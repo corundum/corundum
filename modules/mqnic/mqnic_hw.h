@@ -47,6 +47,7 @@ either expressed or implied, of The Regents of the University of California.
 
 #define MQNIC_BOARD_ID_VCU108        0x10ee806c
 #define MQNIC_BOARD_ID_VCU118        0x10ee9076
+#define MQNIC_BOARD_ID_AU250         0x10ee907a
 #define MQNIC_BOARD_ID_EXANIC_X10    0x1ce40003
 #define MQNIC_BOARD_ID_ADM_PCIE_9V3  0x41449003
 

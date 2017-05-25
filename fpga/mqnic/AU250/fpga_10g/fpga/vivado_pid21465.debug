@@ -1,0 +1,57 @@
+#--------------------------------------------------------------------------
+# Xilinx Vivado v2019.1 (64-bit)
+# SW Build: 2552052 on Fri May 24 14:47:09 MDT 2019
+# IP Build: 2548770 on Fri May 24 18:01:18 MDT 2019
+# Current time: Thu May 25 10:14:57 PDT 2017
+# Process ID (PID): 21465
+# User: jamiey
+# OS: Ubuntu
+#
+# This file is an indication that an internal application error occurred.
+# This information is useful for debugging. Please open a case with Xilinx.
+# Technical Support with this file and a testcase attached.
+#--------------------------------------------------------------------------
+Thu May 25 10:14:57 PDT 2017
+ui.utils.e: WARNING: GUI thread is sluggish  23560 ms
+Thread: AWT-EventQueue-1
+	at ui.customizerjni.HACGCJModelJNI.HACGCCustomizer_setParamValues__SWIG_0(Native Method)
+	at ui.customizerjni.h.a(SourceFile:156)
+	at ui.customizerjni.HACGCJModel.a(SourceFile:281)
+	at ui.data.coregen.a.a.s.a(SourceFile:4161)
+	at ui.data.coregen.a.a.B.Yq(SourceFile:1804)
+	at ui.data.coregen.a.a.B.a(SourceFile:2010)
+	at ui.data.coregen.a.a.s.a(SourceFile:418)
+	at ui.customizerjni.HACGCJModel.triggerUpdate(SourceFile:163)
+	at ui.customizerjni.HACGCJModelJNI.HACGCCustomizer_postGUIUpdate(Native Method)
+	at ui.customizerjni.h.hv(SourceFile:301)
+	at ui.customizerjni.HACGCJModel.a(SourceFile:303)
+	at ui.data.coregen.a.F.run(SourceFile:446)
+	at java.desktop@9.0.4/java.awt.event.InvocationEvent.dispatch(Unknown Source)
+	at java.desktop@9.0.4/java.awt.EventQueue.dispatchEventImpl(Unknown Source)
+	at java.desktop@9.0.4/java.awt.EventQueue.access$500(Unknown Source)
+	at java.desktop@9.0.4/java.awt.EventQueue$3.run(Unknown Source)
+	at java.desktop@9.0.4/java.awt.EventQueue$3.run(Unknown Source)
+	at java.base@9.0.4/java.security.AccessController.doPrivileged(Native Method)
+	at java.base@9.0.4/java.security.ProtectionDomain$JavaSecurityAccessImpl.doIntersectionPrivilege(Unknown Source)
+	at java.desktop@9.0.4/java.awt.EventQueue.dispatchEvent(Unknown Source)
+	at ui.frmwork.b.d.dispatchEvent(SourceFile:88)
+	at java.desktop@9.0.4/java.awt.EventDispatchThread.pumpOneEventForFilters(Unknown Source)
+	at java.desktop@9.0.4/java.awt.EventDispatchThread.pumpEventsForFilter(Unknown Source)
+	at java.desktop@9.0.4/java.awt.EventDispatchThread.pumpEventsForHierarchy(Unknown Source)
+	at java.desktop@9.0.4/java.awt.EventDispatchThread.pumpEvents(Unknown Source)
+	at java.desktop@9.0.4/java.awt.EventDispatchThread.pumpEvents(Unknown Source)
+	at java.desktop@9.0.4/java.awt.EventDispatchThread.run(Unknown Source)
+
+
+	at ui.utils.d.c.Jf(SourceFile:630)
+	at ui.utils.m.Jf(SourceFile:2540)
+	at ui.utils.m.g(SourceFile:2592)
+	at ui.frmwork.b.d.a(SourceFile:182)
+	at ui.frmwork.b.d.dispatchEvent(SourceFile:87)
+	at java.desktop/java.awt.EventDispatchThread.pumpOneEventForFilters(Unknown Source)
+	at java.desktop/java.awt.EventDispatchThread.pumpEventsForFilter(Unknown Source)
+	at java.desktop/java.awt.EventDispatchThread.pumpEventsForHierarchy(Unknown Source)
+	at java.desktop/java.awt.EventDispatchThread.pumpEvents(Unknown Source)
+	at java.desktop/java.awt.EventDispatchThread.pumpEvents(Unknown Source)
+	at java.desktop/java.awt.EventDispatchThread.run(Unknown Source)
+

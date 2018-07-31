@@ -612,10 +612,10 @@ class AXIRam(object):
                 if burst == BURST_WRAP:
                     lower_wrap_boundary = int(addr/transfer_size)*transfer_size
                     upper_wrap_boundary = lower_wrap_boundary+transfer_size
-                
+
                 if burst == BURST_INCR:
                     # check for 4k boundary crossing
-                    assert 0x1000-(addr&0xfff) >= transfer_size
+                    assert 0x1000-(aligned_addr&0xfff) >= transfer_size
 
                 cur_addr = aligned_addr
 
@@ -715,10 +715,15 @@ class AXIRam(object):
                 aligned_addr = int(addr/num_bytes)*num_bytes
                 length = length+1
 
+                transfer_size = num_bytes*length
+
                 if burst == BURST_WRAP:
-                    transfer_size = num_bytes*length
                     lower_wrap_boundary = int(addr/transfer_size)*transfer_size
                     upper_wrap_boundary = lower_wrap_boundary+transfer_size
+
+                if burst == BURST_INCR:
+                    # check for 4k boundary crossing
+                    assert 0x1000-(aligned_addr&0xfff) >= transfer_size
 
                 cur_addr = aligned_addr
 

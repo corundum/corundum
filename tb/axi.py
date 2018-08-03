@@ -186,26 +186,27 @@ class AXIMaster(object):
             raise Exception("Logic already instantiated!")
 
         if m_axi_wdata is not None:
-            assert m_axi_awid is not None
-            assert m_axi_bid is not None
-            assert len(m_axi_awid) == len(m_axi_bid)
+            if m_axi_awid is not None:
+                assert m_axi_bid is not None
+                assert len(m_axi_awid) == len(m_axi_bid)
             assert m_axi_awaddr is not None
             assert len(m_axi_wdata) % 8 == 0
             assert len(m_axi_wdata) / 8 == len(m_axi_wstrb)
             w = len(m_axi_wdata)
 
         if m_axi_rdata is not None:
-            assert m_axi_arid is not None
-            assert m_axi_rid is not None
-            assert len(m_axi_arid) == len(m_axi_rid)
+            if m_axi_arid is not None:
+                assert m_axi_rid is not None
+                assert len(m_axi_arid) == len(m_axi_rid)
             assert m_axi_araddr is not None
             assert len(m_axi_rdata) % 8 == 0
             w = len(m_axi_rdata)
 
             if m_axi_wdata is not None:
-                assert len(m_axi_wdata) == len(m_axi_rdata)
-                assert len(m_axi_awid) == len(m_axi_arid)
+                if m_axi_awid is not None:
+                    assert len(m_axi_awid) == len(m_axi_arid)
                 assert len(m_axi_awaddr) == len(m_axi_araddr)
+                assert len(m_axi_wdata) == len(m_axi_rdata)
 
         bw = int(w/8)
 
@@ -299,7 +300,7 @@ class AXIMaster(object):
                     while not self.int_write_resp_queue:
                         yield clk.posedge
 
-                    cycle_resp = self.int_write_resp_queue.pop(0)
+                    cycle_id, cycle_resp, cycle_user = self.int_write_resp_queue.pop(0)
 
                     if cycle_resp != 0:
                         resp = cycle_resp
@@ -315,7 +316,8 @@ class AXIMaster(object):
                     yield clk.posedge
 
                 addr, awid, length, size, burst, lock, cache, prot, qos, region, user = self.int_write_addr_queue.pop(0)
-                m_axi_awaddr.next = addr
+                if m_axi_awaddr is not None:
+                    m_axi_awaddr.next = addr
                 m_axi_awid.next = awid
                 m_axi_awlen.next = length
                 m_axi_awsize.next = size
@@ -360,7 +362,16 @@ class AXIMaster(object):
                 yield clk.posedge
 
                 if m_axi_bready & m_axi_bvalid:
-                    self.int_write_resp_queue.append(int(m_axi_bresp))
+                    if m_axi_bid is not None:
+                        bid = int(m_axi_bid)
+                    else:
+                        bid = 0
+                    bresp = int(m_axi_bresp)
+                    if m_axi_buser is not None:
+                        buser = int(m_axi_buser)
+                    else:
+                        buser = 0
+                    self.int_write_resp_queue.append((bid, bresp, buser))
                     self.int_write_resp_sync.next = not self.int_write_resp_sync
 
         @instance
@@ -433,7 +444,7 @@ class AXIMaster(object):
                     if not self.int_read_resp_queue:
                         yield self.int_read_resp_sync
 
-                    cycle_data, cycle_resp, cycle_last = self.int_read_resp_queue.pop(0)
+                    cycle_id, cycle_data, cycle_resp, cycle_last, cycle_user = self.int_read_resp_queue.pop(0)
 
                     if cycle_resp != 0:
                         resp = cycle_resp
@@ -468,7 +479,8 @@ class AXIMaster(object):
 
                 addr, arid, length, size, burst, lock, cache, prot, qos, region, user = self.int_read_addr_queue.pop(0)
                 m_axi_araddr.next = addr
-                m_axi_arid.next = arid
+                if m_axi_arid is not None:
+                    m_axi_arid.next = arid
                 m_axi_arlen.next = length
                 m_axi_arsize.next = size
                 m_axi_arburst.next = burst
@@ -496,7 +508,18 @@ class AXIMaster(object):
                 yield clk.posedge
 
                 if m_axi_rready & m_axi_rvalid:
-                    self.int_read_resp_queue.append((int(m_axi_rdata), int(m_axi_rresp), int(m_axi_rlast)))
+                    if m_axi_rid is not None:
+                        rid = int(m_axi_rid)
+                    else:
+                        rid = 0
+                    rdata = int(m_axi_rdata)
+                    rresp = int(m_axi_rresp)
+                    rlast = int(m_axi_rlast)
+                    if m_axi_buser is not None:
+                        ruser = int(m_axi_ruser)
+                    else:
+                        ruser = 0
+                    self.int_read_resp_queue.append((rid, rdata, rresp, rlast, ruser))
                     self.int_read_resp_sync.next = not self.int_read_resp_sync
 
         return instances()
@@ -568,26 +591,27 @@ class AXIRam(object):
             ):
 
         if s_axi_wdata is not None:
-            assert s_axi_awid is not None
-            assert s_axi_bid is not None
-            assert len(s_axi_awid) == len(s_axi_bid)
+            if s_axi_awid is not None:
+                assert s_axi_bid is not None
+                assert len(s_axi_awid) == len(s_axi_bid)
             assert s_axi_awaddr is not None
             assert len(s_axi_wdata) % 8 == 0
             assert len(s_axi_wdata) / 8 == len(s_axi_wstrb)
             w = len(s_axi_wdata)
 
         if s_axi_rdata is not None:
-            assert s_axi_arid is not None
-            assert s_axi_rid is not None
-            assert len(s_axi_arid) == len(s_axi_rid)
+            if s_axi_arid is not None:
+                assert s_axi_rid is not None
+                assert len(s_axi_arid) == len(s_axi_rid)
             assert s_axi_araddr is not None
             assert len(s_axi_rdata) % 8 == 0
             w = len(s_axi_rdata)
 
             if s_axi_wdata is not None:
-                assert len(s_axi_wdata) == len(s_axi_rdata)
-                assert len(s_axi_awid) == len(s_axi_arid)
+                if s_axi_awid is not None:
+                    assert len(s_axi_awid) == len(s_axi_arid)
                 assert len(s_axi_awaddr) == len(s_axi_araddr)
+                assert len(s_axi_wdata) == len(s_axi_rdata)
 
         bw = int(w/8)
 
@@ -661,7 +685,10 @@ class AXIRam(object):
 
                 if s_axi_awready & s_axi_awvalid:
                     addr = int(s_axi_awaddr)
-                    awid = int(s_axi_awid)
+                    if s_axi_awid is not None:
+                        awid = int(s_axi_awid)
+                    else:
+                        awid = 0
                     length = int(s_axi_awlen)
                     size = int(s_axi_awsize)
                     burst = int(s_axi_awburst)
@@ -691,7 +718,10 @@ class AXIRam(object):
                 while not self.int_write_resp_queue:
                     yield clk.posedge
 
-                s_axi_bid.next, s_axi_bresp.next = self.int_write_resp_queue.pop(0)
+                bid, bresp = self.int_write_resp_queue.pop(0)
+                if s_axi_bid is not None:
+                    s_axi_bid.next = bid
+                s_axi_bresp.next = bresp
                 s_axi_bvalid.next = True
 
                 yield clk.posedge
@@ -758,7 +788,10 @@ class AXIRam(object):
 
                 if s_axi_arready & s_axi_arvalid:
                     addr = int(s_axi_araddr)
-                    arid = int(s_axi_arid)
+                    if s_axi_arid is not None:
+                        arid = int(s_axi_arid)
+                    else:
+                        arid = 0
                     length = int(s_axi_arlen)
                     size = int(s_axi_arsize)
                     burst = int(s_axi_arburst)
@@ -774,7 +807,12 @@ class AXIRam(object):
                 while not self.int_read_resp_queue:
                     yield clk.posedge
 
-                s_axi_rid.next, s_axi_rdata.next, s_axi_rresp.next, s_axi_rlast.next = self.int_read_resp_queue.pop(0)
+                rid, rdata, rresp, rlast = self.int_read_resp_queue.pop(0)
+                if s_axi_rid is not None:
+                    s_axi_rid.next = rid
+                s_axi_rdata.next = rdata
+                s_axi_rresp.next = rresp
+                s_axi_rlast.next = rlast
                 s_axi_rvalid.next = True
 
                 yield clk.posedge

@@ -548,7 +548,7 @@ class AXIRam(object):
 
     def write_mem(self, address, data):
         self.mem.seek(address % self.size)
-        self.mem.write(data)
+        self.mem.write(bytes(data))
 
     def create_port(self,
                 clk,
@@ -659,12 +659,15 @@ class AXIRam(object):
                         wdata >>= 8
                     for i in range(bw):
                         if strb & (1 << i):
-                            self.mem.write(data[i:i+1])
+                            self.mem.write(bytes(data[i:i+1]))
                         else:
                             self.mem.seek(1, 1)
                     if n == length-1:
                         self.int_write_resp_queue.append((awid, 0b00))
                         self.int_write_resp_sync.next = not self.int_write_resp_sync
+                    if last != (n == length-1):
+                        print("Error: bad last assert")
+                        raise StopSimulation
                     assert last == (n == length-1)
                     if name is not None:
                         print("[%s] Write word id: %d addr: 0x%08x prot: 0x%x wstrb: 0x%02x data: %s" % (name, awid, cur_addr, prot, s_axi_wstrb, " ".join(("{:02x}".format(c) for c in bytearray(data)))))

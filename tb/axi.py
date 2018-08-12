@@ -251,6 +251,10 @@ class AXIMaster(object):
                 if not self.write_command_queue:
                     yield self.write_command_sync
 
+                if m_axi_awaddr is None:
+                    print("Error: attempted write on read-only interface")
+                    raise StopSimulation
+
                 addr, data, burst, size, lock, cache, prot, qos, region, user = self.write_command_queue.pop(0)
                 self.in_flight_operations += 1
 
@@ -409,6 +413,10 @@ class AXIMaster(object):
             while True:
                 if not self.read_command_queue:
                     yield self.read_command_sync
+
+                if m_axi_araddr is None:
+                    print("Error: attempted read on write-only interface")
+                    raise StopSimulation
 
                 addr, length, burst, size, lock, cache, prot, qos, region, user = self.read_command_queue.pop(0)
                 self.in_flight_operations += 1

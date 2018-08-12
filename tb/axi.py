@@ -106,6 +106,8 @@ class AXIMaster(object):
 
         self.in_flight_operations = 0
 
+        self.max_burst_len = 256
+
         self.has_logic = False
         self.clk = None
 
@@ -304,7 +306,7 @@ class AXIMaster(object):
                     if n >= burst_length:
                         transfer_count += 1
                         n = 0
-                        burst_length = min(cycles-k, 256) # max len
+                        burst_length = min(cycles-k, min(max(self.max_burst_len, 1), 256)) # max len
                         burst_length = min(burst_length, 0x1000-(cur_addr&0xfff)) # 4k align
                         awid = self.cur_write_id
                         self.cur_write_id = (self.cur_write_id + 1) % 2**len(m_axi_awid)
@@ -447,7 +449,7 @@ class AXIMaster(object):
                     n += 1
                     if n >= burst_length:
                         n = 0
-                        burst_length = min(cycles-k, 256) # max len
+                        burst_length = min(cycles-k, min(max(self.max_burst_len, 1), 256)) # max len
                         burst_length = min(burst_length, 0x1000-((aligned_addr+k*num_bytes)&0xfff))# 4k align
                         arid = self.cur_read_id
                         self.cur_read_id = (self.cur_read_id + 1) % 2**len(m_axi_arid)

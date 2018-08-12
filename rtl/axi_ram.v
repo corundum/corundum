@@ -183,7 +183,7 @@ always @* begin
 
     write_id_next = write_id_reg;
     write_addr_next = write_addr_reg;
-    write_addr_valid_next = write_addr_valid_reg & ~write_addr_ready;
+    write_addr_valid_next = write_addr_valid_reg && !write_addr_ready;
     write_count_next = write_count_reg;
     write_size_next = write_size_reg;
     write_burst_next = write_burst_reg;
@@ -192,11 +192,11 @@ always @* begin
     s_axi_wready_next = write_addr_valid_next;
     s_axi_bid_next = s_axi_bid_reg;
     s_axi_bresp_next = s_axi_bresp_reg;
-    s_axi_bvalid_next = s_axi_bvalid_reg & ~s_axi_bready;
+    s_axi_bvalid_next = s_axi_bvalid_reg && !s_axi_bready;
 
     case (write_state_reg)
         WRITE_STATE_IDLE: begin
-            s_axi_awready_next = (write_addr_ready || ~write_addr_valid_reg) & (~s_axi_bvalid | s_axi_bready);
+            s_axi_awready_next = (write_addr_ready || !write_addr_valid_reg) && (!s_axi_bvalid || s_axi_bready);
 
             write_id_next = s_axi_awid;
             write_addr_next = s_axi_awaddr;
@@ -228,11 +228,12 @@ always @* begin
                     write_addr_next = write_addr_reg + (1 << write_size_reg);
                 end
                 write_count_next = write_count_reg - 1;
-                write_addr_valid_next = 1'b1;
                 s_axi_wready_next = 1'b1;
-                if (write_count_next > 0) begin
+                if (write_count_reg > 0) begin
+                    write_addr_valid_next = 1'b1;
                     write_state_next = WRITE_STATE_BURST;
                 end else begin
+                    write_addr_valid_next = 1'b0;
                     s_axi_bid_next = write_id_reg;
                     s_axi_bresp_next = 2'b00;
                     s_axi_bvalid_next = 1'b1;
@@ -286,9 +287,9 @@ always @* begin
     s_axi_rid_next = s_axi_rid_reg;
     s_axi_rresp_next = s_axi_rresp_reg;
     s_axi_rlast_next = s_axi_rlast_reg;
-    s_axi_rvalid_next = s_axi_rvalid_reg & ~s_axi_rready;
+    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
 
-    if (read_addr_valid_reg & (s_axi_rready || ~s_axi_rvalid)) begin
+    if (read_addr_valid_reg && (s_axi_rready || !s_axi_rvalid)) begin
         read_addr_ready = 1'b1;
         mem_rd_en = 1'b1;
         s_axi_rvalid_next = 1'b1;
@@ -298,7 +299,7 @@ always @* begin
 
     read_id_next = read_id_reg;
     read_addr_next = read_addr_reg;
-    read_addr_valid_next = read_addr_valid_reg & ~read_addr_ready;
+    read_addr_valid_next = read_addr_valid_reg && !read_addr_ready;
     read_last_next = read_last_reg;
     read_count_next = read_count_reg;
     read_size_next = read_size_reg;
@@ -308,7 +309,7 @@ always @* begin
 
     case (read_state_reg)
         READ_STATE_IDLE: begin
-            s_axi_arready_next = (read_addr_ready || ~read_addr_valid_reg);
+            s_axi_arready_next = (read_addr_ready || !read_addr_valid_reg);
 
             read_id_next = s_axi_arid;
             read_addr_next = s_axi_araddr;
@@ -338,12 +339,12 @@ always @* begin
                     read_addr_next = read_addr_reg + (1 << read_size_reg);
                 end
                 read_count_next = read_count_reg - 1;
-                read_addr_valid_next = 1'b1;
-                if (read_count_next > 0) begin
-                    read_last_next = 1'b0;
+                read_last_next = read_count_next == 0;
+                if (read_count_reg > 0) begin
+                    read_addr_valid_next = 1'b1;
                     read_state_next = READ_STATE_BURST;
                 end else begin
-                    read_last_next = 1'b1;
+                    read_addr_valid_next = 1'b0;
                     read_state_next = READ_STATE_IDLE;
                 end
             end else begin

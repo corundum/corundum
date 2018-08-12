@@ -93,6 +93,7 @@ def bench():
 
     # AXI4 master
     axi_master_inst = axi.AXIMaster()
+    axi_master_pause = Signal(bool(False))
 
     axi_master_logic = axi_master_inst.create_logic(
         clk,
@@ -132,6 +133,7 @@ def bench():
         m_axi_rlast=s_axi_rlast,
         m_axi_rvalid=s_axi_rvalid,
         m_axi_rready=s_axi_rready,
+        pause=axi_master_pause,
         name='master'
     )
 
@@ -185,6 +187,19 @@ def bench():
     def clkgen():
         clk.next = not clk
 
+    def wait_normal():
+        while not axi_master_inst.idle():
+            yield clk.posedge
+
+    def wait_pause_master():
+        while not axi_master_inst.idle():
+            axi_master_pause.next = True
+            yield clk.posedge
+            yield clk.posedge
+            yield clk.posedge
+            axi_master_pause.next = False
+            yield clk.posedge
+
     @instance
     def check():
         yield delay(100)
@@ -223,24 +238,37 @@ def bench():
         current_test.next = 2
 
         for length in range(1,8):
-            for offset in range(4):
+            for offset in range(4,8):
                 for size in (2, 1, 0):
-                    axi_master_inst.init_write(256*(16*offset+length)+offset, b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length], size=size)
+                    for wait in wait_normal, wait_pause_master:
+                        axi_master_inst.init_write(256*(16*offset+length)+offset-4, b'\xaa'*(length+8), size=size)
 
-                    yield axi_master_inst.wait()
-                    yield clk.posedge
+                        yield axi_master_inst.wait()
+
+                        axi_master_inst.init_write(256*(16*offset+length)+offset, b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length], size=size)
+
+                        yield wait()
+
+                        axi_master_inst.init_read(256*(16*offset+length)+offset-1, length+2, size=size)
+
+                        yield axi_master_inst.wait()
+
+                        data = axi_master_inst.get_read_data()
+                        assert data[0] == 256*(16*offset+length)+offset-1
+                        assert data[1] == b'\xaa'+b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length]+b'\xaa'
 
         for length in range(1,8):
-            for offset in range(4):
+            for offset in range(4,8):
                 for size in (2, 1, 0):
-                    axi_master_inst.init_read(256*(16*offset+length)+offset, length, size=size)
+                    for wait in wait_normal, wait_pause_master:
+                        axi_master_inst.init_read(256*(16*offset+length)+offset, length, size=size)
 
-                    yield axi_master_inst.wait()
-                    yield clk.posedge
+                        yield wait()
+                        yield clk.posedge
 
-                    data = axi_master_inst.get_read_data()
-                    assert data[0] == 256*(16*offset+length)+offset
-                    assert data[1] == b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length]
+                        data = axi_master_inst.get_read_data()
+                        assert data[0] == 256*(16*offset+length)+offset
+                        assert data[1] == b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length]
 
         yield delay(100)
 

@@ -179,6 +179,12 @@ class AXIMaster(object):
                 m_axi_ruser=None,
                 m_axi_rvalid=Signal(bool(False)),
                 m_axi_rready=Signal(bool(False)),
+                pause=False,
+                awpause=False,
+                wpause=False,
+                bpause=False,
+                arpause=False,
+                rpause=False,
                 name=None
             ):
         
@@ -214,6 +220,30 @@ class AXIMaster(object):
 
         self.has_logic = True
         self.clk = clk
+
+        m_axi_awvalid_int = Signal(bool(False))
+        m_axi_awready_int = Signal(bool(False))
+        m_axi_wvalid_int = Signal(bool(False))
+        m_axi_wready_int = Signal(bool(False))
+        m_axi_bvalid_int = Signal(bool(False))
+        m_axi_bready_int = Signal(bool(False))
+        m_axi_arvalid_int = Signal(bool(False))
+        m_axi_arready_int = Signal(bool(False))
+        m_axi_rvalid_int = Signal(bool(False))
+        m_axi_rready_int = Signal(bool(False))
+
+        @always_comb
+        def pause_logic():
+            m_axi_awvalid.next = m_axi_awvalid_int and not (pause or awpause)
+            m_axi_awready_int.next = m_axi_awready and not (pause or awpause)
+            m_axi_wvalid.next = m_axi_wvalid_int and not (pause or wpause)
+            m_axi_wready_int.next = m_axi_wready and not (pause or wpause)
+            m_axi_bvalid_int.next = m_axi_bvalid and not (pause or bpause)
+            m_axi_bready.next = m_axi_bready_int and not (pause or bpause)
+            m_axi_arvalid.next = m_axi_arvalid_int and not (pause or arpause)
+            m_axi_arready_int.next = m_axi_arready and not (pause or arpause)
+            m_axi_rvalid_int.next = m_axi_rvalid and not (pause or rpause)
+            m_axi_rready.next = m_axi_rready_int and not (pause or rpause)
 
         @instance
         def write_logic():
@@ -329,14 +359,14 @@ class AXIMaster(object):
                 m_axi_awregion.next = region
                 if m_axi_awuser is not None:
                     m_axi_awuser.next = user
-                m_axi_awvalid.next = True
+                m_axi_awvalid_int.next = True
 
                 yield clk.posedge
 
-                while m_axi_awvalid and not m_axi_awready:
+                while m_axi_awvalid_int and not m_axi_awready_int:
                     yield clk.posedge
 
-                m_axi_awvalid.next = False
+                m_axi_awvalid_int.next = False
 
         @instance
         def write_data_interface_logic():
@@ -345,23 +375,23 @@ class AXIMaster(object):
                     yield clk.posedge
 
                 m_axi_wdata.next, m_axi_wstrb.next, m_axi_wlast.next = self.int_write_data_queue.pop(0)
-                m_axi_wvalid.next = True
+                m_axi_wvalid_int.next = True
 
                 yield clk.posedge
 
-                while m_axi_wvalid and not m_axi_wready:
+                while m_axi_wvalid_int and not m_axi_wready_int:
                     yield clk.posedge
 
-                m_axi_wvalid.next = False
+                m_axi_wvalid_int.next = False
 
         @instance
         def write_resp_interface_logic():
             while True:
-                m_axi_bready.next = True
+                m_axi_bready_int.next = True
 
                 yield clk.posedge
 
-                if m_axi_bready & m_axi_bvalid:
+                if m_axi_bready and m_axi_bvalid_int:
                     if m_axi_bid is not None:
                         bid = int(m_axi_bid)
                     else:
@@ -491,23 +521,23 @@ class AXIMaster(object):
                 m_axi_arregion.next = region
                 if m_axi_aruser is not None:
                     m_axi_aruser.next = user
-                m_axi_arvalid.next = True
+                m_axi_arvalid_int.next = True
 
                 yield clk.posedge
 
-                while m_axi_arvalid and not m_axi_arready:
+                while m_axi_arvalid_int and not m_axi_arready_int:
                     yield clk.posedge
 
-                m_axi_arvalid.next = False
+                m_axi_arvalid_int.next = False
 
         @instance
         def read_resp_interface_logic():
             while True:
-                m_axi_rready.next = True
+                m_axi_rready_int.next = True
 
                 yield clk.posedge
 
-                if m_axi_rready & m_axi_rvalid:
+                if m_axi_rready and m_axi_rvalid_int:
                     if m_axi_rid is not None:
                         rid = int(m_axi_rid)
                     else:
@@ -587,6 +617,12 @@ class AXIRam(object):
                 s_axi_rlast=Signal(bool(True)),
                 s_axi_rvalid=Signal(bool(False)),
                 s_axi_rready=Signal(bool(False)),
+                pause=False,
+                awpause=False,
+                wpause=False,
+                bpause=False,
+                arpause=False,
+                rpause=False,
                 name=None
             ):
 
@@ -616,6 +652,30 @@ class AXIRam(object):
         bw = int(w/8)
 
         assert bw in (1, 2, 4, 8, 16, 32, 64, 128)
+
+        s_axi_awvalid_int = Signal(bool(False))
+        s_axi_awready_int = Signal(bool(False))
+        s_axi_wvalid_int = Signal(bool(False))
+        s_axi_wready_int = Signal(bool(False))
+        s_axi_bvalid_int = Signal(bool(False))
+        s_axi_bready_int = Signal(bool(False))
+        s_axi_arvalid_int = Signal(bool(False))
+        s_axi_arready_int = Signal(bool(False))
+        s_axi_rvalid_int = Signal(bool(False))
+        s_axi_rready_int = Signal(bool(False))
+
+        @always_comb
+        def pause_logic():
+            s_axi_awvalid_int.next = s_axi_awvalid and not (pause or awpause)
+            s_axi_awready.next = s_axi_awready_int and not (pause or awpause)
+            s_axi_wvalid_int.next = s_axi_wvalid and not (pause or wpause)
+            s_axi_wready.next = s_axi_wready_int and not (pause or wpause)
+            s_axi_bvalid.next = s_axi_bvalid_int and not (pause or bpause)
+            s_axi_bready_int.next = s_axi_bready and not (pause or bpause)
+            s_axi_arvalid_int.next = s_axi_arvalid and not (pause or arpause)
+            s_axi_arready.next = s_axi_arready_int and not (pause or arpause)
+            s_axi_rvalid.next = s_axi_rvalid_int and not (pause or rpause)
+            s_axi_rready_int.next = s_axi_rready and not (pause or rpause)
 
         @instance
         def write_logic():
@@ -682,11 +742,11 @@ class AXIRam(object):
         @instance
         def write_addr_interface_logic():
             while True:
-                s_axi_awready.next = True
+                s_axi_awready_int.next = True
 
                 yield clk.posedge
 
-                if s_axi_awready & s_axi_awvalid:
+                if s_axi_awready and s_axi_awvalid_int:
                     addr = int(s_axi_awaddr)
                     if s_axi_awid is not None:
                         awid = int(s_axi_awid)
@@ -704,11 +764,11 @@ class AXIRam(object):
         @instance
         def write_data_interface_logic():
             while True:
-                s_axi_wready.next = True
+                s_axi_wready_int.next = True
 
                 yield clk.posedge
 
-                if s_axi_wready & s_axi_wvalid:
+                if s_axi_wready and s_axi_wvalid_int:
                     data = int(s_axi_wdata)
                     strb = int(s_axi_wstrb)
                     last = bool(s_axi_wlast)
@@ -725,14 +785,14 @@ class AXIRam(object):
                 if s_axi_bid is not None:
                     s_axi_bid.next = bid
                 s_axi_bresp.next = bresp
-                s_axi_bvalid.next = True
+                s_axi_bvalid_int.next = True
 
                 yield clk.posedge
 
-                while s_axi_bvalid and not s_axi_bready:
+                while s_axi_bvalid_int and not s_axi_bready_int:
                     yield clk.posedge
 
-                s_axi_bvalid.next = False
+                s_axi_bvalid_int.next = False
 
         @instance
         def read_logic():
@@ -785,11 +845,11 @@ class AXIRam(object):
         @instance
         def read_addr_interface_logic():
             while True:
-                s_axi_arready.next = True
+                s_axi_arready_int.next = True
 
                 yield clk.posedge
 
-                if s_axi_arready & s_axi_arvalid:
+                if s_axi_arready and s_axi_arvalid_int:
                     addr = int(s_axi_araddr)
                     if s_axi_arid is not None:
                         arid = int(s_axi_arid)
@@ -816,14 +876,14 @@ class AXIRam(object):
                 s_axi_rdata.next = rdata
                 s_axi_rresp.next = rresp
                 s_axi_rlast.next = rlast
-                s_axi_rvalid.next = True
+                s_axi_rvalid_int.next = True
 
                 yield clk.posedge
 
-                while s_axi_rvalid and not s_axi_rready:
+                while s_axi_rvalid_int and not s_axi_rready_int:
                     yield clk.posedge
 
-                s_axi_rvalid.next = False
+                s_axi_rvalid_int.next = False
 
         return instances()
 

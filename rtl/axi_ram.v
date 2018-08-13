@@ -198,19 +198,20 @@ always @* begin
         WRITE_STATE_IDLE: begin
             s_axi_awready_next = (write_addr_ready || !write_addr_valid_reg) && (!s_axi_bvalid || s_axi_bready);
 
-            write_id_next = s_axi_awid;
-            write_addr_next = s_axi_awaddr;
-            write_count_next = s_axi_awlen;
-            write_size_next = s_axi_awsize < $clog2(STRB_WIDTH) ? s_axi_awsize : $clog2(STRB_WIDTH);
-            write_burst_next = s_axi_awburst;
-
             if (s_axi_awready & s_axi_awvalid) begin
-                s_axi_awready_next = write_addr_ready;
+                write_id_next = s_axi_awid;
+                write_addr_next = s_axi_awaddr;
+                write_count_next = s_axi_awlen;
+                write_size_next = s_axi_awsize < $clog2(STRB_WIDTH) ? s_axi_awsize : $clog2(STRB_WIDTH);
+                write_burst_next = s_axi_awburst;
+
                 write_addr_valid_next = 1'b1;
                 s_axi_wready_next = 1'b1;
                 if (s_axi_awlen > 0) begin
+                    s_axi_awready_next = 1'b0;
                     write_state_next = WRITE_STATE_BURST;
                 end else begin
+                    s_axi_awready_next = 1'b0;
                     s_axi_bid_next = write_id_next;
                     s_axi_bresp_next = 2'b00;
                     s_axi_bvalid_next = 1'b1;
@@ -234,6 +235,8 @@ always @* begin
                     write_state_next = WRITE_STATE_BURST;
                 end else begin
                     write_addr_valid_next = 1'b0;
+                    s_axi_awready_next = 1'b0;
+                    s_axi_wready_next = 1'b0;
                     s_axi_bid_next = write_id_reg;
                     s_axi_bresp_next = 2'b00;
                     s_axi_bvalid_next = 1'b1;
@@ -311,19 +314,20 @@ always @* begin
         READ_STATE_IDLE: begin
             s_axi_arready_next = (read_addr_ready || !read_addr_valid_reg);
 
-            read_id_next = s_axi_arid;
-            read_addr_next = s_axi_araddr;
-            read_count_next = s_axi_arlen;
-            read_size_next = s_axi_arsize < $clog2(STRB_WIDTH) ? s_axi_arsize : $clog2(STRB_WIDTH);
-            read_burst_next = s_axi_arburst;
-
             if (s_axi_arready & s_axi_arvalid) begin
-                s_axi_arready_next = read_addr_ready;
+                read_id_next = s_axi_arid;
+                read_addr_next = s_axi_araddr;
+                read_count_next = s_axi_arlen;
+                read_size_next = s_axi_arsize < $clog2(STRB_WIDTH) ? s_axi_arsize : $clog2(STRB_WIDTH);
+                read_burst_next = s_axi_arburst;
+
                 read_addr_valid_next = 1'b1;
                 if (s_axi_arlen > 0) begin
+                    s_axi_arready_next = 1'b0;
                     read_last_next = 1'b0;
                     read_state_next = READ_STATE_BURST;
                 end else begin
+                    s_axi_arready_next = 1'b0;
                     read_last_next = 1'b1;
                     read_state_next = READ_STATE_IDLE;
                 end
@@ -344,6 +348,7 @@ always @* begin
                     read_addr_valid_next = 1'b1;
                     read_state_next = READ_STATE_BURST;
                 end else begin
+                    s_axi_arready_next = 1'b0;
                     read_addr_valid_next = 1'b0;
                     read_state_next = READ_STATE_IDLE;
                 end

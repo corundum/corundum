@@ -217,19 +217,22 @@ def bench():
         print("test 1: read and write")
         current_test.next = 1
 
-        axi_master_inst.init_write(4, b'\x11\x22\x33\x44')
+        addr = 4
+        test_data = b'\x11\x22\x33\x44'
+
+        axi_master_inst.init_write(addr, test_data)
 
         yield axi_master_inst.wait()
         yield clk.posedge
 
-        axi_master_inst.init_read(4, 4)
+        axi_master_inst.init_read(addr, len(test_data))
 
         yield axi_master_inst.wait()
         yield clk.posedge
 
         data = axi_master_inst.get_read_data()
-        assert data[0] == 4
-        assert data[1] == b'\x11\x22\x33\x44'
+        assert data[0] == addr
+        assert data[1] == test_data
 
         yield delay(100)
 
@@ -237,38 +240,52 @@ def bench():
         print("test 2: various reads and writes")
         current_test.next = 2
 
-        for length in range(1,8):
-            for offset in range(4,8):
+        for length in list(range(1,8))+[1024]:
+            for offset in list(range(4,8))+[4096-4]:
                 for size in (2, 1, 0):
                     for wait in wait_normal, wait_pause_master:
-                        axi_master_inst.init_write(256*(16*offset+length)+offset-4, b'\xaa'*(length+8), size=size)
+                        print("length %d, offset %d, size %d"% (length, offset, size))
+                        #addr = 256*(16*offset+length)+offset
+                        addr = offset
+                        test_data = bytearray([x%256 for x in range(length)])
+
+                        axi_master_inst.init_write(addr-4, b'\xAA'*(length+8), size=size)
 
                         yield axi_master_inst.wait()
 
-                        axi_master_inst.init_write(256*(16*offset+length)+offset, b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length], size=size)
+                        axi_master_inst.init_write(addr, test_data, size=size)
 
                         yield wait()
 
-                        axi_master_inst.init_read(256*(16*offset+length)+offset-1, length+2, size=size)
+                        axi_master_inst.init_read(addr-1, length+2, size=size)
 
                         yield axi_master_inst.wait()
 
                         data = axi_master_inst.get_read_data()
-                        assert data[0] == 256*(16*offset+length)+offset-1
-                        assert data[1] == b'\xaa'+b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length]+b'\xaa'
+                        assert data[0] == addr-1
+                        assert data[1] == b'\xAA'+test_data+b'\xAA'
 
-        for length in range(1,8):
-            for offset in range(4,8):
+        for length in list(range(1,8))+[1024]:
+            for offset in list(range(4,8))+[4096-4]:
                 for size in (2, 1, 0):
                     for wait in wait_normal, wait_pause_master:
-                        axi_master_inst.init_read(256*(16*offset+length)+offset, length, size=size)
+                        print("length %d, offset %d, size %d"% (length, offset, size))
+                        #addr = 256*(16*offset+length)+offset
+                        addr = offset
+                        test_data = bytearray([x%256 for x in range(length)])
+
+                        axi_master_inst.init_write(addr, test_data, size=size)
+
+                        yield axi_master_inst.wait()
+
+                        axi_master_inst.init_read(addr, length, size=size)
 
                         yield wait()
                         yield clk.posedge
 
                         data = axi_master_inst.get_read_data()
-                        assert data[0] == 256*(16*offset+length)+offset
-                        assert data[1] == b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length]
+                        assert data[0] == addr
+                        assert data[1] == test_data
 
         yield delay(100)
 

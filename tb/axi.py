@@ -101,7 +101,7 @@ class AXIMaster(object):
         self.int_read_addr_sync = Signal(False)
         self.int_read_resp_command_queue = []
         self.int_read_resp_command_sync = Signal(False)
-        self.int_read_resp_queue = []
+        self.int_read_resp_queue_list = {}
         self.int_read_resp_sync = Signal(False)
 
         self.in_flight_operations = 0
@@ -189,7 +189,7 @@ class AXIMaster(object):
                 rpause=False,
                 name=None
             ):
-        
+
         if self.has_logic:
             raise Exception("Logic already instantiated!")
 
@@ -438,7 +438,9 @@ class AXIMaster(object):
 
                 cycles = int((length + num_bytes-1 + (addr % num_bytes)) / num_bytes)
 
-                self.int_read_resp_command_queue.append((addr, length, size, cycles, prot))
+                burst_list = []
+
+                self.int_read_resp_command_queue.append((addr, length, size, cycles, prot, burst_list))
                 self.int_read_resp_command_sync.next = not self.int_read_resp_command_sync
 
                 cur_addr = aligned_addr
@@ -455,6 +457,7 @@ class AXIMaster(object):
                         burst_length = int((min(burst_length*num_bytes, 0x1000-(cur_addr&0xfff))+num_bytes-1)/num_bytes) # 4k align
                         arid = self.cur_read_id
                         self.cur_read_id = (self.cur_read_id + 1) % 2**len(m_axi_arid)
+                        burst_list.append((arid, burst_length))
                         self.int_read_addr_queue.append((cur_addr, arid, burst_length-1, size, burst, lock, cache, prot, qos, region, user))
                         self.int_read_addr_sync.next = not self.int_read_addr_sync
                         if name is not None:
@@ -462,13 +465,15 @@ class AXIMaster(object):
 
                     cur_addr += num_bytes
 
+                burst_list.append(None)
+
         @instance
         def read_resp_logic():
             while True:
                 if not self.int_read_resp_command_queue:
                     yield self.int_read_resp_command_sync
 
-                addr, length, size, cycles, prot = self.int_read_resp_command_queue.pop(0)
+                addr, length, size, cycles, prot, burst_list = self.int_read_resp_command_queue.pop(0)
 
                 num_bytes = 2**size
                 assert 0 <= size <= int(math.log(bw, 2))
@@ -484,29 +489,46 @@ class AXIMaster(object):
 
                 resp = 0
 
-                for k in range(cycles):
-                    if not self.int_read_resp_queue:
-                        yield self.int_read_resp_sync
+                first = True
 
-                    cycle_id, cycle_data, cycle_resp, cycle_last, cycle_user = self.int_read_resp_queue.pop(0)
+                while True:
+                    while not burst_list:
+                        yield clk.posedge
 
-                    if cycle_resp != 0:
-                        resp = cycle_resp
+                    cur_burst = burst_list.pop(0)
 
-                    start = cycle_offset
-                    stop = cycle_offset+num_bytes
+                    if cur_burst is None:
+                        break
 
-                    if k == 0:
-                        start = start_offset
-                    if k == cycles-1:
-                        stop = end_offset
+                    rid = cur_burst[0]
+                    burst_length = cur_burst[1]
 
-                    assert cycle_last == (k == cycles - 1)
+                    for k in range(burst_length):
+                        self.int_read_resp_queue_list.setdefault(rid, [])
+                        while not self.int_read_resp_queue_list[rid]:
+                            yield self.int_read_resp_sync
 
-                    for j in range(start, stop):
-                        data += bytearray([(cycle_data >> j*8) & 0xff])
+                        cycle_id, cycle_data, cycle_resp, cycle_last, cycle_user = self.int_read_resp_queue_list[rid].pop(0)
 
-                    cycle_offset = (cycle_offset + num_bytes) % bw
+                        if cycle_resp != 0:
+                            resp = cycle_resp
+
+                        start = cycle_offset
+                        stop = cycle_offset+num_bytes
+
+                        if first:
+                            start = start_offset
+
+                        assert cycle_last == (k == burst_length - 1)
+
+                        for j in range(start, stop):
+                            data += bytearray([(cycle_data >> j*8) & 0xff])
+
+                        cycle_offset = (cycle_offset + num_bytes) % bw
+
+                        first = False
+
+                data = data[:length]
 
                 if name is not None:
                     print("[%s] Read data addr: 0x%08x prot: 0x%x data: %s" % (name, addr, prot, " ".join(("{:02x}".format(c) for c in bytearray(data)))))
@@ -563,7 +585,8 @@ class AXIMaster(object):
                         ruser = int(m_axi_ruser)
                     else:
                         ruser = 0
-                    self.int_read_resp_queue.append((rid, rdata, rresp, rlast, ruser))
+                    self.int_read_resp_queue_list.setdefault(rid, [])
+                    self.int_read_resp_queue_list[rid].append((rid, rdata, rresp, rlast, ruser))
                     self.int_read_resp_sync.next = not self.int_read_resp_sync
 
         return instances()

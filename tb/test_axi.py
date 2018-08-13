@@ -229,22 +229,27 @@ def bench():
         for i in range(0, len(data), 16):
             print(" ".join(("{:02x}".format(c) for c in bytearray(data[i:i+16]))))
 
-        assert axi_ram_inst.read_mem(0,4) == b'test'
+        assert axi_ram_inst.read_mem(0, 4) == b'test'
+
+        yield delay(100)
 
         yield clk.posedge
         print("test 3: write via port0")
         current_test.next = 3
 
-        axi_master_inst.init_write(4, b'\x11\x22\x33\x44')
+        addr = 4
+        test_data = b'\x11\x22\x33\x44'
+
+        axi_master_inst.init_write(addr, test_data)
 
         yield axi_master_inst.wait()
         yield clk.posedge
 
-        data = axi_ram_inst.read_mem(0, 32)
+        data = axi_ram_inst.read_mem(addr&0xffffff80, 32)
         for i in range(0, len(data), 16):
             print(" ".join(("{:02x}".format(c) for c in bytearray(data[i:i+16]))))
 
-        assert axi_ram_inst.read_mem(4,4) == b'\x11\x22\x33\x44'
+        assert axi_ram_inst.read_mem(addr, len(test_data)) == test_data
 
         yield delay(100)
 
@@ -252,14 +257,19 @@ def bench():
         print("test 4: read via port0")
         current_test.next = 4
 
-        axi_master_inst.init_read(4, 4)
+        addr = 4
+        test_data = b'\x11\x22\x33\x44'
+
+        axi_ram_inst.write_mem(addr, test_data)
+
+        axi_master_inst.init_read(addr, len(test_data))
 
         yield axi_master_inst.wait()
         yield clk.posedge
 
         data = axi_master_inst.get_read_data()
-        assert data[0] == 4
-        assert data[1] == b'\x11\x22\x33\x44'
+        assert data[0] == addr
+        assert data[1] == test_data
 
         yield delay(100)
 
@@ -267,23 +277,27 @@ def bench():
         print("test 5: various writes")
         current_test.next = 5
 
-        for length in range(1,8):
-            for offset in range(4,8):
+        for length in list(range(1,8))+[1024]:
+            for offset in list(range(4,8))+[4096-4]:
                 for size in (2, 1, 0):
                     for wait in wait_normal, wait_pause_master, wait_pause_slave:
-                        axi_ram_inst.write_mem(256*(16*offset+length), b'\xAA'*32)
-                        axi_master_inst.init_write(256*(16*offset+length)+offset, b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length], size=size)
+                        print("length %d, offset %d, size %d"% (length, offset, size))
+                        addr = 256*(16*offset+length)+offset
+                        test_data = bytearray([x%256 for x in range(length)])
+
+                        axi_ram_inst.write_mem(addr&0xffffff80, b'\xAA'*(length+256))
+                        axi_master_inst.init_write(addr, test_data, size=size)
 
                         yield wait()
                         yield clk.posedge
 
-                        data = axi_ram_inst.read_mem(256*(16*offset+length), 32)
+                        data = axi_ram_inst.read_mem(addr&0xffffff80, 32)
                         for i in range(0, len(data), 16):
                             print(" ".join(("{:02x}".format(c) for c in bytearray(data[i:i+16]))))
 
-                        assert axi_ram_inst.read_mem(256*(16*offset+length)+offset, length) == b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length]
-                        assert axi_ram_inst.read_mem(256*(16*offset+length)+offset-1, 1) == b'\xAA'
-                        assert axi_ram_inst.read_mem(256*(16*offset+length)+offset+length, 1) == b'\xAA'
+                        assert axi_ram_inst.read_mem(addr, length) == test_data
+                        assert axi_ram_inst.read_mem(addr-1, 1) == b'\xAA'
+                        assert axi_ram_inst.read_mem(addr+length, 1) == b'\xAA'
 
         yield delay(100)
 
@@ -291,18 +305,24 @@ def bench():
         print("test 6: various reads")
         current_test.next = 6
 
-        for length in range(1,8):
-            for offset in range(4,8):
+        for length in list(range(1,8))+[1024]:
+            for offset in list(range(4,8))+[4096-4]:
                 for size in (2, 1, 0):
                     for wait in wait_normal, wait_pause_master, wait_pause_slave:
-                        axi_master_inst.init_read(256*(16*offset+length)+offset, length, size=size)
+                        print("length %d, offset %d, size %d"% (length, offset, size))
+                        addr = 256*(16*offset+length)+offset
+                        test_data = bytearray([x%256 for x in range(length)])
+
+                        axi_ram_inst.write_mem(addr, test_data)
+
+                        axi_master_inst.init_read(addr, length, size=size)
 
                         yield wait()
                         yield clk.posedge
 
                         data = axi_master_inst.get_read_data()
-                        assert data[0] == 256*(16*offset+length)+offset
-                        assert data[1] == b'\x11\x22\x33\x44\x55\x66\x77\x88'[0:length]
+                        assert data[0] == addr
+                        assert data[1] == test_data
 
         yield delay(100)
 

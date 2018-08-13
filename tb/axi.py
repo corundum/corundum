@@ -307,7 +307,7 @@ class AXIMaster(object):
                         transfer_count += 1
                         n = 0
                         burst_length = min(cycles-k, min(max(self.max_burst_len, 1), 256)) # max len
-                        burst_length = min(burst_length, 0x1000-(cur_addr&0xfff)) # 4k align
+                        burst_length = int((min(burst_length*num_bytes, 0x1000-(cur_addr&0xfff))+num_bytes-1)/num_bytes) # 4k align
                         awid = self.cur_write_id
                         self.cur_write_id = (self.cur_write_id + 1) % 2**len(m_axi_awid)
                         self.int_write_addr_queue.append((cur_addr, awid, burst_length-1, size, burst, lock, cache, prot, qos, region, user))
@@ -452,7 +452,7 @@ class AXIMaster(object):
                     if n >= burst_length:
                         n = 0
                         burst_length = min(cycles-k, min(max(self.max_burst_len, 1), 256)) # max len
-                        burst_length = min(burst_length, 0x1000-((aligned_addr+k*num_bytes)&0xfff))# 4k align
+                        burst_length = int((min(burst_length*num_bytes, 0x1000-(cur_addr&0xfff))+num_bytes-1)/num_bytes) # 4k align
                         arid = self.cur_read_id
                         self.cur_read_id = (self.cur_read_id + 1) % 2**len(m_axi_arid)
                         self.int_read_addr_queue.append((cur_addr, arid, burst_length-1, size, burst, lock, cache, prot, qos, region, user))

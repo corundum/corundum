@@ -312,6 +312,8 @@ class AXIMaster(object):
                         self.cur_write_id = (self.cur_write_id + 1) % 2**len(m_axi_awid)
                         self.int_write_addr_queue.append((cur_addr, awid, burst_length-1, size, burst, lock, cache, prot, qos, region, user))
                         self.int_write_addr_sync.next = not self.int_write_addr_sync
+                        if name is not None:
+                            print("[%s] Write burst awid: 0x%x awaddr: 0x%08x awlen: %d awsize: %d" % (name, awid, cur_addr, burst_length-1, size))
                     n += 1
                     self.int_write_data_queue.append((val, strb, n >= burst_length))
                     self.int_write_data_sync.next = not self.int_write_data_sync
@@ -455,6 +457,8 @@ class AXIMaster(object):
                         self.cur_read_id = (self.cur_read_id + 1) % 2**len(m_axi_arid)
                         self.int_read_addr_queue.append((cur_addr, arid, burst_length-1, size, burst, lock, cache, prot, qos, region, user))
                         self.int_read_addr_sync.next = not self.int_read_addr_sync
+                        if name is not None:
+                            print("[%s] Read burst arid: 0x%x araddr: 0x%08x arlen: %d arsize: %d" % (name, arid, cur_addr, burst_length-1, size))
 
                     cur_addr += num_bytes
 
@@ -695,6 +699,9 @@ class AXIRam(object):
 
                 addr, awid, length, size, burst, lock, cache, prot = self.int_write_addr_queue.pop(0)
 
+                if name is not None:
+                    print("[%s] Write burst awid: 0x%x awaddr: 0x%08x awlen: %d awsize: %d" % (name, awid, addr, length, size))
+
                 num_bytes = 2**size
                 assert 0 < num_bytes <= bw
 
@@ -811,6 +818,9 @@ class AXIRam(object):
                     yield self.int_read_addr_sync
 
                 addr, arid, length, size, burst, lock, cache, prot = self.int_read_addr_queue.pop(0)
+
+                if name is not None:
+                    print("[%s] Read burst arid: 0x%x araddr: 0x%08x arlen: %d arsize: %d" % (name, arid, addr, length, size))
 
                 num_bytes = 2**size
                 assert 0 < num_bytes <= bw

@@ -307,7 +307,10 @@ class AXIMaster(object):
                         burst_length = min(cycles-k, min(max(self.max_burst_len, 1), 256)) # max len
                         burst_length = int((min(burst_length*num_bytes, 0x1000-(cur_addr&0xfff))+num_bytes-1)/num_bytes) # 4k align
                         awid = self.cur_write_id
-                        self.cur_write_id = (self.cur_write_id + 1) % 2**len(m_axi_awid)
+                        if m_axi_awid is not None:
+                            self.cur_write_id = (self.cur_write_id + 1) % 2**len(m_axi_awid)
+                        else:
+                            self.cur_write_id = 0
                         self.int_write_addr_queue.append((cur_addr, awid, burst_length-1, size, burst, lock, cache, prot, qos, region, user))
                         self.int_write_addr_sync.next = not self.int_write_addr_sync
                         if name is not None:
@@ -454,7 +457,10 @@ class AXIMaster(object):
                         burst_length = min(cycles-k, min(max(self.max_burst_len, 1), 256)) # max len
                         burst_length = int((min(burst_length*num_bytes, 0x1000-(cur_addr&0xfff))+num_bytes-1)/num_bytes) # 4k align
                         arid = self.cur_read_id
-                        self.cur_read_id = (self.cur_read_id + 1) % 2**len(m_axi_arid)
+                        if m_axi_arid is not None:
+                            self.cur_read_id = (self.cur_read_id + 1) % 2**len(m_axi_arid)
+                        else:
+                            self.cur_read_id = 0
                         burst_list.append((arid, burst_length))
                         self.int_read_addr_queue.append((cur_addr, arid, burst_length-1, size, burst, lock, cache, prot, qos, region, user))
                         self.int_read_addr_sync.next = not self.int_read_addr_sync

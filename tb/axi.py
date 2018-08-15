@@ -221,27 +221,15 @@ class AXIMaster(object):
         self.has_logic = True
         self.clk = clk
 
-        m_axi_awvalid_int = Signal(bool(False))
-        m_axi_awready_int = Signal(bool(False))
-        m_axi_wvalid_int = Signal(bool(False))
-        m_axi_wready_int = Signal(bool(False))
         m_axi_bvalid_int = Signal(bool(False))
         m_axi_bready_int = Signal(bool(False))
-        m_axi_arvalid_int = Signal(bool(False))
-        m_axi_arready_int = Signal(bool(False))
         m_axi_rvalid_int = Signal(bool(False))
         m_axi_rready_int = Signal(bool(False))
 
         @always_comb
         def pause_logic():
-            m_axi_awvalid.next = m_axi_awvalid_int and not (pause or awpause)
-            m_axi_awready_int.next = m_axi_awready and not (pause or awpause)
-            m_axi_wvalid.next = m_axi_wvalid_int and not (pause or wpause)
-            m_axi_wready_int.next = m_axi_wready and not (pause or wpause)
             m_axi_bvalid_int.next = m_axi_bvalid and not (pause or bpause)
             m_axi_bready.next = m_axi_bready_int and not (pause or bpause)
-            m_axi_arvalid.next = m_axi_arvalid_int and not (pause or arpause)
-            m_axi_arready_int.next = m_axi_arready and not (pause or arpause)
             m_axi_rvalid_int.next = m_axi_rvalid and not (pause or rpause)
             m_axi_rready.next = m_axi_rready_int and not (pause or rpause)
 
@@ -368,14 +356,15 @@ class AXIMaster(object):
                 m_axi_awregion.next = region
                 if m_axi_awuser is not None:
                     m_axi_awuser.next = user
-                m_axi_awvalid_int.next = True
+                m_axi_awvalid.next = not (pause or awpause)
 
                 yield clk.posedge
 
-                while m_axi_awvalid_int and not m_axi_awready_int:
+                while not m_axi_awvalid or not m_axi_awready:
+                    m_axi_awvalid.next = m_axi_awvalid or not (pause or awpause)
                     yield clk.posedge
 
-                m_axi_awvalid_int.next = False
+                m_axi_awvalid.next = False
 
         @instance
         def write_data_interface_logic():
@@ -384,14 +373,15 @@ class AXIMaster(object):
                     yield clk.posedge
 
                 m_axi_wdata.next, m_axi_wstrb.next, m_axi_wlast.next = self.int_write_data_queue.pop(0)
-                m_axi_wvalid_int.next = True
+                m_axi_wvalid.next = not (pause or wpause)
 
                 yield clk.posedge
 
-                while m_axi_wvalid_int and not m_axi_wready_int:
+                while not m_axi_wvalid or not m_axi_wready:
+                    m_axi_wvalid.next = m_axi_wvalid or not (pause or wpause)
                     yield clk.posedge
 
-                m_axi_wvalid_int.next = False
+                m_axi_wvalid.next = False
 
         @instance
         def write_resp_interface_logic():
@@ -561,14 +551,15 @@ class AXIMaster(object):
                 m_axi_arregion.next = region
                 if m_axi_aruser is not None:
                     m_axi_aruser.next = user
-                m_axi_arvalid_int.next = True
+                m_axi_arvalid.next = not (pause or arpause)
 
                 yield clk.posedge
 
-                while m_axi_arvalid_int and not m_axi_arready_int:
+                while not m_axi_arvalid or not m_axi_arready:
+                    m_axi_arvalid.next = m_axi_arvalid or not (pause or arpause)
                     yield clk.posedge
 
-                m_axi_arvalid_int.next = False
+                m_axi_arvalid.next = False
 
         @instance
         def read_resp_interface_logic():
@@ -696,12 +687,8 @@ class AXIRam(object):
         s_axi_awready_int = Signal(bool(False))
         s_axi_wvalid_int = Signal(bool(False))
         s_axi_wready_int = Signal(bool(False))
-        s_axi_bvalid_int = Signal(bool(False))
-        s_axi_bready_int = Signal(bool(False))
         s_axi_arvalid_int = Signal(bool(False))
         s_axi_arready_int = Signal(bool(False))
-        s_axi_rvalid_int = Signal(bool(False))
-        s_axi_rready_int = Signal(bool(False))
 
         @always_comb
         def pause_logic():
@@ -709,12 +696,8 @@ class AXIRam(object):
             s_axi_awready.next = s_axi_awready_int and not (pause or awpause)
             s_axi_wvalid_int.next = s_axi_wvalid and not (pause or wpause)
             s_axi_wready.next = s_axi_wready_int and not (pause or wpause)
-            s_axi_bvalid.next = s_axi_bvalid_int and not (pause or bpause)
-            s_axi_bready_int.next = s_axi_bready and not (pause or bpause)
             s_axi_arvalid_int.next = s_axi_arvalid and not (pause or arpause)
             s_axi_arready.next = s_axi_arready_int and not (pause or arpause)
-            s_axi_rvalid.next = s_axi_rvalid_int and not (pause or rpause)
-            s_axi_rready_int.next = s_axi_rready and not (pause or rpause)
 
         @instance
         def write_logic():
@@ -827,14 +810,15 @@ class AXIRam(object):
                 if s_axi_bid is not None:
                     s_axi_bid.next = bid
                 s_axi_bresp.next = bresp
-                s_axi_bvalid_int.next = True
+                s_axi_bvalid.next = not (pause or bpause)
 
                 yield clk.posedge
 
-                while s_axi_bvalid_int and not s_axi_bready_int:
+                while not s_axi_bvalid or not s_axi_bready:
+                    s_axi_bvalid.next = s_axi_bvalid or not (pause or bpause)
                     yield clk.posedge
 
-                s_axi_bvalid_int.next = False
+                s_axi_bvalid.next = False
 
         @instance
         def read_logic():
@@ -921,14 +905,15 @@ class AXIRam(object):
                 s_axi_rdata.next = rdata
                 s_axi_rresp.next = rresp
                 s_axi_rlast.next = rlast
-                s_axi_rvalid_int.next = True
+                s_axi_rvalid.next = not (pause or rpause)
 
                 yield clk.posedge
 
-                while s_axi_rvalid_int and not s_axi_rready_int:
+                while not s_axi_rvalid or not s_axi_rready:
+                    s_axi_rvalid.next = s_axi_rvalid or not (pause or rpause)
                     yield clk.posedge
 
-                s_axi_rvalid_int.next = False
+                s_axi_rvalid.next = False
 
         return instances()
 

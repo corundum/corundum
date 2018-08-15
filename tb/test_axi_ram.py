@@ -249,7 +249,7 @@ def bench():
                         addr = offset
                         test_data = bytearray([x%256 for x in range(length)])
 
-                        axi_master_inst.init_write(addr-4, b'\xAA'*(length+8), size=size)
+                        axi_master_inst.init_write(addr-4, b'\xAA'*(length+8))
 
                         yield axi_master_inst.wait()
 
@@ -257,7 +257,7 @@ def bench():
 
                         yield wait()
 
-                        axi_master_inst.init_read(addr-1, length+2, size=size)
+                        axi_master_inst.init_read(addr-1, length+2)
 
                         yield axi_master_inst.wait()
 
@@ -274,7 +274,7 @@ def bench():
                         addr = offset
                         test_data = bytearray([x%256 for x in range(length)])
 
-                        axi_master_inst.init_write(addr, test_data, size=size)
+                        axi_master_inst.init_write(addr, test_data)
 
                         yield axi_master_inst.wait()
 

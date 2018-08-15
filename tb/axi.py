@@ -211,8 +211,6 @@ class AXIMaster(object):
             w = len(m_axi_rdata)
 
             if m_axi_wdata is not None:
-                if m_axi_awid is not None:
-                    assert len(m_axi_awid) == len(m_axi_arid)
                 assert len(m_axi_awaddr) == len(m_axi_araddr)
                 assert len(m_axi_wdata) == len(m_axi_rdata)
 
@@ -681,8 +679,6 @@ class AXIRam(object):
             w = len(s_axi_rdata)
 
             if s_axi_wdata is not None:
-                if s_axi_awid is not None:
-                    assert len(s_axi_awid) == len(s_axi_arid)
                 assert len(s_axi_awaddr) == len(s_axi_araddr)
                 assert len(s_axi_wdata) == len(s_axi_rdata)
 

@@ -463,11 +463,11 @@ class AXILiteRam(object):
 
                 yield clk.posedge
 
-                addr = int(int(s_axil_awaddr)/bw)*bw
-                prot = int(s_axil_awprot)
-
                 if s_axil_awready and s_axil_awvalid_int:
                     s_axil_awready_int.next = False
+
+                    addr = int(int(s_axil_awaddr)/bw)*bw
+                    prot = int(s_axil_awprot)
 
                     for i in range(latency):
                         yield clk.posedge
@@ -513,11 +513,11 @@ class AXILiteRam(object):
 
                 yield clk.posedge
 
-                addr = int(int(s_axil_araddr)/bw)*bw
-                prot = int(s_axil_arprot)
-
                 if s_axil_arready and s_axil_arvalid_int:
                     s_axil_arready_int.next = False
+
+                    addr = int(int(s_axil_araddr)/bw)*bw
+                    prot = int(s_axil_arprot)
 
                     for i in range(latency):
                         yield clk.posedge

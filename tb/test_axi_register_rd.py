@@ -51,8 +51,8 @@ def bench():
     ARUSER_WIDTH = 1
     RUSER_ENABLE = 0
     RUSER_WIDTH = 1
-    AR_REG_ENABLE = 1
-    R_REG_ENABLE = 1
+    AR_REG_TYPE = 1
+    R_REG_TYPE = 2
 
     # Inputs
     clk = Signal(bool(0))

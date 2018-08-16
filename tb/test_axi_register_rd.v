@@ -40,8 +40,8 @@ parameter ARUSER_ENABLE = 0;
 parameter ARUSER_WIDTH = 1;
 parameter RUSER_ENABLE = 0;
 parameter RUSER_WIDTH = 1;
-parameter AR_REG_ENABLE = 1;
-parameter R_REG_ENABLE = 1;
+parameter AR_REG_TYPE = 1;
+parameter R_REG_TYPE = 2;
 
 // Inputs
 reg clk = 0;
@@ -155,8 +155,8 @@ axi_register_rd #(
     .ARUSER_WIDTH(ARUSER_WIDTH),
     .RUSER_ENABLE(RUSER_ENABLE),
     .RUSER_WIDTH(RUSER_WIDTH),
-    .AR_REG_ENABLE(AR_REG_ENABLE),
-    .R_REG_ENABLE(R_REG_ENABLE)
+    .AR_REG_TYPE(AR_REG_TYPE),
+    .R_REG_TYPE(R_REG_TYPE)
 )
 UUT (
     .clk(clk),

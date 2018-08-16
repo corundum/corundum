@@ -42,9 +42,9 @@ parameter WUSER_ENABLE = 0;
 parameter WUSER_WIDTH = 1;
 parameter BUSER_ENABLE = 0;
 parameter BUSER_WIDTH = 1;
-parameter AW_REG_ENABLE = 1;
-parameter W_REG_ENABLE = 1;
-parameter B_REG_ENABLE = 1;
+parameter AW_REG_TYPE = 1;
+parameter W_REG_TYPE = 2;
+parameter B_REG_TYPE = 1;
 
 // Inputs
 reg clk = 0;
@@ -176,9 +176,9 @@ axi_register_wr #(
     .WUSER_WIDTH(WUSER_WIDTH),
     .BUSER_ENABLE(BUSER_ENABLE),
     .BUSER_WIDTH(BUSER_WIDTH),
-    .AW_REG_ENABLE(AW_REG_ENABLE),
-    .W_REG_ENABLE(W_REG_ENABLE),
-    .B_REG_ENABLE(B_REG_ENABLE)
+    .AW_REG_TYPE(AW_REG_TYPE),
+    .W_REG_TYPE(W_REG_TYPE),
+    .B_REG_TYPE(B_REG_TYPE)
 )
 UUT (
     .clk(clk),

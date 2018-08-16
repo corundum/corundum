@@ -39,8 +39,8 @@ module axi_register_rd #
     parameter ARUSER_WIDTH = 1,
     parameter RUSER_ENABLE = 0,
     parameter RUSER_WIDTH = 1,
-    parameter AR_REG_ENABLE = 1,
-    parameter R_REG_ENABLE = 1
+    parameter AR_REG_TYPE = 1,
+    parameter R_REG_TYPE = 2
 )
 (
     input  wire                     clk,
@@ -99,7 +99,8 @@ generate
 
 // AR channel
 
-if (AR_REG_ENABLE) begin
+if (AR_REG_TYPE > 1) begin
+// skid buffer, no bubble cycles
 
 // datapath registers
 reg                    s_axi_arready_reg = 1'b0;
@@ -234,6 +235,85 @@ always @(posedge clk) begin
     end
 end
 
+end else if (AR_REG_TYPE == 1) begin
+// simple register, inserts bubble cycles
+
+// datapath registers
+reg                    s_axi_arready_reg = 1'b0;
+
+reg [ID_WIDTH-1:0]     m_axi_arid_reg     = {ID_WIDTH{1'b0}};
+reg [ADDR_WIDTH-1:0]   m_axi_araddr_reg   = {ADDR_WIDTH{1'b0}};
+reg [7:0]              m_axi_arlen_reg    = 8'd0;
+reg [2:0]              m_axi_arsize_reg   = 3'd0;
+reg [1:0]              m_axi_arburst_reg  = 2'd0;
+reg                    m_axi_arlock_reg   = 1'b0;
+reg [3:0]              m_axi_arcache_reg  = 4'd0;
+reg [2:0]              m_axi_arprot_reg   = 3'd0;
+reg [3:0]              m_axi_arqos_reg    = 4'd0;
+reg [3:0]              m_axi_arregion_reg = 4'd0;
+reg [ARUSER_WIDTH-1:0] m_axi_aruser_reg   = {ARUSER_WIDTH{1'b0}};
+reg                    m_axi_arvalid_reg  = 1'b0, m_axi_arvalid_next;
+
+// datapath control
+reg store_axi_ar_input_to_output;
+
+assign s_axi_arready  = s_axi_arready_reg;
+
+assign m_axi_arid     = m_axi_arid_reg;
+assign m_axi_araddr   = m_axi_araddr_reg;
+assign m_axi_arlen    = m_axi_arlen_reg;
+assign m_axi_arsize   = m_axi_arsize_reg;
+assign m_axi_arburst  = m_axi_arburst_reg;
+assign m_axi_arlock   = m_axi_arlock_reg;
+assign m_axi_arcache  = m_axi_arcache_reg;
+assign m_axi_arprot   = m_axi_arprot_reg;
+assign m_axi_arqos    = m_axi_arqos_reg;
+assign m_axi_arregion = m_axi_arregion_reg;
+assign m_axi_aruser   = ARUSER_ENABLE ? m_axi_aruser_reg : {ARUSER_WIDTH{1'b0}};
+assign m_axi_arvalid  = m_axi_arvalid_reg;
+
+// enable ready input next cycle if output buffer will be empty
+wire s_axi_arready_early = !m_axi_arvalid_next;
+
+always @* begin
+    // transfer sink ready state to source
+    m_axi_arvalid_next = m_axi_arvalid_reg;
+
+    store_axi_ar_input_to_output = 1'b0;
+
+    if (s_axi_arready_reg) begin
+        m_axi_arvalid_next = s_axi_arvalid;
+        store_axi_ar_input_to_output = 1'b1;
+    end else if (m_axi_arready) begin
+        m_axi_arvalid_next = 1'b0;
+    end
+end
+
+always @(posedge clk) begin
+    if (rst) begin
+        s_axi_arready_reg <= 1'b0;
+        m_axi_arvalid_reg <= 1'b0;
+    end else begin
+        s_axi_arready_reg <= s_axi_arready_early;
+        m_axi_arvalid_reg <= m_axi_arvalid_next;
+    end
+
+    // datapath
+    if (store_axi_ar_input_to_output) begin
+        m_axi_arid_reg <= s_axi_arid;
+        m_axi_araddr_reg <= s_axi_araddr;
+        m_axi_arlen_reg <= s_axi_arlen;
+        m_axi_arsize_reg <= s_axi_arsize;
+        m_axi_arburst_reg <= s_axi_arburst;
+        m_axi_arlock_reg <= s_axi_arlock;
+        m_axi_arcache_reg <= s_axi_arcache;
+        m_axi_arprot_reg <= s_axi_arprot;
+        m_axi_arqos_reg <= s_axi_arqos;
+        m_axi_arregion_reg <= s_axi_arregion;
+        m_axi_aruser_reg <= s_axi_aruser;
+    end
+end
+
 end else begin
 
     // bypass AR channel
@@ -255,7 +335,8 @@ end
 
 // R channel
 
-if (R_REG_ENABLE) begin
+if (R_REG_TYPE > 1) begin
+// skid buffer, no bubble cycles
 
 // datapath registers
 reg                   m_axi_rready_reg = 1'b0;
@@ -351,6 +432,67 @@ always @(posedge clk) begin
         temp_s_axi_rresp_reg <= m_axi_rresp;
         temp_s_axi_rlast_reg <= m_axi_rlast;
         temp_s_axi_ruser_reg <= m_axi_ruser;
+    end
+end
+
+end else if (R_REG_TYPE == 1) begin
+// simple register, inserts bubble cycles
+
+// datapath registers
+reg                   m_axi_rready_reg = 1'b0;
+
+reg [ID_WIDTH-1:0]    s_axi_rid_reg    = {ID_WIDTH{1'b0}};
+reg [DATA_WIDTH-1:0]  s_axi_rdata_reg  = {DATA_WIDTH{1'b0}};
+reg [1:0]             s_axi_rresp_reg  = 2'b0;
+reg                   s_axi_rlast_reg  = 1'b0;
+reg [RUSER_WIDTH-1:0] s_axi_ruser_reg  = {RUSER_WIDTH{1'b0}};
+reg                   s_axi_rvalid_reg = 1'b0, s_axi_rvalid_next;
+
+// datapath control
+reg store_axi_r_input_to_output;
+
+assign m_axi_rready = m_axi_rready_reg;
+
+assign s_axi_rid    = s_axi_rid_reg;
+assign s_axi_rdata  = s_axi_rdata_reg;
+assign s_axi_rresp  = s_axi_rresp_reg;
+assign s_axi_rlast  = s_axi_rlast_reg;
+assign s_axi_ruser  = RUSER_ENABLE ? s_axi_ruser_reg : {RUSER_WIDTH{1'b0}};
+assign s_axi_rvalid = s_axi_rvalid_reg;
+
+// enable ready input next cycle if output buffer will be empty
+wire m_axi_rready_early = !s_axi_rvalid_next;
+
+always @* begin
+    // transfer sink ready state to source
+    s_axi_rvalid_next = s_axi_rvalid_reg;
+
+    store_axi_r_input_to_output = 1'b0;
+
+    if (m_axi_rready_reg) begin
+        s_axi_rvalid_next = m_axi_rvalid;
+        store_axi_r_input_to_output = 1'b1;
+    end else if (s_axi_rready) begin
+        s_axi_rvalid_next = 1'b0;
+    end
+end
+
+always @(posedge clk) begin
+    if (rst) begin
+        m_axi_rready_reg <= 1'b0;
+        s_axi_rvalid_reg <= 1'b0;
+    end else begin
+        m_axi_rready_reg <= m_axi_rready_early;
+        s_axi_rvalid_reg <= s_axi_rvalid_next;
+    end
+
+    // datapath
+    if (store_axi_r_input_to_output) begin
+        s_axi_rid_reg   <= m_axi_rid;
+        s_axi_rdata_reg <= m_axi_rdata;
+        s_axi_rresp_reg <= m_axi_rresp;
+        s_axi_rlast_reg <= m_axi_rlast;
+        s_axi_ruser_reg <= m_axi_ruser;
     end
 end
 

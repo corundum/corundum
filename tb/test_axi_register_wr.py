@@ -53,9 +53,9 @@ def bench():
     WUSER_WIDTH = 1
     BUSER_ENABLE = 0
     BUSER_WIDTH = 1
-    AW_REG_ENABLE = 1
-    W_REG_ENABLE = 1
-    B_REG_ENABLE = 1
+    AW_REG_TYPE = 1
+    W_REG_TYPE = 2
+    B_REG_TYPE = 1
 
     # Inputs
     clk = Signal(bool(0))

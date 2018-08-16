@@ -25,6 +25,15 @@ THE SOFTWARE.
 from myhdl import *
 import mmap
 
+PROT_PRIVILEGED = 0b001
+PROT_NONSECURE = 0b010
+PROT_INSTRUCTION = 0b100
+
+RESP_OKAY = 0b00
+RESP_EXOKAY = 0b01
+RESP_SLVERR = 0b10
+RESP_DECERR = 0b11
+
 class AXILiteMaster(object):
     def __init__(self):
         self.write_command_queue = []

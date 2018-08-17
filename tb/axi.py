@@ -120,11 +120,11 @@ class AXIMaster(object):
         self.has_logic = False
         self.clk = None
 
-    def init_read(self, address, length, burst=0b01, size=None, lock=0b0, cache=0b0000, prot=0b010, qos=0b0000, region=0b0000, user=None):
+    def init_read(self, address, length, burst=0b01, size=None, lock=0b0, cache=0b0011, prot=0b010, qos=0b0000, region=0b0000, user=None):
         self.read_command_queue.append((address, length, burst, size, lock, cache, prot, qos, region, user))
         self.read_command_sync.next = not self.read_command_sync
 
-    def init_write(self, address, data, burst=0b01, size=None, lock=0b0, cache=0b0000, prot=0b010, qos=0b0000, region=0b0000, user=None):
+    def init_write(self, address, data, burst=0b01, size=None, lock=0b0, cache=0b0011, prot=0b010, qos=0b0000, region=0b0000, user=None):
         self.write_command_queue.append((address, data, burst, size, lock, cache, prot, qos, region, user))
         self.write_command_sync.next = not self.write_command_sync
 

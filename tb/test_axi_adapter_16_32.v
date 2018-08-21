@@ -49,6 +49,8 @@ parameter ARUSER_WIDTH = 1;
 parameter RUSER_ENABLE = 0;
 parameter RUSER_WIDTH = 1;
 parameter CONVERT_BURST = 1;
+parameter CONVERT_NARROW_BURST = 1;
+parameter FORWARD_ID = 1;
 
 // Inputs
 reg clk = 0;
@@ -266,7 +268,9 @@ axi_adapter #(
     .ARUSER_WIDTH(ARUSER_WIDTH),
     .RUSER_ENABLE(RUSER_ENABLE),
     .RUSER_WIDTH(RUSER_WIDTH),
-    .CONVERT_BURST(CONVERT_BURST)
+    .CONVERT_BURST(CONVERT_BURST),
+    .CONVERT_NARROW_BURST(CONVERT_NARROW_BURST),
+    .FORWARD_ID(FORWARD_ID)
 )
 UUT (
     .clk(clk),

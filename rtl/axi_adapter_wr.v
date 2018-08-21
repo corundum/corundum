@@ -43,7 +43,9 @@ module axi_adapter_wr #
     parameter WUSER_WIDTH = 1,
     parameter BUSER_ENABLE = 0,
     parameter BUSER_WIDTH = 1,
-    parameter CONVERT_BURST = 1
+    parameter CONVERT_BURST = 1,
+    parameter CONVERT_NARROW_BURST = 0,
+    parameter FORWARD_ID = 0
 )
 (
     input  wire                     clk,
@@ -214,7 +216,7 @@ assign s_axi_bresp = s_axi_bresp_reg;
 assign s_axi_buser = BUSER_ENABLE ? s_axi_buser_reg : {BUSER_WIDTH{1'b0}};
 assign s_axi_bvalid = s_axi_bvalid_reg;
 
-assign m_axi_awid = m_axi_awid_reg;
+assign m_axi_awid = FORWARD_ID ? m_axi_awid_reg : {ID_WIDTH{1'b0}};
 assign m_axi_awaddr = m_axi_awaddr_reg;
 assign m_axi_awlen = m_axi_awlen_reg;
 assign m_axi_awsize = m_axi_awsize_reg;
@@ -362,11 +364,15 @@ always @* begin
                     addr_next = s_axi_awaddr;
                     burst_next = s_axi_awlen;
                     burst_size_next = s_axi_awsize;
-                    if (CONVERT_BURST && s_axi_awcache[1]) begin
+                    if (CONVERT_BURST && s_axi_awcache[1] && (CONVERT_NARROW_BURST || s_axi_awsize == $clog2(S_WORD_WIDTH))) begin
                         // merge writes
                         // require CONVERT_BURST and awcache[1] set
                         master_burst_size_next = $clog2(M_WORD_WIDTH);
-                        m_axi_awlen_next = (({{S_ADDR_BIT_OFFSET+1{1'b0}}, s_axi_awlen} << s_axi_awsize) + s_axi_awaddr[M_ADDR_BIT_OFFSET-1:0]) >> $clog2(M_WORD_WIDTH);
+                        if (CONVERT_NARROW_BURST) begin
+                            m_axi_awlen_next = (({{S_ADDR_BIT_OFFSET+1{1'b0}}, s_axi_awlen} << s_axi_awsize) + s_axi_awaddr[M_ADDR_BIT_OFFSET-1:0]) >> $clog2(M_WORD_WIDTH);
+                        end else begin
+                            m_axi_awlen_next = ({1'b0, s_axi_awlen} + s_axi_awaddr[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]) >> $clog2(CYCLE_COUNT);
+                        end
                         m_axi_awsize_next = $clog2(M_WORD_WIDTH);
                         state_next = STATE_DATA_2;
                     end else begin
@@ -415,11 +421,16 @@ always @* begin
                 s_axi_wready_next = m_axi_wready_int_early;
 
                 if (s_axi_wready && s_axi_wvalid) begin
-                    for (i = 0; i < S_WORD_WIDTH; i = i + 1) begin
-                        if (s_axi_wstrb[i]) begin
-                            data_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*CYCLE_DATA_WIDTH+i*M_WORD_SIZE +: M_WORD_SIZE] = s_axi_wdata[i*M_WORD_SIZE +: M_WORD_SIZE];
-                            strb_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*CYCLE_STRB_WIDTH+i] = 1'b1;
+                    if (CONVERT_NARROW_BURST) begin
+                        for (i = 0; i < S_WORD_WIDTH; i = i + 1) begin
+                            if (s_axi_wstrb[i]) begin
+                                data_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*CYCLE_DATA_WIDTH+i*M_WORD_SIZE +: M_WORD_SIZE] = s_axi_wdata[i*M_WORD_SIZE +: M_WORD_SIZE];
+                                strb_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*CYCLE_STRB_WIDTH+i] = 1'b1;
+                            end
                         end
+                    end else begin
+                        data_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*CYCLE_DATA_WIDTH +: CYCLE_DATA_WIDTH] = s_axi_wdata;
+                        strb_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*CYCLE_STRB_WIDTH +: CYCLE_STRB_WIDTH] = s_axi_wstrb;
                     end
                     m_axi_wdata_int = data_next;
                     m_axi_wstrb_int = strb_next;

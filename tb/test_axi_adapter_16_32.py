@@ -62,6 +62,8 @@ def bench():
     RUSER_ENABLE = 0
     RUSER_WIDTH = 1
     CONVERT_BURST = 1
+    CONVERT_NARROW_BURST = 1
+    FORWARD_ID = 1
 
     # Inputs
     clk = Signal(bool(0))

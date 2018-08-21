@@ -47,7 +47,9 @@ module axi_adapter #
     parameter ARUSER_WIDTH = 1,
     parameter RUSER_ENABLE = 0,
     parameter RUSER_WIDTH = 1,
-    parameter CONVERT_BURST = 1
+    parameter CONVERT_BURST = 1,
+    parameter CONVERT_NARROW_BURST = 0,
+    parameter FORWARD_ID = 0
 )
 (
     input  wire                     clk,
@@ -163,7 +165,9 @@ axi_adapter_wr #(
     .WUSER_WIDTH(WUSER_WIDTH),
     .BUSER_ENABLE(BUSER_ENABLE),
     .BUSER_WIDTH(BUSER_WIDTH),
-    .CONVERT_BURST(CONVERT_BURST)
+    .CONVERT_BURST(CONVERT_BURST),
+    .CONVERT_NARROW_BURST(CONVERT_NARROW_BURST),
+    .FORWARD_ID(FORWARD_ID)
 )
 axi_adapter_wr_inst (
     .clk(clk),
@@ -237,7 +241,9 @@ axi_adapter_rd #(
     .ARUSER_WIDTH(ARUSER_WIDTH),
     .RUSER_ENABLE(RUSER_ENABLE),
     .RUSER_WIDTH(RUSER_WIDTH),
-    .CONVERT_BURST(CONVERT_BURST)
+    .CONVERT_BURST(CONVERT_BURST),
+    .CONVERT_NARROW_BURST(CONVERT_NARROW_BURST),
+    .FORWARD_ID(FORWARD_ID)
 )
 axi_adapter_rd_inst (
     .clk(clk),

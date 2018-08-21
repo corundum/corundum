@@ -41,7 +41,9 @@ module axi_adapter_rd #
     parameter ARUSER_WIDTH = 1,
     parameter RUSER_ENABLE = 0,
     parameter RUSER_WIDTH = 1,
-    parameter CONVERT_BURST = 1
+    parameter CONVERT_BURST = 1,
+    parameter CONVERT_NARROW_BURST = 0,
+    parameter FORWARD_ID = 0
 )
 (
     input  wire                     clk,
@@ -194,7 +196,7 @@ wire                    s_axi_rready_int_early;
 
 assign s_axi_arready = s_axi_arready_reg;
 
-assign m_axi_arid = m_axi_arid_reg;
+assign m_axi_arid = FORWARD_ID ? m_axi_arid_reg : {ID_WIDTH{1'b0}};
 assign m_axi_araddr = m_axi_araddr_reg;
 assign m_axi_arlen = m_axi_arlen_reg;
 assign m_axi_arsize = m_axi_arsize_reg;
@@ -318,11 +320,15 @@ always @* begin
                     addr_next = s_axi_araddr;
                     burst_next = s_axi_arlen;
                     burst_size_next = s_axi_arsize;
-                    if (CONVERT_BURST && s_axi_arcache[1]) begin
+                    if (CONVERT_BURST && s_axi_arcache[1] && (CONVERT_NARROW_BURST || s_axi_arsize == $clog2(S_WORD_WIDTH))) begin
                         // split reads
                         // require CONVERT_BURST and arcache[1] set
                         master_burst_size_next = $clog2(M_WORD_WIDTH);
-                        m_axi_arlen_next = (({{S_ADDR_BIT_OFFSET+1{1'b0}}, s_axi_arlen} << s_axi_arsize) + s_axi_araddr[M_ADDR_BIT_OFFSET-1:0]) >> $clog2(M_WORD_WIDTH);
+                        if (CONVERT_NARROW_BURST) begin
+                            m_axi_arlen_next = (({{S_ADDR_BIT_OFFSET+1{1'b0}}, s_axi_arlen} << s_axi_arsize) + s_axi_araddr[M_ADDR_BIT_OFFSET-1:0]) >> $clog2(M_WORD_WIDTH);
+                        end else begin
+                            m_axi_arlen_next = ({1'b0, s_axi_arlen} + s_axi_araddr[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]) >> $clog2(CYCLE_COUNT);
+                        end
                         m_axi_arsize_next = $clog2(M_WORD_WIDTH);
                         state_next = STATE_DATA_READ;
                     end else begin

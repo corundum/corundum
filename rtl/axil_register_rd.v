@@ -32,7 +32,7 @@ THE SOFTWARE.
 module axil_register_rd #
 (
     parameter DATA_WIDTH = 32,
-    parameter ADDR_WIDTH = 16,
+    parameter ADDR_WIDTH = 32,
     parameter STRB_WIDTH = (DATA_WIDTH/8),
     parameter AR_REG_TYPE = 1,
     parameter R_REG_TYPE = 1

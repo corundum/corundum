@@ -46,7 +46,7 @@ def bench():
 
     # Parameters
     DATA_WIDTH = 32
-    ADDR_WIDTH = 16
+    ADDR_WIDTH = 32
     STRB_WIDTH = (DATA_WIDTH/8)
     AW_REG_TYPE = 1
     W_REG_TYPE = 1

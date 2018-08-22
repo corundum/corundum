@@ -31,7 +31,7 @@ THE SOFTWARE.
  */
 module axil_adapter_rd #
 (
-    parameter ADDR_WIDTH = 16,
+    parameter ADDR_WIDTH = 32,
     parameter S_DATA_WIDTH = 32,
     parameter S_STRB_WIDTH = (S_DATA_WIDTH/8),
     parameter M_DATA_WIDTH = 32,

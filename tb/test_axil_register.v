@@ -33,7 +33,7 @@ module test_axil_register;
 
 // Parameters
 parameter DATA_WIDTH = 32;
-parameter ADDR_WIDTH = 16;
+parameter ADDR_WIDTH = 32;
 parameter STRB_WIDTH = (DATA_WIDTH/8);
 parameter AW_REG_TYPE = 1;
 parameter W_REG_TYPE = 1;

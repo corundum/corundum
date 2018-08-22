@@ -32,7 +32,7 @@ THE SOFTWARE.
 module axi_register #
 (
     parameter DATA_WIDTH = 32,
-    parameter ADDR_WIDTH = 16,
+    parameter ADDR_WIDTH = 32,
     parameter STRB_WIDTH = (DATA_WIDTH/8),
     parameter ID_WIDTH = 8,
     parameter AWUSER_ENABLE = 0,

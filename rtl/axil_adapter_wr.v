@@ -31,7 +31,7 @@ THE SOFTWARE.
  */
 module axil_adapter_wr #
 (
-    parameter ADDR_WIDTH = 16,
+    parameter ADDR_WIDTH = 32,
     parameter S_DATA_WIDTH = 32,
     parameter S_STRB_WIDTH = (S_DATA_WIDTH/8),
     parameter M_DATA_WIDTH = 32,
@@ -194,7 +194,7 @@ always @* begin
             end
             STATE_DATA: begin
                 s_axil_wready_next = !m_axil_wvalid;
-                
+
                 if (s_axil_wready && s_axil_wvalid) begin
                     s_axil_wready_next = 1'b0;
                     if (M_WORD_WIDTH == S_WORD_WIDTH) begin
@@ -247,7 +247,7 @@ always @* begin
             end
             STATE_DATA: begin
                 s_axil_wready_next = !m_axil_wvalid;
-                
+
                 if (s_axil_wready && s_axil_wvalid) begin
                     s_axil_wready_next = 1'b0;
                     data_next = s_axil_wdata;

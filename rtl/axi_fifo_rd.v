@@ -32,7 +32,7 @@ THE SOFTWARE.
 module axi_fifo_rd #
 (
     parameter DATA_WIDTH = 32,
-    parameter ADDR_WIDTH = 16,
+    parameter ADDR_WIDTH = 32,
     parameter STRB_WIDTH = (DATA_WIDTH/8),
     parameter ID_WIDTH = 8,
     parameter ARUSER_ENABLE = 0,

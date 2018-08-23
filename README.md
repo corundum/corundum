@@ -15,17 +15,17 @@ intelligent bus cosimulation endpoints.
 ### axi_adapter module
 
 AXI width adapter module with parametrizable data and address interface widths.
-Supports INCR burst types and narrow bursts.  Wrapper for axi_adapter_rd and axi_adapter_wr.  
+Supports INCR burst types and narrow bursts.  Wrapper for axi_adapter_rd and axi_adapter_wr.
 
 ### axi_adapter_rd module
 
 AXI width adapter module with parametrizable data and address interface widths.
-Supports INCR burst types and narrow bursts.  
+Supports INCR burst types and narrow bursts.
 
 ### axi_adapter_wr module
 
 AXI width adapter module with parametrizable data and address interface widths.
-Supports INCR burst types and narrow bursts.  
+Supports INCR burst types and narrow bursts.
 
 ### axi_fifo module
 
@@ -47,6 +47,12 @@ AXI FIFO with parametrizable data and address interface widths.  WR, W, and B
 channels only.  Supports all burst types.  Optionally can delay the address
 channel until the write data is shifted completely into the write data FIFO,
 or the current burst completely fills the write data FIFO.
+
+### axi_interconnect module
+
+AXI shared interconnect with parametrizable data and address interface
+widths.  Supports all burst types.  Small in area, but does not support
+concurrent operations.
 
 ### axi_ram module
 
@@ -77,7 +83,7 @@ changed or bypassed.
 ### axil_adapter module
 
 AXI lite width adapter module with parametrizable data and address interface
-widths.  Wrapper for axi_adapter_rd and axi_adapter_wr.  
+widths.  Wrapper for axi_adapter_rd and axi_adapter_wr.
 
 ### axil_adapter_rd module
 
@@ -92,7 +98,7 @@ widths.
 ### axil_interconnect module
 
 AXI lite shared interconnect with parametrizable data and address interface
-widths.  Small in area, but does not support concurrent operations.  
+widths.  Small in area, but does not support concurrent operations.
 
 ### axil_ram module
 
@@ -189,6 +195,7 @@ registers can be individually bypassed.
     rtl/axi_fifo.v                  : AXI FIFO
     rtl/axi_fifo_rd.v               : AXI FIFO (read)
     rtl/axi_fifo_wr.v               : AXI FIFO (write)
+    rtl/axi_interconnect.v          : AXI shared interconnect
     rtl/axi_ram.v                   : AXI RAM
     rtl/axi_register.v              : AXI register
     rtl/axi_register_rd.v           : AXI register (read)
@@ -196,7 +203,7 @@ registers can be individually bypassed.
     rtl/axil_adapter.v              : AXI lite width converter
     rtl/axil_adapter_rd.v           : AXI lite width converter (read)
     rtl/axil_adapter_wr.v           : AXI lite width converter (write)
-    rtl/axil_interconnect.v         : AXI lite interconnect
+    rtl/axil_interconnect.v         : AXI lite shared interconnect
     rtl/axil_ram.v                  : AXI lite RAM
     rtl/axil_register.v             : AXI lite register
     rtl/axil_register_rd.v          : AXI lite register (read)

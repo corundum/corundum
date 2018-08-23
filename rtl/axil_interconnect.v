@@ -234,8 +234,8 @@ genvar n;
 // request generation
 generate
 for (n = 0; n < S_COUNT; n = n + 1) begin
-    assign request[2*n]   = s_axil_awvalid[n] && (!s_axil_bvalid[n] || s_axil_bready[n]) && (!s_axil_rvalid[n] || s_axil_rready[n]);
-    assign request[2*n+1] = s_axil_arvalid[n] && (!s_axil_bvalid[n] || s_axil_bready[n]) && (!s_axil_rvalid[n] || s_axil_rready[n]);
+    assign request[2*n]   = s_axil_awvalid[n];
+    assign request[2*n+1] = s_axil_arvalid[n];
 end
 endgenerate
 

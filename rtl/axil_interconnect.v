@@ -302,7 +302,7 @@ always @* begin
 
             match = 1'b0;
             for (i = 0; i < M_COUNT; i = i + 1) begin
-                if (M_ADDR_WIDTH[i*32 +: 32] && (read ? M_CONNECT_READ[i][s_select] : M_CONNECT_WRITE[i][s_select]) && (axil_addr_reg >> M_ADDR_WIDTH[i*32 +: 32]) == (M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] >> M_ADDR_WIDTH[i*32 +: 32])) begin
+                if (M_ADDR_WIDTH[i*32 +: 32] && ((read ? M_CONNECT_READ : M_CONNECT_WRITE) & (1 << (s_select*S_COUNT+i))) && (axil_addr_reg >> M_ADDR_WIDTH[i*32 +: 32]) == (M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] >> M_ADDR_WIDTH[i*32 +: 32])) begin
                     m_select_next = i;
                     match = 1'b1;
                 end

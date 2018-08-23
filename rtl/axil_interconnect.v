@@ -401,10 +401,6 @@ always @* begin
         end
         STATE_WAIT_IDLE: begin
             // wait for idle state; wait untl grant valid is deasserted
-            if (current_s_axil_wready) begin
-                // dump any write data
-                s_axil_wready_next[s_select] = !current_s_axil_wvalid;
-            end
 
             if (!grant_valid || acknowledge) begin
                 state_next = STATE_IDLE;

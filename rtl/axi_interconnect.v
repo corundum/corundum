@@ -366,7 +366,7 @@ wire grant_valid;
 wire [CL_S_COUNT:0] grant_encoded;
 
 wire read = grant_encoded[0];
-wire [CL_S_COUNT-1:0] s_select = grant_encoded[CL_S_COUNT:1];
+wire [(CL_S_COUNT > 0 ? CL_S_COUNT-1 : 0):0] s_select = grant_encoded >> 1;
 
 arbiter #(
     .PORTS(S_COUNT*2),

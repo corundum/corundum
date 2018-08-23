@@ -502,6 +502,31 @@ def bench():
 
         yield delay(100)
 
+        yield clk.posedge
+        print("test 8: bad write")
+        current_test.next = 8
+
+        axil_master_inst_list[0].init_write(0xff000000, b'\xDE\xAD\xBE\xEF')
+
+        yield axil_master_inst_list[0].wait()
+        yield clk.posedge
+
+        yield delay(100)
+
+        yield clk.posedge
+        print("test 2: bad read")
+        current_test.next = 2
+
+        axil_master_inst_list[0].init_read(0xff000000, 4)
+
+        yield axil_master_inst_list[0].wait()
+        yield clk.posedge
+
+        data = axil_master_inst_list[0].get_read_data()
+        assert data[0] == 0xff000000
+
+        yield delay(100)
+
         raise StopSimulation
 
     return instances()

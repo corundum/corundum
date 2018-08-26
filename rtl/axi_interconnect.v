@@ -49,9 +49,9 @@ module axi_interconnect #
     parameter S_COUNT = 4,
     parameter M_COUNT = 4,
     parameter M_BASE_ADDR = {32'h03000000, 32'h02000000, 32'h01000000, 32'h00000000},
-    parameter M_ADDR_WIDTH = {32'd24, 32'd24, 32'd24, 32'd24},
-    parameter M_CONNECT_READ = {4'b1111, 4'b1111, 4'b1111, 4'b1111},
-    parameter M_CONNECT_WRITE = {4'b1111, 4'b1111, 4'b1111, 4'b1111}
+    parameter M_ADDR_WIDTH = {M_COUNT{32'd24}},
+    parameter M_CONNECT_READ = {M_COUNT{{S_COUNT{1'b1}}}},
+    parameter M_CONNECT_WRITE = {M_COUNT{{S_COUNT{1'b1}}}}
 )
 (
     input  wire                           clk,

@@ -205,10 +205,8 @@ reg [S_COUNT-1:0] s_axi_awready_reg = 0, s_axi_awready_next;
 reg [S_COUNT-1:0] s_axi_wready_reg = 0, s_axi_wready_next;
 reg [S_COUNT-1:0] s_axi_bvalid_reg = 0, s_axi_bvalid_next;
 reg [S_COUNT-1:0] s_axi_arready_reg = 0, s_axi_arready_next;
-//reg [S_COUNT-1:0] s_axi_rvalid_reg = 0, s_axi_rvalid_next;
 
 reg [M_COUNT-1:0] m_axi_awvalid_reg = 0, m_axi_awvalid_next;
-//reg [M_COUNT-1:0] m_axi_wvalid_reg = 0, m_axi_wvalid_next;
 reg [M_COUNT-1:0] m_axi_bready_reg = 0, m_axi_bready_next;
 reg [M_COUNT-1:0] m_axi_arvalid_reg = 0, m_axi_arvalid_next;
 reg [M_COUNT-1:0] m_axi_rready_reg = 0, m_axi_rready_next;
@@ -235,7 +233,7 @@ assign s_axi_awready = s_axi_awready_reg;
 assign s_axi_wready = s_axi_wready_reg;
 assign s_axi_bid = {S_COUNT{axi_id_reg}};
 assign s_axi_bresp = {S_COUNT{axi_bresp_reg}};
-assign s_axi_buser = {S_COUNT{BUSER_ENABLE ? axi_buser_reg[BUSER_WIDTH-1:0] : {BUSER_WIDTH{1'b0}}}};
+assign s_axi_buser = {S_COUNT{BUSER_ENABLE ? axi_buser_reg : {BUSER_WIDTH{1'b0}}}};
 assign s_axi_bvalid = s_axi_bvalid_reg;
 assign s_axi_arready = s_axi_arready_reg;
 

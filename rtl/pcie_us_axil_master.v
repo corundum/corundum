@@ -230,7 +230,7 @@ always @* begin
         4'b1zz1: m_axis_cc_tdata_int[28:16] = 13'd4; // Byte count
     endcase
     m_axis_cc_tdata_int[42:32] = 11'd1; // DWORD count
-    m_axis_cc_tdata_int[45:43] = status_next;
+    m_axis_cc_tdata_int[45:43] = status_reg;
     m_axis_cc_tdata_int[63:48] = requester_id_reg;
     if (AXIS_PCIE_DATA_WIDTH > 64) begin
         m_axis_cc_tdata_int[71:64] = tag_reg;
@@ -302,7 +302,7 @@ always @* begin
                         // read request
                         if (s_axis_cq_tlast && dword_count_next == 11'd1) begin
                             m_axil_arvalid_next = 1'b1;
-                            m_axil_rready_next = 1'b1;
+                            m_axil_rready_next = m_axis_cc_tready_int_early;
                             s_axis_cq_tready_next = 1'b0;
                             state_next = STATE_READ;
                         end else begin
@@ -327,6 +327,7 @@ always @* begin
                             s_axis_cq_tready_next = 1'b0;
                             state_next = STATE_WRITE_2;
                         end else if (AXIS_PCIE_DATA_WIDTH < 256 && dword_count_next == 11'd1) begin
+                            s_axis_cq_tready_next = 1'b1;
                             state_next = STATE_WRITE_1;
                         end else begin
                             // bad length
@@ -407,7 +408,7 @@ always @* begin
                     // read request
                     if (s_axis_cq_tlast && dword_count_next == 11'd1) begin
                         m_axil_arvalid_next = 1'b1;
-                        m_axil_rready_next = 1'b1;
+                        m_axil_rready_next = m_axis_cc_tready_int_early;
                         s_axis_cq_tready_next = 1'b0;
                         state_next = STATE_READ;
                     end else begin
@@ -426,6 +427,7 @@ always @* begin
                 end else if (type_next == 4'b0001 || type_next == 4'b0011) begin
                     // write request
                     if (dword_count_next == 11'd1) begin
+                        s_axis_cq_tready_next = 1'b1;
                         state_next = STATE_WRITE_1;
                     end else begin
                         // bad length
@@ -487,7 +489,7 @@ always @* begin
         end
         STATE_READ: begin
             // read state, wait for read response
-            m_axil_rready_next = 1'b1;
+            m_axil_rready_next = m_axis_cc_tready_int_early;
 
             m_axis_cc_tdata_int[42:32] = 11'd1; // DWORD count
             m_axis_cc_tdata_int[45:43] = 3'b000; // status: successful completion
@@ -522,7 +524,7 @@ always @* begin
         end
         STATE_WRITE_1: begin
             // write 1 state, store write data and initiate write
-            s_axis_cq_tready_next = m_axis_cc_tready_int_early;
+            s_axis_cq_tready_next = 1'b1;
 
             // data
             m_axil_wdata_next = s_axis_cq_tdata[31:0];

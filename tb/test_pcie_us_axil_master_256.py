@@ -232,6 +232,8 @@ def bench():
 
         cur_tag = 1
 
+        completer_id.next = pcie_us.id2int((4, 5, 6))
+
         yield clk.posedge
         print("test 1: baseline")
         current_test.next = 1
@@ -272,8 +274,46 @@ def bench():
         yield delay(100)
 
         yield clk.posedge
-        print("test 3: memory read")
+        print("test 3: IO write")
         current_test.next = 3
+
+        tlp = pcie_us.TLP_us()
+        tlp.fmt, tlp.type = pcie_us.TLP_IO_WRITE
+        tlp.requester_id = (1, 2, 3)
+        tlp.tag = cur_tag
+        tlp.tc = 0
+        tlp.set_be_data(0x0000, b'\x11\x22\x33\x44')
+        tlp.address = 0x0000
+
+        cq_source.send(tlp.pack_us_cq(AXIS_PCIE_DATA_WIDTH))
+
+        yield cc_sink.wait(500)
+        pkt = cc_sink.recv()
+
+        rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt, AXIS_PCIE_DATA_WIDTH)
+
+        print(rx_tlp)
+
+        assert rx_tlp.status == pcie_us.CPL_STATUS_SC
+        assert rx_tlp.tag == cur_tag
+        assert rx_tlp.completer_id == (4, 5, 6)
+
+        data = axil_ram_inst.read_mem(0, 32)
+        for i in range(0, len(data), 16):
+            print(" ".join(("{:02x}".format(c) for c in bytearray(data[i:i+16]))))
+
+        assert axil_ram_inst.read_mem(0, 4) == b'\x11\x22\x33\x44'
+
+        assert not status_error_cor_asserted
+        assert not status_error_uncor_asserted
+
+        cur_tag = (cur_tag + 1) % 32
+
+        yield delay(100)
+
+        yield clk.posedge
+        print("test 4: memory read")
+        current_test.next = 4
 
         tlp = pcie_us.TLP_us()
         tlp.fmt, tlp.type = pcie_us.TLP_MEM_READ
@@ -298,7 +338,9 @@ def bench():
         print(data)
 
         assert data == b'\x11\x22\x33\x44'
+        assert rx_tlp.status == pcie_us.CPL_STATUS_SC
         assert rx_tlp.tag == cur_tag
+        assert rx_tlp.completer_id == (4, 5, 6)
 
         assert not status_error_cor_asserted
         assert not status_error_uncor_asserted
@@ -308,8 +350,46 @@ def bench():
         yield delay(100)
 
         yield clk.posedge
-        print("test 4: various writes")
-        current_test.next = 4
+        print("test 5: IO read")
+        current_test.next = 5
+
+        tlp = pcie_us.TLP_us()
+        tlp.fmt, tlp.type = pcie_us.TLP_IO_READ
+        tlp.requester_id = (1, 2, 3)
+        tlp.tag = cur_tag
+        tlp.tc = 0
+        tlp.length = 1
+        tlp.set_be(0x0000, 4)
+        tlp.address = 0x0000
+
+        cq_source.send(tlp.pack_us_cq(AXIS_PCIE_DATA_WIDTH))
+
+        yield cc_sink.wait(500)
+        pkt = cc_sink.recv()
+
+        rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt, AXIS_PCIE_DATA_WIDTH)
+
+        print(rx_tlp)
+
+        data = rx_tlp.get_data()
+
+        print(data)
+
+        assert data == b'\x11\x22\x33\x44'
+        assert rx_tlp.status == pcie_us.CPL_STATUS_SC
+        assert rx_tlp.tag == cur_tag
+        assert rx_tlp.completer_id == (4, 5, 6)
+
+        assert not status_error_cor_asserted
+        assert not status_error_uncor_asserted
+
+        cur_tag = (cur_tag + 1) % 32
+
+        yield delay(100)
+
+        yield clk.posedge
+        print("test 6: various writes")
+        current_test.next = 6
 
         for length in range(1,5):
             for offset in range(4,8-length+1):
@@ -343,8 +423,8 @@ def bench():
         yield delay(100)
 
         yield clk.posedge
-        print("test 4: various reads")
-        current_test.next = 4
+        print("test 7: various reads")
+        current_test.next = 7
 
         for length in range(1,5):
             for offset in range(4,8-length+1):
@@ -371,7 +451,9 @@ def bench():
                 print(data)
 
                 assert data == b'\xAA'*(offset-4)+b'\x11\x22\x33\x44'[0:length]+b'\xAA'*(8-offset-length)
+                assert rx_tlp.status == pcie_us.CPL_STATUS_SC
                 assert rx_tlp.tag == cur_tag
+                assert rx_tlp.completer_id == (4, 5, 6)
 
                 assert not status_error_cor_asserted
                 assert not status_error_uncor_asserted
@@ -381,8 +463,8 @@ def bench():
         yield delay(100)
 
         yield clk.posedge
-        print("test 5: bad memory write")
-        current_test.next = 5
+        print("test 8: bad memory write")
+        current_test.next = 8
 
         tlp = pcie_us.TLP_us()
         tlp.fmt, tlp.type = pcie_us.TLP_MEM_WRITE
@@ -406,8 +488,8 @@ def bench():
         yield delay(100)
 
         yield clk.posedge
-        print("test 6: bad memory read")
-        current_test.next = 6
+        print("test 9: bad memory read")
+        current_test.next = 9
 
         tlp = pcie_us.TLP_us()
         tlp.fmt, tlp.type = pcie_us.TLP_MEM_READ
@@ -428,6 +510,7 @@ def bench():
 
         assert rx_tlp.status == pcie_us.CPL_STATUS_CA
         assert rx_tlp.tag == cur_tag
+        assert rx_tlp.completer_id == (4, 5, 6)
 
         assert status_error_cor_asserted
         assert not status_error_uncor_asserted

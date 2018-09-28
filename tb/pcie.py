@@ -233,30 +233,34 @@ class TLP(object):
                 raise Exception("TLP validation failed, request crosses 4K boundary")
         return True
 
-    def set_completion(self, tlp, completer_id):
+    def set_completion(self, tlp, completer_id, has_data=False, status=CPL_STATUS_SC):
         """Prepare completion for TLP"""
-        self.fmt, self.type = TLP_CPL
+        if has_data:
+            self.fmt, self.type = TLP_CPL_DATA
+        else:
+            self.fmt, self.type = TLP_CPL
         self.requester_id = tlp.requester_id
         self.completer_id = completer_id
-        self.status = CPL_STATUS_SC
+        self.status = status
         self.attr = tlp.attr
         self.tag = tlp.tag
         self.tc = tlp.tc
 
+    def set_completion_data(self, tlp, completer_id):
+        """Prepare completion with data for TLP"""
+        self.set_completion(tlp, completer_id, True)
+
     def set_ur_completion(self, tlp, completer_id):
         """Prepare unsupported request (UR) completion for TLP"""
-        self.set_completion(tlp, completer_id)
-        self.status = CPL_STATUS_UR
+        self.set_completion(tlp, completer_id, False, CPL_STATUS_UR)
 
     def set_crs_completion(self, tlp, completer_id):
         """Prepare configuration request retry status (CRS) completion for TLP"""
-        self.set_completion(tlp, completer_id)
-        self.status = CPL_STATUS_CRS
+        self.set_completion(tlp, completer_id, False, CPL_STATUS_CRS)
 
     def set_ca_completion(self, tlp, completer_id):
         """Prepare completer abort (CA) completion for TLP"""
-        self.set_completion(tlp, completer_id)
-        self.status = CPL_STATUS_CA
+        self.set_completion(tlp, completer_id, False, CPL_STATUS_CA)
 
     def set_be(self, addr, length):
         """Compute byte enables and DWORD length from byte address and length"""

@@ -382,7 +382,7 @@ class TLP(object):
                     pkt.append(l)
                 l |= self.address & 0xfffffffc
                 pkt.append(l)
-        if ((self.fmt, self.type) == TLP_CPL or (self.fmt, self.type) == TLP_CPL_DATA or
+        elif ((self.fmt, self.type) == TLP_CPL or (self.fmt, self.type) == TLP_CPL_DATA or
                 (self.fmt, self.type) == TLP_CPL_LOCKED or (self.fmt, self.type) == TLP_CPL_LOCKED_DATA):
             l = self.byte_count & 0xfff
             l |= (self.bcm & 1) << 12
@@ -393,6 +393,8 @@ class TLP(object):
             l |= (self.tag & 0xff) << 8
             l |= id2int(self.requester_id) << 16
             pkt.append(l)
+        else:
+            raise Exception("Unknown TLP type")
 
         if self.fmt == FMT_3DW_DATA or self.fmt == FMT_4DW_DATA:
             pkt.extend(self.data)
@@ -435,7 +437,7 @@ class TLP(object):
                 self.address = pkt[3] & 0xfffffffc
             elif self.fmt == FMT_4DW or self.fmt == FMT_4DW_DATA:
                 self.address = (pkt[4] & 0xffffffff) << 32 | pkt[4] & 0xfffffffc
-        if ((self.fmt, self.type) == TLP_CPL or (self.fmt, self.type) == TLP_CPL_DATA or
+        elif ((self.fmt, self.type) == TLP_CPL or (self.fmt, self.type) == TLP_CPL_DATA or
                 (self.fmt, self.type) == TLP_CPL_LOCKED or (self.fmt, self.type) == TLP_CPL_LOCKED_DATA):
             self.byte_count = pkt[1] & 0xfff
             self.bcm = (pkt[1] >> 12) & 1
@@ -447,6 +449,8 @@ class TLP(object):
 
             if self.byte_count == 0:
                 self.byte_count = 4096
+        else:
+            raise Exception("Unknown TLP type")
 
         if self.fmt == FMT_3DW_DATA:
             self.data = pkt[3:]

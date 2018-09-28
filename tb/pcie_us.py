@@ -484,7 +484,7 @@ class TLP_us(TLP):
             # TODO poisoned completion
             l |= id2int(self.requester_id) << 16
             pkt.data.append(l)
-            l |= (self.tag & 0xff)
+            l = (self.tag & 0xff)
             l |= id2int(self.completer_id) << 8
             l |= (self.tc & 0x7) << 25
             l |= (self.attr & 0x7) << 28

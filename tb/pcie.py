@@ -306,11 +306,15 @@ class TLP(object):
 
     def get_last_be_offset(self):
         """Offset after last transferred byte from last byte enable"""
-        if self.last_be & 0xf == 0x1:
+        if self.length == 1:
+            be = self.first_be
+        else:
+            be = self.last_be
+        if be & 0xf == 0x1:
             return 3
-        elif self.last_be & 0xe == 0x2:
+        elif be & 0xe == 0x2:
             return 2
-        elif self.last_be & 0xc == 0x4:
+        elif be & 0xc == 0x4:
             return 1
         else:
             return 0

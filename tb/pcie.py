@@ -1427,6 +1427,9 @@ class Function(PMCapability, PCIECapability):
 
         super(Function, self).__init__(*args, **kwargs)
 
+    def get_id(self):
+        return (self.bus_num, self.device_num, self.function_num)
+
     def get_desc(self):
         return "%02x:%02x.%x %s" % (self.bus_num, self.device_num, self.function_num, self.desc)
 
@@ -1760,7 +1763,7 @@ class Function(PMCapability, PCIECapability):
 
             # prepare completion TLP
             cpl = TLP()
-            cpl.set_completion(tlp, (self.bus_num, self.device_num, self.function_num))
+            cpl.set_completion(tlp, self.get_id())
 
             # perform operation
             if (tlp.fmt, tlp.type) == TLP_CFG_READ_0:
@@ -1790,7 +1793,7 @@ class Function(PMCapability, PCIECapability):
         while n < length:
             tlp = TLP()
             tlp.fmt, tlp.type = TLP_IO_READ
-            tlp.requester_id = (self.bus_num, self.device_num, self.function_num)
+            tlp.requester_id = self.get_id()
             tlp.tag = self.current_tag
 
             first_pad = addr % 4
@@ -1828,7 +1831,7 @@ class Function(PMCapability, PCIECapability):
         while n < len(data):
             tlp = TLP()
             tlp.fmt, tlp.type = TLP_IO_WRITE
-            tlp.requester_id = (self.bus_num, self.device_num, self.function_num)
+            tlp.requester_id = self.get_id()
             tlp.tag = self.current_tag
 
             first_pad = addr % 4
@@ -1864,7 +1867,7 @@ class Function(PMCapability, PCIECapability):
                 tlp.fmt, tlp.type = TLP_MEM_READ_64
             else:
                 tlp.fmt, tlp.type = TLP_MEM_READ
-            tlp.requester_id = (self.bus_num, self.device_num, self.function_num)
+            tlp.requester_id = self.get_id()
             tlp.tag = self.current_tag
 
             first_pad = addr % 4
@@ -1917,7 +1920,7 @@ class Function(PMCapability, PCIECapability):
                 tlp.fmt, tlp.type = TLP_MEM_WRITE_64
             else:
                 tlp.fmt, tlp.type = TLP_MEM_WRITE
-            tlp.requester_id = (self.bus_num, self.device_num, self.function_num)
+            tlp.requester_id = self.get_id()
             tlp.tag = self.current_tag
 
             first_pad = addr % 4
@@ -2084,8 +2087,7 @@ class MemoryEndpoint(Endpoint):
 
             # prepare completion TLP
             cpl = TLP()
-            cpl.set_completion(tlp, (self.bus_num, self.device_num, self.function_num))
-            cpl.fmt, cpl.type = TLP_CPL_DATA
+            cpl.set_completion_data(tlp, self.get_id())
 
             region = m[0][0]
             addr = m[0][1]
@@ -2093,7 +2095,7 @@ class MemoryEndpoint(Endpoint):
             start_offset = None
             mask = tlp.first_be
 
-            # perform operation
+            # perform read
             data = bytearray(4)
 
             for k in range(4):
@@ -2124,7 +2126,7 @@ class MemoryEndpoint(Endpoint):
 
             # Unsupported request
             cpl = TLP()
-            cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, self.function_num))
+            cpl.set_ur_completion(tlp, self.get_id())
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
             yield self.send(cpl)
@@ -2137,7 +2139,7 @@ class MemoryEndpoint(Endpoint):
 
             # prepare completion TLP
             cpl = TLP()
-            cpl.set_completion(tlp, (self.bus_num, self.device_num, self.function_num))
+            cpl.set_completion(tlp, self.get_id())
 
             region = m[0][0]
             addr = m[0][1]
@@ -2145,7 +2147,7 @@ class MemoryEndpoint(Endpoint):
             start_offset = None
             mask = tlp.first_be
 
-            # perform operation
+            # perform write
             data = tlp.get_data()
 
             for k in range(4):
@@ -2172,7 +2174,7 @@ class MemoryEndpoint(Endpoint):
 
             # Unsupported request
             cpl = TLP()
-            cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, self.function_num))
+            cpl.set_ur_completion(tlp, self.get_id())
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
             yield self.send(cpl)
@@ -2201,7 +2203,7 @@ class MemoryEndpoint(Endpoint):
 
             while n < length:
                 cpl = TLP()
-                cpl.set_completion(tlp, (self.bus_num, self.device_num, self.function_num))
+                cpl.set_completion_data(tlp, self.get_id())
 
                 byte_length = length-n
                 cpl.byte_count = byte_length
@@ -2227,7 +2229,7 @@ class MemoryEndpoint(Endpoint):
 
             # Unsupported request
             cpl = TLP()
-            cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, self.function_num))
+            cpl.set_ur_completion(tlp, self.get_id())
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
             yield self.send(cpl)
@@ -2447,7 +2449,7 @@ class Bridge(Function):
         elif ((tlp.fmt, tlp.type) == TLP_CPL or (tlp.fmt, tlp.type) == TLP_CPL_DATA or
                 (tlp.fmt, tlp.type) == TLP_CPL_LOCKED or (tlp.fmt, tlp.type) == TLP_CPL_LOCKED_DATA):
             # Completions
-            if not self.root and tlp.requester_id == (self.bus_num, self.device_num, self.function_num):
+            if not self.root and tlp.requester_id == self.get_id():
                 # for me
                 yield self.handle_tlp(tlp)
             elif self.sec_bus_num <= tlp.requester_id[0] <= self.sub_bus_num:
@@ -2457,7 +2459,7 @@ class Bridge(Function):
                 pass
         elif (tlp.fmt, tlp.type) == TLP_MSG_ID or (tlp.fmt, tlp.type) == TLP_MSG_DATA_ID:
             # ID routed message
-            if not self.root and tlp.dest_id == (self.bus_num, self.device_num, self.function_num):
+            if not self.root and tlp.dest_id == self.get_id():
                 # for me
                 yield self.handle_tlp(tlp)
             elif self.sec_bus_num <= tlp.dest_id[0] <= self.sub_bus_num:
@@ -2521,7 +2523,7 @@ class Bridge(Function):
         elif ((tlp.fmt, tlp.type) == TLP_CPL or (tlp.fmt, tlp.type) == TLP_CPL_DATA or
                 (tlp.fmt, tlp.type) == TLP_CPL_LOCKED or (tlp.fmt, tlp.type) == TLP_CPL_LOCKED_DATA):
             # Completions
-            if not self.root and tlp.requester_id == (self.bus_num, self.device_num, self.function_num):
+            if not self.root and tlp.requester_id == self.get_id():
                 # for me
                 yield self.handle_tlp(tlp)
             elif self.sec_bus_num <= tlp.requester_id[0] <= self.sub_bus_num:
@@ -2533,7 +2535,7 @@ class Bridge(Function):
                 yield self.upstream_send(tlp)
         elif (tlp.fmt, tlp.type) == TLP_MSG_ID or (tlp.fmt, tlp.type) == TLP_MSG_DATA_ID:
             # ID routed messages
-            if not self.root and tlp.dest_id == (self.bus_num, self.device_num, self.function_num):
+            if not self.root and tlp.dest_id == self.get_id():
                 # for me
                 yield self.handle_tlp(tlp)
             elif self.sec_bus_num <= tlp.dest_id[0] <= self.sub_bus_num:
@@ -2850,7 +2852,7 @@ class TreeItem(object):
         self.children = []
 
     def find_dev(self, b, d, f):
-        if (b, d, f) == (self.bus_num, self.device_num, self.function_num):
+        if (b, d, f) == self.get_id():
             return self
         for c in self.children:
             res = c.find_dev(b, d, f)
@@ -3104,15 +3106,14 @@ class RootComplex(Switch):
 
             # prepare completion TLP
             cpl = TLP()
-            cpl.set_completion(tlp, (0, 0, 0))
-            cpl.fmt, cpl.type = TLP_CPL_DATA
+            cpl.set_completion_data(tlp, (0, 0, 0))
 
             addr = tlp.address
             offset = 0
             start_offset = None
             mask = tlp.first_be
 
-            # perform operation
+            # perform read
             data = bytearray(4)
 
             for k in range(4):
@@ -3162,7 +3163,7 @@ class RootComplex(Switch):
             start_offset = None
             mask = tlp.first_be
 
-            # perform operation
+            # perform write
             data = tlp.get_data()
 
             for k in range(4):
@@ -3220,7 +3221,7 @@ class RootComplex(Switch):
 
             while n < length:
                 cpl = TLP()
-                cpl.set_completion(tlp, (0, 0, 0))
+                cpl.set_completion_data(tlp, (0, 0, 0))
 
                 byte_length = length-n
                 cpl.byte_count = byte_length

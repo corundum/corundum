@@ -412,6 +412,10 @@ class TLP(object):
         self.type = (pkt[0] >> 24) & 0x1f
         self.fmt = (pkt[0] >> 29) & 0x7
 
+        if self.fmt == FMT_3DW_DATA or self.fmt == FMT_4DW_DATA:
+            if self.length == 0:
+                self.length = 1024
+
         if ((self.fmt, self.type) == TLP_CFG_READ_0 or (self.fmt, self.type) == TLP_CFG_WRITE_0 or
                 (self.fmt, self.type) == TLP_CFG_READ_1 or (self.fmt, self.type) == TLP_CFG_WRITE_1 or
                 (self.fmt, self.type) == TLP_MEM_READ or (self.fmt, self.type) == TLP_MEM_READ_64 or
@@ -440,6 +444,9 @@ class TLP(object):
             self.lower_address = pkt[2] & 0x7f
             self.tag = (pkt[2] >> 8) & 0xff
             self.requester_id = int2id(pkt[2] >> 16)
+
+            if self.byte_count == 0:
+                self.byte_count = 4096
 
         if self.fmt == FMT_3DW_DATA:
             self.data = pkt[3:]

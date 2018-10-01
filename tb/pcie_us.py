@@ -86,10 +86,10 @@ class TLP_us(TLP):
                 l |= 6 << 11
             elif self.fmt_type == TLP_MEM_READ_LOCKED or self.fmt_type == TLP_MEM_READ_LOCKED_64:
                 l |= 7 << 11
-            l |= id2int(self.requester_id) << 16
+            l |= int(self.requester_id) << 16
             pkt.data.append(l)
             l = (self.tag & 0xff)
-            l |= (self.completer_id[2] & 0xff) << 8
+            l |= (self.completer_id.function & 0xff) << 8
             l |= (self.bar_id & 0x7) << 16
             l |= (self.bar_aperture & 0x3f) << 19
             l |= (self.tc & 0x7) << 25
@@ -162,7 +162,7 @@ class TLP_us(TLP):
             raise Exception("Invalid packet type")
 
         self.length = pkt.data[2] & 0x7ff
-        self.requester_id = int2id(pkt.data[2] >> 16)
+        self.requester_id = PcieId.from_int(pkt.data[2] >> 16)
         self.tag = pkt.data[3] & 0xff
         self.tc = (pkt.data[3] >> 25) & 0x7
         self.attr = (pkt.data[3] >> 28) & 0x7
@@ -176,7 +176,7 @@ class TLP_us(TLP):
                     self.fmt = FMT_4DW
                 elif self.fmt == FMT_3DW_DATA:
                     self.fmt = FMT_4DW_DATA
-            self.completer_id = (0, 0, (pkt.data[3] >> 8) & 0xff)
+            self.completer_id = PcieId(0, 0, (pkt.data[3] >> 8) & 0xff)
             self.bar_id = (pkt.data[3] >> 16) & 7
             self.bar_aperture = (pkt.data[3] >> 19) & 0x3f
 
@@ -227,10 +227,10 @@ class TLP_us(TLP):
             l = self.length & 0x7ff
             l |= (self.status & 0x7) << 11
             # TODO poisoned completion
-            l |= id2int(self.requester_id) << 16
+            l |= int(self.requester_id) << 16
             pkt.data.append(l)
             l = (self.tag & 0xff)
-            l |= id2int(self.completer_id) << 8
+            l |= int(self.completer_id) << 8
             if self.completer_id_enable: l |= 1 << 24
             l |= (self.tc & 0x7) << 25
             l |= (self.attr & 0x7) << 28
@@ -275,8 +275,8 @@ class TLP_us(TLP):
         if self.length > 0:
             self.fmt = FMT_3DW_DATA
         self.status = (pkt.data[1] >> 11) & 7
-        self.requester_id = int2id(pkt.data[1] >> 16)
-        self.completer_id = int2id(pkt.data[2] >> 8)
+        self.requester_id = PcieId.from_int(pkt.data[1] >> 16)
+        self.completer_id = PcieId.from_int(pkt.data[2] >> 8)
         self.completer_id_enable = pkt.data[2] >> 24 & 1 != 0
         self.tag = pkt.data[2] & 0xff
         self.tc = (pkt.data[2] >> 25) & 0x7
@@ -347,10 +347,10 @@ class TLP_us(TLP):
             elif self.fmt_type == TLP_CFG_WRITE_1:
                 l |= 11 << 11
             # TODO poisoned
-            l |= id2int(self.requester_id) << 16
+            l |= int(self.requester_id) << 16
             pkt.data.append(l)
             l = (self.tag & 0xff)
-            l |= id2int(self.completer_id) << 8
+            l |= int(self.completer_id) << 8
             if self.requester_id_enable: l |= 1 << 24
             l |= (self.tc & 0x7) << 25
             l |= (self.attr & 0x7) << 28
@@ -424,7 +424,7 @@ class TLP_us(TLP):
 
         self.length = pkt.data[2] & 0x7ff
         # TODO poisoned
-        self.requester_id = int2id(pkt.data[2] >> 16)
+        self.requester_id = PcieId.from_int(pkt.data[2] >> 16)
         self.tag = pkt.data[3] & 0xff
         self.tc = (pkt.data[3] >> 25) & 0x7
         self.attr = (pkt.data[3] >> 28) & 0x7
@@ -441,7 +441,7 @@ class TLP_us(TLP):
                         self.fmt = FMT_4DW_DATA
             else:
                 self.register_number = (pkt.data[0] >> 2) & 0x3ff
-            self.completer_id = int2id(pkt.data[3] >> 8)
+            self.completer_id = PcieId.from_int(pkt.data[3] >> 8)
             self.requester_id_enable = pkt.data[3] >> 24 & 1 != 0
 
             self.first_be = pkt.user[0] & 0xf
@@ -482,10 +482,10 @@ class TLP_us(TLP):
             l = self.length & 0x7ff
             l |= (self.status & 0x7) << 11
             # TODO poisoned completion
-            l |= id2int(self.requester_id) << 16
+            l |= int(self.requester_id) << 16
             pkt.data.append(l)
             l = (self.tag & 0xff)
-            l |= id2int(self.completer_id) << 8
+            l |= int(self.completer_id) << 8
             l |= (self.tc & 0x7) << 25
             l |= (self.attr & 0x7) << 28
             pkt.data.append(l)
@@ -544,8 +544,8 @@ class TLP_us(TLP):
         if self.length > 0:
             self.fmt = FMT_3DW_DATA
         self.status = (pkt.data[1] >> 11) & 7
-        self.requester_id = int2id(pkt.data[1] >> 16)
-        self.completer_id = int2id(pkt.data[2] >> 8)
+        self.requester_id = PcieId.from_int(pkt.data[1] >> 16)
+        self.completer_id = PcieId.from_int(pkt.data[2] >> 8)
         self.tag = pkt.data[2] & 0xff
         self.tc = (pkt.data[2] >> 25) & 0x7
         self.attr = (pkt.data[2] >> 28) & 0x7
@@ -700,16 +700,16 @@ class UltrascalePCIe(Device):
                 print("[%s] CRS Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
                 yield self.upstream_send(cpl)
                 return
-            elif tlp.dest_id[1] == self.device_num:
+            elif tlp.dest_id.device == self.device_num:
                 # capture address information
-                self.bus_num = tlp.dest_id[0]
+                self.bus_num = tlp.dest_id.bus
 
                 for f in self.functions:
                     f.bus_num = self.bus_num
 
                 # pass TLP to function
                 for f in self.functions:
-                    if f.function_num == tlp.dest_id[2]:
+                    if f.function_num == tlp.dest_id.function:
                         yield f.upstream_recv(tlp)
                         return
 
@@ -728,9 +728,9 @@ class UltrascalePCIe(Device):
                 tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
             # Completion
 
-            if tlp.requester_id[0] == self.bus_num and tlp.requester_id[1] == self.device_num:
+            if tlp.requester_id.bus == self.bus_num and tlp.requester_id.device == self.device_num:
                 for f in self.functions:
-                    if f.function_num == tlp.requester_id[2]:
+                    if f.function_num == tlp.requester_id.function:
 
                         tlp = TLP_us(tlp)
                         self.rc_queue.append(tlp)
@@ -750,7 +750,7 @@ class UltrascalePCIe(Device):
                     tlp = TLP_us(tlp)
                     tlp.bar_id = bar[0][0]
                     tlp.bar_aperture = int(math.log2((~self.functions[0].bar_mask[bar[0][0]]&0xffffffff)+1))
-                    tlp.completer_id = (self.bus_num, self.device_num, f.function_num)
+                    tlp.completer_id = PcieId(self.bus_num, self.device_num, f.function_num)
                     self.cq_queue.append(tlp)
 
                     return
@@ -777,7 +777,7 @@ class UltrascalePCIe(Device):
                         tlp.bar_aperture = int(math.log2((~(self.functions[0].bar_mask[bar[0][0]] | (self.functions[0].bar_mask[bar[0][0]+1]<<32))&0xffffffffffffffff)+1))
                     else:
                         tlp.bar_aperture = int(math.log2((~self.functions[0].bar_mask[bar[0][0]]&0xffffffff)+1))
-                    tlp.completer_id = (self.bus_num, self.device_num, f.function_num)
+                    tlp.completer_id = PcieId(self.bus_num, self.device_num, f.function_num)
                     self.cq_queue.append(tlp)
 
                     return
@@ -787,7 +787,7 @@ class UltrascalePCIe(Device):
             if tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64:
                 # Unsupported request
                 cpl = TLP()
-                cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
+                cpl.set_ur_completion(tlp, PcieId(self.bus_num, self.device_num, 0))
                 # logging
                 print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
                 yield self.upstream_send(cpl)
@@ -1349,7 +1349,7 @@ class UltrascalePCIe(Device):
                     tlp = TLP_us().unpack_us_cc(pkt, self.dw, self.enable_parity)
 
                     if not tlp.completer_id_enable:
-                        tlp.completer_id = (self.bus_num, self.device_num, tlp.completer_id[2])
+                        tlp.completer_id = PcieId(self.bus_num, self.device_num, tlp.completer_id.function)
 
                     if not tlp.discontinue:
                         yield self.send(TLP(tlp))
@@ -1361,10 +1361,10 @@ class UltrascalePCIe(Device):
                     tlp = TLP_us().unpack_us_rq(pkt, self.dw, self.enable_parity)
 
                     if not tlp.requester_id_enable:
-                        tlp.requester_id = (self.bus_num, self.device_num, tlp.requester_id[2])
+                        tlp.requester_id = PcieId(self.bus_num, self.device_num, tlp.requester_id.function)
 
                     if not tlp.discontinue:
-                        if self.functions[tlp.requester_id[2]].bus_master_enable:
+                        if self.functions[tlp.requester_id.function].bus_master_enable:
                             yield self.send(TLP(tlp))
                         else:
                             print("Bus mastering disabled")

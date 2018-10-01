@@ -155,20 +155,43 @@ def byte_mask_update(old, mask, new, bitmask=-1):
     return old
 
 
-def id2int(id):
-    return ((id[0] & 0xff) << 8) | ((id[1] & 0x1f) << 3) | (id[2] & 0x7)
-
-
-def int2id(i):
-    return ((i >> 8) & 0xff, (i >> 3) & 0x1f, i & 0x7)
-
-
-def id_to_str(id):
-    return "%02x:%02x.%x" % id
-
-
 def highlight(s):
     return "\033[32m%s\033[0m" % s
+
+
+class PcieId(object):
+    def __init__(self, bus=0, device=0, function=0):
+        self.bus = 0
+        self.device = 0
+        self.function = 0
+        if isinstance(bus, PcieId):
+            self.bus = bus.bus
+            self.device = bus.device
+            self.function = bus.function
+        elif isinstance(bus, tuple):
+            self.bus, self.device, self.function = bus
+        else:
+            self.bus = bus
+            self.device = device
+            self.function = function
+
+    @classmethod
+    def from_int(cls, val):
+        return cls((val >> 8) & 0xff, (val >> 3) & 0x1f, val & 0x7)
+
+    def __eq__(self, other):
+        if isinstance(other, PcieId):
+            return self.bus == other.bus and self.device == other.device and self.function == other.function
+        return False
+
+    def __int__(self):
+        return ((self.bus & 0xff) << 8) | ((self.device & 0x1f) << 3) | (self.function & 0x7)
+
+    def __str__(self):
+        return "%02x:%02x.%x" % (self.bus, self.device, self.function)
+
+    def __repr__(self):
+        return "PcieId(%d, %d, %d)" % (self.bus, self.device, self.function)
 
 
 class TLP(object):
@@ -182,12 +205,12 @@ class TLP(object):
         self.attr = 0
         self.at = 0
         self.length = 0
-        self.completer_id = (0, 0, 0)
+        self.completer_id = PcieId(0, 0, 0)
         self.status = 0
         self.bcm = 0
         self.byte_count = 0
-        self.requester_id = (0, 0, 0)
-        self.dest_id = (0, 0, 0)
+        self.requester_id = PcieId(0, 0, 0)
+        self.dest_id = PcieId(0, 0, 0)
         self.tag = 0
         self.first_be = 0
         self.last_be = 0
@@ -226,6 +249,30 @@ class TLP(object):
     @fmt_type.setter
     def fmt_type(self, val):
         self.fmt, self.type = val
+
+    @property
+    def completer_id(self):
+        return self._completer_id
+    
+    @completer_id.setter
+    def completer_id(self, val):
+        self._completer_id = PcieId(val)
+
+    @property
+    def requester_id(self):
+        return self._requester_id
+    
+    @requester_id.setter
+    def requester_id(self, val):
+        self._requester_id = PcieId(val)
+
+    @property
+    def dest_id(self):
+        return self._dest_id
+    
+    @dest_id.setter
+    def dest_id(self, val):
+        self._dest_id = PcieId(val)
 
     def check(self):
         """Validate TLP"""
@@ -375,13 +422,13 @@ class TLP(object):
             l = self.first_be & 0xf
             l |= (self.last_be & 0xf) << 4
             l |= (self.tag & 0xff) << 8
-            l |= id2int(self.requester_id) << 16
+            l |= int(self.requester_id) << 16
             pkt.append(l)
 
             if (self.fmt_type == TLP_CFG_READ_0 or self.fmt_type == TLP_CFG_WRITE_0 or
                     self.fmt_type == TLP_CFG_READ_1 or self.fmt_type == TLP_CFG_WRITE_1):
                 l = (self.register_number & 0x3ff) << 2
-                l |= id2int(self.dest_id) << 16
+                l |= int(self.dest_id) << 16
                 pkt.append(l)
             else:
                 l = 0
@@ -395,11 +442,11 @@ class TLP(object):
             l = self.byte_count & 0xfff
             l |= (self.bcm & 1) << 12
             l |= (self.status & 0x7) << 13
-            l |= id2int(self.completer_id) << 16
+            l |= int(self.completer_id) << 16
             pkt.append(l)
             l = self.lower_address & 0x7f
             l |= (self.tag & 0xff) << 8
-            l |= id2int(self.requester_id) << 16
+            l |= int(self.requester_id) << 16
             pkt.append(l)
         else:
             raise Exception("Unknown TLP type")
@@ -435,12 +482,12 @@ class TLP(object):
             self.first_be = pkt[1] & 0xf
             self.last_be = (pkt[1] >> 4) & 0xf
             self.tag = (pkt[1] >> 8) & 0xff
-            self.requester_id = int2id(pkt[1] >> 16)
+            self.requester_id = PcieId.from_int(pkt[1] >> 16)
 
             if (self.fmt_type == TLP_CFG_READ_0 or self.fmt_type == TLP_CFG_WRITE_0 or
                     self.fmt_type == TLP_CFG_READ_1 or self.fmt_type == TLP_CFG_WRITE_1):
                 self.register_number = (pkt[2] >> 2) >> 0x3ff
-                self.dest_id = int2id(pkt[2] >> 16)
+                self.dest_id = PcieId.from_int(pkt[2] >> 16)
             elif self.fmt == FMT_3DW or self.fmt == FMT_3DW_DATA:
                 self.address = pkt[3] & 0xfffffffc
             elif self.fmt == FMT_4DW or self.fmt == FMT_4DW_DATA:
@@ -450,10 +497,10 @@ class TLP(object):
             self.byte_count = pkt[1] & 0xfff
             self.bcm = (pkt[1] >> 12) & 1
             self.status = (pkt[1] >> 13) & 0x7
-            self.completer_id = int2id(pkt[1] >> 16)
+            self.completer_id = PcieId.from_int(pkt[1] >> 16)
             self.lower_address = pkt[2] & 0x7f
             self.tag = (pkt[2] >> 8) & 0xff
-            self.requester_id = int2id(pkt[2] >> 16)
+            self.requester_id = PcieId.from_int(pkt[2] >> 16)
 
             if self.byte_count == 0:
                 self.byte_count = 4096
@@ -1447,7 +1494,7 @@ class Function(PMCapability, PCIECapability):
         super(Function, self).__init__(*args, **kwargs)
 
     def get_id(self):
-        return (self.bus_num, self.device_num, self.function_num)
+        return PcieId(self.bus_num, self.device_num, self.function_num)
 
     def get_desc(self):
         return "%02x:%02x.%x %s" % (self.bus_num, self.device_num, self.function_num, self.desc)
@@ -1773,12 +1820,12 @@ class Function(PMCapability, PCIECapability):
         return None
 
     def handle_config_0_tlp(self, tlp):
-        if tlp.dest_id[1] == self.device_num and tlp.dest_id[2] == self.function_num:
+        if tlp.dest_id.device == self.device_num and tlp.dest_id.function == self.function_num:
             # logging
             print("[%s] Config type 0 for me" % (highlight(self.get_desc())))
 
             # capture address information
-            self.bus_num = tlp.dest_id[0]
+            self.bus_num = tlp.dest_id.bus
 
             # prepare completion TLP
             cpl = TLP()
@@ -2453,8 +2500,8 @@ class Bridge(Function):
             yield self.handle_tlp(tlp)
         elif tlp.fmt_type == TLP_CFG_READ_1 or tlp.fmt_type == TLP_CFG_WRITE_1:
             # config type 1
-            if self.sec_bus_num <= tlp.dest_id[0] <= self.sub_bus_num:
-                if tlp.dest_id[0] == self.sec_bus_num:
+            if self.sec_bus_num <= tlp.dest_id.bus <= self.sub_bus_num:
+                if tlp.dest_id.bus == self.sec_bus_num:
                     # targeted to directly connected device; change to type 0
                     if tlp.fmt_type == TLP_CFG_READ_1:
                         tlp.fmt_type = TLP_CFG_READ_0
@@ -2470,7 +2517,7 @@ class Bridge(Function):
             if not self.root and tlp.requester_id == self.get_id():
                 # for me
                 yield self.handle_tlp(tlp)
-            elif self.sec_bus_num <= tlp.requester_id[0] <= self.sub_bus_num:
+            elif self.sec_bus_num <= tlp.requester_id.bus <= self.sub_bus_num:
                 yield self.downstream_send(tlp)
             else:
                 # error
@@ -2480,7 +2527,7 @@ class Bridge(Function):
             if not self.root and tlp.dest_id == self.get_id():
                 # for me
                 yield self.handle_tlp(tlp)
-            elif self.sec_bus_num <= tlp.dest_id[0] <= self.sub_bus_num:
+            elif self.sec_bus_num <= tlp.dest_id.bus <= self.sub_bus_num:
                 yield self.downstream_send(tlp)
             else:
                 # error
@@ -2544,8 +2591,8 @@ class Bridge(Function):
             if not self.root and tlp.requester_id == self.get_id():
                 # for me
                 yield self.handle_tlp(tlp)
-            elif self.sec_bus_num <= tlp.requester_id[0] <= self.sub_bus_num:
-                if self.root and tlp.requester_id[0] == self.pri_bus_num and tlp.requester_id[1] == 0:
+            elif self.sec_bus_num <= tlp.requester_id.bus <= self.sub_bus_num:
+                if self.root and tlp.requester_id.bus == self.pri_bus_num and tlp.requester_id.device == 0:
                     yield self.upstream_send(tlp)
                 else:
                     yield self.downstream_send(tlp)
@@ -2556,8 +2603,8 @@ class Bridge(Function):
             if not self.root and tlp.dest_id == self.get_id():
                 # for me
                 yield self.handle_tlp(tlp)
-            elif self.sec_bus_num <= tlp.dest_id[0] <= self.sub_bus_num:
-                if self.root and tlp.dest_id[0] == self.pri_bus_num and tlp.dest_id[1] == 0:
+            elif self.sec_bus_num <= tlp.dest_id.bus <= self.sub_bus_num:
+                if self.root and tlp.dest_id.bus == self.pri_bus_num and tlp.dest_id.device == 0:
                     yield self.upstream_send(tlp)
                 else:
                     yield self.downstream_send(tlp)
@@ -2710,16 +2757,16 @@ class Device(object):
         if tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0:
             # config type 0
 
-            if tlp.dest_id[1] == self.device_num:
+            if tlp.dest_id.device == self.device_num:
                 # capture address information
-                self.bus_num = tlp.dest_id[0]
+                self.bus_num = tlp.dest_id.bus
 
                 for f in self.functions:
                     f.bus_num = self.bus_num
 
                 # pass TLP to function
                 for f in self.functions:
-                    if f.function_num == tlp.dest_id[2]:
+                    if f.function_num == tlp.dest_id.function:
                         yield f.upstream_recv(tlp)
                         return
 
@@ -2738,9 +2785,9 @@ class Device(object):
                 tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
             # Completion
 
-            if tlp.requester_id[0] == self.bus_num and tlp.requester_id[1] == self.device_num:
+            if tlp.requester_id.bus == self.bus_num and tlp.requester_id.device == self.device_num:
                 for f in self.functions:
-                    if f.function_num == tlp.requester_id[2]:
+                    if f.function_num == tlp.requester_id.function:
                         yield f.upstream_recv(tlp)
                         return
 
@@ -2869,11 +2916,11 @@ class TreeItem(object):
 
         self.children = []
 
-    def find_dev(self, b, d, f):
-        if (b, d, f) == self.get_id():
+    def find_dev(self, dev_id):
+        if dev_id == self.get_id():
             return self
         for c in self.children:
-            res = c.find_dev(b, d, f)
+            res = c.find_dev(dev_id)
             if res is not None:
                 return res
         return None
@@ -2914,7 +2961,7 @@ class TreeItem(object):
         return s
 
     def get_id(self):
-        return (self.bus_num, self.device_num, self.function_num)
+        return PcieId(self.bus_num, self.device_num, self.function_num)
 
     def __bool__(self):
         return True
@@ -3124,7 +3171,7 @@ class RootComplex(Switch):
 
             # prepare completion TLP
             cpl = TLP()
-            cpl.set_completion_data(tlp, (0, 0, 0))
+            cpl.set_completion_data(tlp, PcieId(0, 0, 0))
 
             addr = tlp.address
             offset = 0
@@ -3162,7 +3209,7 @@ class RootComplex(Switch):
 
             # Unsupported request
             cpl = TLP()
-            cpl.set_ur_completion(tlp, (0, 0, 0))
+            cpl.set_ur_completion(tlp, PcieId(0, 0, 0))
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
             yield self.send(cpl)
@@ -3174,7 +3221,7 @@ class RootComplex(Switch):
 
             # prepare completion TLP
             cpl = TLP()
-            cpl.set_completion(tlp, (0, 0, 0))
+            cpl.set_completion(tlp, PcieId(0, 0, 0))
 
             addr = tlp.address
             offset = 0
@@ -3208,7 +3255,7 @@ class RootComplex(Switch):
 
             # Unsupported request
             cpl = TLP()
-            cpl.set_ur_completion(tlp, (0, 0, 0))
+            cpl.set_ur_completion(tlp, PcieId(0, 0, 0))
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
             yield self.send(cpl)
@@ -3239,7 +3286,7 @@ class RootComplex(Switch):
 
             while n < length:
                 cpl = TLP()
-                cpl.set_completion_data(tlp, (0, 0, 0))
+                cpl.set_completion_data(tlp, PcieId(0, 0, 0))
 
                 byte_length = length-n
                 cpl.byte_count = byte_length
@@ -3265,7 +3312,7 @@ class RootComplex(Switch):
 
             # Unsupported request
             cpl = TLP()
-            cpl.set_ur_completion(tlp, (0, 0, 0))
+            cpl.set_ur_completion(tlp, PcieId(0, 0, 0))
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
             yield self.send(cpl)
@@ -3338,7 +3385,7 @@ class RootComplex(Switch):
         while n < length:
             tlp = TLP()
             tlp.fmt_type = TLP_CFG_READ_1
-            tlp.requester_id = (0, 0, 0)
+            tlp.requester_id = PcieId(0, 0, 0)
             tlp.tag = self.current_tag
             tlp.dest_id = dest_id
 
@@ -3371,7 +3418,7 @@ class RootComplex(Switch):
         while n < len(data):
             tlp = TLP()
             tlp.fmt_type = TLP_CFG_WRITE_1
-            tlp.requester_id = (0, 0, 0)
+            tlp.requester_id = PcieId(0, 0, 0)
             tlp.tag = self.current_tag
             tlp.dest_id = dest_id
 
@@ -3390,7 +3437,7 @@ class RootComplex(Switch):
             addr += byte_length
 
     def capability_read(self, dest_id, cap_id, addr, length, timeout=0):
-        ti = self.tree.find_dev(*dest_id)
+        ti = self.tree.find_dev(dest_id)
 
         if not ti:
             raise Exception("Device not found")
@@ -3407,7 +3454,7 @@ class RootComplex(Switch):
         return self.config_read(dest_id, addr+offset, length, timeout)
 
     def capability_write(self, dest_id, cap_id, addr, data, timeout=0):
-        ti = self.tree.find_dev(*dest_id)
+        ti = self.tree.find_dev(dest_id)
 
         if not ti:
             raise Exception("Device not found")
@@ -3433,7 +3480,7 @@ class RootComplex(Switch):
         while n < length:
             tlp = TLP()
             tlp.fmt_type = TLP_IO_READ
-            tlp.requester_id = (0, 0, 0)
+            tlp.requester_id = PcieId(0, 0, 0)
             tlp.tag = self.current_tag
 
             first_pad = addr % 4
@@ -3470,7 +3517,7 @@ class RootComplex(Switch):
         while n < len(data):
             tlp = TLP()
             tlp.fmt_type = TLP_IO_WRITE
-            tlp.requester_id = (0, 0, 0)
+            tlp.requester_id = PcieId(0, 0, 0)
             tlp.tag = self.current_tag
 
             first_pad = addr % 4
@@ -3505,7 +3552,7 @@ class RootComplex(Switch):
                 tlp.fmt_type = TLP_MEM_READ_64
             else:
                 tlp.fmt_type = TLP_MEM_READ
-            tlp.requester_id = (0, 0, 0)
+            tlp.requester_id = PcieId(0, 0, 0)
             tlp.tag = self.current_tag
 
             first_pad = addr % 4
@@ -3557,7 +3604,7 @@ class RootComplex(Switch):
                 tlp.fmt_type = TLP_MEM_WRITE_64
             else:
                 tlp.fmt_type = TLP_MEM_WRITE
-            tlp.requester_id = (0, 0, 0)
+            tlp.requester_id = PcieId(0, 0, 0)
             tlp.tag = self.current_tag
 
             first_pad = addr % 4
@@ -3604,7 +3651,7 @@ class RootComplex(Switch):
                 continue
 
             # read vendor ID and device ID
-            val = yield from self.config_read((bus, d, 0), 0x000, 4, timeout)
+            val = yield from self.config_read(PcieId(bus, d, 0), 0x000, 4, timeout)
 
             if val is None or val == b'\xff\xff\xff\xff':
                 continue
@@ -3616,7 +3663,7 @@ class RootComplex(Switch):
             fc = 1
 
             # read type
-            val = yield from self.config_read((bus, d, 0), 0x00e, 1, timeout)
+            val = yield from self.config_read(PcieId(bus, d, 0), 0x00e, 1, timeout)
 
             if val[0] & 0x80:
                 # multifunction device
@@ -3624,7 +3671,7 @@ class RootComplex(Switch):
 
             for f in range(fc):
                 # read vendor ID and device ID
-                val = yield from self.config_read((bus, d, f), 0x000, 4, timeout)
+                val = yield from self.config_read(PcieId(bus, d, f), 0x000, 4, timeout)
 
                 if val is None or val == b'\xff\xff\xff\xff':
                     continue
@@ -3639,7 +3686,7 @@ class RootComplex(Switch):
                 print("[%s] Found function at %02x:%02x.%x" % (highlight(self.get_desc()), bus, d, f))
 
                 # read type
-                val = yield from self.config_read((bus, d, f), 0x00e, 1, timeout)
+                val = yield from self.config_read(PcieId(bus, d, f), 0x00e, 1, timeout)
 
                 bridge = val[0] & 0x7f == 0x01
 
@@ -3655,8 +3702,8 @@ class RootComplex(Switch):
                 bar = 0
                 while bar < bar_cnt:
                     # read BAR
-                    yield self.config_write((bus, d, f), 0x010+bar*4, b'\xff\xff\xff\xff')
-                    val = yield from self.config_read((bus, d, f), 0x010+bar*4, 4)
+                    yield self.config_write(PcieId(bus, d, f), 0x010+bar*4, b'\xff\xff\xff\xff')
+                    val = yield from self.config_read(PcieId(bus, d, f), 0x010+bar*4, 4)
                     val = struct.unpack('<L', val)[0]
 
                     if val == 0:
@@ -3688,7 +3735,7 @@ class RootComplex(Switch):
                         self.io_limit += size
 
                         # write BAR
-                        yield self.config_write((bus, d, f), 0x010+bar*4, struct.pack('<L', val))
+                        yield self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val))
 
                         bar += 1
                     else:
@@ -3696,8 +3743,8 @@ class RootComplex(Switch):
 
                         if val & 4:
                             # 64 bit BAR
-                            yield self.config_write((bus, d, f), 0x010+(bar+1)*4, b'\xff\xff\xff\xff')
-                            val2 = yield from self.config_read((bus, d, f), 0x010+(bar+1)*4, 4)
+                            yield self.config_write(PcieId(bus, d, f), 0x010+(bar+1)*4, b'\xff\xff\xff\xff')
+                            val2 = yield from self.config_read(PcieId(bus, d, f), 0x010+(bar+1)*4, 4)
                             val |= struct.unpack('<L', val2)[0] << 32
                             mask = (~val & 0xffffffffffffffff) | 15
                             size = mask + 1
@@ -3722,8 +3769,8 @@ class RootComplex(Switch):
                             self.prefetchable_mem_limit += size
 
                             # write BAR
-                            yield self.config_write((bus, d, f), 0x010+bar*4, struct.pack('<L', val & 0xffffffff))
-                            yield self.config_write((bus, d, f), 0x010+(bar+1)*4, struct.pack('<L', (val >> 32) & 0xffffffff))
+                            yield self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val & 0xffffffff))
+                            yield self.config_write(PcieId(bus, d, f), 0x010+(bar+1)*4, struct.pack('<L', (val >> 32) & 0xffffffff))
 
                             bar += 2
                         else:
@@ -3752,7 +3799,7 @@ class RootComplex(Switch):
                             self.mem_limit += size
 
                             # write BAR
-                            yield self.config_write((bus, d, f), 0x010+bar*4, struct.pack('<L', val))
+                            yield self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val))
 
                             bar += 1
 
@@ -3760,11 +3807,11 @@ class RootComplex(Switch):
                 print("[%s] Walk capabilities of %02x:%02x.%x" % (highlight(self.get_desc()), bus, d, f))
 
                 # walk capabilities
-                ptr = yield from self.config_read((bus, d, f), 0x34, 1)
+                ptr = yield from self.config_read(PcieId(bus, d, f), 0x34, 1)
                 ptr = ptr[0] & 0xfc
 
                 while ptr > 0:
-                    val = yield from self.config_read((bus, d, f), ptr, 2)
+                    val = yield from self.config_read(PcieId(bus, d, f), ptr, 2)
                     # logging
                     print("[%s] Found capability 0x%02x at offset 0x%02x, next ptr 0x%02x" % (highlight(self.get_desc()), val[0], ptr, val[1] & 0xfc))
                     ti.capabilities.append((val[0], ptr))
@@ -3775,17 +3822,17 @@ class RootComplex(Switch):
 
                 if enable_bus_mastering:
                     # enable bus mastering
-                    val = yield from self.config_read((bus, d, f), 0x04, 2)
+                    val = yield from self.config_read(PcieId(bus, d, f), 0x04, 2)
                     val = struct.unpack('<H', val)[0]
                     val |= 4
-                    yield self.config_write((bus, d, f), 0x04, struct.pack('<H', val))
+                    yield self.config_write(PcieId(bus, d, f), 0x04, struct.pack('<H', val))
 
                 if bridge:
                     # set bridge registers for enumeration
                     # logging
                     print("[%s] Set pri %d, sec %d, sub %d" % (highlight(self.get_desc()), bus, sec_bus, 255))
 
-                    yield self.config_write((bus, d, f), 0x018, bytearray([bus, sec_bus, 255]))
+                    yield self.config_write(PcieId(bus, d, f), 0x018, bytearray([bus, sec_bus, 255]))
 
                     # enumerate secondary bus
                     sub_bus, ti = yield from self.enumerate_segment(bus=sec_bus, timeout=timeout, tree=ti, enable_bus_mastering=enable_bus_mastering)
@@ -3794,26 +3841,26 @@ class RootComplex(Switch):
                     # logging
                     print("[%s] Set pri %d, sec %d, sub %d" % (highlight(self.get_desc()), bus, sec_bus, sub_bus))
 
-                    yield self.config_write((bus, d, f), 0x018, bytearray([bus, sec_bus, sub_bus]))
+                    yield self.config_write(PcieId(bus, d, f), 0x018, bytearray([bus, sec_bus, sub_bus]))
 
                     # set base/limit registers
                     # logging
                     print("[%s] Set IO base: %08x, limit: %08x" % (highlight(self.get_desc()), ti.io_base, ti.io_limit))
 
-                    yield self.config_write((bus, d, f), 0x01C, struct.pack('BB', (ti.io_base >> 8) & 0xf0, (ti.io_limit >> 8) & 0xf0))
-                    yield self.config_write((bus, d, f), 0x030, struct.pack('<HH', ti.io_base >> 16, ti.io_limit >> 16))
+                    yield self.config_write(PcieId(bus, d, f), 0x01C, struct.pack('BB', (ti.io_base >> 8) & 0xf0, (ti.io_limit >> 8) & 0xf0))
+                    yield self.config_write(PcieId(bus, d, f), 0x030, struct.pack('<HH', ti.io_base >> 16, ti.io_limit >> 16))
 
                     # logging
                     print("[%s] Set mem base: %08x, limit: %08x" % (highlight(self.get_desc()), ti.mem_base, ti.mem_limit))
 
-                    yield self.config_write((bus, d, f), 0x020, struct.pack('<HH', (ti.mem_base >> 16) & 0xfff0, (ti.mem_limit >> 16) & 0xfff0))
+                    yield self.config_write(PcieId(bus, d, f), 0x020, struct.pack('<HH', (ti.mem_base >> 16) & 0xfff0, (ti.mem_limit >> 16) & 0xfff0))
 
                     # logging
                     print("[%s] Set prefetchable mem base: %016x, limit: %016x" % (highlight(self.get_desc()), ti.prefetchable_mem_base, ti.prefetchable_mem_limit))
 
-                    yield self.config_write((bus, d, f), 0x024, struct.pack('<HH', (ti.prefetchable_mem_base >> 16) & 0xfff0, (ti.prefetchable_mem_limit >> 16) & 0xfff0))
-                    yield self.config_write((bus, d, f), 0x028, struct.pack('<L', ti.prefetchable_mem_base >> 32))
-                    yield self.config_write((bus, d, f), 0x02c, struct.pack('<L', ti.prefetchable_mem_limit >> 32))
+                    yield self.config_write(PcieId(bus, d, f), 0x024, struct.pack('<HH', (ti.prefetchable_mem_base >> 16) & 0xfff0, (ti.prefetchable_mem_limit >> 16) & 0xfff0))
+                    yield self.config_write(PcieId(bus, d, f), 0x028, struct.pack('<L', ti.prefetchable_mem_base >> 32))
+                    yield self.config_write(PcieId(bus, d, f), 0x02c, struct.pack('<L', ti.prefetchable_mem_limit >> 32))
 
                     sec_bus = sub_bus+1
 

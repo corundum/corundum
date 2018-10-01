@@ -231,7 +231,7 @@ def bench():
 
         yield delay(100)
 
-        val = yield from rc.capability_read((1, 0, 0), pcie.PCIE_CAP_ID, 0x000, 4)
+        val = yield from rc.capability_read(pcie.PcieId(1, 0, 0), pcie.PCIE_CAP_ID, 0x000, 4)
 
         raise StopSimulation
 

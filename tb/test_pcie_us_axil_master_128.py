@@ -232,7 +232,7 @@ def bench():
 
         cur_tag = 1
 
-        completer_id.next = pcie_us.id2int((4, 5, 6))
+        completer_id.next = int(pcie_us.PcieId(4, 5, 6))
 
         yield clk.posedge
         print("test 1: baseline")
@@ -250,7 +250,7 @@ def bench():
 
         tlp = pcie_us.TLP_us()
         tlp.fmt_type = pcie_us.TLP_MEM_WRITE
-        tlp.requester_id = (1, 2, 3)
+        tlp.requester_id = pcie_us.PcieId(1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
         tlp.set_be_data(0x0000, b'\x11\x22\x33\x44')
@@ -279,7 +279,7 @@ def bench():
 
         tlp = pcie_us.TLP_us()
         tlp.fmt_type = pcie_us.TLP_IO_WRITE
-        tlp.requester_id = (1, 2, 3)
+        tlp.requester_id = pcie_us.PcieId(1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
         tlp.set_be_data(0x0000, b'\x11\x22\x33\x44')
@@ -296,7 +296,7 @@ def bench():
 
         assert rx_tlp.status == pcie_us.CPL_STATUS_SC
         assert rx_tlp.tag == cur_tag
-        assert rx_tlp.completer_id == (4, 5, 6)
+        assert rx_tlp.completer_id == pcie_us.PcieId(4, 5, 6)
 
         data = axil_ram_inst.read_mem(0, 32)
         for i in range(0, len(data), 16):
@@ -317,7 +317,7 @@ def bench():
 
         tlp = pcie_us.TLP_us()
         tlp.fmt_type = pcie_us.TLP_MEM_READ
-        tlp.requester_id = (1, 2, 3)
+        tlp.requester_id = pcie_us.PcieId(1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
         tlp.length = 1
@@ -340,7 +340,7 @@ def bench():
         assert data == b'\x11\x22\x33\x44'
         assert rx_tlp.status == pcie_us.CPL_STATUS_SC
         assert rx_tlp.tag == cur_tag
-        assert rx_tlp.completer_id == (4, 5, 6)
+        assert rx_tlp.completer_id == pcie_us.PcieId(4, 5, 6)
 
         assert not status_error_cor_asserted
         assert not status_error_uncor_asserted
@@ -355,7 +355,7 @@ def bench():
 
         tlp = pcie_us.TLP_us()
         tlp.fmt_type = pcie_us.TLP_IO_READ
-        tlp.requester_id = (1, 2, 3)
+        tlp.requester_id = pcie_us.PcieId(1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
         tlp.length = 1
@@ -378,7 +378,7 @@ def bench():
         assert data == b'\x11\x22\x33\x44'
         assert rx_tlp.status == pcie_us.CPL_STATUS_SC
         assert rx_tlp.tag == cur_tag
-        assert rx_tlp.completer_id == (4, 5, 6)
+        assert rx_tlp.completer_id == pcie_us.PcieId(4, 5, 6)
 
         assert not status_error_cor_asserted
         assert not status_error_uncor_asserted
@@ -397,7 +397,7 @@ def bench():
 
                 tlp = pcie_us.TLP_us()
                 tlp.fmt_type = pcie_us.TLP_MEM_WRITE
-                tlp.requester_id = (1, 2, 3)
+                tlp.requester_id = pcie_us.PcieId(1, 2, 3)
                 tlp.tag = cur_tag
                 tlp.tc = 0
                 tlp.set_be_data(256*(16*offset+length)+offset, b'\x11\x22\x33\x44'[0:length])
@@ -430,7 +430,7 @@ def bench():
             for offset in range(4,8-length+1):
                 tlp = pcie_us.TLP_us()
                 tlp.fmt_type = pcie_us.TLP_MEM_READ
-                tlp.requester_id = (1, 2, 3)
+                tlp.requester_id = pcie_us.PcieId(1, 2, 3)
                 tlp.tag = cur_tag
                 tlp.tc = 0
                 tlp.length = 1
@@ -453,7 +453,7 @@ def bench():
                 assert data == b'\xAA'*(offset-4)+b'\x11\x22\x33\x44'[0:length]+b'\xAA'*(8-offset-length)
                 assert rx_tlp.status == pcie_us.CPL_STATUS_SC
                 assert rx_tlp.tag == cur_tag
-                assert rx_tlp.completer_id == (4, 5, 6)
+                assert rx_tlp.completer_id == pcie_us.PcieId(4, 5, 6)
 
                 assert not status_error_cor_asserted
                 assert not status_error_uncor_asserted
@@ -468,7 +468,7 @@ def bench():
 
         tlp = pcie_us.TLP_us()
         tlp.fmt_type = pcie_us.TLP_MEM_WRITE
-        tlp.requester_id = (1, 2, 3)
+        tlp.requester_id = pcie_us.PcieId(1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
         tlp.set_be_data(0x0000, bytearray(range(64)))
@@ -493,7 +493,7 @@ def bench():
 
         tlp = pcie_us.TLP_us()
         tlp.fmt_type = pcie_us.TLP_MEM_READ
-        tlp.requester_id = (1, 2, 3)
+        tlp.requester_id = pcie_us.PcieId(1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
         tlp.set_be(0x0000, 64)
@@ -510,7 +510,7 @@ def bench():
 
         assert rx_tlp.status == pcie_us.CPL_STATUS_CA
         assert rx_tlp.tag == cur_tag
-        assert rx_tlp.completer_id == (4, 5, 6)
+        assert rx_tlp.completer_id == pcie_us.PcieId(4, 5, 6)
 
         assert status_error_cor_asserted
         assert not status_error_uncor_asserted

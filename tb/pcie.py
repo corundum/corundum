@@ -276,17 +276,32 @@ class TLP(object):
 
     def check(self):
         """Validate TLP"""
+        ret = True
         if self.fmt == FMT_3DW_DATA or self.fmt == FMT_4DW_DATA:
             if self.length != len(self.data):
-                print("TLP validation failed, length field does not match data: %s" % repr(tlp))
-                raise Exception("TLP validation failed, length field does not match data")
+                print("TLP validation failed, length field does not match data: %s" % repr(self))
+                ret = False
+            if 0 > self.length > 1024:
+                print("TLP validation failed, length out of range: %s" % repr(self))
+                ret = False
         if (self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64 or
                 self.fmt_type == TLP_MEM_READ_LOCKED or self.fmt_type == TLP_MEM_READ_LOCKED_64 or
                 self.fmt_type == TLP_MEM_WRITE or self.fmt_type == TLP_MEM_WRITE_64):
-            if tlp.length*4 > 0x1000 - (tlp.address & 0xfff):
-                print("TLP validation failed, request crosses 4K boundary: %s" % repr(tlp))
-                raise Exception("TLP validation failed, request crosses 4K boundary")
-        return True
+            if self.length*4 > 0x1000 - (self.address & 0xfff):
+                print("TLP validation failed, request crosses 4K boundary: %s" % repr(self))
+                ret = False
+        if (self.fmt_type == TLP_IO_READ or self.fmt_type == TLP_IO_WRITE):
+            if self.length != 1:
+                print("TLP validation failed, invalid length for IO request: %s" % repr(self))
+                ret = False
+            if self.last_be != 0:
+                print("TLP validation failed, invalid last BE for IO request: %s" % repr(self))
+                ret = False
+        if (self.fmt_type == TLP_CPL_DATA):
+            if (self.byte_count + (self.lower_address&3) + 3) < self.length*4:
+                print("TLP validation failed, completion byte count too small: %s" % repr(self))
+                ret = False
+        return ret
 
     def set_completion(self, tlp, completer_id, has_data=False, status=CPL_STATUS_SC):
         """Prepare completion for TLP"""
@@ -1780,6 +1795,7 @@ class Function(PMCapability, PCIECapability):
     def upstream_send(self, tlp):
         # logging
         print("[%s] Sending upstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
+        assert tlp.check()
         if self.upstream_tx_handler is None:
             raise Exception("Transmit handler not set")
         yield self.upstream_tx_handler(tlp)
@@ -1790,6 +1806,7 @@ class Function(PMCapability, PCIECapability):
     def upstream_recv(self, tlp):
         # logging
         print("[%s] Got downstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
+        assert tlp.check()
         yield self.handle_tlp(tlp)
 
     def handle_tlp(self, tlp):
@@ -2488,6 +2505,7 @@ class Bridge(Function):
             super(Bridge, self).write_config_register(reg, data, mask)
 
     def upstream_send(self, tlp):
+        assert tlp.check()
         if self.upstream_tx_handler is None:
             raise Exception("Transmit handler not set")
         yield self.upstream_tx_handler(tlp)
@@ -2496,6 +2514,7 @@ class Bridge(Function):
         # logging
         if trace_routing:
             print("[%s] Routing downstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
+        assert tlp.check()
         if tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0:
             yield self.handle_tlp(tlp)
         elif tlp.fmt_type == TLP_CFG_READ_1 or tlp.fmt_type == TLP_CFG_WRITE_1:
@@ -2573,6 +2592,7 @@ class Bridge(Function):
             raise Exception("Unknown/invalid packet type")
 
     def downstream_send(self, tlp):
+        assert tlp.check()
         if self.downstream_tx_handler is None:
             raise Exception("Transmit handler not set")
         yield self.downstream_tx_handler(tlp)
@@ -2581,6 +2601,7 @@ class Bridge(Function):
         # logging
         if trace_routing:
             print("[%s] Routing upstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
+        assert tlp.check()
         if (tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0 or
                 tlp.fmt_type == TLP_CFG_READ_1 or tlp.fmt_type == TLP_CFG_WRITE_1):
             # error
@@ -2754,6 +2775,7 @@ class Device(object):
     def upstream_recv(self, tlp):
         # logging
         print("[%s] Got downstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
+        assert tlp.check()
         if tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0:
             # config type 0
 
@@ -2834,6 +2856,7 @@ class Device(object):
     def upstream_send(self, tlp):
         # logging
         print("[%s] Sending upstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
+        assert tlp.check()
         yield self.upstream_port.send(tlp)
 
     def send(self, tlp):
@@ -3127,6 +3150,7 @@ class RootComplex(Switch):
     def downstream_send(self, tlp):
         # logging
         print("[%s] Sending TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
+        assert tlp.check()
         yield self.upstream_bridge.upstream_recv(tlp)
 
     def send(self, tlp):
@@ -3135,6 +3159,7 @@ class RootComplex(Switch):
     def downstream_recv(self, tlp):
         # logging
         print("[%s] Got TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
+        assert tlp.check()
         yield self.handle_tlp(tlp)
 
     def handle_tlp(self, tlp):

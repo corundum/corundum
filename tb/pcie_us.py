@@ -60,9 +60,9 @@ class TLP_us(TLP):
     def pack_us_cq(self, dw):
         pkt = axis_ep.AXIStreamFrame([])
 
-        if ((self.fmt, self.type) == TLP_IO_READ or (self.fmt, self.type) == TLP_IO_WRITE or
-                (self.fmt, self.type) == TLP_MEM_READ or (self.fmt, self.type) == TLP_MEM_READ_64 or
-                (self.fmt, self.type) == TLP_MEM_WRITE or (self.fmt, self.type) == TLP_MEM_WRITE_64):
+        if (self.fmt_type == TLP_IO_READ or self.fmt_type == TLP_IO_WRITE or
+                self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64 or
+                self.fmt_type == TLP_MEM_WRITE or self.fmt_type == TLP_MEM_WRITE_64):
             # Completer Request descriptor
             l = self.at & 0x3
             l |= self.address & 0xfffffffc
@@ -70,21 +70,21 @@ class TLP_us(TLP):
             l = (self.address & 0xffffffff00000000) >> 32
             pkt.data.append(l)
             l = self.length & 0x7ff
-            if (self.fmt, self.type) == TLP_MEM_READ or (self.fmt, self.type) == TLP_MEM_READ_64:
+            if self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64:
                 l |= 0 << 11
-            elif (self.fmt, self.type) == TLP_MEM_WRITE or (self.fmt, self.type) == TLP_MEM_WRITE_64:
+            elif self.fmt_type == TLP_MEM_WRITE or self.fmt_type == TLP_MEM_WRITE_64:
                 l |= 1 << 11
-            elif (self.fmt, self.type) == TLP_IO_READ:
+            elif self.fmt_type == TLP_IO_READ:
                 l |= 2 << 11
-            elif (self.fmt, self.type) == TLP_IO_WRITE:
+            elif self.fmt_type == TLP_IO_WRITE:
                 l |= 3 << 11
-            elif (self.fmt, self.type) == TLP_FETCH_ADD or (self.fmt, self.type) == TLP_FETCH_ADD_64:
+            elif self.fmt_type == TLP_FETCH_ADD or self.fmt_type == TLP_FETCH_ADD_64:
                 l |= 4 << 11
-            elif (self.fmt, self.type) == TLP_SWAP or (self.fmt, self.type) == TLP_SWAP_64:
+            elif self.fmt_type == TLP_SWAP or self.fmt_type == TLP_SWAP_64:
                 l |= 5 << 11
-            elif (self.fmt, self.type) == TLP_CAS or (self.fmt, self.type) == TLP_CAS_64:
+            elif self.fmt_type == TLP_CAS or self.fmt_type == TLP_CAS_64:
                 l |= 6 << 11
-            elif (self.fmt, self.type) == TLP_MEM_READ_LOCKED or (self.fmt, self.type) == TLP_MEM_READ_LOCKED_64:
+            elif self.fmt_type == TLP_MEM_READ_LOCKED or self.fmt_type == TLP_MEM_READ_LOCKED_64:
                 l |= 7 << 11
             l |= id2int(self.requester_id) << 16
             pkt.data.append(l)
@@ -143,21 +143,21 @@ class TLP_us(TLP):
         req_type = (pkt.data[2] >> 11) & 0xf
 
         if req_type == 0:
-            self.fmt, self.type = TLP_MEM_READ
+            self.fmt_type = TLP_MEM_READ
         elif req_type == 1:
-            self.fmt, self.type = TLP_MEM_WRITE
+            self.fmt_type = TLP_MEM_WRITE
         elif req_type == 2:
-            self.fmt, self.type = TLP_IO_READ
+            self.fmt_type = TLP_IO_READ
         elif req_type == 3:
-            self.fmt, self.type = TLP_IO_WRITE
+            self.fmt_type = TLP_IO_WRITE
         elif req_type == 4:
-            self.fmt, self.type = TLP_FETCH_ADD
+            self.fmt_type = TLP_FETCH_ADD
         elif req_type == 5:
-            self.fmt, self.type = TLP_SWAP
+            self.fmt_type = TLP_SWAP
         elif req_type == 6:
-            self.fmt, self.type = TLP_CAS
+            self.fmt_type = TLP_CAS
         elif req_type == 7:
-            self.fmt, self.type = TLP_MEM_READ_LOCKED
+            self.fmt_type = TLP_MEM_READ_LOCKED
         else:
             raise Exception("Invalid packet type")
 
@@ -213,13 +213,13 @@ class TLP_us(TLP):
     def pack_us_cc(self, dw):
         pkt = axis_ep.AXIStreamFrame([])
 
-        if ((self.fmt, self.type) == TLP_CPL or (self.fmt, self.type) == TLP_CPL_DATA or
-                (self.fmt, self.type) == TLP_CPL_LOCKED or (self.fmt, self.type) == TLP_CPL_LOCKED_DATA):
+        if (self.fmt_type == TLP_CPL or self.fmt_type == TLP_CPL_DATA or
+                self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA):
             # Requester Completion descriptor
             l = self.lower_address & 0x7f
             l |= (self.at & 3) << 8
             l |= (self.byte_count & 0x1fff) << 16
-            if (self.fmt, self.type) == TLP_CPL_LOCKED or (self.fmt, self.type) == TLP_CPL_LOCKED_DATA:
+            if self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA:
                 # TODO only for completions for locked read requests
                 l |= 1 << 29
             # TODO request completed
@@ -263,13 +263,13 @@ class TLP_us(TLP):
         return pkt
 
     def unpack_us_cc(self, pkt, dw, check_parity=False):
-        self.fmt, self.type = TLP_CPL
+        self.fmt_type = TLP_CPL
 
         self.lower_address = pkt.data[0] & 0x7f
         self.at = (pkt.data[0] >> 8) & 3
         self.byte_count = (pkt.data[0] >> 16) & 0x1fff
         if pkt.data[0] & (1 << 29):
-            self.fmt, self.type = TLP_CPL_LOCKED
+            self.fmt_type = TLP_CPL_LOCKED
 
         self.length = pkt.data[1] & 0x7ff
         if self.length > 0:
@@ -302,49 +302,49 @@ class TLP_us(TLP):
     def pack_us_rq(self, dw):
         pkt = axis_ep.AXIStreamFrame([])
 
-        if ((self.fmt, self.type) == TLP_IO_READ or (self.fmt, self.type) == TLP_IO_WRITE or
-                (self.fmt, self.type) == TLP_MEM_READ or (self.fmt, self.type) == TLP_MEM_READ_64 or
-                (self.fmt, self.type) == TLP_MEM_WRITE or (self.fmt, self.type) == TLP_MEM_WRITE_64 or
-                (self.fmt, self.type) == TLP_CFG_READ_0 or (self.fmt, self.type) == TLP_CFG_READ_1 or
-                (self.fmt, self.type) == TLP_CFG_WRITE_0 or (self.fmt, self.type) == TLP_CFG_WRITE_1):
+        if (self.fmt_type == TLP_IO_READ or self.fmt_type == TLP_IO_WRITE or
+                self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64 or
+                self.fmt_type == TLP_MEM_WRITE or self.fmt_type == TLP_MEM_WRITE_64 or
+                self.fmt_type == TLP_CFG_READ_0 or self.fmt_type == TLP_CFG_READ_1 or
+                self.fmt_type == TLP_CFG_WRITE_0 or self.fmt_type == TLP_CFG_WRITE_1):
             # Completer Request descriptor
-            if ((self.fmt, self.type) == TLP_IO_READ or (self.fmt, self.type) == TLP_IO_WRITE or
-                    (self.fmt, self.type) == TLP_MEM_READ or (self.fmt, self.type) == TLP_MEM_READ_64 or
-                    (self.fmt, self.type) == TLP_MEM_WRITE or (self.fmt, self.type) == TLP_MEM_WRITE_64):
+            if (self.fmt_type == TLP_IO_READ or self.fmt_type == TLP_IO_WRITE or
+                    self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64 or
+                    self.fmt_type == TLP_MEM_WRITE or self.fmt_type == TLP_MEM_WRITE_64):
                 l = self.at & 0x3
                 l |= self.address & 0xfffffffc
                 pkt.data.append(l)
                 l = (self.address & 0xffffffff00000000) >> 32
                 pkt.data.append(l)
-            elif ((self.fmt, self.type) == TLP_CFG_READ_0 or (self.fmt, self.type) == TLP_CFG_READ_1 or
-                    (self.fmt, self.type) == TLP_CFG_WRITE_0 or (self.fmt, self.type) == TLP_CFG_WRITE_1):
+            elif (self.fmt_type == TLP_CFG_READ_0 or self.fmt_type == TLP_CFG_READ_1 or
+                    self.fmt_type == TLP_CFG_WRITE_0 or self.fmt_type == TLP_CFG_WRITE_1):
                 l = (self.register_number & 0x3ff) << 2
                 pkt.data.append(l)
                 pkt.data.append(0)
             l = self.length & 0x7ff
-            if (self.fmt, self.type) == TLP_MEM_READ or (self.fmt, self.type) == TLP_MEM_READ_64:
+            if self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64:
                 l |= 0 << 11
-            elif (self.fmt, self.type) == TLP_MEM_WRITE or (self.fmt, self.type) == TLP_MEM_WRITE_64:
+            elif self.fmt_type == TLP_MEM_WRITE or self.fmt_type == TLP_MEM_WRITE_64:
                 l |= 1 << 11
-            elif (self.fmt, self.type) == TLP_IO_READ:
+            elif self.fmt_type == TLP_IO_READ:
                 l |= 2 << 11
-            elif (self.fmt, self.type) == TLP_IO_WRITE:
+            elif self.fmt_type == TLP_IO_WRITE:
                 l |= 3 << 11
-            elif (self.fmt, self.type) == TLP_FETCH_ADD or (self.fmt, self.type) == TLP_FETCH_ADD_64:
+            elif self.fmt_type == TLP_FETCH_ADD or self.fmt_type == TLP_FETCH_ADD_64:
                 l |= 4 << 11
-            elif (self.fmt, self.type) == TLP_SWAP or (self.fmt, self.type) == TLP_SWAP_64:
+            elif self.fmt_type == TLP_SWAP or self.fmt_type == TLP_SWAP_64:
                 l |= 5 << 11
-            elif (self.fmt, self.type) == TLP_CAS or (self.fmt, self.type) == TLP_CAS_64:
+            elif self.fmt_type == TLP_CAS or self.fmt_type == TLP_CAS_64:
                 l |= 6 << 11
-            elif (self.fmt, self.type) == TLP_MEM_READ_LOCKED or (self.fmt, self.type) == TLP_MEM_READ_LOCKED_64:
+            elif self.fmt_type == TLP_MEM_READ_LOCKED or self.fmt_type == TLP_MEM_READ_LOCKED_64:
                 l |= 7 << 11
-            elif (self.fmt, self.type) == TLP_CFG_READ_0:
+            elif self.fmt_type == TLP_CFG_READ_0:
                 l |= 8 << 11
-            elif (self.fmt, self.type) == TLP_CFG_READ_1:
+            elif self.fmt_type == TLP_CFG_READ_1:
                 l |= 9 << 11
-            elif (self.fmt, self.type) == TLP_CFG_WRITE_0:
+            elif self.fmt_type == TLP_CFG_WRITE_0:
                 l |= 10 << 11
-            elif (self.fmt, self.type) == TLP_CFG_WRITE_1:
+            elif self.fmt_type == TLP_CFG_WRITE_1:
                 l |= 11 << 11
             # TODO poisoned
             l |= id2int(self.requester_id) << 16
@@ -396,29 +396,29 @@ class TLP_us(TLP):
         req_type = (pkt.data[2] >> 11) & 0xf
 
         if req_type == 0:
-            self.fmt, self.type = TLP_MEM_READ
+            self.fmt_type = TLP_MEM_READ
         elif req_type == 1:
-            self.fmt, self.type = TLP_MEM_WRITE
+            self.fmt_type = TLP_MEM_WRITE
         elif req_type == 2:
-            self.fmt, self.type = TLP_IO_READ
+            self.fmt_type = TLP_IO_READ
         elif req_type == 3:
-            self.fmt, self.type = TLP_IO_WRITE
+            self.fmt_type = TLP_IO_WRITE
         elif req_type == 4:
-            self.fmt, self.type = TLP_FETCH_ADD
+            self.fmt_type = TLP_FETCH_ADD
         elif req_type == 5:
-            self.fmt, self.type = TLP_SWAP
+            self.fmt_type = TLP_SWAP
         elif req_type == 6:
-            self.fmt, self.type = TLP_CAS
+            self.fmt_type = TLP_CAS
         elif req_type == 7:
-            self.fmt, self.type = TLP_MEM_READ_LOCKED
+            self.fmt_type = TLP_MEM_READ_LOCKED
         elif req_type == 8:
-            self.fmt, self.type = TLP_CFG_READ_0
+            self.fmt_type = TLP_CFG_READ_0
         elif req_type == 9:
-            self.fmt, self.type = TLP_CFG_READ_1
+            self.fmt_type = TLP_CFG_READ_1
         elif req_type == 10:
-            self.fmt, self.type = TLP_CFG_WRITE_0
+            self.fmt_type = TLP_CFG_WRITE_0
         elif req_type == 11:
-            self.fmt, self.type = TLP_CFG_WRITE_1
+            self.fmt_type = TLP_CFG_WRITE_1
         else:
             raise Exception("Invalid packet type")
 
@@ -468,13 +468,13 @@ class TLP_us(TLP):
     def pack_us_rc(self, dw):
         pkt = axis_ep.AXIStreamFrame([])
 
-        if ((self.fmt, self.type) == TLP_CPL or (self.fmt, self.type) == TLP_CPL_DATA or
-                (self.fmt, self.type) == TLP_CPL_LOCKED or (self.fmt, self.type) == TLP_CPL_LOCKED_DATA):
+        if (self.fmt_type == TLP_CPL or self.fmt_type == TLP_CPL_DATA or
+                self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA):
             # Requester Completion descriptor
             l = self.lower_address & 0xfff
             # TODO error code
             l |= (self.byte_count & 0x1fff) << 16
-            if (self.fmt, self.type) == TLP_CPL_LOCKED or (self.fmt, self.type) == TLP_CPL_LOCKED_DATA:
+            if self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA:
                 # TODO only for completions for locked read requests
                 l |= 1 << 29
             # TODO request completed
@@ -532,13 +532,13 @@ class TLP_us(TLP):
         return pkt
 
     def unpack_us_rc(self, pkt, dw, check_parity=False):
-        self.fmt, self.type = TLP_CPL
+        self.fmt_type = TLP_CPL
 
         self.lower_address = pkt.data[0] & 0xfff
         # error code
         self.byte_count = (pkt.data[0] >> 16) & 0x1fff
         if pkt.data[0] & (1 << 29):
-            self.fmt, self.type = TLP_CPL_LOCKED
+            self.fmt_type = TLP_CPL_LOCKED
 
         self.length = pkt.data[1] & 0x7ff
         if self.length > 0:
@@ -688,7 +688,7 @@ class UltrascalePCIe(Device):
     def upstream_recv(self, tlp):
         # logging
         print("[%s] Got downstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
-        if (tlp.fmt, tlp.type) == TLP_CFG_READ_0 or (tlp.fmt, tlp.type) == TLP_CFG_WRITE_0:
+        if tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0:
             # config type 0
 
             if not self.config_space_enable:
@@ -724,8 +724,8 @@ class UltrascalePCIe(Device):
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
             yield self.upstream_send(cpl)
-        elif ((tlp.fmt, tlp.type) == TLP_CPL or (tlp.fmt, tlp.type) == TLP_CPL_DATA or
-                (tlp.fmt, tlp.type) == TLP_CPL_LOCKED or (tlp.fmt, tlp.type) == TLP_CPL_LOCKED_DATA):
+        elif (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
+                tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
             # Completion
 
             if tlp.requester_id[0] == self.bus_num and tlp.requester_id[1] == self.device_num:
@@ -740,7 +740,7 @@ class UltrascalePCIe(Device):
                 print("Function not found")
             else:
                 print("Bus/device number mismatch")
-        elif ((tlp.fmt, tlp.type) == TLP_IO_READ or (tlp.fmt, tlp.type) == TLP_IO_WRITE):
+        elif (tlp.fmt_type == TLP_IO_READ or tlp.fmt_type == TLP_IO_WRITE):
             # IO read/write
 
             for f in self.functions:
@@ -763,8 +763,8 @@ class UltrascalePCIe(Device):
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
             yield self.upstream_send(cpl)
-        elif ((tlp.fmt, tlp.type) == TLP_MEM_READ or (tlp.fmt, tlp.type) == TLP_MEM_READ_64 or
-                (tlp.fmt, tlp.type) == TLP_MEM_WRITE or (tlp.fmt, tlp.type) == TLP_MEM_WRITE_64):
+        elif (tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64 or
+                tlp.fmt_type == TLP_MEM_WRITE or tlp.fmt_type == TLP_MEM_WRITE_64):
             # Memory read/write
 
             for f in self.functions:
@@ -784,7 +784,7 @@ class UltrascalePCIe(Device):
 
             print("Memory request did not match any BARs")
 
-            if (tlp.fmt, tlp.type) == TLP_MEM_READ or (tlp.fmt, tlp.type) == TLP_MEM_READ_64:
+            if tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64:
                 # Unsupported request
                 cpl = TLP()
                 cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
@@ -1326,8 +1326,8 @@ class UltrascalePCIe(Device):
                 while self.cq_queue:
                     tlp = self.cq_queue.pop(0)
 
-                    if ((tlp.fmt, tlp.type) == TLP_IO_READ or (tlp.fmt, tlp.type) == TLP_IO_WRITE or
-                            (tlp.fmt, tlp.type) == TLP_MEM_READ or (tlp.fmt, tlp.type) == TLP_MEM_READ_64):
+                    if (tlp.fmt_type == TLP_IO_READ or tlp.fmt_type == TLP_IO_WRITE or
+                            tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64):
                         # non-posted request
                         if self.cq_np_req_count > 0:
                             # have credit, can forward

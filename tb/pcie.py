@@ -219,15 +219,23 @@ class TLP(object):
             self.register_number = tlp.register_number
             self.data = tlp.data
 
+    @property
+    def fmt_type(self):
+        return (self.fmt, self.type)
+
+    @fmt_type.setter
+    def fmt_type(self, val):
+        self.fmt, self.type = val
+
     def check(self):
         """Validate TLP"""
         if self.fmt == FMT_3DW_DATA or self.fmt == FMT_4DW_DATA:
             if self.length != len(self.data):
                 print("TLP validation failed, length field does not match data: %s" % repr(tlp))
                 raise Exception("TLP validation failed, length field does not match data")
-        if ((self.fmt, self.type) == TLP_MEM_READ or (self.fmt, self.type) == TLP_MEM_READ_64 or
-                (self.fmt, self.type) == TLP_MEM_READ_LOCKED or (self.fmt, self.type) == TLP_MEM_READ_LOCKED_64 or
-                (self.fmt, self.type) == TLP_MEM_WRITE or (self.fmt, self.type) == TLP_MEM_WRITE_64):
+        if (self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64 or
+                self.fmt_type == TLP_MEM_READ_LOCKED or self.fmt_type == TLP_MEM_READ_LOCKED_64 or
+                self.fmt_type == TLP_MEM_WRITE or self.fmt_type == TLP_MEM_WRITE_64):
             if tlp.length*4 > 0x1000 - (tlp.address & 0xfff):
                 print("TLP validation failed, request crosses 4K boundary: %s" % repr(tlp))
                 raise Exception("TLP validation failed, request crosses 4K boundary")
@@ -236,9 +244,9 @@ class TLP(object):
     def set_completion(self, tlp, completer_id, has_data=False, status=CPL_STATUS_SC):
         """Prepare completion for TLP"""
         if has_data:
-            self.fmt, self.type = TLP_CPL_DATA
+            self.fmt_type = TLP_CPL_DATA
         else:
-            self.fmt, self.type = TLP_CPL
+            self.fmt_type = TLP_CPL
         self.requester_id = tlp.requester_id
         self.completer_id = completer_id
         self.status = status
@@ -358,20 +366,20 @@ class TLP(object):
         l |= (self.fmt & 0x7) << 29
         pkt.append(l)
 
-        if ((self.fmt, self.type) == TLP_CFG_READ_0 or (self.fmt, self.type) == TLP_CFG_WRITE_0 or
-                (self.fmt, self.type) == TLP_CFG_READ_1 or (self.fmt, self.type) == TLP_CFG_WRITE_1 or
-                (self.fmt, self.type) == TLP_MEM_READ or (self.fmt, self.type) == TLP_MEM_READ_64 or
-                (self.fmt, self.type) == TLP_MEM_READ_LOCKED or (self.fmt, self.type) == TLP_MEM_READ_LOCKED_64 or
-                (self.fmt, self.type) == TLP_MEM_WRITE or (self.fmt, self.type) == TLP_MEM_WRITE_64 or
-                (self.fmt, self.type) == TLP_IO_READ or (self.fmt, self.type) == TLP_IO_WRITE):
+        if (self.fmt_type == TLP_CFG_READ_0 or self.fmt_type == TLP_CFG_WRITE_0 or
+                self.fmt_type == TLP_CFG_READ_1 or self.fmt_type == TLP_CFG_WRITE_1 or
+                self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64 or
+                self.fmt_type == TLP_MEM_READ_LOCKED or self.fmt_type == TLP_MEM_READ_LOCKED_64 or
+                self.fmt_type == TLP_MEM_WRITE or self.fmt_type == TLP_MEM_WRITE_64 or
+                self.fmt_type == TLP_IO_READ or self.fmt_type == TLP_IO_WRITE):
             l = self.first_be & 0xf
             l |= (self.last_be & 0xf) << 4
             l |= (self.tag & 0xff) << 8
             l |= id2int(self.requester_id) << 16
             pkt.append(l)
 
-            if ((self.fmt, self.type) == TLP_CFG_READ_0 or (self.fmt, self.type) == TLP_CFG_WRITE_0 or
-                    (self.fmt, self.type) == TLP_CFG_READ_1 or (self.fmt, self.type) == TLP_CFG_WRITE_1):
+            if (self.fmt_type == TLP_CFG_READ_0 or self.fmt_type == TLP_CFG_WRITE_0 or
+                    self.fmt_type == TLP_CFG_READ_1 or self.fmt_type == TLP_CFG_WRITE_1):
                 l = (self.register_number & 0x3ff) << 2
                 l |= id2int(self.dest_id) << 16
                 pkt.append(l)
@@ -382,8 +390,8 @@ class TLP(object):
                     pkt.append(l)
                 l |= self.address & 0xfffffffc
                 pkt.append(l)
-        elif ((self.fmt, self.type) == TLP_CPL or (self.fmt, self.type) == TLP_CPL_DATA or
-                (self.fmt, self.type) == TLP_CPL_LOCKED or (self.fmt, self.type) == TLP_CPL_LOCKED_DATA):
+        elif (self.fmt_type == TLP_CPL or self.fmt_type == TLP_CPL_DATA or
+                self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA):
             l = self.byte_count & 0xfff
             l |= (self.bcm & 1) << 12
             l |= (self.status & 0x7) << 13
@@ -418,27 +426,27 @@ class TLP(object):
             if self.length == 0:
                 self.length = 1024
 
-        if ((self.fmt, self.type) == TLP_CFG_READ_0 or (self.fmt, self.type) == TLP_CFG_WRITE_0 or
-                (self.fmt, self.type) == TLP_CFG_READ_1 or (self.fmt, self.type) == TLP_CFG_WRITE_1 or
-                (self.fmt, self.type) == TLP_MEM_READ or (self.fmt, self.type) == TLP_MEM_READ_64 or
-                (self.fmt, self.type) == TLP_MEM_READ_LOCKED or (self.fmt, self.type) == TLP_MEM_READ_LOCKED_64 or
-                (self.fmt, self.type) == TLP_MEM_WRITE or (self.fmt, self.type) == TLP_MEM_WRITE_64 or
-                (self.fmt, self.type) == TLP_IO_READ or (self.fmt, self.type) == TLP_IO_WRITE):
+        if (self.fmt_type == TLP_CFG_READ_0 or self.fmt_type == TLP_CFG_WRITE_0 or
+                self.fmt_type == TLP_CFG_READ_1 or self.fmt_type == TLP_CFG_WRITE_1 or
+                self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64 or
+                self.fmt_type == TLP_MEM_READ_LOCKED or self.fmt_type == TLP_MEM_READ_LOCKED_64 or
+                self.fmt_type == TLP_MEM_WRITE or self.fmt_type == TLP_MEM_WRITE_64 or
+                self.fmt_type == TLP_IO_READ or self.fmt_type == TLP_IO_WRITE):
             self.first_be = pkt[1] & 0xf
             self.last_be = (pkt[1] >> 4) & 0xf
             self.tag = (pkt[1] >> 8) & 0xff
             self.requester_id = int2id(pkt[1] >> 16)
 
-            if ((self.fmt, self.type) == TLP_CFG_READ_0 or (self.fmt, self.type) == TLP_CFG_WRITE_0 or
-                    (self.fmt, self.type) == TLP_CFG_READ_1 or (self.fmt, self.type) == TLP_CFG_WRITE_1):
+            if (self.fmt_type == TLP_CFG_READ_0 or self.fmt_type == TLP_CFG_WRITE_0 or
+                    self.fmt_type == TLP_CFG_READ_1 or self.fmt_type == TLP_CFG_WRITE_1):
                 self.register_number = (pkt[2] >> 2) >> 0x3ff
                 self.dest_id = int2id(pkt[2] >> 16)
             elif self.fmt == FMT_3DW or self.fmt == FMT_3DW_DATA:
                 self.address = pkt[3] & 0xfffffffc
             elif self.fmt == FMT_4DW or self.fmt == FMT_4DW_DATA:
                 self.address = (pkt[4] & 0xffffffff) << 32 | pkt[4] & 0xfffffffc
-        elif ((self.fmt, self.type) == TLP_CPL or (self.fmt, self.type) == TLP_CPL_DATA or
-                (self.fmt, self.type) == TLP_CPL_LOCKED or (self.fmt, self.type) == TLP_CPL_LOCKED_DATA):
+        elif (self.fmt_type == TLP_CPL or self.fmt_type == TLP_CPL_DATA or
+                self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA):
             self.byte_count = pkt[1] & 0xfff
             self.bcm = (pkt[1] >> 12) & 1
             self.status = (pkt[1] >> 13) & 0x7
@@ -1738,12 +1746,12 @@ class Function(PMCapability, PCIECapability):
         yield self.handle_tlp(tlp)
 
     def handle_tlp(self, tlp):
-        if ((tlp.fmt, tlp.type) == TLP_CPL or (tlp.fmt, tlp.type) == TLP_CPL_DATA or
-                (tlp.fmt, tlp.type) == TLP_CPL_LOCKED or (tlp.fmt, tlp.type) == TLP_CPL_LOCKED_DATA):
+        if (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
+                tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
             self.rx_cpl_queues[tlp.tag].append(tlp)
             self.rx_cpl_sync[tlp.tag].next = not self.rx_cpl_sync[tlp.tag]
-        elif (tlp.fmt, tlp.type) in self.rx_tlp_handler:
-            yield self.rx_tlp_handler[(tlp.fmt, tlp.type)](tlp)
+        elif tlp.fmt_type in self.rx_tlp_handler:
+            yield self.rx_tlp_handler[tlp.fmt_type](tlp)
         else:
             raise Exception("Unhandled TLP")
 
@@ -1774,16 +1782,15 @@ class Function(PMCapability, PCIECapability):
 
             # prepare completion TLP
             cpl = TLP()
-            cpl.set_completion(tlp, self.get_id())
 
             # perform operation
-            if (tlp.fmt, tlp.type) == TLP_CFG_READ_0:
-                cpl.fmt, cpl.type = TLP_CPL_DATA
+            if tlp.fmt_type == TLP_CFG_READ_0:
+                cpl.set_completion_data(tlp, self.get_id())
                 cpl.data = [self.read_config_register(tlp.register_number)]
                 cpl.byte_count = 4
                 cpl.length = 1
-            elif (tlp.fmt, tlp.type) == TLP_CFG_WRITE_0:
-                cpl.fmt, cpl.type = TLP_CPL
+            elif tlp.fmt_type == TLP_CFG_WRITE_0:
+                cpl.set_completion(tlp, self.get_id())
                 self.write_config_register(tlp.register_number, tlp.data[0], tlp.first_be)
 
             # logging
@@ -1803,7 +1810,7 @@ class Function(PMCapability, PCIECapability):
 
         while n < length:
             tlp = TLP()
-            tlp.fmt, tlp.type = TLP_IO_READ
+            tlp.fmt_type = TLP_IO_READ
             tlp.requester_id = self.get_id()
             tlp.tag = self.current_tag
 
@@ -1841,7 +1848,7 @@ class Function(PMCapability, PCIECapability):
 
         while n < len(data):
             tlp = TLP()
-            tlp.fmt, tlp.type = TLP_IO_WRITE
+            tlp.fmt_type = TLP_IO_WRITE
             tlp.requester_id = self.get_id()
             tlp.tag = self.current_tag
 
@@ -1875,9 +1882,9 @@ class Function(PMCapability, PCIECapability):
         while n < length:
             tlp = TLP()
             if addr > 0xffffffff:
-                tlp.fmt, tlp.type = TLP_MEM_READ_64
+                tlp.fmt_type = TLP_MEM_READ_64
             else:
-                tlp.fmt, tlp.type = TLP_MEM_READ
+                tlp.fmt_type = TLP_MEM_READ
             tlp.requester_id = self.get_id()
             tlp.tag = self.current_tag
 
@@ -1928,9 +1935,9 @@ class Function(PMCapability, PCIECapability):
         while n < len(data):
             tlp = TLP()
             if addr > 0xffffffff:
-                tlp.fmt, tlp.type = TLP_MEM_WRITE_64
+                tlp.fmt_type = TLP_MEM_WRITE_64
             else:
-                tlp.fmt, tlp.type = TLP_MEM_WRITE
+                tlp.fmt_type = TLP_MEM_WRITE
             tlp.requester_id = self.get_id()
             tlp.tag = self.current_tag
 
@@ -2442,23 +2449,23 @@ class Bridge(Function):
         # logging
         if trace_routing:
             print("[%s] Routing downstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
-        if (tlp.fmt, tlp.type) == TLP_CFG_READ_0 or (tlp.fmt, tlp.type) == TLP_CFG_WRITE_0:
+        if tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0:
             yield self.handle_tlp(tlp)
-        elif (tlp.fmt, tlp.type) == TLP_CFG_READ_1 or (tlp.fmt, tlp.type) == TLP_CFG_WRITE_1:
+        elif tlp.fmt_type == TLP_CFG_READ_1 or tlp.fmt_type == TLP_CFG_WRITE_1:
             # config type 1
             if self.sec_bus_num <= tlp.dest_id[0] <= self.sub_bus_num:
                 if tlp.dest_id[0] == self.sec_bus_num:
                     # targeted to directly connected device; change to type 0
-                    if (tlp.fmt, tlp.type) == TLP_CFG_READ_1:
-                        (tlp.fmt, tlp.type) = TLP_CFG_READ_0
-                    elif (tlp.fmt, tlp.type) == TLP_CFG_WRITE_1:
-                        (tlp.fmt, tlp.type) = TLP_CFG_WRITE_0
+                    if tlp.fmt_type == TLP_CFG_READ_1:
+                        tlp.fmt_type = TLP_CFG_READ_0
+                    elif tlp.fmt_type == TLP_CFG_WRITE_1:
+                        tlp.fmt_type = TLP_CFG_WRITE_0
                 yield self.downstream_send(tlp)
             else:
                 # error
                 pass
-        elif ((tlp.fmt, tlp.type) == TLP_CPL or (tlp.fmt, tlp.type) == TLP_CPL_DATA or
-                (tlp.fmt, tlp.type) == TLP_CPL_LOCKED or (tlp.fmt, tlp.type) == TLP_CPL_LOCKED_DATA):
+        elif (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
+                tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
             # Completions
             if not self.root and tlp.requester_id == self.get_id():
                 # for me
@@ -2468,7 +2475,7 @@ class Bridge(Function):
             else:
                 # error
                 pass
-        elif (tlp.fmt, tlp.type) == TLP_MSG_ID or (tlp.fmt, tlp.type) == TLP_MSG_DATA_ID:
+        elif tlp.fmt_type == TLP_MSG_ID or tlp.fmt_type == TLP_MSG_DATA_ID:
             # ID routed message
             if not self.root and tlp.dest_id == self.get_id():
                 # for me
@@ -2478,7 +2485,7 @@ class Bridge(Function):
             else:
                 # error
                 pass
-        elif ((tlp.fmt, tlp.type) == TLP_IO_READ or (tlp.fmt, tlp.type) == TLP_IO_WRITE):
+        elif (tlp.fmt_type == TLP_IO_READ or tlp.fmt_type == TLP_IO_WRITE):
             # IO read/write
             if self.match_bar(tlp.address):
                 # for me
@@ -2488,8 +2495,8 @@ class Bridge(Function):
             else:
                 # error
                 pass
-        elif ((tlp.fmt, tlp.type) == TLP_MEM_READ or (tlp.fmt, tlp.type) == TLP_MEM_READ_64 or
-                (tlp.fmt, tlp.type) == TLP_MEM_WRITE or (tlp.fmt, tlp.type) == TLP_MEM_WRITE_64):
+        elif (tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64 or
+                tlp.fmt_type == TLP_MEM_WRITE or tlp.fmt_type == TLP_MEM_WRITE_64):
             # Memory read/write
             if self.match_bar(tlp.address):
                 # for me
@@ -2499,18 +2506,18 @@ class Bridge(Function):
             else:
                 # error
                 pass
-        elif (tlp.fmt, tlp.type) == TLP_MSG_TO_RC or (tlp.fmt, tlp.type) == TLP_MSG_DATA_TO_RC:
+        elif tlp.fmt_type == TLP_MSG_TO_RC or tlp.fmt_type == TLP_MSG_DATA_TO_RC:
             # Message to root complex
             # error
             pass
-        elif (tlp.fmt, tlp.type) == TLP_MSG_BCAST or (tlp.fmt, tlp.type) == TLP_MSG_DATA_BCAST:
+        elif tlp.fmt_type == TLP_MSG_BCAST or tlp.fmt_type == TLP_MSG_DATA_BCAST:
             # Message broadcast from root complex
             yield self.upstream_send(tlp)
-        elif (tlp.fmt, tlp.type) == TLP_MSG_LOCAL or (tlp.fmt, tlp.type) == TLP_MSG_DATA_LOCAL:
+        elif tlp.fmt_type == TLP_MSG_LOCAL or tlp.fmt_type == TLP_MSG_DATA_LOCAL:
             # Message local to receiver
             # error
             pass
-        elif (tlp.fmt, tlp.type) == TLP_MSG_GATHER or (tlp.fmt, tlp.type) == TLP_MSG_DATA_GATHER:
+        elif tlp.fmt_type == TLP_MSG_GATHER or tlp.fmt_type == TLP_MSG_DATA_GATHER:
             # Message gather to root complex
             # error
             pass
@@ -2527,12 +2534,12 @@ class Bridge(Function):
         # logging
         if trace_routing:
             print("[%s] Routing upstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
-        if ((tlp.fmt, tlp.type) == TLP_CFG_READ_0 or (tlp.fmt, tlp.type) == TLP_CFG_WRITE_0 or
-                (tlp.fmt, tlp.type) == TLP_CFG_READ_1 or (tlp.fmt, tlp.type) == TLP_CFG_WRITE_1):
+        if (tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0 or
+                tlp.fmt_type == TLP_CFG_READ_1 or tlp.fmt_type == TLP_CFG_WRITE_1):
             # error
             pass
-        elif ((tlp.fmt, tlp.type) == TLP_CPL or (tlp.fmt, tlp.type) == TLP_CPL_DATA or
-                (tlp.fmt, tlp.type) == TLP_CPL_LOCKED or (tlp.fmt, tlp.type) == TLP_CPL_LOCKED_DATA):
+        elif (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
+                tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
             # Completions
             if not self.root and tlp.requester_id == self.get_id():
                 # for me
@@ -2544,7 +2551,7 @@ class Bridge(Function):
                     yield self.downstream_send(tlp)
             else:
                 yield self.upstream_send(tlp)
-        elif (tlp.fmt, tlp.type) == TLP_MSG_ID or (tlp.fmt, tlp.type) == TLP_MSG_DATA_ID:
+        elif tlp.fmt_type == TLP_MSG_ID or tlp.fmt_type == TLP_MSG_DATA_ID:
             # ID routed messages
             if not self.root and tlp.dest_id == self.get_id():
                 # for me
@@ -2556,7 +2563,7 @@ class Bridge(Function):
                     yield self.downstream_send(tlp)
             else:
                 yield self.upstream_send(tlp)
-        elif ((tlp.fmt, tlp.type) == TLP_IO_READ or (tlp.fmt, tlp.type) == TLP_IO_WRITE):
+        elif (tlp.fmt_type == TLP_IO_READ or tlp.fmt_type == TLP_IO_WRITE):
             # IO read/write
             if self.match_bar(tlp.address):
                 # for me
@@ -2565,8 +2572,8 @@ class Bridge(Function):
                 yield self.downstream_send(tlp)
             else:
                 yield self.upstream_send(tlp)
-        elif ((tlp.fmt, tlp.type) == TLP_MEM_READ or (tlp.fmt, tlp.type) == TLP_MEM_READ_64 or
-                (tlp.fmt, tlp.type) == TLP_MEM_WRITE or (tlp.fmt, tlp.type) == TLP_MEM_WRITE_64):
+        elif (tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64 or
+                tlp.fmt_type == TLP_MEM_WRITE or tlp.fmt_type == TLP_MEM_WRITE_64):
             # Memory read/write
             if self.match_bar(tlp.address):
                 # for me
@@ -2575,18 +2582,18 @@ class Bridge(Function):
                 yield self.downstream_send(tlp)
             else:
                 yield self.upstream_send(tlp)
-        elif (tlp.fmt, tlp.type) == TLP_MSG_TO_RC or (tlp.fmt, tlp.type) == TLP_MSG_DATA_TO_RC:
+        elif tlp.fmt_type == TLP_MSG_TO_RC or tlp.fmt_type == TLP_MSG_DATA_TO_RC:
             # Message to root complex
             yield self.upstream_send(tlp)
-        elif (tlp.fmt, tlp.type) == TLP_MSG_BCAST or (tlp.fmt, tlp.type) == TLP_MSG_DATA_BCAST:
+        elif tlp.fmt_type == TLP_MSG_BCAST or tlp.fmt_type == TLP_MSG_DATA_BCAST:
             # Message broadcast from root complex
             # error
             pass
-        elif (tlp.fmt, tlp.type) == TLP_MSG_LOCAL or (tlp.fmt, tlp.type) == TLP_MSG_DATA_LOCAL:
+        elif tlp.fmt_type == TLP_MSG_LOCAL or tlp.fmt_type == TLP_MSG_DATA_LOCAL:
             # Message local to receiver
             # error
             pass
-        elif (tlp.fmt, tlp.type) == TLP_MSG_GATHER or (tlp.fmt, tlp.type) == TLP_MSG_DATA_GATHER:
+        elif tlp.fmt_type == TLP_MSG_GATHER or tlp.fmt_type == TLP_MSG_DATA_GATHER:
             # Message gather to root complex
             raise Exception("TODO")
         else:
@@ -2700,7 +2707,7 @@ class Device(object):
     def upstream_recv(self, tlp):
         # logging
         print("[%s] Got downstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
-        if (tlp.fmt, tlp.type) == TLP_CFG_READ_0 or (tlp.fmt, tlp.type) == TLP_CFG_WRITE_0:
+        if tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0:
             # config type 0
 
             if tlp.dest_id[1] == self.device_num:
@@ -2727,8 +2734,8 @@ class Device(object):
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
             yield self.upstream_send(cpl)
-        elif ((tlp.fmt, tlp.type) == TLP_CPL or (tlp.fmt, tlp.type) == TLP_CPL_DATA or
-                (tlp.fmt, tlp.type) == TLP_CPL_LOCKED or (tlp.fmt, tlp.type) == TLP_CPL_LOCKED_DATA):
+        elif (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
+                tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
             # Completion
 
             if tlp.requester_id[0] == self.bus_num and tlp.requester_id[1] == self.device_num:
@@ -2740,7 +2747,7 @@ class Device(object):
                 print("Function not found")
             else:
                 print("Bus/device number mismatch")
-        elif ((tlp.fmt, tlp.type) == TLP_IO_READ or (tlp.fmt, tlp.type) == TLP_IO_WRITE):
+        elif (tlp.fmt_type == TLP_IO_READ or tlp.fmt_type == TLP_IO_WRITE):
             # IO read/write
 
             for f in self.functions:
@@ -2756,8 +2763,8 @@ class Device(object):
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
             yield self.upstream_send(cpl)
-        elif ((tlp.fmt, tlp.type) == TLP_MEM_READ or (tlp.fmt, tlp.type) == TLP_MEM_READ_64 or
-                (tlp.fmt, tlp.type) == TLP_MEM_WRITE or (tlp.fmt, tlp.type) == TLP_MEM_WRITE_64):
+        elif (tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64 or
+                tlp.fmt_type == TLP_MEM_WRITE or tlp.fmt_type == TLP_MEM_WRITE_64):
             # Memory read/write
 
             for f in self.functions:
@@ -2767,7 +2774,7 @@ class Device(object):
 
             print("Memory request did not match any BARs")
 
-            if (tlp.fmt, tlp.type) == TLP_MEM_READ or (tlp.fmt, tlp.type) == TLP_MEM_READ_64:
+            if tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64:
                 # Unsupported request
                 cpl = TLP()
                 cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
@@ -3084,12 +3091,12 @@ class RootComplex(Switch):
         yield self.handle_tlp(tlp)
 
     def handle_tlp(self, tlp):
-        if ((tlp.fmt, tlp.type) == TLP_CPL or (tlp.fmt, tlp.type) == TLP_CPL_DATA or
-                (tlp.fmt, tlp.type) == TLP_CPL_LOCKED or (tlp.fmt, tlp.type) == TLP_CPL_LOCKED_DATA):
+        if (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
+                tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
             self.rx_cpl_queues[tlp.tag].append(tlp)
             self.rx_cpl_sync[tlp.tag].next = not self.rx_cpl_sync[tlp.tag]
-        elif (tlp.fmt, tlp.type) in self.rx_tlp_handler:
-            yield self.rx_tlp_handler[(tlp.fmt, tlp.type)](tlp)
+        elif tlp.fmt_type in self.rx_tlp_handler:
+            yield self.rx_tlp_handler[tlp.fmt_type](tlp)
         else:
             raise Exception("Unhandled TLP")
 
@@ -3330,7 +3337,7 @@ class RootComplex(Switch):
 
         while n < length:
             tlp = TLP()
-            tlp.fmt, tlp.type = TLP_CFG_READ_1
+            tlp.fmt_type = TLP_CFG_READ_1
             tlp.requester_id = (0, 0, 0)
             tlp.tag = self.current_tag
             tlp.dest_id = dest_id
@@ -3363,7 +3370,7 @@ class RootComplex(Switch):
 
         while n < len(data):
             tlp = TLP()
-            tlp.fmt, tlp.type = TLP_CFG_WRITE_1
+            tlp.fmt_type = TLP_CFG_WRITE_1
             tlp.requester_id = (0, 0, 0)
             tlp.tag = self.current_tag
             tlp.dest_id = dest_id
@@ -3425,7 +3432,7 @@ class RootComplex(Switch):
 
         while n < length:
             tlp = TLP()
-            tlp.fmt, tlp.type = TLP_IO_READ
+            tlp.fmt_type = TLP_IO_READ
             tlp.requester_id = (0, 0, 0)
             tlp.tag = self.current_tag
 
@@ -3462,7 +3469,7 @@ class RootComplex(Switch):
 
         while n < len(data):
             tlp = TLP()
-            tlp.fmt, tlp.type = TLP_IO_WRITE
+            tlp.fmt_type = TLP_IO_WRITE
             tlp.requester_id = (0, 0, 0)
             tlp.tag = self.current_tag
 
@@ -3495,9 +3502,9 @@ class RootComplex(Switch):
         while n < length:
             tlp = TLP()
             if addr > 0xffffffff:
-                tlp.fmt, tlp.type = TLP_MEM_READ_64
+                tlp.fmt_type = TLP_MEM_READ_64
             else:
-                tlp.fmt, tlp.type = TLP_MEM_READ
+                tlp.fmt_type = TLP_MEM_READ
             tlp.requester_id = (0, 0, 0)
             tlp.tag = self.current_tag
 
@@ -3547,9 +3554,9 @@ class RootComplex(Switch):
         while n < len(data):
             tlp = TLP()
             if addr > 0xffffffff:
-                tlp.fmt, tlp.type = TLP_MEM_WRITE_64
+                tlp.fmt_type = TLP_MEM_WRITE_64
             else:
-                tlp.fmt, tlp.type = TLP_MEM_WRITE
+                tlp.fmt_type = TLP_MEM_WRITE
             tlp.requester_id = (0, 0, 0)
             tlp.tag = self.current_tag
 

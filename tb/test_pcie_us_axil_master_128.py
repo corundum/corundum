@@ -249,7 +249,7 @@ def bench():
         current_test.next = 2
 
         tlp = pcie_us.TLP_us()
-        tlp.fmt, tlp.type = pcie_us.TLP_MEM_WRITE
+        tlp.fmt_type = pcie_us.TLP_MEM_WRITE
         tlp.requester_id = (1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
@@ -278,7 +278,7 @@ def bench():
         current_test.next = 3
 
         tlp = pcie_us.TLP_us()
-        tlp.fmt, tlp.type = pcie_us.TLP_IO_WRITE
+        tlp.fmt_type = pcie_us.TLP_IO_WRITE
         tlp.requester_id = (1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
@@ -316,7 +316,7 @@ def bench():
         current_test.next = 4
 
         tlp = pcie_us.TLP_us()
-        tlp.fmt, tlp.type = pcie_us.TLP_MEM_READ
+        tlp.fmt_type = pcie_us.TLP_MEM_READ
         tlp.requester_id = (1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
@@ -354,7 +354,7 @@ def bench():
         current_test.next = 5
 
         tlp = pcie_us.TLP_us()
-        tlp.fmt, tlp.type = pcie_us.TLP_IO_READ
+        tlp.fmt_type = pcie_us.TLP_IO_READ
         tlp.requester_id = (1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
@@ -396,7 +396,7 @@ def bench():
                 axil_ram_inst.write_mem(256*(16*offset+length), b'\xAA'*32)
 
                 tlp = pcie_us.TLP_us()
-                tlp.fmt, tlp.type = pcie_us.TLP_MEM_WRITE
+                tlp.fmt_type = pcie_us.TLP_MEM_WRITE
                 tlp.requester_id = (1, 2, 3)
                 tlp.tag = cur_tag
                 tlp.tc = 0
@@ -429,7 +429,7 @@ def bench():
         for length in range(1,5):
             for offset in range(4,8-length+1):
                 tlp = pcie_us.TLP_us()
-                tlp.fmt, tlp.type = pcie_us.TLP_MEM_READ
+                tlp.fmt_type = pcie_us.TLP_MEM_READ
                 tlp.requester_id = (1, 2, 3)
                 tlp.tag = cur_tag
                 tlp.tc = 0
@@ -467,7 +467,7 @@ def bench():
         current_test.next = 8
 
         tlp = pcie_us.TLP_us()
-        tlp.fmt, tlp.type = pcie_us.TLP_MEM_WRITE
+        tlp.fmt_type = pcie_us.TLP_MEM_WRITE
         tlp.requester_id = (1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0
@@ -492,7 +492,7 @@ def bench():
         current_test.next = 9
 
         tlp = pcie_us.TLP_us()
-        tlp.fmt, tlp.type = pcie_us.TLP_MEM_READ
+        tlp.fmt_type = pcie_us.TLP_MEM_READ
         tlp.requester_id = (1, 2, 3)
         tlp.tag = cur_tag
         tlp.tc = 0

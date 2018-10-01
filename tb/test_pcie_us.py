@@ -499,12 +499,12 @@ def bench():
 
                 print(tlp)
 
-                if ((tlp.fmt, tlp.type) == pcie.TLP_IO_READ):
+                if (tlp.fmt_type == pcie.TLP_IO_READ):
                     print("IO read")
 
                     cpl = pcie_us.TLP_us()
                     cpl.set_completion(tlp, (0, 0, 0))
-                    cpl.fmt, cpl.type = pcie.TLP_CPL_DATA
+                    cpl.fmt_type = pcie.TLP_CPL_DATA
 
                     region = tlp.bar_id
                     addr = tlp.address & 0xffff # TODO
@@ -534,7 +534,7 @@ def bench():
                     cpl.length = 1
 
                     cc_source.send(cpl.pack_us_cc(dw))
-                elif ((tlp.fmt, tlp.type) == pcie.TLP_IO_WRITE):
+                elif (tlp.fmt_type == pcie.TLP_IO_WRITE):
                     print("IO write")
 
                     cpl = pcie_us.TLP_us()
@@ -564,7 +564,7 @@ def bench():
                         regions[region][addr+start_offset:addr+offset] = data[start_offset:offset]
 
                     cc_source.send(cpl.pack_us_cc(dw))
-                if ((tlp.fmt, tlp.type) == pcie.TLP_MEM_READ or (tlp.fmt, tlp.type) == pcie.TLP_MEM_READ_64):
+                if (tlp.fmt_type == pcie.TLP_MEM_READ or tlp.fmt_type == pcie.TLP_MEM_READ_64):
                     print("Memory read")
 
                     # perform operation
@@ -602,7 +602,7 @@ def bench():
 
                         n += byte_length
                         addr += byte_length
-                if ((tlp.fmt, tlp.type) == pcie.TLP_MEM_WRITE or (tlp.fmt, tlp.type) == pcie.TLP_MEM_WRITE_64):
+                if (tlp.fmt_type == pcie.TLP_MEM_WRITE or tlp.fmt_type == pcie.TLP_MEM_WRITE_64):
                     print("Memory write")
 
                     # perform operation
@@ -727,7 +727,7 @@ def bench():
 
         while n < len(data):
             tlp = pcie_us.TLP_us()
-            tlp.fmt, tlp.type = pcie.TLP_IO_WRITE
+            tlp.fmt_type = pcie.TLP_IO_WRITE
             tlp.requester_id = (dev.bus_num, dev.device_num, 0)
             tlp.tag = current_tag
 
@@ -765,7 +765,7 @@ def bench():
 
         while n < length:
             tlp = pcie_us.TLP_us()
-            tlp.fmt, tlp.type = pcie.TLP_IO_READ
+            tlp.fmt_type = pcie.TLP_IO_READ
             tlp.requester_id = (dev.bus_num, dev.device_num, 0)
             tlp.tag = current_tag
 
@@ -809,9 +809,9 @@ def bench():
         while n < len(data):
             tlp = pcie_us.TLP_us()
             if addr > 0xffffffff:
-                tlp.fmt, tlp.type = pcie.TLP_MEM_WRITE_64
+                tlp.fmt_type = pcie.TLP_MEM_WRITE_64
             else:
-                tlp.fmt, tlp.type = pcie.TLP_MEM_WRITE
+                tlp.fmt_type = pcie.TLP_MEM_WRITE
             tlp.requester_id = (dev.bus_num, dev.device_num, 0)
             tlp.tag = current_tag
 
@@ -843,9 +843,9 @@ def bench():
         while n < length:
             tlp = pcie_us.TLP_us()
             if addr > 0xffffffff:
-                tlp.fmt, tlp.type = pcie.TLP_MEM_READ_64
+                tlp.fmt_type = pcie.TLP_MEM_READ_64
             else:
-                tlp.fmt, tlp.type = pcie.TLP_MEM_READ
+                tlp.fmt_type = pcie.TLP_MEM_READ
             tlp.requester_id = (dev.bus_num, dev.device_num, 0)
             tlp.tag = current_tag
 

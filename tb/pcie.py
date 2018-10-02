@@ -2281,7 +2281,7 @@ class MemoryEndpoint(Endpoint):
             # prepare completion TLP(s)
             m = 0
             n = 0
-            addr = tlp.address
+            addr = tlp.address+tlp.get_first_be_offset()
             dw_length = tlp.length
             byte_length = tlp.get_be_byte_count()
 
@@ -3310,7 +3310,7 @@ class RootComplex(Switch):
             # prepare completion TLP(s)
             m = 0
             n = 0
-            addr = tlp.address
+            addr = tlp.address+tlp.get_first_be_offset()
             dw_length = tlp.length
             byte_length = tlp.get_be_byte_count()
 

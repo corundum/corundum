@@ -2279,31 +2279,34 @@ class MemoryEndpoint(Endpoint):
             data = bytearray(self.read_region(region, addr, tlp.length*4))
 
             # prepare completion TLP(s)
+            m = 0
             n = 0
             addr = tlp.address
-            length = tlp.length*4
+            dw_length = tlp.length
+            byte_length = tlp.get_be_byte_count()
 
-            while n < length:
+            while m < dw_length:
                 cpl = TLP()
                 cpl.set_completion_data(tlp, self.get_id())
 
-                byte_length = length-n
-                cpl.byte_count = byte_length
-                if byte_length > 128 << self.max_payload_size:
-                    byte_length = 128 << self.max_payload_size # max payload size
-                    byte_length -= (addr + byte_length) % self.read_completion_boundary # RCB align
-                byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
+                cpl_dw_length = dw_length - m
+                cpl_byte_length = byte_length - n
+                cpl.byte_count = cpl_byte_length
+                if cpl_dw_length > 32 << self.max_payload_size:
+                    cpl_dw_length = 32 << self.max_payload_size # max payload size
+                    cpl_dw_length -= (addr & 0x7c) >> 2 # RCB align
 
                 cpl.lower_address = addr & 0x7f
 
-                cpl.set_data(data[n:n+byte_length])
+                cpl.set_data(data[m*4:(m+cpl_dw_length)*4])
 
                 # logging
                 print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
                 yield self.send(cpl)
 
-                n += byte_length
-                addr += byte_length
+                m += cpl_dw_length;
+                n += cpl_dw_length*4 + (addr&3)
+                addr += cpl_dw_length*4 + (addr&3)
 
         else:
             # logging
@@ -3305,31 +3308,34 @@ class RootComplex(Switch):
             data = self.read_region(addr, tlp.length*4)
 
             # prepare completion TLP(s)
+            m = 0
             n = 0
             addr = tlp.address
-            length = tlp.length*4
+            dw_length = tlp.length
+            byte_length = tlp.get_be_byte_count()
 
-            while n < length:
+            while m < dw_length:
                 cpl = TLP()
                 cpl.set_completion_data(tlp, PcieId(0, 0, 0))
 
-                byte_length = length-n
-                cpl.byte_count = byte_length
-                if byte_length > 128 << self.max_payload_size:
-                    byte_length = 128 << self.max_payload_size # max payload size
-                    byte_length -= (addr + byte_length) % self.read_completion_boundary # RCB align
-                byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
+                cpl_dw_length = dw_length - m
+                cpl_byte_length = byte_length - n
+                cpl.byte_count = cpl_byte_length
+                if cpl_dw_length > 32 << self.max_payload_size:
+                    cpl_dw_length = 32 << self.max_payload_size # max payload size
+                    cpl_dw_length -= (addr & 0x7c) >> 2 # RCB align
 
                 cpl.lower_address = addr & 0x7f
 
-                cpl.set_data(data[n:n+byte_length])
+                cpl.set_data(data[m*4:(m+cpl_dw_length)*4])
 
                 # logging
                 print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
                 yield self.send(cpl)
 
-                n += byte_length
-                addr += byte_length
+                m += cpl_dw_length;
+                n += cpl_dw_length*4 + (addr&3)
+                addr += cpl_dw_length*4 + (addr&3)
 
         else:
             # logging

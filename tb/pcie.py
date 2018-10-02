@@ -2305,8 +2305,8 @@ class MemoryEndpoint(Endpoint):
                 yield self.send(cpl)
 
                 m += cpl_dw_length;
-                n += cpl_dw_length*4 + (addr&3)
-                addr += cpl_dw_length*4 + (addr&3)
+                n += cpl_dw_length*4 - (addr&3)
+                addr += cpl_dw_length*4 - (addr&3)
 
         else:
             # logging
@@ -3296,8 +3296,6 @@ class RootComplex(Switch):
             # perform operation
             addr = tlp.address
             offset = 0
-            start_offset = None
-            mask = tlp.first_be
 
             # check for 4k boundary crossing
             if tlp.length*4 > 0x1000 - (addr & 0xfff):
@@ -3334,8 +3332,8 @@ class RootComplex(Switch):
                 yield self.send(cpl)
 
                 m += cpl_dw_length;
-                n += cpl_dw_length*4 + (addr&3)
-                addr += cpl_dw_length*4 + (addr&3)
+                n += cpl_dw_length*4 - (addr&3)
+                addr += cpl_dw_length*4 - (addr&3)
 
         else:
             # logging

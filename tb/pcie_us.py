@@ -527,8 +527,12 @@ class TLP_us(TLP):
 
                 if k == 0:
                     u |= 1 << 32 # is_sof_0
+                    eof = 0
+                    if k+int(dw/32) > len(byte_en):
+                        eof = 1 | ((len(byte_en)-1) % int(dw/32)) << 1
+                    u |= eof << 34 # is_eof_0
 
-                    # TODO is_sof_1, is_eof (straddle)
+                    # TODO is_sof_1, is_eof_1 (straddle)
 
                 pkt.user.append(u)
 

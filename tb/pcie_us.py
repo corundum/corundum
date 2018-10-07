@@ -481,7 +481,6 @@ class TLP_us(TLP):
             # TODO error code
             l |= (self.byte_count & 0x1fff) << 16
             if self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA:
-                # TODO only for completions for locked read requests
                 l |= 1 << 29
             # TODO request completed
             pkt.data.append(l)

@@ -110,7 +110,7 @@ class TLP_us(TLP):
                 byte_en += [self.last_be]
 
             # compute parity
-            parity = [dword_parity(d) for d in pkt.data]
+            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
 
             # assemble sideband signal
             pkt.user = []
@@ -122,6 +122,8 @@ class TLP_us(TLP):
                     if k+l < len(byte_en):
                         u |= byte_en[k+l] << l*4+8
                         u |= parity[k+l] << l*4+53
+                    else:
+                        u |= 0xf<< l*4+53
 
                 if k == 0:
                     u |= (self.first_be & 0xf)
@@ -196,7 +198,7 @@ class TLP_us(TLP):
                 byte_en += [self.last_be]
 
             # compute parity
-            parity = [dword_parity(d) for d in pkt.data]
+            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
 
             # check sideband components
             assert pkt.user[0] & (1 << 40) # SOP
@@ -240,7 +242,7 @@ class TLP_us(TLP):
             pkt.data += self.data
 
             # compute parity
-            parity = [dword_parity(d) for d in pkt.data]
+            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
 
             # assemble sideband signal
             pkt.user = []
@@ -254,6 +256,8 @@ class TLP_us(TLP):
                 for l in range(int(dw/32)):
                     if k+l < len(parity):
                         u |= parity[k+l] << l*4+1
+                    else:
+                        u |= 0xf << l*4+1
 
                 pkt.user.append(u)
 
@@ -286,7 +290,7 @@ class TLP_us(TLP):
             self.data = pkt.data[3:3+self.length]
 
         # compute parity
-        parity = [dword_parity(d) for d in pkt.data]
+        parity = [dword_parity(d) ^ 0xf for d in pkt.data]
 
         # check sideband components
         for k in range(0, len(pkt.data), int(dw/32)):
@@ -361,7 +365,7 @@ class TLP_us(TLP):
             pkt.data += self.data
 
             # compute parity
-            parity = [dword_parity(d) for d in pkt.data]
+            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
 
             # assemble sideband signal
             pkt.user = []
@@ -375,6 +379,8 @@ class TLP_us(TLP):
                 for l in range(int(dw/32)):
                     if k+l < len(parity):
                         u |= parity[k+l] << l*4+28
+                    else:
+                        u |= 0xf << l*4+28
 
                 if k == 0:
                     u |= (self.first_be & 0xf)
@@ -450,7 +456,7 @@ class TLP_us(TLP):
             self.data = pkt.data[4:]
 
             # compute parity
-            parity = [dword_parity(d) for d in pkt.data]
+            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
 
             # check sideband components
             for k in range(0, len(pkt.data), int(dw/32)):
@@ -504,7 +510,7 @@ class TLP_us(TLP):
                 byte_en += [self.last_be]
 
             # compute parity
-            parity = [dword_parity(d) for d in pkt.data]
+            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
 
             # assemble sideband signal
             pkt.user = []
@@ -516,6 +522,8 @@ class TLP_us(TLP):
                     if k+l < len(byte_en):
                         u |= byte_en[k+l] << l*4
                         u |= parity[k+l] << l*4+43
+                    else:
+                        u |= 0xf << l*4+43
 
                 if k == 0:
                     u |= 1 << 32 # is_sof_0
@@ -564,7 +572,7 @@ class TLP_us(TLP):
             byte_en += [self.last_be]
 
         # compute parity
-        parity = [dword_parity(d) for d in pkt.data]
+        parity = [dword_parity(d) ^ 0xf for d in pkt.data]
 
         # check sideband components
         assert pkt.user[0] & (1 << 32) # is_sof_0

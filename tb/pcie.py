@@ -3637,7 +3637,7 @@ class RootComplex(Switch):
             yield self.capability_write(dev, MSI_CAP_ID, 8, struct.pack('<L', self.msi_msg_limit))
 
         # enable and set enabled messages
-        yield self.capability_write(dev, MSI_CAP_ID, 0, struct.pack('<L', msg_ctrl | 1 << 16 | msi_mmcap << 20))
+        yield self.capability_write(dev, MSI_CAP_ID, 0, struct.pack('<L', (msg_ctrl & ~(7 << 20)) | 1 << 16 | msi_mmcap << 20))
 
         ti.msi_addr = self.msi_addr
         ti.msi_data = self.msi_msg_limit

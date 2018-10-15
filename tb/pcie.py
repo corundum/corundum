@@ -1999,15 +1999,12 @@ class Function(PMCapability, PCIECapability):
             else:
                 tlp.fmt_type = TLP_MEM_WRITE
             tlp.requester_id = self.get_id()
-            tlp.tag = self.current_tag
 
             first_pad = addr % 4
             byte_length = len(data)-n
             byte_length = min(byte_length, (128 << self.max_payload_size)-first_pad) # max payload size
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
             tlp.set_be_data(addr, data[n:n+byte_length])
-
-            self.current_tag = (self.current_tag % 31) + 1
 
             yield self.send(tlp)
 
@@ -3622,15 +3619,12 @@ class RootComplex(Switch):
             else:
                 tlp.fmt_type = TLP_MEM_WRITE
             tlp.requester_id = PcieId(0, 0, 0)
-            tlp.tag = self.current_tag
 
             first_pad = addr % 4
             byte_length = len(data)-n
             byte_length = min(byte_length, (128 << self.max_payload_size)-first_pad) # max payload size
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
             tlp.set_be_data(addr, data[n:n+byte_length])
-
-            self.current_tag = (self.current_tag % 31) + 1
 
             yield self.send(tlp)
 

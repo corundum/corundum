@@ -112,7 +112,9 @@ CPL_STATUS_CA  = 0x4 # completer abort
 
 # PCIe capabilities
 MSI_CAP_ID = 0x05
+MSI_CAP_LEN = 6
 MSIX_CAP_ID = 0x11
+MSIX_CAP_LEN = 3
 
 PM_CAP_ID = 0x01
 PM_CAP_LEN = 2
@@ -1222,7 +1224,7 @@ class MSICapability(object):
         self.msi_mask_bits = 0
         self.msi_pending_bits = 0
 
-        self.register_capability(MSI_CAP_ID, 6, self.read_msi_cap_register, self.write_msi_cap_register)
+        self.register_capability(MSI_CAP_ID, MSI_CAP_LEN, self.read_msi_cap_register, self.write_msi_cap_register)
 
     """
     MSI Capability (32 bit)
@@ -1339,7 +1341,7 @@ class MSIXCapability(object):
         self.msix_pba_bar_indicator_register = 0
         self.msix_pba_offset = 0
 
-        self.register_capability(MSIX_CAP_ID, 3, self.read_msix_cap_register, self.write_msix_cap_register)
+        self.register_capability(MSIX_CAP_ID, MSIX_CAP_LEN, self.read_msix_cap_register, self.write_msix_cap_register)
 
     """
     MSI-X Capability

@@ -643,9 +643,12 @@ class TLP_us(TLP):
             )
 
 
-class UltrascalePCIeFunction(Endpoint, MSI64MaskCapability, MSIXCapability):
+class UltrascalePCIeFunction(Endpoint, MSICapability, MSIXCapability):
     def __init__(self):
         super(UltrascalePCIeFunction, self).__init__()
+
+        self.msi_64bit_address_capable = 1
+        self.msi_per_vector_mask_capable = 0
 
         self.register_capability(PCIE_CAP_ID, offset=48)
         self.register_capability(MSIX_CAP_ID, offset=44)

@@ -1207,18 +1207,22 @@ class PCIECapability(object):
         pass
 
 
-class MSI32Capability(object):
+class MSICapability(object):
     def __init__(self, *args, **kwargs):
-        super(MSI32Capability, self).__init__(*args, **kwargs)
+        super(MSICapability, self).__init__(*args, **kwargs)
 
-        # MSI Capability Registes
+        # MSI Capability Registers
+        self.msi_enable = False
         self.msi_multiple_message_capable = 0
         self.msi_multiple_message_enable = 0
-        self.msi_enable = False
+        self.msi_64bit_address_capable = 0
+        self.msi_per_vector_mask_capable = 0
         self.msi_message_address = 0
         self.msi_message_data = 0
+        self.msi_mask_bits = 0
+        self.msi_pending_bits = 0
 
-        self.register_capability(MSI_CAP_ID, 3, self.read_msi_cap_register, self.write_msi_cap_register)
+        self.register_capability(MSI_CAP_ID, 6, self.read_msi_cap_register, self.write_msi_cap_register)
 
     """
     MSI Capability (32 bit)
@@ -1231,50 +1235,7 @@ class MSI32Capability(object):
     +---------------------------------+---------------------------------+
     |                                 |           Message Data          |   2   0x08
     +---------------------------------+---------------------------------+
-    """
-    def read_msi_cap_register(self, reg):
-        if reg == 0:
-            # Message control
-            val = 0x00000000
-            if self.msi_enable: val |= 1 << 16
-            val |= (self.msi_multiple_message_capable & 0x7) << 17
-            val |= (self.msi_multiple_message_enable & 0x7) << 20
-            return val
-        elif reg == 1:
-            # Message address
-            return self.msi_message_address & 0xfffffffc
-        elif reg == 2:
-            # Message data
-            return self.msi_message_data & 0xffff
 
-    def write_msi_cap_register(self, reg, write, offset=None):
-        if reg == 0:
-            # Message control
-            if mask & 0x4: self.msi_enable = (data & 1 << 16 != 0)
-            if mask & 0x4: self.msi_multiple_message_enable = (data >> 20) & 0x7
-        elif reg == 1:
-            # Message address
-            self.msi_message_address = byte_mask_update(self.msi_message_address, mask, data) & 0xfffffffc
-        elif reg == 2:
-            # Message data
-            self.msi_message_data = byte_mask_update(self.msi_message_data, mask & 0x3, data) & 0xffff
-
-
-class MSI64Capability(object):
-    def __init__(self, *args, **kwargs):
-        super(MSI64Capability, self).__init__(*args, **kwargs)
-
-        # MSI Capability Registes
-        self.msi_multiple_message_capable = 0
-        self.msi_multiple_message_enable = 0
-        self.msi_enable = False
-        self.msi_message_address = 0
-        self.msi_message_upper_address = 0
-        self.msi_message_data = 0
-
-        self.register_capability(MSI_CAP_ID, 4, self.read_msi_cap_register, self.write_msi_cap_register)
-
-    """
     MSI Capability (64 bit)
 
     31                                                                  0
@@ -1287,58 +1248,22 @@ class MSI64Capability(object):
     +---------------------------------+---------------------------------+
     |                                 |           Message Data          |   3   0x0C
     +---------------------------------+---------------------------------+
-    """
-    def read_msi_cap_register(self, reg):
-        if reg == 0:
-            # Message control
-            val = 0x00800000
-            if self.msi_enable: val |= 1 << 16
-            val |= (self.msi_multiple_message_capable & 0x7) << 17
-            val |= (self.msi_multiple_message_enable & 0x7) << 20
-            return val
-        elif reg == 1:
-            # Message address
-            return self.msi_message_address & 0xfffffffc
-        elif reg == 2:
-            # Message upper address
-            return self.msi_message_upper_address & 0xffffffff
-        elif reg == 3:
-            # Message data
-            return self.msi_message_data & 0xffff
 
-    def write_msi_cap_register(self, reg, write, offset=None):
-        if reg == 0:
-            # Message control
-            if mask & 0x4: self.msi_enable = (data & 1 << 16 != 0)
-            if mask & 0x4: self.msi_multiple_message_enable = (data >> 20) & 0x7
-        elif reg == 1:
-            # Message address
-            self.msi_message_address = byte_mask_update(self.msi_message_address, mask, data) & 0xfffffffc
-        elif reg == 2:
-            # Message upper address
-            self.msi_message_upper_address = byte_mask_update(self.msi_message_upper_address, mask, data) & 0xffffffff
-        elif reg == 3:
-            # Message data
-            self.msi_message_data = byte_mask_update(self.msi_message_data, mask & 0x3, data) & 0xffff
+    MSI Capability (32 bit with per-vector masking)
 
+    31                                                                  0
+    +---------------------------------+----------------+----------------+
+    |         Message Control         |    Next Cap    |     Cap ID     |   0   0x00
+    +---------------------------------+----------------+----------------+
+    |                          Message Address                          |   1   0x04
+    +-------------------------------------------------------------------+
+    |                                 |           Message Data          |   2   0x08
+    +---------------------------------+---------------------------------+
+    |                             Mask Bits                             |   3   0x0C
+    +-------------------------------------------------------------------+
+    |                           Pending Bits                            |   4   0x10
+    +-------------------------------------------------------------------+
 
-class MSI64MaskCapability(object):
-    def __init__(self, *args, **kwargs):
-        super(MSI64MaskCapability, self).__init__(*args, **kwargs)
-
-        # MSI Capability Registes
-        self.msi_enable = False
-        self.msi_multiple_message_capable = 0
-        self.msi_multiple_message_enable = 0
-        self.msi_message_address = 0
-        self.msi_message_upper_address = 0
-        self.msi_message_data = 0
-        self.msi_mask_bits = 0
-        self.msi_pending_bits = 0
-
-        self.register_capability(MSI_CAP_ID, 6, self.read_msi_cap_register, self.write_msi_cap_register)
-
-    """
     MSI Capability (64 bit with per-vector masking)
 
     31                                                                  0
@@ -1359,42 +1284,44 @@ class MSI64MaskCapability(object):
     def read_msi_cap_register(self, reg):
         if reg == 0:
             # Message control
-            val = 0x01800000
+            val = 0x00000000
             if self.msi_enable: val |= 1 << 16
             val |= (self.msi_multiple_message_capable & 0x7) << 17
             val |= (self.msi_multiple_message_enable & 0x7) << 20
+            if self.msi_64bit_address_capable: val |= 1 << 23
+            if self.msi_per_vector_mask_capable: val |= 1 << 24
             return val
         elif reg == 1:
             # Message address
             return self.msi_message_address & 0xfffffffc
-        elif reg == 2:
+        elif reg == 2 and self.msi_64bit_address_capable:
             # Message upper address
-            return self.msi_message_upper_address & 0xffffffff
-        elif reg == 3:
+            return (self.msi_message_address >> 32) & 0xffffffff
+        elif reg == (3 if self.msi_64bit_address_capable else 2):
             # Message data
             return self.msi_message_data & 0xffff
-        elif reg == 4:
+        elif reg == (4 if self.msi_64bit_address_capable else 3) and self.msi_per_vector_mask_capable:
             # Mask bits
             return self.msi_mask_bits & 0xffffffff
-        elif reg == 5:
+        elif reg == (5 if self.msi_64bit_address_capable else 4) and self.msi_per_vector_mask_capable:
             # Pending bits
             return self.msi_pending_bits & 0xffffffff
 
-    def write_msi_cap_register(self, reg, write, offset=None):
+    def write_msi_cap_register(self, reg, data, mask):
         if reg == 0:
             # Message control
             if mask & 0x4: self.msi_enable = (data & 1 << 16 != 0)
             if mask & 0x4: self.msi_multiple_message_enable = (data >> 20) & 0x7
         elif reg == 1:
             # Message address
-            self.msi_message_address = byte_mask_update(self.msi_message_address, mask, data) & 0xfffffffc
-        elif reg == 2:
+            self.msi_message_address = byte_mask_update(self.msi_message_address, mask, data) & 0xfffffffffffffffc
+        elif reg == 2 and self.msi_64bit_address_capable:
             # Message upper address
-            self.msi_message_upper_address = byte_mask_update(self.msi_message_upper_address, mask, data) & 0xffffffff
-        elif reg == 3:
+            self.msi_message_address = byte_mask_update(self.msi_message_address, mask << 4, data << 32) & 0xfffffffffffffffc
+        elif reg == (3 if self.msi_64bit_address_capable else 2):
             # Message data
             self.msi_message_data = byte_mask_update(self.msi_message_data, mask & 0x3, data) & 0xffff
-        elif reg == 4:
+        elif reg == (4 if self.msi_64bit_address_capable else 3) and self.msi_per_vector_mask_capable:
             # Mask bits
             self.msi_mask_bits = byte_mask_update(self.msi_mask_bits, mask, data) & 0xffffffff
 

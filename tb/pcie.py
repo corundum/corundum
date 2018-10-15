@@ -3398,7 +3398,7 @@ class RootComplex(Switch):
             # logging
             print("Memory request did not match any regions")
 
-    def config_read(self, dest_id, addr, length, timeout=0):
+    def config_read(self, dev, addr, length, timeout=0):
         n = 0
         data = b''
 
@@ -3407,7 +3407,7 @@ class RootComplex(Switch):
             tlp.fmt_type = TLP_CFG_READ_1
             tlp.requester_id = PcieId(0, 0, 0)
             tlp.tag = self.current_tag
-            tlp.dest_id = dest_id
+            tlp.dest_id = dev
 
             first_pad = addr % 4
             byte_length = min(length-n, 4-first_pad)
@@ -3432,7 +3432,7 @@ class RootComplex(Switch):
 
         return data[:length]
 
-    def config_write(self, dest_id, addr, data, timeout=0):
+    def config_write(self, dev, addr, data, timeout=0):
         n = 0
 
         while n < len(data):
@@ -3440,7 +3440,7 @@ class RootComplex(Switch):
             tlp.fmt_type = TLP_CFG_WRITE_1
             tlp.requester_id = PcieId(0, 0, 0)
             tlp.tag = self.current_tag
-            tlp.dest_id = dest_id
+            tlp.dest_id = dev
 
             first_pad = addr % 4
             byte_length = min(len(data)-n, 4-first_pad)
@@ -3456,8 +3456,8 @@ class RootComplex(Switch):
             n += byte_length
             addr += byte_length
 
-    def capability_read(self, dest_id, cap_id, addr, length, timeout=0):
-        ti = self.tree.find_dev(dest_id)
+    def capability_read(self, dev, cap_id, addr, length, timeout=0):
+        ti = self.tree.find_dev(dev)
 
         if not ti:
             raise Exception("Device not found")
@@ -3471,10 +3471,10 @@ class RootComplex(Switch):
         if not offset:
             raise Exception("Capability not found")
 
-        return self.config_read(dest_id, addr+offset, length, timeout)
+        return self.config_read(dev, addr+offset, length, timeout)
 
-    def capability_write(self, dest_id, cap_id, addr, data, timeout=0):
-        ti = self.tree.find_dev(dest_id)
+    def capability_write(self, dev, cap_id, addr, data, timeout=0):
+        ti = self.tree.find_dev(dev)
 
         if not ti:
             raise Exception("Device not found")
@@ -3488,7 +3488,7 @@ class RootComplex(Switch):
         if not offset:
             raise Exception("Capability not found")
 
-        self.config_write(dest_id, addr+offset, data, timeout)
+        self.config_write(dev, addr+offset, data, timeout)
 
     def io_read(self, addr, length, timeout=0):
         n = 0

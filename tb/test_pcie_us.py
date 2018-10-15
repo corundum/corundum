@@ -296,6 +296,8 @@ def bench():
     regions[1] = bytearray(1024*1024)
     regions[3] = bytearray(1024)
 
+    dev.functions[0].msi_multiple_message_capable = 5
+
     dev.functions[0].configure_bar(0, len(regions[0]))
     dev.functions[0].configure_bar(1, len(regions[1]), True, True)
     dev.functions[0].configure_bar(3, len(regions[3]), False, False, True)
@@ -674,7 +676,7 @@ def bench():
         print("test 1: enumeration")
         current_test.next = 1
 
-        yield rc.enumerate(enable_bus_mastering=True)
+        yield rc.enumerate(enable_bus_mastering=True, configure_msi=True)
 
         yield delay(100)
 
@@ -897,8 +899,18 @@ def bench():
 
         yield delay(100)
 
-        #print(dev.functions[0].capabilities)
-        #print(rc.tree.children[0].children[0].capabilities)
+        yield clk.posedge
+        print("test 5: MSI")
+        current_test.next = 5
+
+        yield user_clk.posedge
+        cfg_interrupt_msi_int.next = 1 << 4
+        yield user_clk.posedge
+        cfg_interrupt_msi_int.next = 0
+
+        yield rc.msi_get_signal(dev.functions[0].get_id(), 4)
+
+        yield delay(100)
 
         raise StopSimulation
 

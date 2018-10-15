@@ -1437,18 +1437,19 @@ class UltrascalePCIe(Device):
                 #cfg_mgmt_type1_cfg_reg_access
 
                 # configuration status
-                #cfg_phy_link_down
                 if not sys_reset:
                     cfg_phy_link_down.next = 1
                     user_lnk_up.next = 0
                 else:
                     cfg_phy_link_down.next = 0 # TODO
                     user_lnk_up.next = 1 # TODO
+
                 #cfg_phy_link_status
                 cfg_negotiated_width.next = self.functions[0].negotiated_link_width
                 cfg_current_speed.next = (1 << (self.functions[0].current_link_speed & 3)) >> 1
                 cfg_max_payload.next = self.functions[0].max_payload_size
                 cfg_max_read_req.next = self.functions[0].max_read_request_size
+
                 status = 0
                 if self.functions[0].bus_master_enable:
                     status |= 0x07
@@ -1460,6 +1461,7 @@ class UltrascalePCIe(Device):
                     if self.functions[1].interrupt_disable:
                         status |= 0x80
                 cfg_function_status.next = status
+
                 #cfg_vf_status
                 #cfg_function_power_state
                 #cfg_vf_power_state
@@ -1469,6 +1471,7 @@ class UltrascalePCIe(Device):
                 #cfg_err_fatal_out
                 cfg_ltr_enable.next = self.functions[0].ltr_mechanism_enable
                 #cfg_ltssm_state
+
                 status = 0
                 if self.functions[0].read_completion_boundary:
                     status |= 1
@@ -1476,6 +1479,7 @@ class UltrascalePCIe(Device):
                     if self.functions[0].read_completion_boundary:
                         status |= 2
                 cfg_rcb_status.next = status
+
                 #cfg_dpa_substate_change
                 #cfg_obff_enable
                 #cfg_pl_status_change
@@ -1511,10 +1515,12 @@ class UltrascalePCIe(Device):
                 # configuration control
                 #cfg_hot_reset_in
                 #cfg_hot_reset_out
+
                 if not sys_reset:
                     self.config_space_enable = False
                 else:
                     self.config_space_enable = bool(cfg_config_space_enable)
+
                 #cfg_per_function_update_done
                 #cfg_per_function_number
                 #cfg_per_function_output_request
@@ -1538,33 +1544,76 @@ class UltrascalePCIe(Device):
                 #cfg_interrupt_int
                 #cfg_interrupt_sent
                 #cfg_interrupt_pending
+
                 # MSI
-                #cfg_interrupt_msi_enable
+                val = 0
+                if self.functions[0].msi_enable:
+                    val |= 1
+                if len(self.functions) > 1:
+                    if self.functions[1].msi_enable:
+                        val |= 2
+                cfg_interrupt_msi_enable.next = val
+
                 #cfg_interrupt_msi_vf_enable
-                #cfg_interrupt_msi_int
-                #cfg_interrupt_msi_sent
-                #cfg_interrupt_msi_fail
-                #cfg_interrupt_msi_mmenable
-                #cfg_interrupt_msi_pending_status
+
+                cfg_interrupt_msi_sent.next = 0
+                cfg_interrupt_msi_fail.next = 0
+                if (cfg_interrupt_msi_int):
+                    n = int(cfg_interrupt_msi_int)
+                    #bits = [i for i in range(n.bit_length()) if n >> i & 1]
+                    bits = [i for i in range(32) if n >> i & 1]
+                    if len(bits) == 1 and cfg_interrupt_msi_function_number < len(self.functions):
+                        yield self.functions[cfg_interrupt_msi_function_number].issue_msi_interrupt(bits[0], attr=int(cfg_interrupt_msi_attr))
+                        cfg_interrupt_msi_sent.next = 1
+
+                val = 0
+                val |= self.functions[0].msi_multiple_message_enable & 0x7
+                if len(self.functions) > 1:
+                    val |= (self.functions[1].msi_multiple_message_enable & 0x7) << 3
+                cfg_interrupt_msi_mmenable.next = val
+
                 #cfg_interrupt_msi_mask_update
-                #cfg_interrupt_msi_select
-                #cfg_interrupt_msi_data
+
+                if cfg_interrupt_msi_select == 0b1111:
+                    cfg_interrupt_msi_data.next = 0
+                else:
+                    if cfg_interrupt_msi_select < len(self.functions):
+                        cfg_interrupt_msi_data.next = self.functions[cfg_interrupt_msi_select].msi_mask_bits;
+                    else:
+                        cfg_interrupt_msi_data.next = 0
+                if cfg_interrupt_msi_pending_status_data_enable:
+                    if cfg_interrupt_msi_pending_status_function_num < len(self.functions):
+                        self.functions[cfg_interrupt_msi_pending_status_function_num].msi_pending_bits = int(cfg_interrupt_msi_pending_status)
+
                 # MSI-X
-                #cfg_interrupt_msix_enable
-                #cfg_interrupt_msix_mask
+                val = 0
+                if self.functions[0].msix_enable:
+                    val |= 1
+                if len(self.functions) > 1:
+                    if self.functions[1].msix_enable:
+                        val |= 2
+                cfg_interrupt_msix_enable.next = val
+                val = 0
+                if self.functions[0].msix_function_mask:
+                    val |= 1
+                if len(self.functions) > 1:
+                    if self.functions[1].msix_function_mask:
+                        val |= 2
+                cfg_interrupt_msix_mask.next = val
                 #cfg_interrupt_msix_vf_enable
                 #cfg_interrupt_msix_vf_mask
-                #cfg_interrupt_msix_address
-                #cfg_interrupt_msix_data
-                #cfg_interrupt_msix_int
-                #cfg_interrupt_msix_sent
-                #cfg_interrupt_msix_fail
+
+                cfg_interrupt_msix_sent.next = 0
+                cfg_interrupt_msix_fail.next = 0
+                if cfg_interrupt_msix_int:
+                    if cfg_interrupt_msi_function_number < len(self.functions):
+                        yield self.functions[cfg_interrupt_msi_function_number].issue_msix_interrupt(int(cfg_interrupt_msix_address), int(cfg_interrupt_msix_data), attr=int(cfg_interrupt_msi_attr))
+                        cfg_interrupt_msix_sent.next = 1
+
                 # MSI/MSI-X
-                #cfg_interrupt_msi_attr
                 #cfg_interrupt_msi_tph_present
                 #cfg_interrupt_msi_tph_type
                 #cfg_interrupt_msi_tph_st_tag
-                #cfg_interrupt_msi_function_number
 
                 # configuration extend
                 #cfg_ext_read_received

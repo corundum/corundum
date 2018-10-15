@@ -2942,6 +2942,12 @@ class TreeItem(object):
                 return res
         return None
 
+    def get_capability_offset(self, cap_id):
+        for c in self.capabilities:
+            if c[0] == cap_id:
+                return c[1]
+        return None
+
     def to_str(self, prefix=''):
         s = ''
 
@@ -3462,11 +3468,7 @@ class RootComplex(Switch):
         if not ti:
             raise Exception("Device not found")
 
-        offset = None
-
-        for c in ti.capabilities:
-            if c[0] == cap_id:
-                offset = c[1]
+        offset = ti.get_capability_offset(cap_id)
 
         if not offset:
             raise Exception("Capability not found")
@@ -3480,11 +3482,7 @@ class RootComplex(Switch):
         if not ti:
             raise Exception("Device not found")
 
-        offset = None
-
-        for c in ti.capabilities:
-            if c[0] == cap_id:
-                offset = c[1]
+        offset = ti.get_capability_offset(cap_id)
 
         if not offset:
             raise Exception("Capability not found")

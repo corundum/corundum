@@ -3047,13 +3047,13 @@ class RootComplex(Switch):
 
     def find_region(self, addr):
         for region in self.regions:
-            if region[0] <= addr <= region[0]+region[1]:
+            if region[0] <= addr < region[0]+region[1]:
                 return region
         return None
 
     def find_io_region(self, addr):
         for region in self.io_regions:
-            if region[0] <= addr <= region[0]+region[1]:
+            if region[0] <= addr < region[0]+region[1]:
                 return region
         return None
 

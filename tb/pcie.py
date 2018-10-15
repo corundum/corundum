@@ -1327,6 +1327,25 @@ class MSICapability(object):
             # Mask bits
             self.msi_mask_bits = byte_mask_update(self.msi_mask_bits, mask, data) & 0xffffffff
 
+    def issue_msi_interrupt(self, number=0, attr=0):
+        if not self.msi_enable:
+            print("MSI disabled")
+            return
+        if number < 0 or number >= 2**self.msi_multiple_message_enable or number >= 2**self.msi_multiple_message_capable:
+            print("MSI message number out of range")
+            return
+
+        tlp = TLP()
+        tlp.fmt_type = TLP_MEM_WRITE
+        tlp.requester_id = self.get_id()
+        tlp.attr = attr
+        addr = self.msi_message_address
+        if addr > 0xffffffff:
+            tlp.fmt_type = TLP_MEM_WRITE_64
+        tlp.data = [self.msi_message_data & ~(2**self.msi_multiple_message_enable-1) | number]
+        tlp.set_be(addr, 4)
+        yield self.send(tlp)
+
 
 class MSIXCapability(object):
     def __init__(self, *args, **kwargs):
@@ -1373,11 +1392,26 @@ class MSIXCapability(object):
             val |= self.msix_pba_offset & 0xfffffff8
             return val
 
-    def write_msix_cap_register(self, reg, write, offset=None):
+    def write_msix_cap_register(self, reg, data, mask):
         if reg == 0:
             # Message control
             if mask & 0x8: self.msix_function_mask = (data & 1 << 30 != 0)
             if mask & 0x8: self.msix_enable = (data & 1 << 31 != 0)
+
+    def issue_msix_interrupt(self, addr, data, attr=0):
+        if not self.msix_enable:
+            print("MSI-X disabled")
+            return
+
+        tlp = TLP()
+        tlp.fmt_type = TLP_MEM_WRITE
+        tlp.requester_id = self.get_id()
+        tlp.attr = attr
+        if addr > 0xffffffff:
+            tlp.fmt_type = TLP_MEM_WRITE_64
+        tlp.data = [data]
+        tlp.set_be(addr, 4)
+        yield self.send(tlp)
 
 
 class Function(PMCapability, PCIECapability):

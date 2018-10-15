@@ -333,7 +333,8 @@ class TLP(object):
         self.set_completion(tlp, completer_id, False, CPL_STATUS_CA)
 
     def set_be(self, addr, length):
-        """Compute byte enables and DWORD length from byte address and length"""
+        """Compute byte enables, DWORD address, and DWORD length from byte address and length"""
+        self.address = addr & ~3
         first_pad = addr % 4
         last_pad = 3 - (addr+length-1) % 4
         self.length = math.ceil((length+first_pad+last_pad)/4)
@@ -353,7 +354,8 @@ class TLP(object):
         self.length = len(self.data)
 
     def set_be_data(self, addr, data):
-        """Set byte enables, DWORD length, and DWORD data from byte address and byte data"""
+        """Set byte enables, DWORD address, DWORD length, and DWORD data from byte address and byte data"""
+        self.address = addr & ~3
         first_pad, last_pad = self.set_be(addr, len(data))
         self.set_data(bytearray(first_pad)+data+bytearray(last_pad))
 
@@ -1882,8 +1884,6 @@ class Function(PMCapability, PCIECapability):
             byte_length = min(length-n, 4-first_pad)
             tlp.set_be(addr, byte_length)
 
-            tlp.address = addr & ~3
-
             self.current_tag = (self.current_tag % 31) + 1
 
             yield self.send(tlp)
@@ -1920,8 +1920,6 @@ class Function(PMCapability, PCIECapability):
             byte_length = min(len(data)-n, 4-first_pad)
             tlp.set_be_data(addr, data[n:n+byte_length])
 
-            tlp.address = addr & ~3
-
             self.current_tag = (self.current_tag % 31) + 1
 
             yield self.send(tlp)
@@ -1957,8 +1955,6 @@ class Function(PMCapability, PCIECapability):
             byte_length = min(byte_length, (128 << self.max_read_request_size)-first_pad) # max read request size
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
             tlp.set_be(addr, length)
-
-            tlp.address = addr & ~3
 
             self.current_tag = (self.current_tag % 31) + 1
 
@@ -2010,8 +2006,6 @@ class Function(PMCapability, PCIECapability):
             byte_length = min(byte_length, (128 << self.max_payload_size)-first_pad) # max payload size
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
             tlp.set_be_data(addr, data[n:n+byte_length])
-
-            tlp.address = addr & ~3
 
             self.current_tag = (self.current_tag % 31) + 1
 
@@ -3516,8 +3510,6 @@ class RootComplex(Switch):
             byte_length = min(length-n, 4-first_pad)
             tlp.set_be(addr, byte_length)
 
-            tlp.address = addr & ~3
-
             self.current_tag = (self.current_tag % 31) + 1
 
             yield self.send(tlp)
@@ -3553,8 +3545,6 @@ class RootComplex(Switch):
             byte_length = min(len(data)-n, 4-first_pad)
             tlp.set_be_data(addr, data[n:n+byte_length])
 
-            tlp.address = addr & ~3
-
             self.current_tag = (self.current_tag % 31) + 1
 
             yield self.send(tlp)
@@ -3589,8 +3579,6 @@ class RootComplex(Switch):
             byte_length = min(byte_length, (128 << self.max_read_request_size)-first_pad) # max read request size
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
             tlp.set_be(addr, byte_length)
-
-            tlp.address = addr & ~3
 
             self.current_tag = (self.current_tag % 31) + 1
 
@@ -3641,8 +3629,6 @@ class RootComplex(Switch):
             byte_length = min(byte_length, (128 << self.max_payload_size)-first_pad) # max payload size
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
             tlp.set_be_data(addr, data[n:n+byte_length])
-
-            tlp.address = addr & ~3
 
             self.current_tag = (self.current_tag % 31) + 1
 

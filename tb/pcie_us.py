@@ -938,20 +938,22 @@ class UltrascalePCIe(Device):
                 cfg_interrupt_int=Signal(intbv(0)[4:]),
                 cfg_interrupt_sent=Signal(bool(0)),
                 cfg_interrupt_pending=Signal(intbv(0)[2:]),
-                cfg_interrupt_msi_enable=Signal(intbv(0)[2:]),
-                cfg_interrupt_msi_vf_enable=Signal(intbv(0)[6:]),
+                cfg_interrupt_msi_enable=Signal(intbv(0)[4:]),
+                cfg_interrupt_msi_vf_enable=Signal(intbv(0)[8:]),
                 cfg_interrupt_msi_int=Signal(intbv(0)[32:]),
                 cfg_interrupt_msi_sent=Signal(bool(0)),
                 cfg_interrupt_msi_fail=Signal(bool(0)),
-                cfg_interrupt_msi_mmenable=Signal(intbv(0)[6:]),
-                cfg_interrupt_msi_pending_status=Signal(intbv(0)[64:]),
+                cfg_interrupt_msi_mmenable=Signal(intbv(0)[12:]),
+                cfg_interrupt_msi_pending_status=Signal(intbv(0)[32:]),
                 cfg_interrupt_msi_mask_update=Signal(bool(0)),
                 cfg_interrupt_msi_select=Signal(intbv(0)[4:]),
                 cfg_interrupt_msi_data=Signal(intbv(0)[32:]),
-                cfg_interrupt_msix_enable=Signal(intbv(0)[2:]),
-                cfg_interrupt_msix_mask=Signal(intbv(0)[2:]),
-                cfg_interrupt_msix_vf_enable=Signal(intbv(0)[6:]),
-                cfg_interrupt_msix_vf_mask=Signal(intbv(0)[6:]),
+                cfg_interrupt_msi_pending_status_function_num=Signal(intbv(0)[4:]),
+                cfg_interrupt_msi_pending_status_data_enable=Signal(bool(0)),
+                cfg_interrupt_msix_enable=Signal(intbv(0)[4:]),
+                cfg_interrupt_msix_mask=Signal(intbv(0)[4:]),
+                cfg_interrupt_msix_vf_enable=Signal(intbv(0)[8:]),
+                cfg_interrupt_msix_vf_mask=Signal(intbv(0)[8:]),
                 cfg_interrupt_msix_address=Signal(intbv(0)[64:]),
                 cfg_interrupt_msix_data=Signal(intbv(0)[32:]),
                 cfg_interrupt_msix_int=Signal(bool(0)),
@@ -961,7 +963,7 @@ class UltrascalePCIe(Device):
                 cfg_interrupt_msi_tph_present=Signal(bool(0)),
                 cfg_interrupt_msi_tph_type=Signal(intbv(0)[2:]),
                 cfg_interrupt_msi_tph_st_tag=Signal(intbv(0)[9:]),
-                cfg_interrupt_msi_function_number=Signal(intbv(0)[3:]),
+                cfg_interrupt_msi_function_number=Signal(intbv(0)[4:]),
 
                 # Configuration Extend Interface
                 cfg_ext_read_received=Signal(bool(0)),
@@ -1190,20 +1192,22 @@ class UltrascalePCIe(Device):
         assert len(cfg_interrupt_int) == 4
         assert len(cfg_interrupt_sent) == 1
         assert len(cfg_interrupt_pending) == 2
-        assert len(cfg_interrupt_msi_enable) == 2
-        assert len(cfg_interrupt_msi_vf_enable) == 6
+        assert len(cfg_interrupt_msi_enable) == 4
+        assert len(cfg_interrupt_msi_vf_enable) == 8
         assert len(cfg_interrupt_msi_int) == 32
         assert len(cfg_interrupt_msi_sent) == 1
         assert len(cfg_interrupt_msi_fail) == 1
-        assert len(cfg_interrupt_msi_mmenable) == 6
-        assert len(cfg_interrupt_msi_pending_status) == 64
+        assert len(cfg_interrupt_msi_mmenable) == 12
+        assert len(cfg_interrupt_msi_pending_status) == 32
         assert len(cfg_interrupt_msi_mask_update) == 1
         assert len(cfg_interrupt_msi_select) == 4
         assert len(cfg_interrupt_msi_data) == 32
-        assert len(cfg_interrupt_msix_enable) == 2
-        assert len(cfg_interrupt_msix_mask) == 2
-        assert len(cfg_interrupt_msix_vf_enable) == 6
-        assert len(cfg_interrupt_msix_vf_mask) == 6
+        assert len(cfg_interrupt_msi_pending_status_function_num) == 4
+        assert len(cfg_interrupt_msi_pending_status_data_enable) == 1
+        assert len(cfg_interrupt_msix_enable) == 4
+        assert len(cfg_interrupt_msix_mask) == 4
+        assert len(cfg_interrupt_msix_vf_enable) == 8
+        assert len(cfg_interrupt_msix_vf_mask) == 8
         assert len(cfg_interrupt_msix_address) == 64
         assert len(cfg_interrupt_msix_data) == 32
         assert len(cfg_interrupt_msix_int) == 1
@@ -1213,7 +1217,7 @@ class UltrascalePCIe(Device):
         assert len(cfg_interrupt_msi_tph_present) == 1
         assert len(cfg_interrupt_msi_tph_type) == 2
         assert len(cfg_interrupt_msi_tph_st_tag) == 9
-        assert len(cfg_interrupt_msi_function_number) == 3
+        assert len(cfg_interrupt_msi_function_number) == 4
 
         # Configuration Extend Interface
         assert len(cfg_ext_read_received) == 1

@@ -3631,12 +3631,9 @@ class RootComplex(Switch):
             n += byte_length
             addr += byte_length
 
-    def enumerate_segment(self, bus, timeout=1000, tree=None, enable_bus_mastering=False):
+    def enumerate_segment(self, tree, bus, timeout=1000, enable_bus_mastering=False):
         sec_bus = bus+1
         sub_bus = bus
-
-        if tree is None:
-            tree = TreeItem()
 
         tree.sec_bus_num = bus
 
@@ -3686,6 +3683,7 @@ class RootComplex(Switch):
                     continue
 
                 ti = TreeItem()
+                tree.children.append(ti)
                 ti.bus_num = bus
                 ti.device_num = d
                 ti.function_num = f
@@ -3708,6 +3706,7 @@ class RootComplex(Switch):
 
                     bar_cnt = 2
 
+                # configure base address registers
                 bar = 0
                 while bar < bar_cnt:
                     # read BAR
@@ -3844,7 +3843,7 @@ class RootComplex(Switch):
                     yield self.config_write(PcieId(bus, d, f), 0x018, bytearray([bus, sec_bus, 255]))
 
                     # enumerate secondary bus
-                    sub_bus, ti = yield from self.enumerate_segment(bus=sec_bus, timeout=timeout, tree=ti, enable_bus_mastering=enable_bus_mastering)
+                    sub_bus = yield from self.enumerate_segment(tree=ti, bus=sec_bus, timeout=timeout, enable_bus_mastering=enable_bus_mastering)
 
                     # finalize bridge configuration
                     # logging
@@ -3873,8 +3872,6 @@ class RootComplex(Switch):
 
                     sec_bus = sub_bus+1
 
-                tree.children.append(ti)
-
         tree.sub_bus_num = sub_bus
 
         # align limits against bridge registers
@@ -3889,7 +3886,7 @@ class RootComplex(Switch):
         # logging
         print("[%s] Enumeration of bus %d complete" % (highlight(self.get_desc()), bus))
 
-        return (sub_bus, tree)
+        return sub_bus
 
     def enumerate(self, timeout=1000, enable_bus_mastering=False):
         # logging
@@ -3899,7 +3896,8 @@ class RootComplex(Switch):
         self.mem_limit = self.mem_base
         self.prefetchable_mem_limit = self.prefetchable_mem_base
 
-        sub_bus, self.tree = yield from self.enumerate_segment(bus=0, timeout=timeout, enable_bus_mastering=enable_bus_mastering)
+        self.tree = TreeItem()
+        yield self.enumerate_segment(tree=self.tree, bus=0, timeout=timeout, enable_bus_mastering=enable_bus_mastering)
 
         self.upstream_bridge.io_base = self.io_base
         self.upstream_bridge.io_limit = self.io_limit

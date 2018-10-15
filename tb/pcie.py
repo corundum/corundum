@@ -1896,7 +1896,7 @@ class Function(PMCapability, PCIECapability):
             n += byte_length
             addr += byte_length
 
-    def mem_read(self, addr, length, timeout=0):
+    def mem_read(self, addr, length, timeout=0, attr=0, tc=0):
         n = 0
         data = b''
 
@@ -1912,6 +1912,8 @@ class Function(PMCapability, PCIECapability):
                 tlp.fmt_type = TLP_MEM_READ
             tlp.requester_id = self.get_id()
             tlp.tag = self.current_tag
+            tlp.attr = attr
+            tlp.tc = tc
 
             first_pad = addr % 4
             byte_length = length-n
@@ -1948,7 +1950,7 @@ class Function(PMCapability, PCIECapability):
 
         return data
 
-    def mem_write(self, addr, data, timeout=0):
+    def mem_write(self, addr, data, timeout=0, attr=0, tc=0):
         n = 0
 
         if not self.bus_master_enable:
@@ -1962,6 +1964,8 @@ class Function(PMCapability, PCIECapability):
             else:
                 tlp.fmt_type = TLP_MEM_WRITE
             tlp.requester_id = self.get_id()
+            tlp.attr = attr
+            tlp.tc = tc
 
             first_pad = addr % 4
             byte_length = len(data)-n
@@ -3524,7 +3528,7 @@ class RootComplex(Switch):
             n += byte_length
             addr += byte_length
 
-    def mem_read(self, addr, length, timeout=0):
+    def mem_read(self, addr, length, timeout=0, attr=0, tc=0):
         n = 0
         data = b''
 
@@ -3539,6 +3543,8 @@ class RootComplex(Switch):
                 tlp.fmt_type = TLP_MEM_READ
             tlp.requester_id = PcieId(0, 0, 0)
             tlp.tag = self.current_tag
+            tlp.attr = attr
+            tlp.tc = tc
 
             first_pad = addr % 4
             byte_length = length-n
@@ -3575,7 +3581,7 @@ class RootComplex(Switch):
 
         return data
 
-    def mem_write(self, addr, data, timeout=0):
+    def mem_write(self, addr, data, timeout=0, attr=0, tc=0):
         n = 0
 
         if self.find_region(addr):
@@ -3588,6 +3594,8 @@ class RootComplex(Switch):
             else:
                 tlp.fmt_type = TLP_MEM_WRITE
             tlp.requester_id = PcieId(0, 0, 0)
+            tlp.attr = attr
+            tlp.tc = tc
 
             first_pad = addr % 4
             byte_length = len(data)-n

@@ -29,12 +29,16 @@ import os
 
 import pcie
 
-class TestEP(pcie.MemoryEndpoint):
+class TestEP(pcie.MemoryEndpoint, pcie.MSICapability):
     def __init__(self, *args, **kwargs):
         super(TestEP, self).__init__(*args, **kwargs)
 
         self.vendor_id = 0x1234
         self.device_id = 0x5678
+
+        self.msi_multiple_message_capable = 5
+        self.msi_64bit_address_capable = 1
+        self.msi_per_vector_mask_capable = 1
 
         self.add_mem_region(1024)
         self.add_prefetchable_mem_region(1024*1024)
@@ -95,7 +99,7 @@ def bench():
         print("test 1: enumeration")
         current_test.next = 1
 
-        yield rc.enumerate(enable_bus_mastering=True)
+        yield rc.enumerate(enable_bus_mastering=True, configure_msi=True)
 
         # val = yield from rc.config_read((0, 1, 0), 0x000, 4)
 
@@ -231,7 +235,15 @@ def bench():
 
         yield delay(100)
 
-        val = yield from rc.capability_read(pcie.PcieId(1, 0, 0), pcie.PCIE_CAP_ID, 0x000, 4)
+        yield clk.posedge
+        print("test 7: MSI")
+        current_test.next = 7
+
+        yield ep.issue_msi_interrupt(4)
+
+        yield rc.msi_get_signal(ep.get_id(), 4)
+
+        yield delay(100)
 
         raise StopSimulation
 

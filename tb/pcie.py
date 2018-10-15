@@ -3471,7 +3471,8 @@ class RootComplex(Switch):
         if not offset:
             raise Exception("Capability not found")
 
-        return self.config_read(dev, addr+offset, length, timeout)
+        val = yield from self.config_read(dev, addr+offset, length, timeout)
+        return val
 
     def capability_write(self, dev, cap_id, addr, data, timeout=0):
         ti = self.tree.find_dev(dev)
@@ -3488,7 +3489,7 @@ class RootComplex(Switch):
         if not offset:
             raise Exception("Capability not found")
 
-        self.config_write(dev, addr+offset, data, timeout)
+        yield self.config_write(dev, addr+offset, data, timeout)
 
     def io_read(self, addr, length, timeout=0):
         n = 0

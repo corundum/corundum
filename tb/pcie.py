@@ -3596,7 +3596,7 @@ class RootComplex(Switch):
         return b'\x00'*length
 
     def msi_region_write(self, addr, data):
-        assert addr == self.msi_addr
+        assert addr == 0
         assert len(data) == 4
         number = struct.unpack('<L', data)[0]
         print("MSI interrupt: 0x%08x, 0x%04x" % (addr, number))

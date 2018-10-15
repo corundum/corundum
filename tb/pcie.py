@@ -2894,6 +2894,9 @@ class TreeItem(object):
         self.capabilities = []
         self.ext_capabilities = []
 
+        self.msi_addr = None
+        self.msi_data = None
+
         self.children = []
 
     def find_dev(self, dev_id):
@@ -3010,6 +3013,10 @@ class RootComplex(Switch):
 
         self.regions = []
         self.io_regions = []
+
+        self.msi_addr = None
+        self.msi_msg_limit = 0
+        self.msi_signals = {}
 
         self.register_rx_tlp_handler(TLP_IO_READ, self.handle_io_read_tlp)
         self.register_rx_tlp_handler(TLP_IO_WRITE, self.handle_io_write_tlp)
@@ -3593,7 +3600,73 @@ class RootComplex(Switch):
             n += byte_length
             addr += byte_length
 
-    def enumerate_segment(self, tree, bus, timeout=1000, enable_bus_mastering=False):
+    def msi_region_read(self, addr, length):
+        return b'\x00'*length
+
+    def msi_region_write(self, addr, data):
+        assert addr == self.msi_addr
+        assert len(data) == 4
+        number = struct.unpack('<L', data)[0]
+        print("MSI interrupt: 0x%08x, 0x%04x" % (addr, number))
+        assert number in self.msi_signals
+        self.msi_signals[number].next = not self.msi_signals[number]
+
+    def configure_msi(self, dev):
+        if self.msi_addr is None:
+            self.msi_addr, _ = self.alloc_region(4, self.msi_region_read, self.msi_region_write)
+        if not self.tree:
+            return None
+        ti = self.tree.find_dev(dev)
+        if not ti:
+            return None
+        if ti.get_capability_offset(MSI_CAP_ID) is None:
+            return None
+
+        msg_ctrl = yield from self.capability_read(dev, MSI_CAP_ID, 0, 4)
+        msg_ctrl = struct.unpack('<L', msg_ctrl)[0]
+
+        msi_64bit = msg_ctrl >> 23 & 1
+        msi_mmcap = msg_ctrl >> 17 & 7
+
+        # message address
+        yield self.capability_write(dev, MSI_CAP_ID, 4, struct.pack('<L', self.msi_addr & 0xfffffffc))
+
+        if msi_64bit:
+            # 64 bit message address
+            # message upper address
+            yield self.capability_write(dev, MSI_CAP_ID, 8, struct.pack('<L', (self.msi_addr >> 32) & 0xffffffff))
+            # message data
+            yield self.capability_write(dev, MSI_CAP_ID, 12, struct.pack('<L', self.msi_msg_limit))
+
+        else:
+            # 32 bit message address
+            # message data
+            yield self.capability_write(dev, MSI_CAP_ID, 8, struct.pack('<L', self.msi_msg_limit))
+
+        # enable and set enabled messages
+        yield self.capability_write(dev, MSI_CAP_ID, 0, struct.pack('<L', msg_ctrl | 1 << 16 | msi_mmcap << 20))
+
+        ti.msi_addr = self.msi_addr
+        ti.msi_data = self.msi_msg_limit
+
+        for k in range(32):
+            self.msi_signals[self.msi_msg_limit+k] = Signal(bool(0))
+
+        self.msi_msg_limit += 32
+
+    def msi_get_signal(self, dev, number=0):
+        if not self.tree:
+            return None
+        ti = self.tree.find_dev(dev)
+        if not ti:
+            return None
+        if ti.msi_data is None:
+            return None
+        if ti.msi_data+number not in self.msi_signals:
+            return None
+        return self.msi_signals[ti.msi_data+number]
+
+    def enumerate_segment(self, tree, bus, timeout=1000, enable_bus_mastering=False, configure_msi=False):
         sec_bus = bus+1
         sub_bus = bus
 
@@ -3797,6 +3870,10 @@ class RootComplex(Switch):
                     val |= 4
                     yield self.config_write(PcieId(bus, d, f), 0x04, struct.pack('<H', val))
 
+                if configure_msi:
+                    # configure MSI
+                    yield self.configure_msi(PcieId(bus, d, f))
+
                 if bridge:
                     # set bridge registers for enumeration
                     # logging
@@ -3805,7 +3882,7 @@ class RootComplex(Switch):
                     yield self.config_write(PcieId(bus, d, f), 0x018, bytearray([bus, sec_bus, 255]))
 
                     # enumerate secondary bus
-                    sub_bus = yield from self.enumerate_segment(tree=ti, bus=sec_bus, timeout=timeout, enable_bus_mastering=enable_bus_mastering)
+                    sub_bus = yield from self.enumerate_segment(tree=ti, bus=sec_bus, timeout=timeout, enable_bus_mastering=enable_bus_mastering, configure_msi=configure_msi)
 
                     # finalize bridge configuration
                     # logging
@@ -3850,7 +3927,7 @@ class RootComplex(Switch):
 
         return sub_bus
 
-    def enumerate(self, timeout=1000, enable_bus_mastering=False):
+    def enumerate(self, timeout=1000, enable_bus_mastering=False, configure_msi=False):
         # logging
         print("[%s] Enumerating bus" % (highlight(self.get_desc())))
 
@@ -3859,7 +3936,7 @@ class RootComplex(Switch):
         self.prefetchable_mem_limit = self.prefetchable_mem_base
 
         self.tree = TreeItem()
-        yield self.enumerate_segment(tree=self.tree, bus=0, timeout=timeout, enable_bus_mastering=enable_bus_mastering)
+        yield self.enumerate_segment(tree=self.tree, bus=0, timeout=timeout, enable_bus_mastering=enable_bus_mastering, configure_msi=configure_msi)
 
         self.upstream_bridge.io_base = self.io_base
         self.upstream_bridge.io_limit = self.io_limit

@@ -984,7 +984,13 @@ class UltrascalePCIe(Device):
                 sys_reset=None,
                 pcie_perstn0_out=Signal(bool(0)),
                 pcie_perstn1_in=Signal(bool(0)),
-                pcie_perstn1_out=Signal(bool(0))
+                pcie_perstn1_out=Signal(bool(0)),
+
+                # debugging connections
+                cq_pause=Signal(bool(0)),
+                cc_pause=Signal(bool(0)),
+                rq_pause=Signal(bool(0)),
+                rc_pause=Signal(bool(0)),
             ):
 
         # validate parameters and widths
@@ -1254,7 +1260,8 @@ class UltrascalePCIe(Device):
             tkeep=m_axis_cq_tkeep,
             tvalid=m_axis_cq_tvalid,
             tready=m_axis_cq_tready,
-            name='cq_source'
+            name='cq_source',
+            pause=cq_pause
         )
 
         cc_sink_logic = self.cc_sink.create_logic(
@@ -1266,7 +1273,8 @@ class UltrascalePCIe(Device):
             tkeep=s_axis_cc_tkeep,
             tvalid=s_axis_cc_tvalid,
             tready=s_axis_cc_tready,
-            name='cc_sink'
+            name='cc_sink',
+            pause=cc_pause
         )
 
         rq_sink_logic = self.rq_sink.create_logic(
@@ -1278,7 +1286,8 @@ class UltrascalePCIe(Device):
             tkeep=s_axis_rq_tkeep,
             tvalid=s_axis_rq_tvalid,
             tready=s_axis_rq_tready,
-            name='rq_sink'
+            name='rq_sink',
+            pause=rq_pause
         )
 
         rc_source_logic = self.rc_source.create_logic(
@@ -1290,7 +1299,8 @@ class UltrascalePCIe(Device):
             tkeep=m_axis_rc_tkeep,
             tvalid=m_axis_rc_tvalid,
             tready=m_axis_rc_tready,
-            name='rc_source'
+            name='rc_source',
+            pause=rc_pause
         )
 
         if self.user_clk_frequency == 62.5e6:

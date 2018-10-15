@@ -3609,7 +3609,8 @@ class RootComplex(Switch):
         number = struct.unpack('<L', data)[0]
         print("MSI interrupt: 0x%08x, 0x%04x" % (addr, number))
         assert number in self.msi_signals
-        self.msi_signals[number].next = not self.msi_signals[number]
+        for sig in self.msi_signals[number]:
+            sig.next = not sig
 
     def configure_msi(self, dev):
         if self.msi_addr is None:
@@ -3650,7 +3651,7 @@ class RootComplex(Switch):
         ti.msi_data = self.msi_msg_limit
 
         for k in range(32):
-            self.msi_signals[self.msi_msg_limit+k] = Signal(bool(0))
+            self.msi_signals[self.msi_msg_limit+k] = [Signal(bool(0))]
 
         self.msi_msg_limit += 32
 
@@ -3664,7 +3665,19 @@ class RootComplex(Switch):
             return None
         if ti.msi_data+number not in self.msi_signals:
             return None
-        return self.msi_signals[ti.msi_data+number]
+        return self.msi_signals[ti.msi_data+number][0]
+
+    def msi_register_signal(self, dev, sig, number=0):
+        if not self.tree:
+            return
+        ti = self.tree.find_dev(dev)
+        if not ti:
+            return
+        if ti.msi_data is None:
+            return
+        if ti.msi_data+number not in self.msi_signals:
+            return
+        self.msi_signals[ti.msi_data+number].append(sig)
 
     def enumerate_segment(self, tree, bus, timeout=1000, enable_bus_mastering=False, configure_msi=False):
         sec_bus = bus+1

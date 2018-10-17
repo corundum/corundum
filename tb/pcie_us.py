@@ -940,16 +940,16 @@ class UltrascalePCIe(Device):
                 cfg_interrupt_pending=Signal(intbv(0)[2:]),
                 cfg_interrupt_msi_enable=Signal(intbv(0)[4:]),
                 cfg_interrupt_msi_vf_enable=Signal(intbv(0)[8:]),
+                cfg_interrupt_msi_mmenable=Signal(intbv(0)[12:]),
+                cfg_interrupt_msi_mask_update=Signal(bool(0)),
+                cfg_interrupt_msi_data=Signal(intbv(0)[32:]),
+                cfg_interrupt_msi_select=Signal(intbv(0)[4:]),
                 cfg_interrupt_msi_int=Signal(intbv(0)[32:]),
+                cfg_interrupt_msi_pending_status=Signal(intbv(0)[32:]),
+                cfg_interrupt_msi_pending_status_data_enable=Signal(bool(0)),
+                cfg_interrupt_msi_pending_status_function_num=Signal(intbv(0)[4:]),
                 cfg_interrupt_msi_sent=Signal(bool(0)),
                 cfg_interrupt_msi_fail=Signal(bool(0)),
-                cfg_interrupt_msi_mmenable=Signal(intbv(0)[12:]),
-                cfg_interrupt_msi_pending_status=Signal(intbv(0)[32:]),
-                cfg_interrupt_msi_mask_update=Signal(bool(0)),
-                cfg_interrupt_msi_select=Signal(intbv(0)[4:]),
-                cfg_interrupt_msi_data=Signal(intbv(0)[32:]),
-                cfg_interrupt_msi_pending_status_function_num=Signal(intbv(0)[4:]),
-                cfg_interrupt_msi_pending_status_data_enable=Signal(bool(0)),
                 cfg_interrupt_msix_enable=Signal(intbv(0)[4:]),
                 cfg_interrupt_msix_mask=Signal(intbv(0)[4:]),
                 cfg_interrupt_msix_vf_enable=Signal(intbv(0)[8:]),
@@ -1200,16 +1200,16 @@ class UltrascalePCIe(Device):
         assert len(cfg_interrupt_pending) == 2
         assert len(cfg_interrupt_msi_enable) == 4
         assert len(cfg_interrupt_msi_vf_enable) == 8
+        assert len(cfg_interrupt_msi_mmenable) == 12
+        assert len(cfg_interrupt_msi_mask_update) == 1
+        assert len(cfg_interrupt_msi_data) == 32
+        assert len(cfg_interrupt_msi_select) == 4
         assert len(cfg_interrupt_msi_int) == 32
+        assert len(cfg_interrupt_msi_pending_status) == 32
+        assert len(cfg_interrupt_msi_pending_status_data_enable) == 1
+        assert len(cfg_interrupt_msi_pending_status_function_num) == 4
         assert len(cfg_interrupt_msi_sent) == 1
         assert len(cfg_interrupt_msi_fail) == 1
-        assert len(cfg_interrupt_msi_mmenable) == 12
-        assert len(cfg_interrupt_msi_pending_status) == 32
-        assert len(cfg_interrupt_msi_mask_update) == 1
-        assert len(cfg_interrupt_msi_select) == 4
-        assert len(cfg_interrupt_msi_data) == 32
-        assert len(cfg_interrupt_msi_pending_status_function_num) == 4
-        assert len(cfg_interrupt_msi_pending_status_data_enable) == 1
         assert len(cfg_interrupt_msix_enable) == 4
         assert len(cfg_interrupt_msix_mask) == 4
         assert len(cfg_interrupt_msix_vf_enable) == 8

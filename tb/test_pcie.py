@@ -99,7 +99,7 @@ def bench():
         print("test 1: enumeration")
         current_test.next = 1
 
-        yield rc.enumerate(enable_bus_mastering=True, configure_msi=True)
+        yield from rc.enumerate(enable_bus_mastering=True, configure_msi=True)
 
         # val = yield from rc.config_read((0, 1, 0), 0x000, 4)
 
@@ -109,7 +109,7 @@ def bench():
 
         # print(val)
 
-        # yield rc.config_write((1, 0, 0), 0x010, b'\xff'*4*6)
+        # yield from rc.config_write((1, 0, 0), 0x010, b'\xff'*4*6)
 
         # val = yield from rc.config_read((1, 0, 0), 0x010, 4*6)
 
@@ -134,20 +134,20 @@ def bench():
         print("test 2: IO and memory read/write")
         current_test.next = 2
 
-        yield rc.io_write(0x80000000, bytearray(range(16)), 1000)
+        yield from rc.io_write(0x80000000, bytearray(range(16)), 1000)
         assert ep.read_region(3, 0, 16) == bytearray(range(16))
 
         val = yield from rc.io_read(0x80000000, 16, 1000)
         assert val == bytearray(range(16))
 
-        yield rc.mem_write(0x80000000, bytearray(range(16)), 1000)
+        yield from rc.mem_write(0x80000000, bytearray(range(16)), 1000)
         yield delay(1000)
         assert ep.read_region(0, 0, 16) == bytearray(range(16))
 
         val = yield from rc.mem_read(0x80000000, 16, 1000)
         assert val == bytearray(range(16))
 
-        yield rc.mem_write(0x8000000000000000, bytearray(range(16)), 1000)
+        yield from rc.mem_write(0x8000000000000000, bytearray(range(16)), 1000)
         yield delay(1000)
         assert ep.read_region(1, 0, 16) == bytearray(range(16))
 
@@ -160,8 +160,8 @@ def bench():
         # print("test 3: Large read/write")
         # current_test.next = 3
 
-        # yield rc.mem_write(0x8000000000000000, bytearray(range(256))*32, 100)
-        # yield delay(100)
+        # yield from rc.mem_write(0x8000000000000000, bytearray(range(256))*32, 100)
+        # yield delay(1000)
         # assert ep.read_region(1, 0, 256*32) == bytearray(range(256))*32
 
         # val = yield from rc.mem_read(0x8000000000000000, 256*32, 100)
@@ -176,13 +176,13 @@ def bench():
         mem_base, mem_data = rc.alloc_region(1024*1024)
         io_base, io_data = rc.alloc_io_region(1024)
 
-        yield rc.io_write(io_base, bytearray(range(16)))
+        yield from rc.io_write(io_base, bytearray(range(16)))
         assert io_data[0:16] == bytearray(range(16))
 
         val = yield from rc.io_read(io_base, 16)
         assert val == bytearray(range(16))
 
-        yield rc.mem_write(mem_base, bytearray(range(16)))
+        yield from rc.mem_write(mem_base, bytearray(range(16)))
         assert mem_data[0:16] == bytearray(range(16))
 
         val = yield from rc.mem_read(mem_base, 16)
@@ -194,20 +194,20 @@ def bench():
         print("test 5: device-to-device DMA")
         current_test.next = 5
 
-        yield ep.io_write(0x80001000, bytearray(range(16)), 10000)
+        yield from ep.io_write(0x80001000, bytearray(range(16)), 10000)
         assert ep2.read_region(3, 0, 16) == bytearray(range(16))
 
         val = yield from ep.io_read(0x80001000, 16, 10000)
         assert val == bytearray(range(16))
 
-        yield ep.mem_write(0x80100000, bytearray(range(16)), 10000)
+        yield from ep.mem_write(0x80100000, bytearray(range(16)), 10000)
         yield delay(1000)
         assert ep2.read_region(0, 0, 16) == bytearray(range(16))
 
         val = yield from ep.mem_read(0x80100000, 16, 10000)
         assert val == bytearray(range(16))
 
-        yield ep.mem_write(0x8000000000100000, bytearray(range(16)), 10000)
+        yield from ep.mem_write(0x8000000000100000, bytearray(range(16)), 10000)
         yield delay(1000)
         assert ep2.read_region(1, 0, 16) == bytearray(range(16))
 
@@ -220,13 +220,13 @@ def bench():
         print("test 6: device-to-root DMA")
         current_test.next = 6
 
-        yield ep.io_write(io_base, bytearray(range(16)), 1000)
+        yield from ep.io_write(io_base, bytearray(range(16)), 1000)
         assert io_data[0:16] == bytearray(range(16))
 
         val = yield from ep.io_read(io_base, 16, 1000)
         assert val == bytearray(range(16))
 
-        yield ep.mem_write(mem_base, bytearray(range(16)), 1000)
+        yield from ep.mem_write(mem_base, bytearray(range(16)), 1000)
         yield delay(1000)
         assert mem_data[0:16] == bytearray(range(16))
 
@@ -239,7 +239,7 @@ def bench():
         print("test 7: MSI")
         current_test.next = 7
 
-        yield ep.issue_msi_interrupt(4)
+        yield from ep.issue_msi_interrupt(4)
 
         yield rc.msi_get_signal(ep.get_id(), 4)
 

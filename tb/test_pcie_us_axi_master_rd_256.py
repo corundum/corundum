@@ -400,7 +400,7 @@ def bench():
         print("test 4: bad requests")
         current_test.next = 4
 
-        yield rc.mem_write(dev_bar0, b'\x11\x22\x33\x44')
+        yield from rc.mem_write(dev_bar0, b'\x11\x22\x33\x44')
 
         yield delay(100)
 

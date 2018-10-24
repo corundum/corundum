@@ -647,12 +647,12 @@ class Port(object):
     def _transmit(self, tlp):
         if self.other is None:
             raise Exception("Port not connected")
-        yield self.other.ext_recv(tlp)
+        yield from self.other.ext_recv(tlp)
 
     def ext_recv(self, tlp):
         if self.rx_handler is None:
             raise Exception("Receive handler not set")
-        yield self.rx_handler(tlp)
+        yield from self.rx_handler(tlp)
 
 
 class BusPort(Port):
@@ -680,7 +680,7 @@ class BusPort(Port):
         if not self.other:
             raise Exception("Port not connected")
         for p in self.other:
-            yield p.ext_recv(TLP(tlp))
+            yield from p.ext_recv(TLP(tlp))
 
 
 class PMCapability(object):
@@ -1336,7 +1336,7 @@ class MSICapability(object):
             return
 
         data = self.msi_message_data & ~(2**self.msi_multiple_message_enable-1) | number
-        yield self.mem_write(self.msi_message_address, struct.pack('<L', data), attr=attr, tc=tc)
+        yield from self.mem_write(self.msi_message_address, struct.pack('<L', data), attr=attr, tc=tc)
 
 
 class MSIXCapability(object):
@@ -1395,7 +1395,7 @@ class MSIXCapability(object):
             print("MSI-X disabled")
             return
 
-        yield self.mem_write(addr, struct.pack('<L', data), attr=attr, tc=tc)
+        yield from self.mem_write(addr, struct.pack('<L', data), attr=attr, tc=tc)
 
 
 class Function(PMCapability, PCIECapability):
@@ -1747,16 +1747,16 @@ class Function(PMCapability, PCIECapability):
         assert tlp.check()
         if self.upstream_tx_handler is None:
             raise Exception("Transmit handler not set")
-        yield self.upstream_tx_handler(tlp)
+        yield from self.upstream_tx_handler(tlp)
 
     def send(self, tlp):
-        yield self.upstream_send(tlp)
+        yield from self.upstream_send(tlp)
 
     def upstream_recv(self, tlp):
         # logging
         print("[%s] Got downstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
         assert tlp.check()
-        yield self.handle_tlp(tlp)
+        yield from self.handle_tlp(tlp)
 
     def handle_tlp(self, tlp):
         if (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
@@ -1808,7 +1808,7 @@ class Function(PMCapability, PCIECapability):
 
             # logging
             print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.upstream_send(cpl)
+            yield from self.upstream_send(cpl)
         else:
             # error
             pass
@@ -1833,7 +1833,7 @@ class Function(PMCapability, PCIECapability):
 
             self.current_tag = (self.current_tag % 31) + 1
 
-            yield self.send(tlp)
+            yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
 
             if not cpl:
@@ -1869,7 +1869,7 @@ class Function(PMCapability, PCIECapability):
 
             self.current_tag = (self.current_tag % 31) + 1
 
-            yield self.send(tlp)
+            yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
 
             if not cpl:
@@ -1907,7 +1907,7 @@ class Function(PMCapability, PCIECapability):
 
             self.current_tag = (self.current_tag % 31) + 1
 
-            yield self.send(tlp)
+            yield from self.send(tlp)
 
             m = 0
 
@@ -1957,7 +1957,7 @@ class Function(PMCapability, PCIECapability):
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
             tlp.set_be_data(addr, data[n:n+byte_length])
 
-            yield self.send(tlp)
+            yield from self.send(tlp)
 
             n += byte_length
             addr += byte_length
@@ -2142,7 +2142,7 @@ class MemoryEndpoint(Endpoint):
 
             # logging
             print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.send(cpl)
+            yield from self.send(cpl)
 
         else:
             # logging
@@ -2153,7 +2153,7 @@ class MemoryEndpoint(Endpoint):
             cpl.set_ur_completion(tlp, self.get_id())
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.send(cpl)
+            yield from self.send(cpl)
 
     def handle_io_write_tlp(self, tlp):
         m = self.match_bar(tlp.address, True)
@@ -2190,7 +2190,7 @@ class MemoryEndpoint(Endpoint):
 
             # logging
             print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.send(cpl)
+            yield from self.send(cpl)
 
         else:
             # logging
@@ -2201,7 +2201,7 @@ class MemoryEndpoint(Endpoint):
             cpl.set_ur_completion(tlp, self.get_id())
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.send(cpl)
+            yield from self.send(cpl)
 
     def handle_mem_read_tlp(self, tlp):
         m = self.match_bar(tlp.address)
@@ -2244,7 +2244,7 @@ class MemoryEndpoint(Endpoint):
 
                 # logging
                 print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-                yield self.send(cpl)
+                yield from self.send(cpl)
 
                 m += cpl_dw_length;
                 n += cpl_dw_length*4 - (addr&3)
@@ -2259,7 +2259,7 @@ class MemoryEndpoint(Endpoint):
             cpl.set_ur_completion(tlp, self.get_id())
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.send(cpl)
+            yield from self.send(cpl)
 
     def handle_mem_write_tlp(self, tlp):
         m = self.match_bar(tlp.address)
@@ -2453,7 +2453,7 @@ class Bridge(Function):
         assert tlp.check()
         if self.upstream_tx_handler is None:
             raise Exception("Transmit handler not set")
-        yield self.upstream_tx_handler(tlp)
+        yield from self.upstream_tx_handler(tlp)
 
     def upstream_recv(self, tlp):
         # logging
@@ -2461,7 +2461,7 @@ class Bridge(Function):
             print("[%s] Routing downstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
         assert tlp.check()
         if tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0:
-            yield self.handle_tlp(tlp)
+            yield from self.handle_tlp(tlp)
         elif tlp.fmt_type == TLP_CFG_READ_1 or tlp.fmt_type == TLP_CFG_WRITE_1:
             # config type 1
             if self.sec_bus_num <= tlp.dest_id.bus <= self.sub_bus_num:
@@ -2471,7 +2471,7 @@ class Bridge(Function):
                         tlp.fmt_type = TLP_CFG_READ_0
                     elif tlp.fmt_type == TLP_CFG_WRITE_1:
                         tlp.fmt_type = TLP_CFG_WRITE_0
-                yield self.downstream_send(tlp)
+                yield from self.downstream_send(tlp)
             else:
                 # error
                 pass
@@ -2480,9 +2480,9 @@ class Bridge(Function):
             # Completions
             if not self.root and tlp.requester_id == self.get_id():
                 # for me
-                yield self.handle_tlp(tlp)
+                yield from self.handle_tlp(tlp)
             elif self.sec_bus_num <= tlp.requester_id.bus <= self.sub_bus_num:
-                yield self.downstream_send(tlp)
+                yield from self.downstream_send(tlp)
             else:
                 # error
                 pass
@@ -2490,9 +2490,9 @@ class Bridge(Function):
             # ID routed message
             if not self.root and tlp.dest_id == self.get_id():
                 # for me
-                yield self.handle_tlp(tlp)
+                yield from self.handle_tlp(tlp)
             elif self.sec_bus_num <= tlp.dest_id.bus <= self.sub_bus_num:
-                yield self.downstream_send(tlp)
+                yield from self.downstream_send(tlp)
             else:
                 # error
                 pass
@@ -2500,9 +2500,9 @@ class Bridge(Function):
             # IO read/write
             if self.match_bar(tlp.address):
                 # for me
-                yield self.handle_tlp(tlp)
+                yield from self.handle_tlp(tlp)
             elif self.io_base <= tlp.address <= self.io_limit:
-                yield self.downstream_send(tlp)
+                yield from self.downstream_send(tlp)
             else:
                 # error
                 pass
@@ -2511,9 +2511,9 @@ class Bridge(Function):
             # Memory read/write
             if self.match_bar(tlp.address):
                 # for me
-                yield self.handle_tlp(tlp)
+                yield from self.handle_tlp(tlp)
             elif self.mem_base <= tlp.address <= self.mem_limit or self.prefetchable_mem_base <= tlp.address <= self.prefetchable_mem_limit:
-                yield self.downstream_send(tlp)
+                yield from self.downstream_send(tlp)
             else:
                 # error
                 pass
@@ -2523,7 +2523,7 @@ class Bridge(Function):
             pass
         elif tlp.fmt_type == TLP_MSG_BCAST or tlp.fmt_type == TLP_MSG_DATA_BCAST:
             # Message broadcast from root complex
-            yield self.upstream_send(tlp)
+            yield from self.upstream_send(tlp)
         elif tlp.fmt_type == TLP_MSG_LOCAL or tlp.fmt_type == TLP_MSG_DATA_LOCAL:
             # Message local to receiver
             # error
@@ -2540,7 +2540,7 @@ class Bridge(Function):
         assert tlp.check()
         if self.downstream_tx_handler is None:
             raise Exception("Transmit handler not set")
-        yield self.downstream_tx_handler(tlp)
+        yield from self.downstream_tx_handler(tlp)
 
     def downstream_recv(self, tlp):
         # logging
@@ -2556,48 +2556,48 @@ class Bridge(Function):
             # Completions
             if not self.root and tlp.requester_id == self.get_id():
                 # for me
-                yield self.handle_tlp(tlp)
+                yield from self.handle_tlp(tlp)
             elif self.sec_bus_num <= tlp.requester_id.bus <= self.sub_bus_num:
                 if self.root and tlp.requester_id.bus == self.pri_bus_num and tlp.requester_id.device == 0:
-                    yield self.upstream_send(tlp)
+                    yield from self.upstream_send(tlp)
                 else:
-                    yield self.downstream_send(tlp)
+                    yield from self.downstream_send(tlp)
             else:
-                yield self.upstream_send(tlp)
+                yield from self.upstream_send(tlp)
         elif tlp.fmt_type == TLP_MSG_ID or tlp.fmt_type == TLP_MSG_DATA_ID:
             # ID routed messages
             if not self.root and tlp.dest_id == self.get_id():
                 # for me
-                yield self.handle_tlp(tlp)
+                yield from self.handle_tlp(tlp)
             elif self.sec_bus_num <= tlp.dest_id.bus <= self.sub_bus_num:
                 if self.root and tlp.dest_id.bus == self.pri_bus_num and tlp.dest_id.device == 0:
-                    yield self.upstream_send(tlp)
+                    yield from self.upstream_send(tlp)
                 else:
-                    yield self.downstream_send(tlp)
+                    yield from self.downstream_send(tlp)
             else:
-                yield self.upstream_send(tlp)
+                yield from self.upstream_send(tlp)
         elif (tlp.fmt_type == TLP_IO_READ or tlp.fmt_type == TLP_IO_WRITE):
             # IO read/write
             if self.match_bar(tlp.address):
                 # for me
-                yield self.handle_tlp(tlp)
+                yield from self.handle_tlp(tlp)
             elif self.io_base <= tlp.address <= self.io_limit:
-                yield self.downstream_send(tlp)
+                yield from self.downstream_send(tlp)
             else:
-                yield self.upstream_send(tlp)
+                yield from self.upstream_send(tlp)
         elif (tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64 or
                 tlp.fmt_type == TLP_MEM_WRITE or tlp.fmt_type == TLP_MEM_WRITE_64):
             # Memory read/write
             if self.match_bar(tlp.address):
                 # for me
-                yield self.handle_tlp(tlp)
+                yield from self.handle_tlp(tlp)
             elif self.mem_base <= tlp.address <= self.mem_limit or self.prefetchable_mem_base <= tlp.address <= self.prefetchable_mem_limit:
-                yield self.downstream_send(tlp)
+                yield from self.downstream_send(tlp)
             else:
-                yield self.upstream_send(tlp)
+                yield from self.upstream_send(tlp)
         elif tlp.fmt_type == TLP_MSG_TO_RC or tlp.fmt_type == TLP_MSG_DATA_TO_RC:
             # Message to root complex
-            yield self.upstream_send(tlp)
+            yield from self.upstream_send(tlp)
         elif tlp.fmt_type == TLP_MSG_BCAST or tlp.fmt_type == TLP_MSG_DATA_BCAST:
             # Message broadcast from root complex
             # error
@@ -2614,7 +2614,7 @@ class Bridge(Function):
 
         def send(self, tlp):
             # route local transmissions as if they came in via downstream port
-            yield self.downstream_recv(tlp)
+            yield from self.downstream_recv(tlp)
 
 
 class HostBridge(Bridge):
@@ -2734,7 +2734,7 @@ class Device(object):
                 # pass TLP to function
                 for f in self.functions:
                     if f.function_num == tlp.dest_id.function:
-                        yield f.upstream_recv(tlp)
+                        yield from f.upstream_recv(tlp)
                         return
 
                 #raise Exception("Function not found")
@@ -2747,7 +2747,7 @@ class Device(object):
             cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.upstream_send(cpl)
+            yield from self.upstream_send(cpl)
         elif (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
                 tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
             # Completion
@@ -2755,7 +2755,7 @@ class Device(object):
             if tlp.requester_id.bus == self.bus_num and tlp.requester_id.device == self.device_num:
                 for f in self.functions:
                     if f.function_num == tlp.requester_id.function:
-                        yield f.upstream_recv(tlp)
+                        yield from f.upstream_recv(tlp)
                         return
 
                 print("Function not found")
@@ -2766,7 +2766,7 @@ class Device(object):
 
             for f in self.functions:
                 if f.match_bar(tlp.address, True):
-                    yield f.upstream_recv(tlp)
+                    yield from f.upstream_recv(tlp)
                     return
 
             print("IO request did not match any BARs")
@@ -2776,14 +2776,14 @@ class Device(object):
             cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.upstream_send(cpl)
+            yield from self.upstream_send(cpl)
         elif (tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64 or
                 tlp.fmt_type == TLP_MEM_WRITE or tlp.fmt_type == TLP_MEM_WRITE_64):
             # Memory read/write
 
             for f in self.functions:
                 if f.match_bar(tlp.address):
-                    yield f.upstream_recv(tlp)
+                    yield from f.upstream_recv(tlp)
                     return
 
             print("Memory request did not match any BARs")
@@ -2794,7 +2794,7 @@ class Device(object):
                 cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
                 # logging
                 print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-                yield self.upstream_send(cpl)
+                yield from self.upstream_send(cpl)
         else:
             raise Exception("TODO")
 
@@ -2802,10 +2802,10 @@ class Device(object):
         # logging
         print("[%s] Sending upstream TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
         assert tlp.check()
-        yield self.upstream_port.send(tlp)
+        yield from self.upstream_port.send(tlp)
 
     def send(self, tlp):
-        yield self.upstream_send(tlp)
+        yield from self.upstream_send(tlp)
 
 
 class Switch(object):
@@ -3109,16 +3109,16 @@ class RootComplex(Switch):
         # logging
         print("[%s] Sending TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
         assert tlp.check()
-        yield self.upstream_bridge.upstream_recv(tlp)
+        yield from self.upstream_bridge.upstream_recv(tlp)
 
     def send(self, tlp):
-        yield self.downstream_send(tlp)
+        yield from self.downstream_send(tlp)
 
     def downstream_recv(self, tlp):
         # logging
         print("[%s] Got TLP: %s" % (highlight(self.get_desc()), repr(tlp)))
         assert tlp.check()
-        yield self.handle_tlp(tlp)
+        yield from self.handle_tlp(tlp)
 
     def handle_tlp(self, tlp):
         if (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
@@ -3184,7 +3184,7 @@ class RootComplex(Switch):
 
             # logging
             print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.send(cpl)
+            yield from self.send(cpl)
 
         else:
             # logging
@@ -3195,7 +3195,7 @@ class RootComplex(Switch):
             cpl.set_ur_completion(tlp, PcieId(0, 0, 0))
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.send(cpl)
+            yield from self.send(cpl)
 
     def handle_io_write_tlp(self, tlp):
         if self.find_io_region(tlp.address):
@@ -3230,7 +3230,7 @@ class RootComplex(Switch):
 
             # logging
             print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.send(cpl)
+            yield from self.send(cpl)
 
         else:
             # logging
@@ -3241,7 +3241,7 @@ class RootComplex(Switch):
             cpl.set_ur_completion(tlp, PcieId(0, 0, 0))
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.send(cpl)
+            yield from self.send(cpl)
 
     def handle_mem_read_tlp(self, tlp):
         if self.find_region(tlp.address):
@@ -3284,7 +3284,7 @@ class RootComplex(Switch):
 
                 # logging
                 print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-                yield self.send(cpl)
+                yield from self.send(cpl)
 
                 m += cpl_dw_length;
                 n += cpl_dw_length*4 - (addr&3)
@@ -3299,7 +3299,7 @@ class RootComplex(Switch):
             cpl.set_ur_completion(tlp, PcieId(0, 0, 0))
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.send(cpl)
+            yield from self.send(cpl)
 
     def handle_mem_write_tlp(self, tlp):
         if self.find_region(tlp.address):
@@ -3381,7 +3381,7 @@ class RootComplex(Switch):
 
             self.current_tag = (self.current_tag % 31) + 1
 
-            yield self.send(tlp)
+            yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
 
             if not cpl or cpl.status != CPL_STATUS_SC:
@@ -3414,7 +3414,7 @@ class RootComplex(Switch):
 
             self.current_tag = (self.current_tag % 31) + 1
 
-            yield self.send(tlp)
+            yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
 
             n += byte_length
@@ -3445,7 +3445,7 @@ class RootComplex(Switch):
         if not offset:
             raise Exception("Capability not found")
 
-        yield self.config_write(dev, addr+offset, data, timeout)
+        yield from self.config_write(dev, addr+offset, data, timeout)
 
     def io_read(self, addr, length, timeout=0):
         n = 0
@@ -3466,7 +3466,7 @@ class RootComplex(Switch):
 
             self.current_tag = (self.current_tag % 31) + 1
 
-            yield self.send(tlp)
+            yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
 
             if not cpl:
@@ -3501,7 +3501,7 @@ class RootComplex(Switch):
 
             self.current_tag = (self.current_tag % 31) + 1
 
-            yield self.send(tlp)
+            yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
 
             if not cpl:
@@ -3538,7 +3538,7 @@ class RootComplex(Switch):
 
             self.current_tag = (self.current_tag % 31) + 1
 
-            yield self.send(tlp)
+            yield from self.send(tlp)
 
             m = 0
 
@@ -3587,7 +3587,7 @@ class RootComplex(Switch):
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
             tlp.set_be_data(addr, data[n:n+byte_length])
 
-            yield self.send(tlp)
+            yield from self.send(tlp)
 
             n += byte_length
             addr += byte_length
@@ -3622,22 +3622,22 @@ class RootComplex(Switch):
         msi_mmcap = msg_ctrl >> 17 & 7
 
         # message address
-        yield self.capability_write(dev, MSI_CAP_ID, 4, struct.pack('<L', self.msi_addr & 0xfffffffc))
+        yield from self.capability_write(dev, MSI_CAP_ID, 4, struct.pack('<L', self.msi_addr & 0xfffffffc))
 
         if msi_64bit:
             # 64 bit message address
             # message upper address
-            yield self.capability_write(dev, MSI_CAP_ID, 8, struct.pack('<L', (self.msi_addr >> 32) & 0xffffffff))
+            yield from self.capability_write(dev, MSI_CAP_ID, 8, struct.pack('<L', (self.msi_addr >> 32) & 0xffffffff))
             # message data
-            yield self.capability_write(dev, MSI_CAP_ID, 12, struct.pack('<L', self.msi_msg_limit))
+            yield from self.capability_write(dev, MSI_CAP_ID, 12, struct.pack('<L', self.msi_msg_limit))
 
         else:
             # 32 bit message address
             # message data
-            yield self.capability_write(dev, MSI_CAP_ID, 8, struct.pack('<L', self.msi_msg_limit))
+            yield from self.capability_write(dev, MSI_CAP_ID, 8, struct.pack('<L', self.msi_msg_limit))
 
         # enable and set enabled messages
-        yield self.capability_write(dev, MSI_CAP_ID, 0, struct.pack('<L', (msg_ctrl & ~(7 << 20)) | 1 << 16 | msi_mmcap << 20))
+        yield from self.capability_write(dev, MSI_CAP_ID, 0, struct.pack('<L', (msg_ctrl & ~(7 << 20)) | 1 << 16 | msi_mmcap << 20))
 
         ti.msi_addr = self.msi_addr
         ti.msi_data = self.msi_msg_limit
@@ -3750,7 +3750,7 @@ class RootComplex(Switch):
                 bar = 0
                 while bar < bar_cnt:
                     # read BAR
-                    yield self.config_write(PcieId(bus, d, f), 0x010+bar*4, b'\xff\xff\xff\xff')
+                    yield from self.config_write(PcieId(bus, d, f), 0x010+bar*4, b'\xff\xff\xff\xff')
                     val = yield from self.config_read(PcieId(bus, d, f), 0x010+bar*4, 4)
                     val = struct.unpack('<L', val)[0]
 
@@ -3783,7 +3783,7 @@ class RootComplex(Switch):
                         self.io_limit += size
 
                         # write BAR
-                        yield self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val))
+                        yield from self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val))
 
                         bar += 1
                     else:
@@ -3791,7 +3791,7 @@ class RootComplex(Switch):
 
                         if val & 4:
                             # 64 bit BAR
-                            yield self.config_write(PcieId(bus, d, f), 0x010+(bar+1)*4, b'\xff\xff\xff\xff')
+                            yield from self.config_write(PcieId(bus, d, f), 0x010+(bar+1)*4, b'\xff\xff\xff\xff')
                             val2 = yield from self.config_read(PcieId(bus, d, f), 0x010+(bar+1)*4, 4)
                             val |= struct.unpack('<L', val2)[0] << 32
                             mask = (~val & 0xffffffffffffffff) | 15
@@ -3817,8 +3817,8 @@ class RootComplex(Switch):
                             self.prefetchable_mem_limit += size
 
                             # write BAR
-                            yield self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val & 0xffffffff))
-                            yield self.config_write(PcieId(bus, d, f), 0x010+(bar+1)*4, struct.pack('<L', (val >> 32) & 0xffffffff))
+                            yield from self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val & 0xffffffff))
+                            yield from self.config_write(PcieId(bus, d, f), 0x010+(bar+1)*4, struct.pack('<L', (val >> 32) & 0xffffffff))
 
                             bar += 2
                         else:
@@ -3847,7 +3847,7 @@ class RootComplex(Switch):
                             self.mem_limit += size
 
                             # write BAR
-                            yield self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val))
+                            yield from self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val))
 
                             bar += 1
 
@@ -3873,18 +3873,18 @@ class RootComplex(Switch):
                     val = yield from self.config_read(PcieId(bus, d, f), 0x04, 2)
                     val = struct.unpack('<H', val)[0]
                     val |= 4
-                    yield self.config_write(PcieId(bus, d, f), 0x04, struct.pack('<H', val))
+                    yield from self.config_write(PcieId(bus, d, f), 0x04, struct.pack('<H', val))
 
                 if configure_msi:
                     # configure MSI
-                    yield self.configure_msi(PcieId(bus, d, f))
+                    yield from self.configure_msi(PcieId(bus, d, f))
 
                 if bridge:
                     # set bridge registers for enumeration
                     # logging
                     print("[%s] Set pri %d, sec %d, sub %d" % (highlight(self.get_desc()), bus, sec_bus, 255))
 
-                    yield self.config_write(PcieId(bus, d, f), 0x018, bytearray([bus, sec_bus, 255]))
+                    yield from self.config_write(PcieId(bus, d, f), 0x018, bytearray([bus, sec_bus, 255]))
 
                     # enumerate secondary bus
                     sub_bus = yield from self.enumerate_segment(tree=ti, bus=sec_bus, timeout=timeout, enable_bus_mastering=enable_bus_mastering, configure_msi=configure_msi)
@@ -3893,26 +3893,26 @@ class RootComplex(Switch):
                     # logging
                     print("[%s] Set pri %d, sec %d, sub %d" % (highlight(self.get_desc()), bus, sec_bus, sub_bus))
 
-                    yield self.config_write(PcieId(bus, d, f), 0x018, bytearray([bus, sec_bus, sub_bus]))
+                    yield from self.config_write(PcieId(bus, d, f), 0x018, bytearray([bus, sec_bus, sub_bus]))
 
                     # set base/limit registers
                     # logging
                     print("[%s] Set IO base: %08x, limit: %08x" % (highlight(self.get_desc()), ti.io_base, ti.io_limit))
 
-                    yield self.config_write(PcieId(bus, d, f), 0x01C, struct.pack('BB', (ti.io_base >> 8) & 0xf0, (ti.io_limit >> 8) & 0xf0))
-                    yield self.config_write(PcieId(bus, d, f), 0x030, struct.pack('<HH', ti.io_base >> 16, ti.io_limit >> 16))
+                    yield from self.config_write(PcieId(bus, d, f), 0x01C, struct.pack('BB', (ti.io_base >> 8) & 0xf0, (ti.io_limit >> 8) & 0xf0))
+                    yield from self.config_write(PcieId(bus, d, f), 0x030, struct.pack('<HH', ti.io_base >> 16, ti.io_limit >> 16))
 
                     # logging
                     print("[%s] Set mem base: %08x, limit: %08x" % (highlight(self.get_desc()), ti.mem_base, ti.mem_limit))
 
-                    yield self.config_write(PcieId(bus, d, f), 0x020, struct.pack('<HH', (ti.mem_base >> 16) & 0xfff0, (ti.mem_limit >> 16) & 0xfff0))
+                    yield from self.config_write(PcieId(bus, d, f), 0x020, struct.pack('<HH', (ti.mem_base >> 16) & 0xfff0, (ti.mem_limit >> 16) & 0xfff0))
 
                     # logging
                     print("[%s] Set prefetchable mem base: %016x, limit: %016x" % (highlight(self.get_desc()), ti.prefetchable_mem_base, ti.prefetchable_mem_limit))
 
-                    yield self.config_write(PcieId(bus, d, f), 0x024, struct.pack('<HH', (ti.prefetchable_mem_base >> 16) & 0xfff0, (ti.prefetchable_mem_limit >> 16) & 0xfff0))
-                    yield self.config_write(PcieId(bus, d, f), 0x028, struct.pack('<L', ti.prefetchable_mem_base >> 32))
-                    yield self.config_write(PcieId(bus, d, f), 0x02c, struct.pack('<L', ti.prefetchable_mem_limit >> 32))
+                    yield from self.config_write(PcieId(bus, d, f), 0x024, struct.pack('<HH', (ti.prefetchable_mem_base >> 16) & 0xfff0, (ti.prefetchable_mem_limit >> 16) & 0xfff0))
+                    yield from self.config_write(PcieId(bus, d, f), 0x028, struct.pack('<L', ti.prefetchable_mem_base >> 32))
+                    yield from self.config_write(PcieId(bus, d, f), 0x02c, struct.pack('<L', ti.prefetchable_mem_limit >> 32))
 
                     sec_bus = sub_bus+1
 
@@ -3941,7 +3941,7 @@ class RootComplex(Switch):
         self.prefetchable_mem_limit = self.prefetchable_mem_base
 
         self.tree = TreeItem()
-        yield self.enumerate_segment(tree=self.tree, bus=0, timeout=timeout, enable_bus_mastering=enable_bus_mastering, configure_msi=configure_msi)
+        yield from self.enumerate_segment(tree=self.tree, bus=0, timeout=timeout, enable_bus_mastering=enable_bus_mastering, configure_msi=configure_msi)
 
         self.upstream_bridge.io_base = self.io_base
         self.upstream_bridge.io_limit = self.io_limit

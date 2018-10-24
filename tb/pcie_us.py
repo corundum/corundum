@@ -712,7 +712,7 @@ class UltrascalePCIe(Device):
                 cpl.set_crs_completion(tlp, (self.bus_num, self.device_num, 0))
                 # logging
                 print("[%s] CRS Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-                yield self.upstream_send(cpl)
+                yield from self.upstream_send(cpl)
                 return
             elif tlp.dest_id.device == self.device_num:
                 # capture address information
@@ -724,7 +724,7 @@ class UltrascalePCIe(Device):
                 # pass TLP to function
                 for f in self.functions:
                     if f.function_num == tlp.dest_id.function:
-                        yield f.upstream_recv(tlp)
+                        yield from f.upstream_recv(tlp)
                         return
 
                 #raise Exception("Function not found")
@@ -737,7 +737,7 @@ class UltrascalePCIe(Device):
             cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.upstream_send(cpl)
+            yield from self.upstream_send(cpl)
         elif (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
                 tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
             # Completion
@@ -776,7 +776,7 @@ class UltrascalePCIe(Device):
             cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
             # logging
             print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-            yield self.upstream_send(cpl)
+            yield from self.upstream_send(cpl)
         elif (tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64 or
                 tlp.fmt_type == TLP_MEM_WRITE or tlp.fmt_type == TLP_MEM_WRITE_64):
             # Memory read/write
@@ -804,7 +804,7 @@ class UltrascalePCIe(Device):
                 cpl.set_ur_completion(tlp, PcieId(self.bus_num, self.device_num, 0))
                 # logging
                 print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-                yield self.upstream_send(cpl)
+                yield from self.upstream_send(cpl)
         else:
             raise Exception("TODO")
 
@@ -1380,7 +1380,7 @@ class UltrascalePCIe(Device):
                         tlp.completer_id = PcieId(self.bus_num, self.device_num, tlp.completer_id.function)
 
                     if not tlp.discontinue:
-                        yield self.send(TLP(tlp))
+                        yield from self.send(TLP(tlp))
 
                 # handle requester requests
                 while not self.rq_sink.empty():
@@ -1393,7 +1393,7 @@ class UltrascalePCIe(Device):
 
                     if not tlp.discontinue:
                         if self.functions[tlp.requester_id.function].bus_master_enable:
-                            yield self.send(TLP(tlp))
+                            yield from self.send(TLP(tlp))
                         else:
                             print("Bus mastering disabled")
 

@@ -686,20 +686,20 @@ def bench():
         print("test 2: IO and memory read/write")
         current_test.next = 2
 
-        yield rc.io_write(0x80000000, bytearray(range(16)), 100)
+        yield from rc.io_write(0x80000000, bytearray(range(16)), 100)
         assert regions[3][0:16] == bytearray(range(16))
 
         val = yield from rc.io_read(0x80000000, 16, 100)
         assert val == bytearray(range(16))
 
-        yield rc.mem_write(0x80000000, bytearray(range(16)), 100)
+        yield from rc.mem_write(0x80000000, bytearray(range(16)), 100)
         yield delay(100)
         assert regions[0][0:16] == bytearray(range(16))
 
         val = yield from rc.mem_read(0x80000000, 16, 100)
         assert val == bytearray(range(16))
 
-        yield rc.mem_write(0x8000000000000000, bytearray(range(16)), 100)
+        yield from rc.mem_write(0x8000000000000000, bytearray(range(16)), 100)
         yield delay(100)
         assert regions[1][0:16] == bytearray(range(16))
 
@@ -712,7 +712,7 @@ def bench():
         # print("test 3: Large read/write")
         # current_test.next = 3
 
-        # yield rc.mem_write(0x8000000000000000, bytearray(range(256))*32, 100)
+        # yield from rc.mem_write(0x8000000000000000, bytearray(range(256))*32, 100)
         # yield delay(100)
         # assert ep.read_region(1, 0, 256*32) == bytearray(range(256))*32
 

@@ -163,6 +163,8 @@ cq_demux_inst (
     .msg_code(),
     .msg_routing(),
 
+    .enable(1),
+    .drop(0),
     .select(select)
 );
 

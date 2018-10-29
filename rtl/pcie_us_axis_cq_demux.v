@@ -71,6 +71,8 @@ module pcie_us_axis_cq_demux #
     /*
      * Control
      */
+    input  wire                                    enable,
+    input  wire                                    drop,
     input  wire [M_COUNT-1:0]                      select
 );
 
@@ -110,7 +112,7 @@ reg                             m_axis_cq_tlast_int;
 reg  [84:0]                     m_axis_cq_tuser_int;
 wire                            m_axis_cq_tready_int_early;
 
-assign s_axis_cq_tready = s_axis_cq_tready_reg || (AXIS_PCIE_DATA_WIDTH == 64 && !temp_s_axis_cq_tvalid);
+assign s_axis_cq_tready = (s_axis_cq_tready_reg || (AXIS_PCIE_DATA_WIDTH == 64 && !temp_s_axis_cq_tvalid)) && enable;
 
 assign req_type =        AXIS_PCIE_DATA_WIDTH > 64 ? s_axis_cq_tdata[78:75]   : s_axis_cq_tdata[14:11];
 assign target_function = AXIS_PCIE_DATA_WIDTH > 64 ? s_axis_cq_tdata[111:104] : s_axis_cq_tdata[47:40];
@@ -135,6 +137,7 @@ always @* begin
             // end of frame detection
             if (temp_s_axis_cq_tlast) begin
                 frame_next = 1'b0;
+                drop_next = 1'b0;
             end
         end
     end else begin
@@ -142,11 +145,12 @@ always @* begin
             // end of frame detection
             if (s_axis_cq_tlast) begin
                 frame_next = 1'b0;
+                drop_next = 1'b0;
             end
         end
     end
 
-    if (!frame_reg && (AXIS_PCIE_DATA_WIDTH == 64 ? temp_s_axis_cq_tvalid : s_axis_cq_tvalid)) begin
+    if (!frame_reg && (AXIS_PCIE_DATA_WIDTH == 64 ? temp_s_axis_cq_tvalid : s_axis_cq_tvalid) && s_axis_cq_tready) begin
         // start of frame, grab select value
         select_ctl = 0;
         drop_ctl = 1'b1;
@@ -157,6 +161,7 @@ always @* begin
                 drop_ctl = 1'b0;
             end
         end
+        drop_ctl = drop_ctl || drop;
         if (AXIS_PCIE_DATA_WIDTH == 64) begin
             if (!(s_axis_cq_tready && temp_s_axis_cq_tvalid && temp_s_axis_cq_tlast)) begin
                 select_next = select_ctl;

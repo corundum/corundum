@@ -498,7 +498,7 @@ assign m_axi_wvalid = m_axi_wvalid_reg;
 assign m_axi_wlast = m_axi_wlast_reg;
 
 // enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign m_axi_wready_int_early = m_axi_wready | (~temp_m_axi_wvalid_reg & (~m_axi_wvalid_reg | ~m_axi_wvalid_int));
+assign m_axi_wready_int_early = m_axi_wready || (!temp_m_axi_wvalid_reg && (!m_axi_wvalid_reg || !m_axi_wvalid_int));
 
 always @* begin
     // transfer sink ready state to source
@@ -511,7 +511,7 @@ always @* begin
     
     if (m_axi_wready_int_reg) begin
         // input is ready
-        if (m_axi_wready | ~m_axi_wvalid_reg) begin
+        if (m_axi_wready || !m_axi_wvalid_reg) begin
             // output is ready or currently not valid, transfer data to output
             m_axi_wvalid_next = m_axi_wvalid_int;
             store_axi_w_int_to_output = 1'b1;

@@ -751,7 +751,7 @@ assign m_axis_cc_tlast = m_axis_cc_tlast_reg;
 assign m_axis_cc_tuser = m_axis_cc_tuser_reg;
 
 // enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign m_axis_cc_tready_int_early = m_axis_cc_tready | (~temp_m_axis_cc_tvalid_reg & (~m_axis_cc_tvalid_reg | ~m_axis_cc_tvalid_int));
+assign m_axis_cc_tready_int_early = m_axis_cc_tready || (!temp_m_axis_cc_tvalid_reg && (!m_axis_cc_tvalid_reg || !m_axis_cc_tvalid_int));
 
 always @* begin
     // transfer sink ready state to source
@@ -764,7 +764,7 @@ always @* begin
     
     if (m_axis_cc_tready_int_reg) begin
         // input is ready
-        if (m_axis_cc_tready | ~m_axis_cc_tvalid_reg) begin
+        if (m_axis_cc_tready || !m_axis_cc_tvalid_reg) begin
             // output is ready or currently not valid, transfer data to output
             m_axis_cc_tvalid_next = m_axis_cc_tvalid_int;
             store_axis_int_to_output = 1'b1;

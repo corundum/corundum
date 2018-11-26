@@ -114,6 +114,29 @@ initial begin
     end
 end
 
+localparam [3:0]
+    REQ_MEM_READ = 4'b0000,
+    REQ_MEM_WRITE = 4'b0001,
+    REQ_IO_READ = 4'b0010,
+    REQ_IO_WRITE = 4'b0011,
+    REQ_MEM_FETCH_ADD = 4'b0100,
+    REQ_MEM_SWAP = 4'b0101,
+    REQ_MEM_CAS = 4'b0110,
+    REQ_MEM_READ_LOCKED = 4'b0111,
+    REQ_CFG_READ_0 = 4'b1000,
+    REQ_CFG_READ_1 = 4'b1001,
+    REQ_CFG_WRITE_0 = 4'b1010,
+    REQ_CFG_WRITE_1 = 4'b1011,
+    REQ_MSG = 4'b1100,
+    REQ_MSG_VENDOR = 4'b1101,
+    REQ_MSG_ATS = 4'b1110;
+
+localparam [2:0]
+    CPL_STATUS_SC  = 3'b000, // successful completion
+    CPL_STATUS_UR  = 3'b001, // unsupported request
+    CPL_STATUS_CRS = 3'b010, // configuration request retry status
+    CPL_STATUS_CA  = 3'b100; // completer abort
+
 localparam [1:0]
     STATE_IDLE = 2'd0,
     STATE_HEADER = 3'd1,
@@ -264,7 +287,7 @@ always @* begin
                     last_cycle_next = output_cycle_count_next == 0;
                     input_active_next = 1'b1;
 
-                    if (type_next == 4'b0001) begin
+                    if (type_next == REQ_MEM_WRITE) begin
                         // write request
                         m_axi_awvalid_next = 1'b1;
                         if (AXIS_PCIE_DATA_WIDTH == 256) begin
@@ -345,7 +368,7 @@ always @* begin
                 last_cycle_next = output_cycle_count_next == 0;
                 input_active_next = 1'b1;
 
-                if (type_next == 4'b0001) begin
+                if (type_next == REQ_MEM_WRITE) begin
                     // write request
                     m_axi_awvalid_next = 1'b1;
                     s_axis_cq_tready_next = m_axi_wready_int_early;

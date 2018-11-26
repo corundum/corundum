@@ -131,6 +131,29 @@ initial begin
     end
 end
 
+localparam [3:0]
+    REQ_MEM_READ = 4'b0000,
+    REQ_MEM_WRITE = 4'b0001,
+    REQ_IO_READ = 4'b0010,
+    REQ_IO_WRITE = 4'b0011,
+    REQ_MEM_FETCH_ADD = 4'b0100,
+    REQ_MEM_SWAP = 4'b0101,
+    REQ_MEM_CAS = 4'b0110,
+    REQ_MEM_READ_LOCKED = 4'b0111,
+    REQ_CFG_READ_0 = 4'b1000,
+    REQ_CFG_READ_1 = 4'b1001,
+    REQ_CFG_WRITE_0 = 4'b1010,
+    REQ_CFG_WRITE_1 = 4'b1011,
+    REQ_MSG = 4'b1100,
+    REQ_MSG_VENDOR = 4'b1101,
+    REQ_MSG_ATS = 4'b1110;
+
+localparam [2:0]
+    CPL_STATUS_SC  = 3'b000, // successful completion
+    CPL_STATUS_UR  = 3'b001, // unsupported request
+    CPL_STATUS_CRS = 3'b010, // configuration request retry status
+    CPL_STATUS_CA  = 3'b100; // completer abort
+
 localparam [2:0]
     AXI_STATE_IDLE = 3'd0,
     AXI_STATE_HEADER = 3'd1,
@@ -320,7 +343,7 @@ always @* begin
             if (s_axis_cq_tready & s_axis_cq_tvalid) begin
                 tlp_cmd_at_next = s_axis_cq_tdata[1:0];
                 pcie_addr_next = {s_axis_cq_tdata[63:2], first_be_offset};
-                tlp_cmd_status_next = 3'b000; // successful completion
+                tlp_cmd_status_next = CPL_STATUS_SC; // successful completion
                 if (AXIS_PCIE_DATA_WIDTH > 64) begin
                     op_dword_count_next = s_axis_cq_tdata[74:64];
                     if (op_dword_count_next == 1) begin
@@ -348,11 +371,11 @@ always @* begin
                         axi_state_next = AXI_STATE_HEADER;
                     end
                 end else begin
-                    if (s_axis_cq_tdata[78:75] == 4'b0000) begin
+                    if (s_axis_cq_tdata[78:75] == REQ_MEM_READ) begin
                         // read request
                         s_axis_cq_tready_next = 1'b0;
                         axi_state_next = AXI_STATE_START;
-                    end else if (s_axis_cq_tdata[78:75] == 4'b0001 || (s_axis_cq_tdata[78:75] & 4'b1100) == 4'b1100) begin
+                    end else if (s_axis_cq_tdata[78:75] == REQ_MEM_WRITE || (s_axis_cq_tdata[78:75] & 4'b1100) == 4'b1100) begin
                         // posted request (memory write or message), drop and report uncorrectable error
                         status_error_uncor_next = 1'b1;
                         if (s_axis_cq_tlast) begin
@@ -363,7 +386,7 @@ always @* begin
                         end
                     end else begin
                         // invalid request, send UR completion
-                        tlp_cmd_status_next = 3'b001; // unsupported request
+                        tlp_cmd_status_next = CPL_STATUS_UR; // unsupported request
                         tlp_cmd_valid_next = 1'b1;
                         // report correctable error
                         status_error_cor_next = 1'b1;
@@ -396,11 +419,11 @@ always @* begin
                 tlp_cmd_tc_next = s_axis_cq_tdata[59:57];
                 tlp_cmd_attr_next = s_axis_cq_tdata[62:60];
 
-                if (s_axis_cq_tdata[14:11] == 4'b0000) begin
+                if (s_axis_cq_tdata[14:11] == REQ_MEM_READ) begin
                     // read request
                     s_axis_cq_tready_next = 1'b0;
                     axi_state_next = AXI_STATE_START;
-                end else if (s_axis_cq_tdata[14:11] == 4'b0001 || (s_axis_cq_tdata[14:11] & 4'b1100) == 4'b1100) begin
+                end else if (s_axis_cq_tdata[14:11] == REQ_MEM_WRITE || (s_axis_cq_tdata[14:11] & 4'b1100) == 4'b1100) begin
                     // posted request (memory write or message), drop and report uncorrectable error
                     // write request - drop
                     status_error_uncor_next = 1'b1;
@@ -412,7 +435,7 @@ always @* begin
                     end
                 end else begin
                     // invalid request, send UR completion
-                    tlp_cmd_status_next = 3'b001; // unsupported request
+                    tlp_cmd_status_next = CPL_STATUS_UR; // unsupported request
                     tlp_cmd_valid_next = 1'b1;
                     // report correctable error
                     status_error_cor_next = 1'b1;
@@ -607,7 +630,7 @@ always @* begin
 
             if (tlp_cmd_valid_reg) begin
                 tlp_cmd_ready = 1'b1;
-                if (status_next == 3'b000) begin
+                if (status_next == CPL_STATUS_SC) begin
                     if (AXIS_PCIE_DATA_WIDTH == 64) begin
                         m_axi_rready_next = m_axis_cc_tready_int_early && bubble_cycle_reg;
                     end else begin

@@ -121,6 +121,29 @@ initial begin
     end
 end
 
+localparam [3:0]
+    REQ_MEM_READ = 4'b0000,
+    REQ_MEM_WRITE = 4'b0001,
+    REQ_IO_READ = 4'b0010,
+    REQ_IO_WRITE = 4'b0011,
+    REQ_MEM_FETCH_ADD = 4'b0100,
+    REQ_MEM_SWAP = 4'b0101,
+    REQ_MEM_CAS = 4'b0110,
+    REQ_MEM_READ_LOCKED = 4'b0111,
+    REQ_CFG_READ_0 = 4'b1000,
+    REQ_CFG_READ_1 = 4'b1001,
+    REQ_CFG_WRITE_0 = 4'b1010,
+    REQ_CFG_WRITE_1 = 4'b1011,
+    REQ_MSG = 4'b1100,
+    REQ_MSG_VENDOR = 4'b1101,
+    REQ_MSG_ATS = 4'b1110;
+
+localparam [2:0]
+    CPL_STATUS_SC  = 3'b000, // successful completion
+    CPL_STATUS_UR  = 3'b001, // unsupported request
+    CPL_STATUS_CRS = 3'b010, // configuration request retry status
+    CPL_STATUS_CA  = 3'b100; // completer abort
+
 localparam [2:0]
     STATE_IDLE = 3'd0,
     STATE_HEADER = 3'd1,
@@ -293,12 +316,12 @@ always @* begin
 
                 m_axil_wstrb_next = first_be_next;
 
-                status_next = 3'b000; // successful completion
+                status_next = CPL_STATUS_SC; // successful completion
 
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
                     state_next = STATE_HEADER;
                 end else begin
-                    if (type_next == 4'b0000 || type_next == 4'b0010) begin
+                    if (type_next == REQ_MEM_READ || type_next == REQ_IO_READ) begin
                         // read request
                         if (s_axis_cq_tlast && dword_count_next == 11'd1) begin
                             m_axil_arvalid_next = 1'b1;
@@ -307,7 +330,7 @@ always @* begin
                             state_next = STATE_READ;
                         end else begin
                             // bad length
-                            status_next = 3'b100; // completer abort
+                            status_next = CPL_STATUS_CA; // completer abort
                             // report correctable error
                             status_error_cor_next = 1'b1;
                             if (s_axis_cq_tlast) begin
@@ -318,7 +341,7 @@ always @* begin
                                 state_next = STATE_WAIT_END;
                             end
                         end
-                    end else if (type_next == 4'b0001 || type_next == 4'b0011) begin
+                    end else if (type_next == REQ_MEM_WRITE || type_next == REQ_IO_WRITE) begin
                         // write request
                         if (AXIS_PCIE_DATA_WIDTH == 256 && s_axis_cq_tlast && dword_count_next == 11'd1) begin
                             m_axil_awvalid_next = 1'b1;
@@ -331,8 +354,8 @@ always @* begin
                             state_next = STATE_WRITE_1;
                         end else begin
                             // bad length
-                            status_next = 3'b100; // completer abort
-                            if (type_next == 4'b0001) begin
+                            status_next = CPL_STATUS_CA; // completer abort
+                            if (type_next == REQ_MEM_WRITE) begin
                                 // memory write - posted, no completion
                                 // report uncorrectable error
                                 status_error_uncor_next = 1'b1;
@@ -358,8 +381,8 @@ always @* begin
                         end
                     end else begin
                         // other request
-                        status_next = 3'b001; // unsupported request
-                        if (type_next == 4'b0001 || (type_next & 4'b1100) == 4'b1100) begin
+                        status_next = CPL_STATUS_UR; // unsupported request
+                        if (type_next == REQ_MEM_WRITE || (type_next & 4'b1100) == 4'b1100) begin
                             // memory write or message - posted, no completion
                             // report uncorrectable error
                             status_error_uncor_next = 1'b1;
@@ -404,7 +427,7 @@ always @* begin
             m_axil_wstrb_next = first_be_reg;
 
             if (s_axis_cq_tready && s_axis_cq_tvalid) begin
-                if (type_next == 4'b0000 || type_next == 4'b0010) begin
+                if (type_next == REQ_MEM_READ || type_next == REQ_IO_READ) begin
                     // read request
                     if (s_axis_cq_tlast && dword_count_next == 11'd1) begin
                         m_axil_arvalid_next = 1'b1;
@@ -413,7 +436,7 @@ always @* begin
                         state_next = STATE_READ;
                     end else begin
                         // bad length
-                        status_next = 3'b100; // completer abort
+                        status_next = CPL_STATUS_CA; // completer abort
                         // report correctable error
                         status_error_cor_next = 1'b1;
                         if (s_axis_cq_tlast) begin
@@ -424,15 +447,15 @@ always @* begin
                             state_next = STATE_WAIT_END;
                         end
                     end
-                end else if (type_next == 4'b0001 || type_next == 4'b0011) begin
+                end else if (type_next == REQ_MEM_WRITE || type_next == REQ_IO_WRITE) begin
                     // write request
                     if (dword_count_next == 11'd1) begin
                         s_axis_cq_tready_next = 1'b1;
                         state_next = STATE_WRITE_1;
                     end else begin
                         // bad length
-                        status_next = 3'b100; // completer abort
-                        if (type_next == 4'b0001) begin
+                        status_next = CPL_STATUS_CA; // completer abort
+                        if (type_next == REQ_MEM_WRITE) begin
                             // memory write - posted, no completion
                             // report uncorrectable error
                             status_error_uncor_next = 1'b1;
@@ -458,8 +481,8 @@ always @* begin
                     end
                 end else begin
                     // other request
-                    status_next = 3'b001; // unsupported request
-                    if (type_next == 4'b0001 || (type_next & 4'b1100) == 4'b1100) begin
+                    status_next = CPL_STATUS_UR; // unsupported request
+                    if (type_next == REQ_MEM_WRITE || (type_next & 4'b1100) == 4'b1100) begin
                         // memory write or message - posted, no completion
                         // report uncorrectable error
                         status_error_uncor_next = 1'b1;
@@ -492,7 +515,7 @@ always @* begin
             m_axil_rready_next = m_axis_cc_tready_int_early;
 
             m_axis_cc_tdata_int[42:32] = 11'd1; // DWORD count
-            m_axis_cc_tdata_int[45:43] = 3'b000; // status: successful completion
+            m_axis_cc_tdata_int[45:43] = CPL_STATUS_SC; // status: successful completion
             m_axis_cc_tdata_int[127:96] = m_axil_rdata;
 
             if (AXIS_PCIE_DATA_WIDTH == 256) begin
@@ -550,7 +573,7 @@ always @* begin
 
             if (m_axil_bready && m_axil_bvalid) begin
                 m_axil_bready_next = 1'b0;
-                if (type_reg == 4'b0001) begin
+                if (type_reg == REQ_MEM_WRITE) begin
                     // memory write - posted, no completion
                     s_axis_cq_tready_next = m_axis_cc_tready_int_early;
                     state_next = STATE_IDLE;
@@ -558,7 +581,7 @@ always @* begin
                     // IO write - non-posted, send completion
                     m_axis_cc_tvalid_int = 1'b1;
                     m_axis_cc_tdata_int[42:32] = 11'd0; // DWORD count
-                    m_axis_cc_tdata_int[45:43] = 3'b000; // status: successful completion
+                    m_axis_cc_tdata_int[45:43] = CPL_STATUS_SC; // status: successful completion
 
                     if (AXIS_PCIE_DATA_WIDTH == 256) begin
                         m_axis_cc_tkeep_int = 8'b00000111;
@@ -590,7 +613,7 @@ always @* begin
             if (s_axis_cq_tready && s_axis_cq_tvalid) begin
                 if (s_axis_cq_tlast) begin
                     // completion
-                    if (type_reg == 4'b0001 || (type_reg & 4'b1100) == 4'b1100) begin
+                    if (type_reg == REQ_MEM_WRITE || (type_reg & 4'b1100) == 4'b1100) begin
                         // memory write or message - posted, no completion
                         s_axis_cq_tready_next = m_axis_cc_tready_int_early;
                         state_next = STATE_IDLE;

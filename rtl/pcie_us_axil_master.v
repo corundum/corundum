@@ -319,7 +319,14 @@ always @* begin
                 status_next = CPL_STATUS_SC; // successful completion
 
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
-                    state_next = STATE_HEADER;
+                    if (s_axis_cq_tlast) begin
+                        // truncated packet
+                        // report uncorrectable error
+                        status_error_uncor_next = 1'b1;
+                        state_next = STATE_IDLE;
+                    end else begin
+                        state_next = STATE_HEADER;
+                    end
                 end else begin
                     if (type_next == REQ_MEM_READ || type_next == REQ_IO_READ) begin
                         // read request
@@ -412,7 +419,7 @@ always @* begin
             end
         end
         STATE_HEADER: begin
-            // header state, handle header
+            // header state, handle header (64 bit interface only)
             s_axis_cq_tready_next = m_axis_cc_tready_int_early;
 
             // header fields

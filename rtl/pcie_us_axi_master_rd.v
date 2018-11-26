@@ -478,7 +478,7 @@ always @* begin
                 tlp_cmd_dword_len_next = tlp_dword_count_next;
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
                     tlp_cmd_offset_next = 1-pcie_addr_reg[OFFSET_WIDTH+2-1:2];
-                    tlp_cmd_bubble_cycle_next = pcie_addr_reg[OFFSET_WIDTH+2-1:2] > 1;
+                    tlp_cmd_bubble_cycle_next = 1'b0;
                 end else begin
                     tlp_cmd_offset_next = 3-pcie_addr_reg[OFFSET_WIDTH+2-1:2];
                     tlp_cmd_bubble_cycle_next = pcie_addr_reg[OFFSET_WIDTH+2-1:2] > 3;
@@ -632,7 +632,7 @@ always @* begin
                 tlp_cmd_ready = 1'b1;
                 if (status_next == CPL_STATUS_SC) begin
                     if (AXIS_PCIE_DATA_WIDTH == 64) begin
-                        m_axi_rready_next = m_axis_cc_tready_int_early && bubble_cycle_reg;
+                        m_axi_rready_next = 1'b0;
                     end else begin
                         m_axi_rready_next = m_axis_cc_tready_int_early;
                     end
@@ -647,20 +647,12 @@ always @* begin
         TLP_STATE_HEADER_1: begin
             // header 1 state, send TLP header
             if (AXIS_PCIE_DATA_WIDTH == 64) begin
+                m_axi_rready_next = 1'b0;
+
                 if (m_axis_cc_tready_int_reg) begin
                     m_axis_cc_tvalid_int = 1'b1;
 
                     m_axi_rready_next = m_axis_cc_tready_int_early;
-
-                    if ((m_axi_rready && m_axi_rvalid) && bubble_cycle_reg) begin
-                        transfer_in_save = 1'b1;
-                        if (input_active_reg) begin
-                            input_cycle_count_next = input_cycle_count_reg - 1;
-                            input_active_next = input_cycle_count_reg > 0;
-                        end
-                        bubble_cycle_next = 1'b0;
-                        m_axi_rready_next = m_axis_cc_tready_int_early && input_active_next;
-                    end
 
                     tlp_state_next = TLP_STATE_HEADER_2;
                 end else begin
@@ -672,7 +664,8 @@ always @* begin
                 if (m_axis_cc_tready_int_reg && ((m_axi_rready && m_axi_rvalid) || !input_active_reg)) begin
                     transfer_in_save = 1'b1;
 
-                    if (bubble_cycle_reg) begin
+                    if (AXIS_PCIE_DATA_WIDTH == 256 && bubble_cycle_reg) begin
+                        // bubble cycle; store input data and update input cycle count
                         if (input_active_reg) begin
                             input_cycle_count_next = input_cycle_count_reg - 1;
                             input_active_next = input_cycle_count_reg > 0;
@@ -737,11 +730,7 @@ always @* begin
 
                             if (tlp_cmd_valid_reg) begin
                                 tlp_cmd_ready = 1'b1;
-                                if (AXIS_PCIE_DATA_WIDTH == 64) begin
-                                    m_axi_rready_next = m_axis_cc_tready_int_early && bubble_cycle_reg;
-                                end else begin
-                                    m_axi_rready_next = m_axis_cc_tready_int_early;
-                                end
+                                m_axi_rready_next = m_axis_cc_tready_int_early;
                                 tlp_state_next = TLP_STATE_HEADER_1;
                             end else begin
                                 m_axi_rready_next = 1'b0;
@@ -770,70 +759,58 @@ always @* begin
             m_axis_cc_tdata_int[63:32] = shift_axi_rdata[63:32];
 
             if (m_axis_cc_tready_int_reg && ((m_axi_rready && m_axi_rvalid) || !input_active_reg)) begin
-                transfer_in_save = 1'b1;
+                transfer_in_save = m_axi_rready && m_axi_rvalid;
 
-                if (bubble_cycle_reg) begin
-                    transfer_in_save = 1'b1;
-                    if (input_active_reg) begin
-                        input_cycle_count_next = input_cycle_count_reg - 1;
-                        input_active_next = input_cycle_count_reg > 0;
-                    end
-                    bubble_cycle_next = 1'b0;
-                    m_axi_rready_next = m_axis_cc_tready_int_early && input_active_next;
-                    tlp_state_next = TLP_STATE_HEADER_2;
+                // some data is transferred with header
+                dword_count_next = dword_count_reg - 1;
+                // update cycle counters
+                if (input_active_reg) begin
+                    input_cycle_count_next = input_cycle_count_reg - 1;
+                    input_active_next = input_cycle_count_reg > 0;
+                end
+                output_cycle_count_next = output_cycle_count_reg - 1;
+                last_cycle_next = output_cycle_count_next == 0;
+
+                // generate tvalid and tkeep signals for header and data
+                m_axis_cc_tvalid_int = 1'b1;
+                if (dword_count_reg >= 1) begin
+                    m_axis_cc_tkeep_int = 2'b11;
                 end else begin
-                    dword_count_next = dword_count_reg - 1;
-                    if (input_active_reg) begin
-                        input_cycle_count_next = input_cycle_count_reg - 1;
-                        input_active_next = input_cycle_count_reg > 0;
-                    end
-                    output_cycle_count_next = output_cycle_count_reg - 1;
-                    last_cycle_next = output_cycle_count_next == 0;
+                    m_axis_cc_tkeep_int = 2'b11 >> (1 - dword_count_reg);
+                end
 
-                    m_axis_cc_tvalid_int = 1'b1;
-                    if (dword_count_reg >= 1) begin
-                        m_axis_cc_tkeep_int = 2'b11;
+                if (last_cycle_reg) begin
+                    m_axis_cc_tlast_int = 1'b1;
+
+                    // skip idle state if possible
+                    at_next = tlp_cmd_at_reg;
+                    tlp_addr_next = tlp_cmd_addr_reg;
+                    tlp_len_next = tlp_cmd_byte_len_reg;
+                    dword_count_next = tlp_cmd_dword_len_reg;
+                    offset_next = tlp_cmd_offset_reg;
+                    input_cycle_count_next = tlp_cmd_input_cycle_len_reg;
+                    output_cycle_count_next = tlp_cmd_output_cycle_len_reg;
+                    input_active_next = 1'b1;
+                    bubble_cycle_next = tlp_cmd_bubble_cycle_reg;
+                    last_cycle_next = tlp_cmd_output_cycle_len_reg == 0;
+                    last_tlp_next = tlp_cmd_last_reg;
+                    status_next = tlp_cmd_status_reg;
+                    requester_id_next = tlp_cmd_requester_id_reg;
+                    tag_next = tlp_cmd_tag_reg;
+                    tc_next = tlp_cmd_tc_reg;
+                    attr_next = tlp_cmd_attr_reg;
+
+                    if (tlp_cmd_valid_reg) begin
+                        tlp_cmd_ready = 1'b1;
+                        m_axi_rready_next = 1'b0;
+                        tlp_state_next = TLP_STATE_HEADER_1;
                     end else begin
-                        m_axis_cc_tkeep_int = 2'b11 >> (1 - dword_count_reg);
+                        m_axi_rready_next = 1'b0;
+                        tlp_state_next = TLP_STATE_IDLE;
                     end
-
-                    if (last_cycle_reg) begin
-                        m_axis_cc_tlast_int = 1'b1;
-
-                        // skip idle state if possible
-                        at_next = tlp_cmd_at_reg;
-                        tlp_addr_next = tlp_cmd_addr_reg;
-                        tlp_len_next = tlp_cmd_byte_len_reg;
-                        dword_count_next = tlp_cmd_dword_len_reg;
-                        offset_next = tlp_cmd_offset_reg;
-                        input_cycle_count_next = tlp_cmd_input_cycle_len_reg;
-                        output_cycle_count_next = tlp_cmd_output_cycle_len_reg;
-                        input_active_next = 1'b1;
-                        bubble_cycle_next = tlp_cmd_bubble_cycle_reg;
-                        last_cycle_next = tlp_cmd_output_cycle_len_reg == 0;
-                        last_tlp_next = tlp_cmd_last_reg;
-                        status_next = tlp_cmd_status_reg;
-                        requester_id_next = tlp_cmd_requester_id_reg;
-                        tag_next = tlp_cmd_tag_reg;
-                        tc_next = tlp_cmd_tc_reg;
-                        attr_next = tlp_cmd_attr_reg;
-
-                        if (tlp_cmd_valid_reg) begin
-                            tlp_cmd_ready = 1'b1;
-                            if (AXIS_PCIE_DATA_WIDTH == 64) begin
-                                m_axi_rready_next = m_axis_cc_tready_int_early && bubble_cycle_reg;
-                            end else begin
-                                m_axi_rready_next = m_axis_cc_tready_int_early;
-                            end
-                            tlp_state_next = TLP_STATE_HEADER_1;
-                        end else begin
-                            m_axi_rready_next = 1'b0;
-                            tlp_state_next = TLP_STATE_IDLE;
-                        end
-                    end else begin
-                        m_axi_rready_next = m_axis_cc_tready_int_early && input_active_next;
-                        tlp_state_next = TLP_STATE_TRANSFER;
-                    end
+                end else begin
+                    m_axi_rready_next = m_axis_cc_tready_int_early && input_active_next;
+                    tlp_state_next = TLP_STATE_TRANSFER;
                 end
             end else begin
                 tlp_state_next = TLP_STATE_HEADER_2;
@@ -895,7 +872,7 @@ always @* begin
                         if (tlp_cmd_valid_reg) begin
                             tlp_cmd_ready = 1'b1;
                             if (AXIS_PCIE_DATA_WIDTH == 64) begin
-                                m_axi_rready_next = m_axis_cc_tready_int_early && bubble_cycle_reg;
+                                m_axi_rready_next = 1'b0;
                             end else begin
                                 m_axi_rready_next = m_axis_cc_tready_int_early;
                             end
@@ -955,11 +932,7 @@ always @* begin
 
                     if (tlp_cmd_valid_reg) begin
                         tlp_cmd_ready = 1'b1;
-                        if (AXIS_PCIE_DATA_WIDTH == 64) begin
-                            m_axi_rready_next = m_axis_cc_tready_int_early && bubble_cycle_reg;
-                        end else begin
-                            m_axi_rready_next = m_axis_cc_tready_int_early;
-                        end
+                        m_axi_rready_next = m_axis_cc_tready_int_early;
                         tlp_state_next = TLP_STATE_HEADER_1;
                     end else begin
                         m_axi_rready_next = 1'b0;
@@ -1004,11 +977,7 @@ always @* begin
 
                 if (tlp_cmd_valid_reg) begin
                     tlp_cmd_ready = 1'b1;
-                    if (AXIS_PCIE_DATA_WIDTH == 64) begin
-                        m_axi_rready_next = m_axis_cc_tready_int_early && bubble_cycle_reg;
-                    end else begin
-                        m_axi_rready_next = m_axis_cc_tready_int_early;
-                    end
+                    m_axi_rready_next = 1'b0;
                     tlp_state_next = TLP_STATE_HEADER_1;
                 end else begin
                     m_axi_rready_next = 1'b0;

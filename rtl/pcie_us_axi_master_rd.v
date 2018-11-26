@@ -341,6 +341,7 @@ always @* begin
             s_axis_cq_tready_next = !tlp_cmd_valid_reg;
 
             if (s_axis_cq_tready & s_axis_cq_tvalid) begin
+                // header fields
                 tlp_cmd_at_next = s_axis_cq_tdata[1:0];
                 pcie_addr_next = {s_axis_cq_tdata[63:2], first_be_offset};
                 tlp_cmd_status_next = CPL_STATUS_SC; // successful completion
@@ -357,10 +358,12 @@ always @* begin
                     tlp_cmd_attr_next = s_axis_cq_tdata[126:124];
                 end
 
+                // tuser fields
                 first_be_next = s_axis_cq_tuser[3:0];
                 last_be_next = s_axis_cq_tuser[7:4];
 
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
+                    // 64 bit interface hasn't processed the whole header yet
                     s_axis_cq_tready_next = 1'b1;
                     if (s_axis_cq_tlast) begin
                         // truncated packet
@@ -371,6 +374,7 @@ always @* begin
                         axi_state_next = AXI_STATE_HEADER;
                     end
                 end else begin
+                    // processed whole header; check request type
                     if (s_axis_cq_tdata[78:75] == REQ_MEM_READ) begin
                         // read request
                         s_axis_cq_tready_next = 1'b0;
@@ -403,7 +407,7 @@ always @* begin
             end
         end
         AXI_STATE_HEADER: begin
-            // header state, store rest of header
+            // header state, store rest of header (64 bit interface only)
             s_axis_cq_tready_next = 1'b1;
 
             if (s_axis_cq_tready & s_axis_cq_tvalid) begin
@@ -419,6 +423,7 @@ always @* begin
                 tlp_cmd_tc_next = s_axis_cq_tdata[59:57];
                 tlp_cmd_attr_next = s_axis_cq_tdata[62:60];
 
+                // processed whole header; check request type
                 if (s_axis_cq_tdata[14:11] == REQ_MEM_READ) begin
                     // read request
                     s_axis_cq_tready_next = 1'b0;
@@ -463,10 +468,13 @@ always @* begin
                     tlp_dword_count_next = max_payload_size_dw_reg - pcie_addr_reg[6:2];
                 end
 
+                // read completion TLP will transfer DWORD count minus offset into first DWORD
                 op_count_next = op_count_reg - (tlp_dword_count_next << 2) + pcie_addr_reg[1:0];
                 op_dword_count_next = op_dword_count_reg - tlp_dword_count_next;
 
+                // number of bus transfers from AXI, DWORD count plus DWORD offset, divided by bus width in DWORDS
                 tlp_cmd_input_cycle_len_next = (tlp_dword_count_next + pcie_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
+                // number of bus transfers in TLP, DOWRD count plus payload start DWORD offset, divided by bus width in DWORDS
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
                     tlp_cmd_output_cycle_len_next = (tlp_dword_count_next + 1 - 1) >> (AXI_BURST_SIZE-2);
                 end else begin
@@ -476,6 +484,8 @@ always @* begin
                 tlp_cmd_addr_next = pcie_addr_reg;
                 tlp_cmd_byte_len_next = op_count_reg;
                 tlp_cmd_dword_len_next = tlp_dword_count_next;
+                // required DWORD shift to place first DWORD read from AXI into proper position in payload
+                // bubble cycle required if first AXI transfer does not fill first payload transfer
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
                     tlp_cmd_offset_next = 1-pcie_addr_reg[OFFSET_WIDTH+2-1:2];
                     tlp_cmd_bubble_cycle_next = 1'b0;
@@ -509,8 +519,11 @@ always @* begin
                     m_axi_arlen_next = (tr_dword_count_next - 1) >> (AXI_BURST_SIZE-2);
                 end
 
+                // increment address by transfer size
                 pcie_addr_next = pcie_addr_reg + (tr_dword_count_next << 2);
+                // first transfer will end on DWORD boundary, so subsequent transfers will be DWORD aligned
                 pcie_addr_next[1:0] = 2'b0;
+                // keep track of how much more needs to be read to fill the TLP
                 tlp_dword_count_next = tlp_dword_count_reg - tr_dword_count_next;
 
                 if (tlp_dword_count_next > 0) begin
@@ -611,6 +624,7 @@ always @* begin
             // idle state, wait for command
             m_axi_rready_next = 1'b0;
 
+            // store TLP fields and transfer parameters
             at_next = tlp_cmd_at_reg;
             tlp_addr_next = tlp_cmd_addr_reg;
             tlp_len_next = tlp_cmd_byte_len_reg;
@@ -631,6 +645,7 @@ always @* begin
             if (tlp_cmd_valid_reg) begin
                 tlp_cmd_ready = 1'b1;
                 if (status_next == CPL_STATUS_SC) begin
+                    // SC status, output TLP header
                     if (AXIS_PCIE_DATA_WIDTH == 64) begin
                         m_axi_rready_next = 1'b0;
                     end else begin
@@ -638,6 +653,7 @@ always @* begin
                     end
                     tlp_state_next = TLP_STATE_HEADER_1;
                 end else begin
+                    // status other than SC
                     tlp_state_next = TLP_STATE_CPL_1;
                 end
             end else begin
@@ -650,6 +666,7 @@ always @* begin
                 m_axi_rready_next = 1'b0;
 
                 if (m_axis_cc_tready_int_reg) begin
+                    // output first part of header
                     m_axis_cc_tvalid_int = 1'b1;
 
                     m_axi_rready_next = m_axis_cc_tready_int_early;
@@ -674,11 +691,13 @@ always @* begin
                         m_axi_rready_next = m_axis_cc_tready_int_early && input_active_next;
                         tlp_state_next = TLP_STATE_HEADER_1;
                     end else begin
+                        // some data is transferred with header
                         if (AXIS_PCIE_DATA_WIDTH == 256) begin
                             dword_count_next = dword_count_reg - 5;
                         end else begin
                             dword_count_next = dword_count_reg - 1;
                         end
+                        // update cycle counters
                         if (input_active_reg) begin
                             input_cycle_count_next = input_cycle_count_reg - 1;
                             input_active_next = input_cycle_count_reg > 0;
@@ -686,12 +705,14 @@ always @* begin
                         output_cycle_count_next = output_cycle_count_reg - 1;
                         last_cycle_next = output_cycle_count_next == 0;
 
+                        // transfer data
                         if (AXIS_PCIE_DATA_WIDTH == 256) begin
                             m_axis_cc_tdata_int[255:96] = shift_axi_rdata[255:96];
                         end else begin
                             m_axis_cc_tdata_int[127:96] = shift_axi_rdata[127:96];
                         end
 
+                        // generate tvalid and tkeep signals for header and data
                         m_axis_cc_tvalid_int = 1'b1;
                         if (AXIS_PCIE_DATA_WIDTH == 256) begin
                             if (dword_count_reg >= 5) begin
@@ -824,6 +845,7 @@ always @* begin
                 transfer_in_save = 1'b1;
 
                 if (bubble_cycle_reg) begin
+                    // bubble cycle; store input data and update input cycle count
                     if (input_active_reg) begin
                         input_cycle_count_next = input_cycle_count_reg - 1;
                         input_active_next = input_cycle_count_reg > 0;
@@ -832,7 +854,9 @@ always @* begin
                     m_axi_rready_next = m_axis_cc_tready_int_early && input_active_next;
                     tlp_state_next = TLP_STATE_TRANSFER;
                 end else begin
+                    // update DWORD count
                     dword_count_next = dword_count_reg - AXI_STRB_WIDTH/4;
+                    // update cycle counters
                     if (input_active_reg) begin
                         input_cycle_count_next = input_cycle_count_reg - 1;
                         input_active_next = input_cycle_count_reg > 0;
@@ -840,6 +864,7 @@ always @* begin
                     output_cycle_count_next = output_cycle_count_reg - 1;
                     last_cycle_next = output_cycle_count_next == 0;
 
+                    // output data and generate tvalid and tkeep signals
                     m_axis_cc_tdata_int = shift_axi_rdata;
                     m_axis_cc_tvalid_int = 1'b1;
                     if (dword_count_reg >= AXI_STRB_WIDTH/4) begin
@@ -897,6 +922,7 @@ always @* begin
             m_axis_cc_tdata_int[42:32] = 11'd0; // DWORD count
             m_axis_cc_tdata_int[45:43] = status_reg;
 
+            // generate tvalid and tkeep signals for completion
             if (AXIS_PCIE_DATA_WIDTH == 256) begin
                 m_axis_cc_tkeep_int = 8'b00000111;
                 m_axis_cc_tlast_int = 1'b1;

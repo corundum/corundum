@@ -269,6 +269,8 @@ always @* begin
 
                     m_axi_awaddr_next = axi_addr_next;
 
+                    // required DWORD shift to place first DWORD from the TLP payload into proper position on AXI interface
+                    // bubble cycle required if first TLP payload transfer does not fill first AXI transfer
                     if (AXIS_PCIE_DATA_WIDTH == 256) begin
                         offset_next = axi_addr_next[OFFSET_WIDTH+2-1:2] - 4;
                         bubble_cycle_next = axi_addr_next[OFFSET_WIDTH+2-1:2] < 4;
@@ -278,11 +280,13 @@ always @* begin
                     end
                     first_cycle_next = 1'b1;
 
+                    // number of bus transfers in TLP, DOWRD count plus payload start DWORD offset, divided by bus width in DWORDS
                     if (AXIS_PCIE_DATA_WIDTH == 256) begin
                         input_cycle_count_next = (tr_dword_count_next + 4 - 1) >> (AXI_BURST_SIZE-2);
                     end else begin
                         input_cycle_count_next = (tr_dword_count_next - 1) >> (AXI_BURST_SIZE-2);
                     end
+                    // number of bus transfers to AXI, DWORD count plus DWORD offset, divided by bus width in DWORDS
                     output_cycle_count_next = (tr_dword_count_next + axi_addr_next[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
                     last_cycle_next = output_cycle_count_next == 0;
                     input_active_next = 1'b1;
@@ -291,6 +295,7 @@ always @* begin
                         // write request
                         m_axi_awvalid_next = 1'b1;
                         if (AXIS_PCIE_DATA_WIDTH == 256) begin
+                            // some data is transferred with header
                             input_active_next = input_cycle_count_next > 0;
                             input_cycle_count_next = input_cycle_count_next - 1;
                             s_axis_cq_tready_next = 1'b0;
@@ -330,7 +335,7 @@ always @* begin
             end
         end
         STATE_HEADER: begin
-            // header state, store rest of header
+            // header state, store rest of header (64 bit interface only)
             s_axis_cq_tready_next = m_axi_wready_int_early;
 
             if (s_axis_cq_tready && s_axis_cq_tvalid) begin
@@ -359,11 +364,15 @@ always @* begin
 
                 m_axi_awaddr_next = axi_addr_reg;
 
+                // required DWORD shift to place first DWORD from the TLP payload into proper position on AXI interface
+                // bubble cycle required if first TLP payload transfer does not fill first AXI transfer
                 offset_next = axi_addr_reg[OFFSET_WIDTH+2-1:2];
                 bubble_cycle_next = 1'b0;
                 first_cycle_next = 1'b1;
 
+                // number of bus transfers in TLP, DOWRD count plus payload start DWORD offset, divided by bus width in DWORDS
                 input_cycle_count_next = (tr_dword_count_next - 1) >> (AXI_BURST_SIZE-2);
+                // number of bus transfers to AXI, DWORD count plus DWORD offset, divided by bus width in DWORDS
                 output_cycle_count_next = (tr_dword_count_next + axi_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
                 last_cycle_next = output_cycle_count_next == 0;
                 input_active_next = 1'b1;
@@ -394,21 +403,25 @@ always @* begin
             if (m_axi_wready_int_reg && ((s_axis_cq_tready && s_axis_cq_tvalid) || !input_active_reg || (AXIS_PCIE_DATA_WIDTH == 256 && first_cycle_reg && !bubble_cycle_reg))) begin
                 transfer_in_save = s_axis_cq_tready && s_axis_cq_tvalid;
 
+                // transfer data
                 if (AXIS_PCIE_DATA_WIDTH == 256 && first_cycle_reg && !bubble_cycle_reg) begin
                     m_axi_wdata_int = {save_axis_tdata_reg, {AXIS_PCIE_DATA_WIDTH{1'b0}}} >> ((AXI_STRB_WIDTH/4-offset_reg)*32);
                     s_axis_cq_tready_next = m_axi_wready_int_early && input_active_reg;
                 end else begin
                     m_axi_wdata_int = shift_axis_tdata;
                 end
+                // generate strb signal
                 if (first_cycle_reg) begin
                     m_axi_wstrb_int = {{AXI_STRB_WIDTH-4{1'b1}}, first_be_reg} << (axi_addr_reg[OFFSET_WIDTH+2-1:2]*4);
                 end else begin
                     m_axi_wstrb_int = {AXI_STRB_WIDTH{1'b1}};
                 end
 
+                // update address and length counters
                 axi_addr_next = axi_addr_reg + (AXI_STRB_WIDTH/4 - axi_addr_reg[OFFSET_WIDTH+2-1:2])*4;
                 tr_dword_count_next = tr_dword_count_reg - (AXI_STRB_WIDTH/4 - axi_addr_reg[OFFSET_WIDTH+2-1:2]);
                 op_dword_count_next = op_dword_count_reg - (AXI_STRB_WIDTH/4 - axi_addr_reg[OFFSET_WIDTH+2-1:2]);
+                // update cycle counters
                 if (input_active_reg && !(AXIS_PCIE_DATA_WIDTH == 256 && first_cycle_reg && !bubble_cycle_reg)) begin
                     input_cycle_count_next = input_cycle_count_reg - 1;
                     input_active_next = input_cycle_count_reg > 0;
@@ -416,6 +429,7 @@ always @* begin
                 output_cycle_count_next = output_cycle_count_reg - 1;
                 last_cycle_next = output_cycle_count_next == 0;
 
+                // modify strb signal at end of transfer
                 if (last_cycle_reg) begin
                     m_axi_wstrb_int = m_axi_wstrb_int & {last_be_reg, {AXI_STRB_WIDTH-4{1'b1}}} >> (AXI_STRB_WIDTH-(tr_dword_count_reg+axi_addr_reg[OFFSET_WIDTH+2-1:2])*4);
                     m_axi_wlast_int = 1'b1;

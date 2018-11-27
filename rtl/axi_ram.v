@@ -34,7 +34,8 @@ module axi_ram #
     parameter DATA_WIDTH = 32,  // width of data bus in bits
     parameter ADDR_WIDTH = 16,  // width of address bus in bits
     parameter STRB_WIDTH = (DATA_WIDTH/8),
-    parameter ID_WIDTH = 8
+    parameter ID_WIDTH = 8,
+    parameter PIPELINE_OUTPUT = 0
 )
 (
     input  wire                   clk,
@@ -136,6 +137,11 @@ reg [DATA_WIDTH-1:0] s_axi_rdata_reg = {DATA_WIDTH{1'b0}}, s_axi_rdata_next;
 reg [1:0] s_axi_rresp_reg = 2'b00, s_axi_rresp_next;
 reg s_axi_rlast_reg = 1'b0, s_axi_rlast_next;
 reg s_axi_rvalid_reg = 1'b0, s_axi_rvalid_next;
+reg [ID_WIDTH-1:0] s_axi_rid_pipe_reg = {ID_WIDTH{1'b0}};
+reg [DATA_WIDTH-1:0] s_axi_rdata_pipe_reg = {DATA_WIDTH{1'b0}};
+reg [1:0] s_axi_rresp_pipe_reg = 2'b00;
+reg s_axi_rlast_pipe_reg = 1'b0;
+reg s_axi_rvalid_pipe_reg = 1'b0;
 
 // (* RAM_STYLE="BLOCK" *)
 reg [DATA_WIDTH-1:0] mem[(2**VALID_ADDR_WIDTH)-1:0];
@@ -151,11 +157,11 @@ assign s_axi_bid = s_axi_bid_reg;
 assign s_axi_bresp = s_axi_bresp_reg;
 assign s_axi_bvalid = s_axi_bvalid_reg;
 assign s_axi_arready = s_axi_arready_reg;
-assign s_axi_rid = s_axi_rid_reg;
-assign s_axi_rdata = s_axi_rdata_reg;
-assign s_axi_rresp = s_axi_rresp_reg;
-assign s_axi_rlast = s_axi_rlast_reg;
-assign s_axi_rvalid = s_axi_rvalid_reg;
+assign s_axi_rid = PIPELINE_OUTPUT ? s_axi_rid_pipe_reg : s_axi_rid_reg;
+assign s_axi_rdata = PIPELINE_OUTPUT ? s_axi_rdata_pipe_reg : s_axi_rdata_reg;
+assign s_axi_rresp = PIPELINE_OUTPUT ? s_axi_rresp_pipe_reg : s_axi_rresp_reg;
+assign s_axi_rlast = PIPELINE_OUTPUT ? s_axi_rlast_pipe_reg : s_axi_rlast_reg;
+assign s_axi_rvalid = PIPELINE_OUTPUT ? s_axi_rvalid_pipe_reg : s_axi_rvalid_reg;
 
 integer i, j;
 
@@ -285,14 +291,14 @@ always @* begin
 
     mem_rd_en = 1'b0;
 
-    read_addr_ready = s_axi_rready;
+    read_addr_ready = (s_axi_rready || (PIPELINE_OUTPUT && !s_axi_rvalid_pipe_reg));
 
     s_axi_rid_next = s_axi_rid_reg;
     s_axi_rresp_next = s_axi_rresp_reg;
     s_axi_rlast_next = s_axi_rlast_reg;
-    s_axi_rvalid_next = s_axi_rvalid_reg && !s_axi_rready;
+    s_axi_rvalid_next = s_axi_rvalid_reg && !(s_axi_rready || (PIPELINE_OUTPUT && !s_axi_rvalid_pipe_reg));
 
-    if (read_addr_valid_reg && (s_axi_rready || !s_axi_rvalid)) begin
+    if (read_addr_valid_reg && (s_axi_rready || (PIPELINE_OUTPUT && !s_axi_rvalid_pipe_reg) || !s_axi_rvalid)) begin
         read_addr_ready = 1'b1;
         mem_rd_en = 1'b1;
         s_axi_rvalid_next = 1'b1;
@@ -365,11 +371,16 @@ always @(posedge clk) begin
         read_addr_valid_reg <= 1'b0;
         s_axi_arready_reg <= 1'b0;
         s_axi_rvalid_reg <= 1'b0;
+        s_axi_rvalid_pipe_reg <= 1'b0;
     end else begin
         read_state_reg <= read_state_next;
         read_addr_valid_reg <= read_addr_valid_next;
         s_axi_arready_reg <= s_axi_arready_next;
         s_axi_rvalid_reg <= s_axi_rvalid_next;
+
+        if (!s_axi_rvalid_pipe_reg || s_axi_rready) begin
+            s_axi_rvalid_pipe_reg <= s_axi_rvalid_reg;
+        end
     end
 
     read_id_reg <= read_id_next;
@@ -385,6 +396,13 @@ always @(posedge clk) begin
 
     if (mem_rd_en) begin
         s_axi_rdata_reg <= mem[read_addr_valid];
+    end
+
+    if (!s_axi_rvalid_pipe_reg || s_axi_rready) begin
+        s_axi_rid_pipe_reg <= s_axi_rid_reg;
+        s_axi_rdata_pipe_reg <= s_axi_rdata_reg;
+        s_axi_rresp_pipe_reg <= s_axi_rresp_reg;
+        s_axi_rlast_pipe_reg <= s_axi_rlast_reg;
     end
 end
 

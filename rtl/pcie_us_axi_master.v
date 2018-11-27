@@ -36,7 +36,8 @@ module pcie_us_axi_master #
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     parameter AXI_ADDR_WIDTH = 64,
     parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8),
-    parameter AXI_ID_WIDTH = 8
+    parameter AXI_ID_WIDTH = 8,
+    parameter AXI_MAX_BURST_LEN = 256
 )
 (
     input  wire                            clk,
@@ -177,7 +178,8 @@ pcie_us_axi_master_rd #(
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
-    .AXI_ID_WIDTH(AXI_ID_WIDTH)
+    .AXI_ID_WIDTH(AXI_ID_WIDTH),
+    .AXI_MAX_BURST_LEN(AXI_MAX_BURST_LEN)
 )
 pcie_us_axi_master_rd_inst (
     .clk(clk),
@@ -243,7 +245,8 @@ pcie_us_axi_master_wr #(
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
-    .AXI_ID_WIDTH(AXI_ID_WIDTH)
+    .AXI_ID_WIDTH(AXI_ID_WIDTH),
+    .AXI_MAX_BURST_LEN(AXI_MAX_BURST_LEN)
 )
 pcie_us_axi_master_wr_inst (
     .clk(clk),

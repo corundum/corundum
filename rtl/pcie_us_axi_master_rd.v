@@ -36,7 +36,8 @@ module pcie_us_axi_master_rd #
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     parameter AXI_ADDR_WIDTH = 64,
     parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8),
-    parameter AXI_ID_WIDTH = 8
+    parameter AXI_ID_WIDTH = 8,
+    parameter AXI_MAX_BURST_LEN = 256
 )
 (
     input  wire                            clk,
@@ -101,7 +102,7 @@ parameter PCIE_ADDR_WIDTH = 64;
 parameter AXI_WORD_WIDTH = AXI_STRB_WIDTH;
 parameter AXI_WORD_SIZE = AXI_DATA_WIDTH/AXI_WORD_WIDTH;
 parameter AXI_BURST_SIZE = $clog2(AXI_STRB_WIDTH);
-parameter AXI_MAX_BURST_SIZE = 256*AXI_WORD_WIDTH;
+parameter AXI_MAX_BURST_SIZE = AXI_MAX_BURST_LEN*AXI_WORD_WIDTH;
 
 parameter AXIS_PCIE_WORD_WIDTH = AXIS_PCIE_KEEP_WIDTH;
 parameter AXIS_PCIE_WORD_SIZE = AXIS_PCIE_DATA_WIDTH/AXIS_PCIE_WORD_WIDTH;
@@ -127,6 +128,11 @@ initial begin
 
     if (AXI_STRB_WIDTH * 8 != AXI_DATA_WIDTH) begin
         $error("Error: AXI interface requires byte (8-bit) granularity");
+        $finish;
+    end
+
+    if (AXI_MAX_BURST_LEN < 1 || AXI_MAX_BURST_LEN > 256) begin
+        $error("Error: AXI_MAX_BURST_LEN must be between 1 and 256");
         $finish;
     end
 end

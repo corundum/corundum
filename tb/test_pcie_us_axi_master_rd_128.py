@@ -51,6 +51,7 @@ def bench():
     AXI_ADDR_WIDTH = 64
     AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8)
     AXI_ID_WIDTH = 8
+    AXI_MAX_BURST_LEN = 256
 
     # Inputs
     clk = Signal(bool(0))

@@ -36,7 +36,8 @@ module pcie_us_axi_master_wr #
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     parameter AXI_ADDR_WIDTH = 64,
     parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8),
-    parameter AXI_ID_WIDTH = 8
+    parameter AXI_ID_WIDTH = 8,
+    parameter AXI_MAX_BURST_LEN = 256
 )
 (
     input  wire                            clk,
@@ -84,7 +85,7 @@ module pcie_us_axi_master_wr #
 parameter AXI_WORD_WIDTH = AXI_STRB_WIDTH;
 parameter AXI_WORD_SIZE = AXI_DATA_WIDTH/AXI_WORD_WIDTH;
 parameter AXI_BURST_SIZE = $clog2(AXI_STRB_WIDTH);
-parameter AXI_MAX_BURST_SIZE = 256*AXI_WORD_WIDTH;
+parameter AXI_MAX_BURST_SIZE = AXI_MAX_BURST_LEN*AXI_WORD_WIDTH;
 
 parameter AXIS_PCIE_WORD_WIDTH = AXIS_PCIE_KEEP_WIDTH;
 parameter AXIS_PCIE_WORD_SIZE = AXIS_PCIE_DATA_WIDTH/AXIS_PCIE_WORD_WIDTH;
@@ -110,6 +111,11 @@ initial begin
 
     if (AXI_STRB_WIDTH * 8 != AXI_DATA_WIDTH) begin
         $error("Error: AXI interface requires byte (8-bit) granularity");
+        $finish;
+    end
+
+    if (AXI_MAX_BURST_LEN < 1 || AXI_MAX_BURST_LEN > 256) begin
+        $error("Error: AXI_MAX_BURST_LEN must be between 1 and 256");
         $finish;
     end
 end
@@ -163,6 +169,8 @@ reg [3:0] type_reg = 4'd0, type_next;
 reg [3:0] first_be_reg = 4'd0, first_be_next;
 reg [3:0] last_be_reg = 4'd0, last_be_next;
 reg [OFFSET_WIDTH-1:0] offset_reg = {OFFSET_WIDTH{1'b0}}, offset_next;
+reg [OFFSET_WIDTH-1:0] first_cycle_offset_reg = {OFFSET_WIDTH{1'b0}}, first_cycle_offset_next;
+reg [OFFSET_WIDTH-1:0] last_cycle_offset_reg = {OFFSET_WIDTH{1'b0}}, last_cycle_offset_next;
 
 reg s_axis_cq_tready_reg = 1'b0, s_axis_cq_tready_next;
 
@@ -220,6 +228,8 @@ always @* begin
     first_be_next = first_be_reg;
     last_be_next = last_be_reg;
     offset_next = offset_reg;
+    first_cycle_offset_next = first_cycle_offset_reg;
+    last_cycle_offset_next = last_cycle_offset_reg;
 
     m_axi_awaddr_next = m_axi_awaddr_reg;
     m_axi_awlen_next = m_axi_awlen_reg;
@@ -256,12 +266,12 @@ always @* begin
                     end
 
                     if (op_dword_count_next <= AXI_MAX_BURST_SIZE/4) begin
-                        // packet smaller than max payload size
+                        // packet smaller than max burst size
                         // assumed to not cross 4k boundary, send one request
                         tr_dword_count_next = op_dword_count_next;
                         m_axi_awlen_next = (tr_dword_count_next + axi_addr_next[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
                     end else begin
-                        // packet larger than max read request size
+                        // packet larger than max burst size
                         // assumed to not cross 4k boundary, send one request
                         tr_dword_count_next = AXI_MAX_BURST_SIZE/4 - axi_addr_next[OFFSET_WIDTH+2-1:2];
                         m_axi_awlen_next = (tr_dword_count_next - 1) >> (AXI_BURST_SIZE-2);
@@ -278,6 +288,7 @@ always @* begin
                         offset_next = axi_addr_next[OFFSET_WIDTH+2-1:2];
                         bubble_cycle_next = 1'b0;
                     end
+                    first_cycle_offset_next = axi_addr_next[OFFSET_WIDTH+2-1:2];
                     first_cycle_next = 1'b1;
 
                     // number of bus transfers in TLP, DOWRD count plus payload start DWORD offset, divided by bus width in DWORDS
@@ -288,8 +299,12 @@ always @* begin
                     end
                     // number of bus transfers to AXI, DWORD count plus DWORD offset, divided by bus width in DWORDS
                     output_cycle_count_next = (tr_dword_count_next + axi_addr_next[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
+                    last_cycle_offset_next = axi_addr_next[OFFSET_WIDTH+2-1:2] + tr_dword_count_next;
                     last_cycle_next = output_cycle_count_next == 0;
                     input_active_next = 1'b1;
+
+                    axi_addr_next = axi_addr_next + (tr_dword_count_next << 2);
+                    op_dword_count_next = op_dword_count_next - tr_dword_count_next;
 
                     if (type_next == REQ_MEM_WRITE) begin
                         // write request
@@ -368,14 +383,19 @@ always @* begin
                 // bubble cycle required if first TLP payload transfer does not fill first AXI transfer
                 offset_next = axi_addr_reg[OFFSET_WIDTH+2-1:2];
                 bubble_cycle_next = 1'b0;
+                first_cycle_offset_next = axi_addr_reg[OFFSET_WIDTH+2-1:2];
                 first_cycle_next = 1'b1;
 
                 // number of bus transfers in TLP, DOWRD count plus payload start DWORD offset, divided by bus width in DWORDS
                 input_cycle_count_next = (tr_dword_count_next - 1) >> (AXI_BURST_SIZE-2);
                 // number of bus transfers to AXI, DWORD count plus DWORD offset, divided by bus width in DWORDS
                 output_cycle_count_next = (tr_dword_count_next + axi_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
+                last_cycle_offset_next = axi_addr_reg[OFFSET_WIDTH+2-1:2] + tr_dword_count_next;
                 last_cycle_next = output_cycle_count_next == 0;
                 input_active_next = 1'b1;
+
+                axi_addr_next = axi_addr_reg + (tr_dword_count_next << 2);
+                op_dword_count_next = op_dword_count_next - tr_dword_count_next;
 
                 if (type_next == REQ_MEM_WRITE) begin
                     // write request
@@ -412,15 +432,11 @@ always @* begin
                 end
                 // generate strb signal
                 if (first_cycle_reg) begin
-                    m_axi_wstrb_int = {{AXI_STRB_WIDTH-4{1'b1}}, first_be_reg} << (axi_addr_reg[OFFSET_WIDTH+2-1:2]*4);
+                    m_axi_wstrb_int = {{AXI_STRB_WIDTH-4{1'b1}}, first_be_reg} << (first_cycle_offset_reg*4);
                 end else begin
                     m_axi_wstrb_int = {AXI_STRB_WIDTH{1'b1}};
                 end
 
-                // update address and length counters
-                axi_addr_next = axi_addr_reg + (AXI_STRB_WIDTH/4 - axi_addr_reg[OFFSET_WIDTH+2-1:2])*4;
-                tr_dword_count_next = tr_dword_count_reg - (AXI_STRB_WIDTH/4 - axi_addr_reg[OFFSET_WIDTH+2-1:2]);
-                op_dword_count_next = op_dword_count_reg - (AXI_STRB_WIDTH/4 - axi_addr_reg[OFFSET_WIDTH+2-1:2]);
                 // update cycle counters
                 if (input_active_reg && !(AXIS_PCIE_DATA_WIDTH == 256 && first_cycle_reg && !bubble_cycle_reg)) begin
                     input_cycle_count_next = input_cycle_count_reg - 1;
@@ -431,7 +447,13 @@ always @* begin
 
                 // modify strb signal at end of transfer
                 if (last_cycle_reg) begin
-                    m_axi_wstrb_int = m_axi_wstrb_int & {last_be_reg, {AXI_STRB_WIDTH-4{1'b1}}} >> (AXI_STRB_WIDTH-(tr_dword_count_reg+axi_addr_reg[OFFSET_WIDTH+2-1:2])*4);
+                    if (op_dword_count_reg == 0) begin
+                        if (last_cycle_offset_reg > 0) begin
+                            m_axi_wstrb_int = m_axi_wstrb_int & {last_be_reg, {AXI_STRB_WIDTH-4{1'b1}}} >> (AXI_STRB_WIDTH-last_cycle_offset_reg*4);
+                        end else begin
+                            m_axi_wstrb_int = m_axi_wstrb_int & {last_be_reg, {AXI_STRB_WIDTH-4{1'b1}}};
+                        end
+                    end
                     m_axi_wlast_int = 1'b1;
                 end
                 m_axi_wvalid_int = 1'b1;
@@ -439,10 +461,40 @@ always @* begin
                 if (!last_cycle_reg) begin
                     s_axis_cq_tready_next = m_axi_wready_int_early && input_active_next;
                     state_next = STATE_TRANSFER;
-                end else if (op_dword_count_next > 0) begin
-                    // TODO (only for 64 bits)
-                    s_axis_cq_tready_next = m_axi_wready_int_early && (!m_axi_awvalid || m_axi_awready);
-                    state_next = STATE_IDLE;
+                end else if (op_dword_count_reg > 0) begin
+                    // current transfer done, but operation not finished yet
+                    if (op_dword_count_reg <= AXI_MAX_BURST_SIZE/4) begin
+                        // packet smaller than max burst size
+                        // assumed to not cross 4k boundary, send one request
+                        tr_dword_count_next = op_dword_count_reg;
+                        m_axi_awlen_next = (tr_dword_count_next + axi_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
+                    end else begin
+                        // packet larger than max burst size
+                        // assumed to not cross 4k boundary, send one request
+                        tr_dword_count_next = AXI_MAX_BURST_SIZE/4 - axi_addr_reg[OFFSET_WIDTH+2-1:2];
+                        m_axi_awlen_next = (tr_dword_count_next - 1) >> (AXI_BURST_SIZE-2);
+                    end
+
+                    m_axi_awaddr_next = axi_addr_reg;
+
+                    // keep offset, no bubble cycles, not first cycle
+                    bubble_cycle_next = 1'b0;
+                    first_cycle_next = 1'b0;
+
+                    // number of bus transfers in TLP, DOWRD count minus payload start DWORD offset, divided by bus width in DWORDS
+                    input_cycle_count_next = (tr_dword_count_next - offset_reg - 1) >> (AXI_BURST_SIZE-2);
+                    // number of bus transfers to AXI, DWORD count plus DWORD offset, divided by bus width in DWORDS
+                    output_cycle_count_next = (tr_dword_count_next + axi_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
+                    last_cycle_offset_next = axi_addr_reg[OFFSET_WIDTH+2-1:2] + tr_dword_count_next;
+                    last_cycle_next = output_cycle_count_next == 0;
+                    input_active_next = tr_dword_count_next > offset_reg;
+
+                    axi_addr_next = axi_addr_reg + (tr_dword_count_next << 2);
+                    op_dword_count_next = op_dword_count_reg - tr_dword_count_next;
+
+                    m_axi_awvalid_next = 1'b1;
+                    s_axis_cq_tready_next = m_axi_wready_int_early && input_active_next;
+                    state_next = STATE_TRANSFER;
                 end else begin
                     s_axis_cq_tready_next = m_axi_wready_int_early && (!m_axi_awvalid || m_axi_awready);
                     state_next = STATE_IDLE;
@@ -504,6 +556,8 @@ always @(posedge clk) begin
     first_be_reg <= first_be_next;
     last_be_reg <= last_be_next;
     offset_reg <= offset_next;
+    first_cycle_offset_reg <= first_cycle_offset_next;
+    last_cycle_offset_reg <= last_cycle_offset_next;
 
     m_axi_awaddr_reg <= m_axi_awaddr_next;
     m_axi_awlen_reg <= m_axi_awlen_next;

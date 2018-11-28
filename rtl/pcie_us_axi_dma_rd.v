@@ -538,8 +538,6 @@ always @* begin
     endcase
 end
 
-reg transfer_is_idle = 1'b0;
-
 always @* begin
     tlp_state_next = TLP_STATE_IDLE;
 
@@ -594,8 +592,6 @@ always @* begin
 
     status_error_cor_next = 1'b0;
     status_error_uncor_next = 1'b0;
-
-    transfer_is_idle = 1'b0;
 
     // TLP response handling and AXI operation generation
     case (tlp_state_reg)
@@ -968,7 +964,6 @@ always @* begin
                     tlp_state_next = TLP_STATE_IDLE;
                 end
             end else begin
-                transfer_is_idle = 1'b1;
                 tlp_state_next = TLP_STATE_TRANSFER;
             end
         end

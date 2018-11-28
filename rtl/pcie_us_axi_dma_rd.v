@@ -141,6 +141,8 @@ parameter AXIS_PCIE_WORD_SIZE = AXIS_PCIE_DATA_WIDTH/AXIS_PCIE_WORD_WIDTH;
 
 parameter OFFSET_WIDTH = $clog2(AXIS_PCIE_DATA_WIDTH/8);
 
+parameter STATUS_FIFO_ADDR_WIDTH = 5;
+
 // bus width assertions
 initial begin
     if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256) begin
@@ -225,6 +227,8 @@ reg transfer_in_save;
 reg tag_table_we_req;
 reg tag_table_we_tlp;
 
+reg status_fifo_we;
+
 reg tlp_cmd_ready;
 
 reg finish_tag;
@@ -264,6 +268,15 @@ reg tlp_cmd_valid_reg = 1'b0, tlp_cmd_valid_next;
 reg [AXI_ADDR_WIDTH-1:0] tag_table_axi_addr[(2**PCIE_TAG_WIDTH)-1:0];
 reg [TAG_WIDTH-1:0] tag_table_tag[(2**PCIE_TAG_WIDTH)-1:0];
 reg tag_table_last[(2**PCIE_TAG_WIDTH)-1:0];
+
+reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_wr_ptr_reg = 0, status_fifo_wr_ptr_next;
+reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0, status_fifo_rd_ptr_next;
+reg [TAG_WIDTH-1:0] status_fifo_tag[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg status_fifo_last[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg status_fifo_completion[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg [TAG_WIDTH-1:0] status_fifo_wr_tag;
+reg status_fifo_wr_last;
+reg status_fifo_wr_completion;
 
 reg [10:0] max_read_request_size_dw_reg = 11'd0;
 
@@ -316,7 +329,7 @@ assign m_axi_awlock = 1'b0;
 assign m_axi_awcache = 4'b0011;
 assign m_axi_awprot = 3'b010;
 assign m_axi_awvalid = m_axi_awvalid_reg;
-assign m_axi_bready = 1'b1;//m_axi_bready_reg;
+assign m_axi_bready = m_axi_bready_reg;
 
 assign status_error_cor = status_error_cor_reg;
 assign status_error_uncor = status_error_uncor_reg;
@@ -536,6 +549,8 @@ always @* begin
 
     tag_table_we_tlp = 1'b0;
 
+    status_fifo_we = 1'b0;
+
     s_axis_rc_tready_next = 1'b0;
 
     m_axis_read_desc_status_tag_next = m_axis_read_desc_status_tag_reg;
@@ -560,6 +575,12 @@ always @* begin
     offset_next = offset_reg;
     first_cycle_offset_next = first_cycle_offset_reg;
     last_cycle_offset_next = last_cycle_offset_reg;
+
+    status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg;
+
+    status_fifo_wr_tag = tag_table_tag[pcie_tag_reg];
+    status_fifo_wr_last = 1'b1;
+    status_fifo_wr_completion = 1'b1;
 
     m_axi_awaddr_next = m_axi_awaddr_reg;
     m_axi_awlen_next = m_axi_awlen_reg;
@@ -660,8 +681,11 @@ always @* begin
                         // release tag
                         finish_tag = 1'b1;
                         // last request in current transfer
-                        m_axis_read_desc_status_tag_next = tag_table_tag[pcie_tag_next];
-                        m_axis_read_desc_status_valid_next = 1'b1;
+                        // enqueue status FIFO entry
+                        status_fifo_we = 1'b1;
+                        status_fifo_wr_tag = tag_table_tag[pcie_tag_next];
+                        status_fifo_wr_last = 1'b1;
+                        status_fifo_wr_completion = 1'b0;
                         // drop TLP
                         s_axis_rc_tready_next = 1'b1;
                         tlp_state_next = TLP_STATE_WAIT_END;
@@ -766,8 +790,11 @@ always @* begin
                     // release tag
                     finish_tag = 1'b1;
                     // last request in current transfer
-                    m_axis_read_desc_status_tag_next = tag_table_tag[pcie_tag_reg];
-                    m_axis_read_desc_status_valid_next = 1'b1;
+                    // enqueue status FIFO entry
+                    status_fifo_we = 1'b1;
+                    status_fifo_wr_tag = tag_table_tag[pcie_tag_reg];
+                    status_fifo_wr_last = 1'b1;
+                    status_fifo_wr_completion = 1'b0;
                     // drop TLP
                     s_axis_rc_tready_next = 1'b1;
                     tlp_state_next = TLP_STATE_WAIT_END;
@@ -909,6 +936,12 @@ always @* begin
                     axi_addr_next = axi_addr_reg + tr_count_next;
                     op_count_next = op_count_reg - tr_count_next;
 
+                    // enqueue status FIFO entry for write completion
+                    status_fifo_we = 1'b1;
+                    status_fifo_wr_tag = tag_table_tag[pcie_tag_reg];
+                    status_fifo_wr_last = 1'b0;
+                    status_fifo_wr_completion = 1'b1;
+
                     m_axi_awvalid_next = 1'b1;
                     s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next;
                     tlp_state_next = TLP_STATE_TRANSFER;
@@ -916,15 +949,17 @@ always @* begin
                     if (final_cpl_reg) begin
                         // last completion in current read request (PCIe tag)
                         finish_tag = 1'b1; // release tag
-                        if (tag_table_last[pcie_tag_reg]) begin
-                            // last request in current transfer
-                            m_axis_read_desc_status_tag_next = tag_table_tag[pcie_tag_reg];
-                            m_axis_read_desc_status_valid_next = 1'b1;
-                        end
                     end else begin
                         // more completions to come, store current address
                         tag_table_we_tlp = 1'b1;
                     end
+
+                    // enqueue status FIFO entry for write completion
+                    status_fifo_we = 1'b1;
+                    status_fifo_wr_tag = tag_table_tag[pcie_tag_reg];
+                    status_fifo_wr_last = final_cpl_reg && tag_table_last[pcie_tag_reg];
+                    status_fifo_wr_completion = 1'b1;
+
                     if (AXIS_PCIE_DATA_WIDTH > 64) begin
                         s_axis_rc_tready_next = 1'b0;
                     end else begin
@@ -957,6 +992,28 @@ always @* begin
             end
         end
     endcase
+
+    if (status_fifo_rd_ptr_reg != status_fifo_wr_ptr_reg) begin
+        // status FIFO not empty
+        if (status_fifo_completion[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]]) begin
+            // completion entry
+            if (m_axi_bready && m_axi_bvalid) begin
+                // got write completion, pop and return status
+                m_axis_read_desc_status_tag_next = status_fifo_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]];
+                m_axis_read_desc_status_valid_next = status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]];
+                status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
+                m_axi_bready_next = 1'b0;
+            end else begin
+                // wait for write completion
+                m_axi_bready_next = 1'b1;
+            end
+        end else begin
+            // non-completion entry, pop and return status
+            m_axis_read_desc_status_tag_next = status_fifo_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]];
+            m_axis_read_desc_status_valid_next = status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]];
+            status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
+        end
+    end
 end
 
 always @* begin
@@ -985,6 +1042,9 @@ always @(posedge clk) begin
 
         status_error_cor_reg <= 1'b0;
         status_error_uncor_reg <= 1'b0;
+
+        status_fifo_wr_ptr_reg <= 0;
+        status_fifo_rd_ptr_reg <= 0;
     end else begin
         req_state_reg <= req_state_next;
         tlp_state_reg <= tlp_state_next;
@@ -997,6 +1057,11 @@ always @(posedge clk) begin
 
         status_error_cor_reg <= status_error_cor_next;
         status_error_uncor_reg <= status_error_uncor_next;
+
+        if (status_fifo_we) begin
+            status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
+        end
+        status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
     end
 
     req_pcie_addr_reg <= req_pcie_addr_next;
@@ -1046,6 +1111,13 @@ always @(posedge clk) begin
         tag_table_axi_addr[tlp_cmd_pcie_tag_reg] <= tlp_cmd_addr_reg;
         tag_table_tag[tlp_cmd_pcie_tag_reg] <= tlp_cmd_tag_reg;
         tag_table_last[tlp_cmd_pcie_tag_reg] <= tlp_cmd_last_reg;
+    end
+
+    if (status_fifo_we) begin
+        status_fifo_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]] <= status_fifo_wr_tag;
+        status_fifo_last[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]] <= status_fifo_wr_last;
+        status_fifo_completion[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]] <= status_fifo_wr_completion;
+        status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
     end
 end
 

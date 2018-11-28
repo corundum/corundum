@@ -424,7 +424,7 @@ always @* begin
     // TLP segmentation and request generation
     case (req_state_reg)
         REQ_STATE_IDLE: begin
-            s_axis_read_desc_ready_next = 1'b1;
+            s_axis_read_desc_ready_next = enable;
 
             if (s_axis_read_desc_ready & s_axis_read_desc_valid) begin
                 s_axis_read_desc_ready_next = 1'b0;
@@ -476,7 +476,7 @@ always @* begin
                     if (req_op_count_next > 0) begin
                         req_state_next = REQ_STATE_START;
                     end else begin
-                        s_axis_read_desc_ready_next = 1'b1;
+                        s_axis_read_desc_ready_next = enable;
                         req_state_next = REQ_STATE_IDLE;
                     end
                 end else begin
@@ -515,7 +515,7 @@ always @* begin
                 if (req_op_count_next > 0) begin
                     req_state_next = REQ_STATE_START;
                 end else begin
-                    s_axis_read_desc_ready_next = 1'b1;
+                    s_axis_read_desc_ready_next = enable;
                     req_state_next = REQ_STATE_IDLE;
                 end
             end else begin

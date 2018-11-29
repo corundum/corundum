@@ -358,32 +358,29 @@ always @* begin
         AXI_STATE_REQ: begin
             // request state, generate AXI read requests
             if (!m_axi_arvalid) begin
-                m_axi_araddr_next = axi_addr_reg;
-                m_axi_arvalid_next = 1;
-
                 if (tlp_count_reg <= AXI_MAX_BURST_SIZE-axi_addr_reg[1:0]) begin
                     // packet smaller than max burst size
                     if (axi_addr_reg[12] != axi_addr_plus_tlp_count[12]) begin
                         // crosses 4k boundary
                         tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                        m_axi_arlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
                     end else begin
                         // does not cross 4k boundary, send one request
                         tr_count_next = tlp_count_reg;
-                        m_axi_arlen_next = (tr_count_next + axi_addr_reg[OFFSET_WIDTH-1:0] - 1) >> AXI_BURST_SIZE;
                     end
                 end else begin
                     // packet larger than max burst size
                     if (axi_addr_reg[12] != axi_addr_plus_max_burst[12]) begin
                         // crosses 4k boundary
                         tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                        m_axi_arlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
                     end else begin
                         // does not cross 4k boundary, send one request
                         tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_reg[OFFSET_WIDTH-1:0];
-                        m_axi_arlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
                     end
                 end
+
+                m_axi_araddr_next = axi_addr_reg;
+                m_axi_arlen_next = (tr_count_next + axi_addr_reg[OFFSET_WIDTH-1:0] - 1) >> AXI_BURST_SIZE;
+                m_axi_arvalid_next = 1;
 
                 axi_addr_next = axi_addr_reg + tr_count_next;
                 tlp_count_next = tlp_count_reg - tr_count_next;

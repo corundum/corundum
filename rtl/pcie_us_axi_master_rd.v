@@ -510,20 +510,19 @@ always @* begin
         AXI_STATE_REQ: begin
             // request state, generate AXI read requests
             if (!m_axi_arvalid) begin
-                m_axi_araddr_next = pcie_addr_reg;
-                m_axi_arvalid_next = 1;
-
                 if (tlp_dword_count_reg <= AXI_MAX_BURST_SIZE/4) begin
                     // packet smaller than max burst size
                     // assumed to not cross 4k boundary, send one request
                     tr_dword_count_next = tlp_dword_count_reg;
-                    m_axi_arlen_next = (tr_dword_count_next + pcie_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
                 end else begin
                     // packet larger than max burst size
                     // assumed to not cross 4k boundary, send one request
                     tr_dword_count_next = AXI_MAX_BURST_SIZE/4 - pcie_addr_reg[OFFSET_WIDTH+2-1:2];
-                    m_axi_arlen_next = (tr_dword_count_next - 1) >> (AXI_BURST_SIZE-2);
                 end
+
+                m_axi_araddr_next = pcie_addr_reg;
+                m_axi_arlen_next = (tr_dword_count_next + pcie_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
+                m_axi_arvalid_next = 1;
 
                 // increment address by transfer size
                 pcie_addr_next = pcie_addr_reg + (tr_dword_count_next << 2);

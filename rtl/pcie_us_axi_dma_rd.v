@@ -810,26 +810,20 @@ always @* begin
                     if (axi_addr_reg[12] != axi_addr_plus_op_count[12]) begin
                         // crosses 4k boundary
                         tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                        m_axi_awlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
                     end else begin
                         // does not cross 4k boundary, send one request
                         tr_count_next = op_count_reg;
-                        m_axi_awlen_next = (tr_count_next + axi_addr_reg[OFFSET_WIDTH-1:0] - 1) >> AXI_BURST_SIZE;
                     end
                 end else begin
                     // packet larger than max burst size
                     if (axi_addr_reg[12] != axi_addr_plus_max_burst[12]) begin
                         // crosses 4k boundary
                         tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                        m_axi_awlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
                     end else begin
                         // does not cross 4k boundary, send one request
                         tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_reg[OFFSET_WIDTH-1:0];
-                        m_axi_awlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
                     end
                 end
-
-                m_axi_awaddr_next = axi_addr_reg;
 
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
                     input_cycle_count_next = (tr_count_next + 4+lower_addr_reg[1:0] - 1) >> (AXI_BURST_SIZE);
@@ -841,10 +835,12 @@ always @* begin
                 last_cycle_next = output_cycle_count_next == 0;
                 input_active_next = 1'b1;
 
+                m_axi_awaddr_next = axi_addr_reg;
+                m_axi_awlen_next = output_cycle_count_next;
+                m_axi_awvalid_next = 1'b1;
+
                 axi_addr_next = axi_addr_reg + tr_count_next;
                 op_count_next = op_count_reg - tr_count_next;
-
-                m_axi_awvalid_next = 1'b1;
 
                 input_active_next = input_cycle_count_next > 0;
                 input_cycle_count_next = input_cycle_count_next - 1;

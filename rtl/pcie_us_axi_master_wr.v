@@ -369,15 +369,11 @@ always @* begin
                     // packet smaller than max burst size (only for 64 bits)
                     // assumed to not cross 4k boundary, send one request
                     tr_dword_count_next = op_dword_count_next;
-                    m_axi_awlen_next = (tr_dword_count_next + axi_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
                 end else begin
                     // packet larger than max burst size
                     // assumed to not cross 4k boundary, send one request
                     tr_dword_count_next = AXI_MAX_BURST_SIZE/4 - axi_addr_reg[OFFSET_WIDTH+2-1:2];
-                    m_axi_awlen_next = (tr_dword_count_next - 1) >> (AXI_BURST_SIZE-2);
                 end
-
-                m_axi_awaddr_next = axi_addr_reg;
 
                 // required DWORD shift to place first DWORD from the TLP payload into proper position on AXI interface
                 // bubble cycle required if first TLP payload transfer does not fill first AXI transfer
@@ -393,6 +389,9 @@ always @* begin
                 last_cycle_offset_next = axi_addr_reg[OFFSET_WIDTH+2-1:2] + tr_dword_count_next;
                 last_cycle_next = output_cycle_count_next == 0;
                 input_active_next = 1'b1;
+
+                m_axi_awaddr_next = axi_addr_reg;
+                m_axi_awlen_next = output_cycle_count_next;
 
                 axi_addr_next = axi_addr_reg + (tr_dword_count_next << 2);
                 op_dword_count_next = op_dword_count_next - tr_dword_count_next;

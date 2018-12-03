@@ -81,7 +81,6 @@ def bench():
     s_axi_awcache_list = [Signal(intbv(0)[4:]) for i in range(S_COUNT)]
     s_axi_awprot_list = [Signal(intbv(0)[3:]) for i in range(S_COUNT)]
     s_axi_awqos_list = [Signal(intbv(0)[4:]) for i in range(S_COUNT)]
-    s_axi_awregion_list = [Signal(intbv(0)[4:]) for i in range(S_COUNT)]
     s_axi_awuser_list = [Signal(intbv(0)[AWUSER_WIDTH:]) for i in range(S_COUNT)]
     s_axi_awvalid_list = [Signal(bool(0)) for i in range(S_COUNT)]
     s_axi_wdata_list = [Signal(intbv(0)[DATA_WIDTH:]) for i in range(S_COUNT)]
@@ -99,7 +98,6 @@ def bench():
     s_axi_arcache_list = [Signal(intbv(0)[4:]) for i in range(S_COUNT)]
     s_axi_arprot_list = [Signal(intbv(0)[3:]) for i in range(S_COUNT)]
     s_axi_arqos_list = [Signal(intbv(0)[4:]) for i in range(S_COUNT)]
-    s_axi_arregion_list = [Signal(intbv(0)[4:]) for i in range(S_COUNT)]
     s_axi_aruser_list = [Signal(intbv(0)[ARUSER_WIDTH:]) for i in range(S_COUNT)]
     s_axi_arvalid_list = [Signal(bool(0)) for i in range(S_COUNT)]
     s_axi_rready_list = [Signal(bool(0)) for i in range(S_COUNT)]
@@ -126,7 +124,6 @@ def bench():
     s_axi_awcache = ConcatSignal(*reversed(s_axi_awcache_list))
     s_axi_awprot = ConcatSignal(*reversed(s_axi_awprot_list))
     s_axi_awqos = ConcatSignal(*reversed(s_axi_awqos_list))
-    s_axi_awregion = ConcatSignal(*reversed(s_axi_awregion_list))
     s_axi_awuser = ConcatSignal(*reversed(s_axi_awuser_list))
     s_axi_awvalid = ConcatSignal(*reversed(s_axi_awvalid_list))
     s_axi_wdata = ConcatSignal(*reversed(s_axi_wdata_list))
@@ -144,7 +141,6 @@ def bench():
     s_axi_arcache = ConcatSignal(*reversed(s_axi_arcache_list))
     s_axi_arprot = ConcatSignal(*reversed(s_axi_arprot_list))
     s_axi_arqos = ConcatSignal(*reversed(s_axi_arqos_list))
-    s_axi_arregion = ConcatSignal(*reversed(s_axi_arregion_list))
     s_axi_aruser = ConcatSignal(*reversed(s_axi_aruser_list))
     s_axi_arvalid = ConcatSignal(*reversed(s_axi_arvalid_list))
     s_axi_rready = ConcatSignal(*reversed(s_axi_rready_list))
@@ -277,7 +273,6 @@ def bench():
             m_axi_awcache=s_axi_awcache_list[k],
             m_axi_awprot=s_axi_awprot_list[k],
             m_axi_awqos=s_axi_awqos_list[k],
-            m_axi_awregion=s_axi_awregion_list[k],
             m_axi_awvalid=s_axi_awvalid_list[k],
             m_axi_awready=s_axi_awready_list[k],
             m_axi_wdata=s_axi_wdata_list[k],
@@ -298,7 +293,6 @@ def bench():
             m_axi_arcache=s_axi_arcache_list[k],
             m_axi_arprot=s_axi_arprot_list[k],
             m_axi_arqos=s_axi_arqos_list[k],
-            m_axi_arregion=s_axi_arregion_list[k],
             m_axi_arvalid=s_axi_arvalid_list[k],
             m_axi_arready=s_axi_arready_list[k],
             m_axi_rid=s_axi_rid_list[k],
@@ -382,7 +376,6 @@ def bench():
         s_axi_awcache=s_axi_awcache,
         s_axi_awprot=s_axi_awprot,
         s_axi_awqos=s_axi_awqos,
-        s_axi_awregion=s_axi_awregion,
         s_axi_awuser=s_axi_awuser,
         s_axi_awvalid=s_axi_awvalid,
         s_axi_awready=s_axi_awready,
@@ -406,7 +399,6 @@ def bench():
         s_axi_arcache=s_axi_arcache,
         s_axi_arprot=s_axi_arprot,
         s_axi_arqos=s_axi_arqos,
-        s_axi_arregion=s_axi_arregion,
         s_axi_aruser=s_axi_aruser,
         s_axi_arvalid=s_axi_arvalid,
         s_axi_arready=s_axi_arready,

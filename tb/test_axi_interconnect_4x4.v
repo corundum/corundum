@@ -68,7 +68,6 @@ reg [S_COUNT-1:0] s_axi_awlock = 0;
 reg [S_COUNT*4-1:0] s_axi_awcache = 0;
 reg [S_COUNT*3-1:0] s_axi_awprot = 0;
 reg [S_COUNT*4-1:0] s_axi_awqos = 0;
-reg [S_COUNT*4-1:0] s_axi_awregion = 0;
 reg [S_COUNT*AWUSER_WIDTH-1:0] s_axi_awuser = 0;
 reg [S_COUNT-1:0] s_axi_awvalid = 0;
 reg [S_COUNT*DATA_WIDTH-1:0] s_axi_wdata = 0;
@@ -86,7 +85,6 @@ reg [S_COUNT-1:0] s_axi_arlock = 0;
 reg [S_COUNT*4-1:0] s_axi_arcache = 0;
 reg [S_COUNT*3-1:0] s_axi_arprot = 0;
 reg [S_COUNT*4-1:0] s_axi_arqos = 0;
-reg [S_COUNT*4-1:0] s_axi_arregion = 0;
 reg [S_COUNT*ARUSER_WIDTH-1:0] s_axi_aruser = 0;
 reg [S_COUNT-1:0] s_axi_arvalid = 0;
 reg [S_COUNT-1:0] s_axi_rready = 0;
@@ -165,7 +163,6 @@ initial begin
         s_axi_awcache,
         s_axi_awprot,
         s_axi_awqos,
-        s_axi_awregion,
         s_axi_awuser,
         s_axi_awvalid,
         s_axi_wdata,
@@ -183,7 +180,6 @@ initial begin
         s_axi_arcache,
         s_axi_arprot,
         s_axi_arqos,
-        s_axi_arregion,
         s_axi_aruser,
         s_axi_arvalid,
         s_axi_rready,
@@ -288,7 +284,6 @@ UUT (
     .s_axi_awcache(s_axi_awcache),
     .s_axi_awprot(s_axi_awprot),
     .s_axi_awqos(s_axi_awqos),
-    .s_axi_awregion(s_axi_awregion),
     .s_axi_awuser(s_axi_awuser),
     .s_axi_awvalid(s_axi_awvalid),
     .s_axi_awready(s_axi_awready),
@@ -312,7 +307,6 @@ UUT (
     .s_axi_arcache(s_axi_arcache),
     .s_axi_arprot(s_axi_arprot),
     .s_axi_arqos(s_axi_arqos),
-    .s_axi_arregion(s_axi_arregion),
     .s_axi_aruser(s_axi_aruser),
     .s_axi_arvalid(s_axi_arvalid),
     .s_axi_arready(s_axi_arready),

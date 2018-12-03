@@ -69,7 +69,6 @@ module axi_interconnect #
     input  wire [S_COUNT*4-1:0]            s_axi_awcache,
     input  wire [S_COUNT*3-1:0]            s_axi_awprot,
     input  wire [S_COUNT*4-1:0]            s_axi_awqos,
-    input  wire [S_COUNT*4-1:0]            s_axi_awregion,
     input  wire [S_COUNT*AWUSER_WIDTH-1:0] s_axi_awuser,
     input  wire [S_COUNT-1:0]              s_axi_awvalid,
     output wire [S_COUNT-1:0]              s_axi_awready,
@@ -93,7 +92,6 @@ module axi_interconnect #
     input  wire [S_COUNT*4-1:0]            s_axi_arcache,
     input  wire [S_COUNT*3-1:0]            s_axi_arprot,
     input  wire [S_COUNT*4-1:0]            s_axi_arqos,
-    input  wire [S_COUNT*4-1:0]            s_axi_arregion,
     input  wire [S_COUNT*ARUSER_WIDTH-1:0] s_axi_aruser,
     input  wire [S_COUNT-1:0]              s_axi_arvalid,
     output wire [S_COUNT-1:0]              s_axi_arready,
@@ -274,7 +272,6 @@ wire                    current_s_axi_awlock    = s_axi_awlock[s_select];
 wire [3:0]              current_s_axi_awcache   = s_axi_awcache[s_select*4 +: 4];
 wire [2:0]              current_s_axi_awprot    = s_axi_awprot[s_select*3 +: 3];
 wire [3:0]              current_s_axi_awqos     = s_axi_awqos[s_select*4 +: 4];
-wire [3:0]              current_s_axi_awregion  = s_axi_awregion[s_select*4 +: 4];
 wire [AWUSER_WIDTH-1:0] current_s_axi_awuser    = s_axi_awuser[s_select*AWUSER_WIDTH +: AWUSER_WIDTH];
 wire                    current_s_axi_awvalid   = s_axi_awvalid[s_select];
 wire                    current_s_axi_awready   = s_axi_awready[s_select];
@@ -298,7 +295,6 @@ wire                    current_s_axi_arlock    = s_axi_arlock[s_select];
 wire [3:0]              current_s_axi_arcache   = s_axi_arcache[s_select*4 +: 4];
 wire [2:0]              current_s_axi_arprot    = s_axi_arprot[s_select*3 +: 3];
 wire [3:0]              current_s_axi_arqos     = s_axi_arqos[s_select*4 +: 4];
-wire [3:0]              current_s_axi_arregion  = s_axi_arregion[s_select*4 +: 4];
 wire [ARUSER_WIDTH-1:0] current_s_axi_aruser    = s_axi_aruser[s_select*ARUSER_WIDTH +: ARUSER_WIDTH];
 wire                    current_s_axi_arvalid   = s_axi_arvalid[s_select];
 wire                    current_s_axi_arready   = s_axi_arready[s_select];
@@ -465,7 +461,6 @@ always @* begin
                     axi_cache_next = current_s_axi_arcache;
                     axi_prot_next = current_s_axi_arprot;
                     axi_qos_next = current_s_axi_arqos;
-                    axi_region_next = current_s_axi_arregion;
                     axi_auser_next = current_s_axi_aruser;
                     s_axi_arready_next[s_select] = 1'b1;
                 end else  begin
@@ -481,7 +476,6 @@ always @* begin
                     axi_cache_next = current_s_axi_awcache;
                     axi_prot_next = current_s_axi_awprot;
                     axi_qos_next = current_s_axi_awqos;
-                    axi_region_next = current_s_axi_awregion;
                     axi_auser_next = current_s_axi_awuser;
                     s_axi_awready_next[s_select] = 1'b1;
                 end

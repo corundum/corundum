@@ -110,27 +110,22 @@ module axi_adapter_wr #
 
 parameter S_ADDR_BIT_OFFSET = $clog2(S_STRB_WIDTH);
 parameter M_ADDR_BIT_OFFSET = $clog2(M_STRB_WIDTH);
-parameter S_VALID_ADDR_WIDTH = ADDR_WIDTH - S_ADDR_BIT_OFFSET;
-parameter M_VALID_ADDR_WIDTH = ADDR_WIDTH - M_ADDR_BIT_OFFSET;
 parameter S_WORD_WIDTH = S_STRB_WIDTH;
 parameter M_WORD_WIDTH = M_STRB_WIDTH;
 parameter S_WORD_SIZE = S_DATA_WIDTH/S_WORD_WIDTH;
 parameter M_WORD_SIZE = M_DATA_WIDTH/M_WORD_WIDTH;
 parameter S_BURST_SIZE = $clog2(S_STRB_WIDTH);
 parameter M_BURST_SIZE = $clog2(M_STRB_WIDTH);
-parameter S_MAX_BURST_SIZE = 256 << S_BURST_SIZE;
-parameter M_MAX_BURST_SIZE = 256 << M_BURST_SIZE;
 
+// output bus is wider
 parameter EXPAND = M_STRB_WIDTH > S_STRB_WIDTH;
 parameter DATA_WIDTH = EXPAND ? M_DATA_WIDTH : S_DATA_WIDTH;
 parameter STRB_WIDTH = EXPAND ? M_STRB_WIDTH : S_STRB_WIDTH;
-parameter CYCLE_COUNT = EXPAND ? (M_STRB_WIDTH / S_STRB_WIDTH) : (S_STRB_WIDTH / M_STRB_WIDTH);
-parameter CYCLE_COUNT_WIDTH = CYCLE_COUNT == 1 ? 1 : $clog2(CYCLE_COUNT);
-parameter CYCLE_COUNT_SHIFT = $clog2(CYCLE_STRB_WIDTH);
-parameter CYCLE_DATA_WIDTH = DATA_WIDTH / CYCLE_COUNT;
-parameter CYCLE_STRB_WIDTH = STRB_WIDTH / CYCLE_COUNT;
-parameter OFFSET_WIDTH = CYCLE_STRB_WIDTH > 1 ? $clog2(CYCLE_STRB_WIDTH) : 1;
-parameter ADDR_MASK = {ADDR_WIDTH{1'b1}} << $clog2(CYCLE_STRB_WIDTH);
+// required number of segments in wider bus
+parameter SEGMENT_COUNT = EXPAND ? (M_STRB_WIDTH / S_STRB_WIDTH) : (S_STRB_WIDTH / M_STRB_WIDTH);
+// data width and keep width per segment
+parameter SEGMENT_DATA_WIDTH = DATA_WIDTH / SEGMENT_COUNT;
+parameter SEGMENT_STRB_WIDTH = STRB_WIDTH / SEGMENT_COUNT;
 
 // bus width assertions
 initial begin
@@ -267,7 +262,7 @@ always @* begin
     m_axi_awvalid_next = m_axi_awvalid_reg && !m_axi_awready;
     m_axi_bready_next = 1'b0;
 
-    if (CYCLE_COUNT == 1) begin
+    if (SEGMENT_COUNT == 1) begin
         // master output is same width; direct transfer with no splitting/merging
         m_axi_wdata_int = s_axi_wdata;
         m_axi_wstrb_int = s_axi_wstrb;
@@ -364,16 +359,16 @@ always @* begin
                     addr_next = s_axi_awaddr;
                     burst_next = s_axi_awlen;
                     burst_size_next = s_axi_awsize;
-                    if (CONVERT_BURST && s_axi_awcache[1] && (CONVERT_NARROW_BURST || s_axi_awsize == $clog2(S_WORD_WIDTH))) begin
+                    if (CONVERT_BURST && s_axi_awcache[1] && (CONVERT_NARROW_BURST || s_axi_awsize == S_BURST_SIZE)) begin
                         // merge writes
                         // require CONVERT_BURST and awcache[1] set
-                        master_burst_size_next = $clog2(M_WORD_WIDTH);
+                        master_burst_size_next = M_BURST_SIZE;
                         if (CONVERT_NARROW_BURST) begin
-                            m_axi_awlen_next = (({{S_ADDR_BIT_OFFSET+1{1'b0}}, s_axi_awlen} << s_axi_awsize) + s_axi_awaddr[M_ADDR_BIT_OFFSET-1:0]) >> $clog2(M_WORD_WIDTH);
+                            m_axi_awlen_next = (({{S_ADDR_BIT_OFFSET+1{1'b0}}, s_axi_awlen} << s_axi_awsize) + s_axi_awaddr[M_ADDR_BIT_OFFSET-1:0]) >> M_BURST_SIZE;
                         end else begin
-                            m_axi_awlen_next = ({1'b0, s_axi_awlen} + s_axi_awaddr[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]) >> $clog2(CYCLE_COUNT);
+                            m_axi_awlen_next = ({1'b0, s_axi_awlen} + s_axi_awaddr[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]) >> $clog2(SEGMENT_COUNT);
                         end
-                        m_axi_awsize_next = $clog2(M_WORD_WIDTH);
+                        m_axi_awsize_next = M_BURST_SIZE;
                         state_next = STATE_DATA_2;
                     end else begin
                         // output narrow burst
@@ -424,13 +419,13 @@ always @* begin
                     if (CONVERT_NARROW_BURST) begin
                         for (i = 0; i < S_WORD_WIDTH; i = i + 1) begin
                             if (s_axi_wstrb[i]) begin
-                                data_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*CYCLE_DATA_WIDTH+i*M_WORD_SIZE +: M_WORD_SIZE] = s_axi_wdata[i*M_WORD_SIZE +: M_WORD_SIZE];
-                                strb_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*CYCLE_STRB_WIDTH+i] = 1'b1;
+                                data_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*SEGMENT_DATA_WIDTH+i*M_WORD_SIZE +: M_WORD_SIZE] = s_axi_wdata[i*M_WORD_SIZE +: M_WORD_SIZE];
+                                strb_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*SEGMENT_STRB_WIDTH+i] = 1'b1;
                             end
                         end
                     end else begin
-                        data_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*CYCLE_DATA_WIDTH +: CYCLE_DATA_WIDTH] = s_axi_wdata;
-                        strb_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*CYCLE_STRB_WIDTH +: CYCLE_STRB_WIDTH] = s_axi_wstrb;
+                        data_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*SEGMENT_DATA_WIDTH +: SEGMENT_DATA_WIDTH] = s_axi_wdata;
+                        strb_next[addr_reg[M_ADDR_BIT_OFFSET-1:S_ADDR_BIT_OFFSET]*SEGMENT_STRB_WIDTH +: SEGMENT_STRB_WIDTH] = s_axi_wstrb;
                     end
                     m_axi_wdata_int = data_next;
                     m_axi_wstrb_int = strb_next;
@@ -496,15 +491,15 @@ always @* begin
                     burst_next = s_axi_awlen;
                     burst_size_next = s_axi_awsize;
                     burst_active_next = 1'b1;
-                    if (s_axi_awsize > $clog2(M_WORD_WIDTH)) begin
+                    if (s_axi_awsize > M_BURST_SIZE) begin
                         // need to adjust burst size
-                        if ({s_axi_awlen, {$clog2(S_WORD_WIDTH)-$clog2(M_WORD_WIDTH){1'b1}}} >> ($clog2(S_WORD_WIDTH)-s_axi_awsize) > 255) begin
+                        if ({s_axi_awlen, {S_BURST_SIZE-M_BURST_SIZE{1'b1}}} >> (S_BURST_SIZE-s_axi_awsize) > 255) begin
                             // limit burst length to max
                             master_burst_next = 8'd255;
                         end else begin
-                            master_burst_next = {s_axi_awlen, {$clog2(S_WORD_WIDTH)-$clog2(M_WORD_WIDTH){1'b1}}} >> ($clog2(S_WORD_WIDTH)-s_axi_awsize);
+                            master_burst_next = {s_axi_awlen, {S_BURST_SIZE-M_BURST_SIZE{1'b1}}} >> (S_BURST_SIZE-s_axi_awsize);
                         end
-                        master_burst_size_next = $clog2(M_WORD_WIDTH);
+                        master_burst_size_next = M_BURST_SIZE;
                         m_axi_awlen_next = master_burst_next;
                         m_axi_awsize_next = master_burst_size_next;
                     end else begin
@@ -598,15 +593,15 @@ always @* begin
                     if (burst_active_reg) begin
                         // burst on slave interface still active; start new burst
                         m_axi_awaddr_next = addr_reg;
-                        if (burst_size_reg > $clog2(M_WORD_WIDTH)) begin
+                        if (burst_size_reg > M_BURST_SIZE) begin
                             // need to adjust burst size
-                            if ({burst_reg, {$clog2(S_WORD_WIDTH)-$clog2(M_WORD_WIDTH){1'b1}}} >> ($clog2(S_WORD_WIDTH)-burst_size_reg) > 255) begin
+                            if ({burst_reg, {S_BURST_SIZE-M_BURST_SIZE{1'b1}}} >> (S_BURST_SIZE-burst_size_reg) > 255) begin
                                 // limit burst length to max
                                 master_burst_next = 8'd255;
                             end else begin
-                                master_burst_next = {burst_reg, {$clog2(S_WORD_WIDTH)-$clog2(M_WORD_WIDTH){1'b1}}} >> ($clog2(S_WORD_WIDTH)-burst_size_reg);
+                                master_burst_next = {burst_reg, {S_BURST_SIZE-M_BURST_SIZE{1'b1}}} >> (S_BURST_SIZE-burst_size_reg);
                             end
-                            master_burst_size_next = $clog2(M_WORD_WIDTH);
+                            master_burst_size_next = M_BURST_SIZE;
                             m_axi_awlen_next = master_burst_next;
                             m_axi_awsize_next = master_burst_size_next;
                         end else begin

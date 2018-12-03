@@ -45,6 +45,8 @@ build_cmd = "iverilog -o %s.vvp %s" % (testbench, src)
 def bench():
 
     # Parameters
+    S_COUNT = 4
+    M_COUNT = 4
     DATA_WIDTH = 32
     ADDR_WIDTH = 32
     STRB_WIDTH = (DATA_WIDTH/8)
@@ -60,12 +62,12 @@ def bench():
     RUSER_ENABLE = 0
     RUSER_WIDTH = 1
     FORWARD_ID = 1
-    S_COUNT = 4
-    M_COUNT = 4
+    M_REGIONS = 1
     M_BASE_ADDR = [0x00000000, 0x01000000, 0x02000000, 0x03000000]
-    M_ADDR_WIDTH = [24, 24, 24, 24]
-    M_CONNECT_READ = [0b1111, 0b1111, 0b1111, 0b1111]
-    M_CONNECT_WRITE = [0b1111, 0b1111, 0b1111, 0b1111]
+    M_ADDR_WIDTH = [24]*M_COUNT*M_REGIONS
+    M_CONNECT_READ = [0b1111]*M_COUNT
+    M_CONNECT_WRITE = [0b1111]*M_COUNT
+    M_SECURE = 0b0000
 
     # Inputs
     clk = Signal(bool(0))

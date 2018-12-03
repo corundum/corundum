@@ -45,15 +45,17 @@ build_cmd = "iverilog -o %s.vvp %s" % (testbench, src)
 def bench():
 
     # Parameters
+    S_COUNT = 4
+    M_COUNT = 4
     DATA_WIDTH = 32
     ADDR_WIDTH = 32
     STRB_WIDTH = (DATA_WIDTH/8)
-    S_COUNT = 4
-    M_COUNT = 4
+    M_REGIONS = 1
     M_BASE_ADDR = [0x00000000, 0x01000000, 0x02000000, 0x03000000]
-    M_ADDR_WIDTH = [24, 24, 24, 24]
-    M_CONNECT_READ = [0b1111, 0b1111, 0b1111, 0b1111]
-    M_CONNECT_WRITE = [0b1111, 0b1111, 0b1111, 0b1111]
+    M_ADDR_WIDTH = [24]*M_COUNT*M_REGIONS
+    M_CONNECT_READ = [0b1111]*M_COUNT
+    M_CONNECT_WRITE = [0b1111]*M_COUNT
+    M_SECURE = 0b0000
 
     # Inputs
     clk = Signal(bool(0))
@@ -514,8 +516,8 @@ def bench():
         yield delay(100)
 
         yield clk.posedge
-        print("test 2: bad read")
-        current_test.next = 2
+        print("test 9: bad read")
+        current_test.next = 9
 
         axil_master_inst_list[0].init_read(0xff000000, 4)
 

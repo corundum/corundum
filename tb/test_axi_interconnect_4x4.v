@@ -32,6 +32,8 @@ THE SOFTWARE.
 module test_axi_interconnect_4x4;
 
 // Parameters
+parameter S_COUNT = 4;
+parameter M_COUNT = 4;
 parameter DATA_WIDTH = 32;
 parameter ADDR_WIDTH = 32;
 parameter STRB_WIDTH = (DATA_WIDTH/8);
@@ -47,12 +49,12 @@ parameter ARUSER_WIDTH = 1;
 parameter RUSER_ENABLE = 0;
 parameter RUSER_WIDTH = 1;
 parameter FORWARD_ID = 1;
-parameter S_COUNT = 4;
-parameter M_COUNT = 4;
+parameter M_REGIONS = 1;
 parameter M_BASE_ADDR = {32'h03000000, 32'h02000000, 32'h01000000, 32'h00000000};
-parameter M_ADDR_WIDTH = {32'd24, 32'd24, 32'd24, 32'd24};
-parameter M_CONNECT_READ = {4'b1111, 4'b1111, 4'b1111, 4'b1111};
-parameter M_CONNECT_WRITE = {4'b1111, 4'b1111, 4'b1111, 4'b1111};
+parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd24}}}};
+parameter M_CONNECT_READ = {M_COUNT{{S_COUNT{1'b1}}}};
+parameter M_CONNECT_WRITE = {M_COUNT{{S_COUNT{1'b1}}}};
+parameter M_SECURE = {M_COUNT{1'b0}};
 
 // Inputs
 reg clk = 0;
@@ -250,6 +252,8 @@ initial begin
 end
 
 axi_interconnect #(
+    .S_COUNT(S_COUNT),
+    .M_COUNT(M_COUNT),
     .DATA_WIDTH(DATA_WIDTH),
     .ADDR_WIDTH(ADDR_WIDTH),
     .STRB_WIDTH(STRB_WIDTH),
@@ -265,12 +269,12 @@ axi_interconnect #(
     .RUSER_ENABLE(RUSER_ENABLE),
     .RUSER_WIDTH(RUSER_WIDTH),
     .FORWARD_ID(FORWARD_ID),
-    .S_COUNT(S_COUNT),
-    .M_COUNT(M_COUNT),
+    .M_REGIONS(M_REGIONS),
     .M_BASE_ADDR(M_BASE_ADDR),
     .M_ADDR_WIDTH(M_ADDR_WIDTH),
     .M_CONNECT_READ(M_CONNECT_READ),
-    .M_CONNECT_WRITE(M_CONNECT_WRITE)
+    .M_CONNECT_WRITE(M_CONNECT_WRITE),
+    .M_SECURE(M_SECURE)
 )
 UUT (
     .clk(clk),

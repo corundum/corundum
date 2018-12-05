@@ -474,7 +474,6 @@ always @* begin
                         m_axis_read_desc_status_valid_next = 1'b1;
 
                         m_axi_rready_next = 1'b0;
-                        s_axis_read_desc_ready_next = enable;
                         axis_state_next = AXIS_STATE_IDLE;
                     end else begin
                         // more cycles in AXI transfer

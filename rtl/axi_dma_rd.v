@@ -238,7 +238,7 @@ assign s_axis_read_desc_ready = s_axis_read_desc_ready_reg;
 assign m_axis_read_desc_status_tag = m_axis_read_desc_status_tag_reg;
 assign m_axis_read_desc_status_valid = m_axis_read_desc_status_valid_reg;
 
-assign m_axi_arid = {AXIS_ID_WIDTH{1'b0}};
+assign m_axi_arid = {AXI_ID_WIDTH{1'b0}};
 assign m_axi_araddr = m_axi_araddr_reg;
 assign m_axi_arlen = m_axi_arlen_reg;
 assign m_axi_arsize = AXI_BURST_SIZE;

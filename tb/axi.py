@@ -740,12 +740,12 @@ class AXIRam(object):
                 for n in range(length):
                     cur_word_addr = int(cur_addr/bw)*bw
 
-                    self.mem.seek(cur_word_addr % self.size)
-
                     if not self.int_write_data_queue:
                         yield self.int_write_data_sync
 
                     wdata, strb, last = self.int_write_data_queue.pop(0)
+
+                    self.mem.seek(cur_word_addr % self.size)
 
                     data = bytearray()
                     for i in range(bw):

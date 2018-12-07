@@ -986,12 +986,12 @@ always @* begin
 
     if (status_fifo_rd_ptr_reg != status_fifo_wr_ptr_reg) begin
         // status FIFO not empty
-        if (status_fifo_completion[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]]) begin
+        if (status_fifo_completion[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]]) begin
             // completion entry
             if (m_axi_bready && m_axi_bvalid) begin
                 // got write completion, pop and return status
-                m_axis_read_desc_status_tag_next = status_fifo_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]];
-                m_axis_read_desc_status_valid_next = status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]];
+                m_axis_read_desc_status_tag_next = status_fifo_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+                m_axis_read_desc_status_valid_next = status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
                 status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
                 m_axi_bready_next = 1'b0;
             end else begin
@@ -1000,8 +1000,8 @@ always @* begin
             end
         end else begin
             // non-completion entry, pop and return status
-            m_axis_read_desc_status_tag_next = status_fifo_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]];
-            m_axis_read_desc_status_valid_next = status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]];
+            m_axis_read_desc_status_tag_next = status_fifo_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+            m_axis_read_desc_status_valid_next = status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
             status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
         end
     end
@@ -1105,9 +1105,9 @@ always @(posedge clk) begin
     end
 
     if (status_fifo_we) begin
-        status_fifo_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]] <= status_fifo_wr_tag;
-        status_fifo_last[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]] <= status_fifo_wr_last;
-        status_fifo_completion[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-2:0]] <= status_fifo_wr_completion;
+        status_fifo_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_tag;
+        status_fifo_last[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_last;
+        status_fifo_completion[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_completion;
         status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
     end
 end

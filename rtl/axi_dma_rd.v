@@ -180,17 +180,8 @@ reg transfer_in_save;
 reg axis_cmd_ready;
 
 reg [AXI_ADDR_WIDTH-1:0] addr_reg = {AXI_ADDR_WIDTH{1'b0}}, addr_next;
-reg [OFFSET_WIDTH-1:0] offset_reg = {OFFSET_WIDTH{1'b0}}, offset_next;
-reg [OFFSET_WIDTH-1:0] last_cycle_offset_reg = {OFFSET_WIDTH{1'b0}}, last_cycle_offset_next;
 reg [LEN_WIDTH-1:0] op_word_count_reg = {LEN_WIDTH{1'b0}}, op_word_count_next;
 reg [LEN_WIDTH-1:0] tr_word_count_reg = {LEN_WIDTH{1'b0}}, tr_word_count_next;
-reg [CYCLE_COUNT_WIDTH-1:0] input_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, input_cycle_count_next;
-reg [CYCLE_COUNT_WIDTH-1:0] output_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, output_cycle_count_next;
-reg input_active_reg = 1'b0, input_active_next;
-reg output_active_reg = 1'b0, output_active_next;
-reg bubble_cycle_reg = 1'b0, bubble_cycle_next;
-reg first_cycle_reg = 1'b0, first_cycle_next;
-reg output_last_cycle_reg = 1'b0, output_last_cycle_next;
 
 reg [OFFSET_WIDTH-1:0] axis_cmd_offset_reg = {OFFSET_WIDTH{1'b0}}, axis_cmd_offset_next;
 reg [OFFSET_WIDTH-1:0] axis_cmd_last_cycle_offset_reg = {OFFSET_WIDTH{1'b0}}, axis_cmd_last_cycle_offset_next;
@@ -202,6 +193,16 @@ reg [AXIS_ID_WIDTH-1:0] axis_cmd_axis_id_reg = {AXIS_ID_WIDTH{1'b0}}, axis_cmd_a
 reg [AXIS_DEST_WIDTH-1:0] axis_cmd_axis_dest_reg = {AXIS_DEST_WIDTH{1'b0}}, axis_cmd_axis_dest_next;
 reg [AXIS_USER_WIDTH-1:0] axis_cmd_axis_user_reg = {AXIS_USER_WIDTH{1'b0}}, axis_cmd_axis_user_next;
 reg axis_cmd_valid_reg = 1'b0, axis_cmd_valid_next;
+
+reg [OFFSET_WIDTH-1:0] offset_reg = {OFFSET_WIDTH{1'b0}}, offset_next;
+reg [OFFSET_WIDTH-1:0] last_cycle_offset_reg = {OFFSET_WIDTH{1'b0}}, last_cycle_offset_next;
+reg [CYCLE_COUNT_WIDTH-1:0] input_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, input_cycle_count_next;
+reg [CYCLE_COUNT_WIDTH-1:0] output_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, output_cycle_count_next;
+reg input_active_reg = 1'b0, input_active_next;
+reg output_active_reg = 1'b0, output_active_next;
+reg bubble_cycle_reg = 1'b0, bubble_cycle_next;
+reg first_cycle_reg = 1'b0, first_cycle_next;
+reg output_last_cycle_reg = 1'b0, output_last_cycle_next;
 
 reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
 reg [AXIS_ID_WIDTH-1:0] axis_id_reg = {AXIS_ID_WIDTH{1'b0}}, axis_id_next;
@@ -279,7 +280,7 @@ always @* begin
     case (axi_state_reg)
         AXI_STATE_IDLE: begin
             // idle state - load new descriptor to start operation
-            s_axis_read_desc_ready_next = enable && !axis_cmd_valid_reg;
+            s_axis_read_desc_ready_next = !axis_cmd_valid_reg && enable;
 
             if (s_axis_read_desc_ready && s_axis_read_desc_valid) begin
                 if (ENABLE_UNALIGNED) begin
@@ -352,6 +353,7 @@ always @* begin
                 if (op_word_count_next > 0) begin
                     axi_state_next = AXI_STATE_START;
                 end else begin
+                    s_axis_read_desc_ready_next = !axis_cmd_valid_reg && enable;
                     axi_state_next = AXI_STATE_IDLE;
                 end
             end else begin
@@ -512,17 +514,8 @@ always @(posedge clk) begin
     m_axi_arlen_reg <= m_axi_arlen_next;
 
     addr_reg <= addr_next;
-    offset_reg <= offset_next;
-    last_cycle_offset_reg <= last_cycle_offset_next;
     op_word_count_reg <= op_word_count_next;
     tr_word_count_reg <= tr_word_count_next;
-    input_cycle_count_reg <= input_cycle_count_next;
-    output_cycle_count_reg <= output_cycle_count_next;
-    input_active_reg <= input_active_next;
-    output_active_reg <= output_active_next;
-    bubble_cycle_reg <= bubble_cycle_next;
-    first_cycle_reg <= first_cycle_next;
-    output_last_cycle_reg <= output_last_cycle_next;
 
     axis_cmd_offset_reg <= axis_cmd_offset_next;
     axis_cmd_last_cycle_offset_reg <= axis_cmd_last_cycle_offset_next;
@@ -534,6 +527,16 @@ always @(posedge clk) begin
     axis_cmd_axis_dest_reg <= axis_cmd_axis_dest_next;
     axis_cmd_axis_user_reg <= axis_cmd_axis_user_next;
     axis_cmd_valid_reg <= axis_cmd_valid_next;
+
+    offset_reg <= offset_next;
+    last_cycle_offset_reg <= last_cycle_offset_next;
+    input_cycle_count_reg <= input_cycle_count_next;
+    output_cycle_count_reg <= output_cycle_count_next;
+    input_active_reg <= input_active_next;
+    output_active_reg <= output_active_next;
+    bubble_cycle_reg <= bubble_cycle_next;
+    first_cycle_reg <= first_cycle_next;
+    output_last_cycle_reg <= output_last_cycle_next;
 
     tag_reg <= tag_next;
     axis_id_reg <= axis_id_next;

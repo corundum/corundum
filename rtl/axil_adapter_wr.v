@@ -74,20 +74,21 @@ module axil_adapter_wr #
 
 parameter S_ADDR_BIT_OFFSET = $clog2(S_STRB_WIDTH);
 parameter M_ADDR_BIT_OFFSET = $clog2(M_STRB_WIDTH);
-parameter S_VALID_ADDR_WIDTH = ADDR_WIDTH - S_ADDR_BIT_OFFSET;
-parameter M_VALID_ADDR_WIDTH = ADDR_WIDTH - M_ADDR_BIT_OFFSET;
 parameter S_WORD_WIDTH = S_STRB_WIDTH;
 parameter M_WORD_WIDTH = M_STRB_WIDTH;
 parameter S_WORD_SIZE = S_DATA_WIDTH/S_WORD_WIDTH;
 parameter M_WORD_SIZE = M_DATA_WIDTH/M_WORD_WIDTH;
 
+// output bus is wider
 parameter EXPAND = M_STRB_WIDTH > S_STRB_WIDTH;
 parameter DATA_WIDTH = EXPAND ? M_DATA_WIDTH : S_DATA_WIDTH;
 parameter STRB_WIDTH = EXPAND ? M_STRB_WIDTH : S_STRB_WIDTH;
-parameter CYCLE_COUNT = EXPAND ? (M_STRB_WIDTH / S_STRB_WIDTH) : (S_STRB_WIDTH / M_STRB_WIDTH);
-parameter CYCLE_COUNT_WIDTH = CYCLE_COUNT == 1 ? 1 : $clog2(CYCLE_COUNT);
-parameter CYCLE_DATA_WIDTH = DATA_WIDTH / CYCLE_COUNT;
-parameter CYCLE_STRB_WIDTH = STRB_WIDTH / CYCLE_COUNT;
+// required number of segments in wider bus
+parameter SEGMENT_COUNT = EXPAND ? (M_STRB_WIDTH / S_STRB_WIDTH) : (S_STRB_WIDTH / M_STRB_WIDTH);
+parameter SEGMENT_COUNT_WIDTH = SEGMENT_COUNT == 1 ? 1 : $clog2(SEGMENT_COUNT);
+// data width and keep width per segment
+parameter SEGMENT_DATA_WIDTH = DATA_WIDTH / SEGMENT_COUNT;
+parameter SEGMENT_STRB_WIDTH = STRB_WIDTH / SEGMENT_COUNT;
 
 // bus width assertions
 initial begin
@@ -127,7 +128,7 @@ reg [1:0] state_reg = STATE_IDLE, state_next;
 reg [DATA_WIDTH-1:0] data_reg = {DATA_WIDTH{1'b0}}, data_next;
 reg [STRB_WIDTH-1:0] strb_reg = {STRB_WIDTH{1'b0}}, strb_next;
 
-reg [CYCLE_COUNT_WIDTH-1:0] current_cycle_reg = 0, current_cycle_next;
+reg [SEGMENT_COUNT_WIDTH-1:0] current_segment_reg = 0, current_segment_next;
 
 reg s_axil_awready_reg = 1'b0, s_axil_awready_next;
 reg s_axil_wready_reg = 1'b0, s_axil_wready_next;
@@ -161,7 +162,7 @@ always @* begin
     data_next = data_reg;
     strb_next = strb_reg;
 
-    current_cycle_next = current_cycle_reg;
+    current_segment_next = current_segment_reg;
 
     s_axil_awready_next = 1'b0;
     s_axil_wready_next = 1'b0;
@@ -175,7 +176,7 @@ always @* begin
     m_axil_wvalid_next = m_axil_wvalid_reg && !m_axil_wready;
     m_axil_bready_next = 1'b0;
 
-    if (CYCLE_COUNT == 1 || EXPAND) begin
+    if (SEGMENT_COUNT == 1 || EXPAND) begin
         // master output is same width or wider; single cycle direct transfer
         case (state_reg)
             STATE_IDLE: begin
@@ -231,7 +232,7 @@ always @* begin
             STATE_IDLE: begin
                 s_axil_awready_next = !m_axil_awvalid;
 
-                current_cycle_next = 0;
+                current_segment_next = 0;
                 s_axil_bresp_next = 2'd0;
 
                 if (s_axil_awready && s_axil_awvalid) begin
@@ -269,16 +270,16 @@ always @* begin
                     if (m_axil_bresp != 0) begin
                         s_axil_bresp_next = m_axil_bresp;
                     end
-                    if (current_cycle_reg == CYCLE_COUNT-1) begin
+                    if (current_segment_reg == SEGMENT_COUNT-1) begin
                         s_axil_bvalid_next = 1'b1;
                         s_axil_awready_next = !m_axil_awvalid;
                         state_next = STATE_IDLE;
                     end else begin
-                        current_cycle_next = current_cycle_reg + 1;
-                        m_axil_awaddr_next = m_axil_awaddr_reg + CYCLE_STRB_WIDTH;
+                        current_segment_next = current_segment_reg + 1;
+                        m_axil_awaddr_next = m_axil_awaddr_reg + SEGMENT_STRB_WIDTH;
                         m_axil_awvalid_next = 1'b1;
-                        m_axil_wdata_next = data_reg >> (current_cycle_reg+1)*CYCLE_DATA_WIDTH;
-                        m_axil_wstrb_next = strb_reg >> (current_cycle_reg+1)*CYCLE_STRB_WIDTH;
+                        m_axil_wdata_next = data_reg >> (current_segment_reg+1)*SEGMENT_DATA_WIDTH;
+                        m_axil_wstrb_next = strb_reg >> (current_segment_reg+1)*SEGMENT_STRB_WIDTH;
                         m_axil_wvalid_next = 1'b1;
                         state_next = STATE_RESP;
                     end
@@ -312,7 +313,7 @@ always @(posedge clk) begin
     data_reg <= data_next;
     strb_reg <= strb_next;
 
-    current_cycle_reg <= current_cycle_next;
+    current_segment_reg <= current_segment_next;
 
     s_axil_bresp_reg <= s_axil_bresp_next;
     m_axil_awaddr_reg <= m_axil_awaddr_next;

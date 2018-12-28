@@ -111,7 +111,7 @@ assign s_axis_desc_ready = (m_axis_desc_ready_int_reg && grant_valid) << grant_e
 wire [PCIE_ADDR_WIDTH-1:0] current_s_desc_pcie_addr  = s_axis_desc_pcie_addr[grant_encoded*PCIE_ADDR_WIDTH +: PCIE_ADDR_WIDTH];
 wire [AXI_ADDR_WIDTH-1:0]  current_s_desc_axi_addr   = s_axis_desc_axi_addr[grant_encoded*AXI_ADDR_WIDTH +: AXI_ADDR_WIDTH];
 wire [LEN_WIDTH-1:0]       current_s_desc_len        = s_axis_desc_len[grant_encoded*LEN_WIDTH +: LEN_WIDTH];
-wire [S_TAG_WIDTH-1:0]     current_s_desc_tag        = s_axis_desc_tag[grant_encoded*M_TAG_WIDTH +: M_TAG_WIDTH];
+wire [S_TAG_WIDTH-1:0]     current_s_desc_tag        = s_axis_desc_tag[grant_encoded*S_TAG_WIDTH +: S_TAG_WIDTH];
 wire                       current_s_desc_valid      = s_axis_desc_valid[grant_encoded];
 wire                       current_s_desc_ready      = s_axis_desc_ready[grant_encoded];
 

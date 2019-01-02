@@ -441,8 +441,8 @@ def bench():
         print("test 3: various reads")
         current_test.next = 3
 
-        for length in list(range(1,19))+[1024]:
-            for pcie_offset in list(range(8,13))+list(range(4096-4,4096)):
+        for length in list(range(1,19))+list(range(128-4,128+4))+[1024]:
+            for pcie_offset in list(range(8,13))+list(range(4096-4,4096+4)):
                 for axi_offset in list(range(8,25))+list(range(4096-16,4096)):
                     for pause in [False, True]:
                         print("length %d, pcie_offset %d, axi_offset %d"% (length, pcie_offset, axi_offset))
@@ -468,8 +468,6 @@ def bench():
 
                         rq_pause_toggle.next = 0
                         rc_pause_toggle.next = 0
-
-                        yield delay(100)
 
                         status = read_desc_status_sink.recv()
 

@@ -393,8 +393,8 @@ def bench():
         print("test 3: various writes")
         current_test.next = 3
 
-        for length in list(range(1,19))+[1024]:
-            for pcie_offset in list(range(8,13))+list(range(4096-4,4096)):
+        for length in list(range(1,19))+list(range(128-4,128+4))+[1024]:
+            for pcie_offset in list(range(8,13))+list(range(4096-4,4096+4)):
                 for axi_offset in list(range(8,25))+list(range(4096-16,4096)):
                     for pause in [False, True]:
                         print("length %d, pcie_offset %d, axi_offset %d"% (length, pcie_offset, axi_offset))
@@ -404,7 +404,7 @@ def bench():
                         test_data = bytearray([x%256 for x in range(length)])
 
                         axi_ram_inst.write_mem(axi_addr & 0xffff80, b'\x55'*(len(test_data)+256))
-                        mem_data[pcie_addr & 0xffff80:(pcie_addr & 0xffff80)+len(test_data)+256] = b'\xaa'*(len(test_data)+256)
+                        mem_data[(pcie_addr-1) & 0xffff80:((pcie_addr-1) & 0xffff80)+len(test_data)+256] = b'\xaa'*(len(test_data)+256)
                         axi_ram_inst.write_mem(axi_addr, test_data) 
 
                         data = axi_ram_inst.read_mem(axi_addr&0xfffff0, 64)

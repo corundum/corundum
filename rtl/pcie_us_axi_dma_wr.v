@@ -505,7 +505,7 @@ always @* begin
                 m_axi_rready_next = m_axis_rq_tready_int_early && input_active_reg;
 
                 if (m_axis_rq_tready_int_reg && ((m_axi_rready && m_axi_rvalid) || !input_active_reg)) begin
-                    transfer_in_save = 1'b1;
+                    transfer_in_save = m_axi_rready && m_axi_rvalid;
 
                     if (bubble_cycle_reg) begin
                         if (input_active_reg) begin

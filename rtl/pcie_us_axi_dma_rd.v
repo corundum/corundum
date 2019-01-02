@@ -625,7 +625,7 @@ always @* begin
                     //s_axis_rc_tuser[42]; // discontinue
                     //s_axis_rc_tuser[74:43]; // parity
 
-                    if (byte_count_next > (op_dword_count_next << 2)) begin
+                    if (byte_count_next > (op_dword_count_next << 2) - lower_addr_next[1:0]) begin
                         // more completions to follow
                         op_count_next = (op_dword_count_next << 2) - lower_addr_next[1:0];
                         final_cpl_next = 1'b0;
@@ -713,7 +713,7 @@ always @* begin
                     //s_axis_rc_tuser[42]; // discontinue
                     //s_axis_rc_tuser[74:43]; // parity
 
-                    if (byte_count_next > (op_dword_count_next << 2)) begin
+                    if (byte_count_next > (op_dword_count_next << 2) - lower_addr_next[1:0]) begin
                         // more completions to follow
                         op_count_next = (op_dword_count_next << 2) - lower_addr_next[1:0];
                         final_cpl_next = 1'b0;

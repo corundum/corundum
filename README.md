@@ -21,6 +21,22 @@ A MyHDL transaction layer PCI Express bus functional model (BFM) is included in 
 
 ### Source Files
 
+    arbiter.v               : Parametriable arbiter
+    axis_arb_mux.v          : Parametriable AXI stream mux
+    pcie_axi_dma_desc_mux.v : Descriptor mux for DMA engine
+    pcie_tag_manager.v      : PCIe in-flight tag manager
+    pcie_us_axi_dma.v       : PCIe AXI DMA module with Xilinx Ultrascale interface
+    pcie_us_axi_dma_rd.v    : PCIe AXI DMA read module with Xilinx Ultrascale interface
+    pcie_us_axi_dma_wr.v    : PCIe AXI DMA write module with Xilinx Ultrascale interface
+    pcie_us_axi_master.v    : AXI Master module with Xilinx Ultrascale interface
+    pcie_us_axi_master_rd.v : AXI Master read module with Xilinx Ultrascale interface
+    pcie_us_axi_master_wr.v : AXI Master write module with Xilinx Ultrascale interface
+    pcie_us_axil_master.v   : AXI Lite Master module with Xilinx Ultrascale interface
+    pcie_us_axis_cq_demux.v : Parametriable AXI stream CQ demux
+    pcie_us_axis_rc_demux.v : Parametriable AXI stream RC demux
+    pcie_us_msi.v           : MSI shim for Xilinx Ultrascale devices
+    priority_encoder.v      : Parametriable priority encoder
+
 ## Testing
 
 Running the included testbenches requires MyHDL and Icarus Verilog.  Make sure

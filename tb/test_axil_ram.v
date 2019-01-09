@@ -35,6 +35,7 @@ module test_axil_ram;
 parameter DATA_WIDTH = 32;
 parameter ADDR_WIDTH = 16;
 parameter STRB_WIDTH = DATA_WIDTH/8;
+parameter PIPELINE_OUTPUT = 0;
 
 // Inputs
 reg clk = 0;
@@ -100,7 +101,8 @@ end
 axil_ram #(
     .DATA_WIDTH(DATA_WIDTH),
     .ADDR_WIDTH(ADDR_WIDTH),
-    .STRB_WIDTH(STRB_WIDTH)
+    .STRB_WIDTH(STRB_WIDTH),
+    .PIPELINE_OUTPUT(PIPELINE_OUTPUT)
 )
 UUT (
     .clk(clk),

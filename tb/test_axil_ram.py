@@ -46,6 +46,7 @@ def bench():
     DATA_WIDTH = 32
     ADDR_WIDTH = 16
     STRB_WIDTH = int(DATA_WIDTH/8)
+    PIPELINE_OUTPUT = 0
 
     # Inputs
     clk = Signal(bool(0))

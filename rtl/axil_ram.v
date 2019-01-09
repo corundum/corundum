@@ -33,7 +33,8 @@ module axil_ram #
 (
     parameter DATA_WIDTH = 32,  // width of data bus in bits
     parameter ADDR_WIDTH = 16,  // width of address bus in bits
-    parameter STRB_WIDTH = (DATA_WIDTH/8)
+    parameter STRB_WIDTH = (DATA_WIDTH/8),
+    parameter PIPELINE_OUTPUT = 0
 )
 (
     input  wire                   clk,
@@ -75,6 +76,9 @@ reg s_axil_arready_reg = 1'b0, s_axil_arready_next;
 reg [DATA_WIDTH-1:0] s_axil_rdata_reg = {DATA_WIDTH{1'b0}}, s_axil_rdata_next;
 reg [1:0] s_axil_rresp_reg = 2'b00, s_axil_rresp_next;
 reg s_axil_rvalid_reg = 1'b0, s_axil_rvalid_next;
+reg [DATA_WIDTH-1:0] s_axil_rdata_pipe_reg = {DATA_WIDTH{1'b0}};
+reg [1:0] s_axil_rresp_pipe_reg = 2'b00;
+reg s_axil_rvalid_pipe_reg = 1'b0;
 
 // (* RAM_STYLE="BLOCK" *)
 reg [DATA_WIDTH-1:0] mem[(2**VALID_ADDR_WIDTH)-1:0];
@@ -87,9 +91,9 @@ assign s_axil_wready = s_axil_wready_reg;
 assign s_axil_bresp = s_axil_bresp_reg;
 assign s_axil_bvalid = s_axil_bvalid_reg;
 assign s_axil_arready = s_axil_arready_reg;
-assign s_axil_rdata = s_axil_rdata_reg;
-assign s_axil_rresp = s_axil_rresp_reg;
-assign s_axil_rvalid = s_axil_rvalid_reg;
+assign s_axil_rdata = PIPELINE_OUTPUT ? s_axil_rdata_pipe_reg : s_axil_rdata_reg;
+assign s_axil_rresp = PIPELINE_OUTPUT ? s_axil_rresp_pipe_reg : s_axil_rresp_reg;
+assign s_axil_rvalid = PIPELINE_OUTPUT ? s_axil_rvalid_pipe_reg : s_axil_rvalid_reg;
 
 integer i, j;
 
@@ -146,9 +150,9 @@ always @* begin
 
     s_axil_arready_next = 1'b0;
     s_axil_rresp_next = 2'b00;
-    s_axil_rvalid_next = s_axil_rvalid_reg && !s_axil_rready;
+    s_axil_rvalid_next = s_axil_rvalid_reg && !(s_axil_rready || (PIPELINE_OUTPUT && !s_axil_rvalid_pipe_reg));
 
-    if (s_axil_arvalid && (!s_axil_rvalid || s_axil_rready) && (!s_axil_arready)) begin
+    if (s_axil_arvalid && (!s_axil_rvalid || s_axil_rready || (PIPELINE_OUTPUT && !s_axil_rvalid_pipe_reg)) && (!s_axil_arready)) begin
         s_axil_arready_next = 1'b1;
         s_axil_rresp_next = 2'b00;
         s_axil_rvalid_next = 1'b1;
@@ -163,14 +167,24 @@ always @(posedge clk) begin
         s_axil_rdata_reg <= {DATA_WIDTH{1'b0}};
         s_axil_rresp_reg <= 2'b00;
         s_axil_rvalid_reg <= 1'b0;
+        s_axil_rvalid_pipe_reg <= 1'b0;
     end else begin
         s_axil_arready_reg <= s_axil_arready_next;
         s_axil_rresp_reg <= s_axil_rresp_next;
         s_axil_rvalid_reg <= s_axil_rvalid_next;
+
+        if (!s_axil_rvalid_pipe_reg || s_axil_rready) begin
+            s_axil_rvalid_pipe_reg <= s_axil_rvalid_reg;
+        end
     end
 
     if (mem_rd_en) begin
         s_axil_rdata_reg <= mem[s_axil_araddr_valid];
+    end
+
+    if (!s_axil_rvalid_pipe_reg || s_axil_rready) begin
+        s_axil_rdata_pipe_reg <= s_axil_rdata_reg;
+        s_axil_rresp_pipe_reg <= s_axil_rresp_reg;
     end
 end
 

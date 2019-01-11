@@ -451,7 +451,7 @@ always @* begin
             end
         end
         REQ_STATE_START: begin
-            if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg) begin
+            if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid) begin
                 if (req_op_count_reg <= {max_read_request_size_dw_reg, 2'b00}-req_pcie_addr_reg[1:0]) begin
                     // packet smaller than max read request size
                     if (req_pcie_addr_reg[12] != req_pcie_addr_plus_op_count[12]) begin
@@ -500,7 +500,7 @@ always @* begin
             end
         end
         REQ_STATE_HEADER: begin
-            if (m_axis_rq_tready_int_reg) begin
+            if (m_axis_rq_tready_int_reg && new_tag_valid) begin
                 req_pcie_addr_next = req_pcie_addr_reg + req_tlp_count_next;
                 req_axi_addr_next = req_axi_addr_reg + req_tlp_count_next;
                 req_op_count_next = req_op_count_reg - req_tlp_count_next;

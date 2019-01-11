@@ -500,7 +500,7 @@ always @* begin
             end
         end
         REQ_STATE_HEADER: begin
-            if (m_axis_rq_tready_int_reg && new_tag_valid) begin
+            if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid) begin
                 req_pcie_addr_next = req_pcie_addr_reg + req_tlp_count_next;
                 req_axi_addr_next = req_axi_addr_reg + req_tlp_count_next;
                 req_op_count_next = req_op_count_reg - req_tlp_count_next;

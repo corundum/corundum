@@ -437,9 +437,9 @@ always @* begin
     // TLP segmentation and request generation
     case (req_state_reg)
         REQ_STATE_IDLE: begin
-            s_axis_read_desc_ready_next = enable;
+            s_axis_read_desc_ready_next = enable && !tlp_cmd_valid_reg;
 
-            if (s_axis_read_desc_ready & s_axis_read_desc_valid) begin
+            if (s_axis_read_desc_ready && s_axis_read_desc_valid) begin
                 s_axis_read_desc_ready_next = 1'b0;
                 req_pcie_addr_next = s_axis_read_desc_pcie_addr;
                 req_axi_addr_next = s_axis_read_desc_axi_addr;
@@ -489,7 +489,7 @@ always @* begin
                     if (req_op_count_next > 0) begin
                         req_state_next = REQ_STATE_START;
                     end else begin
-                        s_axis_read_desc_ready_next = enable;
+                        s_axis_read_desc_ready_next = 1'b0;
                         req_state_next = REQ_STATE_IDLE;
                     end
                 end else begin
@@ -528,7 +528,7 @@ always @* begin
                 if (req_op_count_next > 0) begin
                     req_state_next = REQ_STATE_START;
                 end else begin
-                    s_axis_read_desc_ready_next = enable;
+                    s_axis_read_desc_ready_next = 1'b0;
                     req_state_next = REQ_STATE_IDLE;
                 end
             end else begin

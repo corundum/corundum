@@ -53,27 +53,27 @@ def bench():
     rst = Signal(bool(0))
     current_test = Signal(intbv(0)[8:])
 
-    axil_awaddr = Signal(intbv(0)[ADDR_WIDTH:])
-    axil_awprot = Signal(intbv(0)[3:])
-    axil_awvalid = Signal(bool(0))
-    axil_wdata = Signal(intbv(0)[DATA_WIDTH:])
-    axil_wstrb = Signal(intbv(0)[STRB_WIDTH:])
-    axil_wvalid = Signal(bool(0))
-    axil_bready = Signal(bool(0))
-    axil_araddr = Signal(intbv(0)[ADDR_WIDTH:])
-    axil_arprot = Signal(intbv(0)[3:])
-    axil_arvalid = Signal(bool(0))
-    axil_rready = Signal(bool(0))
+    s_axil_awaddr = Signal(intbv(0)[ADDR_WIDTH:])
+    s_axil_awprot = Signal(intbv(0)[3:])
+    s_axil_awvalid = Signal(bool(0))
+    s_axil_wdata = Signal(intbv(0)[DATA_WIDTH:])
+    s_axil_wstrb = Signal(intbv(0)[STRB_WIDTH:])
+    s_axil_wvalid = Signal(bool(0))
+    s_axil_bready = Signal(bool(0))
+    s_axil_araddr = Signal(intbv(0)[ADDR_WIDTH:])
+    s_axil_arprot = Signal(intbv(0)[3:])
+    s_axil_arvalid = Signal(bool(0))
+    s_axil_rready = Signal(bool(0))
 
     # Outputs
-    axil_awready = Signal(bool(0))
-    axil_wready = Signal(bool(0))
-    axil_bresp = Signal(intbv(0)[2:])
-    axil_bvalid = Signal(bool(0))
-    axil_arready = Signal(bool(0))
-    axil_rdata = Signal(intbv(0)[DATA_WIDTH:])
-    axil_rresp = Signal(intbv(0)[2:])
-    axil_rvalid = Signal(bool(0))
+    s_axil_awready = Signal(bool(0))
+    s_axil_wready = Signal(bool(0))
+    s_axil_bresp = Signal(intbv(0)[2:])
+    s_axil_bvalid = Signal(bool(0))
+    s_axil_arready = Signal(bool(0))
+    s_axil_rdata = Signal(intbv(0)[DATA_WIDTH:])
+    s_axil_rresp = Signal(intbv(0)[2:])
+    s_axil_rvalid = Signal(bool(0))
 
     # AXI4-Lite master
     axil_master_inst = axil.AXILiteMaster()
@@ -82,25 +82,25 @@ def bench():
     axil_master_logic = axil_master_inst.create_logic(
         clk,
         rst,
-        m_axil_awaddr=axil_awaddr,
-        m_axil_awprot=axil_awprot,
-        m_axil_awvalid=axil_awvalid,
-        m_axil_awready=axil_awready,
-        m_axil_wdata=axil_wdata,
-        m_axil_wstrb=axil_wstrb,
-        m_axil_wvalid=axil_wvalid,
-        m_axil_wready=axil_wready,
-        m_axil_bresp=axil_bresp,
-        m_axil_bvalid=axil_bvalid,
-        m_axil_bready=axil_bready,
-        m_axil_araddr=axil_araddr,
-        m_axil_arprot=axil_arprot,
-        m_axil_arvalid=axil_arvalid,
-        m_axil_arready=axil_arready,
-        m_axil_rdata=axil_rdata,
-        m_axil_rresp=axil_rresp,
-        m_axil_rvalid=axil_rvalid,
-        m_axil_rready=axil_rready,
+        m_axil_awaddr=s_axil_awaddr,
+        m_axil_awprot=s_axil_awprot,
+        m_axil_awvalid=s_axil_awvalid,
+        m_axil_awready=s_axil_awready,
+        m_axil_wdata=s_axil_wdata,
+        m_axil_wstrb=s_axil_wstrb,
+        m_axil_wvalid=s_axil_wvalid,
+        m_axil_wready=s_axil_wready,
+        m_axil_bresp=s_axil_bresp,
+        m_axil_bvalid=s_axil_bvalid,
+        m_axil_bready=s_axil_bready,
+        m_axil_araddr=s_axil_araddr,
+        m_axil_arprot=s_axil_arprot,
+        m_axil_arvalid=s_axil_arvalid,
+        m_axil_arready=s_axil_arready,
+        m_axil_rdata=s_axil_rdata,
+        m_axil_rresp=s_axil_rresp,
+        m_axil_rvalid=s_axil_rvalid,
+        m_axil_rready=s_axil_rready,
         pause=axil_master_pause,
         name='master'
     )
@@ -115,25 +115,25 @@ def bench():
         rst=rst,
         current_test=current_test,
 
-        s_axil_awaddr=axil_awaddr,
-        s_axil_awprot=axil_awprot,
-        s_axil_awvalid=axil_awvalid,
-        s_axil_awready=axil_awready,
-        s_axil_wdata=axil_wdata,
-        s_axil_wstrb=axil_wstrb,
-        s_axil_wvalid=axil_wvalid,
-        s_axil_wready=axil_wready,
-        s_axil_bresp=axil_bresp,
-        s_axil_bvalid=axil_bvalid,
-        s_axil_bready=axil_bready,
-        s_axil_araddr=axil_araddr,
-        s_axil_arprot=axil_arprot,
-        s_axil_arvalid=axil_arvalid,
-        s_axil_arready=axil_arready,
-        s_axil_rdata=axil_rdata,
-        s_axil_rresp=axil_rresp,
-        s_axil_rvalid=axil_rvalid,
-        s_axil_rready=axil_rready
+        s_axil_awaddr=s_axil_awaddr,
+        s_axil_awprot=s_axil_awprot,
+        s_axil_awvalid=s_axil_awvalid,
+        s_axil_awready=s_axil_awready,
+        s_axil_wdata=s_axil_wdata,
+        s_axil_wstrb=s_axil_wstrb,
+        s_axil_wvalid=s_axil_wvalid,
+        s_axil_wready=s_axil_wready,
+        s_axil_bresp=s_axil_bresp,
+        s_axil_bvalid=s_axil_bvalid,
+        s_axil_bready=s_axil_bready,
+        s_axil_araddr=s_axil_araddr,
+        s_axil_arprot=s_axil_arprot,
+        s_axil_arvalid=s_axil_arvalid,
+        s_axil_arready=s_axil_arready,
+        s_axil_rdata=s_axil_rdata,
+        s_axil_rresp=s_axil_rresp,
+        s_axil_rvalid=s_axil_rvalid,
+        s_axil_rready=s_axil_rready
     )
 
     @always(delay(4))

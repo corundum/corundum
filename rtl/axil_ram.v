@@ -164,7 +164,6 @@ end
 always @(posedge clk) begin
     if (rst) begin
         s_axil_arready_reg <= 1'b0;
-        s_axil_rdata_reg <= {DATA_WIDTH{1'b0}};
         s_axil_rresp_reg <= 2'b00;
         s_axil_rvalid_reg <= 1'b0;
         s_axil_rvalid_pipe_reg <= 1'b0;

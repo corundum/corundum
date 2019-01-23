@@ -847,21 +847,20 @@ always @* begin
 
                 input_active_next = input_cycle_count_next > 0;
                 input_cycle_count_next = input_cycle_count_next - 1;
-                s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next && bubble_cycle_reg;
+                s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next && bubble_cycle_reg && (!last_cycle_next || op_count_next == 0 || !m_axi_awvalid || m_axi_awready);
                 tlp_state_next = TLP_STATE_TRANSFER;
             end else begin
                 tlp_state_next = TLP_STATE_START;
             end
         end
         TLP_STATE_TRANSFER: begin
-            s_axis_rc_tready_next = m_axi_wready_int_early && input_active_reg && !(first_cycle_reg && !bubble_cycle_reg);
+            s_axis_rc_tready_next = m_axi_wready_int_early && input_active_reg && !(first_cycle_reg && !bubble_cycle_reg) && (!last_cycle_reg || op_count_reg == 0 || !m_axi_awvalid || m_axi_awready);
 
-            if (m_axi_wready_int_reg && ((s_axis_rc_tready && s_axis_rc_tvalid) || !input_active_reg || (first_cycle_reg && !bubble_cycle_reg))) begin
+            if (m_axi_wready_int_reg && ((s_axis_rc_tready && s_axis_rc_tvalid) || !input_active_reg || (first_cycle_reg && !bubble_cycle_reg)) && (!last_cycle_reg || op_count_reg == 0 || !m_axi_awvalid || m_axi_awready)) begin
                 transfer_in_save = s_axis_rc_tready && s_axis_rc_tvalid;
 
                 if (first_cycle_reg && !bubble_cycle_reg) begin
                     m_axi_wdata_int = {save_axis_tdata_reg, {AXIS_PCIE_DATA_WIDTH{1'b0}}} >> ((AXI_STRB_WIDTH-offset_reg)*8);
-                    s_axis_rc_tready_next = m_axi_wready_int_early && input_active_reg;
                 end else begin
                     m_axi_wdata_int = shift_axis_tdata;
                 end
@@ -888,7 +887,7 @@ always @* begin
                 first_cycle_next = 1'b0;
                 if (!last_cycle_reg) begin
                     // current transfer not finished yet
-                    s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next;
+                    s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next && (!last_cycle_next || op_count_reg == 0 || !m_axi_awvalid || m_axi_awready);
                     tlp_state_next = TLP_STATE_TRANSFER;
                 end else if (op_count_reg > 0) begin
                     // current transfer done, but operation not finished yet
@@ -938,7 +937,7 @@ always @* begin
                     status_fifo_wr_completion = 1'b1;
 
                     m_axi_awvalid_next = 1'b1;
-                    s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next;
+                    s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next && (!last_cycle_next || op_count_reg == 0 || !m_axi_awvalid || m_axi_awready);
                     tlp_state_next = TLP_STATE_TRANSFER;
                 end else begin
                     if (final_cpl_reg) begin

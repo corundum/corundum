@@ -687,10 +687,11 @@ always @* begin
                         tlp_state_next = TLP_STATE_WAIT_END;
                     end
                 end else begin
+                    s_axis_rc_tready_next = 1'b0;
                     tlp_state_next = TLP_STATE_IDLE;
                 end
             end else begin
-                s_axis_rc_tready_next = !m_axi_awvalid || m_axi_awready;
+                s_axis_rc_tready_next = 1'b1;
 
                 if (s_axis_rc_tready && s_axis_rc_tvalid) begin
                     // header fields
@@ -723,13 +724,15 @@ always @* begin
                         final_cpl_next = 1'b1;
                     end
 
-                    s_axis_rc_tready_next = 1'b0;
                     if (s_axis_rc_tlast) begin
+                        s_axis_rc_tready_next = !m_axi_awvalid || m_axi_awready;
                         tlp_state_next = TLP_STATE_IDLE;
                     end else begin
+                        s_axis_rc_tready_next = 1'b0;
                         tlp_state_next = TLP_STATE_HEADER;
                     end
                 end else begin
+                    s_axis_rc_tready_next = !m_axi_awvalid || m_axi_awready;
                     tlp_state_next = TLP_STATE_IDLE;
                 end
             end

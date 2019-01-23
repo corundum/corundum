@@ -653,7 +653,7 @@ always @* begin
                         status_error_uncor_next = 1'b1;
                         s_axis_rc_tready_next = 1'b1;
                         tlp_state_next = TLP_STATE_WAIT_END;
-                    end else if (!active_tags[pcie_tag_next]|| error_code_next == RC_ERROR_INVALID_TAG) begin
+                    end else if (!active_tags[pcie_tag_next] || error_code_next == RC_ERROR_INVALID_TAG) begin
                         // invalid tag
                         // Handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
                         // drop TLP and report correctable error
@@ -762,7 +762,7 @@ always @* begin
                     status_error_uncor_next = 1'b1;
                     s_axis_rc_tready_next = 1'b1;
                     tlp_state_next = TLP_STATE_WAIT_END;
-                end else if (!active_tags[pcie_tag_reg] || error_code_next == RC_ERROR_INVALID_TAG) begin
+                end else if (!active_tags[pcie_tag_next] || error_code_next == RC_ERROR_INVALID_TAG) begin
                     // invalid tag or mismatched fields (tag invalid)
                     // Handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
                     // drop TLP and report correctable error
@@ -788,7 +788,7 @@ always @* begin
                     // last request in current transfer
                     // enqueue status FIFO entry
                     status_fifo_we = 1'b1;
-                    status_fifo_wr_tag = tag_table_tag[pcie_tag_reg];
+                    status_fifo_wr_tag = tag_table_tag[pcie_tag_next];
                     status_fifo_wr_last = 1'b1;
                     status_fifo_wr_completion = 1'b0;
                     // drop TLP

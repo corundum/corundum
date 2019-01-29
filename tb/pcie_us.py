@@ -618,7 +618,7 @@ class TLP_us(TLP):
 
     def __repr__(self):
         return (
-                ('TLP_us(data=%s, ' % repr(self.data)) +
+                ('TLP_us(data=[%s], ' % ', '.join(hex(x) for x in self.data)) +
                 ('fmt=0x%x, ' % self.fmt) +
                 ('type=0x%x, ' % self.type) +
                 ('tc=0x%x, ' % self.tc) +

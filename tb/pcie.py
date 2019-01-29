@@ -22,6 +22,7 @@ THE SOFTWARE.
 
 """
 
+import inspect
 import math
 import struct
 from myhdl import *
@@ -3005,6 +3006,7 @@ class RootComplex(Switch):
         self.msi_addr = None
         self.msi_msg_limit = 0
         self.msi_signals = {}
+        self.msi_callbacks = {}
 
         self.register_rx_tlp_handler(TLP_IO_READ, self.handle_io_read_tlp)
         self.register_rx_tlp_handler(TLP_IO_WRITE, self.handle_io_write_tlp)
@@ -3065,7 +3067,10 @@ class RootComplex(Switch):
         if len(region) == 3:
             return region[2][offset:offset+length]
         elif len(region) == 4:
-            return region[2](offset, length)
+            if inspect.isgeneratorfunction(region[2]):
+                yield from region[2](offset, data)
+            else:
+                region[2](offset, data)
 
     def write_region(self, addr, data):
         region = self.find_region(addr)
@@ -3075,7 +3080,10 @@ class RootComplex(Switch):
         if len(region) == 3:
             region[2][offset:offset+len(data)] = data
         elif len(region) == 4:
-            region[3](offset, data)
+            if inspect.isgeneratorfunction(region[3]):
+                yield from region[3](offset, data)
+            else:
+                region[3](offset, data)
 
     def read_io_region(self, addr, length):
         region = self.find_io_region(addr)
@@ -3085,7 +3093,10 @@ class RootComplex(Switch):
         if len(region) == 3:
             return region[2][offset:offset+length]
         elif len(region) == 4:
-            return region[2](offset, length)
+            if inspect.isgeneratorfunction(region[2]):
+                yield from region[2](offset, data)
+            else:
+                region[2](offset, data)
 
     def write_io_region(self, addr, data):
         region = self.find_io_region(addr)
@@ -3095,7 +3106,10 @@ class RootComplex(Switch):
         if len(region) == 3:
             region[2][offset:offset+len(data)] = data
         elif len(region) == 4:
-            region[3](offset, data)
+            if inspect.isgeneratorfunction(region[3]):
+                yield from region[3](offset, data)
+            else:
+                region[3](offset, data)
 
     def make_port(self):
         port = RootPort()
@@ -3258,7 +3272,7 @@ class RootComplex(Switch):
                 return
 
             # perform read
-            data = self.read_region(addr, tlp.length*4)
+            data = yield from self.read_region(addr, tlp.length*4)
 
             # prepare completion TLP(s)
             m = 0
@@ -3327,7 +3341,7 @@ class RootComplex(Switch):
                         start_offset = offset
                 else:
                     if start_offset is not None and offset != start_offset:
-                        self.write_region(addr+start_offset, data[start_offset:offset])
+                        yield from self.write_region(addr+start_offset, data[start_offset:offset])
                     start_offset = None
 
                 offset += 1
@@ -3348,13 +3362,13 @@ class RootComplex(Switch):
                             start_offset = offset
                     else:
                         if start_offset is not None and offset != start_offset:
-                            self.write_region(addr+start_offset, data[start_offset:offset])
+                            yield from self.write_region(addr+start_offset, data[start_offset:offset])
                         start_offset = None
 
                     offset += 1
 
             if start_offset is not None and offset != start_offset:
-                self.write_region(addr+start_offset, data[start_offset:offset])
+                yield from self.write_region(addr+start_offset, data[start_offset:offset])
 
             # memory writes are posted, so don't send a completion
 
@@ -3603,17 +3617,22 @@ class RootComplex(Switch):
         assert number in self.msi_signals
         for sig in self.msi_signals[number]:
             sig.next = not sig
+        for cb in self.msi_callbacks[number]:
+            if inspect.isgeneratorfunction(cb):
+                yield cb(), None
+            else:
+                cb()
 
     def configure_msi(self, dev):
         if self.msi_addr is None:
             self.msi_addr, _ = self.alloc_region(4, self.msi_region_read, self.msi_region_write)
         if not self.tree:
-            return None
+            return False
         ti = self.tree.find_dev(dev)
         if not ti:
-            return None
+            return False
         if ti.get_capability_offset(MSI_CAP_ID) is None:
-            return None
+            return False
 
         msg_ctrl = yield from self.capability_read(dev, MSI_CAP_ID, 0, 4)
         msg_ctrl = struct.unpack('<L', msg_ctrl)[0]
@@ -3643,9 +3662,11 @@ class RootComplex(Switch):
         ti.msi_data = self.msi_msg_limit
 
         for k in range(32):
-            self.msi_signals[self.msi_msg_limit+k] = [Signal(bool(0))]
+            self.msi_signals[self.msi_msg_limit] = [Signal(bool(0))]
+            self.msi_callbacks[self.msi_msg_limit] = []
+            self.msi_msg_limit += 1
 
-        self.msi_msg_limit += 32
+        return True
 
     def msi_get_signal(self, dev, number=0):
         if not self.tree:
@@ -3670,6 +3691,18 @@ class RootComplex(Switch):
         if ti.msi_data+number not in self.msi_signals:
             return
         self.msi_signals[ti.msi_data+number].append(sig)
+
+    def msi_register_callback(self, dev, callback, number=0):
+        if not self.tree:
+            return
+        ti = self.tree.find_dev(dev)
+        if not ti:
+            return
+        if ti.msi_data is None:
+            return
+        if ti.msi_data+number not in self.msi_callbacks:
+            return
+        self.msi_callbacks[ti.msi_data+number].append(callback)
 
     def enumerate_segment(self, tree, bus, timeout=1000, enable_bus_mastering=False, configure_msi=False):
         sec_bus = bus+1

@@ -403,7 +403,7 @@ def bench():
             axil_b_master_inst.init_write(k*256, b'\x11\x22\x33\x44')
             axil_b_master_inst.init_read(k*256, 4)
 
-        yield wait()
+        yield wait_normal()
 
         for k in range(10):
             axil_a_master_inst.get_read_data()

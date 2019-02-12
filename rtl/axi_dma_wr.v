@@ -494,7 +494,7 @@ always @* begin
 
                     if (AXIS_KEEP_ENABLE) begin
                         cycle_size = AXIS_KEEP_WIDTH_INT;
-                        for (i = AXIS_KEEP_WIDTH_INT; i >= 0; i = i - 1) begin
+                        for (i = AXIS_KEEP_WIDTH_INT-1; i >= 0; i = i - 1) begin
                             if (!shift_axis_tkeep[i] && (!first_cycle_reg || i >= offset_reg)) begin
                                 cycle_size = i;
                             end

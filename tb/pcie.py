@@ -2816,6 +2816,8 @@ class Switch(object):
         self.upstream_bridge = SwitchBridge()
         self.upstream_bridge.pcie_device_type = 0x5
 
+        self.default_switch_port = SwitchBridge
+
         self.min_dev = 1
         self.endpoints = []
 
@@ -2845,7 +2847,7 @@ class Switch(object):
         return self.append_endpoint(ep)
 
     def make_port(self):
-        port = SwitchBridge()
+        port = self.default_switch_port()
         self.upstream_bridge.downstream_port.connect(port.upstream_port)
         port.pri_bus_num = 0
         port.sec_bus_num = 0
@@ -2957,6 +2959,8 @@ class TreeItem(object):
 class RootComplex(Switch):
     def __init__(self, *args, **kwargs):
         super(RootComplex, self).__init__(*args, **kwargs)
+
+        self.default_switch_port = RootPort
 
         self.min_dev = 1
 
@@ -3110,14 +3114,6 @@ class RootComplex(Switch):
                 yield from region[3](offset, data)
             else:
                 region[3](offset, data)
-
-    def make_port(self):
-        port = RootPort()
-        self.upstream_bridge.downstream_port.connect(port.upstream_port)
-        port.pri_bus_num = 0
-        port.sec_bus_num = 0
-        port.sub_bus_num = 0
-        return self.add_endpoint(port)
 
     def downstream_send(self, tlp):
         # logging

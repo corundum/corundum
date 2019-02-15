@@ -3184,13 +3184,13 @@ class RootComplex(Switch):
                         start_offset = offset
                 else:
                     if start_offset is not None and offset != start_offset:
-                        data[start_offset:offset] = self.read_io_region(addr+start_offset, offset-start_offset)
+                        data[start_offset:offset] = yield from self.read_io_region(addr+start_offset, offset-start_offset)
                     start_offset = None
 
                 offset += 1
 
             if start_offset is not None and offset != start_offset:
-                data[start_offset:offset] = self.read_io_region(addr+start_offset, offset-start_offset)
+                data[start_offset:offset] = yield from self.read_io_region(addr+start_offset, offset-start_offset)
 
             cpl.set_data(data)
             cpl.byte_count = 4
@@ -3234,13 +3234,13 @@ class RootComplex(Switch):
                         start_offset = offset
                 else:
                     if start_offset is not None and offset != start_offset:
-                        self.write_io_region(addr+start_offset, data[start_offset:offset])
+                        yield from self.write_io_region(addr+start_offset, data[start_offset:offset])
                     start_offset = None
 
                 offset += 1
 
             if start_offset is not None and offset != start_offset:
-                self.write_io_region(addr+start_offset, data[start_offset:offset])
+                yield from self.write_io_region(addr+start_offset, data[start_offset:offset])
 
             # logging
             print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
@@ -3466,7 +3466,8 @@ class RootComplex(Switch):
         data = b''
 
         if self.find_region(addr):
-            return self.read_io_region(addr, length)
+            val = yield from self.read_io_region(addr, length)
+            return val
 
         while n < length:
             tlp = TLP()
@@ -3501,7 +3502,8 @@ class RootComplex(Switch):
         n = 0
 
         if self.find_region(addr):
-            return self.write_io_region(addr, data)
+            yield from self.write_io_region(addr, data)
+            return
 
         while n < len(data):
             tlp = TLP()
@@ -3531,7 +3533,8 @@ class RootComplex(Switch):
         data = b''
 
         if self.find_region(addr):
-            return self.read_region(addr, length)
+            val = yield from self.read_region(addr, length)
+            return val
 
         while n < length:
             tlp = TLP()
@@ -3583,7 +3586,8 @@ class RootComplex(Switch):
         n = 0
 
         if self.find_region(addr):
-            return self.write_region(addr, data)
+            yield from self.write_region(addr, data)
+            return
 
         while n < len(data):
             tlp = TLP()

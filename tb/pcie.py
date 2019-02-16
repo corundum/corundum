@@ -2472,7 +2472,7 @@ class Bridge(Function):
                         tlp.fmt_type = TLP_CFG_READ_0
                     elif tlp.fmt_type == TLP_CFG_WRITE_1:
                         tlp.fmt_type = TLP_CFG_WRITE_0
-                yield from self.downstream_send(tlp)
+                yield from self.route_downstream_tlp(tlp, False)
             else:
                 # error
                 pass
@@ -2483,7 +2483,7 @@ class Bridge(Function):
                 # for me
                 yield from self.handle_tlp(tlp)
             elif self.sec_bus_num <= tlp.requester_id.bus <= self.sub_bus_num:
-                yield from self.downstream_send(tlp)
+                yield from self.route_downstream_tlp(tlp, False)
             else:
                 # error
                 pass
@@ -2493,7 +2493,7 @@ class Bridge(Function):
                 # for me
                 yield from self.handle_tlp(tlp)
             elif self.sec_bus_num <= tlp.dest_id.bus <= self.sub_bus_num:
-                yield from self.downstream_send(tlp)
+                yield from self.route_downstream_tlp(tlp, False)
             else:
                 # error
                 pass
@@ -2503,7 +2503,7 @@ class Bridge(Function):
                 # for me
                 yield from self.handle_tlp(tlp)
             elif self.io_base <= tlp.address <= self.io_limit:
-                yield from self.downstream_send(tlp)
+                yield from self.route_downstream_tlp(tlp, False)
             else:
                 # error
                 pass
@@ -2514,7 +2514,7 @@ class Bridge(Function):
                 # for me
                 yield from self.handle_tlp(tlp)
             elif self.mem_base <= tlp.address <= self.mem_limit or self.prefetchable_mem_base <= tlp.address <= self.prefetchable_mem_limit:
-                yield from self.downstream_send(tlp)
+                yield from self.route_downstream_tlp(tlp, False)
             else:
                 # error
                 pass
@@ -2536,6 +2536,9 @@ class Bridge(Function):
         else:
             # logging
             raise Exception("Unknown/invalid packet type")
+
+    def route_downstream_tlp(self, tlp, from_downstream=False):
+        yield from self.downstream_send(tlp)
 
     def downstream_send(self, tlp):
         assert tlp.check()
@@ -2562,7 +2565,7 @@ class Bridge(Function):
                 if self.root and tlp.requester_id.bus == self.pri_bus_num and tlp.requester_id.device == 0:
                     yield from self.upstream_send(tlp)
                 else:
-                    yield from self.downstream_send(tlp)
+                    yield from self.route_downstream_tlp(tlp, True)
             else:
                 yield from self.upstream_send(tlp)
         elif tlp.fmt_type == TLP_MSG_ID or tlp.fmt_type == TLP_MSG_DATA_ID:
@@ -2574,7 +2577,7 @@ class Bridge(Function):
                 if self.root and tlp.dest_id.bus == self.pri_bus_num and tlp.dest_id.device == 0:
                     yield from self.upstream_send(tlp)
                 else:
-                    yield from self.downstream_send(tlp)
+                    yield from self.route_downstream_tlp(tlp, True)
             else:
                 yield from self.upstream_send(tlp)
         elif (tlp.fmt_type == TLP_IO_READ or tlp.fmt_type == TLP_IO_WRITE):
@@ -2583,7 +2586,7 @@ class Bridge(Function):
                 # for me
                 yield from self.handle_tlp(tlp)
             elif self.io_base <= tlp.address <= self.io_limit:
-                yield from self.downstream_send(tlp)
+                yield from self.route_downstream_tlp(tlp, True)
             else:
                 yield from self.upstream_send(tlp)
         elif (tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64 or
@@ -2593,7 +2596,7 @@ class Bridge(Function):
                 # for me
                 yield from self.handle_tlp(tlp)
             elif self.mem_base <= tlp.address <= self.mem_limit or self.prefetchable_mem_base <= tlp.address <= self.prefetchable_mem_limit:
-                yield from self.downstream_send(tlp)
+                yield from self.route_downstream_tlp(tlp, True)
             else:
                 yield from self.upstream_send(tlp)
         elif tlp.fmt_type == TLP_MSG_TO_RC or tlp.fmt_type == TLP_MSG_DATA_TO_RC:
@@ -2625,15 +2628,91 @@ class SwitchUpstreamPort(Bridge):
         self.pcie_device_type = 0x5
 
         self.downstream_port = BusPort(self, self.downstream_recv)
-        self.downstream_tx_handler = self.downstream_port.send
+        self.downstream_tx_handler = None
 
         self.desc = "SwitchUpstreamPort"
 
         self.vendor_id = 0x1234
         self.device_id = 0x0003
 
-    def connect(self, port):
-        self.downstream_port.connect(port)
+    def route_downstream_tlp(self, tlp, from_downstream=False):
+        assert tlp.check()
+
+        # route downstream packet
+        for p in self.downstream_port.other:
+            dev = p.parent
+            if tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0:
+                # config type 0
+                if tlp.dest_id.device == dev.device_num and tlp.dest_id.function == dev.function_num:
+                    yield from p.ext_recv(TLP(tlp))
+                    return
+            elif tlp.fmt_type == TLP_CFG_READ_1 or tlp.fmt_type == TLP_CFG_WRITE_1:
+                # config type 1
+                if isinstance(dev, Bridge) and dev.sec_bus_num <= tlp.dest_id.bus <= dev.sub_bus_num:
+                    yield from p.ext_recv(TLP(tlp))
+                    return
+            elif (tlp.fmt_type == TLP_CPL or tlp.fmt_type == TLP_CPL_DATA or
+                    tlp.fmt_type == TLP_CPL_LOCKED or tlp.fmt_type == TLP_CPL_LOCKED_DATA):
+                # Completions
+                if tlp.requester_id == dev.get_id():
+                    yield from p.ext_recv(TLP(tlp))
+                    return
+                elif isinstance(dev, Bridge) and dev.sec_bus_num <= tlp.requester_id.bus <= dev.sub_bus_num:
+                    yield from p.ext_recv(TLP(tlp))
+                    return
+            elif tlp.fmt_type == TLP_MSG_ID or tlp.fmt_type == TLP_MSG_DATA_ID:
+                # ID routed message
+                if tlp.dest_id == dev.get_id():
+                    yield from p.ext_recv(TLP(tlp))
+                    return
+                elif isinstance(dev, Bridge) and dev.sec_bus_num <= tlp.requester_id.bus <= dev.sub_bus_num:
+                    yield from p.ext_recv(TLP(tlp))
+                    return
+            elif (tlp.fmt_type == TLP_IO_READ or tlp.fmt_type == TLP_IO_WRITE):
+                # IO read/write
+                if dev.match_bar(tlp.address, True):
+                    yield from p.ext_recv(TLP(tlp))
+                    return
+                elif isinstance(dev, Bridge) and dev.io_base <= tlp.address <= dev.io_limit:
+                    yield from p.ext_recv(TLP(tlp))
+                    return
+            elif (tlp.fmt_type == TLP_MEM_READ or tlp.fmt_type == TLP_MEM_READ_64 or
+                    tlp.fmt_type == TLP_MEM_WRITE or tlp.fmt_type == TLP_MEM_WRITE_64):
+                # Memory read/write
+                if dev.match_bar(tlp.address):
+                    yield from p.ext_recv(TLP(tlp))
+                    return
+                elif isinstance(dev, Bridge) and (dev.mem_base <= tlp.address <= dev.mem_limit or dev.prefetchable_mem_base <= tlp.address <= dev.prefetchable_mem_limit):
+                    yield from p.ext_recv(TLP(tlp))
+                    return
+            elif tlp.fmt_type == TLP_MSG_TO_RC or tlp.fmt_type == TLP_MSG_DATA_TO_RC:
+                # Message to root complex
+                # error
+                pass
+            elif tlp.fmt_type == TLP_MSG_BCAST or tlp.fmt_type == TLP_MSG_DATA_BCAST:
+                # Message broadcast from root complex
+                pass
+            elif tlp.fmt_type == TLP_MSG_LOCAL or tlp.fmt_type == TLP_MSG_DATA_LOCAL:
+                # Message local to receiver
+                # error
+                pass
+            elif tlp.fmt_type == TLP_MSG_GATHER or tlp.fmt_type == TLP_MSG_DATA_GATHER:
+                # Message gather to root complex
+                # error
+                pass
+            else:
+                # logging
+                raise Exception("Unknown/invalid packet type")
+
+        # Unsupported request
+        cpl = TLP()
+        cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
+        # logging
+        print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
+        if from_downstream:
+            yield from self.downstream_send(cpl)
+        else:
+            yield from self.upstream_send(cpl)
 
 
 class SwitchDownstreamPort(Bridge):

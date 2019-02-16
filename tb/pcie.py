@@ -2524,7 +2524,7 @@ class Bridge(Function):
             pass
         elif tlp.fmt_type == TLP_MSG_BCAST or tlp.fmt_type == TLP_MSG_DATA_BCAST:
             # Message broadcast from root complex
-            yield from self.upstream_send(tlp)
+            yield from self.route_downstream_tlp(tlp, False)
         elif tlp.fmt_type == TLP_MSG_LOCAL or tlp.fmt_type == TLP_MSG_DATA_LOCAL:
             # Message local to receiver
             # error
@@ -2639,6 +2639,7 @@ class SwitchUpstreamPort(Bridge):
         assert tlp.check()
 
         # route downstream packet
+        ok = False
         for p in self.downstream_port.other:
             dev = p.parent
             if tlp.fmt_type == TLP_CFG_READ_0 or tlp.fmt_type == TLP_CFG_WRITE_0:
@@ -2691,7 +2692,8 @@ class SwitchUpstreamPort(Bridge):
                 pass
             elif tlp.fmt_type == TLP_MSG_BCAST or tlp.fmt_type == TLP_MSG_DATA_BCAST:
                 # Message broadcast from root complex
-                pass
+                yield from p.ext_recv(TLP(tlp))
+                ok = True
             elif tlp.fmt_type == TLP_MSG_LOCAL or tlp.fmt_type == TLP_MSG_DATA_LOCAL:
                 # Message local to receiver
                 # error
@@ -2704,15 +2706,16 @@ class SwitchUpstreamPort(Bridge):
                 # logging
                 raise Exception("Unknown/invalid packet type")
 
-        # Unsupported request
-        cpl = TLP()
-        cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
-        # logging
-        print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
-        if from_downstream:
-            yield from self.downstream_send(cpl)
-        else:
-            yield from self.upstream_send(cpl)
+        if not ok:
+            # Unsupported request
+            cpl = TLP()
+            cpl.set_ur_completion(tlp, (self.bus_num, self.device_num, 0))
+            # logging
+            print("[%s] UR Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
+            if from_downstream:
+                yield from self.route_downstream_tlp(cpl, False)
+            else:
+                yield from self.upstream_send(cpl)
 
 
 class SwitchDownstreamPort(Bridge):

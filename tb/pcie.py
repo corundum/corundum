@@ -2355,7 +2355,7 @@ class Bridge(Function):
         self.upstream_port = Port(self, self.upstream_recv)
         self.upstream_tx_handler = self.upstream_port.send
 
-        self.downstream_port = BusPort(self, self.downstream_recv)
+        self.downstream_port = Port(self, self.downstream_recv)
         self.downstream_tx_handler = self.downstream_port.send
 
     """
@@ -2618,7 +2618,40 @@ class Bridge(Function):
             yield from self.downstream_recv(tlp)
 
 
-class HostBridge(Bridge):
+class SwitchUpstreamPort(Bridge):
+    def __init__(self, *args, **kwargs):
+        super(SwitchUpstreamPort, self).__init__(*args, **kwargs)
+
+        self.pcie_device_type = 0x5
+
+        self.downstream_port = BusPort(self, self.downstream_recv)
+        self.downstream_tx_handler = self.downstream_port.send
+
+        self.desc = "SwitchUpstreamPort"
+
+        self.vendor_id = 0x1234
+        self.device_id = 0x0003
+
+    def connect(self, port):
+        self.downstream_port.connect(port)
+
+
+class SwitchDownstreamPort(Bridge):
+    def __init__(self, *args, **kwargs):
+        super(SwitchDownstreamPort, self).__init__(*args, **kwargs)
+
+        self.pcie_device_type = 0x6
+
+        self.desc = "SwitchDownstreamPort"
+
+        self.vendor_id = 0x1234
+        self.device_id = 0x0004
+
+    def connect(self, port):
+        self.downstream_port.connect(port)
+
+
+class HostBridge(SwitchUpstreamPort):
     def __init__(self, *args, **kwargs):
         super(HostBridge, self).__init__(*args, **kwargs)
 
@@ -2632,7 +2665,7 @@ class HostBridge(Bridge):
         self.sub_bus_num = 255
 
 
-class RootPort(Bridge):
+class RootPort(SwitchDownstreamPort):
     def __init__(self, *args, **kwargs):
         super(RootPort, self).__init__(*args, **kwargs)
 
@@ -2642,21 +2675,6 @@ class RootPort(Bridge):
 
         self.vendor_id = 0x1234
         self.device_id = 0x0002
-
-    def connect(self, port):
-        self.downstream_port.connect(port)
-
-
-class SwitchBridge(Bridge):
-    def __init__(self, *args, **kwargs):
-        super(SwitchBridge, self).__init__(*args, **kwargs)
-
-        self.pcie_device_type = 0x6
-
-        self.desc = "SwitchBridge"
-
-        self.vendor_id = 0x1234
-        self.device_id = 0x0003
 
     def connect(self, port):
         self.downstream_port.connect(port)
@@ -2813,10 +2831,9 @@ class Switch(object):
     """Switch object, container for switch bridges and associated interconnect"""
     def __init__(self, *args, **kwargs):
         super(Switch, self).__init__(*args, **kwargs)
-        self.upstream_bridge = SwitchBridge()
-        self.upstream_bridge.pcie_device_type = 0x5
+        self.upstream_bridge = SwitchUpstreamPort()
 
-        self.default_switch_port = SwitchBridge
+        self.default_switch_port = SwitchDownstreamPort
 
         self.min_dev = 1
         self.endpoints = []

@@ -2499,7 +2499,7 @@ class Bridge(Function):
                 pass
         elif (tlp.fmt_type == TLP_IO_READ or tlp.fmt_type == TLP_IO_WRITE):
             # IO read/write
-            if self.match_bar(tlp.address):
+            if self.match_bar(tlp.address, io=True):
                 # for me
                 yield from self.handle_tlp(tlp)
             elif self.io_base <= tlp.address <= self.io_limit:
@@ -2579,7 +2579,7 @@ class Bridge(Function):
                 yield from self.upstream_send(tlp)
         elif (tlp.fmt_type == TLP_IO_READ or tlp.fmt_type == TLP_IO_WRITE):
             # IO read/write
-            if self.match_bar(tlp.address):
+            if self.match_bar(tlp.address, io=True):
                 # for me
                 yield from self.handle_tlp(tlp)
             elif self.io_base <= tlp.address <= self.io_limit:

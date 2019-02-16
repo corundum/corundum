@@ -2613,9 +2613,9 @@ class Bridge(Function):
         else:
             raise Exception("Unknown/invalid packet type")
 
-        def send(self, tlp):
-            # route local transmissions as if they came in via downstream port
-            yield from self.downstream_recv(tlp)
+    def send(self, tlp):
+        # route local transmissions as if they came in via downstream port
+        yield from self.downstream_recv(tlp)
 
 
 class SwitchUpstreamPort(Bridge):

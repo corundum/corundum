@@ -35,45 +35,60 @@ module axi_ram_rd_if #
     parameter ADDR_WIDTH = 16,  // width of address bus in bits
     parameter STRB_WIDTH = (DATA_WIDTH/8),
     parameter ID_WIDTH = 8,
+    parameter ARUSER_ENABLE = 0,
+    parameter ARUSER_WIDTH = 1,
+    parameter RUSER_ENABLE = 0,
+    parameter RUSER_WIDTH = 1,
     parameter PIPELINE_OUTPUT = 0
 )
 (
-    input  wire                   clk,
-    input  wire                   rst,
+    input  wire                     clk,
+    input  wire                     rst,
 
     /*
      * AXI slave interface
      */
-    input  wire [ID_WIDTH-1:0]    s_axi_arid,
-    input  wire [ADDR_WIDTH-1:0]  s_axi_araddr,
-    input  wire [7:0]             s_axi_arlen,
-    input  wire [2:0]             s_axi_arsize,
-    input  wire [1:0]             s_axi_arburst,
-    input  wire                   s_axi_arlock,
-    input  wire [3:0]             s_axi_arcache,
-    input  wire [2:0]             s_axi_arprot,
-    input  wire                   s_axi_arvalid,
-    output wire                   s_axi_arready,
-    output wire [ID_WIDTH-1:0]    s_axi_rid,
-    output wire [DATA_WIDTH-1:0]  s_axi_rdata,
-    output wire [1:0]             s_axi_rresp,
-    output wire                   s_axi_rlast,
-    output wire                   s_axi_rvalid,
-    input  wire                   s_axi_rready,
+    input  wire [ID_WIDTH-1:0]      s_axi_arid,
+    input  wire [ADDR_WIDTH-1:0]    s_axi_araddr,
+    input  wire [7:0]               s_axi_arlen,
+    input  wire [2:0]               s_axi_arsize,
+    input  wire [1:0]               s_axi_arburst,
+    input  wire                     s_axi_arlock,
+    input  wire [3:0]               s_axi_arcache,
+    input  wire [2:0]               s_axi_arprot,
+    input  wire [3:0]               s_axi_arqos,
+    input  wire [3:0]               s_axi_arregion,
+    input  wire [ARUSER_WIDTH-1:0]  s_axi_aruser,
+    input  wire                     s_axi_arvalid,
+    output wire                     s_axi_arready,
+    output wire [ID_WIDTH-1:0]      s_axi_rid,
+    output wire [DATA_WIDTH-1:0]    s_axi_rdata,
+    output wire [1:0]               s_axi_rresp,
+    output wire                     s_axi_rlast,
+    output wire [RUSER_WIDTH-1:0]   s_axi_ruser,
+    output wire                     s_axi_rvalid,
+    input  wire                     s_axi_rready,
 
     /*
      * RAM interface
      */
-    output wire [ID_WIDTH-1:0]    ram_rd_cmd_id,
-    output wire [ADDR_WIDTH-1:0]  ram_rd_cmd_addr,
-    output wire                   ram_rd_cmd_en,
-    output wire                   ram_rd_cmd_last,
-    input  wire                   ram_rd_cmd_ready,
-    input  wire [ID_WIDTH-1:0]    ram_rd_resp_id,
-    input  wire [DATA_WIDTH-1:0]  ram_rd_resp_data,
-    input  wire                   ram_rd_resp_last,
-    input  wire                   ram_rd_resp_valid,
-    output wire                   ram_rd_resp_ready
+    output wire [ID_WIDTH-1:0]      ram_rd_cmd_id,
+    output wire [ADDR_WIDTH-1:0]    ram_rd_cmd_addr,
+    output wire                     ram_rd_cmd_lock,
+    output wire [3:0]               ram_rd_cmd_cache,
+    output wire [2:0]               ram_rd_cmd_prot,
+    output wire [3:0]               ram_rd_cmd_qos,
+    output wire [3:0]               ram_rd_cmd_region,
+    output wire [ARUSER_WIDTH-1:0]  ram_rd_cmd_auser,
+    output wire                     ram_rd_cmd_en,
+    output wire                     ram_rd_cmd_last,
+    input  wire                     ram_rd_cmd_ready,
+    input  wire [ID_WIDTH-1:0]      ram_rd_resp_id,
+    input  wire [DATA_WIDTH-1:0]    ram_rd_resp_data,
+    input  wire                     ram_rd_resp_last,
+    input  wire [RUSER_WIDTH-1:0]   ram_rd_resp_user,
+    input  wire                     ram_rd_resp_valid,
+    output wire                     ram_rd_resp_ready
 );
 
 parameter VALID_ADDR_WIDTH = ADDR_WIDTH - $clog2(STRB_WIDTH);
@@ -101,6 +116,12 @@ reg [0:0] state_reg = STATE_IDLE, state_next;
 
 reg [ID_WIDTH-1:0] read_id_reg = {ID_WIDTH{1'b0}}, read_id_next;
 reg [ADDR_WIDTH-1:0] read_addr_reg = {ADDR_WIDTH{1'b0}}, read_addr_next;
+reg read_lock_reg = 1'b0, read_lock_next;
+reg [3:0] read_cache_reg = 4'd0, read_cache_next;
+reg [2:0] read_prot_reg = 3'd0, read_prot_next;
+reg [3:0] read_qos_reg = 4'd0, read_qos_next;
+reg [3:0] read_region_reg = 4'd0, read_region_next;
+reg [ARUSER_WIDTH-1:0] read_aruser_reg = {ARUSER_WIDTH{1'b0}}, read_aruser_next;
 reg read_addr_valid_reg = 1'b0, read_addr_valid_next;
 reg read_addr_ready;
 reg read_last_reg = 1'b0, read_last_next;
@@ -112,6 +133,7 @@ reg s_axi_arready_reg = 1'b0, s_axi_arready_next;
 reg [ID_WIDTH-1:0] s_axi_rid_pipe_reg = {ID_WIDTH{1'b0}};
 reg [DATA_WIDTH-1:0] s_axi_rdata_pipe_reg = {DATA_WIDTH{1'b0}};
 reg s_axi_rlast_pipe_reg = 1'b0;
+reg [RUSER_WIDTH-1:0] s_axi_ruser_pipe_reg = {RUSER_WIDTH{1'b0}};
 reg s_axi_rvalid_pipe_reg = 1'b0;
 
 assign s_axi_arready = s_axi_arready_reg;
@@ -119,10 +141,17 @@ assign s_axi_rid = PIPELINE_OUTPUT ? s_axi_rid_pipe_reg : ram_rd_resp_id;
 assign s_axi_rdata = PIPELINE_OUTPUT ? s_axi_rdata_pipe_reg : ram_rd_resp_data;
 assign s_axi_rresp = 2'b00;
 assign s_axi_rlast = PIPELINE_OUTPUT ? s_axi_rlast_pipe_reg : ram_rd_resp_last;
+assign s_axi_ruser = PIPELINE_OUTPUT ? s_axi_ruser_pipe_reg : ram_rd_resp_user;
 assign s_axi_rvalid = PIPELINE_OUTPUT ? s_axi_rvalid_pipe_reg : ram_rd_resp_valid;
 
 assign ram_rd_cmd_id = read_id_reg;
 assign ram_rd_cmd_addr = read_addr_reg;
+assign ram_rd_cmd_lock = read_lock_next;
+assign ram_rd_cmd_cache = read_cache_next;
+assign ram_rd_cmd_prot = read_prot_next;
+assign ram_rd_cmd_qos = read_qos_next;
+assign ram_rd_cmd_region = read_region_next;
+assign ram_rd_cmd_auser = ARUSER_ENABLE ? read_aruser_next : {ARUSER_WIDTH{1'b0}};
 assign ram_rd_cmd_en = read_addr_valid_reg;
 assign ram_rd_cmd_last = read_last_reg;
 
@@ -135,6 +164,12 @@ always @* begin
 
     read_id_next = read_id_reg;
     read_addr_next = read_addr_reg;
+    read_lock_next = read_lock_reg;
+    read_cache_next = read_cache_reg;
+    read_prot_next = read_prot_reg;
+    read_qos_next = read_qos_reg;
+    read_region_next = read_region_reg;
+    read_aruser_next = read_aruser_reg;
     read_addr_valid_next = read_addr_valid_reg;
     read_last_next = read_last_reg;
     read_count_next = read_count_reg;
@@ -155,6 +190,12 @@ always @* begin
             if (s_axi_arready & s_axi_arvalid) begin
                 read_id_next = s_axi_arid;
                 read_addr_next = s_axi_araddr;
+                read_lock_next = s_axi_arlock;
+                read_cache_next = s_axi_arcache;
+                read_prot_next = s_axi_arprot;
+                read_qos_next = s_axi_arqos;
+                read_region_next = s_axi_arregion;
+                read_aruser_next = s_axi_aruser;
                 read_count_next = s_axi_arlen;
                 read_size_next = s_axi_arsize < $clog2(STRB_WIDTH) ? s_axi_arsize : $clog2(STRB_WIDTH);
                 read_burst_next = s_axi_arburst;
@@ -211,6 +252,12 @@ always @(posedge clk) begin
 
     read_id_reg <= read_id_next;
     read_addr_reg <= read_addr_next;
+    read_lock_reg <= read_lock_next;
+    read_cache_reg <= read_cache_next;
+    read_prot_reg <= read_prot_next;
+    read_qos_reg <= read_qos_next;
+    read_region_reg <= read_region_next;
+    read_aruser_reg <= read_aruser_next;
     read_last_reg <= read_last_next;
     read_count_reg <= read_count_next;
     read_size_reg <= read_size_next;
@@ -220,6 +267,7 @@ always @(posedge clk) begin
         s_axi_rid_pipe_reg <= ram_rd_resp_id;
         s_axi_rdata_pipe_reg <= ram_rd_resp_data;
         s_axi_rlast_pipe_reg <= ram_rd_resp_last;
+        s_axi_ruser_pipe_reg <= ram_rd_resp_user;
     end
 end
 

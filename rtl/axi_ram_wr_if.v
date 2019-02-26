@@ -34,44 +34,63 @@ module axi_ram_wr_if #
     parameter DATA_WIDTH = 32,  // width of data bus in bits
     parameter ADDR_WIDTH = 16,  // width of address bus in bits
     parameter STRB_WIDTH = (DATA_WIDTH/8),
-    parameter ID_WIDTH = 8
+    parameter ID_WIDTH = 8,
+    parameter AWUSER_ENABLE = 0,
+    parameter AWUSER_WIDTH = 1,
+    parameter WUSER_ENABLE = 0,
+    parameter WUSER_WIDTH = 1,
+    parameter BUSER_ENABLE = 0,
+    parameter BUSER_WIDTH = 1
 )
 (
-    input  wire                   clk,
-    input  wire                   rst,
+    input  wire                     clk,
+    input  wire                     rst,
 
     /*
      * AXI slave interface
      */
-    input  wire [ID_WIDTH-1:0]    s_axi_awid,
-    input  wire [ADDR_WIDTH-1:0]  s_axi_awaddr,
-    input  wire [7:0]             s_axi_awlen,
-    input  wire [2:0]             s_axi_awsize,
-    input  wire [1:0]             s_axi_awburst,
-    input  wire                   s_axi_awlock,
-    input  wire [3:0]             s_axi_awcache,
-    input  wire [2:0]             s_axi_awprot,
-    input  wire                   s_axi_awvalid,
-    output wire                   s_axi_awready,
-    input  wire [DATA_WIDTH-1:0]  s_axi_wdata,
-    input  wire [STRB_WIDTH-1:0]  s_axi_wstrb,
-    input  wire                   s_axi_wlast,
-    input  wire                   s_axi_wvalid,
-    output wire                   s_axi_wready,
-    output wire [ID_WIDTH-1:0]    s_axi_bid,
-    output wire [1:0]             s_axi_bresp,
-    output wire                   s_axi_bvalid,
-    input  wire                   s_axi_bready,
+    input  wire [ID_WIDTH-1:0]      s_axi_awid,
+    input  wire [ADDR_WIDTH-1:0]    s_axi_awaddr,
+    input  wire [7:0]               s_axi_awlen,
+    input  wire [2:0]               s_axi_awsize,
+    input  wire [1:0]               s_axi_awburst,
+    input  wire                     s_axi_awlock,
+    input  wire [3:0]               s_axi_awcache,
+    input  wire [2:0]               s_axi_awprot,
+    input  wire [3:0]               s_axi_awqos,
+    input  wire [3:0]               s_axi_awregion,
+    input  wire [AWUSER_WIDTH-1:0]  s_axi_awuser,
+    input  wire                     s_axi_awvalid,
+    output wire                     s_axi_awready,
+    input  wire [DATA_WIDTH-1:0]    s_axi_wdata,
+    input  wire [STRB_WIDTH-1:0]    s_axi_wstrb,
+    input  wire                     s_axi_wlast,
+    input  wire [WUSER_WIDTH-1:0]   s_axi_wuser,
+    input  wire                     s_axi_wvalid,
+    output wire                     s_axi_wready,
+    output wire [ID_WIDTH-1:0]      s_axi_bid,
+    output wire [1:0]               s_axi_bresp,
+    output wire [BUSER_WIDTH-1:0]   s_axi_buser,
+    output wire                     s_axi_bvalid,
+    input  wire                     s_axi_bready,
 
     /*
      * RAM interface
      */
-    output wire [ADDR_WIDTH-1:0]  ram_wr_cmd_addr,
-    output wire [DATA_WIDTH-1:0]  ram_wr_cmd_data,
-    output wire [STRB_WIDTH-1:0]  ram_wr_cmd_strb,
-    output wire                   ram_wr_cmd_en,
-    output wire                   ram_wr_cmd_last,
-    input  wire                   ram_wr_cmd_ready
+    output wire [ID_WIDTH-1:0]      ram_wr_cmd_id,
+    output wire [ADDR_WIDTH-1:0]    ram_wr_cmd_addr,
+    output wire                     ram_wr_cmd_lock,
+    output wire [3:0]               ram_wr_cmd_cache,
+    output wire [2:0]               ram_wr_cmd_prot,
+    output wire [3:0]               ram_wr_cmd_qos,
+    output wire [3:0]               ram_wr_cmd_region,
+    output wire [AWUSER_WIDTH-1:0]  ram_wr_cmd_auser,
+    output wire [DATA_WIDTH-1:0]    ram_wr_cmd_data,
+    output wire [STRB_WIDTH-1:0]    ram_wr_cmd_strb,
+    output wire [WUSER_WIDTH-1:0]   ram_wr_cmd_user,
+    output wire                     ram_wr_cmd_en,
+    output wire                     ram_wr_cmd_last,
+    input  wire                     ram_wr_cmd_ready
 );
 
 parameter VALID_ADDR_WIDTH = ADDR_WIDTH - $clog2(STRB_WIDTH);
@@ -99,6 +118,12 @@ reg [0:0] state_reg = STATE_IDLE, state_next;
 
 reg [ID_WIDTH-1:0] write_id_reg = {ID_WIDTH{1'b0}}, write_id_next;
 reg [ADDR_WIDTH-1:0] write_addr_reg = {ADDR_WIDTH{1'b0}}, write_addr_next;
+reg write_lock_reg = 1'b0, write_lock_next;
+reg [3:0] write_cache_reg = 4'd0, write_cache_next;
+reg [2:0] write_prot_reg = 3'd0, write_prot_next;
+reg [3:0] write_qos_reg = 4'd0, write_qos_next;
+reg [3:0] write_region_reg = 4'd0, write_region_next;
+reg [AWUSER_WIDTH-1:0] write_awuser_reg = {AWUSER_WIDTH{1'b0}}, write_awuser_next;
 reg write_addr_valid_reg = 1'b0, write_addr_valid_next;
 reg write_addr_ready;
 reg write_last_reg = 1'b0, write_last_next;
@@ -116,9 +141,17 @@ assign s_axi_bid = s_axi_bid_reg;
 assign s_axi_bresp = 2'b00;
 assign s_axi_bvalid = s_axi_bvalid_reg;
 
+assign ram_wr_cmd_id = write_id_reg;
 assign ram_wr_cmd_addr = write_addr_reg;
+assign ram_wr_cmd_lock = write_lock_next;
+assign ram_wr_cmd_cache = write_cache_next;
+assign ram_wr_cmd_prot = write_prot_next;
+assign ram_wr_cmd_qos = write_qos_next;
+assign ram_wr_cmd_region = write_region_next;
+assign ram_wr_cmd_auser = AWUSER_ENABLE ? write_awuser_next : {AWUSER_WIDTH{1'b0}};
 assign ram_wr_cmd_data = s_axi_wdata;
 assign ram_wr_cmd_strb = s_axi_wstrb;
+assign ram_wr_cmd_user = WUSER_ENABLE ? s_axi_wuser : {WUSER_WIDTH{1'b0}};
 assign ram_wr_cmd_en = write_addr_valid_reg && s_axi_wvalid;
 assign ram_wr_cmd_last = write_last_reg;
 
@@ -129,6 +162,12 @@ always @* begin
 
     write_id_next = write_id_reg;
     write_addr_next = write_addr_reg;
+    write_lock_next = write_lock_reg;
+    write_cache_next = write_cache_reg;
+    write_prot_next = write_prot_reg;
+    write_qos_next = write_qos_reg;
+    write_region_next = write_region_reg;
+    write_awuser_next = write_awuser_reg;
     write_addr_valid_next = write_addr_valid_reg;
     write_last_next = write_last_reg;
     write_count_next = write_count_reg;
@@ -151,6 +190,12 @@ always @* begin
             if (s_axi_awready & s_axi_awvalid) begin
                 write_id_next = s_axi_awid;
                 write_addr_next = s_axi_awaddr;
+                write_lock_next = s_axi_awlock;
+                write_cache_next = s_axi_awcache;
+                write_prot_next = s_axi_awprot;
+                write_qos_next = s_axi_awqos;
+                write_region_next = s_axi_awregion;
+                write_awuser_next = s_axi_awuser;
                 write_count_next = s_axi_awlen;
                 write_size_next = s_axi_awsize < $clog2(STRB_WIDTH) ? s_axi_awsize : $clog2(STRB_WIDTH);
                 write_burst_next = s_axi_awburst;
@@ -208,6 +253,12 @@ always @(posedge clk) begin
 
     write_id_reg <= write_id_next;
     write_addr_reg <= write_addr_next;
+    write_lock_reg <= write_lock_next;
+    write_cache_reg <= write_cache_next;
+    write_prot_reg <= write_prot_next;
+    write_qos_reg <= write_qos_next;
+    write_region_reg <= write_region_next;
+    write_awuser_reg <= write_awuser_next;
     write_last_reg <= write_last_next;
     write_count_reg <= write_count_next;
     write_size_reg <= write_size_next;

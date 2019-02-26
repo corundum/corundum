@@ -250,9 +250,9 @@ always @(posedge clk) begin
         m_axis_desc_addr_reg <= temp_m_axis_desc_addr_reg;
         m_axis_desc_len_reg <= temp_m_axis_desc_len_reg;
         m_axis_desc_tag_reg <= temp_m_axis_desc_tag_reg;
-        m_axis_desc_id_reg <= temp_m_axis_desc_id_int;
-        m_axis_desc_dest_reg <= temp_m_axis_desc_dest_int;
-        m_axis_desc_user_reg <= temp_m_axis_desc_user_int;
+        m_axis_desc_id_reg <= temp_m_axis_desc_id_reg;
+        m_axis_desc_dest_reg <= temp_m_axis_desc_dest_reg;
+        m_axis_desc_user_reg <= temp_m_axis_desc_user_reg;
     end
 
     if (store_axis_int_to_temp) begin

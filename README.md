@@ -27,6 +27,76 @@ Supports INCR burst types and narrow bursts.
 AXI width adapter module with parametrizable data and address interface widths.
 Supports INCR burst types and narrow bursts.
 
+### axi_cdma module
+
+AXI to AXI DMA engine with parametrizable data and address interface widths.
+Generates full-width INCR bursts only, with parametrizable maximum burst
+length.  Supports unaligned transfers, which can be disabled via parameter
+to save on resource consumption.
+
+### axi_cdma_desc_mux module
+
+Descriptor multiplexer/demultiplexer for AXI CDMA module.  Enables sharing the
+AXI CDMA module between multiple request sources, interleaving requests and
+distributing responses.
+
+### axi_crossbar module
+
+AXI nonblocking crossbar interconnect with parametrizable data and address
+interface widths and master and slave interface counts.  Supports all burst
+types.  Fully nonblocking with completely separate read and write paths; ID
+based transaction ordering protection logic; and per-port address decode,
+admission control, and decode error handling.  Wrapper for axi_crossbar_rd and
+axi_crossbar_wr.  
+
+### axi_crossbar_addr module
+
+Address decode and admission control module for AXI nonblocking crossbar interconnect.
+
+### axi_crossbar_rd module
+
+AXI nonblocking crossbar interconnect with parametrizable data and address
+interface widths and master and slave interface counts.  Read interface only.
+Supports all burst types.  Fully nonblocking with completely separate read and
+write paths; ID based transaction ordering protection logic; and per-port
+address decode, admission control, and decode error handling.
+
+### axi_crossbar_wr module
+
+AXI nonblocking crossbar interconnect with parametrizable data and address
+interface widths and master and slave interface counts.  Write interface only.
+Supports all burst types.  Fully nonblocking with completely separate read and
+write paths; ID based transaction ordering protection logic; and per-port
+address decode, admission control, and decode error handling.
+
+### axi_dma module
+
+AXI to AXI stream DMA engine with parametrizable data and address interface
+widths.  Generates full-width INCR bursts only, with parametrizable maximum
+burst length.  Supportts unaligned transfers, which can be disabled via
+parameter to save on resource consumption.  Wrapper for axi_dma_rd and
+axi_dma_wr.
+
+### axi_dma_desc_mux module
+
+Descriptor multiplexer/demultiplexer for AXI DMA module.  Enables sharing the
+AXI DMA module between multiple request sources, interleaving requests and
+distributing responses.
+
+### axi_dma_rd module
+
+AXI to AXI stream DMA engine with parametrizable data and address interface
+widths.  Generates full-width INCR bursts only, with parametrizable maximum
+burst length.  Supportts unaligned transfers, which can be disabled via
+parameter to save on resource consumption.
+
+### axi_dma_wr module
+
+AXI stream to AXI DMA engine with parametrizable data and address interface
+widths.  Generates full-width INCR bursts only, with parametrizable maximum
+burst length.  Supportts unaligned transfers, which can be disabled via
+parameter to save on resource consumption.
+
 ### axi_fifo module
 
 AXI FIFO with parametrizable data and address interface widths.  Supports all
@@ -51,8 +121,8 @@ or the current burst completely fills the write data FIFO.
 ### axi_interconnect module
 
 AXI shared interconnect with parametrizable data and address interface
-widths.  Supports all burst types.  Small in area, but does not support
-concurrent operations.
+widths and master and slave interface counts.  Supports all burst types.
+Small in area, but does not support concurrent operations.
 
 ### axi_ram module
 
@@ -98,7 +168,8 @@ widths.
 ### axil_interconnect module
 
 AXI lite shared interconnect with parametrizable data and address interface
-widths.  Small in area, but does not support concurrent operations.
+widths and master and slave interface counts.  Small in area, but does not
+support concurrent operations.
 
 ### axil_ram module
 
@@ -192,6 +263,16 @@ registers can be individually bypassed.
     rtl/axi_adapter.v               : AXI lite width converter
     rtl/axi_adapter_rd.v            : AXI lite width converter (read)
     rtl/axi_adapter_wr.v            : AXI lite width converter (write)
+    rtl/axi_cdma.v                  : AXI central DMA engine
+    rtl/axi_cdma_desc_mux.v         : AXI CDMA descriptor mux
+    rtl/axi_crossbar.v              : AXI nonblocking crossbar interconnect
+    rtl/axi_crossbar_addr.v         : AXI crossbar address module
+    rtl/axi_crossbar_rd.v           : AXI crossbar read module
+    rtl/axi_crossbar_wr.v           : AXI crossbar write module
+    rtl/axi_dma.v                   : AXI DMA engine
+    rtl/axi_dma_desc_mux.v          : AXI DMA descriptor mux
+    rtl/axi_dma_rd.v                : AXI DMA engine (read)
+    rtl/axi_dma_wr.v                : AXI DMA engine (write)
     rtl/axi_fifo.v                  : AXI FIFO
     rtl/axi_fifo_rd.v               : AXI FIFO (read)
     rtl/axi_fifo_wr.v               : AXI FIFO (write)

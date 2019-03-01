@@ -3117,6 +3117,7 @@ class RootComplex(Switch):
         self.max_payload_size = 0
         self.max_read_request_size = 2
         self.read_completion_boundary = 128
+        self.extended_tag_field_enable = True
 
         self.region_base = 0
         self.region_limit = self.region_base
@@ -4020,6 +4021,20 @@ class RootComplex(Switch):
 
                 # walk extended capabilities
                 # TODO
+
+                # set max payload size, max read request size, and extended tag enable
+                val = yield from self.capability_read(PcieId(bus, d, f), PCIE_CAP_ID, 4, 4)
+                dev_cap = struct.unpack('<L', val)[0]
+                val = yield from self.capability_read(PcieId(bus, d, f), PCIE_CAP_ID, 8, 4)
+                dev_ctrl_sta = struct.unpack('<L', val)[0]
+
+                max_payload = min(0x5, min(self.max_payload_size, dev_cap & 7))
+                ext_tag = bool(self.extended_tag_field_enable and (dev_cap & (1 << 5)))
+                max_read_req = min(0x5, self.max_read_request_size)
+
+                new_dev_ctrl = dev_ctrl_sta & 0x00008e1f | (max_payload << 5) | (ext_tag << 8) | (max_read_req << 12)
+
+                yield from self.capability_write(PcieId(bus, d, f), PCIE_CAP_ID, 8, struct.pack('<L', new_dev_ctrl))
 
                 if enable_bus_mastering:
                     # enable bus mastering

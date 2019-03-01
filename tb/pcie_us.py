@@ -650,10 +650,10 @@ class UltrascalePCIeFunction(Endpoint, MSICapability, MSIXCapability):
         self.msi_64bit_address_capable = 1
         self.msi_per_vector_mask_capable = 0
 
-        self.register_capability(PCIE_CAP_ID, offset=48)
-        self.register_capability(MSIX_CAP_ID, offset=44)
-        self.register_capability(PM_CAP_ID, offset=32)
-        self.register_capability(MSI_CAP_ID, offset=36)
+        self.register_capability(PM_CAP_ID, offset=0x20)
+        self.register_capability(MSI_CAP_ID, offset=0x24)
+        self.register_capability(MSIX_CAP_ID, offset=0x2c)
+        self.register_capability(PCIE_CAP_ID, offset=0x30)
 
 
 class UltrascalePCIe(Device):

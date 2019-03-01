@@ -197,6 +197,134 @@ class PcieId(object):
         return "PcieId(%d, %d, %d)" % (self.bus, self.device, self.function)
 
 
+class PcieCap(object):
+    def __init__(self, cap_id, cap_ver=None, length=None, read=None, write=None, offset=None, next_cap=None):
+        self.cap_id = cap_id
+        self.cap_ver = cap_ver
+        self.length = length
+        self.read = read
+        self.write = write
+        self.offset = offset
+        self.next_cap = next_cap
+
+    def read_register(self, reg):
+        val = self.read(reg)
+        if reg == 0:
+            val = (val & 0xffff0000) | ((self.next_cap & 0xff) << 8) | (self.cap_id & 0xff)
+        return val
+
+    def write_register(self, reg, data, mask):
+        self.write(reg, data, mask)
+
+    def __repr__(self):
+        return "PcieCap(cap_id={:#x}, cap_ver={}, length={}, read={}, write={}, offset={}, next_cap={})".format(self.cap_id, repr(self.cap_ver), repr(self.length), repr(self.read), repr(self.write), repr(self.offset), repr(self.next_cap))
+
+
+class PcieExtCap(PcieCap):
+    def read_register(self, reg):
+        if reg == 0:
+            return ((self.next_cap & 0xfff) << 20) | ((self.cap_ver & 0xf) << 16) | (self.cap_id & 0xffff)
+        return self.read(reg)
+
+
+class PcieCapList(object):
+    def __init__(self):
+        self.cap_type = PcieCap
+        self.list = []
+        self.start = 0x10
+        self.end = 0x3f
+
+    def find_by_id(self, cap_id):
+        for cap in self.list:
+            if cap.cap_id == cap_id:
+                return cap
+        return None
+
+    def find_by_reg(self, reg):
+        for cap in self.list:
+            if cap.offset <= reg < cap.offset+cap.length:
+                return cap
+        return None
+
+    def read_register(self, reg):
+        cap = self.find_by_reg(reg)
+        if cap:
+            return cap.read_register(reg-cap.offset)
+        return 0
+
+    def write_register(self, reg, data, mask):
+        cap = self.find_by_reg(reg)
+        if cap:
+            cap.write_register(reg-cap.offset, data, mask)
+
+    def register(self, cap_id, cap_ver=None, length=None, read=None, write=None, offset=None):
+        if isinstance(cap_id, self.cap_type):
+            new_cap = cap_id
+        else:
+            new_cap = self.find_by_id(cap_id)
+
+            if new_cap:
+                # re-registering cap
+
+                # remove from list
+                self.list.remove(new_cap)
+
+                # update parameters
+                if cap_ver is not None:
+                    new_cap.cap_ver = cap_ver
+                if length:
+                    new_cap.length = length
+                if read:
+                    new_cap.read = read
+                if write:
+                    new_cap.write = write
+                if offset:
+                    new_cap.offset = offset
+
+        if not new_cap:
+            new_cap = self.cap_type(cap_id, cap_ver, length, read, write, offset)
+
+        if not new_cap.length or not new_cap.read or not new_cap.write:
+            raise Exception("Missing required parameter")
+
+        bump_list = []
+
+        if new_cap.offset:
+            for cap in self.list:
+                if cap.offset <= new_cap.offset+new_cap.length-1 and new_cap.offset <= cap.offset+cap.length-1:
+                    bump_list.append(cap)
+            for cap in bump_list:
+                self.list.remove(cap)
+        else:
+            new_cap.offset = self.start
+            for cap in self.list:
+                if cap.offset < new_cap.offset+new_cap.length-1 and new_cap.offset <= cap.offset+cap.length-1:
+                    new_cap.offset = cap.offset+cap.length
+
+        self.list.append(new_cap)
+
+        # sort list by offset
+        self.list.sort(key=lambda x: x.offset)
+
+        # update list next cap pointers
+        for k in range(1, len(self.list)):
+            self.list[k-1].next_cap = self.list[k].offset*4
+            self.list[k].next_cap = 0
+
+        # re-insert bumped caps
+        for cap in bump_list:
+            cap.offset = None
+            self.register(cap)
+
+
+class PcieExtCapList(PcieCapList):
+    def __init__(self):
+        super(PcieExtCapList, self).__init__()
+        self.cap_type = PcieExtCap
+        self.start = 0x40
+        self.end = 0x3ff
+
+
 class TLP(object):
     def __init__(self, tlp=None):
         self.fmt = 0
@@ -1416,10 +1544,8 @@ class Function(PMCapability, PCIECapability):
         self.rx_cpl_sync = [Signal(False)]*256
         self.rx_tlp_handler = {}
 
-        self.capabilities = {}
-        self.last_capability_id = None
-        self.ext_capabilities = {}
-        self.last_ext_capability_id = None
+        self.capabilities = PcieCapList()
+        self.ext_capabilities = PcieExtCapList()
 
         # configuration registers
         self.vendor_id = 0
@@ -1556,131 +1682,26 @@ class Function(PMCapability, PCIECapability):
         elif 256 <= reg < 4096: self.write_extended_capability_register(reg, data, mask)
 
     def read_capability_register(self, reg):
-        for cap in self.capabilities:
-            if self.capabilities[cap][0] <= reg < self.capabilities[cap][0]+self.capabilities[cap][1]:
-                print("read cap %d" % cap)
-                offset = reg-self.capabilities[cap][0]
-                val = self.capabilities[cap][2](offset)
-                if offset == 0:
-                    val = (val & 0xffff0000) | (self.capabilities[cap][4] << 8) | cap
-                return val
-        return 0
+        return self.capabilities.read_register(reg)
 
     def write_capability_register(self, reg, data, mask):
-        for cap in self.capabilities:
-            if self.capabilities[cap][0] <= reg < self.capabilities[cap][0]+self.capabilities[cap][1]:
-                offset = reg-self.capabilities[cap][0]
-                self.capabilities[cap][3](offset, data, mask)
-                return
+        self.capabilities.write_register(reg, data, mask)
 
     def register_capability(self, cap_id, length=None, read=None, write=None, offset=None):
-        if cap_id in self.capabilities:
-            # re-registering, capture and remove entry
-            orig_offset = self.capabilities[cap_id][0]
-            if not offset:
-                offset = self.capabilities[cap_id][0]
-            if not length:
-                length = self.capabilities[cap_id][1]
-            if not read:
-                read = self.capabilities[cap_id][2]
-            if not write:
-                write = self.capabilities[cap_id][3]
-
-            # remove from linked list
-            if self.cap_ptr == orig_offset*4:
-                self.cap_ptr = self.capabilities[cap_id][4]
-            else:
-                for cap in self.capabilities:
-                    if self.capabilities[cap][4] == orig_offset*4:
-                        self.capabilities[cap][4] = self.capabilities[cap_id][4]
-            del self.capabilities[cap_id]
-        elif not length or not read or not write:
-            raise Exception("Missing required parameter")
-
-        cl = sorted([(self.capabilities[x][0], self.capabilities[x][1]) for x in self.capabilities])
-
-        if offset is not None:
-            for a, l in cl:
-                if a <= offset+length-1 and offset <= a+l-1:
-                    raise Exception("Invalid offset")
+        self.capabilities.register(cap_id, 0, length, read, write, offset)
+        if self.capabilities.list:
+            self.cap_ptr = self.capabilities.list[0].offset*4
         else:
-            offset = 0x10
-
-            for a, l in cl:
-                if a <= offset+length-1 and offset <= a+l-1:
-                    offset = a+l
-
-        self.capabilities[cap_id] = [offset, length, read, write, 0]
-
-        # add to linked list
-        if self.last_capability_id is not None:
-            self.capabilities[self.last_capability_id][4] = offset*4
-        else:
-            self.cap_ptr = offset*4
-
-        self.last_capability_id = cap_id
+            self.cap_ptr = 0
 
     def read_extended_capability_register(self, reg):
-        for cap in self.ext_capabilities:
-            if self.ext_capabilities[cap][0] <= reg < self.ext_capabilities[cap][0]+self.ext_capabilities[cap][1]:
-                offset = reg-self.ext_capabilities[cap][0]
-                if offset == 0:
-                    return (self.ext_capabilities[cap][4] << 20) | cap
-                return self.ext_capabilities[cap][2](offset)
-        return 0
+        return self.ext_capabilities.read_register(reg)
 
     def write_extended_capability_register(self, reg, data, mask):
-        for cap in self.ext_capabilities:
-            if self.ext_capabilities[cap][0] <= reg < self.ext_capabilities[cap][0]+self.ext_capabilities[cap][1]:
-                offset = reg-self.ext_capabilities[cap][0]
-                self.ext_capabilities[cap][3](offset, data, mask)
-                return
+        self.ext_capabilities.write_register(reg, data, mask)
 
     def register_extended_capability(self, cap_id, cap_ver, length=None, read=None, write=None, offset=None):
-        if cap_id in self.ext_capabilities:
-            # re-registering, capture and remove entry
-            orig_offset = self.ext_capabilities[cap_id][0]
-            if not offset:
-                offset = self.ext_capabilities[cap_id][0]
-            if not length:
-                length = self.ext_capabilities[cap_id][1]
-            if not read:
-                read = self.ext_capabilities[cap_id][2]
-            if not write:
-                write = self.ext_capabilities[cap_id][3]
-            if not cap_ver:
-                cap_ver = self.ext_capabilities[cap_id][5]
-
-            # remove from linked list
-            for cap in self.ext_capabilities:
-                if self.ext_capabilities[cap][4] == orig_offset*4:
-                    self.ext_capabilities[cap][4] = self.ext_capabilities[cap_id][4]
-            del self.ext_capabilities[cap_id]
-        elif not length or not read or not write:
-            raise Exception("Missing required parameter")
-
-        cl = sorted([(self.ext_capabilities[x][0], self.ext_capabilities[x][1]) for x in self.ext_capabilities])
-
-        if offset is not None:
-            for a, l in cl:
-                if a <= offset+length-1 and offset <= a+l-1:
-                    raise Exception("Invalid offset")
-        else:
-            offset = 0x40
-
-            for a, l in cl:
-                if a <= offset+length-1 and offset <= a+l-1:
-                    offset = a+l
-
-        self.ext_capabilities[cap_id] = [offset, length, read, write, 0, cap_ver]
-
-        # add to linked list
-        if self.last_ext_capability_id is not None:
-            self.ext_capabilities[self.last_ext_capability_id][4] = offset*4
-        else:
-            raise Exception("TODO")
-
-        self.last_ext_capability_id = cap_id
+        self.ext_capabilities.register(cap_id, cap_ver, length, read, write, offset)
 
     def configure_bar(self, idx, size, ext=False, prefetch=False, io=False):
         mask = 2**math.ceil(math.log(size, 2))-1

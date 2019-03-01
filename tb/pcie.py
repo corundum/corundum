@@ -1863,6 +1863,7 @@ class Function(PMCapability, PCIECapability):
             if cpl.status != CPL_STATUS_SC:
                 raise Exception("Unsuccessful completion")
             else:
+                assert cpl.length == 1
                 d = struct.pack('<L', cpl.data[0])
 
             data += d[first_pad:]
@@ -1941,6 +1942,9 @@ class Function(PMCapability, PCIECapability):
                 if cpl.status != CPL_STATUS_SC:
                     raise Exception("Unsuccessful completion")
                 else:
+                    assert cpl.byte_count+3+(cpl.lower_address&3) >= cpl.length*4
+                    assert cpl.byte_count == byte_length - m
+
                     d = bytearray()
 
                     for k in range(cpl.length):
@@ -2131,6 +2135,8 @@ class MemoryEndpoint(Endpoint):
             # logging
             print("[%s] IO read" % (highlight(self.get_desc())))
 
+            assert tlp.length == 1
+
             # prepare completion TLP
             cpl = TLP()
             cpl.set_completion_data(tlp, self.get_id())
@@ -2183,6 +2189,8 @@ class MemoryEndpoint(Endpoint):
             # logging
             print("[%s] IO write" % (highlight(self.get_desc())))
 
+            assert tlp.length == 1
+
             # prepare completion TLP
             cpl = TLP()
             cpl.set_completion(tlp, self.get_id())
@@ -2209,6 +2217,8 @@ class MemoryEndpoint(Endpoint):
 
             if start_offset is not None and offset != start_offset:
                 self.write_region(region, addr+start_offset, data[start_offset:offset])
+
+            cpl.byte_count = 4
 
             # logging
             print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
@@ -3283,6 +3293,8 @@ class RootComplex(Switch):
             # logging
             print("[%s] IO read" % (highlight(self.get_desc())))
 
+            assert tlp.length == 1
+
             # prepare completion TLP
             cpl = TLP()
             cpl.set_completion_data(tlp, PcieId(0, 0, 0))
@@ -3333,6 +3345,8 @@ class RootComplex(Switch):
             # logging
             print("[%s] IO write" % (highlight(self.get_desc())))
 
+            assert tlp.length == 1
+
             # prepare completion TLP
             cpl = TLP()
             cpl.set_completion(tlp, PcieId(0, 0, 0))
@@ -3358,6 +3372,8 @@ class RootComplex(Switch):
 
             if start_offset is not None and offset != start_offset:
                 yield from self.write_io_region(addr+start_offset, data[start_offset:offset])
+
+            cpl.byte_count = 4
 
             # logging
             print("[%s] Completion: %s" % (highlight(self.get_desc()), repr(cpl)))
@@ -3518,6 +3534,7 @@ class RootComplex(Switch):
             if not cpl or cpl.status != CPL_STATUS_SC:
                 d = b'\xff\xff\xff\xff'
             else:
+                assert cpl.length == 1
                 d = struct.pack('<L', cpl.data[0])
 
             data += d[first_pad:]
@@ -3606,6 +3623,7 @@ class RootComplex(Switch):
             if cpl.status != CPL_STATUS_SC:
                 raise Exception("Unsuccessful completion")
             else:
+                assert cpl.length == 1
                 d = struct.pack('<L', cpl.data[0])
 
             data += d[first_pad:]
@@ -3684,6 +3702,9 @@ class RootComplex(Switch):
                 if cpl.status != CPL_STATUS_SC:
                     raise Exception("Unsuccessful completion")
                 else:
+                    assert cpl.byte_count+3+(cpl.lower_address&3) >= cpl.length*4
+                    assert cpl.byte_count == byte_length - m
+
                     d = bytearray()
 
                     for k in range(cpl.length):

@@ -31,8 +31,8 @@ THE SOFTWARE.
  */
 module pcie_tag_manager #
 (
-    parameter PCIE_TAG_WIDTH = 8,
     parameter PCIE_TAG_COUNT = 256,
+    parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT),
     parameter PCIE_EXT_TAG_ENABLE = 1
 )
 (

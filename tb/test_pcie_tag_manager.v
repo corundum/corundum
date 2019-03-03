@@ -32,8 +32,8 @@ THE SOFTWARE.
 module test_pcie_tag_manager;
 
 // Parameters
-parameter PCIE_TAG_WIDTH = 8;
 parameter PCIE_TAG_COUNT = 256;
+parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT);
 parameter PCIE_EXT_TAG_ENABLE = 1;
 
 // Inputs
@@ -74,8 +74,8 @@ initial begin
 end
 
 pcie_tag_manager #(
-    .PCIE_TAG_WIDTH(PCIE_TAG_WIDTH),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
+    .PCIE_TAG_WIDTH(PCIE_TAG_WIDTH),
     .PCIE_EXT_TAG_ENABLE(PCIE_EXT_TAG_ENABLE)
 )
 UUT (

@@ -40,8 +40,8 @@ module pcie_us_axi_dma #
     parameter AXI_MAX_BURST_LEN = 256,
     parameter PCIE_ADDR_WIDTH = 64,
     parameter PCIE_CLIENT_TAG = 1,
-    parameter PCIE_TAG_WIDTH = 8,
     parameter PCIE_TAG_COUNT = 32,
+    parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT),
     parameter PCIE_EXT_TAG_ENABLE = 0,
     parameter LEN_WIDTH = 20,
     parameter TAG_WIDTH = 8

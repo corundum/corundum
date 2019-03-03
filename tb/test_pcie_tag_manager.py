@@ -44,8 +44,8 @@ build_cmd = "iverilog -o %s.vvp %s" % (testbench, src)
 def bench():
 
     # Parameters
-    PCIE_TAG_WIDTH = 8
     PCIE_TAG_COUNT = 256
+    PCIE_TAG_WIDTH = (PCIE_TAG_COUNT-1).bit_length()
     PCIE_EXT_TAG_ENABLE = 1
 
     # Inputs

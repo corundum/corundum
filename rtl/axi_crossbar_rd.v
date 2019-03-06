@@ -312,7 +312,7 @@ generate
         wire [1:0]             m_axi_rresp_mux  = {2'b11, int_m_axi_rresp} >> r_grant_encoded*2;
         wire                   m_axi_rlast_mux  = {decerr_m_axi_rlast_reg, int_m_axi_rlast} >> r_grant_encoded;
         wire [RUSER_WIDTH-1:0] m_axi_ruser_mux  = {{RUSER_WIDTH{1'b0}}, int_m_axi_ruser} >> r_grant_encoded*RUSER_WIDTH;
-        wire                   m_axi_rvalid_mux = ({decerr_m_axi_rvalid_reg, int_m_axi_rvalid} >> r_grant_encoded) && r_grant_valid;
+        wire                   m_axi_rvalid_mux = ({decerr_m_axi_rvalid_reg, int_m_axi_rvalid} >> r_grant_encoded) & r_grant_valid;
         wire                   m_axi_rready_mux;
 
         assign int_axi_rready[m*M_COUNT +: M_COUNT] = (r_grant_valid && m_axi_rready_mux) << r_grant_encoded;

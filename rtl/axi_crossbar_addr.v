@@ -161,6 +161,7 @@ reg [$clog2(S_ACCEPT+1)-1:0] thread_count_reg[S_INT_THREADS-1:0];
 
 wire [S_INT_THREADS-1:0] thread_active;
 wire [S_INT_THREADS-1:0] thread_match;
+wire [S_INT_THREADS-1:0] thread_match_dest;
 wire [S_INT_THREADS-1:0] thread_cpl_match;
 wire [S_INT_THREADS-1:0] thread_trans_start;
 wire [S_INT_THREADS-1:0] thread_trans_complete;
@@ -175,6 +176,7 @@ generate
 
         assign thread_active[n] = thread_count_reg[n] != 0;
         assign thread_match[n] = thread_active[n] && thread_id_reg[n] == s_axi_aid;
+        assign thread_match_dest[n] = thread_match[n] && thread_m_reg[n] == m_select_next;
         assign thread_cpl_match[n] = thread_active[n] && thread_id_reg[n] == s_cpl_id;
         assign thread_trans_start[n] = (thread_match[n] || (!thread_active[n] && !thread_match && !(thread_trans_start & ({S_INT_THREADS{1'b1}} >> (S_INT_THREADS-n))))) && trans_start;
         assign thread_trans_complete[n] = thread_cpl_match[n] && trans_complete;
@@ -257,7 +259,7 @@ always @* begin
 
                 if (match) begin
                     // address decode successful
-                    if (!trans_limit && (thread_match || !(&thread_active))) begin
+                    if (!trans_limit && (thread_match_dest || (!(&thread_active) && !thread_match))) begin
                         // transaction limit not reached
                         m_axi_avalid_next = 1'b1;
                         m_decerr_next = 1'b0;

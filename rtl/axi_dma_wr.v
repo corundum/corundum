@@ -440,16 +440,20 @@ always @* begin
                 end
             end
 
-            m_axi_awaddr_next = addr_reg;
-            m_axi_awlen_next = output_cycle_count_next;
-            m_axi_awvalid_next = s_axis_write_data_tvalid || !first_cycle_reg;
+            if (!m_axi_awvalid_reg) begin
+                m_axi_awaddr_next = addr_reg;
+                m_axi_awlen_next = output_cycle_count_next;
+                m_axi_awvalid_next = s_axis_write_data_tvalid || !first_cycle_reg;
 
-            if (m_axi_awvalid_next) begin
-                addr_next = addr_reg + tr_word_count_next;
-                op_word_count_next = op_word_count_reg - tr_word_count_next;
+                if (m_axi_awvalid_next) begin
+                    addr_next = addr_reg + tr_word_count_next;
+                    op_word_count_next = op_word_count_reg - tr_word_count_next;
 
-                s_axis_write_data_tready_next = m_axi_wready_int_early && input_active_next;
-                state_next = STATE_WRITE;
+                    s_axis_write_data_tready_next = m_axi_wready_int_early && input_active_next;
+                    state_next = STATE_WRITE;
+                end else begin
+                    state_next = STATE_START;
+                end
             end else begin
                 state_next = STATE_START;
             end

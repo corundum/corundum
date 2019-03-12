@@ -512,6 +512,16 @@ generate
 
         assign trans_start = s_axi_awvalid_mux && s_axi_awready_mux && a_grant_valid;
 
+        // write data mux
+        wire [DATA_WIDTH-1:0]  s_axi_wdata_mux   = int_s_axi_wdata[w_select_reg*DATA_WIDTH +: DATA_WIDTH];
+        wire [STRB_WIDTH-1:0]  s_axi_wstrb_mux   = int_s_axi_wstrb[w_select_reg*STRB_WIDTH +: STRB_WIDTH];
+        wire                   s_axi_wlast_mux   = int_s_axi_wlast[w_select_reg];
+        wire [WUSER_WIDTH-1:0] s_axi_wuser_mux   = int_s_axi_wuser[w_select_reg*WUSER_WIDTH +: WUSER_WIDTH];
+        wire                   s_axi_wvalid_mux  = int_axi_wvalid[w_select_reg*M_COUNT+n] && w_select_valid_reg;
+        wire                   s_axi_wready_mux;
+
+        assign int_axi_wready[n*S_COUNT +: S_COUNT] = (w_select_valid_reg && s_axi_wready_mux) << w_select_reg;
+
         // write data routing
         always @* begin
             w_select_next = w_select_reg;
@@ -536,16 +546,6 @@ generate
 
             w_select_reg <= w_select_next;
         end
-
-        // write data mux
-        wire [DATA_WIDTH-1:0]  s_axi_wdata_mux   = int_s_axi_wdata[w_select_reg*DATA_WIDTH +: DATA_WIDTH];
-        wire [STRB_WIDTH-1:0]  s_axi_wstrb_mux   = int_s_axi_wstrb[w_select_reg*STRB_WIDTH +: STRB_WIDTH];
-        wire                   s_axi_wlast_mux   = int_s_axi_wlast[w_select_reg];
-        wire [WUSER_WIDTH-1:0] s_axi_wuser_mux   = int_s_axi_wuser[w_select_reg*WUSER_WIDTH +: WUSER_WIDTH];
-        wire                   s_axi_wvalid_mux  = int_axi_wvalid[w_select_reg*M_COUNT+n] && w_select_valid_reg;
-        wire                   s_axi_wready_mux;
-
-        assign int_axi_wready[n*S_COUNT +: S_COUNT] = (w_select_valid_reg && s_axi_wready_mux) << w_select_reg;
 
         // write response forwarding
         wire [CL_S_COUNT-1:0] b_select = m_axi_bid[n*M_ID_WIDTH +: M_ID_WIDTH] >> S_ID_WIDTH;

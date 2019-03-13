@@ -493,6 +493,12 @@ always @* begin
                 end
                 m_axi_wvalid_int = 1'b1;
 
+                if (AXIS_LAST_ENABLE && s_axis_write_data_tlast) begin
+                    // end of input frame
+                    input_active_next = 1'b0;
+                    s_axis_write_data_tready_next = 1'b0;
+                end
+
                 if (AXIS_LAST_ENABLE && shift_axis_tlast) begin
                     // end of data packet
 

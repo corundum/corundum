@@ -283,6 +283,8 @@ assign m_axi_arvalid = m_axi_arvalid_reg;
 assign m_axi_rready = m_axi_rready_reg;
 
 // slave side mux
+wire [(CL_S_COUNT > 0 ? CL_S_COUNT-1 : 0):0] s_select;
+
 wire [ID_WIDTH-1:0]     current_s_axi_awid      = s_axi_awid[s_select*ID_WIDTH +: ID_WIDTH];
 wire [ADDR_WIDTH-1:0]   current_s_axi_awaddr    = s_axi_awaddr[s_select*ADDR_WIDTH +: ADDR_WIDTH];
 wire [7:0]              current_s_axi_awlen     = s_axi_awlen[s_select*8 +: 8];
@@ -380,7 +382,7 @@ wire grant_valid;
 wire [CL_S_COUNT:0] grant_encoded;
 
 wire read = grant_encoded[0];
-wire [(CL_S_COUNT > 0 ? CL_S_COUNT-1 : 0):0] s_select = grant_encoded >> 1;
+assign s_select = grant_encoded >> 1;
 
 arbiter #(
     .PORTS(S_COUNT*2),

@@ -42,7 +42,7 @@ module pcie_us_axi_dma #
     parameter PCIE_CLIENT_TAG = 1,
     parameter PCIE_TAG_COUNT = 32,
     parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT),
-    parameter PCIE_EXT_TAG_ENABLE = 0,
+    parameter PCIE_EXT_TAG_ENABLE = (PCIE_TAG_COUNT>32),
     parameter LEN_WIDTH = 20,
     parameter TAG_WIDTH = 8
 )

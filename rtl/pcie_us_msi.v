@@ -87,7 +87,7 @@ assign cfg_interrupt_msi_function_number = 4'd0; // send MSI for PF0
 
 wire [MSI_COUNT-1:0] message_enable_mask = cfg_interrupt_msi_mmenable[2:0] > 3'd4 ? {32{1'b1}} : {32{1'b1}} >> (32 - (1 << cfg_interrupt_msi_mmenable[2:0]));
 
-reg acknowledge;
+reg [MSI_COUNT-1:0] acknowledge;
 wire [MSI_COUNT-1:0] grant;
 wire grant_valid;
 
@@ -113,7 +113,7 @@ always @* begin
 
     msi_irq_active_next = (msi_irq_active_reg | (msi_irq_reg & ~msi_irq_last_reg));
 
-    msi_irq_mask_next = ~cfg_interrupt_msi_data & message_enable_mask & {32{cfg_interrupt_msi_enable}};
+    msi_irq_mask_next = ~cfg_interrupt_msi_data & message_enable_mask & {32{cfg_interrupt_msi_enable[0]}};
 
     msi_int_next = {MSI_COUNT{1'b0}};
 

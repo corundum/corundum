@@ -110,11 +110,12 @@ initial begin
     end
 end
 
-localparam [0:0]
-    STATE_IDLE = 1'd0,
-    STATE_BURST = 1'd1;
+localparam [1:0]
+    STATE_IDLE = 2'd0,
+    STATE_BURST = 2'd1,
+    STATE_RESP = 2'd1;
 
-reg [0:0] state_reg = STATE_IDLE, state_next;
+reg [1:0] state_reg = STATE_IDLE, state_next;
 
 reg [ID_WIDTH-1:0] write_id_reg = {ID_WIDTH{1'b0}}, write_id_next;
 reg [ADDR_WIDTH-1:0] write_addr_reg = {ADDR_WIDTH{1'b0}}, write_addr_next;
@@ -125,7 +126,6 @@ reg [3:0] write_qos_reg = 4'd0, write_qos_next;
 reg [3:0] write_region_reg = 4'd0, write_region_next;
 reg [AWUSER_WIDTH-1:0] write_awuser_reg = {AWUSER_WIDTH{1'b0}}, write_awuser_next;
 reg write_addr_valid_reg = 1'b0, write_addr_valid_next;
-reg write_addr_ready;
 reg write_last_reg = 1'b0, write_last_next;
 reg [7:0] write_count_reg = 8'd0, write_count_next;
 reg [2:0] write_size_reg = 3'd0, write_size_next;
@@ -139,16 +139,17 @@ assign s_axi_awready = s_axi_awready_reg;
 assign s_axi_wready = write_addr_valid_reg && ram_wr_cmd_ready;
 assign s_axi_bid = s_axi_bid_reg;
 assign s_axi_bresp = 2'b00;
+assign s_axi_buser = {BUSER_WIDTH{1'b0}};
 assign s_axi_bvalid = s_axi_bvalid_reg;
 
 assign ram_wr_cmd_id = write_id_reg;
 assign ram_wr_cmd_addr = write_addr_reg;
-assign ram_wr_cmd_lock = write_lock_next;
-assign ram_wr_cmd_cache = write_cache_next;
-assign ram_wr_cmd_prot = write_prot_next;
-assign ram_wr_cmd_qos = write_qos_next;
-assign ram_wr_cmd_region = write_region_next;
-assign ram_wr_cmd_auser = AWUSER_ENABLE ? write_awuser_next : {AWUSER_WIDTH{1'b0}};
+assign ram_wr_cmd_lock = write_lock_reg;
+assign ram_wr_cmd_cache = write_cache_reg;
+assign ram_wr_cmd_prot = write_prot_reg;
+assign ram_wr_cmd_qos = write_qos_reg;
+assign ram_wr_cmd_region = write_region_reg;
+assign ram_wr_cmd_auser = AWUSER_ENABLE ? write_awuser_reg : {AWUSER_WIDTH{1'b0}};
 assign ram_wr_cmd_data = s_axi_wdata;
 assign ram_wr_cmd_strb = s_axi_wstrb;
 assign ram_wr_cmd_user = WUSER_ENABLE ? s_axi_wuser : {WUSER_WIDTH{1'b0}};
@@ -157,8 +158,6 @@ assign ram_wr_cmd_last = write_last_reg;
 
 always @* begin
     state_next = STATE_IDLE;
-
-    write_addr_ready = 1'b0;
 
     write_id_next = write_id_reg;
     write_addr_next = write_addr_reg;
@@ -178,16 +177,11 @@ always @* begin
     s_axi_bid_next = s_axi_bid_reg;
     s_axi_bvalid_next = s_axi_bvalid_reg && !s_axi_bready;
 
-    if (ram_wr_cmd_ready && ram_wr_cmd_en) begin
-        write_addr_ready = 1'b1;
-        write_addr_valid_next = !write_last_reg;
-    end
-
     case (state_reg)
         STATE_IDLE: begin
-            s_axi_awready_next = (write_addr_ready || !write_addr_valid_reg) && (!s_axi_bvalid || s_axi_bready);
+            s_axi_awready_next = 1'b1;
 
-            if (s_axi_awready & s_axi_awvalid) begin
+            if (s_axi_awready && s_axi_awvalid) begin
                 write_id_next = s_axi_awid;
                 write_addr_next = s_axi_awaddr;
                 write_lock_next = s_axi_awlock;
@@ -204,35 +198,47 @@ always @* begin
                 s_axi_awready_next = 1'b0;
                 if (s_axi_awlen > 0) begin
                     write_last_next = 1'b0;
-                    state_next = STATE_BURST;
                 end else begin
-                    s_axi_bid_next = write_id_next;
-                    s_axi_bvalid_next = 1'b1;
                     write_last_next = 1'b1;
-                    state_next = STATE_IDLE;
                 end
+                state_next = STATE_BURST;
             end else begin
                 state_next = STATE_IDLE;
             end
         end
         STATE_BURST: begin
-            s_axi_awready_next = 1'b0;
-
-            if (write_addr_ready) begin
+            if (s_axi_wready && s_axi_wvalid) begin
                 if (write_burst_reg != 2'b00) begin
                     write_addr_next = write_addr_reg + (1 << write_size_reg);
                 end
                 write_count_next = write_count_reg - 1;
                 write_last_next = write_count_next == 0;
                 if (write_count_reg > 0) begin
+                    write_addr_valid_next = 1'b1;
                     state_next = STATE_BURST;
                 end else begin
-                    s_axi_bid_next = write_id_reg;
-                    s_axi_bvalid_next = 1'b1;
-                    state_next = STATE_IDLE;
+                    write_addr_valid_next = 1'b0;
+                    if (s_axi_bready || !s_axi_bvalid) begin
+                        s_axi_bid_next = write_id_reg;
+                        s_axi_bvalid_next = 1'b1;
+                        s_axi_awready_next = 1'b1;
+                        state_next = STATE_IDLE;
+                    end else begin
+                        state_next = STATE_RESP;
+                    end
                 end
             end else begin
                 state_next = STATE_BURST;
+            end
+        end
+        STATE_RESP: begin
+            if (s_axi_bready || !s_axi_bvalid) begin
+                s_axi_bid_next = write_id_reg;
+                s_axi_bvalid_next = 1'b1;
+                s_axi_awready_next = 1'b1;
+                state_next = STATE_IDLE;
+            end else begin
+                state_next = STATE_RESP;
             end
         end
     endcase

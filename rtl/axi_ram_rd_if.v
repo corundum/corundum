@@ -123,7 +123,6 @@ reg [3:0] read_qos_reg = 4'd0, read_qos_next;
 reg [3:0] read_region_reg = 4'd0, read_region_next;
 reg [ARUSER_WIDTH-1:0] read_aruser_reg = {ARUSER_WIDTH{1'b0}}, read_aruser_next;
 reg read_addr_valid_reg = 1'b0, read_addr_valid_next;
-reg read_addr_ready;
 reg read_last_reg = 1'b0, read_last_next;
 reg [7:0] read_count_reg = 8'd0, read_count_next;
 reg [2:0] read_size_reg = 3'd0, read_size_next;
@@ -146,12 +145,12 @@ assign s_axi_rvalid = PIPELINE_OUTPUT ? s_axi_rvalid_pipe_reg : ram_rd_resp_vali
 
 assign ram_rd_cmd_id = read_id_reg;
 assign ram_rd_cmd_addr = read_addr_reg;
-assign ram_rd_cmd_lock = read_lock_next;
-assign ram_rd_cmd_cache = read_cache_next;
-assign ram_rd_cmd_prot = read_prot_next;
-assign ram_rd_cmd_qos = read_qos_next;
-assign ram_rd_cmd_region = read_region_next;
-assign ram_rd_cmd_auser = ARUSER_ENABLE ? read_aruser_next : {ARUSER_WIDTH{1'b0}};
+assign ram_rd_cmd_lock = read_lock_reg;
+assign ram_rd_cmd_cache = read_cache_reg;
+assign ram_rd_cmd_prot = read_prot_reg;
+assign ram_rd_cmd_qos = read_qos_reg;
+assign ram_rd_cmd_region = read_region_reg;
+assign ram_rd_cmd_auser = ARUSER_ENABLE ? read_aruser_reg : {ARUSER_WIDTH{1'b0}};
 assign ram_rd_cmd_en = read_addr_valid_reg;
 assign ram_rd_cmd_last = read_last_reg;
 
@@ -159,8 +158,6 @@ assign ram_rd_resp_ready = s_axi_rready || (PIPELINE_OUTPUT && !s_axi_rvalid_pip
 
 always @* begin
     state_next = STATE_IDLE;
-
-    read_addr_ready = ram_rd_cmd_ready;
 
     read_id_next = read_id_reg;
     read_addr_next = read_addr_reg;
@@ -170,7 +167,7 @@ always @* begin
     read_qos_next = read_qos_reg;
     read_region_next = read_region_reg;
     read_aruser_next = read_aruser_reg;
-    read_addr_valid_next = read_addr_valid_reg;
+    read_addr_valid_next = read_addr_valid_reg && !ram_rd_cmd_ready;
     read_last_next = read_last_reg;
     read_count_next = read_count_reg;
     read_size_next = read_size_reg;
@@ -178,16 +175,11 @@ always @* begin
 
     s_axi_arready_next = 1'b0;
 
-    if (ram_rd_cmd_ready && ram_rd_cmd_en) begin
-        read_addr_ready = 1'b1;
-        read_addr_valid_next = !read_last_reg;
-    end
-
     case (state_reg)
         STATE_IDLE: begin
-            s_axi_arready_next = (read_addr_ready || !read_addr_valid_reg);
+            s_axi_arready_next = 1'b1;
 
-            if (s_axi_arready & s_axi_arvalid) begin
+            if (s_axi_arready && s_axi_arvalid) begin
                 read_id_next = s_axi_arid;
                 read_addr_next = s_axi_araddr;
                 read_lock_next = s_axi_arlock;
@@ -201,30 +193,25 @@ always @* begin
                 read_burst_next = s_axi_arburst;
 
                 s_axi_arready_next = 1'b0;
+                read_last_next = read_count_next == 0;
                 read_addr_valid_next = 1'b1;
-                if (s_axi_arlen > 0) begin
-                    read_last_next = 1'b0;
-                    state_next = STATE_BURST;
-                end else begin
-                    read_last_next = 1'b1;
-                    state_next = STATE_IDLE;
-                end
+                state_next = STATE_BURST;
             end else begin
                 state_next = STATE_IDLE;
             end
         end
         STATE_BURST: begin
-            s_axi_arready_next = 1'b0;
-
-            if (read_addr_ready) begin
+            if (ram_rd_cmd_ready && ram_rd_cmd_en) begin
                 if (read_burst_reg != 2'b00) begin
                     read_addr_next = read_addr_reg + (1 << read_size_reg);
                 end
                 read_count_next = read_count_reg - 1;
                 read_last_next = read_count_next == 0;
                 if (read_count_reg > 0) begin
+                    read_addr_valid_next = 1'b1;
                     state_next = STATE_BURST;
                 end else begin
+                    s_axi_arready_next = 1'b1;
                     state_next = STATE_IDLE;
                 end
             end else begin

@@ -937,7 +937,7 @@ always @* begin
                     status_fifo_wr_completion = 1'b1;
 
                     m_axi_awvalid_next = 1'b1;
-                    s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next && (!last_cycle_next || op_count_reg == 0 || !m_axi_awvalid || m_axi_awready);
+                    s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next && (!last_cycle_next || op_count_next == 0 || !m_axi_awvalid || m_axi_awready);
                     tlp_state_next = TLP_STATE_TRANSFER;
                 end else begin
                     if (final_cpl_reg) begin

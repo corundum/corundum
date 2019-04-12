@@ -290,7 +290,7 @@ always @* begin
         READ_STATE_IDLE: begin
             s_axi_arready_next = 1'b1;
 
-            if (s_axi_arready & s_axi_arvalid) begin
+            if (s_axi_arready && s_axi_arvalid) begin
                 read_id_next = s_axi_arid;
                 read_addr_next = s_axi_araddr;
                 read_count_next = s_axi_arlen;
@@ -304,11 +304,11 @@ always @* begin
             end
         end
         READ_STATE_BURST: begin
-            if (s_axi_rready || (PIPELINE_OUTPUT && !s_axi_rvalid_pipe_reg) || !s_axi_rvalid) begin
+            if (s_axi_rready || (PIPELINE_OUTPUT && !s_axi_rvalid_pipe_reg) || !s_axi_rvalid_reg) begin
                 mem_rd_en = 1'b1;
                 s_axi_rvalid_next = 1'b1;
                 s_axi_rid_next = read_id_reg;
-                s_axi_rlast_next = read_count_next == 0;
+                s_axi_rlast_next = read_count_reg == 0;
                 if (read_burst_reg != 2'b00) begin
                     read_addr_next = read_addr_reg + (1 << read_size_reg);
                 end

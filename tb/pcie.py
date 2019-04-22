@@ -1873,6 +1873,38 @@ class Function(PMCapability, PCIECapability):
 
         return data[:length]
 
+    def io_read_words(self, addr, count, ws=2, timeout=0, attr=0, tc=0):
+        assert ws in (1, 2, 4, 8)
+        data = yield from self.io_read(addr, count*ws, timeout, attr, tc)
+        words = []
+        for k in range(count):
+            words.append(int.from_bytes(data[ws*k:ws*(k+1)], 'little'))
+        return words
+
+    def io_read_dwords(self, addr, count, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read_words(addr, count, 4, timeout, attr, tc)
+        return data
+
+    def io_read_qwords(self, addr, count, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read_words(addr, count, 8, timeout, attr, tc)
+        return data
+
+    def io_read_byte(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read(addr, 1, timeout, attr, tc)
+        return data[0]
+
+    def io_read_word(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read_words(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
+    def io_read_dword(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read_dwords(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
+    def io_read_qword(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read_qwords(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
     def io_write(self, addr, data, timeout=0):
         n = 0
 
@@ -1902,6 +1934,32 @@ class Function(PMCapability, PCIECapability):
 
             n += byte_length
             addr += byte_length
+
+    def io_write_words(self, addr, data, ws=2, timeout=0, attr=0, tc=0):
+        assert ws in (1, 2, 4, 8)
+        words = data
+        data = b''
+        for w in words:
+            data += w.to_bytes(ws, 'little')
+        yield from self.io_write(addr, data, timeout, attr, tc)
+
+    def io_write_dwords(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write_words(addr, data, 4, timeout, attr, tc)
+
+    def io_write_qwords(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write_words(addr, data, 8, timeout, attr, tc)
+
+    def io_write_byte(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write(addr, [data], timeout, attr, tc)
+
+    def io_write_word(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write_words(addr, [data], timeout=timeout, attr=attr, tc=tc)
+
+    def io_write_dword(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write_dwords(addr, [data], timeout=timeout, attr=attr, tc=tc)
+
+    def io_write_qword(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write_qwords(addr, [data], timeout=timeout, attr=attr, tc=tc)
 
     def mem_read(self, addr, length, timeout=0, attr=0, tc=0):
         n = 0
@@ -1960,6 +2018,38 @@ class Function(PMCapability, PCIECapability):
 
         return data
 
+    def mem_read_words(self, addr, count, ws=2, timeout=0, attr=0, tc=0):
+        assert ws in (1, 2, 4, 8)
+        data = yield from self.mem_read(addr, count*ws, timeout, attr, tc)
+        words = []
+        for k in range(count):
+            words.append(int.from_bytes(data[ws*k:ws*(k+1)], 'little'))
+        return words
+
+    def mem_read_dwords(self, addr, count, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read_words(addr, count, 4, timeout, attr, tc)
+        return data
+
+    def mem_read_qwords(self, addr, count, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read_words(addr, count, 8, timeout, attr, tc)
+        return data
+
+    def mem_read_byte(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read(addr, 1, timeout, attr, tc)
+        return data[0]
+
+    def mem_read_word(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read_words(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
+    def mem_read_dword(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read_dwords(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
+    def mem_read_qword(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read_qwords(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
     def mem_write(self, addr, data, timeout=0, attr=0, tc=0):
         n = 0
 
@@ -1987,6 +2077,32 @@ class Function(PMCapability, PCIECapability):
 
             n += byte_length
             addr += byte_length
+
+    def mem_write_words(self, addr, data, ws=2, timeout=0, attr=0, tc=0):
+        assert ws in (1, 2, 4, 8)
+        words = data
+        data = b''
+        for w in words:
+            data += w.to_bytes(ws, 'little')
+        yield from self.mem_write(addr, data, timeout, attr, tc)
+
+    def mem_write_dwords(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write_words(addr, data, 4, timeout, attr, tc)
+
+    def mem_write_qwords(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write_words(addr, data, 8, timeout, attr, tc)
+
+    def mem_write_byte(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write(addr, [data], timeout, attr, tc)
+
+    def mem_write_word(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write_words(addr, [data], timeout=timeout, attr=attr, tc=tc)
+
+    def mem_write_dword(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write_dwords(addr, [data], timeout=timeout, attr=attr, tc=tc)
+
+    def mem_write_qword(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write_qwords(addr, [data], timeout=timeout, attr=attr, tc=tc)
 
 
 class Endpoint(Function):
@@ -3544,6 +3660,38 @@ class RootComplex(Switch):
 
         return data[:length]
 
+    def config_read_words(self, dev, addr, count, ws=2, timeout=0):
+        assert ws in (1, 2, 4, 8)
+        data = yield from self.config_read(dev, addr, count*ws, timeout)
+        words = []
+        for k in range(count):
+            words.append(int.from_bytes(data[ws*k:ws*(k+1)], 'little'))
+        return words
+
+    def config_read_dwords(self, dev, addr, count, timeout=0):
+        data = yield from self.config_read_words(dev, addr, count, 4, timeout)
+        return data
+
+    def config_read_qwords(self, dev, addr, count, timeout=0):
+        data = yield from self.config_read_words(dev, addr, count, 8, timeout)
+        return data
+
+    def config_read_byte(self, dev, addr, timeout=0):
+        data = yield from self.config_read(dev, addr, 1, timeout)
+        return data[0]
+
+    def config_read_word(self, dev, addr, timeout=0):
+        data = yield from self.config_read_words(dev, addr, 1, timeout=timeout)
+        return data[0]
+
+    def config_read_dword(self, dev, addr, timeout=0):
+        data = yield from self.config_read_dwords(dev, addr, 1, timeout=timeout)
+        return data[0]
+
+    def config_read_qword(self, dev, addr, timeout=0):
+        data = yield from self.config_read_qwords(dev, addr, 1, timeout=timeout)
+        return data[0]
+
     def config_write(self, dev, addr, data, timeout=0):
         n = 0
 
@@ -3568,6 +3716,32 @@ class RootComplex(Switch):
             n += byte_length
             addr += byte_length
 
+    def config_write_words(self, dev, addr, data, ws=2, timeout=0):
+        assert ws in (1, 2, 4, 8)
+        words = data
+        data = b''
+        for w in words:
+            data += w.to_bytes(ws, 'little')
+        yield from self.config_write(dev, addr, data, timeout)
+
+    def config_write_dwords(self, dev, addr, data, timeout=0):
+        yield from self.config_write_words(dev, addr, data, 4, timeout)
+
+    def config_write_qwords(self, dev, addr, data, timeout=0):
+        yield from self.config_write_words(dev, addr, data, 8, timeout)
+
+    def config_write_byte(self, dev, addr, data, timeout=0):
+        yield from self.config_write(dev, addr, [data], timeout)
+
+    def config_write_word(self, dev, addr, data, timeout=0):
+        yield from self.config_write_words(dev, addr, [data], timeout=timeout)
+
+    def config_write_dword(self, dev, addr, data, timeout=0):
+        yield from self.config_write_dwords(dev, addr, [data], timeout=timeout)
+
+    def config_write_qword(self, dev, addr, data, timeout=0):
+        yield from self.config_write_qwords(dev, addr, [data], timeout=timeout)
+
     def capability_read(self, dev, cap_id, addr, length, timeout=0):
         ti = self.tree.find_dev(dev)
 
@@ -3582,6 +3756,38 @@ class RootComplex(Switch):
         val = yield from self.config_read(dev, addr+offset, length, timeout)
         return val
 
+    def capability_read_words(self, dev, cap_id, addr, count, ws=2, timeout=0):
+        assert ws in (1, 2, 4, 8)
+        data = yield from self.capability_read(dev, cap_id, addr, count*ws, timeout)
+        words = []
+        for k in range(count):
+            words.append(int.from_bytes(data[ws*k:ws*(k+1)], 'little'))
+        return words
+
+    def capability_read_dwords(self, dev, cap_id, addr, count, timeout=0):
+        data = yield from self.capability_read_words(dev, cap_id, addr, count, 4, timeout)
+        return data
+
+    def capability_read_qwords(self, dev, cap_id, addr, count, timeout=0):
+        data = yield from self.capability_read_words(dev, cap_id, addr, count, 8, timeout)
+        return data
+
+    def capability_read_byte(self, dev, cap_id, addr, timeout=0):
+        data = yield from self.capability_read(dev, cap_id, addr, 1, timeout)
+        return data[0]
+
+    def capability_read_word(self, dev, cap_id, addr, timeout=0):
+        data = yield from self.capability_read_words(dev, cap_id, addr, 1, timeout=timeout)
+        return data[0]
+
+    def capability_read_dword(self, dev, cap_id, addr, timeout=0):
+        data = yield from self.capability_read_dwords(dev, cap_id, addr, 1, timeout=timeout)
+        return data[0]
+
+    def capability_read_qword(self, dev, cap_id, addr, timeout=0):
+        data = yield from self.capability_read_qwords(dev, cap_id, addr, 1, timeout=timeout)
+        return data[0]
+
     def capability_write(self, dev, cap_id, addr, data, timeout=0):
         ti = self.tree.find_dev(dev)
 
@@ -3594,6 +3800,32 @@ class RootComplex(Switch):
             raise Exception("Capability not found")
 
         yield from self.config_write(dev, addr+offset, data, timeout)
+
+    def capability_write_words(self, dev, cap_id, addr, data, ws=2, timeout=0):
+        assert ws in (1, 2, 4, 8)
+        words = data
+        data = b''
+        for w in words:
+            data += w.to_bytes(ws, 'little')
+        yield from self.capability_write(dev, cap_id, addr, data, timeout)
+
+    def capability_write_dwords(self, dev, cap_id, addr, data, timeout=0):
+        yield from self.capability_write_words(dev, cap_id, addr, data, 4, timeout)
+
+    def capability_write_qwords(self, dev, cap_id, addr, data, timeout=0):
+        yield from self.capability_write_words(dev, cap_id, addr, data, 8, timeout)
+
+    def capability_write_byte(self, dev, cap_id, addr, data, timeout=0):
+        yield from self.capability_write(dev, cap_id, addr, [data], timeout)
+
+    def capability_write_word(self, dev, cap_id, addr, data, timeout=0):
+        yield from self.capability_write_words(dev, cap_id, addr, [data], timeout=timeout)
+
+    def capability_write_dword(self, dev, cap_id, addr, data, timeout=0):
+        yield from self.capability_write_dwords(dev, cap_id, addr, [data], timeout=timeout)
+
+    def capability_write_qword(self, dev, cap_id, addr, data, timeout=0):
+        yield from self.capability_write_qwords(dev, cap_id, addr, [data], timeout=timeout)
 
     def io_read(self, addr, length, timeout=0):
         n = 0
@@ -3633,6 +3865,38 @@ class RootComplex(Switch):
 
         return data[:length]
 
+    def io_read_words(self, addr, count, ws=2, timeout=0, attr=0, tc=0):
+        assert ws in (1, 2, 4, 8)
+        data = yield from self.io_read(addr, count*ws, timeout, attr, tc)
+        words = []
+        for k in range(count):
+            words.append(int.from_bytes(data[ws*k:ws*(k+1)], 'little'))
+        return words
+
+    def io_read_dwords(self, addr, count, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read_words(addr, count, 4, timeout, attr, tc)
+        return data
+
+    def io_read_qwords(self, addr, count, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read_words(addr, count, 8, timeout, attr, tc)
+        return data
+
+    def io_read_byte(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read(addr, 1, timeout, attr, tc)
+        return data[0]
+
+    def io_read_word(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read_words(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
+    def io_read_dword(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read_dwords(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
+    def io_read_qword(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.io_read_qwords(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
     def io_write(self, addr, data, timeout=0):
         n = 0
 
@@ -3662,6 +3926,32 @@ class RootComplex(Switch):
 
             n += byte_length
             addr += byte_length
+
+    def io_write_words(self, addr, data, ws=2, timeout=0, attr=0, tc=0):
+        assert ws in (1, 2, 4, 8)
+        words = data
+        data = b''
+        for w in words:
+            data += w.to_bytes(ws, 'little')
+        yield from self.io_write(addr, data, timeout, attr, tc)
+
+    def io_write_dwords(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write_words(addr, data, 4, timeout, attr, tc)
+
+    def io_write_qwords(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write_words(addr, data, 8, timeout, attr, tc)
+
+    def io_write_byte(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write(addr, [data], timeout, attr, tc)
+
+    def io_write_word(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write_words(addr, [data], timeout=timeout, attr=attr, tc=tc)
+
+    def io_write_dword(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write_dwords(addr, [data], timeout=timeout, attr=attr, tc=tc)
+
+    def io_write_qword(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.io_write_qwords(addr, [data], timeout=timeout, attr=attr, tc=tc)
 
     def mem_read(self, addr, length, timeout=0, attr=0, tc=0):
         n = 0
@@ -3720,6 +4010,38 @@ class RootComplex(Switch):
 
         return data
 
+    def mem_read_words(self, addr, count, ws=2, timeout=0, attr=0, tc=0):
+        assert ws in (1, 2, 4, 8)
+        data = yield from self.mem_read(addr, count*ws, timeout, attr, tc)
+        words = []
+        for k in range(count):
+            words.append(int.from_bytes(data[ws*k:ws*(k+1)], 'little'))
+        return words
+
+    def mem_read_dwords(self, addr, count, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read_words(addr, count, 4, timeout, attr, tc)
+        return data
+
+    def mem_read_qwords(self, addr, count, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read_words(addr, count, 8, timeout, attr, tc)
+        return data
+
+    def mem_read_byte(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read(addr, 1, timeout, attr, tc)
+        return data[0]
+
+    def mem_read_word(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read_words(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
+    def mem_read_dword(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read_dwords(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
+    def mem_read_qword(self, addr, timeout=0, attr=0, tc=0):
+        data = yield from self.mem_read_qwords(addr, 1, timeout=timeout, attr=attr, tc=tc)
+        return data[0]
+
     def mem_write(self, addr, data, timeout=0, attr=0, tc=0):
         n = 0
 
@@ -3747,6 +4069,32 @@ class RootComplex(Switch):
 
             n += byte_length
             addr += byte_length
+
+    def mem_write_words(self, addr, data, ws=2, timeout=0, attr=0, tc=0):
+        assert ws in (1, 2, 4, 8)
+        words = data
+        data = b''
+        for w in words:
+            data += w.to_bytes(ws, 'little')
+        yield from self.mem_write(addr, data, timeout, attr, tc)
+
+    def mem_write_dwords(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write_words(addr, data, 4, timeout, attr, tc)
+
+    def mem_write_qwords(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write_words(addr, data, 8, timeout, attr, tc)
+
+    def mem_write_byte(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write(addr, [data], timeout, attr, tc)
+
+    def mem_write_word(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write_words(addr, [data], timeout=timeout, attr=attr, tc=tc)
+
+    def mem_write_dword(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write_dwords(addr, [data], timeout=timeout, attr=attr, tc=tc)
+
+    def mem_write_qword(self, addr, data, timeout=0, attr=0, tc=0):
+        yield from self.mem_write_qwords(addr, [data], timeout=timeout, attr=attr, tc=tc)
 
     def msi_region_read(self, addr, length):
         return b'\x00'*length
@@ -3776,29 +4124,28 @@ class RootComplex(Switch):
         if ti.get_capability_offset(MSI_CAP_ID) is None:
             return False
 
-        msg_ctrl = yield from self.capability_read(dev, MSI_CAP_ID, 0, 4)
-        msg_ctrl = struct.unpack('<L', msg_ctrl)[0]
+        msg_ctrl = yield from self.capability_read_dword(dev, MSI_CAP_ID, 0)
 
         msi_64bit = msg_ctrl >> 23 & 1
         msi_mmcap = msg_ctrl >> 17 & 7
 
         # message address
-        yield from self.capability_write(dev, MSI_CAP_ID, 4, struct.pack('<L', self.msi_addr & 0xfffffffc))
+        yield from self.capability_write_dword(dev, MSI_CAP_ID, 4, self.msi_addr & 0xfffffffc)
 
         if msi_64bit:
             # 64 bit message address
             # message upper address
-            yield from self.capability_write(dev, MSI_CAP_ID, 8, struct.pack('<L', (self.msi_addr >> 32) & 0xffffffff))
+            yield from self.capability_write_dword(dev, MSI_CAP_ID, 8, (self.msi_addr >> 32) & 0xffffffff)
             # message data
-            yield from self.capability_write(dev, MSI_CAP_ID, 12, struct.pack('<L', self.msi_msg_limit))
+            yield from self.capability_write_dword(dev, MSI_CAP_ID, 12, self.msi_msg_limit)
 
         else:
             # 32 bit message address
             # message data
-            yield from self.capability_write(dev, MSI_CAP_ID, 8, struct.pack('<L', self.msi_msg_limit))
+            yield from self.capability_write_dword(dev, MSI_CAP_ID, 8, self.msi_msg_limit)
 
         # enable and set enabled messages
-        yield from self.capability_write(dev, MSI_CAP_ID, 0, struct.pack('<L', (msg_ctrl & ~(7 << 20)) | 1 << 16 | msi_mmcap << 20))
+        yield from self.capability_write_dword(dev, MSI_CAP_ID, 0, (msg_ctrl & ~(7 << 20)) | 1 << 16 | msi_mmcap << 20)
 
         ti.msi_addr = self.msi_addr
         ti.msi_data = self.msi_msg_limit
@@ -3872,9 +4219,9 @@ class RootComplex(Switch):
                 continue
 
             # read vendor ID and device ID
-            val = yield from self.config_read(PcieId(bus, d, 0), 0x000, 4, timeout)
+            val = yield from self.config_read_dword(PcieId(bus, d, 0), 0x000, timeout)
 
-            if val is None or val == b'\xff\xff\xff\xff':
+            if val is None or val == 0xffffffff:
                 continue
 
             # valid vendor ID
@@ -3884,9 +4231,9 @@ class RootComplex(Switch):
             fc = 1
 
             # read type
-            val = yield from self.config_read(PcieId(bus, d, 0), 0x00e, 1, timeout)
+            val = yield from self.config_read_byte(PcieId(bus, d, 0), 0x00e, timeout)
 
-            if val[0] & 0x80:
+            if val & 0x80:
                 # multifunction device
                 fc = 8
 
@@ -3908,9 +4255,9 @@ class RootComplex(Switch):
                 print("[%s] Found function at %02x:%02x.%x" % (highlight(self.get_desc()), bus, d, f))
 
                 # read type
-                val = yield from self.config_read(PcieId(bus, d, f), 0x00e, 1, timeout)
+                val = yield from self.config_read_byte(PcieId(bus, d, f), 0x00e, timeout)
 
-                bridge = val[0] & 0x7f == 0x01
+                bridge = val & 0x7f == 0x01
 
                 bar_cnt = 6
 
@@ -3925,9 +4272,8 @@ class RootComplex(Switch):
                 bar = 0
                 while bar < bar_cnt:
                     # read BAR
-                    yield from self.config_write(PcieId(bus, d, f), 0x010+bar*4, b'\xff\xff\xff\xff')
-                    val = yield from self.config_read(PcieId(bus, d, f), 0x010+bar*4, 4)
-                    val = struct.unpack('<L', val)[0]
+                    yield from self.config_write_dword(PcieId(bus, d, f), 0x010+bar*4, 0xffffffff)
+                    val = yield from self.config_read_dword(PcieId(bus, d, f), 0x010+bar*4)
 
                     if val == 0:
                         # unimplemented BAR
@@ -3958,7 +4304,7 @@ class RootComplex(Switch):
                         self.io_limit += size
 
                         # write BAR
-                        yield from self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val))
+                        yield from self.config_write_dword(PcieId(bus, d, f), 0x010+bar*4, val)
 
                         bar += 1
                     else:
@@ -3966,9 +4312,9 @@ class RootComplex(Switch):
 
                         if val & 4:
                             # 64 bit BAR
-                            yield from self.config_write(PcieId(bus, d, f), 0x010+(bar+1)*4, b'\xff\xff\xff\xff')
-                            val2 = yield from self.config_read(PcieId(bus, d, f), 0x010+(bar+1)*4, 4)
-                            val |= struct.unpack('<L', val2)[0] << 32
+                            yield from self.config_write_dword(PcieId(bus, d, f), 0x010+(bar+1)*4, 0xffffffff)
+                            val2 = yield from self.config_read_dword(PcieId(bus, d, f), 0x010+(bar+1)*4)
+                            val |= val2 << 32
                             mask = (~val & 0xffffffffffffffff) | 15
                             size = mask + 1
                             # logging
@@ -3992,8 +4338,8 @@ class RootComplex(Switch):
                             self.prefetchable_mem_limit += size
 
                             # write BAR
-                            yield from self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val & 0xffffffff))
-                            yield from self.config_write(PcieId(bus, d, f), 0x010+(bar+1)*4, struct.pack('<L', (val >> 32) & 0xffffffff))
+                            yield from self.config_write_dword(PcieId(bus, d, f), 0x010+bar*4, val & 0xffffffff)
+                            yield from self.config_write_dword(PcieId(bus, d, f), 0x010+(bar+1)*4, (val >> 32) & 0xffffffff)
 
                             bar += 2
                         else:
@@ -4022,7 +4368,7 @@ class RootComplex(Switch):
                             self.mem_limit += size
 
                             # write BAR
-                            yield from self.config_write(PcieId(bus, d, f), 0x010+bar*4, struct.pack('<L', val))
+                            yield from self.config_write_dword(PcieId(bus, d, f), 0x010+bar*4, val)
 
                             bar += 1
 
@@ -4030,8 +4376,8 @@ class RootComplex(Switch):
                 print("[%s] Walk capabilities of %02x:%02x.%x" % (highlight(self.get_desc()), bus, d, f))
 
                 # walk capabilities
-                ptr = yield from self.config_read(PcieId(bus, d, f), 0x34, 1)
-                ptr = ptr[0] & 0xfc
+                ptr = yield from self.config_read_byte(PcieId(bus, d, f), 0x34)
+                ptr = ptr & 0xfc
 
                 while ptr > 0:
                     val = yield from self.config_read(PcieId(bus, d, f), ptr, 2)
@@ -4044,10 +4390,8 @@ class RootComplex(Switch):
                 # TODO
 
                 # set max payload size, max read request size, and extended tag enable
-                val = yield from self.capability_read(PcieId(bus, d, f), PCIE_CAP_ID, 4, 4)
-                dev_cap = struct.unpack('<L', val)[0]
-                val = yield from self.capability_read(PcieId(bus, d, f), PCIE_CAP_ID, 8, 4)
-                dev_ctrl_sta = struct.unpack('<L', val)[0]
+                dev_cap = yield from self.capability_read_dword(PcieId(bus, d, f), PCIE_CAP_ID, 4)
+                dev_ctrl_sta = yield from self.capability_read_dword(PcieId(bus, d, f), PCIE_CAP_ID, 8)
 
                 max_payload = min(0x5, min(self.max_payload_size, dev_cap & 7))
                 ext_tag = bool(self.extended_tag_field_enable and (dev_cap & (1 << 5)))
@@ -4055,14 +4399,12 @@ class RootComplex(Switch):
 
                 new_dev_ctrl = dev_ctrl_sta & 0x00008e1f | (max_payload << 5) | (ext_tag << 8) | (max_read_req << 12)
 
-                yield from self.capability_write(PcieId(bus, d, f), PCIE_CAP_ID, 8, struct.pack('<L', new_dev_ctrl))
+                yield from self.capability_write_dword(PcieId(bus, d, f), PCIE_CAP_ID, 8, new_dev_ctrl)
 
                 if enable_bus_mastering:
                     # enable bus mastering
-                    val = yield from self.config_read(PcieId(bus, d, f), 0x04, 2)
-                    val = struct.unpack('<H', val)[0]
-                    val |= 4
-                    yield from self.config_write(PcieId(bus, d, f), 0x04, struct.pack('<H', val))
+                    val = yield from self.config_read_word(PcieId(bus, d, f), 0x04)
+                    yield from self.config_write_word(PcieId(bus, d, f), 0x04, val | 4)
 
                 if configure_msi:
                     # configure MSI

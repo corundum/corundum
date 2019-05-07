@@ -113,7 +113,7 @@ end
 localparam [1:0]
     STATE_IDLE = 2'd0,
     STATE_BURST = 2'd1,
-    STATE_RESP = 2'd1;
+    STATE_RESP = 2'd2;
 
 reg [1:0] state_reg = STATE_IDLE, state_next;
 

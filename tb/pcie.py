@@ -3319,9 +3319,9 @@ class RootComplex(Switch):
             return region[2][offset:offset+length]
         elif len(region) == 4:
             if inspect.isgeneratorfunction(region[2]):
-                yield from region[2](offset, data)
+                yield from region[2](offset, length)
             else:
-                region[2](offset, data)
+                region[2](offset, length)
 
     def write_region(self, addr, data):
         region = self.find_region(addr)

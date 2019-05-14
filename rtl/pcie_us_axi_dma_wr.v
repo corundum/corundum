@@ -111,6 +111,7 @@ parameter AXIS_PCIE_WORD_SIZE = AXIS_PCIE_DATA_WIDTH/AXIS_PCIE_WORD_WIDTH;
 
 parameter OFFSET_WIDTH = $clog2(AXI_DATA_WIDTH/8);
 parameter WORD_LEN_WIDTH = LEN_WIDTH - $clog2(AXIS_PCIE_KEEP_WIDTH);
+parameter CYCLE_COUNT_WIDTH = 13-AXI_BURST_SIZE;
 
 // bus width assertions
 initial begin
@@ -193,8 +194,8 @@ reg [PCIE_ADDR_WIDTH-1:0] tlp_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, tlp_addr_next;
 reg [11:0] tlp_len_reg = 12'd0, tlp_len_next;
 reg [OFFSET_WIDTH-1:0] offset_reg = {OFFSET_WIDTH{1'b0}}, offset_next;
 reg [9:0] dword_count_reg = 10'd0, dword_count_next;
-reg [11:0] input_cycle_count_reg = 12'd0, input_cycle_count_next;
-reg [11:0] output_cycle_count_reg = 12'd0, output_cycle_count_next;
+reg [CYCLE_COUNT_WIDTH-1:0] input_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, input_cycle_count_next;
+reg [CYCLE_COUNT_WIDTH-1:0] output_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, output_cycle_count_next;
 reg input_active_reg = 1'b0, input_active_next;
 reg bubble_cycle_reg = 1'b0, bubble_cycle_next;
 reg last_cycle_reg = 1'b0, last_cycle_next;
@@ -204,8 +205,8 @@ reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
 reg [PCIE_ADDR_WIDTH-1:0] tlp_cmd_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, tlp_cmd_addr_next;
 reg [11:0] tlp_cmd_len_reg = 12'd0, tlp_cmd_len_next;
 reg [9:0] tlp_cmd_dword_len_reg = 10'd0, tlp_cmd_dword_len_next;
-reg [11:0] tlp_cmd_input_cycle_len_reg = 12'd0, tlp_cmd_input_cycle_len_next;
-reg [11:0] tlp_cmd_output_cycle_len_reg = 12'd0, tlp_cmd_output_cycle_len_next;
+reg [CYCLE_COUNT_WIDTH-1:0] tlp_cmd_input_cycle_len_reg = {CYCLE_COUNT_WIDTH{1'b0}}, tlp_cmd_input_cycle_len_next;
+reg [CYCLE_COUNT_WIDTH-1:0] tlp_cmd_output_cycle_len_reg = {CYCLE_COUNT_WIDTH{1'b0}}, tlp_cmd_output_cycle_len_next;
 reg [OFFSET_WIDTH-1:0] tlp_cmd_offset_reg = {OFFSET_WIDTH{1'b0}}, tlp_cmd_offset_next;
 reg [TAG_WIDTH-1:0] tlp_cmd_tag_reg = {TAG_WIDTH{1'b0}}, tlp_cmd_tag_next;
 reg tlp_cmd_bubble_cycle_reg = 1'b0, tlp_cmd_bubble_cycle_next;

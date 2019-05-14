@@ -140,6 +140,7 @@ parameter AXIS_PCIE_WORD_WIDTH = AXIS_PCIE_KEEP_WIDTH;
 parameter AXIS_PCIE_WORD_SIZE = AXIS_PCIE_DATA_WIDTH/AXIS_PCIE_WORD_WIDTH;
 
 parameter OFFSET_WIDTH = $clog2(AXIS_PCIE_DATA_WIDTH/8);
+parameter CYCLE_COUNT_WIDTH = 13-AXI_BURST_SIZE;
 
 parameter STATUS_FIFO_ADDR_WIDTH = 5;
 
@@ -245,8 +246,8 @@ reg axi_addr_valid_reg = 1'b0, axi_addr_valid_next;
 reg [9:0] op_dword_count_reg = 10'd0, op_dword_count_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
 reg [12:0] tr_count_reg = 13'd0, tr_count_next;
-reg [11:0] input_cycle_count_reg = 12'd0, input_cycle_count_next;
-reg [11:0] output_cycle_count_reg = 12'd0, output_cycle_count_next;
+reg [CYCLE_COUNT_WIDTH-1:0] input_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, input_cycle_count_next;
+reg [CYCLE_COUNT_WIDTH-1:0] output_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, output_cycle_count_next;
 reg input_active_reg = 1'b0, input_active_next;
 reg bubble_cycle_reg = 1'b0, bubble_cycle_next;
 reg first_cycle_reg = 1'b0, first_cycle_next;

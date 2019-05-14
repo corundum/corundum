@@ -225,7 +225,6 @@ reg [2:0] tlp_state_reg = TLP_STATE_IDLE, tlp_state_next;
 reg transfer_in_save;
 
 reg tag_table_we_req;
-reg tag_table_we_tlp;
 
 reg status_fifo_we;
 
@@ -242,6 +241,7 @@ reg [11:0] lower_addr_reg = 12'd0, lower_addr_next;
 reg [12:0] byte_count_reg = 13'd0, byte_count_next;
 reg [3:0] error_code_reg = 4'd0, error_code_next;
 reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
+reg axi_addr_valid_reg = 1'b0, axi_addr_valid_next;
 reg [9:0] op_dword_count_reg = 10'd0, op_dword_count_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
 reg [12:0] tr_count_reg = 13'd0, tr_count_next;
@@ -268,6 +268,7 @@ reg tlp_cmd_valid_reg = 1'b0, tlp_cmd_valid_next;
 reg [AXI_ADDR_WIDTH-1:0] tag_table_axi_addr[(2**PCIE_TAG_WIDTH)-1:0];
 reg [TAG_WIDTH-1:0] tag_table_tag[(2**PCIE_TAG_WIDTH)-1:0];
 reg tag_table_last[(2**PCIE_TAG_WIDTH)-1:0];
+reg tag_table_we_tlp_reg = 1'b0, tag_table_we_tlp_next;
 
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_wr_ptr_reg = 0, status_fifo_wr_ptr_next;
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0, status_fifo_rd_ptr_next;
@@ -545,7 +546,7 @@ always @* begin
 
     finish_tag = 1'b0;
 
-    tag_table_we_tlp = 1'b0;
+    tag_table_we_tlp_next = 1'b0;
 
     status_fifo_we = 1'b0;
 
@@ -558,6 +559,7 @@ always @* begin
     byte_count_next = byte_count_reg;
     error_code_next = error_code_reg;
     axi_addr_next = axi_addr_reg;
+    axi_addr_valid_next = axi_addr_valid_reg;
     op_count_next = op_count_reg;
     tr_count_next = tr_count_reg;
     op_dword_count_next = op_dword_count_reg;
@@ -635,7 +637,10 @@ always @* begin
                         final_cpl_next = 1'b1;
                     end
 
-                    axi_addr_next = tag_table_axi_addr[pcie_tag_next];
+                    if (!axi_addr_valid_reg || pcie_tag_reg != pcie_tag_next) begin
+                        // current AXI address not valid, so read it from table
+                        axi_addr_next = tag_table_axi_addr[pcie_tag_next];
+                    end
 
                     offset_next = axi_addr_next[OFFSET_WIDTH-1:0] - (12+lower_addr_next[1:0]);
                     bubble_cycle_next = axi_addr_next[OFFSET_WIDTH-1:0] < 12+lower_addr_next[1:0];
@@ -644,6 +649,7 @@ always @* begin
 
                     if (active_tags[pcie_tag_next] && error_code_next == RC_ERROR_NORMAL_TERMINATION) begin
                         // no error
+                        axi_addr_valid_next = !final_cpl_next;
                         s_axis_rc_tready_next = !m_axi_awvalid || m_axi_awready;
                         tlp_state_next = TLP_STATE_START;
                     end else if (error_code_next == RC_ERROR_MISMATCH) begin
@@ -651,6 +657,7 @@ always @* begin
                         // Handle as malformed TLP (2.3.2)
                         // drop TLP and report uncorrectable error
                         status_error_uncor_next = 1'b1;
+                        axi_addr_valid_next = 1'b0;
                         s_axis_rc_tready_next = 1'b1;
                         tlp_state_next = TLP_STATE_WAIT_END;
                     end else if (!active_tags[pcie_tag_next] || error_code_next == RC_ERROR_INVALID_TAG) begin
@@ -658,6 +665,7 @@ always @* begin
                         // Handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
                         // drop TLP and report correctable error
                         status_error_cor_next = 1'b1;
+                        axi_addr_valid_next = 1'b0;
                         s_axis_rc_tready_next = 1'b1;
                         tlp_state_next = TLP_STATE_WAIT_END;
                     end else begin
@@ -677,6 +685,7 @@ always @* begin
                         // release tag
                         finish_tag = 1'b1;
                         // last request in current transfer
+                        axi_addr_valid_next = 1'b0;
                         // enqueue status FIFO entry
                         status_fifo_we = 1'b1;
                         status_fifo_wr_tag = tag_table_tag[pcie_tag_next];
@@ -747,7 +756,10 @@ always @* begin
                 //s_axis_rc_tdata[27:25]; // attr
                 //s_axis_rc_tdata[30:28]; // tc
 
-                axi_addr_next = tag_table_axi_addr[pcie_tag_next];
+                if (!axi_addr_valid_reg || pcie_tag_reg != pcie_tag_next) begin
+                    // current AXI address not valid, so read it from table
+                    axi_addr_next = tag_table_axi_addr[pcie_tag_next];
+                end
 
                 offset_next = axi_addr_next[OFFSET_WIDTH-1:0] - (4+lower_addr_reg[1:0]);
                 bubble_cycle_next = axi_addr_next[OFFSET_WIDTH-1:0] < 4+lower_addr_reg[1:0];
@@ -756,6 +768,7 @@ always @* begin
 
                 if (active_tags[pcie_tag_next] && error_code_reg == RC_ERROR_NORMAL_TERMINATION) begin
                     // no error
+                    axi_addr_valid_next = !final_cpl_next;
                     s_axis_rc_tready_next = !m_axi_awvalid || m_axi_awready;
                     tlp_state_next = TLP_STATE_START;
                 end else if (error_code_next == RC_ERROR_MISMATCH) begin
@@ -763,6 +776,7 @@ always @* begin
                     // Handle as malformed TLP (2.3.2)
                     // drop TLP and report uncorrectable error
                     status_error_uncor_next = 1'b1;
+                    axi_addr_valid_next = 1'b0;
                     s_axis_rc_tready_next = 1'b1;
                     tlp_state_next = TLP_STATE_WAIT_END;
                 end else if (!active_tags[pcie_tag_next] || error_code_next == RC_ERROR_INVALID_TAG) begin
@@ -770,6 +784,7 @@ always @* begin
                     // Handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
                     // drop TLP and report correctable error
                     status_error_cor_next = 1'b1;
+                    axi_addr_valid_next = 1'b0;
                     s_axis_rc_tready_next = 1'b1;
                     tlp_state_next = TLP_STATE_WAIT_END;
                 end else begin
@@ -789,6 +804,7 @@ always @* begin
                     // release tag
                     finish_tag = 1'b1;
                     // last request in current transfer
+                    axi_addr_valid_next = 1'b0;
                     // enqueue status FIFO entry
                     status_fifo_we = 1'b1;
                     status_fifo_wr_tag = tag_table_tag[pcie_tag_next];
@@ -945,7 +961,7 @@ always @* begin
                         finish_tag = 1'b1; // release tag
                     end else begin
                         // more completions to come, store current address
-                        tag_table_we_tlp = 1'b1;
+                        tag_table_we_tlp_next = 1'b1;
                     end
 
                     // enqueue status FIFO entry for write completion
@@ -1014,7 +1030,7 @@ always @* begin
     tlp_cmd_ready = 1'b0;
 
     // tag table write management
-    if (tag_table_we_tlp) begin
+    if (tag_table_we_tlp_reg) begin
         
     end else if (tlp_cmd_valid_reg) begin
         tlp_cmd_ready = 1'b1;
@@ -1026,12 +1042,15 @@ always @(posedge clk) begin
     if (rst) begin
         req_state_reg <= REQ_STATE_IDLE;
         tlp_state_reg <= TLP_STATE_IDLE;
+        axi_addr_valid_reg <= 1'b0;
         tlp_cmd_valid_reg <= 1'b0;
         s_axis_rc_tready_reg <= 1'b0;
         s_axis_read_desc_ready_reg <= 1'b0;
         m_axis_read_desc_status_valid_reg <= 1'b0;
         m_axi_awvalid_reg <= 1'b0;
         m_axi_bready_reg <= 1'b0;
+
+        tag_table_we_tlp_reg <= 1'b0;
 
         status_error_cor_reg <= 1'b0;
         status_error_uncor_reg <= 1'b0;
@@ -1041,12 +1060,15 @@ always @(posedge clk) begin
     end else begin
         req_state_reg <= req_state_next;
         tlp_state_reg <= tlp_state_next;
+        axi_addr_valid_reg <= axi_addr_valid_next;
         tlp_cmd_valid_reg <= tlp_cmd_valid_next;
         s_axis_rc_tready_reg <= s_axis_rc_tready_next;
         s_axis_read_desc_ready_reg <= s_axis_read_desc_ready_next;
         m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
         m_axi_awvalid_reg <= m_axi_awvalid_next;
         m_axi_bready_reg <= m_axi_bready_next;
+
+        tag_table_we_tlp_reg <= tag_table_we_tlp_next;
 
         status_error_cor_reg <= status_error_cor_next;
         status_error_uncor_reg <= status_error_uncor_next;
@@ -1098,8 +1120,8 @@ always @(posedge clk) begin
         save_axis_tdata_reg <= s_axis_rc_tdata;
     end
 
-    if (tag_table_we_tlp) begin
-        tag_table_axi_addr[pcie_tag_reg] <= axi_addr_next;
+    if (tag_table_we_tlp_reg) begin
+        tag_table_axi_addr[pcie_tag_reg] <= axi_addr_reg;
     end else if (tlp_cmd_valid_reg && tag_table_we_req) begin
         tag_table_axi_addr[tlp_cmd_pcie_tag_reg] <= tlp_cmd_addr_reg;
         tag_table_tag[tlp_cmd_pcie_tag_reg] <= tlp_cmd_tag_reg;

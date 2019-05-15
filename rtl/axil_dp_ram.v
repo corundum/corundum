@@ -288,8 +288,8 @@ always @* begin
     end
 end
 
-always @(posedge a_clk) begin
-    if (a_rst) begin
+always @(posedge b_clk) begin
+    if (b_rst) begin
         last_read_b_reg <= 1'b0;
 
         s_axil_b_awready_reg <= 1'b0;

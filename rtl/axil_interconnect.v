@@ -330,7 +330,7 @@ always @* begin
             if (match) begin
                 if (read) begin
                     // reading
-                    m_axil_rready_next[m_select_reg] = 1'b1;
+                    m_axil_rready_next[m_select_next] = 1'b1;
                     state_next = STATE_READ;
                 end else begin
                     // writing

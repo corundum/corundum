@@ -3214,9 +3214,8 @@ class RootComplex(Switch):
 
         self.downstream_tag_recv_queues = {}
 
-        self.rx_cpl_queues = {}
-        self.rx_cpl_queues = [[]]*256
-        self.rx_cpl_sync = [Signal(False)]*256
+        self.rx_cpl_queues = [[] for k in range(256)]
+        self.rx_cpl_sync = [Signal(False) for k in range(256)]
 
         self.rx_tlp_handler = {}
 

@@ -247,7 +247,7 @@ reg [AXIS_KEEP_WIDTH_INT-1:0] shift_axis_tkeep;
 reg shift_axis_tvalid;
 reg shift_axis_tlast;
 reg shift_axis_input_tready;
-reg shift_axis_extra_cycle;
+reg shift_axis_extra_cycle_reg = 1'b0;
 
 // internal datapath
 reg  [AXI_DATA_WIDTH-1:0] m_axi_wdata_int;
@@ -283,8 +283,6 @@ wire [AXI_ADDR_WIDTH-1:0] addr_plus_max_burst = addr_reg + AXI_MAX_BURST_SIZE;
 wire [AXI_ADDR_WIDTH-1:0] addr_plus_count = addr_reg + op_word_count_reg;
 
 always @* begin
-    shift_axis_extra_cycle = save_axis_tlast_reg & ((save_axis_tkeep_reg >> (AXIS_KEEP_WIDTH_INT-offset_reg)) != 0);
-
     if (!ENABLE_UNALIGNED || offset_reg == 0) begin
         // passthrough if no overlap
         shift_axis_tdata = s_axis_write_data_tdata;
@@ -298,7 +296,7 @@ always @* begin
         shift_axis_tvalid = s_axis_write_data_tvalid;
         shift_axis_tlast = 1'b0;
         shift_axis_input_tready = 1'b1;
-    end else if (shift_axis_extra_cycle) begin
+    end else if (shift_axis_extra_cycle_reg) begin
         shift_axis_tdata = {s_axis_write_data_tdata, save_axis_tdata_reg} >> ((AXIS_KEEP_WIDTH_INT-offset_reg)*AXIS_WORD_SIZE);
         shift_axis_tkeep = {{AXIS_KEEP_WIDTH_INT{1'b0}}, save_axis_tkeep_reg} >> (AXIS_KEEP_WIDTH_INT-offset_reg);
         shift_axis_tvalid = 1'b1;
@@ -717,6 +715,7 @@ always @(posedge clk) begin
         m_axi_awvalid_reg <= 1'b0;
         m_axi_bready_reg <= 1'b0;
         save_axis_tlast_reg <= 1'b0;
+        shift_axis_extra_cycle_reg <= 1'b0;
 
         status_fifo_wr_ptr_reg <= 0;
         status_fifo_rd_ptr_reg <= 0;
@@ -731,8 +730,10 @@ always @(posedge clk) begin
         // datapath
         if (flush_save) begin
             save_axis_tlast_reg <= 1'b0;
+            shift_axis_extra_cycle_reg <= 1'b0;
         end else if (transfer_in_save) begin
             save_axis_tlast_reg <= s_axis_write_data_tlast;
+            shift_axis_extra_cycle_reg <= s_axis_write_data_tlast & ((s_axis_write_data_tkeep >> (AXIS_KEEP_WIDTH_INT-offset_reg)) != 0);
         end
 
         if (status_fifo_we) begin

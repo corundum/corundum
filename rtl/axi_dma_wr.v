@@ -517,7 +517,7 @@ always @* begin
                         // no more data to transfer, finish operation
                         if (last_transfer_reg && last_cycle_offset_reg > 0) begin
                             if (AXIS_KEEP_ENABLE && cycle_size < last_cycle_offset_reg) begin
-                                m_axi_wstrb_int = m_axi_wstrb_int & {AXI_STRB_WIDTH{1'b1}} >> (AXI_STRB_WIDTH - cycle_size);
+                                m_axi_wstrb_int = m_axi_wstrb_int & shift_axis_tkeep;
                                 if (first_cycle_reg) begin
                                     length_next = length_reg + (cycle_size - offset_reg);
                                 end else begin
@@ -533,7 +533,7 @@ always @* begin
                             end
                         end else begin
                             if (AXIS_KEEP_ENABLE && cycle_size < AXI_STRB_WIDTH) begin
-                                m_axi_wstrb_int = m_axi_wstrb_int & {AXI_STRB_WIDTH{1'b1}} >> (AXI_STRB_WIDTH - cycle_size);
+                                m_axi_wstrb_int = m_axi_wstrb_int & shift_axis_tkeep;
                                 if (first_cycle_reg) begin
                                     length_next = length_reg + (cycle_size - offset_reg);
                                 end else begin
@@ -557,7 +557,7 @@ always @* begin
                     end else begin
                         // more cycles left in burst, finish burst
                         if (AXIS_KEEP_ENABLE && cycle_size < AXI_STRB_WIDTH) begin
-                            m_axi_wstrb_int = m_axi_wstrb_int & {AXI_STRB_WIDTH{1'b1}} >> (AXI_STRB_WIDTH - cycle_size);
+                            m_axi_wstrb_int = m_axi_wstrb_int & shift_axis_tkeep;
                             if (first_cycle_reg) begin
                                 length_next = length_reg + (cycle_size - offset_reg);
                             end else begin

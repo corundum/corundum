@@ -507,7 +507,7 @@ always @* begin
                     if (AXIS_KEEP_ENABLE) begin
                         cycle_size = AXIS_KEEP_WIDTH_INT;
                         for (i = AXIS_KEEP_WIDTH_INT-1; i >= 0; i = i - 1) begin
-                            if (!shift_axis_tkeep[i] && (!first_cycle_reg || i >= offset_reg)) begin
+                            if (~shift_axis_tkeep & m_axi_wstrb_int & (1 << i)) begin
                                 cycle_size = i;
                             end
                         end

@@ -479,6 +479,7 @@ always @* begin
                         axis_state_next = AXIS_STATE_IDLE;
                     end else begin
                         // more cycles in AXI transfer
+                        m_axi_rready_next = m_axis_read_data_tready_int_early && input_active_next;
                         axis_state_next = AXIS_STATE_READ;
                     end
                 end

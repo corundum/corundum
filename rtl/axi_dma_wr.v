@@ -192,6 +192,7 @@ reg [LEN_WIDTH-1:0] op_word_count_reg = {LEN_WIDTH{1'b0}}, op_word_count_next;
 reg [LEN_WIDTH-1:0] tr_word_count_reg = {LEN_WIDTH{1'b0}}, tr_word_count_next;
 
 reg [OFFSET_WIDTH-1:0] offset_reg = {OFFSET_WIDTH{1'b0}}, offset_next;
+reg zero_offset_reg = 1'b1, zero_offset_next;
 reg [OFFSET_WIDTH-1:0] last_cycle_offset_reg = {OFFSET_WIDTH{1'b0}}, last_cycle_offset_next;
 reg [LEN_WIDTH-1:0] length_reg = {LEN_WIDTH{1'b0}}, length_next;
 reg [CYCLE_COUNT_WIDTH-1:0] input_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, input_cycle_count_next;
@@ -283,7 +284,7 @@ wire [AXI_ADDR_WIDTH-1:0] addr_plus_max_burst = addr_reg + AXI_MAX_BURST_SIZE;
 wire [AXI_ADDR_WIDTH-1:0] addr_plus_count = addr_reg + op_word_count_reg;
 
 always @* begin
-    if (!ENABLE_UNALIGNED || offset_reg == 0) begin
+    if (!ENABLE_UNALIGNED || zero_offset_reg) begin
         // passthrough if no overlap
         shift_axis_tdata = s_axis_write_data_tdata;
         shift_axis_tkeep = s_axis_write_data_tkeep;
@@ -342,6 +343,7 @@ always @* begin
 
     addr_next = addr_reg;
     offset_next = offset_reg;
+    zero_offset_next = zero_offset_reg;
     last_cycle_offset_next = last_cycle_offset_reg;
     length_next = length_reg;
     op_word_count_next = op_word_count_reg;
@@ -377,10 +379,12 @@ always @* begin
             if (ENABLE_UNALIGNED) begin
                 addr_next = s_axis_write_desc_addr;
                 offset_next = s_axis_write_desc_addr & OFFSET_MASK;
+                zero_offset_next = (s_axis_write_desc_addr & OFFSET_MASK) == 0;
                 last_cycle_offset_next = offset_next + (s_axis_write_desc_len & OFFSET_MASK);
             end else begin
                 addr_next = s_axis_write_desc_addr & ADDR_MASK;
                 offset_next = 0;
+                zero_offset_next = 1'b1;
                 last_cycle_offset_next = offset_next + (s_axis_write_desc_len & OFFSET_MASK);
             end
             tag_next = s_axis_write_desc_tag;
@@ -753,6 +757,7 @@ always @(posedge clk) begin
 
     addr_reg <= addr_next;
     offset_reg <= offset_next;
+    zero_offset_reg <= zero_offset_next;
     last_cycle_offset_reg <= last_cycle_offset_next;
     length_reg <= length_next;
     op_word_count_reg <= op_word_count_next;

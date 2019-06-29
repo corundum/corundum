@@ -245,6 +245,7 @@ reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
 reg axi_addr_valid_reg = 1'b0, axi_addr_valid_next;
 reg [9:0] op_dword_count_reg = 10'd0, op_dword_count_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
+reg op_count_leq_axi_max_burst_reg = 1'b0, op_count_leq_axi_max_burst_next;
 reg [12:0] tr_count_reg = 13'd0, tr_count_next;
 reg [CYCLE_COUNT_WIDTH-1:0] input_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, input_cycle_count_next;
 reg [CYCLE_COUNT_WIDTH-1:0] output_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, output_cycle_count_next;
@@ -562,6 +563,7 @@ always @* begin
     axi_addr_next = axi_addr_reg;
     axi_addr_valid_next = axi_addr_valid_reg;
     op_count_next = op_count_reg;
+    op_count_leq_axi_max_burst_next = op_count_leq_axi_max_burst_reg;
     tr_count_next = tr_count_reg;
     op_dword_count_next = op_dword_count_reg;
     input_cycle_count_next = input_cycle_count_reg;
@@ -647,6 +649,8 @@ always @* begin
                     bubble_cycle_next = axi_addr_next[OFFSET_WIDTH-1:0] < 12+lower_addr_next[1:0];
                     first_cycle_offset_next = axi_addr_next[OFFSET_WIDTH-1:0];
                     first_cycle_next = 1'b1;
+
+                    op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
 
                     if (active_tags[pcie_tag_next] && error_code_next == RC_ERROR_NORMAL_TERMINATION) begin
                         // no error
@@ -767,6 +771,8 @@ always @* begin
                 first_cycle_offset_next = axi_addr_next[OFFSET_WIDTH-1:0];
                 first_cycle_next = 1'b1;
 
+                op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
+
                 if (active_tags[pcie_tag_next] && error_code_reg == RC_ERROR_NORMAL_TERMINATION) begin
                     // no error
                     axi_addr_valid_next = !final_cpl_next;
@@ -825,7 +831,7 @@ always @* begin
             if (s_axis_rc_tready && s_axis_rc_tvalid) begin
                 transfer_in_save = 1'b1;
 
-                if (op_count_reg <= AXI_MAX_BURST_SIZE-axi_addr_reg[1:0]) begin
+                if (op_count_leq_axi_max_burst_reg) begin
                     // packet smaller than max burst size
                     if (axi_addr_reg[12] != axi_addr_plus_op_count[12]) begin
                         // crosses 4k boundary
@@ -861,6 +867,8 @@ always @* begin
 
                 axi_addr_next = axi_addr_reg + tr_count_next;
                 op_count_next = op_count_reg - tr_count_next;
+
+                op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
 
                 input_active_next = input_cycle_count_next != 0;
                 input_cycle_count_next = input_cycle_count_next - 1;
@@ -908,7 +916,7 @@ always @* begin
                     tlp_state_next = TLP_STATE_TRANSFER;
                 end else if (op_count_reg != 0) begin
                     // current transfer done, but operation not finished yet
-                    if (op_count_reg <= AXI_MAX_BURST_SIZE-axi_addr_reg[1:0]) begin
+                    if (op_count_leq_axi_max_burst_reg) begin
                         // packet smaller than max burst size
                         if (axi_addr_reg[12] != axi_addr_plus_op_count[12]) begin
                             // crosses 4k boundary
@@ -946,6 +954,8 @@ always @* begin
 
                     axi_addr_next = axi_addr_reg + tr_count_next;
                     op_count_next = op_count_reg - tr_count_next;
+
+                    op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
 
                     // enqueue status FIFO entry for write completion
                     status_fifo_we = 1'b1;
@@ -1090,6 +1100,7 @@ always @(posedge clk) begin
     error_code_reg <= error_code_next;
     axi_addr_reg <= axi_addr_next;
     op_count_reg <= op_count_next;
+    op_count_leq_axi_max_burst_reg <= op_count_leq_axi_max_burst_next;
     tr_count_reg <= tr_count_next;
     op_dword_count_reg <= op_dword_count_next;
     input_cycle_count_reg <= input_cycle_count_next;

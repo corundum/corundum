@@ -386,9 +386,9 @@ always @* begin
                 axi_addr_next = axi_addr_reg + tr_count_next;
                 tlp_count_next = tlp_count_reg - tr_count_next;
 
-                if (tlp_count_next > 0) begin
+                if (tlp_count_next != 0) begin
                     axi_state_next = AXI_STATE_REQ;
-                end else if (op_count_next > 0) begin
+                end else if (op_count_next != 0) begin
                     axi_state_next = AXI_STATE_START;
                 end else begin
                     s_axis_write_desc_ready_next = !tlp_cmd_valid_reg && enable;
@@ -511,7 +511,7 @@ always @* begin
                     if (bubble_cycle_reg) begin
                         if (input_active_reg) begin
                             input_cycle_count_next = input_cycle_count_reg - 1;
-                            input_active_next = input_cycle_count_reg > 0;
+                            input_active_next = input_cycle_count_reg != 0;
                         end
                         bubble_cycle_next = 1'b0;
                         m_axi_rready_next = m_axis_rq_tready_int_early && input_active_next;
@@ -520,7 +520,7 @@ always @* begin
                         dword_count_next = dword_count_reg - 4;
                         if (input_active_reg) begin
                             input_cycle_count_next = input_cycle_count_reg - 1;
-                            input_active_next = input_cycle_count_reg > 0;
+                            input_active_next = input_cycle_count_reg != 0;
                         end
                         output_cycle_count_next = output_cycle_count_reg - 1;
                         last_cycle_next = output_cycle_count_next == 0;
@@ -585,7 +585,7 @@ always @* begin
                             transfer_in_save = 1'b1;
                             if (input_active_reg) begin
                                 input_cycle_count_next = input_cycle_count_reg - 1;
-                                input_active_next = input_cycle_count_reg > 0;
+                                input_active_next = input_cycle_count_reg != 0;
                             end
                             bubble_cycle_next = 1'b0;
                             m_axi_rready_next = m_axis_rq_tready_int_early && input_active_next;
@@ -621,7 +621,7 @@ always @* begin
                     transfer_in_save = 1'b1;
                     if (input_active_reg) begin
                         input_cycle_count_next = input_cycle_count_reg - 1;
-                        input_active_next = input_cycle_count_reg > 0;
+                        input_active_next = input_cycle_count_reg != 0;
                     end
                     bubble_cycle_next = 1'b0;
                     m_axi_rready_next = m_axis_rq_tready_int_early && input_active_next;
@@ -641,7 +641,7 @@ always @* begin
                 if (bubble_cycle_reg) begin
                     if (input_active_reg) begin
                         input_cycle_count_next = input_cycle_count_reg - 1;
-                        input_active_next = input_cycle_count_reg > 0;
+                        input_active_next = input_cycle_count_reg != 0;
                     end
                     bubble_cycle_next = 1'b0;
                     m_axi_rready_next = m_axis_rq_tready_int_early && input_active_next;
@@ -650,7 +650,7 @@ always @* begin
                     dword_count_next = dword_count_reg - AXI_STRB_WIDTH/4;
                     if (input_active_reg) begin
                         input_cycle_count_next = input_cycle_count_reg - 1;
-                        input_active_next = input_cycle_count_reg > 0;
+                        input_active_next = input_cycle_count_reg != 0;
                     end
                     output_cycle_count_next = output_cycle_count_reg - 1;
                     last_cycle_next = output_cycle_count_next == 0;

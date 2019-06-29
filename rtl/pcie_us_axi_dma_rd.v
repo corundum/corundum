@@ -488,7 +488,7 @@ always @* begin
                     tlp_cmd_last_next = req_op_count_next == 0;
                     tlp_cmd_valid_next = 1'b1;
 
-                    if (req_op_count_next > 0) begin
+                    if (req_op_count_next != 0) begin
                         req_state_next = REQ_STATE_START;
                     end else begin
                         s_axis_read_desc_ready_next = 1'b0;
@@ -527,7 +527,7 @@ always @* begin
                 tlp_cmd_last_next = req_op_count_next == 0;
                 tlp_cmd_valid_next = 1'b1;
 
-                if (req_op_count_next > 0) begin
+                if (req_op_count_next != 0) begin
                     req_state_next = REQ_STATE_START;
                 end else begin
                     s_axis_read_desc_ready_next = 1'b0;
@@ -862,7 +862,7 @@ always @* begin
                 axi_addr_next = axi_addr_reg + tr_count_next;
                 op_count_next = op_count_reg - tr_count_next;
 
-                input_active_next = input_cycle_count_next > 0;
+                input_active_next = input_cycle_count_next != 0;
                 input_cycle_count_next = input_cycle_count_next - 1;
                 s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next && bubble_cycle_reg && (!last_cycle_next || op_count_next == 0 || !m_axi_awvalid || m_axi_awready);
                 tlp_state_next = TLP_STATE_TRANSFER;
@@ -889,13 +889,13 @@ always @* begin
 
                 if (input_active_reg && !(first_cycle_reg && !bubble_cycle_reg)) begin
                     input_cycle_count_next = input_cycle_count_reg - 1;
-                    input_active_next = input_cycle_count_reg > 0;
+                    input_active_next = input_cycle_count_reg != 0;
                 end
                 output_cycle_count_next = output_cycle_count_reg - 1;
                 last_cycle_next = output_cycle_count_next == 0;
 
                 if (last_cycle_reg) begin
-                    if (last_cycle_offset_reg > 0 && op_count_reg == 0) begin
+                    if (last_cycle_offset_reg != 0 && op_count_reg == 0) begin
                         m_axi_wstrb_int = m_axi_wstrb_int & {AXI_STRB_WIDTH{1'b1}} >> (AXI_STRB_WIDTH-last_cycle_offset_reg);
                     end
                     m_axi_wlast_int = 1'b1;
@@ -906,7 +906,7 @@ always @* begin
                     // current transfer not finished yet
                     s_axis_rc_tready_next = m_axi_wready_int_early && input_active_next && (!last_cycle_next || op_count_reg == 0 || !m_axi_awvalid || m_axi_awready);
                     tlp_state_next = TLP_STATE_TRANSFER;
-                end else if (op_count_reg > 0) begin
+                end else if (op_count_reg != 0) begin
                     // current transfer done, but operation not finished yet
                     if (op_count_reg <= AXI_MAX_BURST_SIZE-axi_addr_reg[1:0]) begin
                         // packet smaller than max burst size

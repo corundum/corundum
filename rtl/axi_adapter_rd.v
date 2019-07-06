@@ -503,6 +503,7 @@ always @* begin
                     end
                     if (master_burst_reg == 0) begin
                         if (burst_reg == 0) begin
+                            m_axi_rready_next = 1'b0;
                             s_axi_rlast_int = 1'b1;
                             s_axi_rvalid_int = 1'b1;
                             s_axi_arready_next = !m_axi_arvalid;

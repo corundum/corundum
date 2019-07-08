@@ -614,8 +614,6 @@ always @* begin
                             m_axi_awlen_next = burst_reg;
                             m_axi_awsize_next = burst_size_reg;
                         end
-                        m_axi_awlen_next = master_burst_next;
-                        m_axi_awsize_next = master_burst_size_reg;
                         m_axi_awvalid_next = 1'b1;
                         state_next = STATE_DATA;
                     end else begin

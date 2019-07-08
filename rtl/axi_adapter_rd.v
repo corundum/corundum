@@ -529,8 +529,6 @@ always @* begin
                                 m_axi_arlen_next = burst_next;
                                 m_axi_arsize_next = burst_size_reg;
                             end
-                            m_axi_arlen_next = master_burst_next;
-                            m_axi_arsize_next = master_burst_size_reg;
                             m_axi_arvalid_next = 1'b1;
                             state_next = STATE_DATA;
                         end

@@ -542,7 +542,7 @@ always @* begin
                     addr_next = addr_reg + (1 << master_burst_size_reg);
                     if (master_burst_reg == 0) begin
                         s_axi_wready_next = 1'b0;
-                        m_axi_bready_next = !s_axi_bvalid;
+                        m_axi_bready_next = !s_axi_bvalid && !s_axi_awvalid;
                         m_axi_wlast_int = 1'b1;
                         state_next = STATE_RESP;
                     end else if (addr_next[burst_size_reg] != addr_reg[burst_size_reg]) begin
@@ -569,7 +569,7 @@ always @* begin
                     if (master_burst_reg == 0) begin
                         // burst on master interface finished; transfer response
                         s_axi_wready_next = 1'b0;
-                        m_axi_bready_next = !s_axi_bvalid;
+                        m_axi_bready_next = !s_axi_bvalid && !m_axi_awvalid;
                         m_axi_wlast_int = 1'b1;
                         state_next = STATE_RESP;
                     end else if (addr_next[burst_size_reg] != addr_reg[burst_size_reg]) begin
@@ -584,7 +584,7 @@ always @* begin
             end
             STATE_RESP: begin
                 // resp state; transfer write response
-                m_axi_bready_next = !s_axi_bvalid;
+                m_axi_bready_next = !s_axi_bvalid && !m_axi_awvalid;
 
                 if (m_axi_bready && m_axi_bvalid) begin
                     first_transfer_next = 1'b0;

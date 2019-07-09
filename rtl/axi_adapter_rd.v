@@ -474,14 +474,14 @@ always @* begin
                     m_axi_arregion_next = s_axi_arregion;
                     m_axi_aruser_next = s_axi_aruser;
                     m_axi_arvalid_next = 1'b1;
-                    m_axi_rready_next = s_axi_rready_int_early;
+                    m_axi_rready_next = 1'b0;
                     state_next = STATE_DATA;
                 end else begin
                     state_next = STATE_IDLE;
                 end
             end
             STATE_DATA: begin
-                m_axi_rready_next = s_axi_rready_int_early;
+                m_axi_rready_next = s_axi_rready_int_early && !m_axi_arvalid;
 
                 if (m_axi_rready && m_axi_rvalid) begin
                     data_next[addr_reg[S_ADDR_BIT_OFFSET-1:M_ADDR_BIT_OFFSET]*SEGMENT_DATA_WIDTH +: SEGMENT_DATA_WIDTH] = m_axi_rdata;
@@ -530,6 +530,7 @@ always @* begin
                                 m_axi_arsize_next = burst_size_reg;
                             end
                             m_axi_arvalid_next = 1'b1;
+                            m_axi_rready_next = 1'b0;
                             state_next = STATE_DATA;
                         end
                     end else begin

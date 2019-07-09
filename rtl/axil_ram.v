@@ -140,7 +140,7 @@ always @(posedge clk) begin
 
     for (i = 0; i < WORD_WIDTH; i = i + 1) begin
         if (mem_wr_en && s_axil_wstrb[i]) begin
-            mem[s_axil_awaddr_valid][8*i +: 8] <= s_axil_wdata[8*i +: 8];
+            mem[s_axil_awaddr_valid][WORD_SIZE*i +: WORD_SIZE] <= s_axil_wdata[WORD_SIZE*i +: WORD_SIZE];
         end
     end
 end

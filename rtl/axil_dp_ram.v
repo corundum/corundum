@@ -239,7 +239,7 @@ always @(posedge a_clk) begin
     end else begin
         for (i = 0; i < WORD_WIDTH; i = i + 1) begin
             if (mem_wr_en_a && s_axil_a_wstrb[i]) begin
-                mem[s_axil_a_awaddr_valid][8*i +: 8] <= s_axil_a_wdata[8*i +: 8];
+                mem[s_axil_a_awaddr_valid][WORD_SIZE*i +: WORD_SIZE] <= s_axil_a_wdata[WORD_SIZE*i +: WORD_SIZE];
             end
         end
     end
@@ -323,7 +323,7 @@ always @(posedge b_clk) begin
     end else begin
         for (i = 0; i < WORD_WIDTH; i = i + 1) begin
             if (mem_wr_en_b && s_axil_b_wstrb[i]) begin
-                mem[s_axil_b_awaddr_valid][8*i +: 8] <= s_axil_b_wdata[8*i +: 8];
+                mem[s_axil_b_awaddr_valid][WORD_SIZE*i +: WORD_SIZE] <= s_axil_b_wdata[WORD_SIZE*i +: WORD_SIZE];
             end
         end
     end

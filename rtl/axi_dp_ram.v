@@ -378,7 +378,7 @@ always @(posedge a_clk) begin
     end else if (ram_a_cmd_ready_reg && ram_a_cmd_wr_en) begin
         for (i = 0; i < WORD_WIDTH; i = i + 1) begin
             if (ram_a_cmd_wr_strb[i]) begin
-                mem[addr_a_valid][8*i +: 8] <= ram_a_cmd_wr_data[8*i +: 8];
+                mem[addr_a_valid][WORD_SIZE*i +: WORD_SIZE] <= ram_a_cmd_wr_data[WORD_SIZE*i +: WORD_SIZE];
             end
         end
     end
@@ -402,7 +402,7 @@ always @(posedge b_clk) begin
     end else if (ram_b_cmd_ready_reg && ram_b_cmd_wr_en) begin
         for (i = 0; i < WORD_WIDTH; i = i + 1) begin
             if (ram_b_cmd_wr_strb[i]) begin
-                mem[addr_b_valid][8*i +: 8] <= ram_b_cmd_wr_data[8*i +: 8];
+                mem[addr_b_valid][WORD_SIZE*i +: WORD_SIZE] <= ram_b_cmd_wr_data[WORD_SIZE*i +: WORD_SIZE];
             end
         end
     end

@@ -89,7 +89,7 @@ address decode, admission control, and decode error handling.
 
 AXI to AXI stream DMA engine with parametrizable data and address interface
 widths.  Generates full-width INCR bursts only, with parametrizable maximum
-burst length.  Supportts unaligned transfers, which can be disabled via
+burst length.  Supports unaligned transfers, which can be disabled via
 parameter to save on resource consumption.  Wrapper for axi_dma_rd and
 axi_dma_wr.
 
@@ -103,14 +103,14 @@ distributing responses.
 
 AXI to AXI stream DMA engine with parametrizable data and address interface
 widths.  Generates full-width INCR bursts only, with parametrizable maximum
-burst length.  Supportts unaligned transfers, which can be disabled via
+burst length.  Supports unaligned transfers, which can be disabled via
 parameter to save on resource consumption.
 
 ### axi_dma_wr module
 
 AXI stream to AXI DMA engine with parametrizable data and address interface
 widths.  Generates full-width INCR bursts only, with parametrizable maximum
-burst length.  Supportts unaligned transfers, which can be disabled via
+burst length.  Supports unaligned transfers, which can be disabled via
 parameter to save on resource consumption.
 
 ### axi_fifo module

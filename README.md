@@ -181,6 +181,21 @@ widths.
 AXI lite width adapter module with parametrizable data and address interface
 widths.
 
+### axil_cdc module
+
+AXI lite clock domain crossing module with parametrizable data and address
+interface widths.  Wrapper for axi_cdc_rd and axi_cdc_wr.
+
+### axil_cdc_rd module
+
+AXI lite clock domain crossing module with parametrizable data and address
+interface widths.
+
+### axil_cdc_wr module
+
+AXI lite clock domain crossing module with parametrizable data and address
+interface widths.
+
 ### axil_interconnect module
 
 AXI lite shared interconnect with parametrizable data and address interface
@@ -303,6 +318,9 @@ registers can be individually bypassed.
     rtl/axil_adapter.v              : AXI lite width converter
     rtl/axil_adapter_rd.v           : AXI lite width converter (read)
     rtl/axil_adapter_wr.v           : AXI lite width converter (write)
+    rtl/axil_cdc.v                  : AXI lite CDC
+    rtl/axil_cdc_rd.v               : AXI lite CDC (read)
+    rtl/axil_cdc_wr.v               : AXI lite CDC (write)
     rtl/axil_interconnect.v         : AXI lite shared interconnect
     rtl/axil_ram.v                  : AXI lite RAM
     rtl/axil_register.v             : AXI lite register

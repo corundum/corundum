@@ -27,6 +27,22 @@ Supports INCR burst types and narrow bursts.
 AXI width adapter module with parametrizable data and address interface widths.
 Supports INCR burst types and narrow bursts.
 
+### axi_axil_adapter module
+
+AXI to AXI lite converter and width adapter module with parametrizable data
+and address interface widths.  Supports INCR burst types and narrow bursts.
+Wrapper for axi_axil_adapter_rd and axi_axil_adapter_wr.
+
+### axi_axil_adapter_rd module
+
+AXI to AXI lite converter and width adapter module with parametrizable data
+and address interface widths.  Supports INCR burst types and narrow bursts.
+
+### axi_axil_adapter_wr module
+
+AXI to AXI lite converter and width adapter module with parametrizable data
+and address interface widths.  Supports INCR burst types and narrow bursts.
+
 ### axi_cdma module
 
 AXI to AXI DMA engine with parametrizable data and address interface widths.
@@ -263,6 +279,9 @@ registers can be individually bypassed.
     rtl/axi_adapter.v               : AXI lite width converter
     rtl/axi_adapter_rd.v            : AXI lite width converter (read)
     rtl/axi_adapter_wr.v            : AXI lite width converter (write)
+    rtl/axi_axil_adapter.v          : AXI to AXI lite converter
+    rtl/axi_axil_adapter_rd.v       : AXI to AXI lite converter (read)
+    rtl/axi_axil_adapter_wr.v       : AXI to AXI lite converter (write)
     rtl/axi_cdma.v                  : AXI central DMA engine
     rtl/axi_cdma_desc_mux.v         : AXI CDMA descriptor mux
     rtl/axi_crossbar.v              : AXI nonblocking crossbar interconnect

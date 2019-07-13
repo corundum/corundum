@@ -91,9 +91,13 @@ Demux module for Xilinx Ultrascale RC interface.  Can be used to route
 incoming completions based on the requester ID (function).  Supports 64, 128,
 and 256 bit datapaths.
 
+### pcie_us_cfg module
+
+Configuration shim for Xilinx Ultrascale series FPGAs.
+
 ### pcie_us_msi module
 
-MSI shim for Xilinx Ultrascale series FPGAs.  
+MSI shim for Xilinx Ultrascale series FPGAs.
 
 ### priority_encoder module
 
@@ -123,6 +127,7 @@ signals together.
     pcie_us_axil_master.v   : AXI Lite Master module with Xilinx Ultrascale interface
     pcie_us_axis_cq_demux.v : Parametrizable AXI stream CQ demux
     pcie_us_axis_rc_demux.v : Parametrizable AXI stream RC demux
+    pcie_us_cfg.v           : Configuration shim for Xilinx Ultrascale devices
     pcie_us_msi.v           : MSI shim for Xilinx Ultrascale devices
     priority_encoder.v      : Parametrizable priority encoder
     pulse_merge             : Parametrizable pulse merge module

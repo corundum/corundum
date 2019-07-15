@@ -251,9 +251,7 @@ def bench():
 
 def test_bench():
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    #sim = Simulation(bench())
-    traceSignals.name = os.path.basename(__file__).rsplit('.',1)[0]
-    sim = Simulation(traceSignals(bench))
+    sim = Simulation(bench())
     sim.run()
 
 if __name__ == '__main__':

@@ -28,7 +28,7 @@ THE SOFTWARE.
 #include <linux/pci-aspm.h>
 #include <linux/delay.h>
 
-MODULE_DESCRIPTION("verilog-pcie exmaple driver");
+MODULE_DESCRIPTION("verilog-pcie example driver");
 MODULE_AUTHOR("Alex Forencich");
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_VERSION(DRIVER_VERSION);

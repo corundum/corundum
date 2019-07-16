@@ -1540,8 +1540,9 @@ class Function(PMCapability, PCIECapability):
 
         self.current_tag = 0
 
-        self.rx_cpl_queues = [[]]*256
-        self.rx_cpl_sync = [Signal(False)]*256
+        self.rx_cpl_queues = [[] for k in range(256)]
+        self.rx_cpl_sync = [Signal(False) for k in range(256)]
+
         self.rx_tlp_handler = {}
 
         self.capabilities = PcieCapList()
@@ -1807,6 +1808,17 @@ class Function(PMCapability, PCIECapability):
 
         return None
 
+    def get_free_tag(self):
+        tag = None
+        tag_count = 256 if self.extended_tag_field_enable else 32
+
+        for k in range(tag_count):
+            if not self.rx_cpl_queues[self.current_tag]:
+                tag = self.current_tag
+            self.current_tag = (self.current_tag + 1) % tag_count
+
+        return tag
+
     def handle_config_0_tlp(self, tlp):
         if tlp.dest_id.device == self.device_num and tlp.dest_id.function == self.function_num:
             # logging
@@ -1847,13 +1859,11 @@ class Function(PMCapability, PCIECapability):
             tlp = TLP()
             tlp.fmt_type = TLP_IO_READ
             tlp.requester_id = self.get_id()
-            tlp.tag = self.current_tag
+            tlp.tag = self.get_free_tag()
 
             first_pad = addr % 4
             byte_length = min(length-n, 4-first_pad)
             tlp.set_be(addr, byte_length)
-
-            self.current_tag = (self.current_tag % 31) + 1
 
             yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
@@ -1916,13 +1926,11 @@ class Function(PMCapability, PCIECapability):
             tlp = TLP()
             tlp.fmt_type = TLP_IO_WRITE
             tlp.requester_id = self.get_id()
-            tlp.tag = self.current_tag
+            tlp.tag = self.get_free_tag()
 
             first_pad = addr % 4
             byte_length = min(len(data)-n, 4-first_pad)
             tlp.set_be_data(addr, data[n:n+byte_length])
-
-            self.current_tag = (self.current_tag % 31) + 1
 
             yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
@@ -1976,7 +1984,7 @@ class Function(PMCapability, PCIECapability):
             else:
                 tlp.fmt_type = TLP_MEM_READ
             tlp.requester_id = self.get_id()
-            tlp.tag = self.current_tag
+            tlp.tag = self.get_free_tag()
             tlp.attr = attr
             tlp.tc = tc
 
@@ -1985,8 +1993,6 @@ class Function(PMCapability, PCIECapability):
             byte_length = min(byte_length, (128 << self.max_read_request_size)-first_pad) # max read request size
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
             tlp.set_be(addr, length)
-
-            self.current_tag = (self.current_tag % 31) + 1
 
             yield from self.send(tlp)
 
@@ -3403,6 +3409,17 @@ class RootComplex(Switch):
 
         return None
 
+    def get_free_tag(self):
+        tag = None
+        tag_count = 32
+
+        for k in range(tag_count):
+            if not self.rx_cpl_queues[self.current_tag]:
+                tag = self.current_tag
+            self.current_tag = (self.current_tag + 1) % tag_count
+
+        return tag
+
     def handle_io_read_tlp(self, tlp):
         if self.find_io_region(tlp.address):
             # logging
@@ -3632,7 +3649,7 @@ class RootComplex(Switch):
             tlp = TLP()
             tlp.fmt_type = TLP_CFG_READ_1
             tlp.requester_id = PcieId(0, 0, 0)
-            tlp.tag = self.current_tag
+            tlp.tag = self.get_free_tag()
             tlp.dest_id = dev
 
             first_pad = addr % 4
@@ -3640,8 +3657,6 @@ class RootComplex(Switch):
             tlp.set_be(addr, byte_length)
 
             tlp.register_number = addr >> 2
-
-            self.current_tag = (self.current_tag % 31) + 1
 
             yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
@@ -3698,7 +3713,7 @@ class RootComplex(Switch):
             tlp = TLP()
             tlp.fmt_type = TLP_CFG_WRITE_1
             tlp.requester_id = PcieId(0, 0, 0)
-            tlp.tag = self.current_tag
+            tlp.tag = self.get_free_tag()
             tlp.dest_id = dev
 
             first_pad = addr % 4
@@ -3706,8 +3721,6 @@ class RootComplex(Switch):
             tlp.set_be_data(addr, data[n:n+byte_length])
 
             tlp.register_number = addr >> 2
-
-            self.current_tag = (self.current_tag % 31) + 1
 
             yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
@@ -3838,13 +3851,11 @@ class RootComplex(Switch):
             tlp = TLP()
             tlp.fmt_type = TLP_IO_READ
             tlp.requester_id = PcieId(0, 0, 0)
-            tlp.tag = self.current_tag
+            tlp.tag = self.get_free_tag()
 
             first_pad = addr % 4
             byte_length = min(length-n, 4-first_pad)
             tlp.set_be(addr, byte_length)
-
-            self.current_tag = (self.current_tag % 31) + 1
 
             yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
@@ -3907,13 +3918,11 @@ class RootComplex(Switch):
             tlp = TLP()
             tlp.fmt_type = TLP_IO_WRITE
             tlp.requester_id = PcieId(0, 0, 0)
-            tlp.tag = self.current_tag
+            tlp.tag = self.get_free_tag()
 
             first_pad = addr % 4
             byte_length = min(len(data)-n, 4-first_pad)
             tlp.set_be_data(addr, data[n:n+byte_length])
-
-            self.current_tag = (self.current_tag % 31) + 1
 
             yield from self.send(tlp)
             cpl = yield from self.recv_cpl(tlp.tag, timeout)
@@ -3967,7 +3976,7 @@ class RootComplex(Switch):
             else:
                 tlp.fmt_type = TLP_MEM_READ
             tlp.requester_id = PcieId(0, 0, 0)
-            tlp.tag = self.current_tag
+            tlp.tag = self.get_free_tag()
             tlp.attr = attr
             tlp.tc = tc
 
@@ -3976,8 +3985,6 @@ class RootComplex(Switch):
             byte_length = min(byte_length, (128 << self.max_read_request_size)-first_pad) # max read request size
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff)) # 4k align
             tlp.set_be(addr, byte_length)
-
-            self.current_tag = (self.current_tag % 31) + 1
 
             yield from self.send(tlp)
 

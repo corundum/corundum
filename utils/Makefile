@@ -5,9 +5,12 @@ BINDIR=$(DESTDIR)$(PREFIX)/bin
 CC=gcc
 CFLAGS=-O3 -Wall
 
-BIN=perout
+BIN=mqnic-config perout
 
 all: $(BIN)
+
+mqnic-config: mqnic-config.c
+	$(CC) $(CFLAGS) $^ -o $@
 
 perout: perout.c
 	$(CC) $(CFLAGS) $^ -o $@

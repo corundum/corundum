@@ -1899,8 +1899,8 @@ generate
             .AXI_BASE_ADDR(n*2**IF_AXI_ADDR_WIDTH),
             .XGMII_DATA_WIDTH(64),
             .XGMII_CTRL_WIDTH(8),
-            .TX_FIFO_ADDR_WIDTH(14-$clog2(AXI_STRB_WIDTH)),
-            .RX_FIFO_ADDR_WIDTH(14-$clog2(AXI_STRB_WIDTH))
+            .TX_FIFO_DEPTH(16384),
+            .RX_FIFO_DEPTH(16384)
         )
         interface_inst (
             .clk(clk_250mhz),

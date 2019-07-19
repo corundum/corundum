@@ -70,8 +70,8 @@ module port #
     parameter AXI_BASE_ADDR = 0,
     parameter XGMII_DATA_WIDTH = 64,
     parameter XGMII_CTRL_WIDTH = (XGMII_DATA_WIDTH/8),
-    parameter TX_FIFO_ADDR_WIDTH = 12-$clog2(AXI_STRB_WIDTH),
-    parameter RX_FIFO_ADDR_WIDTH = 12-$clog2(AXI_STRB_WIDTH)
+    parameter TX_FIFO_DEPTH = 4096,
+    parameter RX_FIFO_DEPTH = 4096
 )
 (
     input  wire                                 clk,
@@ -1015,7 +1015,7 @@ tx_engine_inst (
 );
 
 axis_fifo #(
-    .ADDR_WIDTH(4),
+    .DEPTH(16),
     .DATA_WIDTH(16),
     .KEEP_ENABLE(0),
     .LAST_ENABLE(0),
@@ -1272,8 +1272,8 @@ eth_interface #(
     .ENABLE_PADDING(1),
     .ENABLE_DIC(1),
     .MIN_FRAME_LENGTH(64),
-    .TX_FIFO_ADDR_WIDTH(TX_FIFO_ADDR_WIDTH),
-    .RX_FIFO_ADDR_WIDTH(RX_FIFO_ADDR_WIDTH),
+    .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
+    .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
     .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
     .LOGIC_PTP_PERIOD_NS(4'h4),

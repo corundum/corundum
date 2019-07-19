@@ -80,8 +80,8 @@ module interface #
     parameter AXI_BASE_ADDR = 0,
     parameter XGMII_DATA_WIDTH = 64,
     parameter XGMII_CTRL_WIDTH = (XGMII_DATA_WIDTH/8),
-    parameter TX_FIFO_ADDR_WIDTH = 12-$clog2(AXI_STRB_WIDTH),
-    parameter RX_FIFO_ADDR_WIDTH = 12-$clog2(AXI_STRB_WIDTH)
+    parameter TX_FIFO_DEPTH = 4096,
+    parameter RX_FIFO_DEPTH = 4096
 )
 (
     input  wire                               clk,
@@ -1740,7 +1740,7 @@ event_mux_inst (
 );
 
 axis_fifo #(
-    .ADDR_WIDTH(4),
+    .DEPTH(16),
     .DATA_WIDTH(EVENT_SOURCE_WIDTH+EVENT_TYPE_WIDTH+EVENT_QUEUE_INDEX_WIDTH),
     .KEEP_ENABLE(0),
     .LAST_ENABLE(0),
@@ -1780,7 +1780,7 @@ tx_event_fifo (
 );
 
 axis_fifo #(
-    .ADDR_WIDTH(4),
+    .DEPTH(16),
     .DATA_WIDTH(EVENT_SOURCE_WIDTH+EVENT_TYPE_WIDTH+EVENT_QUEUE_INDEX_WIDTH),
     .KEEP_ENABLE(0),
     .LAST_ENABLE(0),
@@ -2319,8 +2319,8 @@ generate
             .AXI_BASE_ADDR(23'h000000),
             .XGMII_DATA_WIDTH(XGMII_DATA_WIDTH),
             .XGMII_CTRL_WIDTH(XGMII_CTRL_WIDTH),
-            .TX_FIFO_ADDR_WIDTH(TX_FIFO_ADDR_WIDTH),
-            .RX_FIFO_ADDR_WIDTH(RX_FIFO_ADDR_WIDTH)
+            .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
+            .RX_FIFO_DEPTH(RX_FIFO_DEPTH)
         )
         port_inst (
             .clk(clk),

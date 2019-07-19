@@ -54,11 +54,11 @@ module eth_interface #
     parameter ENABLE_PADDING = 1,
     parameter ENABLE_DIC = 1,
     parameter MIN_FRAME_LENGTH = 64,
-    parameter TX_FIFO_ADDR_WIDTH = 12-$clog2(AXI_STRB_WIDTH),
+    parameter TX_FIFO_DEPTH = 4096,
     parameter TX_FRAME_FIFO = 1,
     parameter TX_DROP_BAD_FRAME = TX_FRAME_FIFO,
     parameter TX_DROP_WHEN_FULL = 0,
-    parameter RX_FIFO_ADDR_WIDTH = 12-$clog2(AXI_STRB_WIDTH),
+    parameter RX_FIFO_DEPTH = 4096,
     parameter RX_FRAME_FIFO = 1,
     parameter RX_DROP_BAD_FRAME = RX_FRAME_FIFO,
     parameter RX_DROP_WHEN_FULL = RX_FRAME_FIFO,
@@ -362,7 +362,7 @@ wire [PTP_TAG_WIDTH-1:0] tx_axis_ptp_ts_tag;
 wire tx_axis_ptp_ts_valid;
 
 axis_async_fifo #(
-    .ADDR_WIDTH(6),
+    .DEPTH(64),
     .DATA_WIDTH(PTP_TAG_WIDTH+PTP_TS_WIDTH),
     .KEEP_ENABLE(0),
     .LAST_ENABLE(0),
@@ -409,7 +409,7 @@ wire [PTP_TS_WIDTH-1:0] rx_axis_ptp_ts_96;
 wire rx_axis_ptp_ts_valid;
 
 axis_fifo #(
-    .ADDR_WIDTH(6),
+    .DEPTH(64),
     .DATA_WIDTH(PTP_TS_WIDTH),
     .KEEP_ENABLE(0),
     .LAST_ENABLE(0),
@@ -606,7 +606,7 @@ tx_adapter (
 );
 
 axis_async_fifo #(
-    .ADDR_WIDTH(TX_FIFO_ADDR_WIDTH),
+    .DEPTH(TX_FIFO_DEPTH),
     .DATA_WIDTH(AXI_DATA_WIDTH),
     .KEEP_ENABLE(1),
     .KEEP_WIDTH(AXI_STRB_WIDTH),
@@ -689,7 +689,7 @@ rx_adapter (
 );
 
 axis_async_fifo #(
-    .ADDR_WIDTH(RX_FIFO_ADDR_WIDTH),
+    .DEPTH(RX_FIFO_DEPTH),
     .DATA_WIDTH(AXI_DATA_WIDTH),
     .KEEP_ENABLE(1),
     .KEEP_WIDTH(AXI_STRB_WIDTH),

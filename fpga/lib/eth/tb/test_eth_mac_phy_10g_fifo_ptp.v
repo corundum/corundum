@@ -29,7 +29,7 @@ THE SOFTWARE.
 /*
  * Testbench for eth_mac_phy_10g_fifo
  */
-module test_eth_mac_phy_10g_fifo;
+module test_eth_mac_phy_10g_fifo_ptp;
 
 // Parameters
 parameter DATA_WIDTH = 64;
@@ -55,6 +55,18 @@ parameter RX_FIFO_DEPTH = 4096;
 parameter RX_FRAME_FIFO = 1;
 parameter RX_DROP_BAD_FRAME = RX_FRAME_FIFO;
 parameter RX_DROP_WHEN_FULL = RX_FRAME_FIFO;
+parameter LOGIC_PTP_PERIOD_NS = 4'h6;
+parameter LOGIC_PTP_PERIOD_FNS = 16'h6666;
+parameter PTP_PERIOD_NS = 4'h6;
+parameter PTP_PERIOD_FNS = 16'h6666;
+parameter PTP_USE_SAMPLE_CLOCK = 0;
+parameter TX_PTP_TS_ENABLE = 1;
+parameter RX_PTP_TS_ENABLE = 1;
+parameter TX_PTP_TS_FIFO_DEPTH = 64;
+parameter RX_PTP_TS_FIFO_DEPTH = 64;
+parameter PTP_TS_WIDTH = 96;
+parameter TX_PTP_TAG_ENABLE = 1;
+parameter PTP_TAG_WIDTH = 16;
 
 // Inputs
 reg clk = 0;
@@ -67,25 +79,37 @@ reg tx_clk = 0;
 reg tx_rst = 0;
 reg logic_clk = 0;
 reg logic_rst = 0;
+reg ptp_sample_clk = 0;
 reg [AXIS_DATA_WIDTH-1:0] tx_axis_tdata = 0;
 reg [AXIS_KEEP_WIDTH-1:0] tx_axis_tkeep = 0;
 reg tx_axis_tvalid = 0;
 reg tx_axis_tlast = 0;
 reg tx_axis_tuser = 0;
+reg [PTP_TAG_WIDTH-1:0] s_axis_tx_ptp_ts_tag = 0;
+reg s_axis_tx_ptp_ts_valid = 0;
+reg m_axis_tx_ptp_ts_ready = 0;
 reg rx_axis_tready = 0;
+reg m_axis_rx_ptp_ts_ready = 0;
 reg [DATA_WIDTH-1:0] serdes_rx_data = 0;
 reg [HDR_WIDTH-1:0] serdes_rx_hdr = 1;
+reg [PTP_TS_WIDTH-1:0] ptp_ts_96 = 0;
 reg [7:0] ifg_delay = 0;
 reg tx_prbs31_enable = 0;
 reg rx_prbs31_enable = 0;
 
 // Outputs
 wire tx_axis_tready;
+wire s_axis_tx_ptp_ts_ready;
+wire [PTP_TS_WIDTH-1:0] m_axis_tx_ptp_ts_96;
+wire [PTP_TAG_WIDTH-1:0] m_axis_tx_ptp_ts_tag;
+wire m_axis_tx_ptp_ts_valid;
 wire [AXIS_DATA_WIDTH-1:0] rx_axis_tdata;
 wire [AXIS_KEEP_WIDTH-1:0] rx_axis_tkeep;
 wire rx_axis_tvalid;
 wire rx_axis_tlast;
 wire rx_axis_tuser;
+wire [PTP_TS_WIDTH-1:0] m_axis_rx_ptp_ts_96;
+wire m_axis_rx_ptp_ts_valid;
 wire [DATA_WIDTH-1:0] serdes_tx_data;
 wire [HDR_WIDTH-1:0] serdes_tx_hdr;
 wire serdes_rx_bitslip;
@@ -114,25 +138,37 @@ initial begin
         tx_rst,
         logic_clk,
         logic_rst,
+        ptp_sample_clk,
         tx_axis_tdata,
         tx_axis_tkeep,
         tx_axis_tvalid,
         tx_axis_tlast,
         tx_axis_tuser,
+        s_axis_tx_ptp_ts_tag,
+        s_axis_tx_ptp_ts_valid,
+        m_axis_tx_ptp_ts_ready,
         rx_axis_tready,
+        m_axis_rx_ptp_ts_ready,
         serdes_rx_data,
         serdes_rx_hdr,
+        ptp_ts_96,
         ifg_delay,
         tx_prbs31_enable,
         rx_prbs31_enable
     );
     $to_myhdl(
         tx_axis_tready,
+        s_axis_tx_ptp_ts_ready,
+        m_axis_tx_ptp_ts_96,
+        m_axis_tx_ptp_ts_tag,
+        m_axis_tx_ptp_ts_valid,
         rx_axis_tdata,
         rx_axis_tkeep,
         rx_axis_tvalid,
         rx_axis_tlast,
         rx_axis_tuser,
+        m_axis_rx_ptp_ts_96,
+        m_axis_rx_ptp_ts_valid,
         serdes_tx_data,
         serdes_tx_hdr,
         serdes_rx_bitslip,
@@ -151,8 +187,8 @@ initial begin
     );
 
     // dump file
-    $dumpfile("test_eth_mac_phy_10g_fifo.lxt");
-    $dumpvars(0, test_eth_mac_phy_10g_fifo);
+    $dumpfile("test_eth_mac_phy_10g_fifo_ptp.lxt");
+    $dumpvars(0, test_eth_mac_phy_10g_fifo_ptp);
 end
 
 eth_mac_phy_10g_fifo #(
@@ -178,7 +214,19 @@ eth_mac_phy_10g_fifo #(
     .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
     .RX_FRAME_FIFO(RX_FRAME_FIFO),
     .RX_DROP_BAD_FRAME(RX_DROP_BAD_FRAME),
-    .RX_DROP_WHEN_FULL(RX_DROP_WHEN_FULL)
+    .RX_DROP_WHEN_FULL(RX_DROP_WHEN_FULL),
+    .LOGIC_PTP_PERIOD_NS(LOGIC_PTP_PERIOD_NS),
+    .LOGIC_PTP_PERIOD_FNS(LOGIC_PTP_PERIOD_FNS),
+    .PTP_PERIOD_NS(PTP_PERIOD_NS),
+    .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
+    .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .TX_PTP_TS_ENABLE(TX_PTP_TS_ENABLE),
+    .RX_PTP_TS_ENABLE(RX_PTP_TS_ENABLE),
+    .TX_PTP_TS_FIFO_DEPTH(TX_PTP_TS_FIFO_DEPTH),
+    .RX_PTP_TS_FIFO_DEPTH(RX_PTP_TS_FIFO_DEPTH),
+    .PTP_TS_WIDTH(PTP_TS_WIDTH),
+    .TX_PTP_TAG_ENABLE(TX_PTP_TAG_ENABLE),
+    .PTP_TAG_WIDTH(PTP_TAG_WIDTH)
 )
 UUT (
     .rx_clk(rx_clk),
@@ -187,18 +235,29 @@ UUT (
     .tx_rst(tx_rst),
     .logic_clk(logic_clk),
     .logic_rst(logic_rst),
+    .ptp_sample_clk(ptp_sample_clk),
     .tx_axis_tdata(tx_axis_tdata),
     .tx_axis_tkeep(tx_axis_tkeep),
     .tx_axis_tvalid(tx_axis_tvalid),
     .tx_axis_tready(tx_axis_tready),
     .tx_axis_tlast(tx_axis_tlast),
     .tx_axis_tuser(tx_axis_tuser),
+    .s_axis_tx_ptp_ts_tag(s_axis_tx_ptp_ts_tag),
+    .s_axis_tx_ptp_ts_valid(s_axis_tx_ptp_ts_valid),
+    .s_axis_tx_ptp_ts_ready(s_axis_tx_ptp_ts_ready),
+    .m_axis_tx_ptp_ts_96(m_axis_tx_ptp_ts_96),
+    .m_axis_tx_ptp_ts_tag(m_axis_tx_ptp_ts_tag),
+    .m_axis_tx_ptp_ts_valid(m_axis_tx_ptp_ts_valid),
+    .m_axis_tx_ptp_ts_ready(m_axis_tx_ptp_ts_ready),
     .rx_axis_tdata(rx_axis_tdata),
     .rx_axis_tkeep(rx_axis_tkeep),
     .rx_axis_tvalid(rx_axis_tvalid),
     .rx_axis_tready(rx_axis_tready),
     .rx_axis_tlast(rx_axis_tlast),
     .rx_axis_tuser(rx_axis_tuser),
+    .m_axis_rx_ptp_ts_96(m_axis_rx_ptp_ts_96),
+    .m_axis_rx_ptp_ts_valid(m_axis_rx_ptp_ts_valid),
+    .m_axis_rx_ptp_ts_ready(m_axis_rx_ptp_ts_ready),
     .serdes_tx_data(serdes_tx_data),
     .serdes_tx_hdr(serdes_tx_hdr),
     .serdes_rx_data(serdes_rx_data),
@@ -216,6 +275,7 @@ UUT (
     .rx_fifo_overflow(rx_fifo_overflow),
     .rx_fifo_bad_frame(rx_fifo_bad_frame),
     .rx_fifo_good_frame(rx_fifo_good_frame),
+    .ptp_ts_96(ptp_ts_96),
     .ifg_delay(ifg_delay),
     .tx_prbs31_enable(tx_prbs31_enable),
     .rx_prbs31_enable(rx_prbs31_enable)

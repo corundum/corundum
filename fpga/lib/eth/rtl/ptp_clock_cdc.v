@@ -90,7 +90,7 @@ reg [TS_NS_WIDTH-1:0] ts_ns_reg = 0;
 reg [FNS_WIDTH-1:0] ts_fns_reg = 0;
 reg [TS_NS_WIDTH-1:0] ts_ns_inc_reg = 0;
 reg [FNS_WIDTH-1:0] ts_fns_inc_reg = 0;
-reg [TS_NS_WIDTH+1-1:0] ts_ns_ovf_reg = {TS_NS_WIDTH{1'b1}};
+reg [TS_NS_WIDTH+1-1:0] ts_ns_ovf_reg = {TS_NS_WIDTH+1{1'b1}};
 reg [FNS_WIDTH-1:0] ts_fns_ovf_reg = {FNS_WIDTH{1'b1}};
 
 reg ts_step_reg = 1'b0;
@@ -182,13 +182,23 @@ endgenerate
 
 // pointer sync
 always @(posedge input_clk) begin
-    rd_ptr_gray_sync1_reg <= rd_ptr_gray_reg;
-    rd_ptr_gray_sync2_reg <= rd_ptr_gray_sync1_reg;
+    if (input_rst) begin
+        rd_ptr_gray_sync1_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
+        rd_ptr_gray_sync2_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
+    end else begin
+        rd_ptr_gray_sync1_reg <= rd_ptr_gray_reg;
+        rd_ptr_gray_sync2_reg <= rd_ptr_gray_sync1_reg;
+    end
 end
 
 always @(posedge output_clk) begin
-    wr_ptr_gray_sync1_reg <= wr_ptr_gray_reg;
-    wr_ptr_gray_sync2_reg <= wr_ptr_gray_sync1_reg;
+    if (output_rst) begin
+        wr_ptr_gray_sync1_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
+        wr_ptr_gray_sync2_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
+    end else begin
+        wr_ptr_gray_sync1_reg <= wr_ptr_gray_reg;
+        wr_ptr_gray_sync2_reg <= wr_ptr_gray_sync1_reg;
+    end
 end
 
 always @(posedge sample_clk) begin
@@ -444,7 +454,7 @@ always @(posedge output_clk) begin
         ts_fns_reg <= 0;
         ts_ns_inc_reg <= 0;
         ts_fns_inc_reg <= 0;
-        ts_ns_ovf_reg <= {TS_NS_WIDTH{1'b1}};
+        ts_ns_ovf_reg <= {TS_NS_WIDTH+1{1'b1}};
         ts_fns_ovf_reg <= {FNS_WIDTH{1'b1}};
         ts_step_reg <= 0;
         pps_reg <= 0;

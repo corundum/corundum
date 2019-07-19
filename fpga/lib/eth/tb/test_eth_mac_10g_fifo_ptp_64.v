@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2015-2018 Alex Forencich
+Copyright (c) 2019 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -27,18 +27,18 @@ THE SOFTWARE.
 `timescale 1ns / 1ps
 
 /*
- * Testbench for eth_mac_1g_gmii_fifo
+ * Testbench for eth_mac_10g_fifo
  */
-module test_eth_mac_1g_gmii_fifo;
+module test_eth_mac_10g_fifo_ptp_64;
 
 // Parameters
-parameter TARGET = "SIM";
-parameter IODDR_STYLE = "IODDR2";
-parameter CLOCK_INPUT_STYLE = "BUFIO2";
-parameter AXIS_DATA_WIDTH = 8;
+parameter DATA_WIDTH = 64;
+parameter CTRL_WIDTH = (DATA_WIDTH/8);
+parameter AXIS_DATA_WIDTH = DATA_WIDTH;
 parameter AXIS_KEEP_ENABLE = (AXIS_DATA_WIDTH>8);
 parameter AXIS_KEEP_WIDTH = (AXIS_DATA_WIDTH/8);
 parameter ENABLE_PADDING = 1;
+parameter ENABLE_DIC = 1;
 parameter MIN_FRAME_LENGTH = 64;
 parameter TX_FIFO_DEPTH = 4096;
 parameter TX_FRAME_FIFO = 1;
@@ -48,40 +48,61 @@ parameter RX_FIFO_DEPTH = 4096;
 parameter RX_FRAME_FIFO = 1;
 parameter RX_DROP_BAD_FRAME = RX_FRAME_FIFO;
 parameter RX_DROP_WHEN_FULL = RX_FRAME_FIFO;
+parameter LOGIC_PTP_PERIOD_NS = 4'h6;
+parameter LOGIC_PTP_PERIOD_FNS = 16'h6666;
+parameter PTP_PERIOD_NS = 4'h6;
+parameter PTP_PERIOD_FNS = 16'h6666;
+parameter PTP_USE_SAMPLE_CLOCK = 0;
+parameter TX_PTP_TS_ENABLE = 1;
+parameter RX_PTP_TS_ENABLE = 1;
+parameter TX_PTP_TS_FIFO_DEPTH = 64;
+parameter RX_PTP_TS_FIFO_DEPTH = 64;
+parameter PTP_TS_WIDTH = 96;
+parameter TX_PTP_TAG_ENABLE = 1;
+parameter PTP_TAG_WIDTH = 16;
 
 // Inputs
 reg clk = 0;
 reg rst = 0;
 reg [7:0] current_test = 0;
 
-reg gtx_clk = 0;
-reg gtx_rst = 0;
+reg rx_clk = 0;
+reg rx_rst = 0;
+reg tx_clk = 0;
+reg tx_rst = 0;
 reg logic_clk = 0;
 reg logic_rst = 0;
+reg ptp_sample_clk = 0;
 reg [AXIS_DATA_WIDTH-1:0] tx_axis_tdata = 0;
 reg [AXIS_KEEP_WIDTH-1:0] tx_axis_tkeep = 0;
 reg tx_axis_tvalid = 0;
 reg tx_axis_tlast = 0;
 reg tx_axis_tuser = 0;
+reg [PTP_TAG_WIDTH-1:0] s_axis_tx_ptp_ts_tag = 0;
+reg s_axis_tx_ptp_ts_valid = 0;
+reg m_axis_tx_ptp_ts_ready = 0;
 reg rx_axis_tready = 0;
-reg gmii_rx_clk = 0;
-reg [7:0] gmii_rxd = 0;
-reg gmii_rx_dv = 0;
-reg gmii_rx_er = 0;
-reg mii_tx_clk = 0;
+reg m_axis_rx_ptp_ts_ready = 0;
+reg [DATA_WIDTH-1:0] xgmii_rxd = 0;
+reg [CTRL_WIDTH-1:0] xgmii_rxc = 0;
+reg [PTP_TS_WIDTH-1:0] ptp_ts_96 = 0;
 reg [7:0] ifg_delay = 0;
 
 // Outputs
 wire tx_axis_tready;
+wire s_axis_tx_ptp_ts_ready;
+wire [PTP_TS_WIDTH-1:0] m_axis_tx_ptp_ts_96;
+wire [PTP_TAG_WIDTH-1:0] m_axis_tx_ptp_ts_tag;
+wire m_axis_tx_ptp_ts_valid;
 wire [AXIS_DATA_WIDTH-1:0] rx_axis_tdata;
 wire [AXIS_KEEP_WIDTH-1:0] rx_axis_tkeep;
 wire rx_axis_tvalid;
 wire rx_axis_tlast;
 wire rx_axis_tuser;
-wire gmii_tx_clk;
-wire [7:0] gmii_txd;
-wire gmii_tx_en;
-wire gmii_tx_er;
+wire [PTP_TS_WIDTH-1:0] m_axis_rx_ptp_ts_96;
+wire m_axis_rx_ptp_ts_valid;
+wire [DATA_WIDTH-1:0] xgmii_txd;
+wire [CTRL_WIDTH-1:0] xgmii_txc;
 wire tx_error_underflow;
 wire tx_fifo_overflow;
 wire tx_fifo_bad_frame;
@@ -91,7 +112,6 @@ wire rx_error_bad_fcs;
 wire rx_fifo_overflow;
 wire rx_fifo_bad_frame;
 wire rx_fifo_good_frame;
-wire [1:0] speed;
 
 initial begin
     // myhdl integration
@@ -99,34 +119,43 @@ initial begin
         clk,
         rst,
         current_test,
-        gtx_clk,
-        gtx_rst,
+        rx_clk,
+        rx_rst,
+        tx_clk,
+        tx_rst,
         logic_clk,
         logic_rst,
+        ptp_sample_clk,
         tx_axis_tdata,
         tx_axis_tkeep,
         tx_axis_tvalid,
         tx_axis_tlast,
         tx_axis_tuser,
+        s_axis_tx_ptp_ts_tag,
+        s_axis_tx_ptp_ts_valid,
+        m_axis_tx_ptp_ts_ready,
         rx_axis_tready,
-        gmii_rx_clk,
-        gmii_rxd,
-        gmii_rx_dv,
-        gmii_rx_er,
-        mii_tx_clk,
+        m_axis_rx_ptp_ts_ready,
+        xgmii_rxd,
+        xgmii_rxc,
+        ptp_ts_96,
         ifg_delay
     );
     $to_myhdl(
         tx_axis_tready,
+        s_axis_tx_ptp_ts_ready,
+        m_axis_tx_ptp_ts_96,
+        m_axis_tx_ptp_ts_tag,
+        m_axis_tx_ptp_ts_valid,
         rx_axis_tdata,
         rx_axis_tkeep,
         rx_axis_tvalid,
         rx_axis_tlast,
         rx_axis_tuser,
-        gmii_tx_clk,
-        gmii_txd,
-        gmii_tx_en,
-        gmii_tx_er,
+        m_axis_rx_ptp_ts_96,
+        m_axis_rx_ptp_ts_valid,
+        xgmii_txd,
+        xgmii_txc,
         tx_error_underflow,
         tx_fifo_overflow,
         tx_fifo_bad_frame,
@@ -135,23 +164,22 @@ initial begin
         rx_error_bad_fcs,
         rx_fifo_overflow,
         rx_fifo_bad_frame,
-        rx_fifo_good_frame,
-        speed
+        rx_fifo_good_frame
     );
 
     // dump file
-    $dumpfile("test_eth_mac_1g_gmii_fifo.lxt");
-    $dumpvars(0, test_eth_mac_1g_gmii_fifo);
+    $dumpfile("test_eth_mac_10g_fifo_ptp_64.lxt");
+    $dumpvars(0, test_eth_mac_10g_fifo_ptp_64);
 end
 
-eth_mac_1g_gmii_fifo #(
-    .TARGET(TARGET),
-    .IODDR_STYLE(IODDR_STYLE),
-    .CLOCK_INPUT_STYLE(CLOCK_INPUT_STYLE),
+eth_mac_10g_fifo #(
+    .DATA_WIDTH(DATA_WIDTH),
+    .CTRL_WIDTH(CTRL_WIDTH),
     .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
     .AXIS_KEEP_ENABLE(AXIS_KEEP_ENABLE),
     .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),
     .ENABLE_PADDING(ENABLE_PADDING),
+    .ENABLE_DIC(ENABLE_DIC),
     .MIN_FRAME_LENGTH(MIN_FRAME_LENGTH),
     .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
     .TX_FRAME_FIFO(TX_FRAME_FIFO),
@@ -160,34 +188,54 @@ eth_mac_1g_gmii_fifo #(
     .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
     .RX_FRAME_FIFO(RX_FRAME_FIFO),
     .RX_DROP_BAD_FRAME(RX_DROP_BAD_FRAME),
-    .RX_DROP_WHEN_FULL(RX_DROP_WHEN_FULL)
+    .RX_DROP_WHEN_FULL(RX_DROP_WHEN_FULL),
+    .LOGIC_PTP_PERIOD_NS(LOGIC_PTP_PERIOD_NS),
+    .LOGIC_PTP_PERIOD_FNS(LOGIC_PTP_PERIOD_FNS),
+    .PTP_PERIOD_NS(PTP_PERIOD_NS),
+    .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
+    .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .TX_PTP_TS_ENABLE(TX_PTP_TS_ENABLE),
+    .RX_PTP_TS_ENABLE(RX_PTP_TS_ENABLE),
+    .TX_PTP_TS_FIFO_DEPTH(TX_PTP_TS_FIFO_DEPTH),
+    .RX_PTP_TS_FIFO_DEPTH(RX_PTP_TS_FIFO_DEPTH),
+    .PTP_TS_WIDTH(PTP_TS_WIDTH),
+    .TX_PTP_TAG_ENABLE(TX_PTP_TAG_ENABLE),
+    .PTP_TAG_WIDTH(PTP_TAG_WIDTH)
 )
 UUT (
-    .gtx_clk(gtx_clk),
-    .gtx_rst(gtx_rst),
+    .rx_clk(rx_clk),
+    .rx_rst(rx_rst),
+    .tx_clk(tx_clk),
+    .tx_rst(tx_rst),
     .logic_clk(logic_clk),
     .logic_rst(logic_rst),
+    .ptp_sample_clk(ptp_sample_clk),
     .tx_axis_tdata(tx_axis_tdata),
     .tx_axis_tkeep(tx_axis_tkeep),
     .tx_axis_tvalid(tx_axis_tvalid),
     .tx_axis_tready(tx_axis_tready),
     .tx_axis_tlast(tx_axis_tlast),
     .tx_axis_tuser(tx_axis_tuser),
+    .s_axis_tx_ptp_ts_tag(s_axis_tx_ptp_ts_tag),
+    .s_axis_tx_ptp_ts_valid(s_axis_tx_ptp_ts_valid),
+    .s_axis_tx_ptp_ts_ready(s_axis_tx_ptp_ts_ready),
+    .m_axis_tx_ptp_ts_96(m_axis_tx_ptp_ts_96),
+    .m_axis_tx_ptp_ts_tag(m_axis_tx_ptp_ts_tag),
+    .m_axis_tx_ptp_ts_valid(m_axis_tx_ptp_ts_valid),
+    .m_axis_tx_ptp_ts_ready(m_axis_tx_ptp_ts_ready),
     .rx_axis_tdata(rx_axis_tdata),
     .rx_axis_tkeep(rx_axis_tkeep),
     .rx_axis_tvalid(rx_axis_tvalid),
     .rx_axis_tready(rx_axis_tready),
     .rx_axis_tlast(rx_axis_tlast),
     .rx_axis_tuser(rx_axis_tuser),
-    .gmii_rx_clk(gmii_rx_clk),
-    .gmii_rxd(gmii_rxd),
-    .gmii_rx_dv(gmii_rx_dv),
-    .gmii_rx_er(gmii_rx_er),
-    .gmii_tx_clk(gmii_tx_clk),
-    .mii_tx_clk(mii_tx_clk),
-    .gmii_txd(gmii_txd),
-    .gmii_tx_en(gmii_tx_en),
-    .gmii_tx_er(gmii_tx_er),
+    .m_axis_rx_ptp_ts_96(m_axis_rx_ptp_ts_96),
+    .m_axis_rx_ptp_ts_valid(m_axis_rx_ptp_ts_valid),
+    .m_axis_rx_ptp_ts_ready(m_axis_rx_ptp_ts_ready),
+    .xgmii_rxd(xgmii_rxd),
+    .xgmii_rxc(xgmii_rxc),
+    .xgmii_txd(xgmii_txd),
+    .xgmii_txc(xgmii_txc),
     .tx_error_underflow(tx_error_underflow),
     .tx_fifo_overflow(tx_fifo_overflow),
     .tx_fifo_bad_frame(tx_fifo_bad_frame),
@@ -197,7 +245,7 @@ UUT (
     .rx_fifo_overflow(rx_fifo_overflow),
     .rx_fifo_bad_frame(rx_fifo_bad_frame),
     .rx_fifo_good_frame(rx_fifo_good_frame),
-    .speed(speed),
+    .ptp_ts_96(ptp_ts_96),
     .ifg_delay(ifg_delay)
 );
 

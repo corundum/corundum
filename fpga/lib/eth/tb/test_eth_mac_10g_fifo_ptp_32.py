@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 
-Copyright (c) 2015-2018 Alex Forencich
+Copyright (c) 2019 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -29,9 +29,10 @@ import os
 import axis_ep
 import eth_ep
 import xgmii_ep
+import ptp
 
 module = 'eth_mac_10g_fifo'
-testbench = 'test_%s_32' % module
+testbench = 'test_%s_ptp_32' % module
 
 srcs = []
 
@@ -40,8 +41,12 @@ srcs.append("../rtl/lfsr.v")
 srcs.append("../rtl/axis_xgmii_rx_32.v")
 srcs.append("../rtl/axis_xgmii_tx_32.v")
 srcs.append("../rtl/eth_mac_10g.v")
+srcs.append("../rtl/ptp_clock_cdc.v")
+srcs.append("../rtl/ptp_tag_insert.v")
+srcs.append("../rtl/ptp_ts_extract.v")
 srcs.append("../lib/axis/rtl/axis_async_fifo.v")
 srcs.append("../lib/axis/rtl/axis_async_fifo_adapter.v")
+srcs.append("../lib/axis/rtl/axis_fifo.v")
 srcs.append("%s.v" % testbench)
 
 src = ' '.join(srcs)
@@ -67,6 +72,18 @@ def bench():
     RX_FRAME_FIFO = 1
     RX_DROP_BAD_FRAME = RX_FRAME_FIFO
     RX_DROP_WHEN_FULL = RX_FRAME_FIFO
+    LOGIC_PTP_PERIOD_NS = 0x3
+    LOGIC_PTP_PERIOD_FNS = 0x3333
+    PTP_PERIOD_NS = 0x3
+    PTP_PERIOD_FNS = 0x3333
+    PTP_USE_SAMPLE_CLOCK = 0
+    TX_PTP_TS_ENABLE = 1
+    RX_PTP_TS_ENABLE = 1
+    TX_PTP_TS_FIFO_DEPTH = 64
+    RX_PTP_TS_FIFO_DEPTH = 64
+    PTP_TS_WIDTH = 96
+    TX_PTP_TAG_ENABLE = 1
+    PTP_TAG_WIDTH = 16
 
     # Inputs
     clk = Signal(bool(0))
@@ -79,23 +96,35 @@ def bench():
     tx_rst = Signal(bool(0))
     logic_clk = Signal(bool(0))
     logic_rst = Signal(bool(0))
+    ptp_sample_clk = Signal(bool(0))
     tx_axis_tdata = Signal(intbv(0)[AXIS_DATA_WIDTH:])
     tx_axis_tkeep = Signal(intbv(0)[AXIS_KEEP_WIDTH:])
     tx_axis_tvalid = Signal(bool(0))
     tx_axis_tlast = Signal(bool(0))
     tx_axis_tuser = Signal(bool(0))
+    s_axis_tx_ptp_ts_tag = Signal(intbv(0)[PTP_TAG_WIDTH:])
+    s_axis_tx_ptp_ts_valid = Signal(bool(0))
+    m_axis_tx_ptp_ts_ready = Signal(bool(0))
     rx_axis_tready = Signal(bool(0))
+    m_axis_rx_ptp_ts_ready = Signal(bool(0))
     xgmii_rxd = Signal(intbv(0x0707070707070707)[DATA_WIDTH:])
     xgmii_rxc = Signal(intbv(0xff)[CTRL_WIDTH:])
+    ptp_ts_96 = Signal(intbv(0)[PTP_TS_WIDTH:])
     ifg_delay = Signal(intbv(0)[8:])
 
     # Outputs
     tx_axis_tready = Signal(bool(0))
+    s_axis_tx_ptp_ts_ready = Signal(bool(1))
+    m_axis_tx_ptp_ts_96 = Signal(intbv(0)[PTP_TS_WIDTH:])
+    m_axis_tx_ptp_ts_tag = Signal(intbv(0)[PTP_TAG_WIDTH:])
+    m_axis_tx_ptp_ts_valid = Signal(bool(0))
     rx_axis_tdata = Signal(intbv(0)[AXIS_DATA_WIDTH:])
     rx_axis_tkeep = Signal(intbv(0)[AXIS_KEEP_WIDTH:])
     rx_axis_tvalid = Signal(bool(0))
     rx_axis_tlast = Signal(bool(0))
     rx_axis_tuser = Signal(bool(0))
+    m_axis_rx_ptp_ts_96 = Signal(intbv(0)[PTP_TS_WIDTH:])
+    m_axis_rx_ptp_ts_valid = Signal(bool(0))
     xgmii_txd = Signal(intbv(0x0707070707070707)[DATA_WIDTH:])
     xgmii_txc = Signal(intbv(0xff)[CTRL_WIDTH:])
     tx_error_underflow = Signal(bool(0))
@@ -162,6 +191,48 @@ def bench():
         name='axis_sink'
     )
 
+    tx_ptp_ts_tag_source = axis_ep.AXIStreamSource()
+
+    tx_ptp_ts_tag_source_logic = tx_ptp_ts_tag_source.create_logic(
+        logic_clk,
+        logic_rst,
+        tdata=s_axis_tx_ptp_ts_tag,
+        tvalid=s_axis_tx_ptp_ts_valid,
+        tready=s_axis_tx_ptp_ts_ready,
+        name='tx_ptp_ts_tag_source'
+    )
+
+    tx_ptp_ts_sink = axis_ep.AXIStreamSink()
+
+    tx_ptp_ts_sink_logic = tx_ptp_ts_sink.create_logic(
+        logic_clk,
+        logic_rst,
+        tdata=(m_axis_tx_ptp_ts_96, m_axis_tx_ptp_ts_tag),
+        tvalid=m_axis_tx_ptp_ts_valid,
+        tready=m_axis_tx_ptp_ts_ready,
+        name='tx_ptp_ts_sink'
+    )
+
+    rx_ptp_ts_sink = axis_ep.AXIStreamSink()
+
+    rx_ptp_ts_sink_logic = rx_ptp_ts_sink.create_logic(
+        logic_clk,
+        logic_rst,
+        tdata=m_axis_rx_ptp_ts_96,
+        tvalid=m_axis_rx_ptp_ts_valid,
+        tready=m_axis_rx_ptp_ts_ready,
+        name='rx_ptp_ts_sink'
+    )
+
+    # PTP clock
+    ptp_clock = ptp.PtpClock(period_ns=LOGIC_PTP_PERIOD_NS, period_fns=LOGIC_PTP_PERIOD_FNS)
+
+    ptp_logic = ptp_clock.create_logic(
+        logic_clk,
+        logic_rst,
+        ts_64=ptp_ts_96
+    )
+
     # DUT
     if os.system(build_cmd):
         raise Exception("Error running build command")
@@ -178,6 +249,7 @@ def bench():
         tx_rst=tx_rst,
         logic_clk=logic_clk,
         logic_rst=logic_rst,
+        ptp_sample_clk=ptp_sample_clk,
 
         tx_axis_tdata=tx_axis_tdata,
         tx_axis_tkeep=tx_axis_tkeep,
@@ -186,12 +258,25 @@ def bench():
         tx_axis_tlast=tx_axis_tlast,
         tx_axis_tuser=tx_axis_tuser,
 
+        s_axis_tx_ptp_ts_tag=s_axis_tx_ptp_ts_tag,
+        s_axis_tx_ptp_ts_valid=s_axis_tx_ptp_ts_valid,
+        s_axis_tx_ptp_ts_ready=s_axis_tx_ptp_ts_ready,
+
+        m_axis_tx_ptp_ts_96=m_axis_tx_ptp_ts_96,
+        m_axis_tx_ptp_ts_tag=m_axis_tx_ptp_ts_tag,
+        m_axis_tx_ptp_ts_valid=m_axis_tx_ptp_ts_valid,
+        m_axis_tx_ptp_ts_ready=m_axis_tx_ptp_ts_ready,
+
         rx_axis_tdata=rx_axis_tdata,
         rx_axis_tkeep=rx_axis_tkeep,
         rx_axis_tvalid=rx_axis_tvalid,
         rx_axis_tready=rx_axis_tready,
         rx_axis_tlast=rx_axis_tlast,
         rx_axis_tuser=rx_axis_tuser,
+
+        m_axis_rx_ptp_ts_96=m_axis_rx_ptp_ts_96,
+        m_axis_rx_ptp_ts_valid=m_axis_rx_ptp_ts_valid,
+        m_axis_rx_ptp_ts_ready=m_axis_rx_ptp_ts_ready,
 
         xgmii_rxd=xgmii_rxd,
         xgmii_rxc=xgmii_rxc,
@@ -209,6 +294,8 @@ def bench():
         rx_fifo_bad_frame=rx_fifo_bad_frame,
         rx_fifo_good_frame=rx_fifo_good_frame,
 
+        ptp_ts_96=ptp_ts_96,
+
         ifg_delay=ifg_delay
     )
 
@@ -218,6 +305,7 @@ def bench():
         tx_clk.next = not tx_clk
         rx_clk.next = not rx_clk
         logic_clk.next = not logic_clk
+        ptp_sample_clk.next = not ptp_sample_clk
 
     @instance
     def check():
@@ -279,6 +367,7 @@ def bench():
 
         axis_frame = test_frame.build_axis()
 
+        tx_ptp_ts_tag_source.send([1234])
         axis_source.send(axis_frame)
 
         yield xgmii_sink.wait()

@@ -197,6 +197,10 @@ parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH;
 parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8);
 parameter AXI_ADDR_WIDTH = 24;
 
+// AXI stream interface parameters
+parameter AXIS_DATA_WIDTH = AXI_DATA_WIDTH;
+parameter AXIS_KEEP_WIDTH = AXI_STRB_WIDTH;
+
 // PCIe DMA parameters
 parameter PCIE_DMA_LEN_WIDTH = 16;
 parameter PCIE_DMA_TAG_WIDTH = 16;
@@ -216,8 +220,9 @@ parameter BOARD_VER = {16'd0, 16'd1};
 
 // Structural parameters
 parameter IF_COUNT = 2;
+parameter PORTS_PER_IF = 1;
 
-parameter PORT_COUNT = 1;
+parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF;
 
 // Queue manager parameters (interface)
 parameter TX_OP_TABLE_SIZE = 16;
@@ -238,6 +243,25 @@ parameter RX_PKT_TABLE_SIZE = 8;
 // Scheduler parameters (port)
 parameter TX_SCHEDULER = "RR";
 parameter TDMA_INDEX_WIDTH = 6;
+
+// Timstamping parameters (port)
+parameter LOGIC_PTP_PERIOD_NS = 6'h4;
+parameter LOGIC_PTP_PERIOD_FNS = 16'h0000;
+parameter IF_PTP_PERIOD_NS = 6'h6;
+parameter IF_PTP_PERIOD_FNS = 16'h6666;
+parameter PTP_TS_ENABLE = 1;
+parameter PTP_TS_WIDTH = 96;
+parameter TX_PTP_TS_FIFO_DEPTH = 32;
+parameter RX_PTP_TS_FIFO_DEPTH = 32;
+
+// Interface parameters (port)
+parameter TX_CHECKSUM_ENABLE = 1;
+parameter RX_CHECKSUM_ENABLE = 1;
+parameter ENABLE_PADDING = 1;
+parameter ENABLE_DIC = 1;
+parameter MIN_FRAME_LENGTH = 64;
+parameter TX_FIFO_DEPTH = 16384;
+parameter RX_FIFO_DEPTH = 16384;
 
 // AXI lite connections
 wire [AXIL_ADDR_WIDTH-1:0] axil_pcie_awaddr;
@@ -1832,17 +1856,17 @@ always @(posedge clk_250mhz) begin
     pps_led_reg <= pps_led_counter_reg > 0;
 end
 
-wire [IF_COUNT-1:0] if_xgmii_tx_clk = {sfp_2_tx_clk, sfp_1_tx_clk};
-wire [IF_COUNT-1:0] if_xgmii_tx_rst = {sfp_2_tx_rst, sfp_1_tx_rst};
-wire [IF_COUNT-1:0] if_xgmii_rx_clk = {sfp_2_rx_clk, sfp_1_rx_clk};
-wire [IF_COUNT-1:0] if_xgmii_rx_rst = {sfp_2_rx_rst, sfp_1_rx_rst};
-wire [IF_COUNT*64-1:0] if_xgmii_txd;
-wire [IF_COUNT*8-1:0] if_xgmii_txc;
-wire [IF_COUNT*64-1:0] if_xgmii_rxd = {sfp_2_rxd, sfp_1_rxd};
-wire [IF_COUNT*8-1:0] if_xgmii_rxc = {sfp_2_rxc, sfp_1_rxc};
+wire [PORT_COUNT-1:0] port_xgmii_tx_clk = {sfp_2_tx_clk, sfp_1_tx_clk};
+wire [PORT_COUNT-1:0] port_xgmii_tx_rst = {sfp_2_tx_rst, sfp_1_tx_rst};
+wire [PORT_COUNT-1:0] port_xgmii_rx_clk = {sfp_2_rx_clk, sfp_1_rx_clk};
+wire [PORT_COUNT-1:0] port_xgmii_rx_rst = {sfp_2_rx_rst, sfp_1_rx_rst};
+wire [PORT_COUNT*64-1:0] port_xgmii_txd;
+wire [PORT_COUNT*8-1:0] port_xgmii_txc;
+wire [PORT_COUNT*64-1:0] port_xgmii_rxd = {sfp_2_rxd, sfp_1_rxd};
+wire [PORT_COUNT*8-1:0] port_xgmii_rxc = {sfp_2_rxc, sfp_1_rxc};
 
-assign {sfp_2_txd, sfp_1_txd} = if_xgmii_txd;
-assign {sfp_2_txc, sfp_1_txc} = if_xgmii_txc;
+assign {sfp_2_txd, sfp_1_txd} = port_xgmii_txd;
+assign {sfp_2_txc, sfp_1_txc} = port_xgmii_txc;
 
 assign sfp_1_led = 2'b00;
 assign sfp_2_led = 2'b00;
@@ -1854,7 +1878,7 @@ wire [IF_COUNT*32-1:0] if_msi_irq;
 assign msi_irq = if_msi_irq[31:0] | if_msi_irq[63:32];
 
 generate
-    genvar n;
+    genvar m, n;
 
     for (n = 0; n < IF_COUNT; n = n + 1) begin : iface
 
@@ -1863,9 +1887,31 @@ generate
         wire [AXI_ADDR_WIDTH-1:0] if_pcie_axi_dma_write_desc_axi_addr_int;
         assign if_pcie_axi_dma_write_desc_axi_addr[n*AXI_ADDR_WIDTH +: AXI_ADDR_WIDTH] = if_pcie_axi_dma_write_desc_axi_addr_int | n*24'h800000;
 
+        wire [PORTS_PER_IF*AXIS_DATA_WIDTH-1:0] tx_axis_tdata;
+        wire [PORTS_PER_IF*AXIS_KEEP_WIDTH-1:0] tx_axis_tkeep;
+        wire [PORTS_PER_IF-1:0] tx_axis_tvalid;
+        wire [PORTS_PER_IF-1:0] tx_axis_tready;
+        wire [PORTS_PER_IF-1:0] tx_axis_tlast;
+        wire [PORTS_PER_IF-1:0] tx_axis_tuser;
+
+        wire [PORTS_PER_IF*PTP_TS_WIDTH-1:0] tx_ptp_ts_96;
+        wire [PORTS_PER_IF-1:0] tx_ptp_ts_valid;
+        wire [PORTS_PER_IF-1:0] tx_ptp_ts_ready;
+
+        wire [PORTS_PER_IF*AXIS_DATA_WIDTH-1:0] rx_axis_tdata;
+        wire [PORTS_PER_IF*AXIS_KEEP_WIDTH-1:0] rx_axis_tkeep;
+        wire [PORTS_PER_IF-1:0] rx_axis_tvalid;
+        wire [PORTS_PER_IF-1:0] rx_axis_tready;
+        wire [PORTS_PER_IF-1:0] rx_axis_tlast;
+        wire [PORTS_PER_IF-1:0] rx_axis_tuser;
+
+        wire [PORTS_PER_IF*PTP_TS_WIDTH-1:0] rx_ptp_ts_96;
+        wire [PORTS_PER_IF-1:0] rx_ptp_ts_valid;
+        wire [PORTS_PER_IF-1:0] rx_ptp_ts_ready;
+
         interface #
         (
-            .PORTS(PORT_COUNT),
+            .PORTS(PORTS_PER_IF),
             .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
             .PCIE_DMA_LEN_WIDTH(PCIE_DMA_LEN_WIDTH),
             .PCIE_DMA_TAG_WIDTH(IF_PCIE_DMA_TAG_WIDTH),
@@ -1888,7 +1934,10 @@ generate
             .QUEUE_LOG_SIZE_WIDTH(4),
             .RAM_ADDR_WIDTH(16),
             .RAM_SIZE(2**15),
-            .PTP_TS_ENABLE(1),
+            .PTP_TS_ENABLE(PTP_TS_ENABLE),
+            .PTP_TS_WIDTH(PTP_TS_WIDTH),
+            .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
+            .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
             .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
             .AXIL_ADDR_WIDTH(IF_AXIL_ADDR_WIDTH),
             .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
@@ -1897,10 +1946,8 @@ generate
             .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
             .AXI_ID_WIDTH(IF_AXI_ID_WIDTH),
             .AXI_BASE_ADDR(n*2**IF_AXI_ADDR_WIDTH),
-            .XGMII_DATA_WIDTH(64),
-            .XGMII_CTRL_WIDTH(8),
-            .TX_FIFO_DEPTH(16384),
-            .RX_FIFO_DEPTH(16384)
+            .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
+            .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH)
         )
         interface_inst (
             .clk(clk_250mhz),
@@ -2024,16 +2071,38 @@ generate
             .s_axi_rready(axi_if_rready[n]),
 
             /*
-             * XGMII interface
+             * Transmit data output
              */
-            .xgmii_rx_clk(if_xgmii_rx_clk[n]),
-            .xgmii_rx_rst(if_xgmii_rx_rst[n]),
-            .xgmii_tx_clk(if_xgmii_tx_clk[n]),
-            .xgmii_tx_rst(if_xgmii_tx_rst[n]),
-            .xgmii_rxd(if_xgmii_rxd[n*64 +: 64]),
-            .xgmii_rxc(if_xgmii_rxc[n*8 +: 8]),
-            .xgmii_txd(if_xgmii_txd[n*64 +: 64]),
-            .xgmii_txc(if_xgmii_txc[n*8 +: 8]),
+            .tx_axis_tdata(tx_axis_tdata),
+            .tx_axis_tkeep(tx_axis_tkeep),
+            .tx_axis_tvalid(tx_axis_tvalid),
+            .tx_axis_tready(tx_axis_tready),
+            .tx_axis_tlast(tx_axis_tlast),
+            .tx_axis_tuser(tx_axis_tuser),
+
+            /*
+             * Transmit timestamp input
+             */
+            .s_axis_tx_ptp_ts_96(tx_ptp_ts_96),
+            .s_axis_tx_ptp_ts_valid(tx_ptp_ts_valid),
+            .s_axis_tx_ptp_ts_ready(tx_ptp_ts_ready),
+
+            /*
+             * Receive data input
+             */
+            .rx_axis_tdata(rx_axis_tdata),
+            .rx_axis_tkeep(rx_axis_tkeep),
+            .rx_axis_tvalid(rx_axis_tvalid),
+            .rx_axis_tready(rx_axis_tready),
+            .rx_axis_tlast(rx_axis_tlast),
+            .rx_axis_tuser(rx_axis_tuser),
+
+            /*
+             * Receive timestamp input
+             */
+            .s_axis_rx_ptp_ts_96(rx_ptp_ts_96),
+            .s_axis_rx_ptp_ts_valid(rx_ptp_ts_valid),
+            .s_axis_rx_ptp_ts_ready(rx_ptp_ts_ready),
 
             /*
              * PTP clock
@@ -2046,6 +2115,91 @@ generate
              */
             .msi_irq(if_msi_irq[n*32 +: 32])
         );
+
+        for (m = 0; m < PORTS_PER_IF; m = m + 1) begin : mac
+
+            eth_mac_10g_fifo #(
+                .DATA_WIDTH(64),
+                .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
+                .AXIS_KEEP_ENABLE(AXIS_KEEP_WIDTH > 1),
+                .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),
+                .ENABLE_PADDING(ENABLE_PADDING),
+                .ENABLE_DIC(ENABLE_DIC),
+                .MIN_FRAME_LENGTH(MIN_FRAME_LENGTH),
+                .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
+                .TX_FRAME_FIFO(1),
+                .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
+                .RX_FRAME_FIFO(1),
+                .LOGIC_PTP_PERIOD_NS(LOGIC_PTP_PERIOD_NS),
+                .LOGIC_PTP_PERIOD_FNS(LOGIC_PTP_PERIOD_FNS),
+                .PTP_PERIOD_NS(IF_PTP_PERIOD_NS),
+                .PTP_PERIOD_FNS(IF_PTP_PERIOD_FNS),
+                .PTP_USE_SAMPLE_CLOCK(0),
+                .TX_PTP_TS_ENABLE(PTP_TS_ENABLE),
+                .RX_PTP_TS_ENABLE(PTP_TS_ENABLE),
+                .TX_PTP_TS_FIFO_DEPTH(TX_PTP_TS_FIFO_DEPTH),
+                .RX_PTP_TS_FIFO_DEPTH(RX_PTP_TS_FIFO_DEPTH),
+                .PTP_TS_WIDTH(PTP_TS_WIDTH),
+                .TX_PTP_TAG_ENABLE(0),
+                .PTP_TAG_WIDTH(16)
+            )
+            eth_mac_inst (
+                .rx_clk(port_xgmii_rx_clk[n*PORTS_PER_IF+m]),
+                .rx_rst(port_xgmii_rx_rst[n*PORTS_PER_IF+m]),
+                .tx_clk(port_xgmii_tx_clk[n*PORTS_PER_IF+m]),
+                .tx_rst(port_xgmii_tx_rst[n*PORTS_PER_IF+m]),
+                .logic_clk(clk_250mhz),
+                .logic_rst(rst_250mhz),
+                .ptp_sample_clk(clk_250mhz),
+
+                .tx_axis_tdata(tx_axis_tdata[m*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
+                .tx_axis_tkeep(tx_axis_tkeep[m*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
+                .tx_axis_tvalid(tx_axis_tvalid[m +: 1]),
+                .tx_axis_tready(tx_axis_tready[m +: 1]),
+                .tx_axis_tlast(tx_axis_tlast[m +: 1]),
+                .tx_axis_tuser(tx_axis_tuser[m +: 1]),
+
+                .s_axis_tx_ptp_ts_tag(0),
+                .s_axis_tx_ptp_ts_valid(0),
+                .s_axis_tx_ptp_ts_ready(),
+
+                .m_axis_tx_ptp_ts_96(tx_ptp_ts_96[m*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
+                .m_axis_tx_ptp_ts_tag(),
+                .m_axis_tx_ptp_ts_valid(tx_ptp_ts_valid[m +: 1]),
+                .m_axis_tx_ptp_ts_ready(tx_ptp_ts_ready[m +: 1]),
+
+                .rx_axis_tdata(rx_axis_tdata[m*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
+                .rx_axis_tkeep(rx_axis_tkeep[m*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
+                .rx_axis_tvalid(rx_axis_tvalid[m +: 1]),
+                .rx_axis_tready(rx_axis_tready[m +: 1]),
+                .rx_axis_tlast(rx_axis_tlast[m +: 1]),
+                .rx_axis_tuser(rx_axis_tuser[m +: 1]),
+
+                .m_axis_rx_ptp_ts_96(rx_ptp_ts_96[m*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
+                .m_axis_rx_ptp_ts_valid(rx_ptp_ts_valid[m +: 1]),
+                .m_axis_rx_ptp_ts_ready(rx_ptp_ts_ready[m +: 1]),
+
+                .xgmii_rxd(port_xgmii_rxd[(n*PORTS_PER_IF+m)*64 +: 64]),
+                .xgmii_rxc(port_xgmii_rxc[(n*PORTS_PER_IF+m)*8 +: 8]),
+                .xgmii_txd(port_xgmii_txd[(n*PORTS_PER_IF+m)*64 +: 64]),
+                .xgmii_txc(port_xgmii_txc[(n*PORTS_PER_IF+m)*8 +: 8]),
+
+                .tx_error_underflow(),
+                .tx_fifo_overflow(),
+                .tx_fifo_bad_frame(),
+                .tx_fifo_good_frame(),
+                .rx_error_bad_frame(),
+                .rx_error_bad_fcs(),
+                .rx_fifo_overflow(),
+                .rx_fifo_bad_frame(),
+                .rx_fifo_good_frame(),
+
+                .ptp_ts_96(ptp_ts_96),
+
+                .ifg_delay(8'd12)
+            );
+
+        end
 
     end
 

@@ -68,6 +68,7 @@ module interface #
     parameter RAM_ADDR_WIDTH = 16,
     parameter RAM_SIZE = 2**14,
     parameter PTP_TS_ENABLE = 1,
+    parameter PTP_TS_WIDTH = 96,
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
     parameter AXIL_DATA_WIDTH = 32,
@@ -77,11 +78,10 @@ module interface #
     parameter AXI_ADDR_WIDTH = 16,
     parameter AXI_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
     parameter AXI_ID_WIDTH = 8,
+    parameter AXI_MAX_BURST_LEN = 16,
     parameter AXI_BASE_ADDR = 0,
-    parameter XGMII_DATA_WIDTH = 64,
-    parameter XGMII_CTRL_WIDTH = (XGMII_DATA_WIDTH/8),
-    parameter TX_FIFO_DEPTH = 4096,
-    parameter RX_FIFO_DEPTH = 4096
+    parameter AXIS_DATA_WIDTH = AXI_DATA_WIDTH,
+    parameter AXIS_KEEP_WIDTH = AXI_STRB_WIDTH
 )
 (
     input  wire                               clk,
@@ -205,16 +205,38 @@ module interface #
     input  wire                               s_axi_rready,
 
     /*
-     * XGMII interface
+     * Transmit data output
      */
-    input  wire [PORTS-1:0]                   xgmii_rx_clk,
-    input  wire [PORTS-1:0]                   xgmii_rx_rst,
-    input  wire [PORTS-1:0]                   xgmii_tx_clk,
-    input  wire [PORTS-1:0]                   xgmii_tx_rst,
-    input  wire [PORTS*XGMII_DATA_WIDTH-1:0]  xgmii_rxd,
-    input  wire [PORTS*XGMII_CTRL_WIDTH-1:0]  xgmii_rxc,
-    output wire [PORTS*XGMII_DATA_WIDTH-1:0]  xgmii_txd,
-    output wire [PORTS*XGMII_CTRL_WIDTH-1:0]  xgmii_txc,
+    output wire [PORTS*AXIS_DATA_WIDTH-1:0]   tx_axis_tdata,
+    output wire [PORTS*AXIS_KEEP_WIDTH-1:0]   tx_axis_tkeep,
+    output wire [PORTS-1:0]                   tx_axis_tvalid,
+    input  wire [PORTS-1:0]                   tx_axis_tready,
+    output wire [PORTS-1:0]                   tx_axis_tlast,
+    output wire [PORTS-1:0]                   tx_axis_tuser,
+
+    /*
+     * Transmit timestamp input
+     */
+    input  wire [PORTS*PTP_TS_WIDTH-1:0]      s_axis_tx_ptp_ts_96,
+    input  wire [PORTS-1:0]                   s_axis_tx_ptp_ts_valid,
+    output wire [PORTS-1:0]                   s_axis_tx_ptp_ts_ready,
+
+    /*
+     * Receive data input
+     */
+    input  wire [PORTS*AXIS_DATA_WIDTH-1:0]   rx_axis_tdata,
+    input  wire [PORTS*AXIS_KEEP_WIDTH-1:0]   rx_axis_tkeep,
+    input  wire [PORTS-1:0]                   rx_axis_tvalid,
+    output wire [PORTS-1:0]                   rx_axis_tready,
+    input  wire [PORTS-1:0]                   rx_axis_tlast,
+    input  wire [PORTS-1:0]                   rx_axis_tuser,
+
+    /*
+     * Receive timestamp input
+     */
+    input  wire [PORTS*PTP_TS_WIDTH-1:0]      s_axis_rx_ptp_ts_96,
+    input  wire [PORTS-1:0]                   s_axis_rx_ptp_ts_valid,
+    output wire [PORTS-1:0]                   s_axis_rx_ptp_ts_ready,
 
     /*
      * PTP clock
@@ -2309,6 +2331,10 @@ generate
             .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
             .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
             .QUEUE_LOG_SIZE_WIDTH(QUEUE_LOG_SIZE_WIDTH),
+            .PTP_TS_ENABLE(PTP_TS_ENABLE),
+            .PTP_TS_WIDTH(PTP_TS_WIDTH),
+            .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
+            .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
             .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
             .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
             .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
@@ -2316,11 +2342,10 @@ generate
             .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
             .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
             .AXI_ID_WIDTH(AXI_ID_WIDTH),
+            .AXI_MAX_BURST_LEN(AXI_MAX_BURST_LEN),
             .AXI_BASE_ADDR(23'h000000),
-            .XGMII_DATA_WIDTH(XGMII_DATA_WIDTH),
-            .XGMII_CTRL_WIDTH(XGMII_CTRL_WIDTH),
-            .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
-            .RX_FIFO_DEPTH(RX_FIFO_DEPTH)
+            .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
+            .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH)
         )
         port_inst (
             .clk(clk),
@@ -2578,16 +2603,38 @@ generate
             .s_axi_rready(axi_port_desc_rready[n +: 1]),
 
             /*
-             * XGMII interface
+             * Transmit data output
              */
-            .xgmii_rx_clk(xgmii_rx_clk[n]),
-            .xgmii_rx_rst(xgmii_rx_rst[n]),
-            .xgmii_tx_clk(xgmii_tx_clk[n]),
-            .xgmii_tx_rst(xgmii_tx_rst[n]),
-            .xgmii_rxd(xgmii_rxd[n*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
-            .xgmii_rxc(xgmii_rxc[n*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
-            .xgmii_txd(xgmii_txd[n*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
-            .xgmii_txc(xgmii_txc[n*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
+            .tx_axis_tdata(tx_axis_tdata[n*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
+            .tx_axis_tkeep(tx_axis_tkeep[n*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
+            .tx_axis_tvalid(tx_axis_tvalid[n +: 1]),
+            .tx_axis_tready(tx_axis_tready[n +: 1]),
+            .tx_axis_tlast(tx_axis_tlast[n +: 1]),
+            .tx_axis_tuser(tx_axis_tuser[n +: 1]),
+
+            /*
+             * Transmit timestamp input
+             */
+            .s_axis_tx_ptp_ts_96(s_axis_tx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
+            .s_axis_tx_ptp_ts_valid(s_axis_tx_ptp_ts_valid[n +: 1]),
+            .s_axis_tx_ptp_ts_ready(s_axis_tx_ptp_ts_ready[n +: 1]),
+
+            /*
+             * Receive data input
+             */
+            .rx_axis_tdata(rx_axis_tdata[n*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
+            .rx_axis_tkeep(rx_axis_tkeep[n*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
+            .rx_axis_tvalid(rx_axis_tvalid[n +: 1]),
+            .rx_axis_tready(rx_axis_tready[n +: 1]),
+            .rx_axis_tlast(rx_axis_tlast[n +: 1]),
+            .rx_axis_tuser(rx_axis_tuser[n +: 1]),
+
+            /*
+             * Receive timestamp input
+             */
+            .s_axis_rx_ptp_ts_96(s_axis_rx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
+            .s_axis_rx_ptp_ts_valid(s_axis_rx_ptp_ts_valid[n +: 1]),
+            .s_axis_rx_ptp_ts_ready(s_axis_rx_ptp_ts_ready[n +: 1]),
 
             /*
              * PTP clock

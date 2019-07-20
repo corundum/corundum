@@ -58,6 +58,7 @@ module port #
     parameter QUEUE_PTR_WIDTH = 16,
     parameter QUEUE_LOG_SIZE_WIDTH = 4,
     parameter PTP_TS_ENABLE = 1,
+    parameter PTP_TS_WIDTH = 96,
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
     parameter AXIL_DATA_WIDTH = 32,
@@ -67,11 +68,10 @@ module port #
     parameter AXI_ADDR_WIDTH = 16,
     parameter AXI_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
     parameter AXI_ID_WIDTH = 8,
+    parameter AXI_MAX_BURST_LEN = 16,
     parameter AXI_BASE_ADDR = 0,
-    parameter XGMII_DATA_WIDTH = 64,
-    parameter XGMII_CTRL_WIDTH = (XGMII_DATA_WIDTH/8),
-    parameter TX_FIFO_DEPTH = 4096,
-    parameter RX_FIFO_DEPTH = 4096
+    parameter AXIS_DATA_WIDTH = AXI_DATA_WIDTH,
+    parameter AXIS_KEEP_WIDTH = AXI_STRB_WIDTH
 )
 (
     input  wire                                 clk,
@@ -329,21 +329,43 @@ module port #
     input  wire                                 s_axi_rready,
 
     /*
-     * XGMII interface
+     * Transmit data output
      */
-    input  wire                                 xgmii_rx_clk,
-    input  wire                                 xgmii_rx_rst,
-    input  wire                                 xgmii_tx_clk,
-    input  wire                                 xgmii_tx_rst,
-    input  wire [XGMII_DATA_WIDTH-1:0]          xgmii_rxd,
-    input  wire [XGMII_CTRL_WIDTH-1:0]          xgmii_rxc,
-    output wire [XGMII_DATA_WIDTH-1:0]          xgmii_txd,
-    output wire [XGMII_CTRL_WIDTH-1:0]          xgmii_txc,
+    output wire [AXIS_DATA_WIDTH-1:0]           tx_axis_tdata,
+    output wire [AXIS_KEEP_WIDTH-1:0]           tx_axis_tkeep,
+    output wire                                 tx_axis_tvalid,
+    input  wire                                 tx_axis_tready,
+    output wire                                 tx_axis_tlast,
+    output wire                                 tx_axis_tuser,
+
+    /*
+     * Transmit PTP timestamp input
+     */
+    input  wire [PTP_TS_WIDTH-1:0]              s_axis_tx_ptp_ts_96,
+    input  wire                                 s_axis_tx_ptp_ts_valid,
+    output wire                                 s_axis_tx_ptp_ts_ready,
+
+    /*
+     * Receive data input
+     */
+    input  wire [AXIS_DATA_WIDTH-1:0]           rx_axis_tdata,
+    input  wire [AXIS_KEEP_WIDTH-1:0]           rx_axis_tkeep,
+    input  wire                                 rx_axis_tvalid,
+    output wire                                 rx_axis_tready,
+    input  wire                                 rx_axis_tlast,
+    input  wire                                 rx_axis_tuser,
+
+    /*
+     * Receive PTP timestamp input
+     */
+    input  wire [PTP_TS_WIDTH-1:0]              s_axis_rx_ptp_ts_96,
+    input  wire                                 s_axis_rx_ptp_ts_valid,
+    output wire                                 s_axis_rx_ptp_ts_ready,
 
     /*
      * PTP clock
      */
-    input  wire [95:0]                          ptp_ts_96,
+    input  wire [PTP_TS_WIDTH-1:0]              ptp_ts_96,
     input  wire                                 ptp_ts_step
 );
 
@@ -449,6 +471,14 @@ wire                       axi_rx_rlast;
 wire                       axi_rx_rvalid;
 wire                       axi_rx_rready;
 
+// Checksumming
+wire [AXIS_DATA_WIDTH-1:0] tx_axis_tdata_int;
+wire [AXIS_KEEP_WIDTH-1:0] tx_axis_tkeep_int;
+wire                       tx_axis_tvalid_int;
+wire                       tx_axis_tready_int;
+wire                       tx_axis_tlast_int;
+wire                       tx_axis_tuser_int;
+
 // PCIe DMA
 wire [PCIE_ADDR_WIDTH-1:0]        tx_pcie_axi_dma_read_desc_pcie_addr;
 wire [AXI_ADDR_WIDTH-1:0]         tx_pcie_axi_dma_read_desc_axi_addr;
@@ -501,53 +531,47 @@ wire [REQ_TAG_WIDTH-1:0]        tx_req_status_tag;
 wire                            tx_req_status_valid;
 
 // RX engine
-reg [7:0] rx_pkt_cnt_reg = 0;
+reg rx_frame_reg = 0;
 
 wire [RX_QUEUE_INDEX_WIDTH-1:0] rx_req_queue = 0; // TODO RSS of some form
 wire [REQ_TAG_WIDTH-1:0]        rx_req_tag = 0;
-wire                            rx_req_valid = rx_pkt_cnt_reg > 0;
+wire                            rx_req_valid = rx_axis_tvalid && !rx_frame_reg;
 wire                            rx_req_ready;
 
 wire [REQ_TAG_WIDTH-1:0]        rx_req_status_tag;
 wire                            rx_req_status_valid;
 
 always @(posedge clk) begin
+    if (rx_axis_tready && rx_axis_tvalid) begin
+        rx_frame_reg <= !rx_axis_tlast;
+    end
+
     if (rst) begin
-        rx_pkt_cnt_reg <= 0;
-    end else begin
-        if (rx_pkt_cnt_reg > 0 && rx_req_ready) begin
-            if (!eth_rx_fifo_good_frame) begin
-                rx_pkt_cnt_reg <= rx_pkt_cnt_reg - 1;
-            end
-        end else begin
-            if (eth_rx_fifo_good_frame) begin
-                rx_pkt_cnt_reg <= rx_pkt_cnt_reg + 1;
-            end
-        end
+        rx_frame_reg <= 1'b0;
     end
 end
 
 // Timestamps
-wire [96:0]              rx_ptp_ts_96;
+wire [95:0]              rx_ptp_ts_96;
 wire                     rx_ptp_ts_valid;
 wire                     rx_ptp_ts_ready;
 
-wire [96:0]              tx_ptp_ts_96;
+wire [95:0]              tx_ptp_ts_96;
 wire                     tx_ptp_ts_valid;
 wire                     tx_ptp_ts_ready;
 
 // Checksums
-wire [96:0]              rx_csum;
+wire [15:0]              rx_csum;
 wire                     rx_csum_valid;
 
-wire [96:0]              rx_fifo_csum;
+wire [15:0]              rx_fifo_csum;
 wire                     rx_fifo_csum_valid;
 wire                     rx_fifo_csum_ready;
 
-// wire [96:0]              tx_csum;
+// wire [15:0]              tx_csum;
 // wire                     tx_csum_valid;
 
-// wire [96:0]              tx_fifo_csum;
+// wire [15:0]              tx_fifo_csum;
 // wire                     tx_fifo_csum_valid;
 // wire                     tx_fifo_csum_ready;
 
@@ -965,9 +989,9 @@ tx_engine_inst (
     /*
      * Transmit timestamp input
      */
-    .s_axis_tx_ptp_ts_96(tx_ptp_ts_96),
-    .s_axis_tx_ptp_ts_valid(tx_ptp_ts_valid),
-    .s_axis_tx_ptp_ts_ready(tx_ptp_ts_ready),
+    .s_axis_tx_ptp_ts_96(s_axis_tx_ptp_ts_96),
+    .s_axis_tx_ptp_ts_valid(s_axis_tx_ptp_ts_valid),
+    .s_axis_tx_ptp_ts_ready(s_axis_tx_ptp_ts_ready),
 
     /*
      * AXI slave interface
@@ -1201,9 +1225,9 @@ rx_engine_inst (
     /*
      * Receive timestamp input
      */
-    .s_axis_rx_ptp_ts_96(rx_ptp_ts_96),
-    .s_axis_rx_ptp_ts_valid(rx_ptp_ts_valid),
-    .s_axis_rx_ptp_ts_ready(rx_ptp_ts_ready),
+    .s_axis_rx_ptp_ts_96(s_axis_rx_ptp_ts_96),
+    .s_axis_rx_ptp_ts_valid(s_axis_rx_ptp_ts_valid),
+    .s_axis_rx_ptp_ts_ready(s_axis_rx_ptp_ts_ready),
 
     /*
      * Receive checksum input
@@ -1257,107 +1281,119 @@ rx_engine_inst (
     .enable(1'b1)
 );
 
-eth_interface #(
-    .DATA_WIDTH(XGMII_DATA_WIDTH),
-    .CTRL_WIDTH(XGMII_CTRL_WIDTH),
+generate
+
+if (RX_CHECKSUM_ENABLE) begin
+
+    rx_checksum #(
+        .DATA_WIDTH(AXI_DATA_WIDTH)
+    )
+    rx_checksum_inst (
+        .clk(clk),
+        .rst(rst),
+        .s_axis_tdata(rx_axis_tdata),
+        .s_axis_tkeep(rx_axis_tkeep),
+        .s_axis_tvalid(rx_axis_tvalid & rx_axis_tready),
+        .s_axis_tlast(rx_axis_tlast),
+        .m_axis_csum(rx_csum),
+        .m_axis_csum_valid(rx_csum_valid)
+    );
+
+end else begin
+
+    assign m_axis_rx_csum = 16'd0;
+    assign m_axis_rx_csum_valid = 1'b0;
+
+end
+
+if (TX_CHECKSUM_ENABLE) begin
+
+    assign tx_axis_tdata = tx_axis_tdata_int;
+    assign tx_axis_tkeep = tx_axis_tkeep_int;
+    assign tx_axis_tvalid = tx_axis_tvalid_int;
+    assign tx_axis_tready_int = tx_axis_tready;
+    assign tx_axis_tlast = tx_axis_tlast_int;
+    assign tx_axis_tuser = tx_axis_tuser_int;
+
+end else begin
+
+    assign tx_axis_tdata = tx_axis_tdata_int;
+    assign tx_axis_tkeep = tx_axis_tkeep_int;
+    assign tx_axis_tvalid = tx_axis_tvalid_int;
+    assign tx_axis_tready_int = tx_axis_tready;
+    assign tx_axis_tlast = tx_axis_tlast_int;
+    assign tx_axis_tuser = tx_axis_tuser_int;
+
+end
+
+endgenerate
+
+axi_dma #(
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
     .AXI_ID_WIDTH(AXI_ID_WIDTH),
-    .AXI_MAX_BURST_LEN(16),
+    .AXI_MAX_BURST_LEN(AXI_MAX_BURST_LEN),
+    .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
+    .AXIS_KEEP_ENABLE(AXIS_KEEP_WIDTH > 1),
+    .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),
+    .AXIS_LAST_ENABLE(1),
+    .AXIS_ID_ENABLE(0),
+    .AXIS_DEST_ENABLE(0),
+    .AXIS_USER_ENABLE(1),
+    .AXIS_USER_WIDTH(1),
     .LEN_WIDTH(AXI_DMA_LEN_WIDTH),
     .TAG_WIDTH(AXI_DMA_TAG_WIDTH),
     .ENABLE_SG(0),
-    .ENABLE_UNALIGNED(1),
-    .ENABLE_PADDING(1),
-    .ENABLE_DIC(1),
-    .MIN_FRAME_LENGTH(64),
-    .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
-    .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
-    .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
-    .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
-    .LOGIC_PTP_PERIOD_NS(4'h4),
-    .LOGIC_PTP_PERIOD_FNS(16'h0000),
-    .PTP_PERIOD_NS(4'h6),
-    .PTP_PERIOD_FNS(16'h6666),
-    .TX_PTP_TS_ENABLE(1),
-    .RX_PTP_TS_ENABLE(1)//,
-    //.PTP_TS_WIDTH(96),
-    //.TX_PTP_TAG_ENABLE(1),
-    //.PTP_TAG_WIDTH(PTP_TAG_WIDTH)
+    .ENABLE_UNALIGNED(1)
 )
-eth_interface_inst (
-    .rx_clk(xgmii_rx_clk),
-    .rx_rst(xgmii_rx_rst),
-    .tx_clk(xgmii_tx_clk),
-    .tx_rst(xgmii_tx_rst),
-    .logic_clk(clk),
-    .logic_rst(rst),
+axi_dma_inst (
+    .clk(clk),
+    .rst(rst),
 
-    /*
-     * Transmit descriptor input
-     */
-    .s_axis_tx_desc_addr(dma_tx_desc_addr),
-    .s_axis_tx_desc_len(dma_tx_desc_len),
-    .s_axis_tx_desc_tag(dma_tx_desc_tag),
-    .s_axis_tx_desc_user(dma_tx_desc_user),
-    .s_axis_tx_desc_valid(dma_tx_desc_valid),
-    .s_axis_tx_desc_ready(dma_tx_desc_ready),
+    .s_axis_read_desc_addr(dma_tx_desc_addr),
+    .s_axis_read_desc_len(dma_tx_desc_len),
+    .s_axis_read_desc_tag(dma_tx_desc_tag),
+    .s_axis_read_desc_id(0),
+    .s_axis_read_desc_dest(0),
+    .s_axis_read_desc_user(dma_tx_desc_user),
+    .s_axis_read_desc_valid(dma_tx_desc_valid),
+    .s_axis_read_desc_ready(dma_tx_desc_ready),
 
-    /*
-     * Transmit descriptor status output
-     */
-    .m_axis_tx_desc_status_tag(dma_tx_desc_status_tag),
-    .m_axis_tx_desc_status_valid(dma_tx_desc_status_valid),
+    .m_axis_read_desc_status_tag(dma_tx_desc_status_tag),
+    .m_axis_read_desc_status_valid(dma_tx_desc_status_valid),
 
-    /*
-     * Transmit timestamp tag input
-     */
-    .s_axis_tx_ptp_ts_tag(0),
-    .s_axis_tx_ptp_ts_valid(1'b0),
-    .s_axis_tx_ptp_ts_ready(),
+    .m_axis_read_data_tdata(tx_axis_tdata_int),
+    .m_axis_read_data_tkeep(tx_axis_tkeep_int),
+    .m_axis_read_data_tvalid(tx_axis_tvalid_int),
+    .m_axis_read_data_tready(tx_axis_tready_int),
+    .m_axis_read_data_tlast(tx_axis_tlast_int),
+    .m_axis_read_data_tid(),
+    .m_axis_read_data_tdest(),
+    .m_axis_read_data_tuser(tx_axis_tuser_int),
 
-    /*
-     * Transmit timestamp output
-     */
-    .m_axis_tx_ptp_ts_96(tx_ptp_ts_96),
-    .m_axis_tx_ptp_ts_tag(),
-    .m_axis_tx_ptp_ts_valid(tx_ptp_ts_valid),
-    .m_axis_tx_ptp_ts_ready(tx_ptp_ts_ready),
+    .s_axis_write_desc_addr(dma_rx_desc_addr),
+    .s_axis_write_desc_len(dma_rx_desc_len),
+    .s_axis_write_desc_tag(dma_rx_desc_tag),
+    .s_axis_write_desc_valid(dma_rx_desc_valid),
+    .s_axis_write_desc_ready(dma_rx_desc_ready),
 
-    /*
-     * Receive descriptor input
-     */
-    .s_axis_rx_desc_addr(dma_rx_desc_addr),
-    .s_axis_rx_desc_len(dma_rx_desc_len),
-    .s_axis_rx_desc_tag(dma_rx_desc_tag),
-    .s_axis_rx_desc_valid(dma_rx_desc_valid),
-    .s_axis_rx_desc_ready(dma_rx_desc_ready),
+    .m_axis_write_desc_status_len(dma_rx_desc_status_len),
+    .m_axis_write_desc_status_tag(dma_rx_desc_status_tag),
+    .m_axis_write_desc_status_id(),
+    .m_axis_write_desc_status_dest(),
+    .m_axis_write_desc_status_user(dma_rx_desc_status_user),
+    .m_axis_write_desc_status_valid(dma_rx_desc_status_valid),
 
-    /*
-     * Receive descriptor status output
-     */
-    .m_axis_rx_desc_status_len(dma_rx_desc_status_len),
-    .m_axis_rx_desc_status_tag(dma_rx_desc_status_tag),
-    .m_axis_rx_desc_status_user(dma_rx_desc_status_user),
-    .m_axis_rx_desc_status_valid(dma_rx_desc_status_valid),
+    .s_axis_write_data_tdata(rx_axis_tdata),
+    .s_axis_write_data_tkeep(rx_axis_tkeep),
+    .s_axis_write_data_tvalid(rx_axis_tvalid),
+    .s_axis_write_data_tready(rx_axis_tready),
+    .s_axis_write_data_tlast(rx_axis_tlast),
+    .s_axis_write_data_tid(0),
+    .s_axis_write_data_tdest(0),
+    .s_axis_write_data_tuser(rx_axis_tuser),
 
-    /*
-     * Receive timestamp output
-     */
-    .m_axis_rx_ptp_ts_96(rx_ptp_ts_96),
-    .m_axis_rx_ptp_ts_valid(rx_ptp_ts_valid),
-    .m_axis_rx_ptp_ts_ready(rx_ptp_ts_ready),
-
-    /*
-     * Receive checksum output
-     */
-    .m_axis_rx_csum(rx_csum),
-    .m_axis_rx_csum_valid(rx_csum_valid),
-
-    /*
-     * AXI master interface
-     */
     .m_axi_awid(m_axi_awid),
     .m_axi_awaddr(m_axi_awaddr),
     .m_axi_awlen(m_axi_awlen),
@@ -1394,26 +1430,9 @@ eth_interface_inst (
     .m_axi_rvalid(m_axi_rvalid),
     .m_axi_rready(m_axi_rready),
 
-    .xgmii_rxd(xgmii_rxd),
-    .xgmii_rxc(xgmii_rxc),
-    .xgmii_txd(xgmii_txd),
-    .xgmii_txc(xgmii_txc),
-
-    .tx_fifo_overflow(eth_tx_fifo_overflow),
-    .tx_fifo_bad_frame(eth_tx_fifo_bad_frame),
-    .tx_fifo_good_frame(eth_tx_fifo_good_frame),
-    .rx_error_bad_frame(eth_rx_error_bad_frame),
-    .rx_error_bad_fcs(eth_rx_error_bad_fcs),
-    .rx_fifo_overflow(eth_rx_fifo_overflow),
-    .rx_fifo_bad_frame(eth_rx_fifo_bad_frame),
-    .rx_fifo_good_frame(eth_rx_fifo_good_frame),
-
-    .ptp_ts_96(ptp_ts_96),
-
-    .tx_enable(dma_enable),
-    .rx_enable(dma_enable),
-    .rx_abort(1'b0),
-    .ifg_delay(8'd12)
+    .read_enable(dma_enable),
+    .write_enable(dma_enable),
+    .write_abort(1'b0)
 );
 
 parameter RAM_COUNT = 3;

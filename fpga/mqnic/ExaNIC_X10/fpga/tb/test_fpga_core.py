@@ -593,7 +593,21 @@ def bench():
         sfp_2_rx_clk.next = clk
         sfp_2_rx_rst.next = rst
 
-    msi_0_sig = Signal(bool(0))
+    loopback_enable = Signal(bool(0))
+
+    @instance
+    def loopback():
+        while True:
+
+            yield clk.posedge
+
+            if loopback_enable:
+                if not sfp_1_sink.empty():
+                    pkt = sfp_1_sink.recv()
+                    sfp_1_source.send(pkt)
+                if not sfp_2_sink.empty():
+                    pkt = sfp_2_sink.recv()
+                    sfp_2_source.send(pkt)
 
     @instance
     def check():
@@ -678,20 +692,16 @@ def bench():
         print("test 4: multiple small packets")
         current_test.next = 4
 
-        data = bytearray([x%256 for x in range(64)])
+        count = 64
 
-        for k in range(32):
-            yield from driver.interfaces[0].start_xmit(data, 0)
+        pkts = [bytearray([(x+k)%256 for x in range(64)]) for k in range(count)]
 
-        for k in range(32):
-            yield sfp_1_sink.wait()
+        loopback_enable.next = True
 
-            pkt = sfp_1_sink.recv()
-            print(pkt)
+        for p in pkts:
+            yield from driver.interfaces[0].start_xmit(p, 0)
 
-            sfp_1_source.send(pkt)
-
-        for k in range(32):
+        for k in range(count):
             pkt = driver.interfaces[0].recv()
 
             if not pkt:
@@ -699,7 +709,10 @@ def bench():
                 pkt = driver.interfaces[0].recv()
 
             print(pkt)
-            assert pkt.data == data
+            assert pkt.data == pkts[k]
+            assert frame_checksum(pkt.data) == pkt.rx_checksum
+
+        loopback_enable.next = False
 
         yield delay(100)
 
@@ -707,20 +720,16 @@ def bench():
         print("test 5: multiple large packets")
         current_test.next = 5
 
-        data = bytearray([x%256 for x in range(1514)])
+        count = 64
 
-        for k in range(16):
-            yield from driver.interfaces[0].start_xmit(data, 0)
+        pkts = [bytearray([(x+k)%256 for x in range(1514)]) for k in range(count)]
 
-        for k in range(16):
-            yield sfp_1_sink.wait()
+        loopback_enable.next = True
 
-            pkt = sfp_1_sink.recv()
-            print(pkt)
+        for p in pkts:
+            yield from driver.interfaces[0].start_xmit(p, 0)
 
-            sfp_1_source.send(pkt)
-
-        for k in range(16):
+        for k in range(count):
             pkt = driver.interfaces[0].recv()
 
             if not pkt:
@@ -728,7 +737,10 @@ def bench():
                 pkt = driver.interfaces[0].recv()
 
             print(pkt)
-            assert pkt.data == data
+            assert pkt.data == pkts[k]
+            assert frame_checksum(pkt.data) == pkt.rx_checksum
+
+        loopback_enable.next = False
 
         yield delay(100)
 

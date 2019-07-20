@@ -593,7 +593,21 @@ def bench():
         sfp_2_rx_clk.next = clk
         sfp_2_rx_rst.next = rst
 
-    msi_0_sig = Signal(bool(0))
+    loopback_enable = Signal(bool(0))
+
+    @instance
+    def loopback():
+        while True:
+
+            yield clk.posedge
+
+            if loopback_enable:
+                if not sfp_1_sink.empty():
+                    pkt = sfp_1_sink.recv()
+                    sfp_1_source.send(pkt)
+                if not sfp_2_sink.empty():
+                    pkt = sfp_2_sink.recv()
+                    sfp_2_source.send(pkt)
 
     @instance
     def check():
@@ -678,20 +692,16 @@ def bench():
         print("test 4: multiple small packets")
         current_test.next = 4
 
-        data = bytearray([x%256 for x in range(64)])
+        count = 64
 
-        for k in range(32):
-            yield from driver.interfaces[0].start_xmit(data, 0)
+        pkts = [bytearray([(x+k)%256 for x in range(64)]) for k in range(count)]
 
-        for k in range(32):
-            yield sfp_1_sink.wait()
+        loopback_enable.next = True
 
-            pkt = sfp_1_sink.recv()
-            print(pkt)
+        for p in pkts:
+            yield from driver.interfaces[0].start_xmit(p, 0)
 
-            sfp_1_source.send(pkt)
-
-        for k in range(32):
+        for k in range(count):
             pkt = driver.interfaces[0].recv()
 
             if not pkt:
@@ -699,7 +709,10 @@ def bench():
                 pkt = driver.interfaces[0].recv()
 
             print(pkt)
-            assert pkt.data == data
+            assert pkt.data == pkts[k]
+            assert frame_checksum(pkt.data) == pkt.rx_checksum
+
+        loopback_enable.next = False
 
         yield delay(100)
 
@@ -707,20 +720,16 @@ def bench():
         print("test 5: multiple large packets")
         current_test.next = 5
 
-        data = bytearray([x%256 for x in range(1514)])
+        count = 64
 
-        for k in range(16):
-            yield from driver.interfaces[0].start_xmit(data, 0)
+        pkts = [bytearray([(x+k)%256 for x in range(1514)]) for k in range(count)]
 
-        for k in range(16):
-            yield sfp_1_sink.wait()
+        loopback_enable.next = True
 
-            pkt = sfp_1_sink.recv()
-            print(pkt)
+        for p in pkts:
+            yield from driver.interfaces[0].start_xmit(p, 0)
 
-            sfp_1_source.send(pkt)
-
-        for k in range(16):
+        for k in range(count):
             pkt = driver.interfaces[0].recv()
 
             if not pkt:
@@ -728,7 +737,73 @@ def bench():
                 pkt = driver.interfaces[0].recv()
 
             print(pkt)
-            assert pkt.data == data
+            assert pkt.data == pkts[k]
+            assert frame_checksum(pkt.data) == pkt.rx_checksum
+
+        loopback_enable.next = False
+
+        yield delay(1000)
+
+        yield clk.posedge
+        print("test 6: TDMA")
+        current_test.next = 6
+
+        count = 16
+
+        pkts = [bytearray([(x+k)%256 for x in range(1514)]) for k in range(count)]
+
+        loopback_enable.next = True
+
+        # configure TDMA
+
+        # configure TDMA scheduler
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00120, 0) # schedule period fns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00124, 40000) # schedule period ns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00128, 0) # schedule period sec (low)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x0012c, 0) # schedule period sec (high)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00130, 0) # timeslot period fns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00134, 10000) # timeslot period ns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00138, 0) # timeslot period sec (low)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x0013c, 0) # timeslot period sec (high)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00140, 0) # active period fns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00144, 5000) # active period ns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00148, 0) # active period sec (low)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x0014c, 0) # active period sec (high)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00110, 0) # schedule start fns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00114, 200000) # schedule start ns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00118, 0) # schedule start sec (low)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x0011c, 0) # schedule start sec (high)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00100, 0x00000001)
+
+        # enable queues
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00200, 0xffffffff)
+        # disable global enable
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x00300, 0x00000000)
+
+        # configure slots
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x10000, 0x00000001)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x10100, 0x00000002)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x10200, 0x00000004)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x10300, 0x00000008)
+
+        yield from rc.mem_read(driver.hw_addr, 4) # wait for all writes to complete
+
+        # send packets
+        for k in range(count):
+            yield from driver.interfaces[0].start_xmit(pkts[k], k%4)
+
+        for k in range(count):
+            pkt = driver.interfaces[0].recv()
+
+            if not pkt:
+                yield driver.interfaces[0].wait()
+                pkt = driver.interfaces[0].recv()
+
+            print(pkt)
+            #assert pkt.data == pkts[k]
+            #assert frame_checksum(pkt.data) == pkt.rx_checksum
+
+        loopback_enable.next = False
 
         yield delay(100)
 

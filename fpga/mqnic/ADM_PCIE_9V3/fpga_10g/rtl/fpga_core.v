@@ -277,7 +277,7 @@ parameter PTP_PERIOD_FNS = 32'd0;
 // FW and board IDs
 parameter FW_ID = 32'd0;
 parameter FW_VER = {16'd0, 16'd1};
-parameter BOARD_ID = {16'h4144, 16'h0001};
+parameter BOARD_ID = {16'h4144, 16'h9003};
 parameter BOARD_VER = {16'd0, 16'd1};
 
 // Structural parameters

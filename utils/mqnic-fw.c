@@ -43,6 +43,8 @@ either expressed or implied, of The Regents of the University of California.
 #include <time.h>
 #include <unistd.h>
 
+#include "mqnic.h"
+
 static void usage(char *name)
 {
     fprintf(stderr,
@@ -57,17 +59,8 @@ int main(int argc, char *argv[])
     int opt;
 
     char *device = NULL;
-    int dev_fd;
 
-    uint32_t fw_id;
-    uint32_t fw_ver;
-    uint32_t board_id;
-    uint32_t board_ver;
-    uint32_t phc_count;
-    uint32_t phc_offset;
-    uint32_t if_count;
-    uint32_t if_stride;
-    uint32_t if_csr_offset;
+    struct mqnic *dev;
 
     name = strrchr(argv[0], '/');
     name = name ? 1+name : argv[0];
@@ -96,105 +89,87 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    dev_fd = open(device, O_RDWR);
+    dev = mqnic_open(device);
 
-    volatile uint32_t *regs = mmap(NULL, 0x1000000, PROT_READ | PROT_WRITE, MAP_SHARED, dev_fd, 0);
-    if (regs == MAP_FAILED)
+    if (!dev)
     {
-        perror("Registers mmap failed");
-        goto err_mmap_registers;
+        fprintf(stderr, "Failed to open device\n");
+        return -1;
     }
 
-    fw_id = regs[0];
-    fw_ver = regs[1];
-    board_id = regs[2];
-    board_ver = regs[3];
-
-    phc_count = regs[4];
-    phc_offset = regs[5];
-
-    if_count = regs[8];
-    if_stride = regs[9];
-    if_csr_offset = regs[11];
-
-    printf("FW ID: 0x%08x\n", fw_id);
-    printf("FW version: %d.%d\n", fw_ver >> 16, fw_ver & 0xffff);
-    printf("Board ID: 0x%08x\n", board_id);
-    printf("Board version: %d.%d\n", board_ver >> 16, board_ver & 0xffff);
-    printf("PHC count: %d\n", phc_count);
-    printf("PHC offset: 0x%08x\n", phc_offset);
-    printf("IF count: %d\n", if_count);
-    printf("IF stride: 0x%08x\n", if_stride);
-    printf("IF CSR offset: 0x%08x\n", if_csr_offset);
+    printf("FW ID: 0x%08x\n", dev->fw_id);
+    printf("FW version: %d.%d\n", dev->fw_ver >> 16, dev->fw_ver & 0xffff);
+    printf("Board ID: 0x%08x\n", dev->board_id);
+    printf("Board version: %d.%d\n", dev->board_ver >> 16, dev->board_ver & 0xffff);
+    printf("PHC count: %d\n", dev->phc_count);
+    printf("PHC offset: 0x%08x\n", dev->phc_offset);
+    printf("IF count: %d\n", dev->if_count);
+    printf("IF stride: 0x%08x\n", dev->if_stride);
+    printf("IF CSR offset: 0x%08x\n", dev->if_csr_offset);
 
     // dump regs
-    printf("Flash ID:   %08x\n", regs[0x50]);
-    printf("Flash Addr: %08x\n", regs[0x51]);
-    printf("Flash Data: %08x\n", regs[0x52]);
-    printf("Flash Ctrl: %08x\n", regs[0x53]);
+    printf("Flash ID:   %08x\n", mqnic_reg_read32(dev->regs, 0x140));
+    printf("Flash Addr: %08x\n", mqnic_reg_read32(dev->regs, 0x144));
+    printf("Flash Data: %08x\n", mqnic_reg_read32(dev->regs, 0x148));
+    printf("Flash Ctrl: %08x\n", mqnic_reg_read32(dev->regs, 0x14c));
 
-    regs[0x53] = 0x0000000f;
+    // release control lines
+    mqnic_reg_write32(dev->regs, 0x14c, 0x0000000f);
 
     // write RCR to put flash in async mode
-    regs[0x51] = 0x0000f94f;
-    regs[0x52] = 0x0060;
-    regs[0x53] = 0x00000102;
-    regs[0x53] = 0x0000000f;
-    regs[0x51] = 0x0000f94f;
-    regs[0x52] = 0x0003;
-    regs[0x53] = 0x00000102;
-    regs[0x53] = 0x0000000f;
+    mqnic_reg_write32(dev->regs, 0x144, 0x0000f94f);
+    mqnic_reg_write32(dev->regs, 0x148, 0x0060);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x00000102);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x0000000f);
+    mqnic_reg_write32(dev->regs, 0x144, 0x0000f94f);
+    mqnic_reg_write32(dev->regs, 0x148, 0x0003);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x00000102);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x0000000f);
 
     // read flash ID
-    regs[0x51] = 0x00000000;
-    regs[0x52] = 0x0090;
-    regs[0x53] = 0x00000102;
-    regs[0x51] = 0x00000000;
-    regs[0x53] = 0x00000004;
+    mqnic_reg_write32(dev->regs, 0x144, 0x00000000);
+    mqnic_reg_write32(dev->regs, 0x148, 0x0090);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x00000102);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x00000004);
 
     // dump regs
-    printf("Flash Addr: %08x\n", regs[0x51]);
-    printf("Flash Data: %08x\n", regs[0x52]);
-    printf("Flash Ctrl: %08x\n", regs[0x53]);
+    printf("Flash Addr: %08x\n", mqnic_reg_read32(dev->regs, 0x144));
+    printf("Flash Data: %08x\n", mqnic_reg_read32(dev->regs, 0x148));
+    printf("Flash Ctrl: %08x\n", mqnic_reg_read32(dev->regs, 0x14c));
 
-    regs[0x51] = 0x00000001;
-    regs[0x53] = 0x00000004;
+    // read rest of flash ID
+    mqnic_reg_write32(dev->regs, 0x144, 0x00000001);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x00000004);
 
     // dump regs
-    printf("Flash Addr: %08x\n", regs[0x51]);
-    printf("Flash Data: %08x\n", regs[0x52]);
-    printf("Flash Ctrl: %08x\n", regs[0x53]);
+    printf("Flash Addr: %08x\n", mqnic_reg_read32(dev->regs, 0x144));
+    printf("Flash Data: %08x\n", mqnic_reg_read32(dev->regs, 0x148));
+    printf("Flash Ctrl: %08x\n", mqnic_reg_read32(dev->regs, 0x14c));
 
-    regs[0x53] = 0x0000000f;
+    // release control lines
+    mqnic_reg_write32(dev->regs, 0x14c, 0x0000000f);
 
     // try reading a word from flash
     // read array
-    regs[0x53] = 0x0000000f;
-    regs[0x51] = 0x00000000 >> 1;
-    regs[0x52] = 0x00ff;
-    regs[0x53] = 0x00000102;
-    regs[0x53] = 0x0000000f;
+    mqnic_reg_write32(dev->regs, 0x144, 0x00000000 >> 1);
+    mqnic_reg_write32(dev->regs, 0x148, 0x00ff);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x00000102);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x0000000f);
 
     // read word
-    regs[0x51] = 0x00000050 >> 1;
-    regs[0x53] = 0x00000004;
+    mqnic_reg_write32(dev->regs, 0x144, 0x00000050 >> 1);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x00000004);
 
     // dump regs
-    printf("Flash ID:   %08x\n", regs[0x50]);
-    printf("Flash Addr: %08x\n", regs[0x51]);
-    printf("Flash Data: %08x\n", regs[0x52]);
-    printf("Flash Ctrl: %08x\n", regs[0x53]);
+    printf("Flash Addr: %08x\n", mqnic_reg_read32(dev->regs, 0x144));
+    printf("Flash Data: %08x\n", mqnic_reg_read32(dev->regs, 0x148));
+    printf("Flash Ctrl: %08x\n", mqnic_reg_read32(dev->regs, 0x14c));
 
-    regs[0x51] = 0x00000000;
-    regs[0x53] = 0x0000000f;
+    // release address and control lines
+    mqnic_reg_write32(dev->regs, 0x144, 0x00000000);
+    mqnic_reg_write32(dev->regs, 0x14c, 0x0000000f);
 
-err:
-
-    munmap(regs, 0x1000000);
-
-err_mmap_registers:
-
-    close(dev_fd);
+    mqnic_close(dev);
 
     return 0;
 }

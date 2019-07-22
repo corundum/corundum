@@ -3,16 +3,16 @@ PREFIX=/usr/local
 BINDIR=$(DESTDIR)$(PREFIX)/bin
 
 CC=gcc
-CFLAGS=-O3 -Wall
+CFLAGS=-O3 -Wall -I../modules/mqnic
 
 BIN=mqnic-config mqnic-fw perout
 
 all: $(BIN)
 
-mqnic-config: mqnic-config.c
+mqnic-config: mqnic-config.c mqnic.c
 	$(CC) $(CFLAGS) $^ -o $@
 
-mqnic-fw: mqnic-fw.c
+mqnic-fw: mqnic-fw.c mqnic.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 perout: perout.c

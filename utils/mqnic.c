@@ -1,0 +1,138 @@
+/*
+
+Copyright 2019, The Regents of the University of California.
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+   1. Redistributions of source code must retain the above copyright notice,
+      this list of conditions and the following disclaimer.
+
+   2. Redistributions in binary form must reproduce the above copyright notice,
+      this list of conditions and the following disclaimer in the documentation
+      and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE REGENTS OF THE UNIVERSITY OF CALIFORNIA ''AS
+IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE REGENTS OF THE UNIVERSITY OF CALIFORNIA OR
+CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL,
+EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT
+OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY
+OF SUCH DAMAGE.
+
+The views and conclusions contained in the software and documentation are those
+of the authors and should not be interpreted as representing official policies,
+either expressed or implied, of The Regents of the University of California.
+
+*/
+
+#include "mqnic.h"
+
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+
+struct mqnic *mqnic_open(const char *dev_name)
+{
+    struct mqnic *dev = calloc(1, sizeof(struct mqnic));
+
+    if (!dev)
+    {
+        perror("memory allocation failed");
+        goto fail_alloc;
+    }
+
+    dev->fd = open(dev_name, O_RDWR);
+
+    if (dev->fd < 0)
+    {
+        perror("open device failed");
+        goto fail_open;
+    }
+
+    dev->regs_size = 0x1000000;
+    dev->regs = (volatile uint8_t *)mmap(NULL, dev->regs_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, 0);
+    if (dev->regs == MAP_FAILED)
+    {
+        perror("mmap regs failed");
+        goto fail_mmap_regs;
+    }
+
+    dev->fw_id = mqnic_reg_read32(dev->regs, MQNIC_REG_FW_ID);
+    dev->fw_ver = mqnic_reg_read32(dev->regs, MQNIC_REG_FW_VER);
+    dev->board_id = mqnic_reg_read32(dev->regs, MQNIC_REG_BOARD_ID);
+    dev->board_ver = mqnic_reg_read32(dev->regs, MQNIC_REG_BOARD_VER);
+
+    dev->phc_count = mqnic_reg_read32(dev->regs, MQNIC_REG_PHC_COUNT);
+    dev->phc_offset = mqnic_reg_read32(dev->regs, MQNIC_REG_PHC_OFFSET);
+
+    if (dev->phc_count)
+    {
+        dev->phc_regs = dev->regs + dev->phc_offset;
+    }
+
+    dev->if_count = mqnic_reg_read32(dev->regs, MQNIC_REG_IF_COUNT);
+    dev->if_stride = mqnic_reg_read32(dev->regs, MQNIC_REG_IF_STRIDE);
+    dev->if_csr_offset = mqnic_reg_read32(dev->regs, MQNIC_REG_IF_CSR_OFFSET);
+
+    if (dev->if_count > MQNIC_MAX_IF)
+        dev->if_count = MQNIC_MAX_IF;
+
+    for (int k = 0; k < dev->if_count; k++)
+    {
+        struct mqnic_if *interface = &dev->interfaces[k];
+        interface->regs = dev->regs + k*dev->if_stride;
+        interface->csr_regs = interface->regs + dev->if_csr_offset;
+
+        interface->if_id = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_ID);
+
+        interface->event_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_EVENT_QUEUE_COUNT);
+        interface->event_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_EVENT_QUEUE_OFFSET);
+        interface->tx_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_QUEUE_COUNT);
+        interface->tx_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_QUEUE_OFFSET);
+        interface->tx_cpl_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_CPL_QUEUE_COUNT);
+        interface->tx_cpl_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_CPL_QUEUE_OFFSET);
+        interface->rx_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_QUEUE_COUNT);
+        interface->rx_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_QUEUE_OFFSET);
+        interface->rx_cpl_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_CPL_QUEUE_COUNT);
+        interface->rx_cpl_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_CPL_QUEUE_OFFSET);
+
+        interface->port_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_COUNT);
+        interface->port_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_OFFSET);
+        interface->port_stride = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_STRIDE);
+
+        if (interface->event_queue_count > MQNIC_MAX_EVENT_RINGS)
+            interface->event_queue_count = MQNIC_MAX_EVENT_RINGS;
+        if (interface->tx_queue_count > MQNIC_MAX_TX_RINGS)
+            interface->tx_queue_count = MQNIC_MAX_TX_RINGS;
+        if (interface->tx_cpl_queue_count > MQNIC_MAX_TX_CPL_RINGS)
+            interface->tx_cpl_queue_count = MQNIC_MAX_TX_CPL_RINGS;
+        if (interface->rx_queue_count > MQNIC_MAX_RX_RINGS)
+            interface->rx_queue_count = MQNIC_MAX_RX_RINGS;
+        if (interface->rx_cpl_queue_count > MQNIC_MAX_RX_CPL_RINGS)
+            interface->rx_cpl_queue_count = MQNIC_MAX_RX_CPL_RINGS;
+    }
+
+    return dev;
+
+fail_mmap_regs:
+    close(dev->fd);
+fail_open:
+    free(dev);
+fail_alloc:
+    return NULL;
+}
+
+void mqnic_close(struct mqnic *dev)
+{
+    munmap((void *)dev->regs, dev->regs_size);
+    close(dev->fd);
+    free(dev);
+}
+

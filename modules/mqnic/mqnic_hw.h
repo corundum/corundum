@@ -34,6 +34,8 @@ either expressed or implied, of The Regents of the University of California.
 #ifndef MQNIC_HW_H
 #define MQNIC_HW_H
 
+#include <linux/types.h>
+
 #define MQNIC_MAX_IF 8
 
 #define MQNIC_MAX_EVENT_RINGS   256
@@ -159,25 +161,25 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_EVENT_SIZE 32
 
 struct mqnic_desc {
-    u16 rsvd0;
-    u16 tx_csum_cmd;
-    u32 len;
-    u64 addr;
+    __u16 rsvd0;
+    __u16 tx_csum_cmd;
+    __u32 len;
+    __u64 addr;
 };
 
 struct mqnic_cpl {
-    u16 queue;
-    u16 index;
-    u16 len;
-    u16 rsvd0;
-    u32 ts_ns;
-    u16 ts_s;
-    u16 rx_csum;
+    __u16 queue;
+    __u16 index;
+    __u16 len;
+    __u16 rsvd0;
+    __u32 ts_ns;
+    __u16 ts_s;
+    __u16 rx_csum;
 };
 
 struct mqnic_event {
-    u16 type;
-    u16 source;
+    __u16 type;
+    __u16 source;
 };
 
 #endif /* MQNIC_HW_H */

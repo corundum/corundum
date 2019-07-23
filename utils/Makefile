@@ -15,7 +15,7 @@ mqnic-config: mqnic-config.c mqnic.c
 mqnic-fw: mqnic-fw.c mqnic.c
 	$(CC) $(CFLAGS) $^ -o $@
 
-perout: perout.c
+perout: perout.c timespec.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 install:

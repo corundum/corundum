@@ -43,6 +43,8 @@ either expressed or implied, of The Regents of the University of California.
 
 #include <linux/ptp_clock.h>
 
+#include "timespec.h"
+
 #ifndef CLOCK_INVALID
 #define CLOCK_INVALID -1
 #endif
@@ -56,48 +58,6 @@ static clockid_t get_clockid(int fd)
 }
 
 #define NSEC_PER_SEC 1000000000
-
-void ts_mod(int64_t *m_sec, int64_t *m_nsec, int64_t n_sec, int64_t n_nsec)
-{
-    int i = 0;
-
-    // shift until larger
-    while (n_sec < *m_sec || (n_sec == *m_sec && n_nsec < *m_nsec))
-    {
-        i++;
-        n_nsec <<= 1;
-        n_sec <<= 1;
-        if (n_nsec > NSEC_PER_SEC)
-        {
-            n_nsec -= NSEC_PER_SEC;
-            n_sec++;
-        }
-    }
-
-    // subtract and shift back
-    while (i > 0)
-    {
-        i--;
-        if (n_sec & 1)
-        {
-            n_nsec += NSEC_PER_SEC;
-        }
-        n_nsec >>= 1;
-        n_sec >>= 1;
-
-        if (n_sec < *m_sec || (n_sec == *m_sec && n_nsec < *m_nsec))
-        {
-            *m_nsec -= n_nsec;
-            *m_sec -= n_sec;
-
-            if (*m_nsec < 0)
-            {
-                *m_nsec += NSEC_PER_SEC;
-                (*m_sec)--;
-            }
-        }
-    }
-}
 
 static void usage(char *name)
 {
@@ -119,11 +79,11 @@ int main(int argc, char *argv[])
     clockid_t clkid;
 
     struct ptp_perout_request perout_request;
-    struct timespec ts;
+    struct timespec ts_now;
+    struct timespec ts_start;
+    struct timespec ts_period;
 
-    int64_t start_sec = 0;
     int64_t start_nsec = 0;
-    int64_t period_sec = 0;
     int64_t period_nsec = 0;
 
     name = strrchr(argv[0], '/');
@@ -176,69 +136,48 @@ int main(int argc, char *argv[])
 
     if (period_nsec > 0)
     {
-        if (clock_gettime(clkid, &ts))
+        if (clock_gettime(clkid, &ts_now))
         {
             perror("Failed to read current time");
             return -1;
         }
 
         // normalize start
-        start_sec = start_nsec / NSEC_PER_SEC;
-        start_nsec -= start_sec * NSEC_PER_SEC;
+        ts_start.tv_sec = start_nsec / NSEC_PER_SEC;
+        ts_start.tv_nsec = start_nsec - ts_start.tv_sec * NSEC_PER_SEC;
 
         // normalize period
-        period_sec = period_nsec / NSEC_PER_SEC;
-        period_nsec -= period_sec * NSEC_PER_SEC;
+        ts_period.tv_sec = period_nsec / NSEC_PER_SEC;
+        ts_period.tv_nsec = period_nsec - ts_period.tv_sec * NSEC_PER_SEC;
 
-        printf("time   %ld.%09ld\n", ts.tv_sec, ts.tv_nsec);
-        printf("start  %ld.%09ld\n", start_sec, start_nsec);
-        printf("period %ld.%09ld\n", period_sec, period_nsec);
+        printf("time   %ld.%09ld\n", ts_now.tv_sec, ts_now.tv_nsec);
+        printf("start  %ld.%09ld\n", ts_start.tv_sec, ts_start.tv_nsec);
+        printf("period %ld.%09ld\n", ts_period.tv_sec, ts_period.tv_nsec);
 
-        if (start_sec < ts.tv_sec || (start_sec == ts.tv_sec && start_nsec < ts.tv_sec))
+        if (timespec_lt(ts_start, ts_now))
         {
             // start time is in the past
 
             // modulo start with period
-            ts_mod(&start_sec, &start_nsec, period_sec, period_nsec);
+            ts_start = timespec_mod(ts_start, ts_period);
 
             // align time with period
-            int64_t m_sec = ts.tv_sec;
-            int64_t m_nsec = ts.tv_nsec;
+            struct timespec ts_aligned = timespec_sub(ts_now, timespec_mod(ts_now, ts_period));
 
-            ts_mod(&m_sec, &m_nsec, period_sec, period_nsec);
-
-            // add current time and normalize
-            start_nsec += ts.tv_nsec;
-            start_sec += ts.tv_sec;
-
-            if (start_nsec > NSEC_PER_SEC)
-            {
-                start_nsec -= NSEC_PER_SEC;
-                start_sec++;
-            }
-
-            // subtract remainder
-            start_nsec -= m_nsec;
-            start_sec -= m_sec;
-
-            // re-normalize
-            if (start_nsec < 0)
-            {
-                start_nsec += NSEC_PER_SEC;
-                start_sec--;
-            }
+            // add aligned time
+            ts_start = timespec_add(ts_start, ts_aligned);
         }
 
-        printf("time   %ld.%09ld\n", ts.tv_sec, ts.tv_nsec);
-        printf("start  %ld.%09ld\n", start_sec, start_nsec);
-        printf("period %ld.%09ld\n", period_sec, period_nsec);
+        printf("time   %ld.%09ld\n", ts_now.tv_sec, ts_now.tv_nsec);
+        printf("start  %ld.%09ld\n", ts_start.tv_sec, ts_start.tv_nsec);
+        printf("period %ld.%09ld\n", ts_period.tv_sec, ts_period.tv_nsec);
 
         memset(&perout_request, 0, sizeof(perout_request));
         perout_request.index = 0;
-        perout_request.start.sec = start_sec;
-        perout_request.start.nsec = start_nsec;
-        perout_request.period.sec = period_sec;
-        perout_request.period.nsec = period_nsec;
+        perout_request.start.sec = ts_start.tv_sec;
+        perout_request.start.nsec = ts_start.tv_nsec;
+        perout_request.period.sec = ts_period.tv_sec;
+        perout_request.period.nsec = ts_period.tv_nsec;
         
         if (ioctl(ptp_fd, PTP_PEROUT_REQUEST, &perout_request))
         {

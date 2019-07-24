@@ -1334,7 +1334,7 @@ function [IF_AXI_BASE_ADDR_WIDTH-1:0] calcIFAxiBaseAddrs(input [31:0] if_addr_wi
     end
 endfunction
 
-parameter IF_AXI_ID_WIDTH = AXI_ID_WIDTH+$clog2(IF_COUNT);
+parameter IF_AXI_ID_WIDTH = AXI_ID_WIDTH+$clog2(2);
 
 wire [IF_COUNT*AXIL_ADDR_WIDTH-1:0] axil_if_awaddr;
 wire [IF_COUNT*3-1:0]               axil_if_awprot;

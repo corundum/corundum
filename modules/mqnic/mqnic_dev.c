@@ -32,6 +32,7 @@ either expressed or implied, of The Regents of the University of California.
 */
 
 #include "mqnic.h"
+#include "mqnic_ioctl.h"
 
 static int mqnic_open(struct inode *inode, struct file *filp)
 {
@@ -103,9 +104,38 @@ fail_invalid_offset:
     return -EINVAL;
 }
 
+static long mqnic_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+{
+    struct mqnic_dev *mqnic = filp->private_data;
+
+    if (_IOC_TYPE(cmd) != MQNIC_IOCTL_TYPE)
+        return -ENOTTY;
+
+    switch (cmd) {
+    case MQNIC_IOCTL_INFO:
+        {
+            struct mqnic_ioctl_info ctl;
+
+            ctl.fw_id = mqnic->fw_id;
+            ctl.fw_ver = mqnic->fw_ver;
+            ctl.board_id = mqnic->board_id;
+            ctl.board_ver = mqnic->board_ver;
+            ctl.regs_size = mqnic->hw_regs_size;
+
+            if (copy_to_user((void *)arg, &ctl, sizeof(ctl)) != 0)
+                return -EFAULT;
+
+            return 0;
+        }
+    default:
+        return -ENOTTY;
+    }
+}
+
 const struct file_operations mqnic_fops = {
     .owner          = THIS_MODULE,
     .open           = mqnic_open,
     .release        = mqnic_release,
     .mmap           = mqnic_mmap,
+    .unlocked_ioctl = mqnic_ioctl,
 };

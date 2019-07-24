@@ -36,6 +36,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <fcntl.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/ioctl.h>
 #include <sys/mman.h>
 
 struct mqnic *mqnic_open(const char *dev_name)
@@ -56,7 +57,14 @@ struct mqnic *mqnic_open(const char *dev_name)
         goto fail_open;
     }
 
-    dev->regs_size = 0x1000000;
+    struct mqnic_ioctl_info info;
+    if (ioctl(dev->fd, MQNIC_IOCTL_INFO, &info) != 0)
+    {
+        perror("MQNICCTL_INFO ioctl failed");
+        goto fail_ioctl;
+    }
+
+    dev->regs_size = info.regs_size;
     dev->regs = (volatile uint8_t *)mmap(NULL, dev->regs_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, 0);
     if (dev->regs == MAP_FAILED)
     {
@@ -122,6 +130,7 @@ struct mqnic *mqnic_open(const char *dev_name)
     return dev;
 
 fail_mmap_regs:
+fail_ioctl:
     close(dev->fd);
 fail_open:
     free(dev);

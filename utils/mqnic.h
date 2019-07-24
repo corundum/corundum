@@ -38,6 +38,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <unistd.h>
 
 #include "mqnic_hw.h"
+#include "mqnic_ioctl.h"
 
 #define mqnic_reg_read32(base, reg) (((volatile uint32_t *)(base))[(reg)/4])
 #define mqnic_reg_write32(base, reg, val) (((volatile uint32_t *)(base))[(reg)/4]) = val

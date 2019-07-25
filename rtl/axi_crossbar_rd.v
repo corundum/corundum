@@ -152,13 +152,13 @@ integer i;
 // check configuration
 initial begin
     if (M_ID_WIDTH < S_ID_WIDTH+$clog2(S_COUNT)) begin
-        $error("Error: M_ID_WIDTH must be at least $clog2(S_COUNT) larger than S_ID_WIDTH");
+        $error("Error: M_ID_WIDTH must be at least $clog2(S_COUNT) larger than S_ID_WIDTH (instance %m)");
         $finish;
     end
 
     for (i = 0; i < M_COUNT*M_REGIONS; i = i + 1) begin
         if (M_ADDR_WIDTH[i*32 +: 32] && (M_ADDR_WIDTH[i*32 +: 32] < 12 || M_ADDR_WIDTH[i*32 +: 32] > ADDR_WIDTH)) begin
-            $error("Error: value out of range");
+            $error("Error: value out of range (instance %m)");
             $finish;
         end
     end

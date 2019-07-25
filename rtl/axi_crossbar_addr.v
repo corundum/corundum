@@ -118,27 +118,27 @@ integer i, j;
 // check configuration
 initial begin
     if (S_ACCEPT < 1) begin
-        $error("Error: need at least 1 accept");
+        $error("Error: need at least 1 accept (instance %m)");
         $finish;
     end
 
     if (S_THREADS < 1) begin
-        $error("Error: need at least 1 thread");
+        $error("Error: need at least 1 thread (instance %m)");
         $finish;
     end
 
     if (S_THREADS > S_ACCEPT) begin
-        $warning("Warning: requested thread count larger than accept count; limiting thread count to accept count");
+        $warning("Warning: requested thread count larger than accept count; limiting thread count to accept count (instance %m)");
     end
 
     if (M_REGIONS < 1) begin
-        $error("Error: need at least 1 region");
+        $error("Error: need at least 1 region (instance %m)");
         $finish;
     end
 
     for (i = 0; i < M_COUNT*M_REGIONS; i = i + 1) begin
         if (M_ADDR_WIDTH[i*32 +: 32] && (M_ADDR_WIDTH[i*32 +: 32] < 12 || M_ADDR_WIDTH[i*32 +: 32] > ADDR_WIDTH)) begin
-            $error("Error: address width out of range");
+            $error("Error: address width out of range (instance %m)");
             $finish;
         end
     end
@@ -149,7 +149,7 @@ initial begin
                 if (((M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32])) <= (M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[j*32 +: 32])))) && ((M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[j*32 +: 32])) <= (M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32]))))) begin
                     $display("%d: %08x / %02d -- %08x-%08x", i, M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[i*32 +: 32], M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32]), M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32])));
                     $display("%d: %08x / %02d -- %08x-%08x", j, M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[j*32 +: 32], M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[j*32 +: 32]), M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[j*32 +: 32])));
-                    $error("Error: address ranges overlap");
+                    $error("Error: address ranges overlap (instance %m)");
                     $finish;
                 end
             end

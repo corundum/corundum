@@ -694,10 +694,8 @@ always @(posedge clk) begin
         s_axi_wready_reg <= 0;
         s_axi_bvalid_reg <= 0;
         s_axi_arready_reg <= 0;
-        s_axi_rvalid_reg <= 0;
 
         m_axi_awvalid_reg <= 0;
-        m_axi_wvalid_reg <= 0;
         m_axi_bready_reg <= 0;
         m_axi_arvalid_reg <= 0;
         m_axi_rready_reg <= 0;
@@ -708,10 +706,8 @@ always @(posedge clk) begin
         s_axi_wready_reg <= s_axi_wready_next;
         s_axi_bvalid_reg <= s_axi_bvalid_next;
         s_axi_arready_reg <= s_axi_arready_next;
-        s_axi_rvalid_reg <= s_axi_rvalid_next;
 
         m_axi_awvalid_reg <= m_axi_awvalid_next;
-        m_axi_wvalid_reg <= m_axi_wvalid_next;
         m_axi_bready_reg <= m_axi_bready_next;
         m_axi_arvalid_reg <= m_axi_arvalid_next;
         m_axi_rready_reg <= m_axi_rready_next;

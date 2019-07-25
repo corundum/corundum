@@ -84,12 +84,12 @@ parameter CL_M_COUNT = $clog2(M_COUNT);
 // bus width assertions
 initial begin
     if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256) begin
-        $error("Error: PCIe interface width must be 64, 128, or 256");
+        $error("Error: PCIe interface width must be 64, 128, or 256 (instance %m)");
         $finish;
     end
 
     if (AXIS_PCIE_KEEP_WIDTH * 32 != AXIS_PCIE_DATA_WIDTH) begin
-        $error("Error: PCIe interface requires dword (32-bit) granularity");
+        $error("Error: PCIe interface requires dword (32-bit) granularity (instance %m)");
         $finish;
     end
 end

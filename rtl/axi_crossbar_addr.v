@@ -166,7 +166,7 @@ reg [2:0] state_reg = STATE_IDLE, state_next;
 reg s_axi_aready_reg = 0, s_axi_aready_next;
 
 reg [3:0] m_axi_aregion_reg = 4'd0, m_axi_aregion_next;
-reg [CL_M_COUNT-1:0] m_select_reg = {CL_M_COUNT{1'b0}}, m_select_next;
+reg [CL_M_COUNT-1:0] m_select_reg = 0, m_select_next;
 reg m_axi_avalid_reg = 1'b0, m_axi_avalid_next;
 reg m_decerr_reg = 1'b0, m_decerr_next;
 reg m_wc_valid_reg = 1'b0, m_wc_valid_next;

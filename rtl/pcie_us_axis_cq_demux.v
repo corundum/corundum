@@ -31,8 +31,11 @@ THE SOFTWARE.
  */
 module pcie_us_axis_cq_demux #
 (
+    // Output count
     parameter M_COUNT = 2,
+    // Width of PCIe AXI stream interfaces in bits
     parameter AXIS_PCIE_DATA_WIDTH = 256,
+    // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
 )
 (

@@ -31,11 +31,17 @@ THE SOFTWARE.
  */
 module pcie_us_axil_master #
 (
+    // Width of PCIe AXI stream interfaces in bits
     parameter AXIS_PCIE_DATA_WIDTH = 256,
+    // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    // Width of AXI lite data bus in bits
     parameter AXI_DATA_WIDTH = 32,
+    // Width of AXI lite address bus in bits
     parameter AXI_ADDR_WIDTH = 64,
+    // Width of AXI lite wstrb (width of data bus in words)
     parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8),
+    // Enable parity
     parameter ENABLE_PARITY = 0
 )
 (

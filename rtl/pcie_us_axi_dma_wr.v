@@ -31,15 +31,25 @@ THE SOFTWARE.
  */
 module pcie_us_axi_dma_wr #
 (
+    // Width of PCIe AXI stream interfaces in bits
     parameter AXIS_PCIE_DATA_WIDTH = 256,
+    // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
+    // Width of AXI address bus in bits
     parameter AXI_ADDR_WIDTH = 64,
+    // Width of AXI wstrb (width of data bus in words)
     parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8),
+    // Width of AXI ID signal
     parameter AXI_ID_WIDTH = 8,
+    // Maximum AXI burst length to generate
     parameter AXI_MAX_BURST_LEN = 256,
+    // PCIe address width
     parameter PCIE_ADDR_WIDTH = 64,
+    // Length field width
     parameter LEN_WIDTH = 20,
+    // Tag field width
     parameter TAG_WIDTH = 8
 )
 (

@@ -31,16 +31,32 @@ THE SOFTWARE.
  */
 module axil_interconnect #
 (
+    // Number of AXI inputs (slave interfaces)
     parameter S_COUNT = 4,
+    // Number of AXI outputs (master interfaces)
     parameter M_COUNT = 4,
+    // Width of data bus in bits
     parameter DATA_WIDTH = 32,
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8),
+    // Number of regions per master interface
     parameter M_REGIONS = 1,
+    // Master interface base addresses
+    // M_COUNT concatenated fields of M_REGIONS concatenated fields of ADDR_WIDTH bits
     parameter M_BASE_ADDR = {32'h03000000, 32'h02000000, 32'h01000000, 32'h00000000},
+    // Master interface address widths
+    // M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
     parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd24}}}},
+    // Read connections between interfaces
+    // M_COUNT concatenated fields of S_COUNT bits
     parameter M_CONNECT_READ = {M_COUNT{{S_COUNT{1'b1}}}},
+    // Write connections between interfaces
+    // M_COUNT concatenated fields of S_COUNT bits
     parameter M_CONNECT_WRITE = {M_COUNT{{S_COUNT{1'b1}}}},
+    // Secure master (fail operations based on awprot/arprot)
+    // M_COUNT bits
     parameter M_SECURE = {M_COUNT{1'b0}}
 )
 (

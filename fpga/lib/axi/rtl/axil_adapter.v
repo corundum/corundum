@@ -31,10 +31,15 @@ THE SOFTWARE.
  */
 module axil_adapter #
 (
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // Width of input (slave) interface data bus in bits
     parameter S_DATA_WIDTH = 32,
+    // Width of input (slave) interface wstrb (width of data bus in words)
     parameter S_STRB_WIDTH = (S_DATA_WIDTH/8),
+    // Width of output (master) interface data bus in bits
     parameter M_DATA_WIDTH = 32,
+    // Width of output (master) interface wstrb (width of data bus in words)
     parameter M_STRB_WIDTH = (M_DATA_WIDTH/8)
 )
 (

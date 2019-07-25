@@ -31,13 +31,21 @@ THE SOFTWARE.
  */
 module axi_dp_ram #
 (
-    parameter DATA_WIDTH = 32,  // width of data bus in bits
-    parameter ADDR_WIDTH = 16,  // width of address bus in bits
+    // Width of data bus in bits
+    parameter DATA_WIDTH = 32,
+    // Width of address bus in bits
+    parameter ADDR_WIDTH = 16,
+    // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8),
+    // Width of ID signal
     parameter ID_WIDTH = 8,
+    // Extra pipeline register on output port A
     parameter A_PIPELINE_OUTPUT = 0,
+    // Extra pipeline register on output port B
     parameter B_PIPELINE_OUTPUT = 0,
+    // Interleave read and write burst cycles on port A
     parameter A_INTERLEAVE = 0,
+    // Interleave read and write burst cycles on port B
     parameter B_INTERLEAVE = 0
 )
 (

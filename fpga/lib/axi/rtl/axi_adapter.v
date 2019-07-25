@@ -31,24 +31,43 @@ THE SOFTWARE.
  */
 module axi_adapter #
 (
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // Width of input (slave) interface data bus in bits
     parameter S_DATA_WIDTH = 32,
+    // Width of input (slave) interface wstrb (width of data bus in words)
     parameter S_STRB_WIDTH = (S_DATA_WIDTH/8),
+    // Width of output (master) interface data bus in bits
     parameter M_DATA_WIDTH = 32,
+    // Width of output (master) interface wstrb (width of data bus in words)
     parameter M_STRB_WIDTH = (M_DATA_WIDTH/8),
+    // Width of ID signal
     parameter ID_WIDTH = 8,
+    // Propagate awuser signal
     parameter AWUSER_ENABLE = 0,
+    // Width of awuser signal
     parameter AWUSER_WIDTH = 1,
+    // Propagate wuser signal
     parameter WUSER_ENABLE = 0,
+    // Width of wuser signal
     parameter WUSER_WIDTH = 1,
+    // Propagate buser signal
     parameter BUSER_ENABLE = 0,
+    // Width of buser signal
     parameter BUSER_WIDTH = 1,
+    // Propagate aruser signal
     parameter ARUSER_ENABLE = 0,
+    // Width of aruser signal
     parameter ARUSER_WIDTH = 1,
+    // Propagate ruser signal
     parameter RUSER_ENABLE = 0,
+    // Width of ruser signal
     parameter RUSER_WIDTH = 1,
+    // When adapting to a wider bus, re-pack full-width burst instead of passing through narrow burst if possible
     parameter CONVERT_BURST = 1,
+    // When adapting to a wider bus, re-pack all bursts instead of passing through narrow burst if possible
     parameter CONVERT_NARROW_BURST = 0,
+    // Forward ID through adapter
     parameter FORWARD_ID = 0
 )
 (

@@ -31,10 +31,16 @@ THE SOFTWARE.
  */
 module axi_cdma_desc_mux #
 (
+    // Number of ports
     parameter PORTS = 2,
+    // AXI address width
     parameter AXI_ADDR_WIDTH = 16,
+    // Length field width
     parameter LEN_WIDTH = 20,
+    // Input tag field width
     parameter S_TAG_WIDTH = 8,
+    // Output tag field width (towards CDMA module)
+    // Additional bits required for response routing
     parameter M_TAG_WIDTH = S_TAG_WIDTH+$clog2(PORTS),
     // arbitration type: "PRIORITY" or "ROUND_ROBIN"
     parameter ARB_TYPE = "PRIORITY",

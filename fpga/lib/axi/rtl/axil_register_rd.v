@@ -31,10 +31,17 @@ THE SOFTWARE.
  */
 module axil_register_rd #
 (
+    // Width of data bus in bits
     parameter DATA_WIDTH = 32,
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8),
+    // AR channel register type
+    // 0 to bypass, 1 for simple buffer
     parameter AR_REG_TYPE = 1,
+    // R channel register type
+    // 0 to bypass, 1 for simple buffer
     parameter R_REG_TYPE = 1
 )
 (

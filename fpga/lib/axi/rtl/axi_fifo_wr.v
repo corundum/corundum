@@ -31,17 +31,29 @@ THE SOFTWARE.
  */
 module axi_fifo_wr #
 (
+    // Width of data bus in bits
     parameter DATA_WIDTH = 32,
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8),
+    // Width of ID signal
     parameter ID_WIDTH = 8,
+    // Propagate awuser signal
     parameter AWUSER_ENABLE = 0,
+    // Width of awuser signal
     parameter AWUSER_WIDTH = 1,
+    // Propagate wuser signal
     parameter WUSER_ENABLE = 0,
+    // Width of wuser signal
     parameter WUSER_WIDTH = 1,
+    // Propagate buser signal
     parameter BUSER_ENABLE = 0,
+    // Width of buser signal
     parameter BUSER_WIDTH = 1,
+    // Write data FIFO depth (cycles)
     parameter FIFO_DEPTH = 32,
+    // Hold write address until write data in FIFO, if possible
     parameter FIFO_DELAY = 0
 )
 (

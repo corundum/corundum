@@ -31,15 +31,25 @@ THE SOFTWARE.
  */
 module axi_fifo_rd #
 (
+    // Width of data bus in bits
     parameter DATA_WIDTH = 32,
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8),
+    // Width of ID signal
     parameter ID_WIDTH = 8,
+    // Propagate aruser signal
     parameter ARUSER_ENABLE = 0,
+    // Width of aruser signal
     parameter ARUSER_WIDTH = 1,
+    // Propagate ruser signal
     parameter RUSER_ENABLE = 0,
+    // Width of ruser signal
     parameter RUSER_WIDTH = 1,
+    // Read data FIFO depth (cycles)
     parameter FIFO_DEPTH = 32,
+    // Hold read address until space available in FIFO for data, if possible
     parameter FIFO_DELAY = 0
 )
 (

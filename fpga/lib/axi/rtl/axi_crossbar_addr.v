@@ -31,18 +31,35 @@ THE SOFTWARE.
  */
 module axi_crossbar_addr #
 (
+    // Slave interface index
     parameter S = 0,
+    // Number of AXI inputs (slave interfaces)
     parameter S_COUNT = 4,
+    // Number of AXI outputs (master interfaces)
     parameter M_COUNT = 4,
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // ID field width
     parameter ID_WIDTH = 8,
+    // Number of concurrent unique IDs
     parameter S_THREADS = 32'd2,
+    // Number of concurrent operations
     parameter S_ACCEPT = 32'd16,
+    // Number of regions per master interface
     parameter M_REGIONS = 1,
+    // Master interface base addresses
+    // M_COUNT concatenated fields of M_REGIONS concatenated fields of ADDR_WIDTH bits
     parameter M_BASE_ADDR = {32'h03000000, 32'h02000000, 32'h01000000, 32'h00000000},
+    // Master interface address widths
+    // M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
     parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd24}}}},
+    // Connections between interfaces
+    // M_COUNT concatenated fields of S_COUNT bits
     parameter M_CONNECT = {M_COUNT{{S_COUNT{1'b1}}}},
+    // Secure master (fail operations based on awprot/arprot)
+    // M_COUNT bits
     parameter M_SECURE = {M_COUNT{1'b0}},
+    // Enable write command output
     parameter WC_OUTPUT = 0
 )
 (

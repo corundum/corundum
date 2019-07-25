@@ -31,28 +31,63 @@ THE SOFTWARE.
  */
 module axi_crossbar_rd #
 (
+    // Number of AXI inputs (slave interfaces)
     parameter S_COUNT = 4,
+    // Number of AXI outputs (master interfaces)
     parameter M_COUNT = 4,
+    // Width of data bus in bits
     parameter DATA_WIDTH = 32,
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8),
+    // Input ID field width (from AXI masters)
     parameter S_ID_WIDTH = 8,
+    // Output ID field width (towards AXI slaves)
+    // Additional bits required for response routing
     parameter M_ID_WIDTH = S_ID_WIDTH+$clog2(S_COUNT),
+    // Propagate aruser signal
     parameter ARUSER_ENABLE = 0,
+    // Width of aruser signal
     parameter ARUSER_WIDTH = 1,
+    // Propagate ruser signal
     parameter RUSER_ENABLE = 0,
+    // Width of ruser signal
     parameter RUSER_WIDTH = 1,
+    // Number of concurrent unique IDs for each slave interface
+    // S_COUNT concatenated fields of 32 bits
     parameter S_THREADS = {S_COUNT{32'd2}},
+    // Number of concurrent operations for each slave interface
+    // S_COUNT concatenated fields of 32 bits
     parameter S_ACCEPT = {S_COUNT{32'd16}},
+    // Number of regions per master interface
     parameter M_REGIONS = 1,
+    // Master interface base addresses
+    // M_COUNT concatenated fields of M_REGIONS concatenated fields of ADDR_WIDTH bits
     parameter M_BASE_ADDR = {32'h03000000, 32'h02000000, 32'h01000000, 32'h00000000},
+    // Master interface address widths
+    // M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
     parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd24}}}},
+    // Read connections between interfaces
+    // M_COUNT concatenated fields of S_COUNT bits
     parameter M_CONNECT = {M_COUNT{{S_COUNT{1'b1}}}},
+    // Number of concurrent operations for each master interface
+    // M_COUNT concatenated fields of 32 bits
     parameter M_ISSUE = {M_COUNT{32'd4}},
+    // Secure master (fail operations based on awprot/arprot)
+    // M_COUNT bits
     parameter M_SECURE = {M_COUNT{1'b0}},
+    // Slave interface AR channel register type (input)
+    // 0 to bypass, 1 for simple buffer, 2 for skid buffer
     parameter S_AR_REG_TYPE = {S_COUNT{2'd0}},
+    // Slave interface R channel register type (output)
+    // 0 to bypass, 1 for simple buffer, 2 for skid buffer
     parameter S_R_REG_TYPE = {S_COUNT{2'd2}},
+    // Master interface AR channel register type (output)
+    // 0 to bypass, 1 for simple buffer, 2 for skid buffer
     parameter M_AR_REG_TYPE = {M_COUNT{2'd1}},
+    // Master interface R channel register type (input)
+    // 0 to bypass, 1 for simple buffer, 2 for skid buffer
     parameter M_R_REG_TYPE = {M_COUNT{2'd0}}
 )
 (

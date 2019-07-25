@@ -31,11 +31,18 @@ THE SOFTWARE.
  */
 module pcie_axi_dma_desc_mux #
 (
+    // Number of ports
     parameter PORTS = 2,
+    // PCIe address width
     parameter PCIE_ADDR_WIDTH = 64,
+    // AXI address width
     parameter AXI_ADDR_WIDTH = 16,
+    // Length field width
     parameter LEN_WIDTH = 20,
+    // Input tag field width
     parameter S_TAG_WIDTH = 8,
+    // Output tag field width (towards DMA module)
+    // Additional bits required for response routing
     parameter M_TAG_WIDTH = S_TAG_WIDTH+$clog2(PORTS),
     // arbitration type: "PRIORITY" or "ROUND_ROBIN"
     parameter ARB_TYPE = "PRIORITY",

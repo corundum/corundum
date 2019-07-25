@@ -31,13 +31,21 @@ THE SOFTWARE.
  */
 module axi_cdma #
 (
-    parameter AXI_DATA_WIDTH = 32,  // width of data bus in bits
-    parameter AXI_ADDR_WIDTH = 16,  // width of address bus in bits
+    // Width of data bus in bits
+    parameter AXI_DATA_WIDTH = 32,
+    // Width of address bus in bits
+    parameter AXI_ADDR_WIDTH = 16,
+    // Width of wstrb (width of data bus in words)
     parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8),
+    // Width of AXI ID signal
     parameter AXI_ID_WIDTH = 8,
+    // Maximum AXI burst length to generate
     parameter AXI_MAX_BURST_LEN = 16,
+    // Width of length field
     parameter LEN_WIDTH = 20,
+    // Width of tag field
     parameter TAG_WIDTH = 8,
+    // Enable support for unaligned transfers
     parameter ENABLE_UNALIGNED = 0
 )
 (

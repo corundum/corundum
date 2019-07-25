@@ -31,8 +31,11 @@ THE SOFTWARE.
  */
 module axil_cdc_wr #
 (
+    // Width of data bus in bits
     parameter DATA_WIDTH = 32,
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8)
 )
 (

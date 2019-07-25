@@ -31,24 +31,44 @@ THE SOFTWARE.
  */
 module axi_dma_rd #
 (
+    // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = 32,
+    // Width of AXI address bus in bits
     parameter AXI_ADDR_WIDTH = 16,
+    // Width of AXI wstrb (width of data bus in words)
     parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8),
+    // Width of AXI ID signal
     parameter AXI_ID_WIDTH = 8,
+    // Maximum AXI burst length to generate
     parameter AXI_MAX_BURST_LEN = 16,
+    // Width of AXI stream interfaces in bits
     parameter AXIS_DATA_WIDTH = AXI_DATA_WIDTH,
+    // Use AXI stream tkeep signal
     parameter AXIS_KEEP_ENABLE = (AXIS_DATA_WIDTH>8),
+    // AXI stream tkeep signal width (words per cycle)
     parameter AXIS_KEEP_WIDTH = (AXIS_DATA_WIDTH/8),
+    // Use AXI stream tlast signal
     parameter AXIS_LAST_ENABLE = 1,
+    // Propagate AXI stream tid signal
     parameter AXIS_ID_ENABLE = 0,
+    // AXI stream tid signal width
     parameter AXIS_ID_WIDTH = 8,
+    // Propagate AXI stream tdest signal
     parameter AXIS_DEST_ENABLE = 0,
+    // AXI stream tdest signal width
     parameter AXIS_DEST_WIDTH = 8,
+    // Propagate AXI stream tuser signal
     parameter AXIS_USER_ENABLE = 1,
+    // AXI stream tuser signal width
     parameter AXIS_USER_WIDTH = 1,
+    // Width of length field
     parameter LEN_WIDTH = 20,
+    // Width of tag field
     parameter TAG_WIDTH = 8,
+    // Enable support for scatter/gather DMA
+    // (multiple descriptors per AXI stream frame)
     parameter ENABLE_SG = 0,
+    // Enable support for unaligned transfers
     parameter ENABLE_UNALIGNED = 0
 )
 (

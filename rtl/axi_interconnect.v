@@ -31,28 +31,56 @@ THE SOFTWARE.
  */
 module axi_interconnect #
 (
+    // Number of AXI inputs (slave interfaces)
     parameter S_COUNT = 4,
+    // Number of AXI outputs (master interfaces)
     parameter M_COUNT = 4,
+    // Width of data bus in bits
     parameter DATA_WIDTH = 32,
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8),
+    // Width of ID signal
     parameter ID_WIDTH = 8,
+    // Propagate awuser signal
     parameter AWUSER_ENABLE = 0,
+    // Width of awuser signal
     parameter AWUSER_WIDTH = 1,
+    // Propagate wuser signal
     parameter WUSER_ENABLE = 0,
+    // Width of wuser signal
     parameter WUSER_WIDTH = 1,
+    // Propagate buser signal
     parameter BUSER_ENABLE = 0,
+    // Width of buser signal
     parameter BUSER_WIDTH = 1,
+    // Propagate aruser signal
     parameter ARUSER_ENABLE = 0,
+    // Width of aruser signal
     parameter ARUSER_WIDTH = 1,
+    // Propagate ruser signal
     parameter RUSER_ENABLE = 0,
+    // Width of ruser signal
     parameter RUSER_WIDTH = 1,
+    // Propagate ID field
     parameter FORWARD_ID = 0,
+    // Number of regions per master interface
     parameter M_REGIONS = 1,
+    // Master interface base addresses
+    // M_COUNT concatenated fields of M_REGIONS concatenated fields of ADDR_WIDTH bits
     parameter M_BASE_ADDR = {32'h03000000, 32'h02000000, 32'h01000000, 32'h00000000},
+    // Master interface address widths
+    // M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
     parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd24}}}},
+    // Read connections between interfaces
+    // M_COUNT concatenated fields of S_COUNT bits
     parameter M_CONNECT_READ = {M_COUNT{{S_COUNT{1'b1}}}},
+    // Write connections between interfaces
+    // M_COUNT concatenated fields of S_COUNT bits
     parameter M_CONNECT_WRITE = {M_COUNT{{S_COUNT{1'b1}}}},
+    // Secure master (fail operations based on awprot/arprot)
+    // M_COUNT bits
     parameter M_SECURE = {M_COUNT{1'b0}}
 )
 (

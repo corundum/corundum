@@ -31,16 +31,28 @@ THE SOFTWARE.
  */
 module axi_dma_desc_mux #
 (
+    // Number of ports
     parameter PORTS = 2,
+    // AXI address width
     parameter AXI_ADDR_WIDTH = 16,
+    // Propagate AXI stream tid signal
     parameter AXIS_ID_ENABLE = 0,
+    // AXI stream tid signal width
     parameter AXIS_ID_WIDTH = 8,
+    // Propagate AXI stream tdest signal
     parameter AXIS_DEST_ENABLE = 0,
+    // AXI stream tdest signal width
     parameter AXIS_DEST_WIDTH = 8,
+    // Propagate AXI stream tuser signal
     parameter AXIS_USER_ENABLE = 1,
+    // AXI stream tuser signal width
     parameter AXIS_USER_WIDTH = 1,
+    // Length field width
     parameter LEN_WIDTH = 20,
+    // Input tag field width
     parameter S_TAG_WIDTH = 8,
+    // Output tag field width (towards CDMA module)
+    // Additional bits required for response routing
     parameter M_TAG_WIDTH = S_TAG_WIDTH+$clog2(PORTS),
     // arbitration type: "PRIORITY" or "ROUND_ROBIN"
     parameter ARB_TYPE = "PRIORITY",

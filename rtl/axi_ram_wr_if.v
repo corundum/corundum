@@ -31,15 +31,25 @@ THE SOFTWARE.
  */
 module axi_ram_wr_if #
 (
-    parameter DATA_WIDTH = 32,  // width of data bus in bits
-    parameter ADDR_WIDTH = 16,  // width of address bus in bits
+    // Width of data bus in bits
+    parameter DATA_WIDTH = 32,
+    // Width of address bus in bits
+    parameter ADDR_WIDTH = 16,
+    // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8),
+    // Width of ID signal
     parameter ID_WIDTH = 8,
+    // Propagate awuser signal
     parameter AWUSER_ENABLE = 0,
+    // Width of awuser signal
     parameter AWUSER_WIDTH = 1,
+    // Propagate wuser signal
     parameter WUSER_ENABLE = 0,
+    // Width of wuser signal
     parameter WUSER_WIDTH = 1,
+    // Propagate buser signal
     parameter BUSER_ENABLE = 0,
+    // Width of buser signal
     parameter BUSER_WIDTH = 1
 )
 (

@@ -31,13 +31,21 @@ THE SOFTWARE.
  */
 module axi_axil_adapter_rd #
 (
+    // Width of address bus in bits
     parameter ADDR_WIDTH = 32,
+    // Width of input (slave) AXI interface data bus in bits
     parameter AXI_DATA_WIDTH = 32,
+    // Width of input (slave) AXI interface wstrb (width of data bus in words)
     parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8),
+    // Width of AXI ID signal
     parameter AXI_ID_WIDTH = 8,
+    // Width of output (master) AXI lite interface data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
+    // Width of output (master) AXI lite interface wstrb (width of data bus in words)
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
+    // When adapting to a wider bus, re-pack full-width burst instead of passing through narrow burst if possible
     parameter CONVERT_BURST = 1,
+    // When adapting to a wider bus, re-pack all bursts instead of passing through narrow burst if possible
     parameter CONVERT_NARROW_BURST = 0
 )
 (

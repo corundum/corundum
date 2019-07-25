@@ -31,14 +31,23 @@ THE SOFTWARE.
  */
 module axi_ram_rd_if #
 (
-    parameter DATA_WIDTH = 32,  // width of data bus in bits
-    parameter ADDR_WIDTH = 16,  // width of address bus in bits
+    // Width of data bus in bits
+    parameter DATA_WIDTH = 32,
+    // Width of address bus in bits
+    parameter ADDR_WIDTH = 16,
+    // Width of wstrb (width of data bus in words)
     parameter STRB_WIDTH = (DATA_WIDTH/8),
+    // Width of ID signal
     parameter ID_WIDTH = 8,
+    // Propagate aruser signal
     parameter ARUSER_ENABLE = 0,
+    // Width of aruser signal
     parameter ARUSER_WIDTH = 1,
+    // Propagate ruser signal
     parameter RUSER_ENABLE = 0,
+    // Width of ruser signal
     parameter RUSER_WIDTH = 1,
+    // Extra pipeline register on output
     parameter PIPELINE_OUTPUT = 0
 )
 (

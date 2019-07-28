@@ -1928,36 +1928,105 @@ tdma_ber_inst (
     .ptp_ts_step(ptp_ts_step)
 );
 
-wire [PORT_COUNT-1:0] port_xgmii_tx_clk = {qsfp_tx_clk_1};
-wire [PORT_COUNT-1:0] port_xgmii_tx_rst = {qsfp_tx_rst_1};
-wire [PORT_COUNT-1:0] port_xgmii_rx_clk = {qsfp_rx_clk_1};
-wire [PORT_COUNT-1:0] port_xgmii_rx_rst = {qsfp_rx_rst_1};
+wire [PORT_COUNT-1:0] port_xgmii_tx_clk;
+wire [PORT_COUNT-1:0] port_xgmii_tx_rst;
+wire [PORT_COUNT-1:0] port_xgmii_rx_clk;
+wire [PORT_COUNT-1:0] port_xgmii_rx_rst;
 wire [PORT_COUNT*64-1:0] port_xgmii_txd;
 wire [PORT_COUNT*8-1:0] port_xgmii_txc;
-wire [PORT_COUNT*64-1:0] port_xgmii_rxd = {qsfp_rxd_1};
-wire [PORT_COUNT*8-1:0] port_xgmii_rxc = {qsfp_rxc_1};
-
-assign {qsfp_txd_1} = port_xgmii_txd;
-assign {qsfp_txc_1} = port_xgmii_txc;
-
-// assign qsfp_txd_1 = 64'h0707070707070707;
-// assign qsfp_txc_1 = 8'hff;
-assign qsfp_txd_2 = 64'h0707070707070707;
-assign qsfp_txc_2 = 8'hff;
-assign qsfp_txd_3 = 64'h0707070707070707;
-assign qsfp_txc_3 = 8'hff;
-assign qsfp_txd_4 = 64'h0707070707070707;
-assign qsfp_txc_4 = 8'hff;
+wire [PORT_COUNT*64-1:0] port_xgmii_rxd;
+wire [PORT_COUNT*8-1:0] port_xgmii_rxc;
 
 assign led[0] = pps_led_reg;
 assign led[7:1] = 0;
 
 wire [IF_COUNT*32-1:0] if_msi_irq;
 
-assign msi_irq = if_msi_irq[31:0];
+//  counts    QSFP 1
+// IF  PORT   1_1      1_2      1_3      1_4
+// 1   1      0 (0.0)
+// 1   2      0 (0.0)  1 (0.1)
+// 1   3      0 (0.0)  1 (0.1)  2 (0.2)
+// 1   4      0 (0.0)  1 (0.1)  2 (0.2)  3 (0.3)
+// 2   1      0 (0.0)  1 (1.0)
+// 2   2      0 (0.0)  1 (0.1)  2 (1.0)  3 (1.1)
+// 3   1      0 (0.0)  1 (1.0)  2 (2.0)
+// 4   1      0 (0.0)  1 (1.0)  2 (2.0)  3 (3.0)
+
+localparam QSFP_1_IND = 0;
+localparam QSFP_2_IND = 1;
+localparam QSFP_3_IND = 2;
+localparam QSFP_4_IND = 3;
 
 generate
     genvar m, n;
+
+    if (QSFP_1_IND >= 0 && QSFP_1_IND < PORT_COUNT) begin
+        assign port_xgmii_tx_clk[QSFP_1_IND] = qsfp_tx_clk_1;
+        assign port_xgmii_tx_rst[QSFP_1_IND] = qsfp_tx_rst_1;
+        assign port_xgmii_rx_clk[QSFP_1_IND] = qsfp_rx_clk_1;
+        assign port_xgmii_rx_rst[QSFP_1_IND] = qsfp_rx_rst_1;
+        assign port_xgmii_rxd[QSFP_1_IND*64 +: 64] = qsfp_rxd_1;
+        assign port_xgmii_rxc[QSFP_1_IND*8 +: 8] = qsfp_rxc_1;
+
+        assign qsfp_txd_1 = port_xgmii_txd[QSFP_1_IND*64 +: 64];
+        assign qsfp_txc_1 = port_xgmii_txc[QSFP_1_IND*8 +: 8];
+    end else begin
+        assign qsfp_txd_1 = 64'h0707070707070707;
+        assign qsfp_txc_1 = 8'hff;
+    end
+
+    if (QSFP_2_IND >= 0 && QSFP_2_IND < PORT_COUNT) begin
+        assign port_xgmii_tx_clk[QSFP_2_IND] = qsfp_tx_clk_2;
+        assign port_xgmii_tx_rst[QSFP_2_IND] = qsfp_tx_rst_2;
+        assign port_xgmii_rx_clk[QSFP_2_IND] = qsfp_rx_clk_2;
+        assign port_xgmii_rx_rst[QSFP_2_IND] = qsfp_rx_rst_2;
+        assign port_xgmii_rxd[QSFP_2_IND*64 +: 64] = qsfp_rxd_2;
+        assign port_xgmii_rxc[QSFP_2_IND*8 +: 8] = qsfp_rxc_2;
+
+        assign qsfp_txd_2 = port_xgmii_txd[QSFP_2_IND*64 +: 64];
+        assign qsfp_txc_2 = port_xgmii_txc[QSFP_2_IND*8 +: 8];
+    end else begin
+        assign qsfp_txd_2 = 64'h0707070707070707;
+        assign qsfp_txc_2 = 8'hff;
+    end
+
+    if (QSFP_3_IND >= 0 && QSFP_3_IND < PORT_COUNT) begin
+        assign port_xgmii_tx_clk[QSFP_3_IND] = qsfp_tx_clk_3;
+        assign port_xgmii_tx_rst[QSFP_3_IND] = qsfp_tx_rst_3;
+        assign port_xgmii_rx_clk[QSFP_3_IND] = qsfp_rx_clk_3;
+        assign port_xgmii_rx_rst[QSFP_3_IND] = qsfp_rx_rst_3;
+        assign port_xgmii_rxd[QSFP_3_IND*64 +: 64] = qsfp_rxd_3;
+        assign port_xgmii_rxc[QSFP_3_IND*8 +: 8] = qsfp_rxc_3;
+
+        assign qsfp_txd_3 = port_xgmii_txd[QSFP_3_IND*64 +: 64];
+        assign qsfp_txc_3 = port_xgmii_txc[QSFP_3_IND*8 +: 8];
+    end else begin
+        assign qsfp_txd_3 = 64'h0707070707070707;
+        assign qsfp_txc_3 = 8'hff;
+    end
+
+    if (QSFP_4_IND >= 0 && QSFP_4_IND < PORT_COUNT) begin
+        assign port_xgmii_tx_clk[QSFP_4_IND] = qsfp_tx_clk_4;
+        assign port_xgmii_tx_rst[QSFP_4_IND] = qsfp_tx_rst_4;
+        assign port_xgmii_rx_clk[QSFP_4_IND] = qsfp_rx_clk_4;
+        assign port_xgmii_rx_rst[QSFP_4_IND] = qsfp_rx_rst_4;
+        assign port_xgmii_rxd[QSFP_4_IND*64 +: 64] = qsfp_rxd_4;
+        assign port_xgmii_rxc[QSFP_4_IND*8 +: 8] = qsfp_rxc_4;
+
+        assign qsfp_txd_4 = port_xgmii_txd[QSFP_4_IND*64 +: 64];
+        assign qsfp_txc_4 = port_xgmii_txc[QSFP_4_IND*8 +: 8];
+    end else begin
+        assign qsfp_txd_4 = 64'h0707070707070707;
+        assign qsfp_txc_4 = 8'hff;
+    end
+
+    case (IF_COUNT)
+        1: assign msi_irq = if_msi_irq[0*32+:32];
+        2: assign msi_irq = if_msi_irq[0*32+:32] | if_msi_irq[1*32+:32];
+        3: assign msi_irq = if_msi_irq[0*32+:32] | if_msi_irq[1*32+:32] | if_msi_irq[2*32+:32];
+        4: assign msi_irq = if_msi_irq[0*32+:32] | if_msi_irq[1*32+:32] | if_msi_irq[2*32+:32] | if_msi_irq[3*32+:32];
+    endcase
 
     for (n = 0; n < IF_COUNT; n = n + 1) begin : iface
 

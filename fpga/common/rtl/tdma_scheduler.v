@@ -40,14 +40,23 @@ either expressed or implied, of The Regents of the University of California.
  */
 module tdma_scheduler #
 (
+    // Timeslot index width
     parameter INDEX_WIDTH = 8,
+    // Schedule absolute PTP start time, seconds part
     parameter SCHEDULE_START_S = 48'h0,
+    // Schedule absolute PTP start time, nanoseconds part
     parameter SCHEDULE_START_NS = 30'h0,
+    // Schedule period, seconds part
     parameter SCHEDULE_PERIOD_S = 48'd0,
+    // Schedule period, nanoseconds part
     parameter SCHEDULE_PERIOD_NS = 30'd1000000,
+    // Timeslot period, seconds part
     parameter TIMESLOT_PERIOD_S = 48'd0,
+    // Timeslot period, nanoseconds part
     parameter TIMESLOT_PERIOD_NS = 30'd100000,
+    // Timeslot active period, seconds part
     parameter ACTIVE_PERIOD_S = 48'd0,
+    // Timeslot active period, nanoseconds part
     parameter ACTIVE_PERIOD_NS = 30'd100000
 )
 (

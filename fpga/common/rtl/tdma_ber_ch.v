@@ -40,10 +40,15 @@ either expressed or implied, of The Regents of the University of California.
  */
 module tdma_ber_ch #
 (
+    // Timeslot index width
     parameter INDEX_WIDTH = 6,
+    // Slice index width
     parameter SLICE_WIDTH = 5,
+    // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
+    // Width of AXI lite address bus in bits
     parameter AXIL_ADDR_WIDTH = INDEX_WIDTH+4,
+    // Width of AXI lite wstrb (width of data bus in words)
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8)
 )
 (
@@ -97,17 +102,17 @@ parameter WORD_SIZE = AXIL_DATA_WIDTH/WORD_WIDTH;
 // check configuration
 initial begin
     if (AXIL_ADDR_WIDTH < INDEX_WIDTH+4) begin
-        $error("Error: AXI address width too narrow");
+        $error("Error: AXI address width too narrow (instance %m)");
         $finish;
     end
 
     if (AXIL_DATA_WIDTH != 32) begin
-        $error("Error: AXI data width must be 32");
+        $error("Error: AXI data width must be 32 (instance %m)");
         $finish;
     end
 
     if (AXIL_STRB_WIDTH * 8 != AXIL_DATA_WIDTH) begin
-        $error("Error: Interface requires byte (8-bit) granularity");
+        $error("Error: Interface requires byte (8-bit) granularity (instance %m)");
         $finish;
     end
 end

@@ -40,47 +40,91 @@ either expressed or implied, of The Regents of the University of California.
  */
 module interface #
 (
+    // Number of ports
     parameter PORTS = 1,
+    // PCIe address width
     parameter PCIE_ADDR_WIDTH = 64,
+    // PCIe DMA length field width
     parameter PCIE_DMA_LEN_WIDTH = 16,
+    // PCIe DMA tag field width
     parameter PCIE_DMA_TAG_WIDTH = 8,
-    //parameter REQ_TAG_WIDTH = 8,
-    parameter EVENT_OP_TABLE_SIZE = 16,
-    parameter TX_OP_TABLE_SIZE = 16,
-    parameter RX_OP_TABLE_SIZE = 16,
-    parameter TX_CPL_OP_TABLE_SIZE = 16,
-    parameter RX_CPL_OP_TABLE_SIZE = 16,
-    //parameter OP_TAG_WIDTH = 8,
+    // Request tag field width
+    parameter REQ_TAG_WIDTH = 8,
+    // Number of outstanding operations (event queue)
+    parameter EVENT_QUEUE_OP_TABLE_SIZE = 16,
+    // Number of outstanding operations (transmit queue)
+    parameter TX_QUEUE_OP_TABLE_SIZE = 16,
+    // Number of outstanding operations (receive queue)
+    parameter RX_QUEUE_OP_TABLE_SIZE = 16,
+    // Number of outstanding operations (transmit completion queue)
+    parameter TX_CPL_QUEUE_OP_TABLE_SIZE = 16,
+    // Number of outstanding operations (receive completion queue)
+    parameter RX_CPL_QUEUE_OP_TABLE_SIZE = 16,
+    // Queue request tag field width
+    parameter QUEUE_REQ_TAG_WIDTH = 8,
+    // Queue operation tag field width
+    parameter QUEUE_OP_TAG_WIDTH = 8,
+    // Event queue index width
     parameter EVENT_QUEUE_INDEX_WIDTH = 5,
+    // Transmit queue index width
     parameter TX_QUEUE_INDEX_WIDTH = 8,
+    // Receive queue index width
     parameter RX_QUEUE_INDEX_WIDTH = 8,
+    // Transmit completion queue index width
     parameter TX_CPL_QUEUE_INDEX_WIDTH = 8,
+    // Receive completion queue index width
     parameter RX_CPL_QUEUE_INDEX_WIDTH = 8,
+    // Transmit descriptor table size (number of in-flight operations)
     parameter TX_DESC_TABLE_SIZE = 16,
+    // Transmit packet table size (number of in-progress packets)
     parameter TX_PKT_TABLE_SIZE = 8,
+    // Receive descriptor table size (number of in-flight operations)
     parameter RX_DESC_TABLE_SIZE = 16,
+    // Receive packet table size (number of in-progress packets)
     parameter RX_PKT_TABLE_SIZE = 8,
+    // Transmit scheduler type
     parameter TX_SCHEDULER = "RR",
+    // Scheduler TDMA index width
     parameter TDMA_INDEX_WIDTH = 8,
+    // Interrupt number width
     parameter INT_WIDTH = 8,
+    // Queue element pointer width
     parameter QUEUE_PTR_WIDTH = 16,
+    // Queue log size field width
     parameter QUEUE_LOG_SIZE_WIDTH = 4,
+    // RAM internal address width
     parameter RAM_ADDR_WIDTH = 16,
+    // Packet scratch RAM size
     parameter RAM_SIZE = 2**14,
+    // Enable PTP timestamping
     parameter PTP_TS_ENABLE = 1,
+    // PTP timestamp width
     parameter PTP_TS_WIDTH = 96,
+    // Enable TX checksum offload
     parameter TX_CHECKSUM_ENABLE = 1,
+    // Enable RX checksum offload
     parameter RX_CHECKSUM_ENABLE = 1,
+    // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
+    // Width of AXI lite address bus in bits
     parameter AXIL_ADDR_WIDTH = 16,
+    // Width of AXI lite wstrb (width of data bus in words)
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
+    // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = 256,
+    // Width of AXI address bus in bits
     parameter AXI_ADDR_WIDTH = 16,
+    // Width of AXI wstrb (width of data bus in words)
     parameter AXI_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
+    // Width of AXI ID signal
     parameter AXI_ID_WIDTH = 8,
+    // Maximum AXI burst length to generate
     parameter AXI_MAX_BURST_LEN = 16,
+    // AXI base address of this module (as seen by PCIe DMA)
     parameter AXI_BASE_ADDR = 0,
+    // Width of AXI stream interfaces in bits
     parameter AXIS_DATA_WIDTH = AXI_DATA_WIDTH,
+    // AXI stream tkeep signal width (words per cycle)
     parameter AXIS_KEEP_WIDTH = AXI_STRB_WIDTH
 )
 (
@@ -256,12 +300,6 @@ parameter EVENT_SIZE = 32;
 
 parameter EVENT_SOURCE_WIDTH = 16;
 parameter EVENT_TYPE_WIDTH = 16;
-
-parameter AXI_DMA_TAG_WIDTH = 8;
-parameter AXI_DMA_LEN_WIDTH = 16;
-
-parameter REQ_TAG_WIDTH = 8;
-parameter OP_TAG_WIDTH = 8;
 
 parameter PCIE_DMA_TAG_WIDTH_INT = PCIE_DMA_TAG_WIDTH - $clog2(PORTS+1);
 
@@ -476,38 +514,38 @@ wire [PORTS-1:0]                        port_pcie_axi_dma_write_desc_status_vali
 
 // Queue management
 wire [EVENT_QUEUE_INDEX_WIDTH-1:0]  event_enqueue_req_queue;
-wire [REQ_TAG_WIDTH-1:0]            event_enqueue_req_tag;
+wire [QUEUE_REQ_TAG_WIDTH-1:0]      event_enqueue_req_tag;
 wire                                event_enqueue_req_valid;
 wire                                event_enqueue_req_ready;
 
 wire [PCIE_ADDR_WIDTH-1:0]          event_enqueue_resp_addr;
-wire [REQ_TAG_WIDTH-1:0]            event_enqueue_resp_tag;
-wire [OP_TAG_WIDTH-1:0]             event_enqueue_resp_op_tag;
+wire [QUEUE_REQ_TAG_WIDTH-1:0]      event_enqueue_resp_tag;
+wire [QUEUE_OP_TAG_WIDTH-1:0]       event_enqueue_resp_op_tag;
 wire                                event_enqueue_resp_full;
 wire                                event_enqueue_resp_error;
 wire                                event_enqueue_resp_valid;
 wire                                event_enqueue_resp_ready;
 
-wire [OP_TAG_WIDTH-1:0]             event_enqueue_commit_op_tag;
+wire [QUEUE_OP_TAG_WIDTH-1:0]       event_enqueue_commit_op_tag;
 wire                                event_enqueue_commit_valid;
 wire                                event_enqueue_commit_ready;
 
 wire [TX_QUEUE_INDEX_WIDTH-1:0]     tx_desc_dequeue_req_queue;
-wire [REQ_TAG_WIDTH-1:0]            tx_desc_dequeue_req_tag;
+wire [QUEUE_REQ_TAG_WIDTH-1:0]      tx_desc_dequeue_req_tag;
 wire                                tx_desc_dequeue_req_valid;
 wire                                tx_desc_dequeue_req_ready;
 
 wire [QUEUE_PTR_WIDTH-1:0]          tx_desc_dequeue_resp_ptr;
 wire [PCIE_ADDR_WIDTH-1:0]          tx_desc_dequeue_resp_addr;
 wire [TX_CPL_QUEUE_INDEX_WIDTH-1:0] tx_desc_dequeue_resp_cpl;
-wire [REQ_TAG_WIDTH-1:0]            tx_desc_dequeue_resp_tag;
-wire [OP_TAG_WIDTH-1:0]             tx_desc_dequeue_resp_op_tag;
+wire [QUEUE_REQ_TAG_WIDTH-1:0]      tx_desc_dequeue_resp_tag;
+wire [QUEUE_OP_TAG_WIDTH-1:0]       tx_desc_dequeue_resp_op_tag;
 wire                                tx_desc_dequeue_resp_empty;
 wire                                tx_desc_dequeue_resp_error;
 wire                                tx_desc_dequeue_resp_valid;
 wire                                tx_desc_dequeue_resp_ready;
 
-wire [OP_TAG_WIDTH-1:0]             tx_desc_dequeue_commit_op_tag;
+wire [QUEUE_OP_TAG_WIDTH-1:0]       tx_desc_dequeue_commit_op_tag;
 wire                                tx_desc_dequeue_commit_valid;
 wire                                tx_desc_dequeue_commit_ready;
 
@@ -515,127 +553,127 @@ wire [TX_QUEUE_INDEX_WIDTH-1:0]     tx_doorbell_queue;
 wire                                tx_doorbell_valid;
 
 wire [PORTS*TX_QUEUE_INDEX_WIDTH-1:0]     tx_port_desc_dequeue_req_queue;
-wire [PORTS*REQ_TAG_WIDTH-1:0]            tx_port_desc_dequeue_req_tag;
+wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]      tx_port_desc_dequeue_req_tag;
 wire [PORTS-1:0]                          tx_port_desc_dequeue_req_valid;
 wire [PORTS-1:0]                          tx_port_desc_dequeue_req_ready;
 
 wire [PORTS*QUEUE_PTR_WIDTH-1:0]          tx_port_desc_dequeue_resp_ptr;
 wire [PORTS*PCIE_ADDR_WIDTH-1:0]          tx_port_desc_dequeue_resp_addr;
 wire [PORTS*TX_CPL_QUEUE_INDEX_WIDTH-1:0] tx_port_desc_dequeue_resp_cpl;
-wire [PORTS*REQ_TAG_WIDTH-1:0]            tx_port_desc_dequeue_resp_tag;
-wire [PORTS*OP_TAG_WIDTH-1:0]             tx_port_desc_dequeue_resp_op_tag;
+wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]      tx_port_desc_dequeue_resp_tag;
+wire [PORTS*QUEUE_OP_TAG_WIDTH-1:0]       tx_port_desc_dequeue_resp_op_tag;
 wire [PORTS-1:0]                          tx_port_desc_dequeue_resp_empty;
 wire [PORTS-1:0]                          tx_port_desc_dequeue_resp_error;
 wire [PORTS-1:0]                          tx_port_desc_dequeue_resp_valid;
 wire [PORTS-1:0]                          tx_port_desc_dequeue_resp_ready;
 
-wire [PORTS*OP_TAG_WIDTH-1:0]             tx_port_desc_dequeue_commit_op_tag;
+wire [PORTS*QUEUE_OP_TAG_WIDTH-1:0]       tx_port_desc_dequeue_commit_op_tag;
 wire [PORTS-1:0]                          tx_port_desc_dequeue_commit_valid;
 wire [PORTS-1:0]                          tx_port_desc_dequeue_commit_ready;
 
 wire [TX_CPL_QUEUE_INDEX_WIDTH-1:0] tx_cpl_enqueue_req_queue;
-wire [REQ_TAG_WIDTH-1:0]            tx_cpl_enqueue_req_tag;
+wire [QUEUE_REQ_TAG_WIDTH-1:0]      tx_cpl_enqueue_req_tag;
 wire                                tx_cpl_enqueue_req_valid;
 wire                                tx_cpl_enqueue_req_ready;
 
 wire [PCIE_ADDR_WIDTH-1:0]          tx_cpl_enqueue_resp_addr;
-wire [REQ_TAG_WIDTH-1:0]            tx_cpl_enqueue_resp_tag;
-wire [OP_TAG_WIDTH-1:0]             tx_cpl_enqueue_resp_op_tag;
+wire [QUEUE_REQ_TAG_WIDTH-1:0]      tx_cpl_enqueue_resp_tag;
+wire [QUEUE_OP_TAG_WIDTH-1:0]       tx_cpl_enqueue_resp_op_tag;
 wire                                tx_cpl_enqueue_resp_full;
 wire                                tx_cpl_enqueue_resp_error;
 wire                                tx_cpl_enqueue_resp_valid;
 wire                                tx_cpl_enqueue_resp_ready;
 
-wire [OP_TAG_WIDTH-1:0]             tx_cpl_enqueue_commit_op_tag;
+wire [QUEUE_OP_TAG_WIDTH-1:0]       tx_cpl_enqueue_commit_op_tag;
 wire                                tx_cpl_enqueue_commit_valid;
 wire                                tx_cpl_enqueue_commit_ready;
 
 wire [PORTS*TX_CPL_QUEUE_INDEX_WIDTH-1:0] tx_port_cpl_enqueue_req_queue;
-wire [PORTS*REQ_TAG_WIDTH-1:0]            tx_port_cpl_enqueue_req_tag;
+wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]      tx_port_cpl_enqueue_req_tag;
 wire [PORTS-1:0]                          tx_port_cpl_enqueue_req_valid;
 wire [PORTS-1:0]                          tx_port_cpl_enqueue_req_ready;
 
 wire [PORTS*PCIE_ADDR_WIDTH-1:0]          tx_port_cpl_enqueue_resp_addr;
-wire [PORTS*REQ_TAG_WIDTH-1:0]            tx_port_cpl_enqueue_resp_tag;
-wire [PORTS*OP_TAG_WIDTH-1:0]             tx_port_cpl_enqueue_resp_op_tag;
+wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]      tx_port_cpl_enqueue_resp_tag;
+wire [PORTS*QUEUE_OP_TAG_WIDTH-1:0]       tx_port_cpl_enqueue_resp_op_tag;
 wire [PORTS-1:0]                          tx_port_cpl_enqueue_resp_full;
 wire [PORTS-1:0]                          tx_port_cpl_enqueue_resp_error;
 wire [PORTS-1:0]                          tx_port_cpl_enqueue_resp_valid;
 wire [PORTS-1:0]                          tx_port_cpl_enqueue_resp_ready;
 
-wire [PORTS*OP_TAG_WIDTH-1:0]             tx_port_cpl_enqueue_commit_op_tag;
+wire [PORTS*QUEUE_OP_TAG_WIDTH-1:0]       tx_port_cpl_enqueue_commit_op_tag;
 wire [PORTS-1:0]                          tx_port_cpl_enqueue_commit_valid;
 wire [PORTS-1:0]                          tx_port_cpl_enqueue_commit_ready;
 
 wire [TX_QUEUE_INDEX_WIDTH-1:0]     rx_desc_dequeue_req_queue;
-wire [REQ_TAG_WIDTH-1:0]            rx_desc_dequeue_req_tag;
+wire [QUEUE_REQ_TAG_WIDTH-1:0]      rx_desc_dequeue_req_tag;
 wire                                rx_desc_dequeue_req_valid;
 wire                                rx_desc_dequeue_req_ready;
 
 wire [QUEUE_PTR_WIDTH-1:0]          rx_desc_dequeue_resp_ptr;
 wire [PCIE_ADDR_WIDTH-1:0]          rx_desc_dequeue_resp_addr;
 wire [RX_CPL_QUEUE_INDEX_WIDTH-1:0] rx_desc_dequeue_resp_cpl;
-wire [REQ_TAG_WIDTH-1:0]            rx_desc_dequeue_resp_tag;
-wire [OP_TAG_WIDTH-1:0]             rx_desc_dequeue_resp_op_tag;
+wire [QUEUE_REQ_TAG_WIDTH-1:0]      rx_desc_dequeue_resp_tag;
+wire [QUEUE_OP_TAG_WIDTH-1:0]       rx_desc_dequeue_resp_op_tag;
 wire                                rx_desc_dequeue_resp_empty;
 wire                                rx_desc_dequeue_resp_error;
 wire                                rx_desc_dequeue_resp_valid;
 wire                                rx_desc_dequeue_resp_ready;
 
-wire [OP_TAG_WIDTH-1:0]             rx_desc_dequeue_commit_op_tag;
+wire [QUEUE_OP_TAG_WIDTH-1:0]       rx_desc_dequeue_commit_op_tag;
 wire                                rx_desc_dequeue_commit_valid;
 wire                                rx_desc_dequeue_commit_ready;
 
 wire [PORTS*RX_QUEUE_INDEX_WIDTH-1:0]     rx_port_desc_dequeue_req_queue;
-wire [PORTS*REQ_TAG_WIDTH-1:0]            rx_port_desc_dequeue_req_tag;
+wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]      rx_port_desc_dequeue_req_tag;
 wire [PORTS-1:0]                          rx_port_desc_dequeue_req_valid;
 wire [PORTS-1:0]                          rx_port_desc_dequeue_req_ready;
 
 wire [PORTS*QUEUE_PTR_WIDTH-1:0]          rx_port_desc_dequeue_resp_ptr;
 wire [PORTS*PCIE_ADDR_WIDTH-1:0]          rx_port_desc_dequeue_resp_addr;
 wire [PORTS*RX_CPL_QUEUE_INDEX_WIDTH-1:0] rx_port_desc_dequeue_resp_cpl;
-wire [PORTS*REQ_TAG_WIDTH-1:0]            rx_port_desc_dequeue_resp_tag;
-wire [PORTS*OP_TAG_WIDTH-1:0]             rx_port_desc_dequeue_resp_op_tag;
+wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]      rx_port_desc_dequeue_resp_tag;
+wire [PORTS*QUEUE_OP_TAG_WIDTH-1:0]       rx_port_desc_dequeue_resp_op_tag;
 wire [PORTS-1:0]                          rx_port_desc_dequeue_resp_empty;
 wire [PORTS-1:0]                          rx_port_desc_dequeue_resp_error;
 wire [PORTS-1:0]                          rx_port_desc_dequeue_resp_valid;
 wire [PORTS-1:0]                          rx_port_desc_dequeue_resp_ready;
 
-wire [PORTS*OP_TAG_WIDTH-1:0]             rx_port_desc_dequeue_commit_op_tag;
+wire [PORTS*QUEUE_OP_TAG_WIDTH-1:0]       rx_port_desc_dequeue_commit_op_tag;
 wire [PORTS-1:0]                          rx_port_desc_dequeue_commit_valid;
 wire [PORTS-1:0]                          rx_port_desc_dequeue_commit_ready;
 
 wire [RX_CPL_QUEUE_INDEX_WIDTH-1:0] rx_cpl_enqueue_req_queue;
-wire [REQ_TAG_WIDTH-1:0]            rx_cpl_enqueue_req_tag;
+wire [QUEUE_REQ_TAG_WIDTH-1:0]      rx_cpl_enqueue_req_tag;
 wire                                rx_cpl_enqueue_req_valid;
 wire                                rx_cpl_enqueue_req_ready;
 
 wire [PCIE_ADDR_WIDTH-1:0]          rx_cpl_enqueue_resp_addr;
-wire [REQ_TAG_WIDTH-1:0]            rx_cpl_enqueue_resp_tag;
-wire [OP_TAG_WIDTH-1:0]             rx_cpl_enqueue_resp_op_tag;
+wire [QUEUE_REQ_TAG_WIDTH-1:0]      rx_cpl_enqueue_resp_tag;
+wire [QUEUE_OP_TAG_WIDTH-1:0]       rx_cpl_enqueue_resp_op_tag;
 wire                                rx_cpl_enqueue_resp_full;
 wire                                rx_cpl_enqueue_resp_error;
 wire                                rx_cpl_enqueue_resp_valid;
 wire                                rx_cpl_enqueue_resp_ready;
 
-wire [OP_TAG_WIDTH-1:0]             rx_cpl_enqueue_commit_op_tag;
+wire [QUEUE_OP_TAG_WIDTH-1:0]       rx_cpl_enqueue_commit_op_tag;
 wire                                rx_cpl_enqueue_commit_valid;
 wire                                rx_cpl_enqueue_commit_ready;
 
 wire [PORTS*RX_CPL_QUEUE_INDEX_WIDTH-1:0] rx_port_cpl_enqueue_req_queue;
-wire [PORTS*REQ_TAG_WIDTH-1:0]            rx_port_cpl_enqueue_req_tag;
+wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]      rx_port_cpl_enqueue_req_tag;
 wire [PORTS-1:0]                          rx_port_cpl_enqueue_req_valid;
 wire [PORTS-1:0]                          rx_port_cpl_enqueue_req_ready;
 
 wire [PORTS*PCIE_ADDR_WIDTH-1:0]          rx_port_cpl_enqueue_resp_addr;
-wire [PORTS*REQ_TAG_WIDTH-1:0]            rx_port_cpl_enqueue_resp_tag;
-wire [PORTS*OP_TAG_WIDTH-1:0]             rx_port_cpl_enqueue_resp_op_tag;
+wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]      rx_port_cpl_enqueue_resp_tag;
+wire [PORTS*QUEUE_OP_TAG_WIDTH-1:0]       rx_port_cpl_enqueue_resp_op_tag;
 wire [PORTS-1:0]                          rx_port_cpl_enqueue_resp_full;
 wire [PORTS-1:0]                          rx_port_cpl_enqueue_resp_error;
 wire [PORTS-1:0]                          rx_port_cpl_enqueue_resp_valid;
 wire [PORTS-1:0]                          rx_port_cpl_enqueue_resp_ready;
 
-wire [PORTS*OP_TAG_WIDTH-1:0]             rx_port_cpl_enqueue_commit_op_tag;
+wire [PORTS*QUEUE_OP_TAG_WIDTH-1:0]       rx_port_cpl_enqueue_commit_op_tag;
 wire [PORTS-1:0]                          rx_port_cpl_enqueue_commit_valid;
 wire [PORTS-1:0]                          rx_port_cpl_enqueue_commit_ready;
 
@@ -811,9 +849,9 @@ axil_interconnect_inst (
 
 cpl_queue_manager #(
     .ADDR_WIDTH(PCIE_ADDR_WIDTH),
-    .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-    .OP_TABLE_SIZE(EVENT_OP_TABLE_SIZE),
-    .OP_TAG_WIDTH(OP_TAG_WIDTH),
+    .REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+    .OP_TABLE_SIZE(EVENT_QUEUE_OP_TABLE_SIZE),
+    .OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
     .QUEUE_INDEX_WIDTH(EVENT_QUEUE_INDEX_WIDTH),
     .EVENT_WIDTH(INT_WIDTH),
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
@@ -898,9 +936,9 @@ if (PORTS > 1) begin
     queue_op_mux #(
         .PORTS(PORTS),
         .ADDR_WIDTH(PCIE_ADDR_WIDTH),
-        .S_REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-        .M_REQ_TAG_WIDTH(REQ_TAG_WIDTH), // TODO
-        .OP_TAG_WIDTH(OP_TAG_WIDTH),
+        .S_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+        .M_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH), // TODO
+        .OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
         .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
         .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
         .CPL_INDEX_WIDTH(TX_CPL_QUEUE_INDEX_WIDTH),
@@ -993,9 +1031,9 @@ end
 
 queue_manager #(
     .ADDR_WIDTH(PCIE_ADDR_WIDTH),
-    .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-    .OP_TABLE_SIZE(TX_OP_TABLE_SIZE),
-    .OP_TAG_WIDTH(OP_TAG_WIDTH),
+    .REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+    .OP_TABLE_SIZE(TX_QUEUE_OP_TABLE_SIZE),
+    .OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
     .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
     .CPL_INDEX_WIDTH(TX_CPL_QUEUE_INDEX_WIDTH),
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
@@ -1079,9 +1117,9 @@ if (PORTS > 1) begin
     queue_op_mux #(
         .PORTS(PORTS),
         .ADDR_WIDTH(PCIE_ADDR_WIDTH),
-        .S_REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-        .M_REQ_TAG_WIDTH(REQ_TAG_WIDTH), // TODO
-        .OP_TAG_WIDTH(OP_TAG_WIDTH),
+        .S_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+        .M_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH), // TODO
+        .OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
         .QUEUE_INDEX_WIDTH(TX_CPL_QUEUE_INDEX_WIDTH),
         .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
         .CPL_INDEX_WIDTH(0),
@@ -1172,9 +1210,9 @@ end
 
 cpl_queue_manager #(
     .ADDR_WIDTH(PCIE_ADDR_WIDTH),
-    .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-    .OP_TABLE_SIZE(TX_OP_TABLE_SIZE),
-    .OP_TAG_WIDTH(OP_TAG_WIDTH),
+    .REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+    .OP_TABLE_SIZE(TX_QUEUE_OP_TABLE_SIZE),
+    .OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
     .QUEUE_INDEX_WIDTH(TX_CPL_QUEUE_INDEX_WIDTH),
     .EVENT_WIDTH(EVENT_QUEUE_INDEX_WIDTH),
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
@@ -1260,9 +1298,9 @@ if (PORTS > 1) begin
     queue_op_mux #(
         .PORTS(PORTS),
         .ADDR_WIDTH(PCIE_ADDR_WIDTH),
-        .S_REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-        .M_REQ_TAG_WIDTH(REQ_TAG_WIDTH), // TODO
-        .OP_TAG_WIDTH(OP_TAG_WIDTH),
+        .S_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+        .M_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH), // TODO
+        .OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
         .QUEUE_INDEX_WIDTH(RX_QUEUE_INDEX_WIDTH),
         .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
         .CPL_INDEX_WIDTH(RX_CPL_QUEUE_INDEX_WIDTH),
@@ -1355,9 +1393,9 @@ end
 
 queue_manager #(
     .ADDR_WIDTH(PCIE_ADDR_WIDTH),
-    .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-    .OP_TABLE_SIZE(RX_OP_TABLE_SIZE),
-    .OP_TAG_WIDTH(OP_TAG_WIDTH),
+    .REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+    .OP_TABLE_SIZE(RX_QUEUE_OP_TABLE_SIZE),
+    .OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
     .QUEUE_INDEX_WIDTH(RX_QUEUE_INDEX_WIDTH),
     .CPL_INDEX_WIDTH(RX_CPL_QUEUE_INDEX_WIDTH),
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
@@ -1441,9 +1479,9 @@ if (PORTS > 1) begin
     queue_op_mux #(
         .PORTS(PORTS),
         .ADDR_WIDTH(PCIE_ADDR_WIDTH),
-        .S_REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-        .M_REQ_TAG_WIDTH(REQ_TAG_WIDTH), // TODO
-        .OP_TAG_WIDTH(OP_TAG_WIDTH),
+        .S_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+        .M_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH), // TODO
+        .OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
         .QUEUE_INDEX_WIDTH(RX_CPL_QUEUE_INDEX_WIDTH),
         .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
         .CPL_INDEX_WIDTH(0),
@@ -1534,9 +1572,9 @@ end
 
 cpl_queue_manager #(
     .ADDR_WIDTH(PCIE_ADDR_WIDTH),
-    .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-    .OP_TABLE_SIZE(RX_OP_TABLE_SIZE),
-    .OP_TAG_WIDTH(OP_TAG_WIDTH),
+    .REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+    .OP_TABLE_SIZE(RX_QUEUE_OP_TABLE_SIZE),
+    .OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
     .QUEUE_INDEX_WIDTH(RX_CPL_QUEUE_INDEX_WIDTH),
     .EVENT_WIDTH(EVENT_QUEUE_INDEX_WIDTH),
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
@@ -1848,13 +1886,12 @@ event_queue #(
     .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
     .PCIE_DMA_LEN_WIDTH(PCIE_DMA_LEN_WIDTH),
     .PCIE_DMA_TAG_WIDTH(PCIE_DMA_TAG_WIDTH_INT),
-    .QUEUE_REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-    .QUEUE_OP_TAG_WIDTH(OP_TAG_WIDTH),
+    .QUEUE_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+    .QUEUE_OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
     .QUEUE_INDEX_WIDTH(EVENT_QUEUE_INDEX_WIDTH),
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .EVENT_TABLE_SIZE(16),
-    .AXI_BASE_ADDR(AXI_BASE_ADDR + 24'h000000),
-    .SCRATCH_EVENT_AXI_ADDR(AXI_BASE_ADDR + 24'h000000)
+    .AXI_BASE_ADDR(AXI_BASE_ADDR + 24'h000000)
 )
 event_queue_inst (
     .clk(clk),
@@ -2318,7 +2355,8 @@ generate
             .PCIE_DMA_LEN_WIDTH(PCIE_DMA_LEN_WIDTH),
             .PCIE_DMA_TAG_WIDTH(PCIE_DMA_TAG_WIDTH_INT),
             .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-            .OP_TAG_WIDTH(OP_TAG_WIDTH),
+            .QUEUE_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+            .QUEUE_OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
             .TX_QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
             .RX_QUEUE_INDEX_WIDTH(RX_QUEUE_INDEX_WIDTH),
             .TX_CPL_QUEUE_INDEX_WIDTH(TX_CPL_QUEUE_INDEX_WIDTH),
@@ -2344,6 +2382,8 @@ generate
             .AXI_ID_WIDTH(AXI_ID_WIDTH),
             .AXI_MAX_BURST_LEN(AXI_MAX_BURST_LEN),
             .AXI_BASE_ADDR(23'h000000),
+            .TX_RAM_AXI_BASE_ADDR(23'h000000 + 23'h010000),
+            .RX_RAM_AXI_BASE_ADDR(23'h000000 + 23'h020000),
             .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
             .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH)
         )
@@ -2355,7 +2395,7 @@ generate
              * TX descriptor dequeue request output
              */
             .m_axis_tx_desc_dequeue_req_queue(tx_port_desc_dequeue_req_queue[n*TX_QUEUE_INDEX_WIDTH +: TX_QUEUE_INDEX_WIDTH]),
-            .m_axis_tx_desc_dequeue_req_tag(tx_port_desc_dequeue_req_tag[n*REQ_TAG_WIDTH +: REQ_TAG_WIDTH]),
+            .m_axis_tx_desc_dequeue_req_tag(tx_port_desc_dequeue_req_tag[n*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH]),
             .m_axis_tx_desc_dequeue_req_valid(tx_port_desc_dequeue_req_valid[n +: 1]),
             .m_axis_tx_desc_dequeue_req_ready(tx_port_desc_dequeue_req_ready[n +: 1]),
 
@@ -2365,8 +2405,8 @@ generate
             .s_axis_tx_desc_dequeue_resp_ptr(tx_port_desc_dequeue_resp_ptr[n*QUEUE_PTR_WIDTH +: QUEUE_PTR_WIDTH]),
             .s_axis_tx_desc_dequeue_resp_addr(tx_port_desc_dequeue_resp_addr[n*PCIE_ADDR_WIDTH +: PCIE_ADDR_WIDTH]),
             .s_axis_tx_desc_dequeue_resp_cpl(tx_port_desc_dequeue_resp_cpl[n*TX_CPL_QUEUE_INDEX_WIDTH +: TX_CPL_QUEUE_INDEX_WIDTH]),
-            .s_axis_tx_desc_dequeue_resp_tag(tx_port_desc_dequeue_resp_tag[n*REQ_TAG_WIDTH +: REQ_TAG_WIDTH]),
-            .s_axis_tx_desc_dequeue_resp_op_tag(tx_port_desc_dequeue_resp_op_tag[n*OP_TAG_WIDTH +: OP_TAG_WIDTH]),
+            .s_axis_tx_desc_dequeue_resp_tag(tx_port_desc_dequeue_resp_tag[n*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH]),
+            .s_axis_tx_desc_dequeue_resp_op_tag(tx_port_desc_dequeue_resp_op_tag[n*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH]),
             .s_axis_tx_desc_dequeue_resp_empty(tx_port_desc_dequeue_resp_empty[n +: 1]),
             .s_axis_tx_desc_dequeue_resp_error(tx_port_desc_dequeue_resp_error[n +: 1]),
             .s_axis_tx_desc_dequeue_resp_valid(tx_port_desc_dequeue_resp_valid[n +: 1]),
@@ -2375,7 +2415,7 @@ generate
             /*
              * TX descriptor dequeue commit output
              */
-            .m_axis_tx_desc_dequeue_commit_op_tag(tx_port_desc_dequeue_commit_op_tag[n*OP_TAG_WIDTH +: OP_TAG_WIDTH]),
+            .m_axis_tx_desc_dequeue_commit_op_tag(tx_port_desc_dequeue_commit_op_tag[n*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH]),
             .m_axis_tx_desc_dequeue_commit_valid(tx_port_desc_dequeue_commit_valid[n +: 1]),
             .m_axis_tx_desc_dequeue_commit_ready(tx_port_desc_dequeue_commit_ready[n +: 1]),
 
@@ -2389,7 +2429,7 @@ generate
              * TX completion enqueue request output
              */
             .m_axis_tx_cpl_enqueue_req_queue(tx_port_cpl_enqueue_req_queue[n*TX_CPL_QUEUE_INDEX_WIDTH +: TX_CPL_QUEUE_INDEX_WIDTH]),
-            .m_axis_tx_cpl_enqueue_req_tag(tx_port_cpl_enqueue_req_tag[n*REQ_TAG_WIDTH +: REQ_TAG_WIDTH]),
+            .m_axis_tx_cpl_enqueue_req_tag(tx_port_cpl_enqueue_req_tag[n*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH]),
             .m_axis_tx_cpl_enqueue_req_valid(tx_port_cpl_enqueue_req_valid[n +: 1]),
             .m_axis_tx_cpl_enqueue_req_ready(tx_port_cpl_enqueue_req_ready[n +: 1]),
 
@@ -2399,8 +2439,8 @@ generate
             //.s_axis_tx_cpl_enqueue_resp_ptr(),
             .s_axis_tx_cpl_enqueue_resp_addr(tx_port_cpl_enqueue_resp_addr[n*PCIE_ADDR_WIDTH +: PCIE_ADDR_WIDTH]),
             //.s_axis_tx_cpl_enqueue_resp_event(),
-            .s_axis_tx_cpl_enqueue_resp_tag(tx_port_cpl_enqueue_resp_tag[n*REQ_TAG_WIDTH +: REQ_TAG_WIDTH]),
-            .s_axis_tx_cpl_enqueue_resp_op_tag(tx_port_cpl_enqueue_resp_op_tag[n*OP_TAG_WIDTH +: OP_TAG_WIDTH]),
+            .s_axis_tx_cpl_enqueue_resp_tag(tx_port_cpl_enqueue_resp_tag[n*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH]),
+            .s_axis_tx_cpl_enqueue_resp_op_tag(tx_port_cpl_enqueue_resp_op_tag[n*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH]),
             .s_axis_tx_cpl_enqueue_resp_full(tx_port_cpl_enqueue_resp_full[n +: 1]),
             .s_axis_tx_cpl_enqueue_resp_error(tx_port_cpl_enqueue_resp_error[n +: 1]),
             .s_axis_tx_cpl_enqueue_resp_valid(tx_port_cpl_enqueue_resp_valid[n +: 1]),
@@ -2409,7 +2449,7 @@ generate
             /*
              * TX completion enqueue commit output
              */
-            .m_axis_tx_cpl_enqueue_commit_op_tag(tx_port_cpl_enqueue_commit_op_tag[n*OP_TAG_WIDTH +: OP_TAG_WIDTH]),
+            .m_axis_tx_cpl_enqueue_commit_op_tag(tx_port_cpl_enqueue_commit_op_tag[n*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH]),
             .m_axis_tx_cpl_enqueue_commit_valid(tx_port_cpl_enqueue_commit_valid[n +: 1]),
             .m_axis_tx_cpl_enqueue_commit_ready(tx_port_cpl_enqueue_commit_ready[n +: 1]),
 
@@ -2417,7 +2457,7 @@ generate
              * RX descriptor dequeue request output
              */
             .m_axis_rx_desc_dequeue_req_queue(rx_port_desc_dequeue_req_queue[n*RX_QUEUE_INDEX_WIDTH +: RX_QUEUE_INDEX_WIDTH]),
-            .m_axis_rx_desc_dequeue_req_tag(rx_port_desc_dequeue_req_tag[n*REQ_TAG_WIDTH +: REQ_TAG_WIDTH]),
+            .m_axis_rx_desc_dequeue_req_tag(rx_port_desc_dequeue_req_tag[n*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH]),
             .m_axis_rx_desc_dequeue_req_valid(rx_port_desc_dequeue_req_valid[n +: 1]),
             .m_axis_rx_desc_dequeue_req_ready(rx_port_desc_dequeue_req_ready[n +: 1]),
 
@@ -2427,8 +2467,8 @@ generate
             .s_axis_rx_desc_dequeue_resp_ptr(rx_port_desc_dequeue_resp_ptr[n*QUEUE_PTR_WIDTH +: QUEUE_PTR_WIDTH]),
             .s_axis_rx_desc_dequeue_resp_addr(rx_port_desc_dequeue_resp_addr[n*PCIE_ADDR_WIDTH +: PCIE_ADDR_WIDTH]),
             .s_axis_rx_desc_dequeue_resp_cpl(rx_port_desc_dequeue_resp_cpl[n*RX_CPL_QUEUE_INDEX_WIDTH +: RX_CPL_QUEUE_INDEX_WIDTH]),
-            .s_axis_rx_desc_dequeue_resp_tag(rx_port_desc_dequeue_resp_tag[n*REQ_TAG_WIDTH +: REQ_TAG_WIDTH]),
-            .s_axis_rx_desc_dequeue_resp_op_tag(rx_port_desc_dequeue_resp_op_tag[n*OP_TAG_WIDTH +: OP_TAG_WIDTH]),
+            .s_axis_rx_desc_dequeue_resp_tag(rx_port_desc_dequeue_resp_tag[n*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH]),
+            .s_axis_rx_desc_dequeue_resp_op_tag(rx_port_desc_dequeue_resp_op_tag[n*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH]),
             .s_axis_rx_desc_dequeue_resp_empty(rx_port_desc_dequeue_resp_empty[n +: 1]),
             .s_axis_rx_desc_dequeue_resp_error(rx_port_desc_dequeue_resp_error[n +: 1]),
             .s_axis_rx_desc_dequeue_resp_valid(rx_port_desc_dequeue_resp_valid[n +: 1]),
@@ -2437,7 +2477,7 @@ generate
             /*
              * RX descriptor dequeue commit output
              */
-            .m_axis_rx_desc_dequeue_commit_op_tag(rx_port_desc_dequeue_commit_op_tag[n*OP_TAG_WIDTH +: OP_TAG_WIDTH]),
+            .m_axis_rx_desc_dequeue_commit_op_tag(rx_port_desc_dequeue_commit_op_tag[n*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH]),
             .m_axis_rx_desc_dequeue_commit_valid(rx_port_desc_dequeue_commit_valid[n +: 1]),
             .m_axis_rx_desc_dequeue_commit_ready(rx_port_desc_dequeue_commit_ready[n +: 1]),
 
@@ -2445,7 +2485,7 @@ generate
              * RX completion enqueue request output
              */
             .m_axis_rx_cpl_enqueue_req_queue(rx_port_cpl_enqueue_req_queue[n*RX_CPL_QUEUE_INDEX_WIDTH +: RX_CPL_QUEUE_INDEX_WIDTH]),
-            .m_axis_rx_cpl_enqueue_req_tag(rx_port_cpl_enqueue_req_tag[n*REQ_TAG_WIDTH +: REQ_TAG_WIDTH]),
+            .m_axis_rx_cpl_enqueue_req_tag(rx_port_cpl_enqueue_req_tag[n*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH]),
             .m_axis_rx_cpl_enqueue_req_valid(rx_port_cpl_enqueue_req_valid[n +: 1]),
             .m_axis_rx_cpl_enqueue_req_ready(rx_port_cpl_enqueue_req_ready[n +: 1]),
 
@@ -2455,8 +2495,8 @@ generate
             //.s_axis_rx_cpl_enqueue_resp_ptr(),
             .s_axis_rx_cpl_enqueue_resp_addr(rx_port_cpl_enqueue_resp_addr[n*PCIE_ADDR_WIDTH +: PCIE_ADDR_WIDTH]),
             //.s_axis_rx_cpl_enqueue_resp_event(),
-            .s_axis_rx_cpl_enqueue_resp_tag(rx_port_cpl_enqueue_resp_tag[n*REQ_TAG_WIDTH +: REQ_TAG_WIDTH]),
-            .s_axis_rx_cpl_enqueue_resp_op_tag(rx_port_cpl_enqueue_resp_op_tag[n*OP_TAG_WIDTH +: OP_TAG_WIDTH]),
+            .s_axis_rx_cpl_enqueue_resp_tag(rx_port_cpl_enqueue_resp_tag[n*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH]),
+            .s_axis_rx_cpl_enqueue_resp_op_tag(rx_port_cpl_enqueue_resp_op_tag[n*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH]),
             .s_axis_rx_cpl_enqueue_resp_full(rx_port_cpl_enqueue_resp_full[n +: 1]),
             .s_axis_rx_cpl_enqueue_resp_error(rx_port_cpl_enqueue_resp_error[n +: 1]),
             .s_axis_rx_cpl_enqueue_resp_valid(rx_port_cpl_enqueue_resp_valid[n +: 1]),
@@ -2465,7 +2505,7 @@ generate
             /*
              * RX completion enqueue commit output
              */
-            .m_axis_rx_cpl_enqueue_commit_op_tag(rx_port_cpl_enqueue_commit_op_tag[n*OP_TAG_WIDTH +: OP_TAG_WIDTH]),
+            .m_axis_rx_cpl_enqueue_commit_op_tag(rx_port_cpl_enqueue_commit_op_tag[n*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH]),
             .m_axis_rx_cpl_enqueue_commit_valid(rx_port_cpl_enqueue_commit_valid[n +: 1]),
             .m_axis_rx_cpl_enqueue_commit_ready(rx_port_cpl_enqueue_commit_ready[n +: 1]),
 

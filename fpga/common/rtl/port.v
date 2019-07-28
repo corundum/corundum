@@ -40,37 +40,73 @@ either expressed or implied, of The Regents of the University of California.
  */
 module port #
 (
+    // PCIe address width
     parameter PCIE_ADDR_WIDTH = 64,
+    // PCIe DMA length field width
     parameter PCIE_DMA_LEN_WIDTH = 16,
+    // PCIe DMA tag field width
     parameter PCIE_DMA_TAG_WIDTH = 8,
+    // Request tag field width
     parameter REQ_TAG_WIDTH = 8,
-    parameter OP_TAG_WIDTH = 8,
+    // Queue request tag field width
+    parameter QUEUE_REQ_TAG_WIDTH = 8,
+    // Queue operation tag field width
+    parameter QUEUE_OP_TAG_WIDTH = 8,
+    // Transmit queue index width
     parameter TX_QUEUE_INDEX_WIDTH = 8,
+    // Receive queue index width
     parameter RX_QUEUE_INDEX_WIDTH = 8,
+    // Transmit completion queue index width
     parameter TX_CPL_QUEUE_INDEX_WIDTH = 8,
+    // Receive completion queue index width
     parameter RX_CPL_QUEUE_INDEX_WIDTH = 8,
+    // Transmit descriptor table size (number of in-flight operations)
     parameter TX_DESC_TABLE_SIZE = 16,
+    // Transmit packet table size (number of in-progress packets)
     parameter TX_PKT_TABLE_SIZE = 8,
+    // Receive descriptor table size (number of in-flight operations)
     parameter RX_DESC_TABLE_SIZE = 16,
+    // Receive packet table size (number of in-progress packets)
     parameter RX_PKT_TABLE_SIZE = 8,
+    // Transmit scheduler type
     parameter TX_SCHEDULER = "RR",
+    // Scheduler TDMA index width
     parameter TDMA_INDEX_WIDTH = 8,
+    // Queue element pointer width
     parameter QUEUE_PTR_WIDTH = 16,
-    parameter QUEUE_LOG_SIZE_WIDTH = 4,
+    // Enable PTP timestamping
     parameter PTP_TS_ENABLE = 1,
+    // PTP timestamp width
     parameter PTP_TS_WIDTH = 96,
+    // Enable TX checksum offload
     parameter TX_CHECKSUM_ENABLE = 1,
+    // Enable RX checksum offload
     parameter RX_CHECKSUM_ENABLE = 1,
+    // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
+    // Width of AXI lite address bus in bits
     parameter AXIL_ADDR_WIDTH = 16,
+    // Width of AXI lite wstrb (width of data bus in words)
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
+    // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = 256,
+    // Width of AXI address bus in bits
     parameter AXI_ADDR_WIDTH = 16,
+    // Width of AXI wstrb (width of data bus in words)
     parameter AXI_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
+    // Width of AXI ID signal
     parameter AXI_ID_WIDTH = 8,
+    // Maximum AXI burst length to generate
     parameter AXI_MAX_BURST_LEN = 16,
+    // AXI base address of this module (as seen by PCIe DMA)
     parameter AXI_BASE_ADDR = 0,
+    // AXI base address of TX packet RAM (as seen by PCIe DMA and AXI DMA in this module)
+    parameter TX_RAM_AXI_BASE_ADDR = 0,
+    // AXI base address of RX packet RAM (as seen by PCIe DMA and AXI DMA in this module)
+    parameter RX_RAM_AXI_BASE_ADDR = 0,
+    // Width of AXI stream interfaces in bits
     parameter AXIS_DATA_WIDTH = AXI_DATA_WIDTH,
+    // AXI stream tkeep signal width (words per cycle)
     parameter AXIS_KEEP_WIDTH = AXI_STRB_WIDTH
 )
 (
@@ -81,7 +117,7 @@ module port #
      * TX descriptor dequeue request output
      */
     output wire [TX_QUEUE_INDEX_WIDTH-1:0]      m_axis_tx_desc_dequeue_req_queue,
-    output wire [REQ_TAG_WIDTH-1:0]             m_axis_tx_desc_dequeue_req_tag,
+    output wire [QUEUE_REQ_TAG_WIDTH-1:0]       m_axis_tx_desc_dequeue_req_tag,
     output wire                                 m_axis_tx_desc_dequeue_req_valid,
     input  wire                                 m_axis_tx_desc_dequeue_req_ready,
 
@@ -91,8 +127,8 @@ module port #
     input  wire [QUEUE_PTR_WIDTH-1:0]           s_axis_tx_desc_dequeue_resp_ptr,
     input  wire [PCIE_ADDR_WIDTH-1:0]           s_axis_tx_desc_dequeue_resp_addr,
     input  wire [TX_CPL_QUEUE_INDEX_WIDTH-1:0]  s_axis_tx_desc_dequeue_resp_cpl,
-    input  wire [REQ_TAG_WIDTH-1:0]             s_axis_tx_desc_dequeue_resp_tag,
-    input  wire [OP_TAG_WIDTH-1:0]              s_axis_tx_desc_dequeue_resp_op_tag,
+    input  wire [QUEUE_REQ_TAG_WIDTH-1:0]       s_axis_tx_desc_dequeue_resp_tag,
+    input  wire [QUEUE_OP_TAG_WIDTH-1:0]        s_axis_tx_desc_dequeue_resp_op_tag,
     input  wire                                 s_axis_tx_desc_dequeue_resp_empty,
     input  wire                                 s_axis_tx_desc_dequeue_resp_error,
     input  wire                                 s_axis_tx_desc_dequeue_resp_valid,
@@ -101,7 +137,7 @@ module port #
     /*
      * TX descriptor dequeue commit output
      */
-    output wire [OP_TAG_WIDTH-1:0]              m_axis_tx_desc_dequeue_commit_op_tag,
+    output wire [QUEUE_OP_TAG_WIDTH-1:0]        m_axis_tx_desc_dequeue_commit_op_tag,
     output wire                                 m_axis_tx_desc_dequeue_commit_valid,
     input  wire                                 m_axis_tx_desc_dequeue_commit_ready,
 
@@ -115,7 +151,7 @@ module port #
      * TX completion enqueue request output
      */
     output wire [TX_CPL_QUEUE_INDEX_WIDTH-1:0]  m_axis_tx_cpl_enqueue_req_queue,
-    output wire [REQ_TAG_WIDTH-1:0]             m_axis_tx_cpl_enqueue_req_tag,
+    output wire [QUEUE_REQ_TAG_WIDTH-1:0]       m_axis_tx_cpl_enqueue_req_tag,
     output wire                                 m_axis_tx_cpl_enqueue_req_valid,
     input  wire                                 m_axis_tx_cpl_enqueue_req_ready,
 
@@ -125,8 +161,8 @@ module port #
     //input  wire [QUEUE_PTR_WIDTH-1:0]           s_axis_tx_cpl_enqueue_resp_ptr,
     input  wire [PCIE_ADDR_WIDTH-1:0]           s_axis_tx_cpl_enqueue_resp_addr,
     //input  wire [EVENT_WIDTH-1:0]               s_axis_tx_cpl_enqueue_resp_event,
-    input  wire [REQ_TAG_WIDTH-1:0]             s_axis_tx_cpl_enqueue_resp_tag,
-    input  wire [OP_TAG_WIDTH-1:0]              s_axis_tx_cpl_enqueue_resp_op_tag,
+    input  wire [QUEUE_REQ_TAG_WIDTH-1:0]       s_axis_tx_cpl_enqueue_resp_tag,
+    input  wire [QUEUE_OP_TAG_WIDTH-1:0]        s_axis_tx_cpl_enqueue_resp_op_tag,
     input  wire                                 s_axis_tx_cpl_enqueue_resp_full,
     input  wire                                 s_axis_tx_cpl_enqueue_resp_error,
     input  wire                                 s_axis_tx_cpl_enqueue_resp_valid,
@@ -135,7 +171,7 @@ module port #
     /*
      * TX completion enqueue commit output
      */
-    output wire [OP_TAG_WIDTH-1:0]              m_axis_tx_cpl_enqueue_commit_op_tag,
+    output wire [QUEUE_OP_TAG_WIDTH-1:0]        m_axis_tx_cpl_enqueue_commit_op_tag,
     output wire                                 m_axis_tx_cpl_enqueue_commit_valid,
     input  wire                                 m_axis_tx_cpl_enqueue_commit_ready,
 
@@ -143,7 +179,7 @@ module port #
      * RX descriptor dequeue request output
      */
     output wire [RX_QUEUE_INDEX_WIDTH-1:0]      m_axis_rx_desc_dequeue_req_queue,
-    output wire [REQ_TAG_WIDTH-1:0]             m_axis_rx_desc_dequeue_req_tag,
+    output wire [QUEUE_REQ_TAG_WIDTH-1:0]       m_axis_rx_desc_dequeue_req_tag,
     output wire                                 m_axis_rx_desc_dequeue_req_valid,
     input  wire                                 m_axis_rx_desc_dequeue_req_ready,
 
@@ -153,8 +189,8 @@ module port #
     input  wire [QUEUE_PTR_WIDTH-1:0]           s_axis_rx_desc_dequeue_resp_ptr,
     input  wire [PCIE_ADDR_WIDTH-1:0]           s_axis_rx_desc_dequeue_resp_addr,
     input  wire [RX_CPL_QUEUE_INDEX_WIDTH-1:0]  s_axis_rx_desc_dequeue_resp_cpl,
-    input  wire [REQ_TAG_WIDTH-1:0]             s_axis_rx_desc_dequeue_resp_tag,
-    input  wire [OP_TAG_WIDTH-1:0]              s_axis_rx_desc_dequeue_resp_op_tag,
+    input  wire [QUEUE_REQ_TAG_WIDTH-1:0]       s_axis_rx_desc_dequeue_resp_tag,
+    input  wire [QUEUE_OP_TAG_WIDTH-1:0]        s_axis_rx_desc_dequeue_resp_op_tag,
     input  wire                                 s_axis_rx_desc_dequeue_resp_empty,
     input  wire                                 s_axis_rx_desc_dequeue_resp_error,
     input  wire                                 s_axis_rx_desc_dequeue_resp_valid,
@@ -163,7 +199,7 @@ module port #
     /*
      * RX descriptor dequeue commit output
      */
-    output wire [OP_TAG_WIDTH-1:0]              m_axis_rx_desc_dequeue_commit_op_tag,
+    output wire [QUEUE_OP_TAG_WIDTH-1:0]        m_axis_rx_desc_dequeue_commit_op_tag,
     output wire                                 m_axis_rx_desc_dequeue_commit_valid,
     input  wire                                 m_axis_rx_desc_dequeue_commit_ready,
 
@@ -171,7 +207,7 @@ module port #
      * RX completion enqueue request output
      */
     output wire [RX_CPL_QUEUE_INDEX_WIDTH-1:0]  m_axis_rx_cpl_enqueue_req_queue,
-    output wire [REQ_TAG_WIDTH-1:0]             m_axis_rx_cpl_enqueue_req_tag,
+    output wire [QUEUE_REQ_TAG_WIDTH-1:0]       m_axis_rx_cpl_enqueue_req_tag,
     output wire                                 m_axis_rx_cpl_enqueue_req_valid,
     input  wire                                 m_axis_rx_cpl_enqueue_req_ready,
 
@@ -181,8 +217,8 @@ module port #
     //input  wire [QUEUE_PTR_WIDTH-1:0]           s_axis_rx_cpl_enqueue_resp_ptr,
     input  wire [PCIE_ADDR_WIDTH-1:0]           s_axis_rx_cpl_enqueue_resp_addr,
     //input  wire [EVENT_WIDTH-1:0]               s_axis_rx_cpl_enqueue_resp_event,
-    input  wire [REQ_TAG_WIDTH-1:0]             s_axis_rx_cpl_enqueue_resp_tag,
-    input  wire [OP_TAG_WIDTH-1:0]              s_axis_rx_cpl_enqueue_resp_op_tag,
+    input  wire [QUEUE_REQ_TAG_WIDTH-1:0]       s_axis_rx_cpl_enqueue_resp_tag,
+    input  wire [QUEUE_OP_TAG_WIDTH-1:0]        s_axis_rx_cpl_enqueue_resp_op_tag,
     input  wire                                 s_axis_rx_cpl_enqueue_resp_full,
     input  wire                                 s_axis_rx_cpl_enqueue_resp_error,
     input  wire                                 s_axis_rx_cpl_enqueue_resp_valid,
@@ -191,7 +227,7 @@ module port #
     /*
      * RX completion enqueue commit output
      */
-    output wire [OP_TAG_WIDTH-1:0]              m_axis_rx_cpl_enqueue_commit_op_tag,
+    output wire [QUEUE_OP_TAG_WIDTH-1:0]        m_axis_rx_cpl_enqueue_commit_op_tag,
     output wire                                 m_axis_rx_cpl_enqueue_commit_valid,
     input  wire                                 m_axis_rx_cpl_enqueue_commit_ready,
 
@@ -852,16 +888,15 @@ tx_engine #(
     .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
     .PCIE_DMA_TAG_WIDTH(PCIE_DMA_TAG_WIDTH_INT),
     .AXI_DMA_TAG_WIDTH(AXI_DMA_TAG_WIDTH),
-    .QUEUE_REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-    .QUEUE_OP_TAG_WIDTH(OP_TAG_WIDTH),
+    .QUEUE_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+    .QUEUE_OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
     .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .CPL_QUEUE_INDEX_WIDTH(TX_CPL_QUEUE_INDEX_WIDTH),
     .DESC_TABLE_SIZE(TX_DESC_TABLE_SIZE),
     .PKT_TABLE_SIZE(TX_PKT_TABLE_SIZE),
     .AXI_BASE_ADDR(AXI_BASE_ADDR + 24'h004000),
-    .SCRATCH_DESC_AXI_ADDR(AXI_BASE_ADDR + 24'h004000),
-    .SCRATCH_PKT_AXI_ADDR(AXI_BASE_ADDR + 24'h010000),
+    .SCRATCH_PKT_AXI_ADDR(TX_RAM_AXI_BASE_ADDR),
     .PTP_TS_ENABLE(PTP_TS_ENABLE),
     .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE)
 )
@@ -1088,16 +1123,15 @@ rx_engine #(
     .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
     .PCIE_DMA_TAG_WIDTH(PCIE_DMA_TAG_WIDTH_INT),
     .AXI_DMA_TAG_WIDTH(AXI_DMA_TAG_WIDTH),
-    .QUEUE_REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-    .QUEUE_OP_TAG_WIDTH(OP_TAG_WIDTH),
+    .QUEUE_REQ_TAG_WIDTH(QUEUE_REQ_TAG_WIDTH),
+    .QUEUE_OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
     .QUEUE_INDEX_WIDTH(RX_QUEUE_INDEX_WIDTH),
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .CPL_QUEUE_INDEX_WIDTH(RX_CPL_QUEUE_INDEX_WIDTH),
     .DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
     .PKT_TABLE_SIZE(RX_PKT_TABLE_SIZE),
     .AXI_BASE_ADDR(AXI_BASE_ADDR + 24'h006000),
-    .SCRATCH_DESC_AXI_ADDR(AXI_BASE_ADDR + 24'h006000),
-    .SCRATCH_PKT_AXI_ADDR(AXI_BASE_ADDR + 24'h020000),
+    .SCRATCH_PKT_AXI_ADDR(RX_RAM_AXI_BASE_ADDR),
     .PTP_TS_ENABLE(PTP_TS_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE)
 )

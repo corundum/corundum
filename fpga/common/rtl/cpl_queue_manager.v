@@ -40,19 +40,33 @@ either expressed or implied, of The Regents of the University of California.
  */
 module cpl_queue_manager #
 (
+    // Base address width
     parameter ADDR_WIDTH = 64,
+    // Request tag field width
     parameter REQ_TAG_WIDTH = 8,
+    // Number of outstanding operations
     parameter OP_TABLE_SIZE = 16,
+    // Operation tag field width
     parameter OP_TAG_WIDTH = 8,
+    // Queue index width (log2 of number of queues)
     parameter QUEUE_INDEX_WIDTH = 8,
+    // Event index width
     parameter EVENT_WIDTH = 8,
+    // Queue element pointer width (log2 of number of elements)
     parameter QUEUE_PTR_WIDTH = 16,
+    // Queue log size field width
     parameter QUEUE_LOG_SIZE_WIDTH = $clog2(QUEUE_PTR_WIDTH),
+    // Queue element size
     parameter CPL_SIZE = 16,
+    // Read pipeline stages
     parameter READ_PIPELINE = 2,
+    // Write pipeline stages
     parameter WRITE_PIPELINE = 1,
+    // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
+    // Width of AXI lite address bus in bits
     parameter AXIL_ADDR_WIDTH = 16,
+    // Width of AXI lite wstrb (width of data bus in words)
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8)
 )
 (
@@ -134,37 +148,37 @@ parameter PIPELINE = READ_PIPELINE + WRITE_PIPELINE;
 // bus width assertions
 initial begin
     if (OP_TAG_WIDTH < CL_OP_TABLE_SIZE) begin
-        $error("Error: OP_TAG_WDITH insufficient for OP_TABLE_SIZE");
+        $error("Error: OP_TAG_WDITH insufficient for OP_TABLE_SIZE (instance %m)");
         $finish;
     end
 
     if (AXIL_DATA_WIDTH != 32) begin
-        $error("Error: AXI lite interface width must be 32");
+        $error("Error: AXI lite interface width must be 32 (instance %m)");
         $finish;
     end
 
     if (AXIL_STRB_WIDTH * 8 != AXIL_DATA_WIDTH) begin
-        $error("Error: AXI lite interface requires byte (8-bit) granularity");
+        $error("Error: AXI lite interface requires byte (8-bit) granularity (instance %m)");
         $finish;
     end
 
     if (AXIL_ADDR_WIDTH < QUEUE_INDEX_WIDTH+5) begin
-        $error("Error: AXI lite address width too narrow");
+        $error("Error: AXI lite address width too narrow (instance %m)");
         $finish;
     end
 
     if (2**$clog2(CPL_SIZE) != CPL_SIZE) begin
-        $error("Error: Completion size must be even power of two");
+        $error("Error: Completion size must be even power of two (instance %m)");
         $finish;
     end
 
     if (READ_PIPELINE < 1) begin
-        $error("Error: READ_PIPELINE must be at least 1");
+        $error("Error: READ_PIPELINE must be at least 1 (instance %m)");
         $finish;
     end
 
     if (WRITE_PIPELINE < 1) begin
-        $error("Error: WRITE_PIPELINE must be at least 1");
+        $error("Error: WRITE_PIPELINE must be at least 1 (instance %m)");
         $finish;
     end
 end

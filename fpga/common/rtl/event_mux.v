@@ -40,9 +40,13 @@ either expressed or implied, of The Regents of the University of California.
  */
 module event_mux #
 (
+    // Number of ports
     parameter PORTS = 2,
+    // Queue index width
     parameter QUEUE_INDEX_WIDTH = 4,
+    // Event type field width
     parameter EVENT_TYPE_WIDTH = 16,
+    // Event source field width
     parameter EVENT_SOURCE_WIDTH = 16,
     // arbitration type: "PRIORITY" or "ROUND_ROBIN"
     parameter ARB_TYPE = "PRIORITY",

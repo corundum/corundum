@@ -40,30 +40,51 @@ either expressed or implied, of The Regents of the University of California.
  */
 module rx_engine #
 (
+    // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = 256,
+    // Width of AXI address bus in bits
     parameter AXI_ADDR_WIDTH = 16,
+    // Width of AXI wstrb (width of data bus in words)
     parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8),
+    // Width of AXI ID signal
     parameter AXI_ID_WIDTH = 8,
+    // PCIe address width
     parameter PCIE_ADDR_WIDTH = 64,
+    // PCIe DMA length field width
     parameter PCIE_DMA_LEN_WIDTH = 20,
+    // AXI DMA length field width
     parameter AXI_DMA_LEN_WIDTH = 20,
+    // Receive request tag field width
     parameter REQ_TAG_WIDTH = 8,
+    // PCIe DMA tag field width
     parameter PCIE_DMA_TAG_WIDTH = 8,
+    // AXI DMA tag field width
     parameter AXI_DMA_TAG_WIDTH = 8,
+    // Queue request tag field width
     parameter QUEUE_REQ_TAG_WIDTH = 8,
+    // Queue operation tag field width
     parameter QUEUE_OP_TAG_WIDTH = 8,
+    // Queue index width
     parameter QUEUE_INDEX_WIDTH = 4,
+    // Queue element pointer width
     parameter QUEUE_PTR_WIDTH = 16,
+    // Completion queue index width
     parameter CPL_QUEUE_INDEX_WIDTH = 4,
+    // Descriptor table size (number of in-flight operations)
     parameter DESC_TABLE_SIZE = 8,
+    // Packet table size (number of in-progress packets)
     parameter PKT_TABLE_SIZE = 8,
+    // Max receive packet size
     parameter MAX_RX_SIZE = 2048,
+    // AXI base address of this module (as seen by PCIe DMA)
     parameter AXI_BASE_ADDR = 16'h0000,
-    parameter SCRATCH_DESC_AXI_ADDR = 16'h0000,
-    parameter SCRATCH_DESC_AXI_ADDR_SHIFT = 5,
+    // AXI address of packet scratchpad RAM (as seen by PCIe DMA and port AXI DMA)
     parameter SCRATCH_PKT_AXI_ADDR = 16'h1000,
+    // Packet scratchpad RAM log segment size
     parameter SCRATCH_PKT_AXI_ADDR_SHIFT = 12,
+    // Enable PTP timestamping
     parameter PTP_TS_ENABLE = 1,
+    // Enable RX checksum offload
     parameter RX_CHECKSUM_ENABLE = 1
 )
 (
@@ -266,37 +287,42 @@ parameter BLOCK_SIZE = DESC_SIZE > CPL_SIZE ? DESC_SIZE : CPL_SIZE;
 // bus width assertions
 initial begin
     if (PCIE_DMA_TAG_WIDTH < CL_DESC_TABLE_SIZE+1) begin
-        $error("Error: PCIe tag width insufficient for descriptor table size");
+        $error("Error: PCIe tag width insufficient for descriptor table size (instance %m)");
         $finish;
     end
 
     if (AXI_DMA_TAG_WIDTH < CL_DESC_TABLE_SIZE) begin
-        $error("Error: AXI tag width insufficient for descriptor table size");
+        $error("Error: AXI tag width insufficient for descriptor table size (instance %m)");
         $finish;
     end
 
     if (AXI_STRB_WIDTH * 8 != AXI_DATA_WIDTH) begin
-        $error("Error: AXI interface requires byte (8-bit) granularity");
+        $error("Error: AXI interface requires byte (8-bit) granularity (instance %m)");
         $finish;
     end
 
     if (AXI_STRB_WIDTH < BLOCK_SIZE) begin
-        $error("Error: AXI interface width must be at least as large as one descriptor");
+        $error("Error: AXI interface width must be at least as large as one descriptor (instance %m)");
         $finish;
     end
 
-    if (SCRATCH_DESC_AXI_ADDR[$clog2(AXI_STRB_WIDTH)-1:0]) begin
-        $error("Error: Descriptor scratch address must be aligned to interface width");
+    if (AXI_BASE_ADDR[$clog2(AXI_STRB_WIDTH)-1:0]) begin
+        $error("Error: AXI base address must be aligned to interface width (instance %m)");
         $finish;
     end
 
-    if (SCRATCH_DESC_AXI_ADDR_SHIFT < $clog2(AXI_STRB_WIDTH)) begin
-        $error("Error: Descriptor scratch address increment must be aligned to interface width");
+    if (SCRATCH_PKT_AXI_ADDR[$clog2(AXI_STRB_WIDTH)-1:0]) begin
+        $error("Error: AXI base address must be aligned to interface width (instance %m)");
         $finish;
     end
 
-    if (SCRATCH_DESC_AXI_ADDR_SHIFT < $clog2(BLOCK_SIZE)) begin
-        $error("Error: Descriptor scratch address increment must be at least as large as one descriptor");
+    if (SCRATCH_PKT_AXI_ADDR_SHIFT < $clog2(AXI_STRB_WIDTH)) begin
+        $error("Error: Packet scratch address increment must be aligned to interface width (instance %m)");
+        $finish;
+    end
+
+    if (SCRATCH_PKT_AXI_ADDR_SHIFT < $clog2(MAX_RX_SIZE)) begin
+        $error("Error: Packet scratch address increment must be at least as large as one packet (instance %m)");
         $finish;
     end
 end

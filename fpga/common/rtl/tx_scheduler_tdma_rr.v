@@ -40,20 +40,35 @@ either expressed or implied, of The Regents of the University of California.
  */
 module tx_scheduler_tdma_rr #
 (
+    // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
+    // Width of AXI lite address bus in bits
     parameter AXIL_ADDR_WIDTH = 16,
+    // Width of AXI lite wstrb (width of data bus in words)
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
+    // AXI DMA length field width
     parameter AXI_DMA_LEN_WIDTH = 16,
+    // Transmit request tag field width
     parameter REQ_TAG_WIDTH = 8,
+    // TDMA timeslot index width
     parameter TDMA_INDEX_WIDTH = 6,
+    // Queue index width
     parameter QUEUE_INDEX_WIDTH = 6,
+    // Schedule absolute PTP start time, seconds part
     parameter SCHEDULE_START_S = 48'h0,
+    // Schedule absolute PTP start time, nanoseconds part
     parameter SCHEDULE_START_NS = 30'h0,
+    // Schedule period, seconds part
     parameter SCHEDULE_PERIOD_S = 48'd0,
+    // Schedule period, nanoseconds part
     parameter SCHEDULE_PERIOD_NS = 30'd1000000,
+    // Timeslot period, seconds part
     parameter TIMESLOT_PERIOD_S = 48'd0,
+    // Timeslot period, nanoseconds part
     parameter TIMESLOT_PERIOD_NS = 30'd100000,
+    // Timeslot active period, seconds part
     parameter ACTIVE_PERIOD_S = 48'd0,
+    // Timeslot active period, nanoseconds part
     parameter ACTIVE_PERIOD_NS = 30'd100000
 )
 (
@@ -118,17 +133,17 @@ parameter WORD_SIZE = AXIL_DATA_WIDTH/WORD_WIDTH;
 // check configuration
 initial begin
     if (AXIL_ADDR_WIDTH < 18) begin // TODO
-        $error("Error: AXI address width too narrow");
+        $error("Error: AXI address width too narrow (instance %m)");
         $finish;
     end
 
     if (AXIL_DATA_WIDTH != 32) begin
-        $error("Error: AXI data width must be 32");
+        $error("Error: AXI data width must be 32 (instance %m)");
         $finish;
     end
 
     if (AXIL_STRB_WIDTH * 8 != AXIL_DATA_WIDTH) begin
-        $error("Error: Interface requires byte (8-bit) granularity");
+        $error("Error: Interface requires byte (8-bit) granularity (instance %m)");
         $finish;
     end
 end

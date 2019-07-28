@@ -40,7 +40,9 @@ either expressed or implied, of The Regents of the University of California.
  */
 module rx_checksum #
 (
+    // Width of AXI stream interfaces in bits
     parameter DATA_WIDTH = 256,
+    // AXI stream tkeep signal width (words per cycle)
     parameter KEEP_WIDTH = (DATA_WIDTH/8)
 )
 (
@@ -65,12 +67,12 @@ module rx_checksum #
 // bus width assertions
 initial begin
     if (DATA_WIDTH != 256) begin
-        $error("Error: AXI stream interface width must be 256");
+        $error("Error: AXI stream interface width must be 256 (instance %m)");
         $finish;
     end
 
     if (KEEP_WIDTH * 8 != DATA_WIDTH) begin
-        $error("Error: AXI stream interface requires byte (8-bit) granularity");
+        $error("Error: AXI stream interface requires byte (8-bit) granularity (instance %m)");
         $finish;
     end
 end

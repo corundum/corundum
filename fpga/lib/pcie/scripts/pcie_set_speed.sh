@@ -17,11 +17,13 @@ if [ ! -e "/sys/bus/pci/devices/$dev" ]; then
     exit 1
 fi
 
+pciec=$(setpci -s $dev CAP_EXP+02.W)
+pt=$((("0x$pciec" & 0xF0) >> 4))
+
 port=$(basename $(dirname $(readlink "/sys/bus/pci/devices/$dev")))
 
-if [[ $port != pci* ]]; then
-    echo "Note: it may be necessary to run this on the corresponding upstream port"
-    echo "Device $dev is connected to upstream port $port"
+if (($pt == 0)) || (($pt == 1)) || (($pt == 5)); then
+    dev=$port
 fi
 
 lc=$(setpci -s $dev CAP_EXP+0c.L)

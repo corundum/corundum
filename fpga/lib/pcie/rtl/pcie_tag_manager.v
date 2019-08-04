@@ -66,21 +66,21 @@ module pcie_tag_manager #
 // parameter assertions
 initial begin
     if (PCIE_TAG_WIDTH < $clog2(PCIE_TAG_COUNT)) begin
-        $error("Error: PCIe tag width insufficient for requested tag count");
+        $error("Error: PCIe tag width insufficient for requested tag count (instance %m)");
         $finish;
     end
 
     if (PCIE_TAG_COUNT < 1 || PCIE_TAG_COUNT > 256) begin
-        $error("Error: PCIe tag count must be between 1 and 256");
+        $error("Error: PCIe tag count must be between 1 and 256 (instance %m)");
         $finish;
     end
 
     if (PCIE_TAG_COUNT > 32 && !PCIE_EXT_TAG_ENABLE) begin
-        $warning("Warning: PCIe tag count set larger than 32, but extended tag support is disabled");
+        $warning("Warning: PCIe tag count set larger than 32, but extended tag support is disabled (instance %m)");
     end
 
     if (PCIE_TAG_COUNT <= 32 && PCIE_EXT_TAG_ENABLE) begin
-        $warning("Warning: PCIe tag count set to 32 or less, but extended tag support is enabled");
+        $warning("Warning: PCIe tag count set to 32 or less, but extended tag support is enabled (instance %m)");
     end
 end
 

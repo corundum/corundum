@@ -4,7 +4,33 @@ GitHub repository: https://github.com/ucsdsysnet/corundum
 
 ## Introduction
 
-Corundum is an open source, high performance FPGA based NIC.
+Corundum is an open-source, high-performance FPGA-based NIC.  Features include
+a high performance datapath (256 bit AXI), 10G Ethernet, PCI express gen 3, a
+custom, high performance, tightly-integrated PCIe DMA engine, many (1000+)
+transmit, receive, completion, and event queues, MSI interrupts, multiple
+interfaces, multiple ports per interface, per-port transmit scheduling
+including high precision TDMA, checksum offloading, and native IEEE 1588 PTP
+timestamping.  A Linux driver is included that integrates with the Linux
+networking stack.  Development and debugging is facilitated by an extensive
+simulation framwork that covers the entire system from a simulation model of
+the driver and PCI express interface on one side to the Ethernet interfaces on
+the other side.
+
+Corundum has several unique architectural features.  First, transmit, receive,
+completion, and event queue states are stored efficiently in block RAM or
+ultra RAM, enabling support for thousands of individually-controllable
+queues.  These queues are associated with interfaces, and each interface can
+have multiple ports, each with its own independent scheduler.  This enables
+extremely fine-grained control over packet transmission.  Coupled with PTP time
+syncronization, this enables high precision TDMA.
+
+Corundum currently supports Xilinx Ultrascale and Ultrascale Plus series
+devices.  Desgins are included for the following FPGA boards:
+
+*  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex Ultrascale Plus XCVU3P)
+*  Exablaze ExaNIC X10 (Xilinx Kintex Ultrascale XCKU035)
+*  Xilinx VCU108 (Xilinx Virtex Ultrascale XCVU095)
+*  Xilinx VCU118 (Xilinx Virtex Ultrascale Plus XCVU9P)
 
 ## Documentation
 
@@ -119,3 +145,14 @@ individual test scripts can be run with python directly.
     tb/ptp.py            : MyHDL PTP clock model
     tb/udp_ep.py         : MyHDL UDP frame endpoints
     tb/xgmii_ep.py       : MyHDL XGMII endpoints
+
+## Dependencies
+
+Corundum internally uses the following libraries:
+
+*  https://github.com/alexforencich/verilog-axi
+*  https://github.com/alexforencich/verilog-axis
+*  https://github.com/alexforencich/verilog-ethernet
+*  https://github.com/alexforencich/verilog-pcie
+*  https://github.com/solemnwarning/timespec
+

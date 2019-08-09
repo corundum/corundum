@@ -55,6 +55,7 @@
  * is normalised according to the rules in timespec_normalise().
 */
 
+#include <limits.h>
 #include <stdbool.h>
 #include <sys/time.h>
 #include <time.h>
@@ -112,6 +113,13 @@ struct timespec timespec_mod(struct timespec ts1, struct timespec ts2)
 	ts1 = timespec_normalise(ts1);
 	ts2 = timespec_normalise(ts2);
 
+	/* If ts2 is zero, just return ts1
+	*/
+	if (ts2.tv_sec == 0 && ts2.tv_nsec == 0)
+	{
+		return ts1;
+	}
+
 	/* If inputs are negative, flip and record sign
 	*/
 	if (ts1.tv_sec < 0 || ts1.tv_nsec < 0)
@@ -128,9 +136,9 @@ struct timespec timespec_mod(struct timespec ts1, struct timespec ts2)
 		ts2.tv_nsec = -ts2.tv_nsec;
 	}
 
-	/* Shift ts2 until it is larger than ts1
+	/* Shift ts2 until it is larger than ts1 or is about to overflow
 	*/
-	while ((ts2.tv_sec != 0 || ts2.tv_nsec != 0) && timespec_ge(ts1, ts2))
+	while ((ts2.tv_sec < (LONG_MAX >> 1)) && timespec_ge(ts1, ts2))
 	{
 		i++;
 		ts2.tv_nsec <<= 1;
@@ -144,8 +152,18 @@ struct timespec timespec_mod(struct timespec ts1, struct timespec ts2)
 
 	/* Division by repeated subtraction
 	*/
-	while (i > 0)
+	while (i >= 0)
 	{
+		if (timespec_ge(ts1, ts2))
+		{
+			ts1 = timespec_sub(ts1, ts2);
+		}
+
+		if (i == 0)
+		{
+			break;
+		}
+
 		i--;
 		if (ts2.tv_sec & 1)
 		{
@@ -153,11 +171,6 @@ struct timespec timespec_mod(struct timespec ts1, struct timespec ts2)
 		}
 		ts2.tv_nsec >>= 1;
 		ts2.tv_sec >>= 1;
-
-		if (timespec_ge(ts1, ts2))
-		{
-			ts1 = timespec_sub(ts1, ts2);
-		}
 	}
 
 	/* If signs differ and result is nonzero, subtract once more to cross zero
@@ -531,6 +544,8 @@ int main()
 	TEST_MOD(1,123456789, 0,1000,      0,789);
 	TEST_MOD(1,0,         0,9999999,   0,100);
 	TEST_MOD(12345,54321, 0,100001,    0,5555);
+	TEST_MOD(LONG_MAX,0,  0,1,         0,0);
+	TEST_MOD(LONG_MAX,0,  LONG_MAX,1,  LONG_MAX,0);
 	
 	// timespec_eq
 	
@@ -700,9 +715,9 @@ int main()
 	TEST_NORMALISE(-5,-1500000000, -6,-500000000);
 	
 	TEST_NORMALISE(0,2000000000,  2,0);
-	TEST_NORMALISE(0,2500000000,  2,500000000);
+	TEST_NORMALISE(0,2100000000,  2,100000000);
 	TEST_NORMALISE(0,-2000000000, -2,0);
-	TEST_NORMALISE(0,-2500000000, -2,-500000000);
+	TEST_NORMALISE(0,-2100000000, -2,-100000000);
 	
 	TEST_NORMALISE(1,-500000001,  0,499999999);
 	TEST_NORMALISE(1,-500000000,  0,500000000);

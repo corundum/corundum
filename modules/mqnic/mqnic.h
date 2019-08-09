@@ -263,6 +263,10 @@ void mqnic_register_phc(struct mqnic_dev *mdev);
 void mqnic_unregister_phc(struct mqnic_dev *mdev);
 ktime_t mqnic_read_cpl_ts(struct mqnic_dev *mdev, struct mqnic_ring *ring, const struct mqnic_cpl *cpl);
 
+// mqnic_i2c.c
+int mqnic_init_i2c(struct mqnic_dev *mqnic);
+void mqnic_remove_i2c(struct mqnic_dev *mqnic);
+
 // mqnic_eq.c
 int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_ptr, int size, int stride, int index, u8 __iomem *hw_addr);
 void mqnic_destroy_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_ptr);

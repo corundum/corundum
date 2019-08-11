@@ -218,11 +218,9 @@ reg m_axis_doorbell_valid_reg = 0, m_axis_doorbell_valid_next;
 
 reg s_axil_awready_reg = 0, s_axil_awready_next;
 reg s_axil_wready_reg = 0, s_axil_wready_next;
-reg [1:0] s_axil_bresp_reg = 0, s_axil_bresp_next;
 reg s_axil_bvalid_reg = 0, s_axil_bvalid_next;
 reg s_axil_arready_reg = 0, s_axil_arready_next;
 reg [AXIL_DATA_WIDTH-1:0] s_axil_rdata_reg = 0, s_axil_rdata_next;
-reg [1:0] s_axil_rresp_reg = 0, s_axil_rresp_next;
 reg s_axil_rvalid_reg = 0, s_axil_rvalid_next;
 
 reg [127:0] queue_ram[QUEUE_COUNT-1:0];
@@ -271,11 +269,11 @@ assign m_axis_doorbell_valid = m_axis_doorbell_valid_reg;
 
 assign s_axil_awready = s_axil_awready_reg;
 assign s_axil_wready = s_axil_wready_reg;
-assign s_axil_bresp = s_axil_bresp_reg;
+assign s_axil_bresp = 2'b00;
 assign s_axil_bvalid = s_axil_bvalid_reg;
 assign s_axil_arready = s_axil_arready_reg;
 assign s_axil_rdata = s_axil_rdata_reg;
-assign s_axil_rresp = s_axil_rresp_reg;
+assign s_axil_rresp = 2'b00;
 assign s_axil_rvalid = s_axil_rvalid_reg;
 
 wire [QUEUE_INDEX_WIDTH-1:0] s_axil_awaddr_queue = s_axil_awaddr >> 5;
@@ -349,12 +347,10 @@ always @* begin
 
     s_axil_awready_next = 1'b0;
     s_axil_wready_next = 1'b0;
-    s_axil_bresp_next = s_axil_bresp_reg;
     s_axil_bvalid_next = s_axil_bvalid_reg && !s_axil_bready;
 
     s_axil_arready_next = 1'b0;
     s_axil_rdata_next = s_axil_rdata_reg;
-    s_axil_rresp_next = s_axil_rresp_reg;
     s_axil_rvalid_next = s_axil_rvalid_reg && !s_axil_rready;
 
     queue_ram_read_ptr = 0;
@@ -474,7 +470,6 @@ always @* begin
     end else if (op_axil_write_pipe_reg[READ_PIPELINE-1]) begin
         // AXIL write
         s_axil_bvalid_next = 1'b1;
-        s_axil_bresp_next = 2'b00;
 
         queue_ram_write_ptr = queue_ram_addr_pipeline_reg[READ_PIPELINE-1];
         queue_ram_wr_en = 1'b1;
@@ -654,9 +649,7 @@ always @(posedge clk) begin
 
     m_axis_doorbell_queue_reg <= m_axis_doorbell_queue_next;
 
-    s_axil_bresp_reg <= s_axil_bresp_next;
     s_axil_rdata_reg <= s_axil_rdata_next;
-    s_axil_rresp_reg <= s_axil_rresp_next;
 
     if (queue_ram_wr_en) begin
         for (i = 0; i < 16; i = i + 1) begin

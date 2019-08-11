@@ -140,10 +140,13 @@ parameter CL_OP_TABLE_SIZE = $clog2(OP_TABLE_SIZE);
 
 parameter CL_DESC_SIZE = $clog2(DESC_SIZE);
 
+parameter QUEUE_RAM_BE_WIDTH = 16;
+parameter QUEUE_RAM_WIDTH = QUEUE_RAM_BE_WIDTH*8;
+
 // bus width assertions
 initial begin
     if (OP_TAG_WIDTH < CL_OP_TABLE_SIZE) begin
-        $error("Error: OP_TAG_WDITH insufficient for OP_TABLE_SIZE (instance %m)");
+        $error("Error: OP_TAG_WIDTH insufficient for OP_TABLE_SIZE (instance %m)");
         $finish;
     end
 
@@ -185,7 +188,7 @@ reg [PIPELINE-1:0] op_req_pipe_reg = {PIPELINE{1'b0}}, op_req_pipe_next;
 reg [PIPELINE-1:0] op_commit_pipe_reg = {PIPELINE{1'b0}}, op_commit_pipe_next;
 
 reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_addr_pipeline_reg[PIPELINE-1:0], queue_ram_addr_pipeline_next[PIPELINE-1:0];
-reg [127:0] queue_ram_read_data_pipeline_reg[PIPELINE-1:0];
+reg [QUEUE_RAM_WIDTH-1:0] queue_ram_read_data_pipeline_reg[PIPELINE-1:0];
 reg [2:0] axil_reg_pipeline_reg[PIPELINE-1:0], axil_reg_pipeline_next[PIPELINE-1:0];
 reg [AXIL_DATA_WIDTH-1:0] write_data_pipeline_reg[PIPELINE-1:0], write_data_pipeline_next[PIPELINE-1:0];
 reg [AXIL_STRB_WIDTH-1:0] write_strobe_pipeline_reg[PIPELINE-1:0], write_strobe_pipeline_next[PIPELINE-1:0];
@@ -214,12 +217,12 @@ reg s_axil_arready_reg = 0, s_axil_arready_next;
 reg [AXIL_DATA_WIDTH-1:0] s_axil_rdata_reg = 0, s_axil_rdata_next;
 reg s_axil_rvalid_reg = 0, s_axil_rvalid_next;
 
-reg [127:0] queue_ram[QUEUE_COUNT-1:0];
+reg [QUEUE_RAM_WIDTH-1:0] queue_ram[QUEUE_COUNT-1:0];
 reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_read_ptr;
 reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_write_ptr;
-reg [127:0] queue_ram_write_data;
+reg [QUEUE_RAM_WIDTH-1:0] queue_ram_write_data;
 reg queue_ram_wr_en;
-reg [15:0] queue_ram_be;
+reg [QUEUE_RAM_BE_WIDTH-1:0] queue_ram_be;
 
 wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_head_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][15:0];
 wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_tail_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][31:16];
@@ -636,7 +639,7 @@ always @(posedge clk) begin
     s_axil_rdata_reg <= s_axil_rdata_next;
 
     if (queue_ram_wr_en) begin
-        for (i = 0; i < 16; i = i + 1) begin
+        for (i = 0; i < QUEUE_RAM_BE_WIDTH; i = i + 1) begin
             if (queue_ram_be[i]) begin
                 queue_ram[queue_ram_write_ptr][i*8 +: 8] <= queue_ram_write_data[i*8 +: 8];
             end

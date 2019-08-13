@@ -50,8 +50,12 @@ module tx_scheduler_rr #
     parameter AXI_DMA_LEN_WIDTH = 16,
     // Transmit request tag field width
     parameter REQ_TAG_WIDTH = 8,
+    // Number of outstanding operations
+    parameter OP_TABLE_SIZE = 16,
     // Queue index width
-    parameter QUEUE_INDEX_WIDTH = 6
+    parameter QUEUE_INDEX_WIDTH = 6,
+    // Pipeline stages
+    parameter PIPELINE = 2
 )
 (
     input  wire                          clk,
@@ -99,105 +103,109 @@ module tx_scheduler_rr #
     output wire [AXIL_DATA_WIDTH-1:0]    s_axil_rdata,
     output wire [1:0]                    s_axil_rresp,
     output wire                          s_axil_rvalid,
-    input  wire                          s_axil_rready
+    input  wire                          s_axil_rready,
+
+    /*
+     * Control
+     */
+    input  wire                          enable,
+    output wire                          active
 );
 
-parameter VALID_ADDR_WIDTH = AXIL_ADDR_WIDTH - $clog2(AXIL_STRB_WIDTH);
-parameter WORD_WIDTH = AXIL_STRB_WIDTH;
-parameter WORD_SIZE = AXIL_DATA_WIDTH/WORD_WIDTH;
+parameter QUEUE_COUNT = 2**QUEUE_INDEX_WIDTH;
 
-// check configuration
+parameter CL_OP_TABLE_SIZE = $clog2(OP_TABLE_SIZE);
+
+parameter QUEUE_RAM_BE_WIDTH = 2;
+parameter QUEUE_RAM_WIDTH = QUEUE_RAM_BE_WIDTH*8;
+
+// bus width assertions
 initial begin
-    if (AXIL_ADDR_WIDTH < 18) begin // TODO
-        $error("Error: AXI address width too narrow (instance %m)");
+    if (REQ_TAG_WIDTH < CL_OP_TABLE_SIZE) begin
+        $error("Error: REQ_TAG_WIDTH insufficient for OP_TABLE_SIZE (instance %m)");
         $finish;
     end
 
     if (AXIL_DATA_WIDTH != 32) begin
-        $error("Error: AXI data width must be 32 (instance %m)");
+        $error("Error: AXI lite interface width must be 32 (instance %m)");
         $finish;
     end
 
     if (AXIL_STRB_WIDTH * 8 != AXIL_DATA_WIDTH) begin
-        $error("Error: Interface requires byte (8-bit) granularity (instance %m)");
+        $error("Error: AXI lite interface requires byte (8-bit) granularity (instance %m)");
+        $finish;
+    end
+
+    if (AXIL_ADDR_WIDTH < QUEUE_INDEX_WIDTH+5) begin
+        $error("Error: AXI lite address width too narrow (instance %m)");
+        $finish;
+    end
+
+    if (PIPELINE < 1) begin
+        $error("Error: PIPELINE must be at least 1 (instance %m)");
         $finish;
     end
 end
 
-parameter QUEUE_WIDTH = 2**QUEUE_INDEX_WIDTH;
+reg op_axil_write_pipe_hazard;
+reg op_axil_read_pipe_hazard;
+reg op_doorbell_pipe_hazard;
+reg op_req_pipe_hazard;
+reg op_complete_pipe_hazard;
+reg stage_active;
 
-reg [QUEUE_WIDTH-1:0] queue_enable_reg = 0, queue_enable_next;
-reg [QUEUE_WIDTH-1:0] queue_active_reg = 0;
-reg [QUEUE_WIDTH-1:0] queue_mask_reg = 0;
+reg [PIPELINE-1:0] op_axil_write_pipe_reg = {PIPELINE{1'b0}}, op_axil_write_pipe_next;
+reg [PIPELINE-1:0] op_axil_read_pipe_reg = {PIPELINE{1'b0}}, op_axil_read_pipe_next;
+reg [PIPELINE-1:0] op_doorbell_pipe_reg = {PIPELINE{1'b0}}, op_doorbell_pipe_next;
+reg [PIPELINE-1:0] op_req_pipe_reg = {PIPELINE{1'b0}}, op_req_pipe_next;
+reg [PIPELINE-1:0] op_complete_pipe_reg = {PIPELINE{1'b0}}, op_complete_pipe_next;
 
-reg [QUEUE_INDEX_WIDTH-1:0] m_axis_tx_req_queue_reg = 0;
-reg [REQ_TAG_WIDTH-1:0] m_axis_tx_req_tag_reg = 0;
-reg m_axis_tx_req_valid_reg = 1'b0;
+reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_addr_pipeline_reg[PIPELINE-1:0], queue_ram_addr_pipeline_next[PIPELINE-1:0];
+reg [QUEUE_RAM_WIDTH-1:0] queue_ram_read_data_pipeline_reg[PIPELINE-1:0];
+reg [AXIL_DATA_WIDTH-1:0] write_data_pipeline_reg[PIPELINE-1:0], write_data_pipeline_next[PIPELINE-1:0];
+reg [AXIL_STRB_WIDTH-1:0] write_strobe_pipeline_reg[PIPELINE-1:0], write_strobe_pipeline_next[PIPELINE-1:0];
+reg [REQ_TAG_WIDTH-1:0] req_tag_pipeline_reg[PIPELINE-1:0], req_tag_pipeline_next[PIPELINE-1:0];
 
-wire queue_valid;
-wire [QUEUE_INDEX_WIDTH-1:0] queue_index;
+reg [QUEUE_INDEX_WIDTH-1:0] m_axis_tx_req_queue_reg = {QUEUE_INDEX_WIDTH{1'b0}}, m_axis_tx_req_queue_next;
+reg [REQ_TAG_WIDTH-1:0] m_axis_tx_req_tag_reg = {REQ_TAG_WIDTH{1'b0}}, m_axis_tx_req_tag_next;
+reg m_axis_tx_req_valid_reg = 1'b0, m_axis_tx_req_valid_next;
 
-priority_encoder #(
-    .WIDTH(QUEUE_WIDTH),
-    .LSB_PRIORITY("HIGH")
-)
-priority_encoder_inst (
-    .input_unencoded(queue_active_reg & queue_enable_reg),
-    .output_valid(queue_valid),
-    .output_encoded(queue_index),
-    .output_unencoded()
-);
+reg s_axil_awready_reg = 0, s_axil_awready_next;
+reg s_axil_wready_reg = 0, s_axil_wready_next;
+reg s_axil_bvalid_reg = 0, s_axil_bvalid_next;
+reg s_axil_arready_reg = 0, s_axil_arready_next;
+reg [AXIL_DATA_WIDTH-1:0] s_axil_rdata_reg = 0, s_axil_rdata_next;
+reg s_axil_rvalid_reg = 0, s_axil_rvalid_next;
 
-wire masked_queue_valid;
-wire [QUEUE_INDEX_WIDTH-1:0] masked_queue_index;
+reg [QUEUE_RAM_WIDTH-1:0] queue_ram[QUEUE_COUNT-1:0];
+reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_read_ptr;
+reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_write_ptr;
+reg [QUEUE_RAM_WIDTH-1:0] queue_ram_write_data;
+reg queue_ram_wr_en;
+reg [QUEUE_RAM_BE_WIDTH-1:0] queue_ram_be;
 
-priority_encoder #(
-    .WIDTH(QUEUE_WIDTH),
-    .LSB_PRIORITY("HIGH")
-)
-priority_encoder_masked (
-    .input_unencoded(queue_active_reg & queue_mask_reg & queue_enable_reg),
-    .output_valid(masked_queue_valid),
-    .output_encoded(masked_queue_index),
-    .output_unencoded()
-);
+wire queue_ram_read_data_enabled = queue_ram_read_data_pipeline_reg[PIPELINE-1][0];
+wire queue_ram_read_data_active = queue_ram_read_data_pipeline_reg[PIPELINE-1][1];
+wire queue_ram_read_data_scheduled = queue_ram_read_data_pipeline_reg[PIPELINE-1][2];
+wire [CL_OP_TABLE_SIZE-1:0] queue_ram_read_data_op_index = queue_ram_read_data_pipeline_reg[PIPELINE-1][15:8];
 
-always @(posedge clk) begin
-    if (s_axis_doorbell_valid) begin
-        queue_active_reg <= queue_active_reg | (1 << s_axis_doorbell_queue);
-    end
+reg [OP_TABLE_SIZE-1:0] op_table_active = 0;
+reg [OP_TABLE_SIZE-1:0] op_table_complete = 0;
+reg [QUEUE_INDEX_WIDTH-1:0] op_table_queue[OP_TABLE_SIZE-1:0];
+reg [OP_TABLE_SIZE-1:0] op_table_doorbell = 0;
+reg [OP_TABLE_SIZE-1:0] op_table_tx_status = 0;
+reg [CL_OP_TABLE_SIZE-1:0] op_table_start_ptr_reg = 0;
+reg [QUEUE_INDEX_WIDTH-1:0] op_table_start_queue;
+reg op_table_start_en;
+reg [CL_OP_TABLE_SIZE-1:0] op_table_doorbell_ptr;
+reg op_table_doorbell_en;
+reg [CL_OP_TABLE_SIZE-1:0] op_table_complete_ptr;
+reg op_table_complete_tx_status;
+reg op_table_complete_en;
+reg [CL_OP_TABLE_SIZE-1:0] op_table_finish_ptr_reg = 0;
+reg op_table_finish_en;
 
-    // TODO deactivate idle queues
-
-    m_axis_tx_req_valid_reg <= m_axis_tx_req_valid_reg && !m_axis_tx_req_ready;
-
-    if (!m_axis_tx_req_valid || m_axis_tx_req_ready) begin
-        if (queue_valid) begin
-            if (masked_queue_valid) begin
-                m_axis_tx_req_queue_reg <= masked_queue_index;
-                m_axis_tx_req_valid_reg <= 1'b1;
-                queue_mask_reg <= {QUEUE_WIDTH{1'b1}} << (masked_queue_index + 1);
-            end else begin
-                m_axis_tx_req_queue_reg <= queue_index;
-                m_axis_tx_req_valid_reg <= 1'b1;
-                queue_mask_reg <= {QUEUE_WIDTH{1'b1}} << (queue_index + 1);
-            end
-        end
-    end
-
-    if (rst) begin
-        queue_active_reg <= 0;
-        queue_mask_reg <= 0;
-    end
-end
-
-// control registers
-reg s_axil_awready_reg = 1'b0, s_axil_awready_next;
-reg s_axil_wready_reg = 1'b0, s_axil_wready_next;
-reg s_axil_bvalid_reg = 1'b0, s_axil_bvalid_next;
-reg s_axil_arready_reg = 1'b0, s_axil_arready_next;
-reg [AXIL_DATA_WIDTH-1:0] s_axil_rdata_reg = {AXIL_DATA_WIDTH{1'b0}}, s_axil_rdata_next;
-reg s_axil_rvalid_reg = 1'b0, s_axil_rvalid_next;
+reg [QUEUE_INDEX_WIDTH:0] active_queue_count_reg = 0, active_queue_count_next;
 
 assign m_axis_tx_req_queue = m_axis_tx_req_queue_reg;
 assign m_axis_tx_req_tag = m_axis_tx_req_tag_reg;
@@ -212,7 +220,150 @@ assign s_axil_rdata = s_axil_rdata_reg;
 assign s_axil_rresp = 2'b00;
 assign s_axil_rvalid = s_axil_rvalid_reg;
 
+assign active = active_queue_count_reg != 0;
+
+wire [QUEUE_INDEX_WIDTH-1:0] s_axil_awaddr_queue = s_axil_awaddr >> 2;
+wire [QUEUE_INDEX_WIDTH-1:0] s_axil_araddr_queue = s_axil_araddr >> 2;
+
+wire queue_active = op_table_active[queue_ram_read_data_op_index] && op_table_queue[queue_ram_read_data_op_index] == queue_ram_addr_pipeline_reg[PIPELINE-1];
+
+wire [QUEUE_INDEX_WIDTH-1:0] axis_doorbell_fifo_queue;
+wire axis_doorbell_fifo_valid;
+reg axis_doorbell_fifo_ready;
+
+axis_fifo #(
+    .DEPTH(256),
+    .DATA_WIDTH(QUEUE_INDEX_WIDTH),
+    .KEEP_ENABLE(0),
+    .KEEP_WIDTH(1),
+    .LAST_ENABLE(0),
+    .ID_ENABLE(0),
+    .DEST_ENABLE(0),
+    .USER_ENABLE(0),
+    .FRAME_FIFO(0)
+)
+doorbell_fifo (
+    .clk(clk),
+    .rst(rst),
+
+    // AXI input
+    .s_axis_tdata(s_axis_doorbell_queue),
+    .s_axis_tkeep(0),
+    .s_axis_tvalid(s_axis_doorbell_valid),
+    .s_axis_tready(),
+    .s_axis_tlast(0),
+    .s_axis_tid(0),
+    .s_axis_tdest(0),
+    .s_axis_tuser(0),
+
+    // AXI output
+    .m_axis_tdata(axis_doorbell_fifo_queue),
+    .m_axis_tkeep(),
+    .m_axis_tvalid(axis_doorbell_fifo_valid),
+    .m_axis_tready(axis_doorbell_fifo_ready),
+    .m_axis_tlast(),
+    .m_axis_tid(),
+    .m_axis_tdest(),
+    .m_axis_tuser(),
+
+    // Status
+    .status_overflow(),
+    .status_bad_frame(),
+    .status_good_frame()
+);
+
+reg [QUEUE_INDEX_WIDTH-1:0] axis_scheduler_fifo_in_queue;
+reg axis_scheduler_fifo_in_valid;
+wire axis_scheduler_fifo_in_ready;
+
+wire [QUEUE_INDEX_WIDTH-1:0] axis_scheduler_fifo_out_queue;
+wire axis_scheduler_fifo_out_valid;
+reg axis_scheduler_fifo_out_ready;
+
+axis_fifo #(
+    .DEPTH(2**QUEUE_INDEX_WIDTH),
+    .DATA_WIDTH(QUEUE_INDEX_WIDTH),
+    .KEEP_ENABLE(0),
+    .KEEP_WIDTH(1),
+    .LAST_ENABLE(0),
+    .ID_ENABLE(0),
+    .DEST_ENABLE(0),
+    .USER_ENABLE(0),
+    .FRAME_FIFO(0)
+)
+rr_fifo (
+    .clk(clk),
+    .rst(rst),
+
+    // AXI input
+    .s_axis_tdata(axis_scheduler_fifo_in_queue),
+    .s_axis_tkeep(0),
+    .s_axis_tvalid(axis_scheduler_fifo_in_valid),
+    .s_axis_tready(axis_scheduler_fifo_in_ready),
+    .s_axis_tlast(0),
+    .s_axis_tid(0),
+    .s_axis_tdest(0),
+    .s_axis_tuser(0),
+
+    // AXI output
+    .m_axis_tdata(axis_scheduler_fifo_out_queue),
+    .m_axis_tkeep(),
+    .m_axis_tvalid(axis_scheduler_fifo_out_valid),
+    .m_axis_tready(axis_scheduler_fifo_out_ready),
+    .m_axis_tlast(),
+    .m_axis_tid(),
+    .m_axis_tdest(),
+    .m_axis_tuser(),
+
+    // Status
+    .status_overflow(),
+    .status_bad_frame(),
+    .status_good_frame()
+);
+
+integer i;
+
+initial begin
+    for (i = 0; i < QUEUE_COUNT; i = i + 1) begin
+        queue_ram[i] = 0;
+    end
+
+    for (i = 0; i < PIPELINE; i = i + 1) begin
+        queue_ram_addr_pipeline_reg[i] = 0;
+        write_data_pipeline_reg[i] = 0;
+        write_strobe_pipeline_reg[i] = 0;
+        req_tag_pipeline_reg[i] = 0;
+    end
+
+    for (i = 0; i < OP_TABLE_SIZE; i = i + 1) begin
+        op_table_queue[i] = 0;
+    end
+end
+
+integer j;
+
 always @* begin
+    op_axil_write_pipe_next = {op_axil_write_pipe_reg, 1'b0};
+    op_axil_read_pipe_next = {op_axil_read_pipe_reg, 1'b0};
+    op_doorbell_pipe_next = {op_doorbell_pipe_reg, 1'b0};
+    op_req_pipe_next = {op_req_pipe_reg, 1'b0};
+    op_complete_pipe_next = {op_complete_pipe_reg, 1'b0};
+
+    queue_ram_addr_pipeline_next[0] = 0;
+    write_data_pipeline_next[0] = 0;
+    write_strobe_pipeline_next[0] = 0;
+    req_tag_pipeline_next[0] = 0;
+    for (j = 1; j < PIPELINE; j = j + 1) begin
+        queue_ram_addr_pipeline_next[j] = queue_ram_addr_pipeline_reg[j-1];
+        write_data_pipeline_next[j] = write_data_pipeline_reg[j-1];
+        write_strobe_pipeline_next[j] = write_strobe_pipeline_reg[j-1];
+        req_tag_pipeline_next[j] = req_tag_pipeline_reg[j-1];
+    end
+
+    m_axis_tx_req_queue_next = m_axis_tx_req_queue_reg;
+    m_axis_tx_req_tag_next = m_axis_tx_req_tag_reg;
+    m_axis_tx_req_valid_next = m_axis_tx_req_valid_reg && !m_axis_tx_req_ready;
+
     s_axil_awready_next = 1'b0;
     s_axil_wready_next = 1'b0;
     s_axil_bvalid_next = s_axil_bvalid_reg && !s_axil_bready;
@@ -221,69 +372,290 @@ always @* begin
     s_axil_rdata_next = s_axil_rdata_reg;
     s_axil_rvalid_next = s_axil_rvalid_reg && !s_axil_rready;
 
-    queue_enable_next = queue_enable_reg;
+    queue_ram_read_ptr = 0;
+    queue_ram_write_ptr = queue_ram_addr_pipeline_reg[PIPELINE-1];
+    queue_ram_write_data = queue_ram_read_data_pipeline_reg[PIPELINE-1];
+    queue_ram_wr_en = 0;
+    queue_ram_be = 0;
 
-    if (s_axil_awvalid && s_axil_wvalid && !s_axil_bvalid) begin
-        // write operation
-        s_axil_awready_next = 1'b1;
-        s_axil_wready_next = 1'b1;
-        s_axil_bvalid_next = 1'b1;
+    op_table_start_queue = queue_ram_addr_pipeline_reg[PIPELINE-1];
+    op_table_start_en = 1'b0;
+    op_table_doorbell_ptr = queue_ram_read_data_op_index;
+    op_table_doorbell_en = 1'b0;
+    op_table_complete_ptr = s_axis_tx_req_status_tag;
+    op_table_complete_tx_status = s_axis_tx_req_status_len != 0;
+    op_table_complete_en = 1'b0;
+    op_table_finish_en = 1'b0;
 
-        case (s_axil_awaddr & {{AXIL_ADDR_WIDTH{1'b1}}, 2'b00})
-            16'h0200: queue_enable_next = (queue_enable_reg & ~(32'hffffffff << 0)) | s_axil_wdata << 0;
-            16'h0204: queue_enable_next = (queue_enable_reg & ~(32'hffffffff << 32)) | s_axil_wdata << 32;
-            16'h0208: queue_enable_next = (queue_enable_reg & ~(32'hffffffff << 64)) | s_axil_wdata << 64;
-            16'h020c: queue_enable_next = (queue_enable_reg & ~(32'hffffffff << 96)) | s_axil_wdata << 96;
-            16'h0210: queue_enable_next = (queue_enable_reg & ~(32'hffffffff << 128)) | s_axil_wdata << 128;
-            16'h0214: queue_enable_next = (queue_enable_reg & ~(32'hffffffff << 160)) | s_axil_wdata << 160;
-            16'h0218: queue_enable_next = (queue_enable_reg & ~(32'hffffffff << 192)) | s_axil_wdata << 192;
-            16'h021c: queue_enable_next = (queue_enable_reg & ~(32'hffffffff << 224)) | s_axil_wdata << 224;
-        endcase
+    active_queue_count_next = active_queue_count_reg;
+
+    axis_doorbell_fifo_ready = 1'b0;
+
+    axis_scheduler_fifo_in_queue = queue_ram_addr_pipeline_reg[PIPELINE-1];
+    axis_scheduler_fifo_in_valid = 1'b0;
+
+    axis_scheduler_fifo_out_ready = 1'b0;
+
+    op_axil_write_pipe_hazard = 1'b0;
+    op_axil_read_pipe_hazard = 1'b0;
+    op_doorbell_pipe_hazard = 1'b0;
+    op_req_pipe_hazard = 1'b0;
+    op_complete_pipe_hazard = 1'b0;
+    stage_active = 1'b0;
+
+    for (j = 0; j < PIPELINE; j = j + 1) begin
+        stage_active = op_axil_write_pipe_reg[j] || op_axil_read_pipe_reg[j] || op_doorbell_pipe_reg[j] || op_req_pipe_reg[j] || op_complete_pipe_reg[j];
+        op_axil_write_pipe_hazard = op_axil_write_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == s_axil_awaddr_queue);
+        op_axil_read_pipe_hazard = op_axil_read_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == s_axil_araddr_queue);
+        op_doorbell_pipe_hazard = op_doorbell_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == axis_doorbell_fifo_queue);
+        op_req_pipe_hazard = op_req_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == axis_scheduler_fifo_out_queue);
+        op_complete_pipe_hazard = op_complete_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == op_table_queue[op_table_finish_ptr_reg]);
     end
 
-    if (s_axil_arvalid && !s_axil_rvalid) begin
-        // read operation
-        s_axil_arready_next = 1'b1;
-        s_axil_rvalid_next = 1'b1;
-        s_axil_rdata_next = {AXIL_DATA_WIDTH{1'b0}};
+    // pipeline stage 0 - receive request
+    if (s_axil_awvalid && s_axil_wvalid && (!s_axil_bvalid || s_axil_bready) && !op_axil_write_pipe_reg[0] && !op_axil_write_pipe_hazard) begin
+        // AXIL write
+        op_axil_write_pipe_next[0] = 1'b1;
 
-        case (s_axil_araddr & {{AXIL_ADDR_WIDTH{1'b1}}, 2'b00})
-            16'h0000: s_axil_rdata_next = 32'h00000001;
-            16'h0010: s_axil_rdata_next = QUEUE_INDEX_WIDTH;
-            16'h0014: s_axil_rdata_next = 0;
-            // 
-            16'h0200: s_axil_rdata_next = queue_enable_reg;
-            16'h0204: s_axil_rdata_next = queue_enable_reg >> 32;
-            16'h0208: s_axil_rdata_next = queue_enable_reg >> 64;
-            16'h020C: s_axil_rdata_next = queue_enable_reg >> 96;
-            16'h0210: s_axil_rdata_next = queue_enable_reg >> 128;
-            16'h0214: s_axil_rdata_next = queue_enable_reg >> 160;
-            16'h0218: s_axil_rdata_next = queue_enable_reg >> 192;
-            16'h021C: s_axil_rdata_next = queue_enable_reg >> 224;
-        endcase
+        s_axil_awready_next = 1'b1;
+        s_axil_wready_next = 1'b1;
+
+        write_data_pipeline_next[0] = s_axil_wdata;
+        write_strobe_pipeline_next[0] = s_axil_wstrb;
+
+        queue_ram_read_ptr = s_axil_awaddr_queue;
+        queue_ram_addr_pipeline_next[0] = s_axil_awaddr_queue;
+    end else if (s_axil_arvalid && (!s_axil_rvalid || s_axil_rready) && !op_axil_read_pipe_reg[0] && !op_axil_read_pipe_hazard) begin
+        // AXIL read
+        op_axil_read_pipe_next[0] = 1'b1;
+
+        s_axil_arready_next = 1'b1;
+
+        queue_ram_read_ptr = s_axil_araddr_queue;
+        queue_ram_addr_pipeline_next[0] = s_axil_araddr_queue;
+    end else if (axis_doorbell_fifo_valid && !op_doorbell_pipe_hazard) begin
+        // handle doorbell
+        op_doorbell_pipe_next[0] = 1'b1;
+
+        axis_doorbell_fifo_ready = 1'b1;
+
+        queue_ram_read_ptr = axis_doorbell_fifo_queue;
+        queue_ram_addr_pipeline_next[0] = axis_doorbell_fifo_queue;
+    end else if (op_table_active[op_table_finish_ptr_reg] && op_table_complete[op_table_finish_ptr_reg] && !op_complete_pipe_reg[0] && !op_complete_pipe_hazard) begin
+        // transmit complete
+        op_complete_pipe_next[0] = 1'b1;
+
+        op_table_finish_en = 1'b1;
+
+        write_data_pipeline_next[0][0] = op_table_tx_status[op_table_finish_ptr_reg] || op_table_doorbell[op_table_finish_ptr_reg];
+
+        queue_ram_read_ptr = op_table_queue[op_table_finish_ptr_reg];
+        queue_ram_addr_pipeline_next[0] = op_table_queue[op_table_finish_ptr_reg];
+    end else if (enable && !op_table_active[op_table_start_ptr_reg] && axis_scheduler_fifo_out_valid && (!m_axis_tx_req_valid || m_axis_tx_req_ready) && !op_req_pipe_reg[0] && !op_req_pipe_hazard) begin
+        // transmit request
+        op_req_pipe_next[0] = 1'b1;
+
+        axis_scheduler_fifo_out_ready = 1'b1;
+
+        queue_ram_read_ptr = axis_scheduler_fifo_out_queue;
+        queue_ram_addr_pipeline_next[0] = axis_scheduler_fifo_out_queue;
+    end
+
+    // read complete, perform operation
+    if (op_doorbell_pipe_reg[PIPELINE-1]) begin
+        // handle doorbell
+
+        // mark queue active
+        queue_ram_write_ptr = queue_ram_addr_pipeline_reg[PIPELINE-1];
+        queue_ram_write_data[1] = 1'b1; // queue active
+        queue_ram_be[0] = 1'b1;
+        queue_ram_wr_en = 1'b1;
+
+        // schedule queue if necessary
+        if (queue_ram_read_data_enabled && !queue_ram_read_data_scheduled) begin
+            queue_ram_write_data[2] = 1'b1; // queue scheduled
+
+            axis_scheduler_fifo_in_queue = queue_ram_addr_pipeline_reg[PIPELINE-1];
+            axis_scheduler_fifo_in_valid = 1'b1;
+
+            active_queue_count_next = active_queue_count_reg + 1;
+        end
+
+        if (queue_active) begin
+            // record doorbell in table so we don't lose it
+            op_table_doorbell_ptr = queue_ram_read_data_op_index;
+            op_table_doorbell_en = 1'b1;
+        end
+    end else if (op_req_pipe_reg[PIPELINE-1]) begin
+        // transmit request
+        m_axis_tx_req_queue_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
+        m_axis_tx_req_tag_next = op_table_start_ptr_reg;
+
+        axis_scheduler_fifo_in_queue = queue_ram_addr_pipeline_reg[PIPELINE-1];
+
+        // update state
+        queue_ram_write_ptr = queue_ram_addr_pipeline_reg[PIPELINE-1];
+        queue_ram_write_data[15:8] = op_table_start_ptr_reg;
+        queue_ram_be[0] = 1'b1;
+        queue_ram_wr_en = 1'b1;
+
+        if (queue_ram_read_data_enabled && queue_ram_read_data_active && queue_ram_read_data_scheduled) begin
+            // queue enabled, active, and scheduled
+
+            // issue transmit request
+            m_axis_tx_req_valid_next = 1'b1;
+
+            // reschedule
+            axis_scheduler_fifo_in_valid = 1'b1;
+
+            // update state
+            queue_ram_write_data[2] = 1'b1; // queue scheduled
+            queue_ram_be[1] = 1'b1;
+
+            op_table_start_en = 1'b1;
+        end else begin
+            // queue not enabled, not active, or not scheduled
+            // deschedule queue
+
+            // update state
+            queue_ram_write_data[2] = 1'b0; // queue scheduled
+
+            if (queue_ram_read_data_scheduled) begin
+                active_queue_count_next = active_queue_count_reg - 1;
+            end
+        end
+    end else if (op_complete_pipe_reg[PIPELINE-1]) begin
+        // tx complete
+
+        // update state
+        queue_ram_write_ptr = queue_ram_addr_pipeline_reg[PIPELINE-1];
+        queue_ram_be[0] = 1'b1;
+        queue_ram_wr_en = 1'b1;
+
+        if (write_data_pipeline_reg[PIPELINE-1][0]) begin
+            queue_ram_write_data[1] = 1'b1; // queue active
+        end else begin
+            queue_ram_write_data[1] = 1'b0; // queue active
+        end
+    end else if (op_axil_write_pipe_reg[PIPELINE-1]) begin
+        // AXIL write
+        s_axil_bvalid_next = 1'b1;
+
+        queue_ram_write_ptr = queue_ram_addr_pipeline_reg[PIPELINE-1];
+        queue_ram_wr_en = 1'b1;
+
+        queue_ram_write_data[0] = write_data_pipeline_reg[PIPELINE-1][0]; // queue enabled
+        queue_ram_be[0] = 1'b1;
+
+        // schedule if disabled
+        if (write_data_pipeline_reg[PIPELINE-1][0] && queue_ram_read_data_active && !queue_ram_read_data_scheduled) begin
+            axis_scheduler_fifo_in_queue = queue_ram_addr_pipeline_reg[PIPELINE-1];
+            axis_scheduler_fifo_in_valid = 1'b1;
+
+            active_queue_count_next = active_queue_count_reg + 1;
+        end
+    end else if (op_axil_read_pipe_reg[PIPELINE-1]) begin
+        // AXIL read
+        s_axil_rvalid_next = 1'b1;
+        s_axil_rdata_next = 0;
+
+        s_axil_rdata_next[0] = queue_ram_read_data_enabled;
+        s_axil_rdata_next[16] = queue_ram_read_data_active;
+        s_axil_rdata_next[24] = queue_ram_read_data_scheduled;
+    end
+
+    // finish transmit operation
+    if (s_axis_tx_req_status_valid) begin
+        op_table_complete_ptr = s_axis_tx_req_status_tag;
+        op_table_complete_tx_status = s_axis_tx_req_status_len != 0;
+        op_table_complete_en = 1'b1;
     end
 end
 
 always @(posedge clk) begin
-    s_axil_awready_reg <= s_axil_awready_next;
-    s_axil_wready_reg <= s_axil_wready_next;
-    s_axil_bvalid_reg <= s_axil_bvalid_next;
-
-    s_axil_arready_reg <= s_axil_arready_next;
-    s_axil_rdata_reg <= s_axil_rdata_next;
-    s_axil_rvalid_reg <= s_axil_rvalid_next;
-
-    queue_enable_reg <= queue_enable_next;
-
     if (rst) begin
+        op_axil_write_pipe_reg <= {PIPELINE{1'b0}};
+        op_axil_read_pipe_reg <= {PIPELINE{1'b0}};
+        op_doorbell_pipe_reg <= {PIPELINE{1'b0}};
+        op_req_pipe_reg <= {PIPELINE{1'b0}};
+        op_complete_pipe_reg <= {PIPELINE{1'b0}};
+
+        m_axis_tx_req_valid_reg <= 1'b0;
+
         s_axil_awready_reg <= 1'b0;
         s_axil_wready_reg <= 1'b0;
         s_axil_bvalid_reg <= 1'b0;
-
         s_axil_arready_reg <= 1'b0;
         s_axil_rvalid_reg <= 1'b0;
 
-        queue_enable_reg <= 0;
+        active_queue_count_reg <= 0;
+
+        op_table_active <= 0;
+
+        op_table_start_ptr_reg <= 0;
+        op_table_finish_ptr_reg <= 0;
+    end else begin
+        op_axil_write_pipe_reg <= op_axil_write_pipe_next;
+        op_axil_read_pipe_reg <= op_axil_read_pipe_next;
+        op_doorbell_pipe_reg <= op_doorbell_pipe_next;
+        op_req_pipe_reg <= op_req_pipe_next;
+        op_complete_pipe_reg <= op_complete_pipe_next;
+
+        m_axis_tx_req_valid_reg <= m_axis_tx_req_valid_next;
+
+        s_axil_awready_reg <= s_axil_awready_next;
+        s_axil_wready_reg <= s_axil_wready_next;
+        s_axil_bvalid_reg <= s_axil_bvalid_next;
+        s_axil_arready_reg <= s_axil_arready_next;
+        s_axil_rvalid_reg <= s_axil_rvalid_next;
+
+        active_queue_count_reg <= active_queue_count_next;
+
+        if (op_table_start_en) begin
+            op_table_start_ptr_reg <= op_table_start_ptr_reg + 1;
+            op_table_active[op_table_start_ptr_reg] <= 1'b1;
+        end
+        if (op_table_finish_en) begin
+            op_table_finish_ptr_reg <= op_table_finish_ptr_reg + 1;
+            op_table_active[op_table_finish_ptr_reg] <= 1'b0;
+        end
+    end
+
+    for (i = 0; i < PIPELINE; i = i + 1) begin
+        queue_ram_addr_pipeline_reg[i] <= queue_ram_addr_pipeline_next[i];
+        write_data_pipeline_reg[i] <= write_data_pipeline_next[i];
+        write_strobe_pipeline_reg[i] <= write_strobe_pipeline_next[i];
+        req_tag_pipeline_reg[i] <= req_tag_pipeline_next[i];
+    end
+
+    m_axis_tx_req_queue_reg <= m_axis_tx_req_queue_next;
+    m_axis_tx_req_tag_reg <= m_axis_tx_req_tag_next;
+
+    s_axil_rdata_reg <= s_axil_rdata_next;
+
+    if (queue_ram_wr_en) begin
+        for (i = 0; i < QUEUE_RAM_BE_WIDTH; i = i + 1) begin
+            if (queue_ram_be[i]) begin
+                queue_ram[queue_ram_write_ptr][i*8 +: 8] <= queue_ram_write_data[i*8 +: 8];
+            end
+        end
+    end
+    queue_ram_read_data_pipeline_reg[0] <= queue_ram[queue_ram_read_ptr];
+    for (i = 1; i < PIPELINE; i = i + 1) begin
+        queue_ram_read_data_pipeline_reg[i] <= queue_ram_read_data_pipeline_reg[i-1];
+    end
+
+    if (op_table_start_en) begin
+        op_table_complete[op_table_start_ptr_reg] <= 1'b0;
+        op_table_queue[op_table_start_ptr_reg] <= op_table_start_queue;
+        op_table_doorbell[op_table_start_ptr_reg] <= 1'b0;
+    end
+    if (op_table_doorbell_en) begin
+        op_table_doorbell[op_table_doorbell_ptr] <= 1'b1;
+    end
+    if (op_table_complete_en) begin
+        op_table_complete[op_table_complete_ptr] <= 1'b1;
+        op_table_tx_status[op_table_complete_ptr] <= op_table_complete_tx_status;
     end
 end
 

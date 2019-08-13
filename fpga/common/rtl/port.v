@@ -970,7 +970,9 @@ if (TX_SCHEDULER == "RR") begin
         .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
         .AXI_DMA_LEN_WIDTH(AXI_DMA_LEN_WIDTH),
         .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-        .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH)
+        .OP_TABLE_SIZE(16),
+        .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
+        .PIPELINE(3)
     )
     tx_scheduler_inst (
         .clk(clk),
@@ -1018,7 +1020,13 @@ if (TX_SCHEDULER == "RR") begin
         .s_axil_rdata(axil_sched_rdata),
         .s_axil_rresp(axil_sched_rresp),
         .s_axil_rvalid(axil_sched_rvalid),
-        .s_axil_rready(axil_sched_rready)
+        .s_axil_rready(axil_sched_rready),
+
+        /*
+         * Control
+         */
+        .enable(sched_enable_reg),
+        .active()
     );
     
 end else if (TX_SCHEDULER == "TDMA_RR") begin

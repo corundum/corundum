@@ -335,7 +335,7 @@ always @* begin
         if (s_axil_awaddr[16]) begin
             mem_wr_en = 1'b1;
         end else begin
-            case (s_axil_awaddr & {{AXIL_ADDR_WIDTH{1'b1}}, 2'b00})
+            case (s_axil_awaddr & {{14{1'b1}}, 2'b00})
                 // TDMA scheduler
                 16'h0100: begin
                     // TDMA control
@@ -399,7 +399,7 @@ always @* begin
         if (s_axil_araddr[16]) begin
             mem_rd_en = 1'b1;
         end else begin
-            case (s_axil_araddr & {{AXIL_ADDR_WIDTH{1'b1}}, 2'b00})
+            case (s_axil_araddr & {{14{1'b1}}, 2'b00})
                 16'h0000: s_axil_rdata_next = 32'h00000001;
                 16'h0010: s_axil_rdata_next = QUEUE_INDEX_WIDTH;
                 16'h0014: s_axil_rdata_next = TDMA_INDEX_WIDTH;

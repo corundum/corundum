@@ -434,6 +434,26 @@ wire [1:0]                 axil_ctrl_rresp;
 wire                       axil_ctrl_rvalid;
 wire                       axil_ctrl_rready;
 
+wire [AXIL_ADDR_WIDTH-1:0] axil_sched_awaddr;
+wire [2:0]                 axil_sched_awprot;
+wire                       axil_sched_awvalid;
+wire                       axil_sched_awready;
+wire [AXIL_DATA_WIDTH-1:0] axil_sched_wdata;
+wire [AXIL_STRB_WIDTH-1:0] axil_sched_wstrb;
+wire                       axil_sched_wvalid;
+wire                       axil_sched_wready;
+wire [1:0]                 axil_sched_bresp;
+wire                       axil_sched_bvalid;
+wire                       axil_sched_bready;
+wire [AXIL_ADDR_WIDTH-1:0] axil_sched_araddr;
+wire [2:0]                 axil_sched_arprot;
+wire                       axil_sched_arvalid;
+wire                       axil_sched_arready;
+wire [AXIL_DATA_WIDTH-1:0] axil_sched_rdata;
+wire [1:0]                 axil_sched_rresp;
+wire                       axil_sched_rvalid;
+wire                       axil_sched_rready;
+
 // AXI connections
 wire [AXI_ID_WIDTH-1:0]    axi_tx_awid;
 wire [AXI_ADDR_WIDTH-1:0]  axi_tx_awaddr;
@@ -635,15 +655,216 @@ wire                         dma_rx_desc_status_valid;
 
 wire                         dma_enable = 1;
 
-// 
-wire eth_tx_fifo_overflow;
-wire eth_tx_fifo_bad_frame;
-wire eth_tx_fifo_good_frame;
-wire eth_rx_error_bad_frame;
-wire eth_rx_error_bad_fcs;
-wire eth_rx_fifo_overflow;
-wire eth_rx_fifo_bad_frame;
-wire eth_rx_fifo_good_frame;
+// Port control registers
+reg axil_ctrl_awready_reg = 1'b0;
+reg axil_ctrl_wready_reg = 1'b0;
+reg axil_ctrl_bvalid_reg = 1'b0;
+reg axil_ctrl_arready_reg = 1'b0;
+reg [AXIL_DATA_WIDTH-1:0] axil_ctrl_rdata_reg = {AXIL_DATA_WIDTH{1'b0}};
+reg axil_ctrl_rvalid_reg = 1'b0;
+
+reg sched_enable_reg = 1'b0;
+
+reg tdma_enable_reg = 1'b0;
+wire tdma_locked;
+wire tdma_error;
+
+reg [79:0] set_tdma_schedule_start_reg = 0;
+reg set_tdma_schedule_start_valid_reg = 0;
+reg [79:0] set_tdma_schedule_period_reg = 0;
+reg set_tdma_schedule_period_valid_reg = 0;
+reg [79:0] set_tdma_timeslot_period_reg = 0;
+reg set_tdma_timeslot_period_valid_reg = 0;
+reg [79:0] set_tdma_active_period_reg = 0;
+reg set_tdma_active_period_valid_reg = 0;
+
+wire tdma_schedule_start;
+wire [TDMA_INDEX_WIDTH-1:0] tdma_timeslot_index;
+wire tdma_timeslot_start;
+wire tdma_timeslot_end;
+wire tdma_timeslot_active;
+
+assign axil_ctrl_awready = axil_ctrl_awready_reg;
+assign axil_ctrl_wready = axil_ctrl_wready_reg;
+assign axil_ctrl_bresp = 2'b00;
+assign axil_ctrl_bvalid = axil_ctrl_bvalid_reg;
+assign axil_ctrl_arready = axil_ctrl_arready_reg;
+assign axil_ctrl_rdata = axil_ctrl_rdata_reg;
+assign axil_ctrl_rresp = 2'b00;
+assign axil_ctrl_rvalid = axil_ctrl_rvalid_reg;
+
+always @(posedge clk) begin
+    axil_ctrl_awready_reg <= 1'b0;
+    axil_ctrl_wready_reg <= 1'b0;
+    axil_ctrl_bvalid_reg <= axil_ctrl_bvalid_reg && !axil_ctrl_bready;
+    axil_ctrl_arready_reg <= 1'b0;
+    axil_ctrl_rvalid_reg <= axil_ctrl_rvalid_reg && !axil_ctrl_rready;
+
+    set_tdma_schedule_start_valid_reg <= 1'b0;
+    set_tdma_schedule_period_valid_reg <= 1'b0;
+    set_tdma_timeslot_period_valid_reg <= 1'b0;
+    set_tdma_active_period_valid_reg <= 1'b0;
+
+    if (axil_ctrl_awvalid && axil_ctrl_wvalid && !axil_ctrl_bvalid) begin
+        // write operation
+        axil_ctrl_awready_reg <= 1'b1;
+        axil_ctrl_wready_reg <= 1'b1;
+        axil_ctrl_bvalid_reg <= 1'b1;
+
+        case ({axil_ctrl_awaddr[15:2], 2'b00})
+            16'h0040: begin
+                // Scheduler enable
+                if (axil_ctrl_wstrb[0]) begin
+                    sched_enable_reg <= axil_ctrl_wdata[0];
+                end
+            end
+            16'h0100: begin
+                // TDMA control
+                if (axil_ctrl_wstrb[0]) begin
+                    tdma_enable_reg <= axil_ctrl_wdata[0];
+                end
+            end
+            16'h0114: set_tdma_schedule_start_reg[29:0] <= axil_ctrl_wdata; // TDMA schedule start ns
+            16'h0118: set_tdma_schedule_start_reg[63:32] <= axil_ctrl_wdata; // TDMA schedule start sec l
+            16'h011C: begin
+                // TDMA schedule start sec h
+                set_tdma_schedule_start_reg[79:64] <= axil_ctrl_wdata;
+                set_tdma_schedule_start_valid_reg <= 1'b1;
+            end
+            16'h0124: set_tdma_schedule_period_reg[29:0] <= axil_ctrl_wdata; // TDMA schedule period ns
+            16'h0128: set_tdma_schedule_period_reg[63:32] <= axil_ctrl_wdata; // TDMA schedule period sec l
+            16'h012C: begin
+                // TDMA schedule period sec h
+                set_tdma_schedule_period_reg[79:64] <= axil_ctrl_wdata;
+                set_tdma_schedule_period_valid_reg <= 1'b1;
+            end
+            16'h0134: set_tdma_timeslot_period_reg[29:0] <= axil_ctrl_wdata; // TDMA timeslot period ns
+            16'h0138: set_tdma_timeslot_period_reg[63:32] <= axil_ctrl_wdata; // TDMA timeslot period sec l
+            16'h013C: begin
+                // TDMA timeslot period sec h
+                set_tdma_timeslot_period_reg[79:64] <= axil_ctrl_wdata;
+                set_tdma_timeslot_period_valid_reg <= 1'b1;
+            end
+            16'h0144: set_tdma_active_period_reg[29:0] <= axil_ctrl_wdata; // TDMA active period ns
+            16'h0148: set_tdma_active_period_reg[63:32] <= axil_ctrl_wdata; // TDMA active period sec l
+            16'h014C: begin
+                // TDMA active period sec h
+                set_tdma_active_period_reg[79:64] <= axil_ctrl_wdata;
+                set_tdma_active_period_valid_reg <= 1'b1;
+            end
+        endcase
+    end
+
+    if (axil_ctrl_arvalid && !axil_ctrl_rvalid) begin
+        // read operation
+        axil_ctrl_arready_reg <= 1'b1;
+        axil_ctrl_rvalid_reg <= 1'b1;
+        axil_ctrl_rdata_reg <= {AXIL_DATA_WIDTH{1'b0}};
+
+        case ({axil_ctrl_araddr[15:2], 2'b00})
+            16'h0000: axil_ctrl_rdata_reg <= 32'd0;       // port_id
+            16'h0004: axil_ctrl_rdata_reg <= 32'd0;       // port_features
+            16'h0010: axil_ctrl_rdata_reg <= 1;           // scheduler_count
+            16'h0014: axil_ctrl_rdata_reg <= 24'h040000;  // scheduler_offset
+            16'h0018: axil_ctrl_rdata_reg <= 24'h040000;  // scheduler_stride
+            16'h001C: axil_ctrl_rdata_reg <= 32'd0;       // scheduler_type
+            16'h0040: begin
+                // Scheduler enable
+                axil_ctrl_rdata_reg[0] <= sched_enable_reg;
+            end
+            16'h0100: begin
+                // TDMA control
+                axil_ctrl_rdata_reg[0] <= tdma_enable_reg;
+            end
+            16'h0104: begin
+                // TDMA status
+                axil_ctrl_rdata_reg[0] <= tdma_locked;
+                axil_ctrl_rdata_reg[1] <= tdma_error;
+            end
+            16'h0114: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[29:0]; // TDMA schedule start ns
+            16'h0118: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[63:32]; // TDMA schedule start sec l
+            16'h011C: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[79:64]; // TDMA schedule start sec h
+            16'h0124: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[29:0]; // TDMA schedule period ns
+            16'h0128: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[63:32]; // TDMA schedule period sec l
+            16'h012C: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[79:64]; // TDMA schedule period sec h
+            16'h0134: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[29:0]; // TDMA timeslot period ns
+            16'h0138: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[63:32]; // TDMA timeslot period sec l
+            16'h013C: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[79:64]; // TDMA timeslot period sec h
+            16'h0144: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[29:0]; // TDMA active period ns
+            16'h0148: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[63:32]; // TDMA active period sec l
+            16'h014C: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[79:64]; // TDMA active period sec h
+        endcase
+    end
+
+    if (rst) begin
+        axil_ctrl_awready_reg <= 1'b0;
+        axil_ctrl_wready_reg <= 1'b0;
+        axil_ctrl_bvalid_reg <= 1'b0;
+        axil_ctrl_arready_reg <= 1'b0;
+        axil_ctrl_rvalid_reg <= 1'b0;
+
+        sched_enable_reg <= 1'b0;
+        tdma_enable_reg <= 1'b0;
+    end
+end
+
+// AXI lite interconnect
+parameter AXIL_S_COUNT = 1;
+parameter AXIL_M_COUNT = 2;
+
+axil_interconnect #(
+    .DATA_WIDTH(AXIL_DATA_WIDTH),
+    .ADDR_WIDTH(AXIL_ADDR_WIDTH),
+    .STRB_WIDTH(AXIL_STRB_WIDTH),
+    .S_COUNT(AXIL_S_COUNT),
+    .M_COUNT(AXIL_M_COUNT),
+    .M_BASE_ADDR({23'h040000, 23'h000000}),
+    .M_ADDR_WIDTH({32'd18, 32'd18}),
+    .M_CONNECT_READ({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}}),
+    .M_CONNECT_WRITE({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}})
+)
+axil_interconnect_inst (
+    .clk(clk),
+    .rst(rst),
+    .s_axil_awaddr(s_axil_awaddr & 23'h0fffff),
+    .s_axil_awprot(s_axil_awprot),
+    .s_axil_awvalid(s_axil_awvalid),
+    .s_axil_awready(s_axil_awready),
+    .s_axil_wdata(s_axil_wdata),
+    .s_axil_wstrb(s_axil_wstrb),
+    .s_axil_wvalid(s_axil_wvalid),
+    .s_axil_wready(s_axil_wready),
+    .s_axil_bresp(s_axil_bresp),
+    .s_axil_bvalid(s_axil_bvalid),
+    .s_axil_bready(s_axil_bready),
+    .s_axil_araddr(s_axil_araddr & 23'h0fffff),
+    .s_axil_arprot(s_axil_arprot),
+    .s_axil_arvalid(s_axil_arvalid),
+    .s_axil_arready(s_axil_arready),
+    .s_axil_rdata(s_axil_rdata),
+    .s_axil_rresp(s_axil_rresp),
+    .s_axil_rvalid(s_axil_rvalid),
+    .s_axil_rready(s_axil_rready),
+    .m_axil_awaddr( {axil_sched_awaddr,  axil_ctrl_awaddr}),
+    .m_axil_awprot( {axil_sched_awprot,  axil_ctrl_awprot}),
+    .m_axil_awvalid({axil_sched_awvalid, axil_ctrl_awvalid}),
+    .m_axil_awready({axil_sched_awready, axil_ctrl_awready}),
+    .m_axil_wdata(  {axil_sched_wdata,   axil_ctrl_wdata}),
+    .m_axil_wstrb(  {axil_sched_wstrb,   axil_ctrl_wstrb}),
+    .m_axil_wvalid( {axil_sched_wvalid,  axil_ctrl_wvalid}),
+    .m_axil_wready( {axil_sched_wready,  axil_ctrl_wready}),
+    .m_axil_bresp(  {axil_sched_bresp,   axil_ctrl_bresp}),
+    .m_axil_bvalid( {axil_sched_bvalid,  axil_ctrl_bvalid}),
+    .m_axil_bready( {axil_sched_bready,  axil_ctrl_bready}),
+    .m_axil_araddr( {axil_sched_araddr,  axil_ctrl_araddr}),
+    .m_axil_arprot( {axil_sched_arprot,  axil_ctrl_arprot}),
+    .m_axil_arvalid({axil_sched_arvalid, axil_ctrl_arvalid}),
+    .m_axil_arready({axil_sched_arready, axil_ctrl_arready}),
+    .m_axil_rdata(  {axil_sched_rdata,   axil_ctrl_rdata}),
+    .m_axil_rresp(  {axil_sched_rresp,   axil_ctrl_rresp}),
+    .m_axil_rvalid( {axil_sched_rvalid,  axil_ctrl_rvalid}),
+    .m_axil_rready( {axil_sched_rready,  axil_ctrl_rready})
+);
 
 pcie_axi_dma_desc_mux #(
     .PORTS(2),
@@ -779,25 +1000,25 @@ if (TX_SCHEDULER == "RR") begin
         /*
          * AXI-Lite slave interface
          */
-        .s_axil_awaddr(s_axil_awaddr),
-        .s_axil_awprot(s_axil_awprot),
-        .s_axil_awvalid(s_axil_awvalid),
-        .s_axil_awready(s_axil_awready),
-        .s_axil_wdata(s_axil_wdata),
-        .s_axil_wstrb(s_axil_wstrb),
-        .s_axil_wvalid(s_axil_wvalid),
-        .s_axil_wready(s_axil_wready),
-        .s_axil_bresp(s_axil_bresp),
-        .s_axil_bvalid(s_axil_bvalid),
-        .s_axil_bready(s_axil_bready),
-        .s_axil_araddr(s_axil_araddr),
-        .s_axil_arprot(s_axil_arprot),
-        .s_axil_arvalid(s_axil_arvalid),
-        .s_axil_arready(s_axil_arready),
-        .s_axil_rdata(s_axil_rdata),
-        .s_axil_rresp(s_axil_rresp),
-        .s_axil_rvalid(s_axil_rvalid),
-        .s_axil_rready(s_axil_rready)
+        .s_axil_awaddr(axil_sched_awaddr),
+        .s_axil_awprot(axil_sched_awprot),
+        .s_axil_awvalid(axil_sched_awvalid),
+        .s_axil_awready(axil_sched_awready),
+        .s_axil_wdata(axil_sched_wdata),
+        .s_axil_wstrb(axil_sched_wstrb),
+        .s_axil_wvalid(axil_sched_wvalid),
+        .s_axil_wready(axil_sched_wready),
+        .s_axil_bresp(axil_sched_bresp),
+        .s_axil_bvalid(axil_sched_bvalid),
+        .s_axil_bready(axil_sched_bready),
+        .s_axil_araddr(axil_sched_araddr),
+        .s_axil_arprot(axil_sched_arprot),
+        .s_axil_arvalid(axil_sched_arvalid),
+        .s_axil_arready(axil_sched_arready),
+        .s_axil_rdata(axil_sched_rdata),
+        .s_axil_rresp(axil_sched_rresp),
+        .s_axil_rvalid(axil_sched_rvalid),
+        .s_axil_rready(axil_sched_rready)
     );
     
 end else if (TX_SCHEDULER == "TDMA_RR") begin
@@ -847,25 +1068,25 @@ end else if (TX_SCHEDULER == "TDMA_RR") begin
         /*
          * AXI-Lite slave interface
          */
-        .s_axil_awaddr(s_axil_awaddr),
-        .s_axil_awprot(s_axil_awprot),
-        .s_axil_awvalid(s_axil_awvalid),
-        .s_axil_awready(s_axil_awready),
-        .s_axil_wdata(s_axil_wdata),
-        .s_axil_wstrb(s_axil_wstrb),
-        .s_axil_wvalid(s_axil_wvalid),
-        .s_axil_wready(s_axil_wready),
-        .s_axil_bresp(s_axil_bresp),
-        .s_axil_bvalid(s_axil_bvalid),
-        .s_axil_bready(s_axil_bready),
-        .s_axil_araddr(s_axil_araddr),
-        .s_axil_arprot(s_axil_arprot),
-        .s_axil_arvalid(s_axil_arvalid),
-        .s_axil_arready(s_axil_arready),
-        .s_axil_rdata(s_axil_rdata),
-        .s_axil_rresp(s_axil_rresp),
-        .s_axil_rvalid(s_axil_rvalid),
-        .s_axil_rready(s_axil_rready),
+        .s_axil_awaddr(axil_sched_awaddr),
+        .s_axil_awprot(axil_sched_awprot),
+        .s_axil_awvalid(axil_sched_awvalid),
+        .s_axil_awready(axil_sched_awready),
+        .s_axil_wdata(axil_sched_wdata),
+        .s_axil_wstrb(axil_sched_wstrb),
+        .s_axil_wvalid(axil_sched_wvalid),
+        .s_axil_wready(axil_sched_wready),
+        .s_axil_bresp(axil_sched_bresp),
+        .s_axil_bvalid(axil_sched_bvalid),
+        .s_axil_bready(axil_sched_bready),
+        .s_axil_araddr(axil_sched_araddr),
+        .s_axil_arprot(axil_sched_arprot),
+        .s_axil_arvalid(axil_sched_arvalid),
+        .s_axil_arready(axil_sched_arready),
+        .s_axil_rdata(axil_sched_rdata),
+        .s_axil_rresp(axil_sched_rresp),
+        .s_axil_rvalid(axil_sched_rvalid),
+        .s_axil_rready(axil_sched_rready),
 
         /*
          * PTP clock

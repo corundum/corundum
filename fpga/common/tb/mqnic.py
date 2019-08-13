@@ -118,6 +118,34 @@ MQNIC_IF_REG_PORT_COUNT          = 0x0040
 MQNIC_IF_REG_PORT_OFFSET         = 0x0044
 MQNIC_IF_REG_PORT_STRIDE         = 0x0048
 
+# Port CSRs
+MQNIC_PORT_REG_PORT_ID                    = 0x0000
+MQNIC_PORT_REG_PORT_FEATURES              = 0x0004
+
+MQNIC_PORT_REG_SCHED_COUNT                = 0x0010
+MQNIC_PORT_REG_SCHED_OFFSET               = 0x0014
+MQNIC_PORT_REG_SCHED_STRIDE               = 0x0018
+MQNIC_PORT_REG_SCHED_TYPE                 = 0x001C
+MQNIC_PORT_REG_SCHED_ENABLE               = 0x0040
+MQNIC_PORT_REG_TDMA_CTRL                  = 0x0100
+MQNIC_PORT_REG_TDMA_STATUS                = 0x0104
+MQNIC_PORT_REG_TDMA_SCHED_START_FNS       = 0x0110
+MQNIC_PORT_REG_TDMA_SCHED_START_NS        = 0x0114
+MQNIC_PORT_REG_TDMA_SCHED_START_SEC_L     = 0x0118
+MQNIC_PORT_REG_TDMA_SCHED_START_SEC_H     = 0x011C
+MQNIC_PORT_REG_TDMA_SCHED_PERIOD_FNS      = 0x0110
+MQNIC_PORT_REG_TDMA_SCHED_PERIOD_NS       = 0x0114
+MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_L    = 0x0118
+MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_H    = 0x011C
+MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_FNS   = 0x0110
+MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_NS    = 0x0114
+MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_L = 0x0118
+MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_H = 0x011C
+MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_FNS     = 0x0110
+MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_NS      = 0x0114
+MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L   = 0x0118
+MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H   = 0x011C
+
 MQNIC_QUEUE_BASE_ADDR_REG       = 0x00
 MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG = 0x08
 MQNIC_QUEUE_CPL_QUEUE_INDEX_REG = 0x0C
@@ -516,6 +544,16 @@ class RxRing(object):
         yield from self.write_head_ptr()
 
 
+class Scheduler(object):
+    def __init__(self, port, index, hw_addr):
+        self.port = port
+        self.interface = port.interface
+        self.driver = port.interface.driver
+        self.rc = port.interface.driver.rc
+        self.index = index
+        self.hw_addr = hw_addr
+
+
 class Port(object):
     def __init__(self, interface, index, hw_addr):
         self.interface = interface
@@ -523,6 +561,33 @@ class Port(object):
         self.rc = interface.driver.rc
         self.index = index
         self.hw_addr = hw_addr
+
+        self.port_id = None
+        self.port_features = None
+        self.sched_count = None
+        self.sched_offset = None
+        self.sched_stride = None
+        self.sched_type = None
+
+    def init(self):
+        # Read ID registers
+        self.port_id = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_ID)
+        print("Port ID: {:#010x}".format(self.port_id));
+
+        self.sched_count = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_COUNT)
+        print("Port count: {}".format(self.sched_count))
+        self.sched_offset = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_OFFSET)
+        print("Port offset: {:#010x}".format(self.sched_offset))
+        self.sched_stride = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_STRIDE)
+        print("Port stride: {:#010x}".format(self.sched_stride))
+        self.sched_type = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_TYPE)
+        print("Port type: {:#010x}".format(self.sched_type))
+
+        self.schedulers = []
+
+        for k in range(self.sched_count):
+            p = Scheduler(self, k, self.hw_addr + self.sched_offset + k*self.sched_stride)
+            self.schedulers.append(p)
 
 
 class Interface(object):
@@ -628,6 +693,7 @@ class Interface(object):
 
         for k in range(self.port_count):
             p = Port(self, k, self.hw_addr + self.port_offset + k*self.port_stride)
+            yield from p.init()
             self.ports.append(p)
 
     def open(self):

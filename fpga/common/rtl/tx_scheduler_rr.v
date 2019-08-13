@@ -152,6 +152,7 @@ reg op_axil_read_pipe_hazard;
 reg op_doorbell_pipe_hazard;
 reg op_req_pipe_hazard;
 reg op_complete_pipe_hazard;
+reg op_internal_pipe_hazard;
 reg stage_active;
 
 reg [PIPELINE-1:0] op_axil_write_pipe_reg = {PIPELINE{1'b0}}, op_axil_write_pipe_next;
@@ -159,6 +160,7 @@ reg [PIPELINE-1:0] op_axil_read_pipe_reg = {PIPELINE{1'b0}}, op_axil_read_pipe_n
 reg [PIPELINE-1:0] op_doorbell_pipe_reg = {PIPELINE{1'b0}}, op_doorbell_pipe_next;
 reg [PIPELINE-1:0] op_req_pipe_reg = {PIPELINE{1'b0}}, op_req_pipe_next;
 reg [PIPELINE-1:0] op_complete_pipe_reg = {PIPELINE{1'b0}}, op_complete_pipe_next;
+reg [PIPELINE-1:0] op_internal_pipe_reg = {PIPELINE{1'b0}}, op_internal_pipe_next;
 
 reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_addr_pipeline_reg[PIPELINE-1:0], queue_ram_addr_pipeline_next[PIPELINE-1:0];
 reg [QUEUE_RAM_WIDTH-1:0] queue_ram_read_data_pipeline_reg[PIPELINE-1:0];
@@ -204,6 +206,9 @@ reg op_table_complete_tx_status;
 reg op_table_complete_en;
 reg [CL_OP_TABLE_SIZE-1:0] op_table_finish_ptr_reg = 0;
 reg op_table_finish_en;
+
+reg init_reg = 1'b0, init_next;
+reg [QUEUE_INDEX_WIDTH-1:0] init_index_reg = 0, init_index_next;
 
 reg [QUEUE_INDEX_WIDTH:0] active_queue_count_reg = 0, active_queue_count_next;
 
@@ -348,6 +353,7 @@ always @* begin
     op_doorbell_pipe_next = {op_doorbell_pipe_reg, 1'b0};
     op_req_pipe_next = {op_req_pipe_reg, 1'b0};
     op_complete_pipe_next = {op_complete_pipe_reg, 1'b0};
+    op_internal_pipe_next = {op_internal_pipe_reg, 1'b0};
 
     queue_ram_addr_pipeline_next[0] = 0;
     write_data_pipeline_next[0] = 0;
@@ -387,6 +393,9 @@ always @* begin
     op_table_complete_en = 1'b0;
     op_table_finish_en = 1'b0;
 
+    init_next = init_reg;
+    init_index_next = init_index_reg;
+
     active_queue_count_next = active_queue_count_reg;
 
     axis_doorbell_fifo_ready = 1'b0;
@@ -401,6 +410,7 @@ always @* begin
     op_doorbell_pipe_hazard = 1'b0;
     op_req_pipe_hazard = 1'b0;
     op_complete_pipe_hazard = 1'b0;
+    op_internal_pipe_hazard = 1'b0;
     stage_active = 1'b0;
 
     for (j = 0; j < PIPELINE; j = j + 1) begin
@@ -410,10 +420,23 @@ always @* begin
         op_doorbell_pipe_hazard = op_doorbell_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == axis_doorbell_fifo_queue);
         op_req_pipe_hazard = op_req_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == axis_scheduler_fifo_out_queue);
         op_complete_pipe_hazard = op_complete_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == op_table_queue[op_table_finish_ptr_reg]);
+        op_internal_pipe_hazard = op_internal_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == init_index_reg);
     end
 
     // pipeline stage 0 - receive request
-    if (s_axil_awvalid && s_axil_wvalid && (!s_axil_bvalid || s_axil_bready) && !op_axil_write_pipe_reg[0] && !op_axil_write_pipe_hazard) begin
+    if (!init_reg && !op_internal_pipe_hazard) begin
+        // init queue states
+        op_internal_pipe_next[0] = 1'b1;
+
+        init_index_next = init_index_reg + 1;
+
+        queue_ram_read_ptr = init_index_reg;
+        queue_ram_addr_pipeline_next[0] = init_index_reg;
+
+        if (init_index_reg == {QUEUE_INDEX_WIDTH{1'b1}}) begin
+            init_next = 1'b1;
+        end
+    end else if (s_axil_awvalid && s_axil_wvalid && (!s_axil_bvalid || s_axil_bready) && !op_axil_write_pipe_reg[0] && !op_axil_write_pipe_hazard) begin
         // AXIL write
         op_axil_write_pipe_next[0] = 1'b1;
 
@@ -462,7 +485,17 @@ always @* begin
     end
 
     // read complete, perform operation
-    if (op_doorbell_pipe_reg[PIPELINE-1]) begin
+    if (op_internal_pipe_reg[PIPELINE-1]) begin
+        // internal operation
+
+        // init queue state
+        queue_ram_write_ptr = queue_ram_addr_pipeline_reg[PIPELINE-1];
+        queue_ram_write_data[0] = 1'b0; // queue enabled
+        queue_ram_write_data[1] = 1'b0; // queue active
+        queue_ram_write_data[2] = 1'b0; // queue scheduled
+        queue_ram_be[0] = 1'b1;
+        queue_ram_wr_en = 1'b1;
+    end else if (op_doorbell_pipe_reg[PIPELINE-1]) begin
         // handle doorbell
 
         // mark queue active
@@ -579,6 +612,7 @@ always @(posedge clk) begin
         op_doorbell_pipe_reg <= {PIPELINE{1'b0}};
         op_req_pipe_reg <= {PIPELINE{1'b0}};
         op_complete_pipe_reg <= {PIPELINE{1'b0}};
+        op_internal_pipe_reg <= {PIPELINE{1'b0}};
 
         m_axis_tx_req_valid_reg <= 1'b0;
 
@@ -587,6 +621,9 @@ always @(posedge clk) begin
         s_axil_bvalid_reg <= 1'b0;
         s_axil_arready_reg <= 1'b0;
         s_axil_rvalid_reg <= 1'b0;
+
+        init_reg <= 1'b0;
+        init_index_reg <= 0;
 
         active_queue_count_reg <= 0;
 
@@ -600,6 +637,7 @@ always @(posedge clk) begin
         op_doorbell_pipe_reg <= op_doorbell_pipe_next;
         op_req_pipe_reg <= op_req_pipe_next;
         op_complete_pipe_reg <= op_complete_pipe_next;
+        op_internal_pipe_reg <= op_internal_pipe_next;
 
         m_axis_tx_req_valid_reg <= m_axis_tx_req_valid_next;
 
@@ -608,6 +646,9 @@ always @(posedge clk) begin
         s_axil_bvalid_reg <= s_axil_bvalid_next;
         s_axil_arready_reg <= s_axil_arready_next;
         s_axil_rvalid_reg <= s_axil_rvalid_next;
+
+        init_reg <= init_next;
+        init_index_reg <= init_index_next;
 
         active_queue_count_reg <= active_queue_count_next;
 

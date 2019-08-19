@@ -37,6 +37,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <linux/types.h>
 
 #define MQNIC_MAX_IF 8
+#define MQNIC_MAX_PORTS 8
 
 #define MQNIC_MAX_EVENT_RINGS   256
 #define MQNIC_MAX_TX_RINGS      256

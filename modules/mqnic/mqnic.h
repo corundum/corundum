@@ -209,6 +209,22 @@ struct mqnic_eq_ring {
     u8 __iomem *hw_tail_ptr;
 };
 
+struct mqnic_port {
+    struct device *dev;
+    struct net_device *ndev;
+
+    int index;
+
+    u32 port_id;
+    u32 port_features;
+    u32 sched_count;
+    u32 sched_offset;
+    u32 sched_stride;
+    u32 sched_type;
+
+    u8 __iomem *hw_addr;
+};
+
 struct mqnic_priv {
     struct device *dev;
     struct net_device *ndev;
@@ -243,6 +259,7 @@ struct mqnic_priv {
     struct mqnic_cq_ring *tx_cpl_ring[MQNIC_MAX_TX_CPL_RINGS];
     struct mqnic_ring *rx_ring[MQNIC_MAX_RX_RINGS];
     struct mqnic_cq_ring *rx_cpl_ring[MQNIC_MAX_RX_CPL_RINGS];
+    struct mqnic_port *ports[MQNIC_MAX_PORTS];
 
     struct hwtstamp_config hwts_config;
 };
@@ -257,6 +274,10 @@ extern const struct file_operations mqnic_fops;
 void mqnic_update_stats(struct net_device *ndev);
 int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr);
 void mqnic_destroy_netdev(struct net_device *ndev);
+
+// mqnic_port.c
+int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr, int index, u8 __iomem *hw_addr);
+void mqnic_destroy_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr);
 
 // mqnic_ptp.c
 void mqnic_register_phc(struct mqnic_dev *mdev);

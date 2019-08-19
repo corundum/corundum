@@ -406,6 +406,9 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
     if (priv->rx_cpl_queue_count > MQNIC_MAX_RX_CPL_RINGS)
         priv->rx_cpl_queue_count = MQNIC_MAX_RX_CPL_RINGS;
 
+    if (priv->port_count > MQNIC_MAX_PORTS)
+        priv->port_count = MQNIC_MAX_PORTS;
+
     // TODO use all queues
     priv->event_queue_count = 1;
     priv->tx_queue_count = 1;
@@ -489,10 +492,14 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
         }
     }
 
-    // scheduler queue enable
-    iowrite32(0xffffffff, hw_addr+priv->port_offset+0x0200);
-    // scheduler global enable
-    iowrite32(0xffffffff, hw_addr+priv->port_offset+0x0300);
+    for (k = 0; k < priv->port_count; k++)
+    {
+        ret = mqnic_create_port(priv, &priv->ports[k], k, hw_addr+priv->port_offset+k*priv->port_stride);
+        if (ret)
+        {
+            goto fail;
+        }
+    }
 
     // entry points
     ndev->netdev_ops = &mqnic_netdev_ops;
@@ -588,6 +595,14 @@ void mqnic_destroy_netdev(struct net_device *ndev)
         if (priv->rx_cpl_ring[k])
         {
             mqnic_destroy_cq_ring(priv, &priv->rx_cpl_ring[k]);
+        }
+    }
+
+    for (k = 0; k < MQNIC_MAX_PORTS; k++)
+    {
+        if (priv->ports[k])
+        {
+            mqnic_destroy_port(priv, &priv->ports[k]);
         }
     }
 

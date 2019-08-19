@@ -45,6 +45,20 @@ either expressed or implied, of The Regents of the University of California.
 
 struct mqnic;
 
+struct mqnic_port {
+    struct mqnic *mqnic;
+    struct mqnic_if *mqnic_if;
+
+    volatile uint8_t *regs;
+
+    uint32_t port_id;
+
+    uint32_t sched_count;
+    uint32_t sched_offset;
+    uint32_t sched_stride;
+    uint32_t sched_type;
+};
+
 struct mqnic_if {
     struct mqnic *mqnic;
 
@@ -67,6 +81,8 @@ struct mqnic_if {
     uint32_t port_count;
     uint32_t port_offset;
     uint32_t port_stride;
+
+    struct mqnic_port ports[MQNIC_MAX_PORTS];
 };
 
 struct mqnic {

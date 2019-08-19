@@ -125,6 +125,22 @@ struct mqnic *mqnic_open(const char *dev_name)
             interface->rx_queue_count = MQNIC_MAX_RX_RINGS;
         if (interface->rx_cpl_queue_count > MQNIC_MAX_RX_CPL_RINGS)
             interface->rx_cpl_queue_count = MQNIC_MAX_RX_CPL_RINGS;
+
+        if (interface->port_count > MQNIC_MAX_PORTS)
+            interface->port_count = MQNIC_MAX_PORTS;
+
+        for (int l = 0; l < interface->port_count; l++)
+        {
+            struct mqnic_port *port = &interface->ports[l];
+            port->regs = interface->regs + interface->port_offset + interface->port_stride*l;
+
+            port->port_id = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_ID);
+
+            port->sched_count = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_COUNT);
+            port->sched_offset = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_OFFSET);
+            port->sched_stride = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_STRIDE);
+            port->sched_type = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_TYPE);
+        }
     }
 
     return dev;

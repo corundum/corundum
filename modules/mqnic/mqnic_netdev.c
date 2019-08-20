@@ -509,17 +509,17 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 
     // set up features
     ndev->hw_features = 0;
-    
-    if (1) // TODO check flag
+
+    if (priv->if_features & MQNIC_IF_FEATURE_RX_CSUM)
     {
         ndev->hw_features |= NETIF_F_RXCSUM;
     }
 
-    if (0) // TODO check flag
+    if (priv->if_features & MQNIC_IF_FEATURE_TX_CSUM)
     {
-        ndev->hw_features |= NETIF_F_HW_CSUM;
+        //ndev->hw_features |= NETIF_F_HW_CSUM;
     }
-    
+
     ndev->features = ndev->hw_features | NETIF_F_HIGHDMA;
     ndev->hw_features |= 0;
 

@@ -295,6 +295,11 @@ initial begin
         write_strobe_pipeline_reg[i] = 0;
         req_tag_pipeline_reg[i] = 0;
     end
+
+    for (i = 0; i < OP_TABLE_SIZE; i = i + 1) begin
+        op_table_queue[i] = 0;
+        op_table_queue_ptr[i] = 0;
+    end
 end
 
 integer j;

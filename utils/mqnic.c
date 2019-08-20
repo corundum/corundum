@@ -99,6 +99,7 @@ struct mqnic *mqnic_open(const char *dev_name)
         interface->csr_regs = interface->regs + dev->if_csr_offset;
 
         interface->if_id = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_ID);
+        interface->if_features = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_FEATURES);
 
         interface->event_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_EVENT_QUEUE_COUNT);
         interface->event_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_EVENT_QUEUE_OFFSET);
@@ -135,6 +136,7 @@ struct mqnic *mqnic_open(const char *dev_name)
             port->regs = interface->regs + interface->port_offset + interface->port_stride*l;
 
             port->port_id = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_ID);
+            port->port_features = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_FEATURES);
 
             port->sched_count = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_COUNT);
             port->sched_offset = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_OFFSET);

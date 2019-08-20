@@ -52,6 +52,7 @@ struct mqnic_port {
     volatile uint8_t *regs;
 
     uint32_t port_id;
+    uint32_t port_features;
 
     uint32_t sched_count;
     uint32_t sched_offset;
@@ -66,6 +67,7 @@ struct mqnic_if {
     volatile uint8_t *csr_regs;
 
     uint32_t if_id;
+    uint32_t if_features;
 
     uint32_t event_queue_count;
     uint32_t event_queue_offset;

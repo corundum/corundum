@@ -122,6 +122,11 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_IF_REG_PORT_OFFSET          0x0044
 #define MQNIC_IF_REG_PORT_STRIDE          0x0048
 
+#define MQNIC_IF_FEATURE_RSS              (1 << 0)
+#define MQNIC_IF_FEATURE_PTP_TS           (1 << 4)
+#define MQNIC_IF_FEATURE_TX_CSUM          (1 << 8)
+#define MQNIC_IF_FEATURE_RX_CSUM          (1 << 9)
+
 // Port CSRs
 #define MQNIC_PORT_REG_PORT_ID                    0x0000
 #define MQNIC_PORT_REG_PORT_FEATURES              0x0004
@@ -149,6 +154,11 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_NS      0x0114
 #define MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L   0x0118
 #define MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H   0x011C
+
+#define MQNIC_PORT_FEATURE_RSS                    (1 << 0)
+#define MQNIC_PORT_FEATURE_PTP_TS                 (1 << 4)
+#define MQNIC_PORT_FEATURE_TX_CSUM                (1 << 8)
+#define MQNIC_PORT_FEATURE_RX_CSUM                (1 << 9)
 
 #define MQNIC_QUEUE_STRIDE        0x00000020
 #define MQNIC_CPL_QUEUE_STRIDE    0x00000020

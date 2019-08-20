@@ -763,7 +763,12 @@ always @(posedge clk) begin
 
         case ({axil_ctrl_araddr[15:2], 2'b00})
             16'h0000: axil_ctrl_rdata_reg <= 32'd0;       // port_id
-            16'h0004: axil_ctrl_rdata_reg <= 32'd0;       // port_features
+            16'h0004: begin
+                // port_features
+                axil_ctrl_rdata_reg[4] <= PTP_TS_ENABLE;
+                axil_ctrl_rdata_reg[8] <= TX_CHECKSUM_ENABLE;
+                axil_ctrl_rdata_reg[9] <= RX_CHECKSUM_ENABLE;
+            end
             16'h0010: axil_ctrl_rdata_reg <= 1;           // scheduler_count
             16'h0014: axil_ctrl_rdata_reg <= 24'h040000;  // scheduler_offset
             16'h0018: axil_ctrl_rdata_reg <= 24'h040000;  // scheduler_stride

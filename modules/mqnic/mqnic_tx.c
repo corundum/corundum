@@ -31,6 +31,7 @@ either expressed or implied, of The Regents of the University of California.
 
 */
 
+#include <linux/version.h>
 #include "mqnic.h"
 
 int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr, int size, int stride, int index, u8 __iomem *hw_addr)
@@ -417,7 +418,11 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
     //__netdev_tx_sent_queue(ring->tx_queue, tx_info->len, skb->xmit_more);
 
     // enqueue on NIC
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,2,0)
+    if (unlikely(!netdev_xmit_more() || stop_queue))
+#else
     if (unlikely(!skb->xmit_more || stop_queue))
+#endif
     {
         dma_wmb();
         mqnic_tx_write_head_ptr(ring);

@@ -118,6 +118,11 @@ MQNIC_IF_REG_PORT_COUNT          = 0x0040
 MQNIC_IF_REG_PORT_OFFSET         = 0x0044
 MQNIC_IF_REG_PORT_STRIDE         = 0x0048
 
+MQNIC_IF_FEATURE_RSS             = (1 << 0)
+MQNIC_IF_FEATURE_PTP_TS          = (1 << 4)
+MQNIC_IF_FEATURE_TX_CSUM         = (1 << 8)
+MQNIC_IF_FEATURE_RX_CSUM         = (1 << 9)
+
 # Port CSRs
 MQNIC_PORT_REG_PORT_ID                    = 0x0000
 MQNIC_PORT_REG_PORT_FEATURES              = 0x0004
@@ -145,6 +150,11 @@ MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_FNS     = 0x0110
 MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_NS      = 0x0114
 MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L   = 0x0118
 MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H   = 0x011C
+
+MQNIC_PORT_FEATURE_RSS                    = (1 << 0)
+MQNIC_PORT_FEATURE_PTP_TS                 = (1 << 4)
+MQNIC_PORT_FEATURE_TX_CSUM                = (1 << 8)
+MQNIC_PORT_FEATURE_RX_CSUM                = (1 << 9)
 
 MQNIC_QUEUE_BASE_ADDR_REG       = 0x00
 MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG = 0x08
@@ -572,16 +582,18 @@ class Port(object):
     def init(self):
         # Read ID registers
         self.port_id = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_ID)
-        print("Port ID: {:#010x}".format(self.port_id));
+        print("Port ID: {:#010x}".format(self.port_id))
+        self.port_features = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_FEATURES)
+        print("Port features: {:#010x}".format(self.port_features))
 
         self.sched_count = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_COUNT)
-        print("Port count: {}".format(self.sched_count))
+        print("Scheduler count: {}".format(self.sched_count))
         self.sched_offset = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_OFFSET)
-        print("Port offset: {:#010x}".format(self.sched_offset))
+        print("Scheduler offset: {:#010x}".format(self.sched_offset))
         self.sched_stride = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_STRIDE)
-        print("Port stride: {:#010x}".format(self.sched_stride))
+        print("Scheduler stride: {:#010x}".format(self.sched_stride))
         self.sched_type = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_TYPE)
-        print("Port type: {:#010x}".format(self.sched_type))
+        print("Scheduler type: {:#010x}".format(self.sched_type))
 
         self.schedulers = []
 
@@ -624,7 +636,9 @@ class Interface(object):
 
         # Read ID registers
         self.if_id = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_IF_ID)
-        print("IF ID: {:#010x}".format(self.if_id));
+        print("IF ID: {:#010x}".format(self.if_id))
+        self.if_features = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_IF_FEATURES)
+        print("IF features: {:#010x}".format(self.if_features))
 
         self.event_queue_count = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_EVENT_QUEUE_COUNT)
         print("Event queue count: {}".format(self.event_queue_count))

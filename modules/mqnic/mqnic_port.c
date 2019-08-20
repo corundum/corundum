@@ -96,3 +96,17 @@ void mqnic_destroy_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr)
     kfree(port);
 }
 
+int mqnic_activate_port(struct mqnic_priv *priv, struct mqnic_port *port)
+{
+    // enable schedulers
+    iowrite32(0xffffffff, port->hw_addr+MQNIC_PORT_REG_SCHED_ENABLE);
+
+    return 0;
+}
+
+void mqnic_deactivate_port(struct mqnic_priv *priv, struct mqnic_port *port)
+{
+    // disable schedulers
+    iowrite32(0, port->hw_addr+MQNIC_PORT_REG_SCHED_ENABLE);
+}
+

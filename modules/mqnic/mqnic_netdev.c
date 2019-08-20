@@ -367,6 +367,8 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
     // read ID registers
     priv->if_id = ioread32(priv->csr_hw_addr+MQNIC_IF_REG_IF_ID);
     dev_info(dev, "IF ID: 0x%08x", priv->if_id);
+    priv->if_features = ioread32(priv->csr_hw_addr+MQNIC_IF_REG_IF_FEATURES);
+    dev_info(dev, "IF features: 0x%08x", priv->if_features);
 
     priv->event_queue_count = ioread32(priv->csr_hw_addr+MQNIC_IF_REG_EVENT_QUEUE_COUNT);
     dev_info(dev, "Event queue count: %d", priv->event_queue_count);

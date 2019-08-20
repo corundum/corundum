@@ -56,6 +56,8 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr, int
     // read ID registers
     port->port_id = ioread32(port->hw_addr+MQNIC_PORT_REG_PORT_ID);
     dev_info(dev, "Port ID: 0x%08x", port->port_id);
+    port->port_features = ioread32(port->hw_addr+MQNIC_PORT_REG_PORT_FEATURES);
+    dev_info(dev, "Port features: 0x%08x", port->port_features);
 
     port->sched_count = ioread32(port->hw_addr+MQNIC_PORT_REG_SCHED_COUNT);
     dev_info(dev, "Scheduler count: %d", port->sched_count);

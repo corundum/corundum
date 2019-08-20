@@ -237,6 +237,7 @@ struct mqnic_priv {
     bool port_up;
 
     u32 if_id;
+    u32 if_features;
     u32 event_queue_count;
     u32 event_queue_offset;
     u32 tx_queue_count;

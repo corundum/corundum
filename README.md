@@ -22,7 +22,7 @@ ultra RAM, enabling support for thousands of individually-controllable
 queues.  These queues are associated with interfaces, and each interface can
 have multiple ports, each with its own independent scheduler.  This enables
 extremely fine-grained control over packet transmission.  Coupled with PTP time
-syncronization, this enables high precision TDMA.
+synchronization, this enables high precision TDMA.
 
 Corundum currently supports Xilinx Ultrascale and Ultrascale Plus series
 devices.  Desgins are included for the following FPGA boards:
@@ -90,6 +90,12 @@ instances of tdma_ber_ch.
 TDMA scheduler module.  Generates TDMA timeslot index and timing signals from
 PTP time.
 
+#### tx_checksum module
+
+Transmit checksum computation and insertion module.  Computes 16 bit checksum
+of frame data with specified start offset, then inserts computed checksum at
+the specified position.
+
 #### tx_engine module
 
 Transmit engine.  Manages receive descriptor dequeue and fetch via DMA, packet
@@ -120,6 +126,7 @@ based on PTP time.
     tdma_ber_ch.v            : TDMA BER channel
     tdma_ber.v               : TDMA BER
     tdma_scheduler.v         : TDMA scheduler
+    tx_checksum.v            : Transmit checksum offload
     tx_engine.v              : Transmit engine
     tx_scheduler_rr.v        : Round robin transmit scheduler
     tx_scheduler_tdma_rr.v   : Round robin TDMA transmit scheduler

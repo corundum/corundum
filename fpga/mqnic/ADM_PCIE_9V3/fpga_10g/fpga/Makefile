@@ -22,6 +22,7 @@ SYN_FILES += rtl/common/tdma_ber.v
 SYN_FILES += rtl/common/tdma_ber_ch.v
 SYN_FILES += rtl/common/tx_engine.v
 SYN_FILES += rtl/common/rx_engine.v
+SYN_FILES += rtl/common/tx_checksum.v
 SYN_FILES += rtl/common/rx_checksum.v
 SYN_FILES += lib/eth/rtl/eth_mac_10g.v
 SYN_FILES += lib/eth/rtl/eth_mac_10g_fifo.v

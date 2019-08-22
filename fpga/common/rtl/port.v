@@ -624,12 +624,17 @@ wire [15:0]              rx_fifo_csum;
 wire                     rx_fifo_csum_valid;
 wire                     rx_fifo_csum_ready;
 
-// wire [15:0]              tx_csum;
-// wire                     tx_csum_valid;
+wire                     tx_csum_cmd_csum_enable;
+wire [7:0]               tx_csum_cmd_csum_start;
+wire [7:0]               tx_csum_cmd_csum_offset;
+wire                     tx_csum_cmd_valid;
+wire                     tx_csum_cmd_ready;
 
-// wire [15:0]              tx_fifo_csum;
-// wire                     tx_fifo_csum_valid;
-// wire                     tx_fifo_csum_ready;
+wire                     tx_fifo_csum_cmd_csum_enable;
+wire [7:0]               tx_fifo_csum_cmd_csum_start;
+wire [7:0]               tx_fifo_csum_cmd_csum_offset;
+wire                     tx_fifo_csum_cmd_valid;
+wire                     tx_fifo_csum_cmd_ready;
 
 // Interface DMA control
 wire [AXI_ADDR_WIDTH-1:0]    dma_tx_desc_addr;
@@ -1256,6 +1261,15 @@ tx_engine_inst (
     .s_axis_tx_desc_status_valid(dma_tx_desc_status_valid),
 
     /*
+     * Transmit checksum command output
+     */
+    .m_axis_tx_csum_cmd_csum_enable(tx_csum_cmd_csum_enable),
+    .m_axis_tx_csum_cmd_csum_start(tx_csum_cmd_csum_start),
+    .m_axis_tx_csum_cmd_csum_offset(tx_csum_cmd_csum_offset),
+    .m_axis_tx_csum_cmd_valid(tx_csum_cmd_valid),
+    .m_axis_tx_csum_cmd_ready(tx_csum_cmd_ready),
+
+    /*
      * Transmit timestamp input
      */
     .s_axis_tx_ptp_ts_96(s_axis_tx_ptp_ts_96),
@@ -1305,46 +1319,6 @@ tx_engine_inst (
      * Configuration
      */
     .enable(1'b1)
-);
-
-axis_fifo #(
-    .DEPTH(16),
-    .DATA_WIDTH(16),
-    .KEEP_ENABLE(0),
-    .LAST_ENABLE(0),
-    .ID_ENABLE(0),
-    .DEST_ENABLE(0),
-    .USER_ENABLE(0),
-    .FRAME_FIFO(0)
-)
-rx_csum_fifo (
-    .clk(clk),
-    .rst(rst),
-
-    // AXI input
-    .s_axis_tdata(rx_csum),
-    .s_axis_tkeep(0),
-    .s_axis_tvalid(rx_csum_valid),
-    .s_axis_tready(),
-    .s_axis_tlast(0),
-    .s_axis_tid(0),
-    .s_axis_tdest(0),
-    .s_axis_tuser(0),
-
-    // AXI output
-    .m_axis_tdata(rx_fifo_csum),
-    .m_axis_tkeep(),
-    .m_axis_tvalid(rx_fifo_csum_valid),
-    .m_axis_tready(rx_fifo_csum_ready),
-    .m_axis_tlast(),
-    .m_axis_tid(),
-    .m_axis_tdest(),
-    .m_axis_tuser(),
-
-    // Status
-    .status_overflow(),
-    .status_bad_frame(),
-    .status_good_frame()
 );
 
 rx_engine #(
@@ -1567,21 +1541,143 @@ if (RX_CHECKSUM_ENABLE) begin
         .m_axis_csum_valid(rx_csum_valid)
     );
 
+    axis_fifo #(
+        .DEPTH(16),
+        .DATA_WIDTH(16),
+        .KEEP_ENABLE(0),
+        .LAST_ENABLE(0),
+        .ID_ENABLE(0),
+        .DEST_ENABLE(0),
+        .USER_ENABLE(0),
+        .FRAME_FIFO(0)
+    )
+    rx_csum_fifo (
+        .clk(clk),
+        .rst(rst),
+
+        // AXI input
+        .s_axis_tdata(rx_csum),
+        .s_axis_tkeep(0),
+        .s_axis_tvalid(rx_csum_valid),
+        .s_axis_tready(),
+        .s_axis_tlast(0),
+        .s_axis_tid(0),
+        .s_axis_tdest(0),
+        .s_axis_tuser(0),
+
+        // AXI output
+        .m_axis_tdata(rx_fifo_csum),
+        .m_axis_tkeep(),
+        .m_axis_tvalid(rx_fifo_csum_valid),
+        .m_axis_tready(rx_fifo_csum_ready),
+        .m_axis_tlast(),
+        .m_axis_tid(),
+        .m_axis_tdest(),
+        .m_axis_tuser(),
+
+        // Status
+        .status_overflow(),
+        .status_bad_frame(),
+        .status_good_frame()
+    );
+
 end else begin
 
-    assign m_axis_rx_csum = 16'd0;
-    assign m_axis_rx_csum_valid = 1'b0;
+    assign rx_fifo_csum = 16'd0;
+    assign rx_fifo_csum_valid = 1'b0;
 
 end
 
 if (TX_CHECKSUM_ENABLE) begin
 
-    assign tx_axis_tdata = tx_axis_tdata_int;
-    assign tx_axis_tkeep = tx_axis_tkeep_int;
-    assign tx_axis_tvalid = tx_axis_tvalid_int;
-    assign tx_axis_tready_int = tx_axis_tready;
-    assign tx_axis_tlast = tx_axis_tlast_int;
-    assign tx_axis_tuser = tx_axis_tuser_int;
+    axis_fifo #(
+        .DEPTH(16),
+        .DATA_WIDTH(1+8+8),
+        .KEEP_ENABLE(0),
+        .LAST_ENABLE(0),
+        .ID_ENABLE(0),
+        .DEST_ENABLE(0),
+        .USER_ENABLE(0),
+        .FRAME_FIFO(0)
+    )
+    tx_csum_fifo (
+        .clk(clk),
+        .rst(rst),
+
+        // AXI input
+        .s_axis_tdata({tx_csum_cmd_csum_enable, tx_csum_cmd_csum_start, tx_csum_cmd_csum_offset}),
+        .s_axis_tkeep(0),
+        .s_axis_tvalid(tx_csum_cmd_valid),
+        .s_axis_tready(tx_csum_cmd_ready),
+        .s_axis_tlast(0),
+        .s_axis_tid(0),
+        .s_axis_tdest(0),
+        .s_axis_tuser(0),
+
+        // AXI output
+        .m_axis_tdata({tx_fifo_csum_cmd_csum_enable, tx_fifo_csum_cmd_csum_start, tx_fifo_csum_cmd_csum_offset}),
+        .m_axis_tkeep(),
+        .m_axis_tvalid(tx_fifo_csum_cmd_valid),
+        .m_axis_tready(tx_fifo_csum_cmd_ready),
+        .m_axis_tlast(),
+        .m_axis_tid(),
+        .m_axis_tdest(),
+        .m_axis_tuser(),
+
+        // Status
+        .status_overflow(),
+        .status_bad_frame(),
+        .status_good_frame()
+    );
+
+    tx_checksum #(
+        .DATA_WIDTH(AXI_DATA_WIDTH),
+        .ID_ENABLE(0),
+        .DEST_ENABLE(0),
+        .USER_ENABLE(1),
+        .USER_WIDTH(1),
+        .USE_INIT_VALUE(0),
+        .DATA_FIFO_DEPTH(4096),
+        .CHECKSUM_FIFO_DEPTH(64)
+    )
+    tx_checksum_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * AXI input
+         */
+        .s_axis_tdata(tx_axis_tdata_int),
+        .s_axis_tkeep(tx_axis_tkeep_int),
+        .s_axis_tvalid(tx_axis_tvalid_int),
+        .s_axis_tready(tx_axis_tready_int),
+        .s_axis_tlast(tx_axis_tlast_int),
+        .s_axis_tid(0),
+        .s_axis_tdest(0),
+        .s_axis_tuser(tx_axis_tuser_int),
+
+        /*
+         * AXI output
+         */
+        .m_axis_tdata(tx_axis_tdata),
+        .m_axis_tkeep(tx_axis_tkeep),
+        .m_axis_tvalid(tx_axis_tvalid),
+        .m_axis_tready(tx_axis_tready),
+        .m_axis_tlast(tx_axis_tlast),
+        .m_axis_tid(),
+        .m_axis_tdest(),
+        .m_axis_tuser(tx_axis_tuser),
+
+        /*
+         * Control
+         */
+        .s_axis_cmd_csum_enable(tx_fifo_csum_cmd_csum_enable),
+        .s_axis_cmd_csum_start(tx_fifo_csum_cmd_csum_start),
+        .s_axis_cmd_csum_offset(tx_fifo_csum_cmd_csum_offset),
+        .s_axis_cmd_csum_init(16'd0),
+        .s_axis_cmd_valid(tx_fifo_csum_cmd_valid),
+        .s_axis_cmd_ready(tx_fifo_csum_cmd_ready)
+    );
 
 end else begin
 
@@ -1591,6 +1687,8 @@ end else begin
     assign tx_axis_tready_int = tx_axis_tready;
     assign tx_axis_tlast = tx_axis_tlast_int;
     assign tx_axis_tuser = tx_axis_tuser_int;
+
+    assign tx_csum_cmd_ready = 1'b1;
 
 end
 

@@ -38,6 +38,9 @@ import os
 import pcie
 import pcie_us
 import xgmii_ep
+import axis_ep
+import eth_ep
+import udp_ep
 
 import struct
 
@@ -55,6 +58,7 @@ srcs.append("../rtl/common/queue_manager.v")
 srcs.append("../rtl/common/cpl_queue_manager.v")
 srcs.append("../rtl/common/tx_engine.v")
 srcs.append("../rtl/common/rx_engine.v")
+srcs.append("../rtl/common/tx_checksum.v")
 srcs.append("../rtl/common/rx_checksum.v")
 srcs.append("../rtl/common/tx_scheduler_rr.v")
 srcs.append("../rtl/common/tdma_scheduler.v")
@@ -689,8 +693,61 @@ def bench():
         yield delay(100)
 
         yield clk.posedge
-        print("test 4: multiple small packets")
+        print("test 4: checksum tests")
         current_test.next = 4
+
+        test_frame = udp_ep.UDPFrame()
+        test_frame.eth_dest_mac = 0xDAD1D2D3D4D5
+        test_frame.eth_src_mac = 0x5A5152535455
+        test_frame.eth_type = 0x0800
+        test_frame.ip_version = 4
+        test_frame.ip_ihl = 5
+        test_frame.ip_length = None
+        test_frame.ip_identification = 0
+        test_frame.ip_flags = 2
+        test_frame.ip_fragment_offset = 0
+        test_frame.ip_ttl = 64
+        test_frame.ip_protocol = 0x11
+        test_frame.ip_header_checksum = None
+        test_frame.ip_source_ip = 0xc0a80164
+        test_frame.ip_dest_ip = 0xc0a80165
+        test_frame.udp_source_port = 1
+        test_frame.udp_dest_port = 2
+        test_frame.udp_length = None
+        test_frame.udp_checksum = None
+        test_frame.payload = bytearray((x%256 for x in range(256)))
+
+        test_frame.set_udp_pseudo_header_checksum()
+
+        axis_frame = test_frame.build_axis()
+
+        yield from driver.interfaces[0].start_xmit(axis_frame.data, 0, 34, 6)
+
+        yield sfp_1_sink.wait()
+
+        pkt = sfp_1_sink.recv()
+        print(pkt)
+
+        sfp_1_source.send(pkt)
+
+        yield driver.interfaces[0].wait()
+
+        pkt = driver.interfaces[0].recv()
+
+        print(pkt)
+
+        assert pkt.rx_checksum == frame_checksum(pkt.data)
+
+        check_frame = udp_ep.UDPFrame()
+        check_frame.parse_axis(pkt.data)
+
+        assert check_frame.verify_checksums()
+
+        yield delay(100)
+
+        yield clk.posedge
+        print("test 5: multiple small packets")
+        current_test.next = 5
 
         count = 64
 
@@ -717,8 +774,8 @@ def bench():
         yield delay(100)
 
         yield clk.posedge
-        print("test 5: multiple large packets")
-        current_test.next = 5
+        print("test 6: multiple large packets")
+        current_test.next = 6
 
         count = 64
 

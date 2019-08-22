@@ -207,6 +207,15 @@ module tx_engine #
     input  wire                             s_axis_tx_desc_status_valid,
 
     /*
+     * Transmit checksum command output
+     */
+    output wire                             m_axis_tx_csum_cmd_csum_enable,
+    output wire [7:0]                       m_axis_tx_csum_cmd_csum_start,
+    output wire [7:0]                       m_axis_tx_csum_cmd_csum_offset,
+    output wire                             m_axis_tx_csum_cmd_valid,
+    input  wire                             m_axis_tx_csum_cmd_ready,
+
+    /*
      * Transmit timestamp input
      */
     input  wire [95:0]                      s_axis_tx_ptp_ts_96,
@@ -355,6 +364,11 @@ reg [AXI_DMA_TAG_WIDTH-1:0] m_axis_tx_desc_tag_reg = {AXI_DMA_TAG_WIDTH{1'b0}}, 
 reg m_axis_tx_desc_user_reg = 1'b0, m_axis_tx_desc_user_next;
 reg m_axis_tx_desc_valid_reg = 1'b0, m_axis_tx_desc_valid_next;
 
+reg m_axis_tx_csum_cmd_csum_enable_reg = 1'b0, m_axis_tx_csum_cmd_csum_enable_next;
+reg [7:0] m_axis_tx_csum_cmd_csum_start_reg = 7'd0, m_axis_tx_csum_cmd_csum_start_next;
+reg [7:0] m_axis_tx_csum_cmd_csum_offset_reg = 7'd0, m_axis_tx_csum_cmd_csum_offset_next;
+reg m_axis_tx_csum_cmd_valid_reg = 1'b0, m_axis_tx_csum_cmd_valid_next;
+
 reg s_axis_tx_ptp_ts_ready_reg = 1'b0, s_axis_tx_ptp_ts_ready_next;
 
 reg [PCIE_ADDR_WIDTH-1:0] desc_fetch_pcie_axi_dma_read_desc_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, desc_fetch_pcie_axi_dma_read_desc_pcie_addr_next;
@@ -380,6 +394,9 @@ reg [QUEUE_INDEX_WIDTH-1:0] desc_table_queue[DESC_TABLE_SIZE-1:0];
 reg [QUEUE_PTR_WIDTH-1:0] desc_table_queue_ptr[DESC_TABLE_SIZE-1:0];
 reg [CPL_QUEUE_INDEX_WIDTH-1:0] desc_table_cpl_queue[DESC_TABLE_SIZE-1:0];
 reg [QUEUE_OP_TAG_WIDTH-1:0] desc_table_queue_op_tag[DESC_TABLE_SIZE-1:0];
+reg [6:0] desc_table_csum_start[DESC_TABLE_SIZE-1:0];
+reg [7:0] desc_table_csum_offset[DESC_TABLE_SIZE-1:0];
+reg desc_table_csum_enable[DESC_TABLE_SIZE-1:0];
 reg [AXI_DMA_LEN_WIDTH-1:0] desc_table_len[DESC_TABLE_SIZE-1:0];
 reg [PCIE_ADDR_WIDTH-1:0] desc_table_pcie_addr[DESC_TABLE_SIZE-1:0];
 reg [CL_PKT_TABLE_SIZE-1:0] desc_table_pkt[DESC_TABLE_SIZE-1:0];
@@ -467,6 +484,11 @@ assign m_axis_tx_desc_len = m_axis_tx_desc_len_reg;
 assign m_axis_tx_desc_tag = m_axis_tx_desc_tag_reg;
 assign m_axis_tx_desc_user = m_axis_tx_desc_user_reg;
 assign m_axis_tx_desc_valid = m_axis_tx_desc_valid_reg;
+
+assign m_axis_tx_csum_cmd_csum_enable = m_axis_tx_csum_cmd_csum_enable_reg;
+assign m_axis_tx_csum_cmd_csum_start = m_axis_tx_csum_cmd_csum_start_reg;
+assign m_axis_tx_csum_cmd_csum_offset = m_axis_tx_csum_cmd_csum_offset_reg;
+assign m_axis_tx_csum_cmd_valid = m_axis_tx_csum_cmd_valid_reg;
 
 assign s_axis_tx_ptp_ts_ready = s_axis_tx_ptp_ts_ready_reg;
 
@@ -610,6 +632,11 @@ always @(posedge clk) begin
         if (ram_wr_cmd_addr[CL_DESC_TABLE_SIZE+5] == 0) begin
             // descriptors
             // TODO byte enables
+            if (TX_CHECKSUM_ENABLE) begin
+                desc_table_csum_start[ram_wr_cmd_addr[(CL_DESC_TABLE_SIZE+5)-1:5]] <= ram_wr_cmd_data[23:16];
+                desc_table_csum_offset[ram_wr_cmd_addr[(CL_DESC_TABLE_SIZE+5)-1:5]] <= ram_wr_cmd_data[30:24];
+                desc_table_csum_enable[ram_wr_cmd_addr[(CL_DESC_TABLE_SIZE+5)-1:5]] <= ram_wr_cmd_data[31];
+            end
             desc_table_len[ram_wr_cmd_addr[(CL_DESC_TABLE_SIZE+5)-1:5]] <= ram_wr_cmd_data[64:32];
             desc_table_pcie_addr[ram_wr_cmd_addr[(CL_DESC_TABLE_SIZE+5)-1:5]] <= ram_wr_cmd_data[127:64];
         end
@@ -726,6 +753,11 @@ always @* begin
     m_axis_tx_desc_tag_next = m_axis_tx_desc_tag_reg;
     m_axis_tx_desc_user_next = m_axis_tx_desc_user_reg;
     m_axis_tx_desc_valid_next = m_axis_tx_desc_valid_reg && !m_axis_tx_desc_ready;
+
+    m_axis_tx_csum_cmd_csum_enable_next = m_axis_tx_csum_cmd_csum_enable_reg;
+    m_axis_tx_csum_cmd_csum_start_next = m_axis_tx_csum_cmd_csum_start_reg;
+    m_axis_tx_csum_cmd_csum_offset_next = m_axis_tx_csum_cmd_csum_offset_reg;
+    m_axis_tx_csum_cmd_valid_next = m_axis_tx_csum_cmd_valid_reg && !m_axis_tx_csum_cmd_ready;
 
     s_axis_tx_ptp_ts_ready_next = 1'b0;
 
@@ -870,7 +902,7 @@ always @* begin
         if (desc_table_invalid[desc_table_tx_start_ptr_reg & DESC_PTR_MASK]) begin
             // invalid entry; skip
             desc_table_tx_start_en = 1'b1;
-        end else if (desc_table_data_fetched[desc_table_tx_start_ptr_reg & DESC_PTR_MASK] && !m_axis_tx_desc_valid) begin
+        end else if (desc_table_data_fetched[desc_table_tx_start_ptr_reg & DESC_PTR_MASK] && !m_axis_tx_desc_valid && (!m_axis_tx_csum_cmd_valid || !TX_CHECKSUM_ENABLE)) begin
             // update entry in descriptor table
             desc_table_tx_start_en = 1'b1;
 
@@ -880,6 +912,14 @@ always @* begin
             m_axis_tx_desc_tag_next = desc_table_tx_start_ptr_reg & DESC_PTR_MASK;
             m_axis_tx_desc_user_next = 1'b0;
             m_axis_tx_desc_valid_next = 1'b1;
+
+            // send TX checksum command
+            if (TX_CHECKSUM_ENABLE) begin
+                m_axis_tx_csum_cmd_csum_enable_next = desc_table_csum_enable[desc_table_tx_start_ptr_reg & DESC_PTR_MASK];
+                m_axis_tx_csum_cmd_csum_start_next = desc_table_csum_start[desc_table_tx_start_ptr_reg & DESC_PTR_MASK];
+                m_axis_tx_csum_cmd_csum_offset_next = desc_table_csum_start[desc_table_tx_start_ptr_reg & DESC_PTR_MASK] + desc_table_csum_offset[desc_table_tx_start_ptr_reg & DESC_PTR_MASK];
+                m_axis_tx_csum_cmd_valid_next = 1'b1;
+            end
         end
     end
 
@@ -1026,6 +1066,7 @@ always @(posedge clk) begin
         m_axis_pcie_axi_dma_write_desc_valid_reg <= 1'b0;
         m_axis_tx_desc_valid_reg <= 1'b0;
         s_axis_tx_ptp_ts_ready_reg <= 1'b0;
+        m_axis_tx_csum_cmd_valid_reg <= 1'b0;
 
         desc_fetch_pcie_axi_dma_read_desc_valid_reg <= 1'b0;
         pkt_fetch_pcie_axi_dma_read_desc_valid_reg <= 1'b0;
@@ -1057,6 +1098,7 @@ always @(posedge clk) begin
         m_axis_pcie_axi_dma_write_desc_valid_reg <= m_axis_pcie_axi_dma_write_desc_valid_next;
         m_axis_tx_desc_valid_reg <= m_axis_tx_desc_valid_next;
         s_axis_tx_ptp_ts_ready_reg <= s_axis_tx_ptp_ts_ready_next;
+        m_axis_tx_csum_cmd_valid_reg <= m_axis_tx_csum_cmd_valid_next;
 
         desc_fetch_pcie_axi_dma_read_desc_valid_reg <= desc_fetch_pcie_axi_dma_read_desc_valid_next;
         pkt_fetch_pcie_axi_dma_read_desc_valid_reg <= pkt_fetch_pcie_axi_dma_read_desc_valid_next;
@@ -1144,6 +1186,10 @@ always @(posedge clk) begin
     m_axis_tx_desc_len_reg <= m_axis_tx_desc_len_next;
     m_axis_tx_desc_tag_reg <= m_axis_tx_desc_tag_next;
     m_axis_tx_desc_user_reg <= m_axis_tx_desc_user_next;
+
+    m_axis_tx_csum_cmd_csum_enable_reg <= m_axis_tx_csum_cmd_csum_enable_next;
+    m_axis_tx_csum_cmd_csum_start_reg <= m_axis_tx_csum_cmd_csum_start_next;
+    m_axis_tx_csum_cmd_csum_offset_reg <= m_axis_tx_csum_cmd_csum_offset_next;
 
     desc_fetch_pcie_axi_dma_read_desc_pcie_addr_reg <= desc_fetch_pcie_axi_dma_read_desc_pcie_addr_next;
     desc_fetch_pcie_axi_dma_read_desc_axi_addr_reg <= desc_fetch_pcie_axi_dma_read_desc_axi_addr_next;

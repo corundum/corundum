@@ -882,7 +882,7 @@ class Interface(object):
         # replenish buffers
         yield from ring.refill_buffers()
 
-    def start_xmit(self, skb, tx_ring=None):
+    def start_xmit(self, skb, tx_ring=None, csum_start=None, csum_offset=None):
         if not self.port_up:
             return
 
@@ -910,8 +910,13 @@ class Interface(object):
         # put data in packet buffer
         pkt[1][0:len(data)] = data
 
+        csum_cmd = 0
+
+        if csum_start is not None and csum_offset is not None:
+            csum_cmd = 0x8000 | (csum_offset << 8) | csum_start
+
         # write descriptor
-        struct.pack_into("<LLQ", ring.buf, index*16, 0, len(data), pkt[0])
+        struct.pack_into("<HHLQ", ring.buf, index*16, 0, csum_cmd, len(data), pkt[0])
 
         ring.head_ptr += 1;
 

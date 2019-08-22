@@ -364,13 +364,13 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
     // TX hardware checksum
     if (skb->ip_summed == CHECKSUM_PARTIAL) {
-        unsigned int csum_start_off = skb_checksum_start_offset(skb);
-        unsigned int csum_index_off = csum_start_off + skb->csum_offset;
+        unsigned int csum_start = skb_checksum_start_offset(skb);
+        unsigned int csum_offset = skb->csum_offset;
 
-        dev_info(&priv->mdev->pdev->dev, "mqnic_start_xmit Hardware checksum requested start %d offset %d", csum_start_off, csum_index_off);
-        
-        if (1 || csum_start_off > 127 || csum_index_off > 255 || csum_start_off & 1 || csum_index_off & 1)
+        if (csum_start > 255 || csum_offset > 127)
         {
+            dev_info(&priv->mdev->pdev->dev, "mqnic_start_xmit Hardware checksum fallback start %d offset %d", csum_start, csum_offset);
+
             // offset out of range, fall back on software checksum
             if (skb_checksum_help(skb))
             {
@@ -381,8 +381,12 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
         }
         else
         {
-            tx_desc->tx_csum_cmd = 0x8000 | (csum_start_off << 8) | (csum_index_off);
+            tx_desc->tx_csum_cmd = 0x8000 | (csum_offset << 8) | (csum_start);
         }
+    }
+    else
+    {
+        tx_desc->tx_csum_cmd = 0;
     }
 
     ring->packets++;

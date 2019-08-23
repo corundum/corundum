@@ -269,6 +269,7 @@ parameter RX_PKT_TABLE_SIZE = 8;
 
 // Scheduler parameters (port)
 parameter TX_SCHEDULER = "TDMA_RR";
+parameter TX_SCHEDULER_OP_TABLE_SIZE = 32;
 parameter TDMA_INDEX_WIDTH = 6;
 
 // Timstamping parameters (port)
@@ -2077,6 +2078,7 @@ generate
             .RX_DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
             .RX_PKT_TABLE_SIZE(RX_PKT_TABLE_SIZE),
             .TX_SCHEDULER(TX_SCHEDULER),
+            .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
             .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
             .INT_WIDTH(8),
             .QUEUE_PTR_WIDTH(16),

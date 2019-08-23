@@ -70,6 +70,8 @@ module port #
     parameter RX_PKT_TABLE_SIZE = 8,
     // Transmit scheduler type
     parameter TX_SCHEDULER = "RR",
+    // Scheduler operation table size
+    parameter TX_SCHEDULER_OP_TABLE_SIZE = 32,
     // Scheduler TDMA index width
     parameter TDMA_INDEX_WIDTH = 8,
     // Queue element pointer width
@@ -980,7 +982,7 @@ if (TX_SCHEDULER == "RR") begin
         .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
         .AXI_DMA_LEN_WIDTH(AXI_DMA_LEN_WIDTH),
         .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-        .OP_TABLE_SIZE(16),
+        .OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
         .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
         .PIPELINE(3)
     )

@@ -84,6 +84,8 @@ module interface #
     parameter RX_PKT_TABLE_SIZE = 8,
     // Transmit scheduler type
     parameter TX_SCHEDULER = "RR",
+    // Scheduler operation table size
+    parameter TX_SCHEDULER_OP_TABLE_SIZE = 32,
     // Scheduler TDMA index width
     parameter TDMA_INDEX_WIDTH = 8,
     // Interrupt number width
@@ -2366,6 +2368,7 @@ generate
             .RX_DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
             .RX_PKT_TABLE_SIZE(RX_PKT_TABLE_SIZE),
             .TX_SCHEDULER(TX_SCHEDULER),
+            .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
             .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
             .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
             .PTP_TS_ENABLE(PTP_TS_ENABLE),

@@ -251,15 +251,15 @@ parameter PORTS_PER_IF = 1;
 parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF;
 
 // Queue manager parameters (interface)
-parameter EVENT_QUEUE_OP_TABLE_SIZE = 16;
-parameter TX_QUEUE_OP_TABLE_SIZE = 16;
-parameter RX_QUEUE_OP_TABLE_SIZE = 16;
-parameter TX_CPL_QUEUE_OP_TABLE_SIZE = 16;
-parameter RX_CPL_QUEUE_OP_TABLE_SIZE = 16;
-parameter TX_QUEUE_INDEX_WIDTH = 6;
-parameter RX_QUEUE_INDEX_WIDTH = 6;
-parameter TX_CPL_QUEUE_INDEX_WIDTH = 6;
-parameter RX_CPL_QUEUE_INDEX_WIDTH = 6;
+parameter EVENT_QUEUE_OP_TABLE_SIZE = 32;
+parameter TX_QUEUE_OP_TABLE_SIZE = 32;
+parameter RX_QUEUE_OP_TABLE_SIZE = 32;
+parameter TX_CPL_QUEUE_OP_TABLE_SIZE = 32;
+parameter RX_CPL_QUEUE_OP_TABLE_SIZE = 32;
+parameter TX_QUEUE_INDEX_WIDTH = 8;
+parameter RX_QUEUE_INDEX_WIDTH = 8;
+parameter TX_CPL_QUEUE_INDEX_WIDTH = 8;
+parameter RX_CPL_QUEUE_INDEX_WIDTH = 8;
 
 // TX and RX engine parameters (port)
 parameter TX_DESC_TABLE_SIZE = 32;

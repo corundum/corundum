@@ -236,9 +236,9 @@ parameter TX_CPL_QUEUE_INDEX_WIDTH = 6;
 parameter RX_CPL_QUEUE_INDEX_WIDTH = 6;
 
 // TX and RX engine parameters (port)
-parameter TX_DESC_TABLE_SIZE = 16;
+parameter TX_DESC_TABLE_SIZE = 32;
 parameter TX_PKT_TABLE_SIZE = 8;
-parameter RX_DESC_TABLE_SIZE = 16;
+parameter RX_DESC_TABLE_SIZE = 32;
 parameter RX_PKT_TABLE_SIZE = 8;
 
 // Scheduler parameters (port)

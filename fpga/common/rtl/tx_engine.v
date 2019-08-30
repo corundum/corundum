@@ -394,6 +394,7 @@ reg [QUEUE_INDEX_WIDTH-1:0] desc_table_queue[DESC_TABLE_SIZE-1:0];
 reg [QUEUE_PTR_WIDTH-1:0] desc_table_queue_ptr[DESC_TABLE_SIZE-1:0];
 reg [CPL_QUEUE_INDEX_WIDTH-1:0] desc_table_cpl_queue[DESC_TABLE_SIZE-1:0];
 reg [QUEUE_OP_TAG_WIDTH-1:0] desc_table_queue_op_tag[DESC_TABLE_SIZE-1:0];
+reg [QUEUE_OP_TAG_WIDTH-1:0] desc_table_cpl_queue_op_tag[DESC_TABLE_SIZE-1:0];
 reg [6:0] desc_table_csum_start[DESC_TABLE_SIZE-1:0];
 reg [7:0] desc_table_csum_offset[DESC_TABLE_SIZE-1:0];
 reg desc_table_csum_enable[DESC_TABLE_SIZE-1:0];
@@ -795,7 +796,7 @@ always @* begin
     desc_table_store_ptp_ts_en = 1'b0;
     desc_table_cpl_enqueue_start_en = 1'b0;
     desc_table_cpl_write_ptr = s_axis_cpl_enqueue_resp_tag & DESC_PTR_MASK;
-    desc_table_cpl_write_queue_op_tag = 0;
+    desc_table_cpl_write_queue_op_tag = s_axis_cpl_enqueue_resp_op_tag;
     desc_table_cpl_write_invalid = 1'b0;
     desc_table_cpl_write_en = 1'b0;
     desc_table_cpl_write_done_ptr = s_axis_pcie_axi_dma_write_desc_status_tag & DESC_PTR_MASK;
@@ -1024,7 +1025,7 @@ always @* begin
             desc_table_finish_en = 1'b1;
 
             // commit enqueue operation
-            m_axis_cpl_enqueue_commit_op_tag_next = desc_table_queue_op_tag[desc_table_finish_ptr_reg & DESC_PTR_MASK];
+            m_axis_cpl_enqueue_commit_op_tag_next = desc_table_cpl_queue_op_tag[desc_table_finish_ptr_reg & DESC_PTR_MASK];
             m_axis_cpl_enqueue_commit_valid_next = 1'b1;
 
             // return transmit request completion
@@ -1217,7 +1218,7 @@ always @(posedge clk) begin
         desc_table_ptp_ts[desc_table_store_ptp_ts_ptr_reg & DESC_PTR_MASK] <= desc_table_store_ptp_ts;
     end
     if (desc_table_cpl_write_en) begin
-        desc_table_queue_op_tag[desc_table_cpl_write_ptr & DESC_PTR_MASK] <= desc_table_cpl_write_queue_op_tag;
+        desc_table_cpl_queue_op_tag[desc_table_cpl_write_ptr & DESC_PTR_MASK] <= desc_table_cpl_write_queue_op_tag;
     end
 end
 

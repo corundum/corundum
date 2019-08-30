@@ -457,6 +457,7 @@ always @* begin
     csum_next = csum_reg;
     csum_offset_next = csum_offset_reg;
     csum_enable_next = csum_enable_reg;
+    csum_split_next = csum_split_reg;
 
     m_axis_tdata_int  = data_out_axis_tdata;
     m_axis_tkeep_int  = data_out_axis_tkeep;

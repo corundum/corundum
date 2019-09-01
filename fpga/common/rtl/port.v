@@ -126,6 +126,7 @@ module port #
     /*
      * TX descriptor dequeue response input
      */
+    input  wire [TX_QUEUE_INDEX_WIDTH-1:0]      s_axis_tx_desc_dequeue_resp_queue,
     input  wire [QUEUE_PTR_WIDTH-1:0]           s_axis_tx_desc_dequeue_resp_ptr,
     input  wire [PCIE_ADDR_WIDTH-1:0]           s_axis_tx_desc_dequeue_resp_addr,
     input  wire [TX_CPL_QUEUE_INDEX_WIDTH-1:0]  s_axis_tx_desc_dequeue_resp_cpl,
@@ -188,6 +189,7 @@ module port #
     /*
      * RX descriptor dequeue response input
      */
+    input  wire [RX_QUEUE_INDEX_WIDTH-1:0]      s_axis_rx_desc_dequeue_resp_queue,
     input  wire [QUEUE_PTR_WIDTH-1:0]           s_axis_rx_desc_dequeue_resp_ptr,
     input  wire [PCIE_ADDR_WIDTH-1:0]           s_axis_rx_desc_dequeue_resp_addr,
     input  wire [RX_CPL_QUEUE_INDEX_WIDTH-1:0]  s_axis_rx_desc_dequeue_resp_cpl,
@@ -1171,6 +1173,7 @@ tx_engine_inst (
     /*
      * Descriptor dequeue response input
      */
+    .s_axis_desc_dequeue_resp_queue(s_axis_tx_desc_dequeue_resp_queue),
     .s_axis_desc_dequeue_resp_ptr(s_axis_tx_desc_dequeue_resp_ptr),
     .s_axis_desc_dequeue_resp_addr(s_axis_tx_desc_dequeue_resp_addr),
     .s_axis_desc_dequeue_resp_cpl(s_axis_tx_desc_dequeue_resp_cpl),
@@ -1374,6 +1377,7 @@ rx_engine_inst (
     /*
      * Descriptor dequeue response input
      */
+    .s_axis_desc_dequeue_resp_queue(s_axis_rx_desc_dequeue_resp_queue),
     .s_axis_desc_dequeue_resp_ptr(s_axis_rx_desc_dequeue_resp_ptr),
     .s_axis_desc_dequeue_resp_addr(s_axis_rx_desc_dequeue_resp_addr),
     .s_axis_desc_dequeue_resp_cpl(s_axis_rx_desc_dequeue_resp_cpl),

@@ -116,6 +116,7 @@ module rx_engine #
     /*
      * Descriptor dequeue response input
      */
+    input  wire [QUEUE_INDEX_WIDTH-1:0]     s_axis_desc_dequeue_resp_queue,
     input  wire [QUEUE_PTR_WIDTH-1:0]       s_axis_desc_dequeue_resp_ptr,
     input  wire [PCIE_ADDR_WIDTH-1:0]       s_axis_desc_dequeue_resp_addr,
     input  wire [CPL_QUEUE_INDEX_WIDTH-1:0] s_axis_desc_dequeue_resp_cpl,

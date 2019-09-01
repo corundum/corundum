@@ -537,6 +537,7 @@ wire [QUEUE_REQ_TAG_WIDTH-1:0]      tx_desc_dequeue_req_tag;
 wire                                tx_desc_dequeue_req_valid;
 wire                                tx_desc_dequeue_req_ready;
 
+wire [TX_QUEUE_INDEX_WIDTH-1:0]     tx_desc_dequeue_resp_queue;
 wire [QUEUE_PTR_WIDTH-1:0]          tx_desc_dequeue_resp_ptr;
 wire [PCIE_ADDR_WIDTH-1:0]          tx_desc_dequeue_resp_addr;
 wire [TX_CPL_QUEUE_INDEX_WIDTH-1:0] tx_desc_dequeue_resp_cpl;
@@ -559,6 +560,7 @@ wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]      tx_port_desc_dequeue_req_tag;
 wire [PORTS-1:0]                          tx_port_desc_dequeue_req_valid;
 wire [PORTS-1:0]                          tx_port_desc_dequeue_req_ready;
 
+wire [PORTS*TX_QUEUE_INDEX_WIDTH-1:0]     tx_port_desc_dequeue_resp_queue;
 wire [PORTS*QUEUE_PTR_WIDTH-1:0]          tx_port_desc_dequeue_resp_ptr;
 wire [PORTS*PCIE_ADDR_WIDTH-1:0]          tx_port_desc_dequeue_resp_addr;
 wire [PORTS*TX_CPL_QUEUE_INDEX_WIDTH-1:0] tx_port_desc_dequeue_resp_cpl;
@@ -612,6 +614,7 @@ wire [QUEUE_REQ_TAG_WIDTH-1:0]      rx_desc_dequeue_req_tag;
 wire                                rx_desc_dequeue_req_valid;
 wire                                rx_desc_dequeue_req_ready;
 
+wire [TX_QUEUE_INDEX_WIDTH-1:0]     rx_desc_dequeue_resp_queue;
 wire [QUEUE_PTR_WIDTH-1:0]          rx_desc_dequeue_resp_ptr;
 wire [PCIE_ADDR_WIDTH-1:0]          rx_desc_dequeue_resp_addr;
 wire [RX_CPL_QUEUE_INDEX_WIDTH-1:0] rx_desc_dequeue_resp_cpl;
@@ -631,6 +634,7 @@ wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]      rx_port_desc_dequeue_req_tag;
 wire [PORTS-1:0]                          rx_port_desc_dequeue_req_valid;
 wire [PORTS-1:0]                          rx_port_desc_dequeue_req_ready;
 
+wire [PORTS*RX_QUEUE_INDEX_WIDTH-1:0]     rx_port_desc_dequeue_resp_queue;
 wire [PORTS*QUEUE_PTR_WIDTH-1:0]          rx_port_desc_dequeue_resp_ptr;
 wire [PORTS*PCIE_ADDR_WIDTH-1:0]          rx_port_desc_dequeue_resp_addr;
 wire [PORTS*RX_CPL_QUEUE_INDEX_WIDTH-1:0] rx_port_desc_dequeue_resp_cpl;
@@ -884,6 +888,7 @@ event_queue_manager_inst (
     /*
      * Enqueue response output
      */
+    .m_axis_enqueue_resp_queue(),
     .m_axis_enqueue_resp_ptr(),
     .m_axis_enqueue_resp_addr(event_enqueue_resp_addr),
     .m_axis_enqueue_resp_event(),
@@ -951,7 +956,7 @@ if (PORTS > 1) begin
         .ARB_TYPE("ROUND_ROBIN"),
         .LSB_PRIORITY("HIGH")
     )
-    event_mux_inst (
+    tx_queue_op_mux_inst (
         .clk(clk),
         .rst(rst),
 
@@ -966,6 +971,7 @@ if (PORTS > 1) begin
         /*
          * Dequeue response input
          */
+        .s_axis_enqueue_resp_queue(tx_desc_dequeue_resp_queue),
         .s_axis_dequeue_resp_ptr(tx_desc_dequeue_resp_ptr),
         .s_axis_dequeue_resp_addr(tx_desc_dequeue_resp_addr),
         .s_axis_dequeue_resp_cpl(tx_desc_dequeue_resp_cpl),
@@ -994,6 +1000,7 @@ if (PORTS > 1) begin
         /*
          * Dequeue response output
          */
+        .m_axis_enqueue_resp_queue(tx_port_desc_dequeue_resp_queue),
         .m_axis_dequeue_resp_ptr(tx_port_desc_dequeue_resp_ptr),
         .m_axis_dequeue_resp_addr(tx_port_desc_dequeue_resp_addr),
         .m_axis_dequeue_resp_cpl(tx_port_desc_dequeue_resp_cpl),
@@ -1019,6 +1026,7 @@ end else begin
     assign tx_desc_dequeue_req_valid = tx_port_desc_dequeue_req_valid;
     assign tx_port_desc_dequeue_req_ready = tx_desc_dequeue_req_ready;
 
+    assign tx_port_desc_dequeue_resp_queue = tx_desc_dequeue_resp_queue;
     assign tx_port_desc_dequeue_resp_ptr = tx_desc_dequeue_resp_ptr;
     assign tx_port_desc_dequeue_resp_addr = tx_desc_dequeue_resp_addr;
     assign tx_port_desc_dequeue_resp_cpl = tx_desc_dequeue_resp_cpl;
@@ -1065,6 +1073,7 @@ tx_queue_manager_inst (
     /*
      * Dequeue response output
      */
+    .m_axis_dequeue_resp_queue(tx_desc_dequeue_resp_queue),
     .m_axis_dequeue_resp_ptr(tx_desc_dequeue_resp_ptr),
     .m_axis_dequeue_resp_addr(tx_desc_dequeue_resp_addr),
     .m_axis_dequeue_resp_cpl(tx_desc_dequeue_resp_cpl),
@@ -1131,7 +1140,7 @@ if (PORTS > 1) begin
         .ARB_TYPE("ROUND_ROBIN"),
         .LSB_PRIORITY("HIGH")
     )
-    event_mux_inst (
+    tx_cpl_queue_op_mux_inst (
         .clk(clk),
         .rst(rst),
 
@@ -1146,6 +1155,7 @@ if (PORTS > 1) begin
         /*
          * Dequeue response input
          */
+        .s_axis_enqueue_resp_queue(0),
         .s_axis_dequeue_resp_ptr(0),
         .s_axis_dequeue_resp_addr(tx_cpl_enqueue_resp_addr),
         .s_axis_dequeue_resp_cpl(0),
@@ -1174,6 +1184,7 @@ if (PORTS > 1) begin
         /*
          * Dequeue response output
          */
+        .m_axis_enqueue_resp_queue(),
         .m_axis_dequeue_resp_ptr(),
         .m_axis_dequeue_resp_addr(tx_port_cpl_enqueue_resp_addr),
         .m_axis_dequeue_resp_cpl(),
@@ -1243,6 +1254,7 @@ tx_cpl_queue_manager_inst (
     /*
      * Enqueue response output
      */
+    .m_axis_enqueue_resp_queue(),
     .m_axis_enqueue_resp_ptr(),
     .m_axis_enqueue_resp_addr(tx_cpl_enqueue_resp_addr),
     .m_axis_enqueue_resp_event(),
@@ -1311,7 +1323,7 @@ if (PORTS > 1) begin
         .ARB_TYPE("ROUND_ROBIN"),
         .LSB_PRIORITY("HIGH")
     )
-    event_mux_inst (
+    rx_queue_op_mux_inst (
         .clk(clk),
         .rst(rst),
 
@@ -1326,6 +1338,7 @@ if (PORTS > 1) begin
         /*
          * Dequeue response input
          */
+        .s_axis_enqueue_resp_queue(rx_desc_dequeue_resp_queue),
         .s_axis_dequeue_resp_ptr(rx_desc_dequeue_resp_ptr),
         .s_axis_dequeue_resp_addr(rx_desc_dequeue_resp_addr),
         .s_axis_dequeue_resp_cpl(rx_desc_dequeue_resp_cpl),
@@ -1354,6 +1367,7 @@ if (PORTS > 1) begin
         /*
          * Dequeue response output
          */
+        .m_axis_enqueue_resp_queue(rx_port_desc_dequeue_resp_queue),
         .m_axis_dequeue_resp_ptr(rx_port_desc_dequeue_resp_ptr),
         .m_axis_dequeue_resp_addr(rx_port_desc_dequeue_resp_addr),
         .m_axis_dequeue_resp_cpl(rx_port_desc_dequeue_resp_cpl),
@@ -1379,6 +1393,7 @@ end else begin
     assign rx_desc_dequeue_req_valid = rx_port_desc_dequeue_req_valid;
     assign rx_port_desc_dequeue_req_ready = rx_desc_dequeue_req_ready;
 
+    assign rx_port_desc_dequeue_resp_queue = rx_desc_dequeue_resp_queue;
     assign rx_port_desc_dequeue_resp_ptr = rx_desc_dequeue_resp_ptr;
     assign rx_port_desc_dequeue_resp_addr = rx_desc_dequeue_resp_addr;
     assign rx_port_desc_dequeue_resp_cpl = rx_desc_dequeue_resp_cpl;
@@ -1425,6 +1440,7 @@ rx_queue_manager_inst (
     /*
      * Dequeue response output
      */
+    .m_axis_dequeue_resp_queue(),
     .m_axis_dequeue_resp_ptr(rx_desc_dequeue_resp_ptr),
     .m_axis_dequeue_resp_addr(rx_desc_dequeue_resp_addr),
     .m_axis_dequeue_resp_cpl(rx_desc_dequeue_resp_cpl),
@@ -1491,7 +1507,7 @@ if (PORTS > 1) begin
         .ARB_TYPE("ROUND_ROBIN"),
         .LSB_PRIORITY("HIGH")
     )
-    event_mux_inst (
+    rx_cpl_queue_op_mux_inst (
         .clk(clk),
         .rst(rst),
 
@@ -1506,6 +1522,7 @@ if (PORTS > 1) begin
         /*
          * Dequeue response input
          */
+        .m_axis_enqueue_resp_queue(0),
         .s_axis_dequeue_resp_ptr(0),
         .s_axis_dequeue_resp_addr(rx_cpl_enqueue_resp_addr),
         .s_axis_dequeue_resp_cpl(0),
@@ -1534,6 +1551,7 @@ if (PORTS > 1) begin
         /*
          * Dequeue response output
          */
+        .m_axis_enqueue_resp_queue(),
         .m_axis_dequeue_resp_ptr(),
         .m_axis_dequeue_resp_addr(rx_port_cpl_enqueue_resp_addr),
         .m_axis_dequeue_resp_cpl(),
@@ -1603,6 +1621,7 @@ rx_cpl_queue_manager_inst (
     /*
      * Enqueue response output
      */
+    .m_axis_enqueue_resp_queue(),
     .m_axis_enqueue_resp_ptr(),
     .m_axis_enqueue_resp_addr(rx_cpl_enqueue_resp_addr),
     .m_axis_enqueue_resp_event(),
@@ -2404,6 +2423,7 @@ generate
             /*
              * TX descriptor dequeue response input
              */
+            .s_axis_tx_desc_dequeue_resp_queue(tx_port_desc_dequeue_resp_queue[n*TX_QUEUE_INDEX_WIDTH +: TX_QUEUE_INDEX_WIDTH]),
             .s_axis_tx_desc_dequeue_resp_ptr(tx_port_desc_dequeue_resp_ptr[n*QUEUE_PTR_WIDTH +: QUEUE_PTR_WIDTH]),
             .s_axis_tx_desc_dequeue_resp_addr(tx_port_desc_dequeue_resp_addr[n*PCIE_ADDR_WIDTH +: PCIE_ADDR_WIDTH]),
             .s_axis_tx_desc_dequeue_resp_cpl(tx_port_desc_dequeue_resp_cpl[n*TX_CPL_QUEUE_INDEX_WIDTH +: TX_CPL_QUEUE_INDEX_WIDTH]),
@@ -2466,6 +2486,7 @@ generate
             /*
              * RX descriptor dequeue response input
              */
+            .s_axis_rx_desc_dequeue_resp_queue(rx_port_desc_dequeue_resp_queue[n*RX_QUEUE_INDEX_WIDTH +: RX_QUEUE_INDEX_WIDTH]),
             .s_axis_rx_desc_dequeue_resp_ptr(rx_port_desc_dequeue_resp_ptr[n*QUEUE_PTR_WIDTH +: QUEUE_PTR_WIDTH]),
             .s_axis_rx_desc_dequeue_resp_addr(rx_port_desc_dequeue_resp_addr[n*PCIE_ADDR_WIDTH +: PCIE_ADDR_WIDTH]),
             .s_axis_rx_desc_dequeue_resp_cpl(rx_port_desc_dequeue_resp_cpl[n*RX_CPL_QUEUE_INDEX_WIDTH +: RX_CPL_QUEUE_INDEX_WIDTH]),

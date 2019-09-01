@@ -96,6 +96,7 @@ def bench():
 
     # Outputs
     s_axis_dequeue_req_ready = Signal(bool(0))
+    m_axis_dequeue_resp_queue = Signal(intbv(0)[QUEUE_INDEX_WIDTH:])
     m_axis_dequeue_resp_ptr = Signal(intbv(0)[QUEUE_PTR_WIDTH:])
     m_axis_dequeue_resp_addr = Signal(intbv(0)[ADDR_WIDTH:])
     m_axis_dequeue_resp_cpl = Signal(intbv(0)[CPL_INDEX_WIDTH:])
@@ -133,7 +134,7 @@ def bench():
     dequeue_resp_sink_logic = dequeue_resp_sink.create_logic(
         clk,
         rst,
-        tdata=(m_axis_dequeue_resp_ptr, m_axis_dequeue_resp_addr, m_axis_dequeue_resp_cpl, m_axis_dequeue_resp_tag, m_axis_dequeue_resp_op_tag, m_axis_dequeue_resp_empty, m_axis_dequeue_resp_error),
+        tdata=(m_axis_dequeue_resp_queue, m_axis_dequeue_resp_ptr, m_axis_dequeue_resp_addr, m_axis_dequeue_resp_cpl, m_axis_dequeue_resp_tag, m_axis_dequeue_resp_op_tag, m_axis_dequeue_resp_empty, m_axis_dequeue_resp_error),
         tvalid=m_axis_dequeue_resp_valid,
         tready=m_axis_dequeue_resp_ready,
         name='dequeue_resp_sink'
@@ -203,6 +204,7 @@ def bench():
         s_axis_dequeue_req_tag=s_axis_dequeue_req_tag,
         s_axis_dequeue_req_valid=s_axis_dequeue_req_valid,
         s_axis_dequeue_req_ready=s_axis_dequeue_req_ready,
+        m_axis_dequeue_resp_queue=m_axis_dequeue_resp_queue,
         m_axis_dequeue_resp_ptr=m_axis_dequeue_resp_ptr,
         m_axis_dequeue_resp_addr=m_axis_dequeue_resp_addr,
         m_axis_dequeue_resp_cpl=m_axis_dequeue_resp_cpl,
@@ -325,7 +327,7 @@ def bench():
         print(resp)
 
         # dequeue commit
-        dequeue_commit_source.send([(resp.data[0][4],)])
+        dequeue_commit_source.send([(resp.data[0][5],)])
 
         yield delay(100)
 
@@ -442,21 +444,22 @@ def bench():
                     resp = dequeue_resp_sink.recv()
                     print(resp)
 
-                    assert resp.data[0][0] == queue_tail_ptr[q]
-                    assert (resp.data[0][1] >> 16) & 0xf == q
-                    assert (resp.data[0][1] >> 4) & 0xf == queue_tail_ptr[q] & 0xf
-                    assert resp.data[0][2] == q
+                    assert resp.data[0][0] == q
+                    assert resp.data[0][1] == queue_tail_ptr[q]
+                    assert (resp.data[0][2] >> 16) & 0xf == q
+                    assert (resp.data[0][2] >> 4) & 0xf == queue_tail_ptr[q] & 0xf
+                    assert resp.data[0][3] == q
 
-                    assert resp.data[0][3] == current_tag # tag
-                    assert not resp.data[0][6] # error
+                    assert resp.data[0][4] == current_tag # tag
+                    assert not resp.data[0][7] # error
 
                     if queue_uncommit_depth[q]:
-                        commit_list.append((q, resp.data[0][4]))
+                        commit_list.append((q, resp.data[0][5]))
                         queue_tail_ptr[q] = (queue_tail_ptr[q] + 1) & 0xffff
                         queue_uncommit_depth[q] -= 1
                     else:
                         print("Queue was empty")
-                        assert resp.data[0][5] # empty
+                        assert resp.data[0][6] # empty
 
                     current_tag = (current_tag + 1) % 256
 

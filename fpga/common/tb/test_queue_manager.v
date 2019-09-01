@@ -81,6 +81,7 @@ reg enable = 0;
 
 // Outputs
 wire s_axis_dequeue_req_ready;
+wire [QUEUE_INDEX_WIDTH-1:0] m_axis_dequeue_resp_queue;
 wire [QUEUE_PTR_WIDTH-1:0] m_axis_dequeue_resp_ptr;
 wire [ADDR_WIDTH-1:0] m_axis_dequeue_resp_addr;
 wire [CPL_INDEX_WIDTH-1:0] m_axis_dequeue_resp_cpl;
@@ -128,6 +129,7 @@ initial begin
     );
     $to_myhdl(
         s_axis_dequeue_req_ready,
+        m_axis_dequeue_resp_queue,
         m_axis_dequeue_resp_ptr,
         m_axis_dequeue_resp_addr,
         m_axis_dequeue_resp_cpl,
@@ -176,6 +178,7 @@ UUT (
     .s_axis_dequeue_req_tag(s_axis_dequeue_req_tag),
     .s_axis_dequeue_req_valid(s_axis_dequeue_req_valid),
     .s_axis_dequeue_req_ready(s_axis_dequeue_req_ready),
+    .m_axis_dequeue_resp_queue(m_axis_dequeue_resp_queue),
     .m_axis_dequeue_resp_ptr(m_axis_dequeue_resp_ptr),
     .m_axis_dequeue_resp_addr(m_axis_dequeue_resp_addr),
     .m_axis_dequeue_resp_cpl(m_axis_dequeue_resp_cpl),

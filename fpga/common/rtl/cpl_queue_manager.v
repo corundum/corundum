@@ -82,6 +82,7 @@ module cpl_queue_manager #
     /*
      * Enqueue response output
      */
+    output wire [QUEUE_INDEX_WIDTH-1:0] m_axis_enqueue_resp_queue,
     output wire [QUEUE_PTR_WIDTH-1:0]   m_axis_enqueue_resp_ptr,
     output wire [ADDR_WIDTH-1:0]        m_axis_enqueue_resp_addr,
     output wire [EVENT_WIDTH-1:0]       m_axis_enqueue_resp_event,
@@ -197,6 +198,7 @@ reg [REQ_TAG_WIDTH-1:0] req_tag_pipeline_reg[PIPELINE-1:0], req_tag_pipeline_nex
 
 reg s_axis_enqueue_req_ready_reg = 1'b0, s_axis_enqueue_req_ready_next;
 
+reg [QUEUE_INDEX_WIDTH-1:0] m_axis_enqueue_resp_queue_reg = 0, m_axis_enqueue_resp_queue_next;
 reg [QUEUE_PTR_WIDTH-1:0] m_axis_enqueue_resp_ptr_reg = 0, m_axis_enqueue_resp_ptr_next;
 reg [ADDR_WIDTH-1:0] m_axis_enqueue_resp_addr_reg = 0, m_axis_enqueue_resp_addr_next;
 reg [EVENT_WIDTH-1:0] m_axis_enqueue_resp_event_reg = 0, m_axis_enqueue_resp_event_next;
@@ -251,6 +253,7 @@ reg op_table_finish_en;
 
 assign s_axis_enqueue_req_ready = s_axis_enqueue_req_ready_reg;
 
+assign m_axis_enqueue_resp_queue = m_axis_enqueue_resp_queue_reg;
 assign m_axis_enqueue_resp_ptr = m_axis_enqueue_resp_ptr_reg;
 assign m_axis_enqueue_resp_addr = m_axis_enqueue_resp_addr_reg;
 assign m_axis_enqueue_resp_event = m_axis_enqueue_resp_event_reg;
@@ -330,6 +333,7 @@ always @* begin
 
     s_axis_enqueue_req_ready_next = 1'b0;
 
+    m_axis_enqueue_resp_queue_next = m_axis_enqueue_resp_queue_reg;
     m_axis_enqueue_resp_ptr_next = m_axis_enqueue_resp_ptr_reg;
     m_axis_enqueue_resp_addr_next = m_axis_enqueue_resp_addr_reg;
     m_axis_enqueue_resp_event_next = m_axis_enqueue_resp_event_reg;
@@ -428,6 +432,7 @@ always @* begin
     // read complete, perform operation
     if (op_req_pipe_reg[PIPELINE-1]) begin
         // request
+        m_axis_enqueue_resp_queue_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
         m_axis_enqueue_resp_ptr_next = queue_ram_read_active_head_ptr;
         m_axis_enqueue_resp_addr_next = queue_ram_read_data_base_addr + ((queue_ram_read_active_head_ptr & ({QUEUE_PTR_WIDTH{1'b1}} >> (QUEUE_PTR_WIDTH - queue_ram_read_data_log_size))) * CPL_SIZE);
         m_axis_enqueue_resp_event_next = queue_ram_read_data_event;
@@ -670,6 +675,7 @@ always @(posedge clk) begin
         req_tag_pipeline_reg[i] <= req_tag_pipeline_next[i];
     end
 
+    m_axis_enqueue_resp_queue_reg <= m_axis_enqueue_resp_queue_next;
     m_axis_enqueue_resp_ptr_reg <= m_axis_enqueue_resp_ptr_next;
     m_axis_enqueue_resp_addr_reg <= m_axis_enqueue_resp_addr_next;
     m_axis_enqueue_resp_event_reg <= m_axis_enqueue_resp_event_next;

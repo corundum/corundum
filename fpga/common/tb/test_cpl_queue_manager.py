@@ -96,6 +96,7 @@ def bench():
 
     # Outputs
     s_axis_enqueue_req_ready = Signal(bool(0))
+    m_axis_enqueue_resp_queue = Signal(intbv(0)[QUEUE_INDEX_WIDTH:])
     m_axis_enqueue_resp_ptr = Signal(intbv(0)[QUEUE_PTR_WIDTH:])
     m_axis_enqueue_resp_addr = Signal(intbv(0)[ADDR_WIDTH:])
     m_axis_enqueue_resp_event = Signal(intbv(0)[EVENT_WIDTH:])
@@ -134,7 +135,7 @@ def bench():
     enqueue_resp_sink_logic = enqueue_resp_sink.create_logic(
         clk,
         rst,
-        tdata=(m_axis_enqueue_resp_ptr, m_axis_enqueue_resp_addr, m_axis_enqueue_resp_event, m_axis_enqueue_resp_tag, m_axis_enqueue_resp_op_tag, m_axis_enqueue_resp_full, m_axis_enqueue_resp_error),
+        tdata=(m_axis_enqueue_resp_queue, m_axis_enqueue_resp_ptr, m_axis_enqueue_resp_addr, m_axis_enqueue_resp_event, m_axis_enqueue_resp_tag, m_axis_enqueue_resp_op_tag, m_axis_enqueue_resp_full, m_axis_enqueue_resp_error),
         tvalid=m_axis_enqueue_resp_valid,
         tready=m_axis_enqueue_resp_ready,
         name='enqueue_resp_sink'
@@ -204,6 +205,7 @@ def bench():
         s_axis_enqueue_req_tag=s_axis_enqueue_req_tag,
         s_axis_enqueue_req_valid=s_axis_enqueue_req_valid,
         s_axis_enqueue_req_ready=s_axis_enqueue_req_ready,
+        m_axis_enqueue_resp_queue=m_axis_enqueue_resp_queue,
         m_axis_enqueue_resp_ptr=m_axis_enqueue_resp_ptr,
         m_axis_enqueue_resp_addr=m_axis_enqueue_resp_addr,
         m_axis_enqueue_resp_event=m_axis_enqueue_resp_event,
@@ -310,7 +312,7 @@ def bench():
         print(resp)
 
         # enqueue commit
-        enqueue_commit_source.send([(resp.data[0][4],)])
+        enqueue_commit_source.send([(resp.data[0][5],)])
 
         # check event
         yield event_sink.wait()
@@ -415,21 +417,22 @@ def bench():
                     resp = enqueue_resp_sink.recv()
                     print(resp)
 
-                    #assert resp.data[0][0] == queue_head_ptr[q]
-                    assert (resp.data[0][1] >> 16) & 0xf == q
-                    assert (resp.data[0][1] >> 4) & 0xf == queue_head_ptr[q] & 0xf
-                    assert resp.data[0][2] == q
+                    assert resp.data[0][0] == q
+                    #assert resp.data[0][1] == queue_head_ptr[q]
+                    assert (resp.data[0][2] >> 16) & 0xf == q
+                    assert (resp.data[0][2] >> 4) & 0xf == queue_head_ptr[q] & 0xf
+                    assert resp.data[0][3] == q
 
-                    assert resp.data[0][3] == current_tag # tag
-                    assert not resp.data[0][6] # error
+                    assert resp.data[0][4] == current_tag # tag
+                    assert not resp.data[0][7] # error
 
                     if queue_uncommit_depth[q] < 16:
-                        commit_list.append((q, resp.data[0][4]))
+                        commit_list.append((q, resp.data[0][5]))
                         queue_head_ptr[q] = (queue_head_ptr[q] + 1) & 0xffff
                         queue_uncommit_depth[q] += 1
                     else:
                         print("Queue was full")
-                        assert resp.data[0][5] # full
+                        assert resp.data[0][6] # full
 
                     current_tag = (current_tag + 1) % 256
 

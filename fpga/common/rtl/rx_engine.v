@@ -326,6 +326,11 @@ initial begin
         $error("Error: Packet scratch address increment must be at least as large as one packet (instance %m)");
         $finish;
     end
+
+    if (QUEUE_REQ_TAG_WIDTH < CL_DESC_TABLE_SIZE) begin
+        $error("Error: QUEUE_REQ_TAG_WIDTH must be at least $clog2(DESC_TABLE_SIZE) (instance %m)");
+        $finish;
+    end
 end
 
 reg [REQ_TAG_WIDTH-1:0] s_axis_rx_req_tag_reg = {REQ_TAG_WIDTH{1'b0}}, s_axis_rx_req_tag_next;

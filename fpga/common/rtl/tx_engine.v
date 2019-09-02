@@ -320,6 +320,11 @@ initial begin
         $error("Error: Packet scratch address increment must be aligned to interface width (instance %m)");
         $finish;
     end
+
+    if (QUEUE_REQ_TAG_WIDTH < REQ_TAG_WIDTH) begin
+        $error("Error: QUEUE_REQ_TAG_WIDTH must be at least REQ_TAG_WIDTH (instance %m)");
+        $finish;
+    end
 end
 
 reg [REQ_TAG_WIDTH-1:0] s_axis_tx_req_tag_reg = {REQ_TAG_WIDTH{1'b0}}, s_axis_tx_req_tag_next;
@@ -372,6 +377,14 @@ reg m_axis_tx_csum_cmd_valid_reg = 1'b0, m_axis_tx_csum_cmd_valid_next;
 
 reg s_axis_tx_ptp_ts_ready_reg = 1'b0, s_axis_tx_ptp_ts_ready_next;
 
+reg [AXI_DMA_LEN_WIDTH-1:0] early_tx_req_status_len_reg = {AXI_DMA_LEN_WIDTH{1'b0}}, early_tx_req_status_len_next;
+reg [REQ_TAG_WIDTH-1:0] early_tx_req_status_tag_reg = {REQ_TAG_WIDTH{1'b0}}, early_tx_req_status_tag_next;
+reg early_tx_req_status_valid_reg = 1'b0, early_tx_req_status_valid_next;
+
+reg [AXI_DMA_LEN_WIDTH-1:0] finish_tx_req_status_len_reg = {AXI_DMA_LEN_WIDTH{1'b0}}, finish_tx_req_status_len_next;
+reg [REQ_TAG_WIDTH-1:0] finish_tx_req_status_tag_reg = {REQ_TAG_WIDTH{1'b0}}, finish_tx_req_status_tag_next;
+reg finish_tx_req_status_valid_reg = 1'b0, finish_tx_req_status_valid_next;
+
 reg [PCIE_ADDR_WIDTH-1:0] desc_fetch_pcie_axi_dma_read_desc_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, desc_fetch_pcie_axi_dma_read_desc_pcie_addr_next;
 reg [AXI_ADDR_WIDTH-1:0] desc_fetch_pcie_axi_dma_read_desc_axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, desc_fetch_pcie_axi_dma_read_desc_axi_addr_next;
 reg [PCIE_DMA_LEN_WIDTH-1:0] desc_fetch_pcie_axi_dma_read_desc_len_reg = {PCIE_DMA_LEN_WIDTH{1'b0}}, desc_fetch_pcie_axi_dma_read_desc_len_next;
@@ -383,6 +396,11 @@ reg [AXI_ADDR_WIDTH-1:0] pkt_fetch_pcie_axi_dma_read_desc_axi_addr_reg = {AXI_AD
 reg [PCIE_DMA_LEN_WIDTH-1:0] pkt_fetch_pcie_axi_dma_read_desc_len_reg = {PCIE_DMA_LEN_WIDTH{1'b0}}, pkt_fetch_pcie_axi_dma_read_desc_len_next;
 reg [PCIE_DMA_TAG_WIDTH-1:0] pkt_fetch_pcie_axi_dma_read_desc_tag_reg = {PCIE_DMA_TAG_WIDTH{1'b0}}, pkt_fetch_pcie_axi_dma_read_desc_tag_next;
 reg pkt_fetch_pcie_axi_dma_read_desc_valid_reg = 1'b0, pkt_fetch_pcie_axi_dma_read_desc_valid_next;
+
+reg [CL_DESC_TABLE_SIZE+1-1:0] active_count_reg = 0;
+reg inc_active;
+reg dec_active_1;
+reg dec_active_2;
 
 reg [DESC_TABLE_SIZE-1:0] desc_table_active = 0;
 reg [DESC_TABLE_SIZE-1:0] desc_table_invalid = 0;
@@ -407,13 +425,10 @@ reg [95:0] desc_table_ptp_ts[DESC_TABLE_SIZE-1:0];
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_start_ptr_reg = 0;
 reg [QUEUE_INDEX_WIDTH-1:0] desc_table_start_queue;
 reg [REQ_TAG_WIDTH-1:0] desc_table_start_tag;
+reg [QUEUE_PTR_WIDTH-1:0] desc_table_start_queue_ptr;
+reg [CPL_QUEUE_INDEX_WIDTH-1:0] desc_table_start_cpl_queue;
+reg [QUEUE_OP_TAG_WIDTH-1:0] desc_table_start_queue_op_tag;
 reg desc_table_start_en;
-reg [CL_DESC_TABLE_SIZE-1:0] desc_table_dequeue_ptr;
-reg [QUEUE_PTR_WIDTH-1:0] desc_table_dequeue_queue_ptr;
-reg [CPL_QUEUE_INDEX_WIDTH-1:0] desc_table_dequeue_cpl_queue;
-reg [QUEUE_OP_TAG_WIDTH-1:0] desc_table_dequeue_queue_op_tag;
-reg desc_table_dequeue_invalid;
-reg desc_table_dequeue_en;
 reg [CL_DESC_TABLE_SIZE-1:0] desc_table_desc_fetched_ptr;
 reg desc_table_desc_fetched_en;
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_data_fetch_start_ptr_reg = 0;
@@ -763,6 +778,14 @@ always @* begin
 
     s_axis_tx_ptp_ts_ready_next = 1'b0;
 
+    early_tx_req_status_len_next = early_tx_req_status_len_reg;
+    early_tx_req_status_tag_next = early_tx_req_status_tag_reg;
+    early_tx_req_status_valid_next = early_tx_req_status_valid_reg;
+
+    finish_tx_req_status_len_next = finish_tx_req_status_len_reg;
+    finish_tx_req_status_tag_next = finish_tx_req_status_tag_reg;
+    finish_tx_req_status_valid_next = finish_tx_req_status_valid_reg;
+
     desc_fetch_pcie_axi_dma_read_desc_pcie_addr_next = desc_fetch_pcie_axi_dma_read_desc_pcie_addr_reg;
     desc_fetch_pcie_axi_dma_read_desc_axi_addr_next = desc_fetch_pcie_axi_dma_read_desc_axi_addr_reg;
     desc_fetch_pcie_axi_dma_read_desc_len_next = desc_fetch_pcie_axi_dma_read_desc_len_reg;
@@ -775,15 +798,16 @@ always @* begin
     pkt_fetch_pcie_axi_dma_read_desc_tag_next = pkt_fetch_pcie_axi_dma_read_desc_tag_reg;
     pkt_fetch_pcie_axi_dma_read_desc_valid_next = pkt_fetch_pcie_axi_dma_read_desc_valid_reg;
 
-    desc_table_start_tag = s_axis_tx_req_tag;
-    desc_table_start_queue = s_axis_tx_req_queue;
+    inc_active = 1'b0;
+    dec_active_1 = 1'b0;
+    dec_active_2 = 1'b0;
+
+    desc_table_start_tag = s_axis_desc_dequeue_resp_tag;
+    desc_table_start_queue = s_axis_desc_dequeue_resp_queue;
+    desc_table_start_queue_ptr = s_axis_desc_dequeue_resp_ptr;
+    desc_table_start_cpl_queue = s_axis_desc_dequeue_resp_cpl;
+    desc_table_start_queue_op_tag = s_axis_desc_dequeue_resp_op_tag;
     desc_table_start_en = 1'b0;
-    desc_table_dequeue_ptr = s_axis_desc_dequeue_resp_tag;
-    desc_table_dequeue_queue_ptr = s_axis_desc_dequeue_resp_ptr;
-    desc_table_dequeue_cpl_queue = s_axis_desc_dequeue_resp_cpl;
-    desc_table_dequeue_queue_op_tag = s_axis_desc_dequeue_resp_op_tag;
-    desc_table_dequeue_invalid = 1'b0;
-    desc_table_dequeue_en = 1'b0;
     desc_table_desc_fetched_ptr = s_axis_pcie_axi_dma_read_desc_status_tag & DESC_PTR_MASK;
     desc_table_desc_fetched_en = 1'b0;
     desc_table_data_fetch_start_pkt = 0;
@@ -811,48 +835,51 @@ always @* begin
 
     // queue query
     // wait for transmit request
-    s_axis_tx_req_ready_next = enable && !desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] && ($unsigned(desc_table_start_ptr_reg - desc_table_finish_ptr_reg) < DESC_TABLE_SIZE) && (!m_axis_desc_dequeue_req_valid_reg || m_axis_desc_dequeue_req_ready);
+    s_axis_tx_req_ready_next = enable && active_count_reg < DESC_TABLE_SIZE && !desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] && ($unsigned(desc_table_start_ptr_reg - desc_table_finish_ptr_reg) < DESC_TABLE_SIZE) && (!m_axis_desc_dequeue_req_valid_reg || m_axis_desc_dequeue_req_ready);
     if (s_axis_tx_req_ready && s_axis_tx_req_valid) begin
         s_axis_tx_req_ready_next = 1'b0;
 
-        // store in descriptor table
-        desc_table_start_tag = s_axis_tx_req_tag;
-        desc_table_start_queue = s_axis_tx_req_queue;
-        desc_table_start_en = 1'b1;
-
         // initiate queue query
         m_axis_desc_dequeue_req_queue_next = s_axis_tx_req_queue;
-        m_axis_desc_dequeue_req_tag_next = desc_table_start_ptr_reg & DESC_PTR_MASK;
+        m_axis_desc_dequeue_req_tag_next = s_axis_tx_req_tag;
         m_axis_desc_dequeue_req_valid_next = 1'b1;
+
+        inc_active = 1'b1;
     end
 
     // descriptor fetch
     // wait for queue query response
-    s_axis_desc_dequeue_resp_ready_next = !desc_fetch_pcie_axi_dma_read_desc_valid_reg;
+    s_axis_desc_dequeue_resp_ready_next = !desc_fetch_pcie_axi_dma_read_desc_valid_reg && !desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] && ($unsigned(desc_table_start_ptr_reg - desc_table_finish_ptr_reg) < DESC_TABLE_SIZE);
     if (s_axis_desc_dequeue_resp_ready && s_axis_desc_dequeue_resp_valid) begin
         s_axis_desc_dequeue_resp_ready_next = 1'b0;
 
-        // update entry in descriptor table
-        desc_table_dequeue_ptr = s_axis_desc_dequeue_resp_tag;
-        desc_table_dequeue_queue_ptr = s_axis_desc_dequeue_resp_ptr;
-        desc_table_dequeue_cpl_queue = s_axis_desc_dequeue_resp_cpl;
-        desc_table_dequeue_queue_op_tag = s_axis_desc_dequeue_resp_op_tag;
-        desc_table_dequeue_invalid = 1'b0;
-        desc_table_dequeue_en = 1'b1;
+        // store in descriptor table
+        desc_table_start_tag = s_axis_desc_dequeue_resp_tag;
+        desc_table_start_queue = s_axis_desc_dequeue_resp_queue;
+        desc_table_start_queue_ptr = s_axis_desc_dequeue_resp_ptr;
+        desc_table_start_cpl_queue = s_axis_desc_dequeue_resp_cpl;
+        desc_table_start_queue_op_tag = s_axis_desc_dequeue_resp_op_tag;
 
         if (s_axis_desc_dequeue_resp_error || s_axis_desc_dequeue_resp_empty) begin
             // queue empty or not active
 
-            // invalidate entry
-            desc_table_dequeue_invalid = 1'b1;
+            // return transmit request completion
+            early_tx_req_status_len_next = 0;
+            early_tx_req_status_tag_next = s_axis_desc_dequeue_resp_tag;
+            early_tx_req_status_valid_next = 1'b1;
+
+            dec_active_1 = 1'b1;
         end else begin
             // descriptor available to dequeue
+            
+            // store in descriptor table
+            desc_table_start_en = 1'b1;
 
             // initiate descriptor fetch to onboard RAM
             desc_fetch_pcie_axi_dma_read_desc_pcie_addr_next = s_axis_desc_dequeue_resp_addr;
-            desc_fetch_pcie_axi_dma_read_desc_axi_addr_next = AXI_BASE_ADDR + (s_axis_desc_dequeue_resp_tag << 5);
+            desc_fetch_pcie_axi_dma_read_desc_axi_addr_next = AXI_BASE_ADDR + ((desc_table_start_ptr_reg & DESC_PTR_MASK) << 5);
             desc_fetch_pcie_axi_dma_read_desc_len_next = DESC_SIZE;
-            desc_fetch_pcie_axi_dma_read_desc_tag_next = s_axis_desc_dequeue_resp_tag;
+            desc_fetch_pcie_axi_dma_read_desc_tag_next = (desc_table_start_ptr_reg & DESC_PTR_MASK);
             desc_fetch_pcie_axi_dma_read_desc_valid_next = 1'b1;
         end
     end
@@ -1012,7 +1039,7 @@ always @* begin
     end
 
     // operation complete
-    if (desc_table_active[desc_table_finish_ptr_reg & DESC_PTR_MASK] && desc_table_finish_ptr_reg != desc_table_start_ptr_reg && desc_table_finish_ptr_reg != desc_table_cpl_enqueue_start_ptr_reg) begin
+    if (desc_table_active[desc_table_finish_ptr_reg & DESC_PTR_MASK] && desc_table_finish_ptr_reg != desc_table_start_ptr_reg && desc_table_finish_ptr_reg != desc_table_cpl_enqueue_start_ptr_reg && !finish_tx_req_status_valid_reg) begin
         if (desc_table_invalid[desc_table_finish_ptr_reg & DESC_PTR_MASK]) begin
             // invalidate entry in descriptor table
             desc_table_finish_en = 1'b1;
@@ -1021,6 +1048,8 @@ always @* begin
             m_axis_tx_req_status_len_next = 0;
             m_axis_tx_req_status_tag_next = desc_table_tag[desc_table_finish_ptr_reg & DESC_PTR_MASK];
             m_axis_tx_req_status_valid_next = 1'b1;
+
+            dec_active_2 = 1'b1;
         end else if (desc_table_cpl_write_done[desc_table_finish_ptr_reg & DESC_PTR_MASK] && !m_axis_cpl_enqueue_commit_valid) begin
             // invalidate entry in descriptor table
             desc_table_finish_en = 1'b1;
@@ -1030,9 +1059,11 @@ always @* begin
             m_axis_cpl_enqueue_commit_valid_next = 1'b1;
 
             // return transmit request completion
-            m_axis_tx_req_status_len_next = desc_table_len[desc_table_finish_ptr_reg & DESC_PTR_MASK];
-            m_axis_tx_req_status_tag_next = desc_table_tag[desc_table_finish_ptr_reg & DESC_PTR_MASK];
-            m_axis_tx_req_status_valid_next = 1'b1;
+            finish_tx_req_status_len_next = desc_table_len[desc_table_finish_ptr_reg & DESC_PTR_MASK];
+            finish_tx_req_status_tag_next = desc_table_tag[desc_table_finish_ptr_reg & DESC_PTR_MASK];
+            finish_tx_req_status_valid_next = 1'b1;
+
+            dec_active_2 = 1'b1;
         end
     end
 
@@ -1052,6 +1083,19 @@ always @* begin
         m_axis_pcie_axi_dma_read_desc_valid_next = 1'b1;
         pkt_fetch_pcie_axi_dma_read_desc_valid_next = 1'b0;
     end
+
+    // transmit request completion arbitration
+    if (finish_tx_req_status_valid_next && !m_axis_tx_req_status_valid_reg) begin
+        m_axis_tx_req_status_len_next = finish_tx_req_status_len_next;
+        m_axis_tx_req_status_tag_next = finish_tx_req_status_tag_next;
+        m_axis_tx_req_status_valid_next = 1'b1;
+        finish_tx_req_status_valid_next = 1'b0;
+    end else if (early_tx_req_status_valid_next && !m_axis_tx_req_status_valid_reg) begin
+        m_axis_tx_req_status_len_next = early_tx_req_status_len_next;
+        m_axis_tx_req_status_tag_next = early_tx_req_status_tag_next;
+        m_axis_tx_req_status_valid_next = 1'b1;
+        early_tx_req_status_valid_next = 1'b0;
+    end
 end
 
 always @(posedge clk) begin
@@ -1070,8 +1114,12 @@ always @(posedge clk) begin
         s_axis_tx_ptp_ts_ready_reg <= 1'b0;
         m_axis_tx_csum_cmd_valid_reg <= 1'b0;
 
+        early_tx_req_status_valid_reg <= 1'b0;
+        finish_tx_req_status_valid_reg <= 1'b0;
         desc_fetch_pcie_axi_dma_read_desc_valid_reg <= 1'b0;
         pkt_fetch_pcie_axi_dma_read_desc_valid_reg <= 1'b0;
+
+        active_count_reg <= 0;
 
         desc_table_active <= 0;
         desc_table_invalid <= 0;
@@ -1102,9 +1150,13 @@ always @(posedge clk) begin
         s_axis_tx_ptp_ts_ready_reg <= s_axis_tx_ptp_ts_ready_next;
         m_axis_tx_csum_cmd_valid_reg <= m_axis_tx_csum_cmd_valid_next;
 
+        early_tx_req_status_valid_reg <= early_tx_req_status_valid_next;
+        finish_tx_req_status_valid_reg <= finish_tx_req_status_valid_next;
         desc_fetch_pcie_axi_dma_read_desc_valid_reg <= desc_fetch_pcie_axi_dma_read_desc_valid_next;
         pkt_fetch_pcie_axi_dma_read_desc_valid_reg <= pkt_fetch_pcie_axi_dma_read_desc_valid_next;
         
+        active_count_reg <= active_count_reg + inc_active - dec_active_1 - dec_active_2;
+
         if (desc_table_start_en) begin
             desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b1;
             desc_table_invalid[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
@@ -1113,11 +1165,6 @@ always @(posedge clk) begin
             desc_table_tx_done[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
             desc_table_cpl_write_done[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
             desc_table_start_ptr_reg <= desc_table_start_ptr_reg + 1;
-        end
-        if (desc_table_dequeue_en) begin
-            if (desc_table_dequeue_invalid) begin
-                desc_table_invalid[desc_table_dequeue_ptr & DESC_PTR_MASK] <= 1'b1;
-            end
         end
         if (desc_table_desc_fetched_en) begin
             desc_table_desc_fetched[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= 1'b1;
@@ -1193,6 +1240,12 @@ always @(posedge clk) begin
     m_axis_tx_csum_cmd_csum_start_reg <= m_axis_tx_csum_cmd_csum_start_next;
     m_axis_tx_csum_cmd_csum_offset_reg <= m_axis_tx_csum_cmd_csum_offset_next;
 
+    early_tx_req_status_len_reg <= early_tx_req_status_len_next;
+    early_tx_req_status_tag_reg <= early_tx_req_status_tag_next;
+
+    finish_tx_req_status_len_reg <= finish_tx_req_status_len_next;
+    finish_tx_req_status_tag_reg <= finish_tx_req_status_tag_next;
+
     desc_fetch_pcie_axi_dma_read_desc_pcie_addr_reg <= desc_fetch_pcie_axi_dma_read_desc_pcie_addr_next;
     desc_fetch_pcie_axi_dma_read_desc_axi_addr_reg <= desc_fetch_pcie_axi_dma_read_desc_axi_addr_next;
     desc_fetch_pcie_axi_dma_read_desc_len_reg <= desc_fetch_pcie_axi_dma_read_desc_len_next;
@@ -1206,11 +1259,9 @@ always @(posedge clk) begin
     if (desc_table_start_en) begin
         desc_table_queue[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_queue;
         desc_table_tag[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_tag;
-    end
-    if (desc_table_dequeue_en) begin
-        desc_table_queue_ptr[desc_table_dequeue_ptr & DESC_PTR_MASK] <= desc_table_dequeue_queue_ptr;
-        desc_table_cpl_queue[desc_table_dequeue_ptr & DESC_PTR_MASK] <= desc_table_dequeue_cpl_queue;
-        desc_table_queue_op_tag[desc_table_dequeue_ptr & DESC_PTR_MASK] <= desc_table_dequeue_queue_op_tag;
+        desc_table_queue_ptr[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_queue_ptr;
+        desc_table_cpl_queue[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_cpl_queue;
+        desc_table_queue_op_tag[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_queue_op_tag;
     end
     if (desc_table_data_fetch_start_en) begin
         desc_table_pkt[desc_table_data_fetch_start_ptr_reg & DESC_PTR_MASK] <= desc_table_data_fetch_start_pkt;

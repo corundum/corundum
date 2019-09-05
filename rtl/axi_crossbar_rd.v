@@ -374,8 +374,8 @@ generate
             .ARUSER_WIDTH(ARUSER_WIDTH),
             .RUSER_ENABLE(RUSER_ENABLE),
             .RUSER_WIDTH(RUSER_WIDTH),
-            .AR_REG_TYPE(S_AR_REG_TYPE),
-            .R_REG_TYPE(S_R_REG_TYPE)
+            .AR_REG_TYPE(S_AR_REG_TYPE[m*2 +: 2]),
+            .R_REG_TYPE(S_R_REG_TYPE[m*2 +: 2])
         )
         reg_inst (
             .clk(clk),
@@ -508,8 +508,8 @@ generate
             .ARUSER_WIDTH(ARUSER_WIDTH),
             .RUSER_ENABLE(RUSER_ENABLE),
             .RUSER_WIDTH(RUSER_WIDTH),
-            .AR_REG_TYPE(M_AR_REG_TYPE),
-            .R_REG_TYPE(M_R_REG_TYPE)
+            .AR_REG_TYPE(M_AR_REG_TYPE[n*2 +: 2]),
+            .R_REG_TYPE(M_R_REG_TYPE[n*2 +: 2])
         )
         reg_inst (
             .clk(clk),

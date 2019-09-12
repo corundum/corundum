@@ -2155,7 +2155,7 @@ axi_crossbar #(
     .BUSER_ENABLE(0),
     .ARUSER_ENABLE(0),
     .RUSER_ENABLE(0),
-    .S_THREADS({AXI_S_COUNT{32'd2}}),
+    .S_THREADS({AXI_S_COUNT{32'd4}}),
     .S_ACCEPT({AXI_S_COUNT{32'd16}}),
     .M_REGIONS(1),
     .M_BASE_ADDR(RAM_BASE_ADDR),

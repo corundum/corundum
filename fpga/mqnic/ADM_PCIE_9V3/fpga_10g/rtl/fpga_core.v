@@ -1536,7 +1536,7 @@ axi_crossbar #(
     .BUSER_ENABLE(0),
     .ARUSER_ENABLE(0),
     .RUSER_ENABLE(0),
-    .S_THREADS({2{32'd2}}),
+    .S_THREADS({2{32'd4}}),
     .S_ACCEPT({2{32'd16}}),
     .M_REGIONS(1),
     .M_BASE_ADDR(IF_AXI_BASE_ADDR),

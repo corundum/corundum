@@ -292,7 +292,10 @@ bool mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
         skb->protocol = eth_type_trans(skb, priv->ndev);
 
         // RX hardware timestamp
-        skb_hwtstamps(skb)->hwtstamp = mqnic_read_cpl_ts(priv->mdev, ring, cpl);
+        if (priv->if_features & MQNIC_IF_FEATURE_PTP_TS)
+        {
+            skb_hwtstamps(skb)->hwtstamp = mqnic_read_cpl_ts(priv->mdev, ring, cpl);
+        }
 
         skb_record_rx_queue(skb, cq_ring->ring_index);
 

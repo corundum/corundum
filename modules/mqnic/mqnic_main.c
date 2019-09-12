@@ -191,7 +191,9 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     dev_info(dev, "PHC count: %d", mqnic->phc_count);
     mqnic->phc_offset = ioread32(mqnic->hw_addr+MQNIC_REG_PHC_OFFSET);
     dev_info(dev, "PHC offset: 0x%08x", mqnic->phc_offset);
-    mqnic->phc_hw_addr = mqnic->hw_addr+mqnic->phc_offset;
+
+    if (mqnic->phc_count)
+        mqnic->phc_hw_addr = mqnic->hw_addr+mqnic->phc_offset;
 
     mqnic->if_count = ioread32(mqnic->hw_addr+MQNIC_REG_IF_COUNT);
     dev_info(dev, "IF count: %d", mqnic->if_count);

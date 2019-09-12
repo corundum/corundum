@@ -103,9 +103,9 @@ void mqnic_destroy_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_
     kfree(ring);
 }
 
-int mqnic_activate_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring *ring, int int_index)
+int mqnic_activate_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring *ring, int eq_index)
 {
-    ring->int_index = int_index;
+    ring->eq_index = eq_index;
 
     // deactivate queue
     iowrite32(0, ring->hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -113,7 +113,7 @@ int mqnic_activate_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring *ring, 
     iowrite32(ring->buf_dma_addr, ring->hw_addr+MQNIC_CPL_QUEUE_BASE_ADDR_REG+0);
     iowrite32(ring->buf_dma_addr >> 32, ring->hw_addr+MQNIC_CPL_QUEUE_BASE_ADDR_REG+4);
     // set interrupt index
-    iowrite32(int_index, ring->hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG);
+    iowrite32(eq_index, ring->hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG);
     // set pointers
     iowrite32(ring->head_ptr & ring->hw_ptr_mask, ring->hw_addr+MQNIC_CPL_QUEUE_HEAD_PTR_REG);
     iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr+MQNIC_CPL_QUEUE_TAIL_PTR_REG);
@@ -128,7 +128,7 @@ void mqnic_deactivate_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring *rin
     // deactivate queue
     iowrite32(ilog2(ring->size), ring->hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG);
     // disarm queue
-    iowrite32(ring->int_index, ring->hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG);
+    iowrite32(ring->eq_index, ring->hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG);
 }
 
 bool mqnic_is_cq_ring_empty(const struct mqnic_cq_ring *ring)
@@ -153,6 +153,6 @@ void mqnic_cq_write_tail_ptr(struct mqnic_cq_ring *ring)
 
 void mqnic_arm_cq(struct mqnic_cq_ring *ring)
 {
-    iowrite32(ring->int_index | MQNIC_CPL_QUEUE_ARM_MASK, ring->hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG);
+    iowrite32(ring->eq_index | MQNIC_CPL_QUEUE_ARM_MASK, ring->hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG);
 }
 

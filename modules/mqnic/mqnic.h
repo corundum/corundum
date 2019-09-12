@@ -175,7 +175,7 @@ struct mqnic_cq_ring {
     struct net_device *ndev;
     struct napi_struct napi;
     int ring_index;
-    int int_index;
+    int eq_index;
 
     void (*handler) (struct mqnic_cq_ring *);
 
@@ -306,7 +306,7 @@ void mqnic_process_eq(struct net_device *ndev, struct mqnic_eq_ring *eq_ring);
 // mqnic_cq.c
 int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_ptr, int size, int stride, int index, u8 __iomem *hw_addr);
 void mqnic_destroy_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_ptr);
-int mqnic_activate_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring *ring, int int_index);
+int mqnic_activate_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring *ring, int eq_index);
 void mqnic_deactivate_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring *ring);
 bool mqnic_is_cq_ring_empty(const struct mqnic_cq_ring *ring);
 bool mqnic_is_cq_ring_full(const struct mqnic_cq_ring *ring);

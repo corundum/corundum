@@ -44,14 +44,15 @@ static int mqnic_open(struct net_device *ndev)
     // set up event queues
     for (k = 0; k < priv->event_queue_count; k++)
     {
-        mqnic_activate_eq_ring(priv, priv->event_ring[k], priv->port); // TODO interrupt index
+        priv->event_ring[k]->irq = pci_irq_vector(mdev->pdev, k % mdev->msi_nvecs);
+        mqnic_activate_eq_ring(priv, priv->event_ring[k], k % mdev->msi_nvecs);
         mqnic_arm_eq(priv->event_ring[k]);
     }
 
     // set up RX completion queues
     for (k = 0; k < priv->rx_cpl_queue_count; k++)
     {
-        mqnic_activate_cq_ring(priv, priv->rx_cpl_ring[k], 0); // TODO configure/constant
+        mqnic_activate_cq_ring(priv, priv->rx_cpl_ring[k], k % priv->event_queue_count);
         priv->rx_cpl_ring[k]->ring_index = k;
         priv->rx_cpl_ring[k]->handler = mqnic_rx_irq;
 
@@ -70,7 +71,7 @@ static int mqnic_open(struct net_device *ndev)
     // set up TX completion queues
     for (k = 0; k < priv->tx_cpl_queue_count; k++)
     {
-        mqnic_activate_cq_ring(priv, priv->tx_cpl_ring[k], 0); // TODO configure/constant
+        mqnic_activate_cq_ring(priv, priv->tx_cpl_ring[k], k % priv->event_queue_count);
         priv->tx_cpl_ring[k]->ring_index = k;
         priv->tx_cpl_ring[k]->handler = mqnic_tx_irq;
 
@@ -311,27 +312,6 @@ static const struct net_device_ops mqnic_netdev_ops = {
     .ndo_do_ioctl           = mqnic_ioctl,
 };
 
-static irqreturn_t mqnic_netdev_interrupt(int irq, void *data)
-{
-    struct mqnic_priv *priv = data;
-
-    int k;
-
-    if (likely(priv->port_up))
-    {
-        for (k = 0; k < priv->event_queue_count; k++)
-        {
-            if (likely(priv->event_ring[k]))
-            {
-                mqnic_process_eq(priv->ndev, priv->event_ring[k]);
-                mqnic_arm_eq(priv->event_ring[k]);
-            }
-        }
-    }
-
-    return IRQ_HANDLED;
-}
-
 int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 {
     struct device *dev = &mdev->pdev->dev;
@@ -420,15 +400,6 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 
     netif_set_real_num_tx_queues(ndev, priv->tx_queue_count);
     netif_set_real_num_rx_queues(ndev, priv->rx_queue_count);
-
-    // Set up interrupt
-    ret = pci_request_irq(mdev->pdev, priv->port, mqnic_netdev_interrupt, 0, priv, "mqnic%d", priv->port);
-    if (ret < 0)
-    {
-        dev_err(dev, "Failed to request IRQ");
-        free_netdev(ndev);
-        return ret;
-    }
 
     // set MAC
     ndev->addr_len = ETH_ALEN;
@@ -608,7 +579,6 @@ void mqnic_destroy_netdev(struct net_device *ndev)
         }
     }
 
-    pci_free_irq(mdev->pdev, priv->port, priv);
     free_netdev(ndev);
 }
 

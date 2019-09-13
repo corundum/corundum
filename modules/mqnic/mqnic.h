@@ -77,6 +77,8 @@ struct mqnic_dev {
 
     char name[16];
 
+    int msi_nvecs;
+
     unsigned int id;
     struct list_head dev_list_node;
 
@@ -200,6 +202,8 @@ struct mqnic_eq_ring {
 
     struct net_device *ndev;
     int int_index;
+
+    int irq;
 
     void (*handler) (struct mqnic_eq_ring *);
 

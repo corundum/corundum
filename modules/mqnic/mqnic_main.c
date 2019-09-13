@@ -94,6 +94,39 @@ done:
     return mqnic;
 }
 
+static irqreturn_t mqnic_interrupt(int irq, void *data)
+{
+    struct mqnic_dev *mqnic = data;
+    struct mqnic_priv *priv;
+
+    int k, l;
+
+    for (k = 0; k < MQNIC_MAX_IF; k++)
+    {
+        if (!mqnic->ndev[k])
+            continue;
+
+        priv = netdev_priv(mqnic->ndev[k]);
+
+        if (unlikely(!priv->port_up))
+            continue;
+
+        for (l = 0; l < priv->event_queue_count; l++)
+        {
+            if (unlikely(!priv->event_ring[l]))
+                continue;
+
+            if (priv->event_ring[l]->irq == irq)
+            {
+                mqnic_process_eq(priv->ndev, priv->event_ring[l]);
+                mqnic_arm_eq(priv->event_ring[l]);
+            }
+        }
+    }
+
+    return IRQ_HANDLED;
+}
+
 static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
     int ret = 0;
@@ -203,11 +236,22 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     dev_info(dev, "IF CSR offset: 0x%08x", mqnic->if_csr_offset);
 
     // Allocate MSI IRQs
-    ret = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI);
-    if (ret < 0)
+    mqnic->msi_nvecs = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI);
+    if (mqnic->msi_nvecs < 0)
     {
         dev_err(dev, "Failed to allocate IRQs");
         goto fail_map_bars;
+    }
+
+    // Set up interrupts
+    for (k = 0; k < mqnic->msi_nvecs; k++)
+    {
+        ret = pci_request_irq(pdev, k, mqnic_interrupt, 0, mqnic, "mqnic");
+        if (ret < 0)
+        {
+            dev_err(dev, "Failed to request IRQ");
+            goto fail_irq;
+        }
     }
 
     // Set up I2C interfaces
@@ -285,6 +329,11 @@ fail_init_netdev:
     pci_clear_master(pdev);
 fail_i2c:
     mqnic_remove_i2c(mqnic);
+    for (k = 0; k < mqnic->msi_nvecs; k++)
+    {
+        pci_free_irq(pdev, k, mqnic);
+    }
+fail_irq:
     pci_free_irq_vectors(pdev);
 fail_map_bars:
     pci_iounmap(pdev, mqnic->hw_addr);
@@ -329,6 +378,10 @@ static void mqnic_remove(struct pci_dev *pdev)
 
     pci_clear_master(pdev);
     mqnic_remove_i2c(mqnic);
+    for (k = 0; k < mqnic->msi_nvecs; k++)
+    {
+        pci_free_irq(pdev, k, mqnic);
+    }
     pci_free_irq_vectors(pdev);
     pci_iounmap(pdev, mqnic->hw_addr);
     pci_release_regions(pdev);

@@ -417,7 +417,7 @@ always @* begin
 
         queue_ram_read_ptr = op_table_queue[op_table_finish_ptr_reg];
         queue_ram_addr_pipeline_next[0] = op_table_queue[op_table_finish_ptr_reg];
-    end else if (enable && !op_table_active[op_table_start_ptr_reg] && s_axis_enqueue_req_valid && (!m_axis_enqueue_resp_valid || m_axis_enqueue_resp_ready) && !op_req_pipe_reg[0] && !op_req_pipe_hazard) begin
+    end else if (enable && !op_table_active[op_table_start_ptr_reg] && s_axis_enqueue_req_valid && (!m_axis_enqueue_resp_valid || m_axis_enqueue_resp_ready) && !op_req_pipe_reg && !op_req_pipe_hazard) begin
         // enqueue request
         op_req_pipe_next[0] = 1'b1;
 

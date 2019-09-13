@@ -74,7 +74,7 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr, int
     // enable schedulers
     iowrite32(0xffffffff, port->hw_addr+MQNIC_PORT_REG_SCHED_ENABLE);
 
-    for (k = 0; k < 32; k++)
+    for (k = 0; k < priv->tx_queue_count; k++)
     {
         iowrite32(1, port->hw_addr+port->sched_offset+k*4);
     }

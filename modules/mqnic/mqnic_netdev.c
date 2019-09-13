@@ -391,13 +391,6 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
     if (priv->port_count > MQNIC_MAX_PORTS)
         priv->port_count = MQNIC_MAX_PORTS;
 
-    // TODO use all queues
-    priv->event_queue_count = 1;
-    priv->tx_queue_count = 1;
-    priv->tx_cpl_queue_count = 1;
-    priv->rx_queue_count = 1;
-    priv->rx_cpl_queue_count = 1;
-
     netif_set_real_num_tx_queues(ndev, priv->tx_queue_count);
     netif_set_real_num_rx_queues(ndev, priv->rx_queue_count);
 

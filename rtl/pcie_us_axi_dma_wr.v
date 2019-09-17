@@ -57,6 +57,16 @@ module pcie_us_axi_dma_wr #
     input  wire                            rst,
 
     /*
+     * AXI input (RQ from read DMA)
+     */
+    input  wire [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_rq_tdata,
+    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_rq_tkeep,
+    input  wire                            s_axis_rq_tvalid,
+    output wire                            s_axis_rq_tready,
+    input  wire                            s_axis_rq_tlast,
+    input  wire [59:0]                     s_axis_rq_tuser,
+
+    /*
      * AXI output (RQ)
      */
     output wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata,
@@ -183,13 +193,14 @@ localparam [1:0]
 
 reg [1:0] axi_state_reg = AXI_STATE_IDLE, axi_state_next;
 
-localparam [1:0]
-    TLP_STATE_IDLE = 2'd0,
-    TLP_STATE_HEADER_1 = 2'd1,
-    TLP_STATE_HEADER_2 = 2'd2,
-    TLP_STATE_TRANSFER = 2'd3;
+localparam [2:0]
+    TLP_STATE_IDLE = 3'd0,
+    TLP_STATE_HEADER_1 = 3'd1,
+    TLP_STATE_HEADER_2 = 3'd2,
+    TLP_STATE_TRANSFER = 3'd3,
+    TLP_STATE_PASSTHROUGH = 3'd4;
 
-reg [1:0] tlp_state_reg = TLP_STATE_IDLE, tlp_state_next;
+reg [2:0] tlp_state_reg = TLP_STATE_IDLE, tlp_state_next;
 
 // datapath control signals
 reg transfer_in_save;
@@ -227,6 +238,8 @@ reg tlp_cmd_valid_reg = 1'b0, tlp_cmd_valid_next;
 
 reg [10:0] max_payload_size_dw_reg = 11'd0;
 
+reg s_axis_rq_tready_reg = 1'b0, s_axis_rq_tready_next;
+
 reg s_axis_write_desc_ready_reg = 1'b0, s_axis_write_desc_ready_next;
 
 reg [TAG_WIDTH-1:0] m_axis_write_desc_status_tag_reg = {TAG_WIDTH{1'b0}}, m_axis_write_desc_status_tag_next;
@@ -249,6 +262,8 @@ reg                             m_axis_rq_tready_int_reg = 1'b0;
 reg                             m_axis_rq_tlast_int;
 reg  [59:0]                     m_axis_rq_tuser_int;
 wire                            m_axis_rq_tready_int_early;
+
+assign s_axis_rq_tready = s_axis_rq_tready_reg;
 
 assign s_axis_write_desc_ready = s_axis_write_desc_ready_reg;
 
@@ -423,6 +438,8 @@ always @* begin
 
     tlp_cmd_ready = 1'b0;
 
+    s_axis_rq_tready_next = 1'b0;
+
     m_axis_write_desc_status_tag_next = m_axis_write_desc_status_tag_reg;
     m_axis_write_desc_status_valid_next = 1'b0;
 
@@ -484,6 +501,15 @@ always @* begin
     case (tlp_state_reg)
         TLP_STATE_IDLE: begin
             // idle state, wait for command
+            s_axis_rq_tready_next = m_axis_rq_tready_int_early;
+
+            // pass through read request TLP
+            m_axis_rq_tdata_int = s_axis_rq_tdata;
+            m_axis_rq_tkeep_int = s_axis_rq_tkeep;
+            m_axis_rq_tvalid_int = s_axis_rq_tready && s_axis_rq_tvalid;
+            m_axis_rq_tlast_int = s_axis_rq_tlast;
+            m_axis_rq_tuser_int = s_axis_rq_tuser;
+
             m_axi_rready_next = 1'b0;
 
             tlp_addr_next = tlp_cmd_addr_reg;
@@ -498,7 +524,15 @@ always @* begin
             last_tlp_next = tlp_cmd_last_reg;
             tag_next = tlp_cmd_tag_reg;
 
-            if (tlp_cmd_valid_reg) begin
+            if (s_axis_rq_tready && s_axis_rq_tvalid) begin
+                // pass through read request TLP
+                if (s_axis_rq_tlast) begin
+                    tlp_state_next = TLP_STATE_IDLE;
+                end else begin
+                    tlp_state_next = TLP_STATE_PASSTHROUGH;
+                end
+            end else if (tlp_cmd_valid_reg) begin
+                s_axis_rq_tready_next = 1'b0;
                 tlp_cmd_ready = 1'b1;
                 if (AXIS_PCIE_DATA_WIDTH == 256) begin
                     m_axi_rready_next = m_axis_rq_tready_int_early;
@@ -576,6 +610,7 @@ always @* begin
                                 end
                                 tlp_state_next = TLP_STATE_HEADER_1;
                             end else begin
+                                s_axis_rq_tready_next = m_axis_rq_tready_int_early;
                                 m_axi_rready_next = 0;
                                 tlp_state_next = TLP_STATE_IDLE;
                             end
@@ -706,6 +741,7 @@ always @* begin
                             end
                             tlp_state_next = TLP_STATE_HEADER_1;
                         end else begin
+                            s_axis_rq_tready_next = m_axis_rq_tready_int_early;
                             m_axi_rready_next = 0;
                             tlp_state_next = TLP_STATE_IDLE;
                         end
@@ -718,6 +754,23 @@ always @* begin
                 tlp_state_next = TLP_STATE_TRANSFER;
             end
         end
+        TLP_STATE_PASSTHROUGH: begin
+            // passthrough state, pass through read request TLP
+            s_axis_rq_tready_next = m_axis_rq_tready_int_early;
+
+            // pass through read request TLP
+            m_axis_rq_tdata_int = s_axis_rq_tdata;
+            m_axis_rq_tkeep_int = s_axis_rq_tkeep;
+            m_axis_rq_tvalid_int = s_axis_rq_tready && s_axis_rq_tvalid;
+            m_axis_rq_tlast_int = s_axis_rq_tlast;
+            m_axis_rq_tuser_int = s_axis_rq_tuser;
+
+            if (s_axis_rq_tready && s_axis_rq_tvalid && s_axis_rq_tlast) begin
+                tlp_state_next = TLP_STATE_IDLE;
+            end else begin
+                tlp_state_next = TLP_STATE_PASSTHROUGH;
+            end
+        end
     endcase
 end
 
@@ -726,6 +779,7 @@ always @(posedge clk) begin
         axi_state_reg <= AXI_STATE_IDLE;
         tlp_state_reg <= TLP_STATE_IDLE;
         tlp_cmd_valid_reg <= 1'b0;
+        s_axis_rq_tready_reg <= 1'b0;
         s_axis_write_desc_ready_reg <= 1'b0;
         m_axis_write_desc_status_valid_reg <= 1'b0;
         m_axi_arvalid_reg <= 1'b0;
@@ -734,6 +788,7 @@ always @(posedge clk) begin
         axi_state_reg <= axi_state_next;
         tlp_state_reg <= tlp_state_next;
         tlp_cmd_valid_reg <= tlp_cmd_valid_next;
+        s_axis_rq_tready_reg <= s_axis_rq_tready_next;
         s_axis_write_desc_ready_reg <= s_axis_write_desc_ready_next;
         m_axis_write_desc_status_valid_reg <= m_axis_write_desc_status_valid_next;
         m_axi_arvalid_reg <= m_axi_arvalid_next;

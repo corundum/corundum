@@ -40,8 +40,6 @@ srcs.append("../rtl/%s.v" % module)
 srcs.append("../rtl/pcie_us_axi_dma_rd.v")
 srcs.append("../rtl/pcie_us_axi_dma_wr.v")
 srcs.append("../rtl/pcie_tag_manager.v")
-srcs.append("../rtl/axis_arb_mux.v")
-srcs.append("../rtl/arbiter.v")
 srcs.append("../rtl/priority_encoder.v")
 srcs.append("%s.v" % testbench)
 
@@ -461,6 +459,7 @@ def bench():
         test_data = b'\x11\x22\x33\x44'
 
         axi_ram_inst.write_mem(axi_addr, test_data)
+        mem_data[pcie_addr:pcie_addr+len(test_data)] = b'\x00'*len(test_data)
 
         data = axi_ram_inst.read_mem(axi_addr, 32)
         for i in range(0, len(data), 16):
@@ -495,6 +494,7 @@ def bench():
         axi_addr = 0x00000000
         test_data = b'\x11\x22\x33\x44'
 
+        axi_ram_inst.write_mem(axi_addr, b'\x00'*len(test_data))
         mem_data[pcie_addr:pcie_addr+len(test_data)] = test_data
 
         data = mem_data[pcie_addr:pcie_addr+32]

@@ -186,13 +186,6 @@ wire                            axis_rq_tready_read;
 wire                            axis_rq_tlast_read;
 wire [59:0]                     axis_rq_tuser_read;
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0] axis_rq_tdata_write;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0] axis_rq_tkeep_write;
-wire                            axis_rq_tvalid_write;
-wire                            axis_rq_tready_write;
-wire                            axis_rq_tlast_write;
-wire [59:0]                     axis_rq_tuser_write;
-
 pcie_us_axi_dma_rd #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
@@ -311,14 +304,24 @@ pcie_us_axi_dma_wr_inst (
     .rst(rst),
 
     /*
+     * AXI input (RQ from read DMA)
+     */
+    .s_axis_rq_tdata(axis_rq_tdata_read),
+    .s_axis_rq_tkeep(axis_rq_tkeep_read),
+    .s_axis_rq_tvalid(axis_rq_tvalid_read),
+    .s_axis_rq_tready(axis_rq_tready_read),
+    .s_axis_rq_tlast(axis_rq_tlast_read),
+    .s_axis_rq_tuser(axis_rq_tuser_read),
+
+    /*
      * AXI output (RQ)
      */
-    .m_axis_rq_tdata(axis_rq_tdata_write),
-    .m_axis_rq_tkeep(axis_rq_tkeep_write),
-    .m_axis_rq_tvalid(axis_rq_tvalid_write),
-    .m_axis_rq_tready(axis_rq_tready_write),
-    .m_axis_rq_tlast(axis_rq_tlast_write),
-    .m_axis_rq_tuser(axis_rq_tuser_write),
+    .m_axis_rq_tdata(m_axis_rq_tdata),
+    .m_axis_rq_tkeep(m_axis_rq_tkeep),
+    .m_axis_rq_tvalid(m_axis_rq_tvalid),
+    .m_axis_rq_tready(m_axis_rq_tready),
+    .m_axis_rq_tlast(m_axis_rq_tlast),
+    .m_axis_rq_tuser(m_axis_rq_tuser),
 
     /*
      * AXI write descriptor input
@@ -363,39 +366,6 @@ pcie_us_axi_dma_wr_inst (
     .requester_id(requester_id),
     .requester_id_enable(requester_id_enable),
     .max_payload_size(max_payload_size)
-);
-
-axis_arb_mux #(
-    .S_COUNT(2),
-    .DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
-    .KEEP_ENABLE(1),
-    .KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
-    .ID_ENABLE(0),
-    .DEST_ENABLE(0),
-    .USER_ENABLE(1),
-    .USER_WIDTH(60),
-    .ARB_TYPE("PRIORITY"),
-    .LSB_PRIORITY("HIGH")
-)
-request_mux_inst (
-    .clk(clk),
-    .rst(rst),
-    .s_axis_tdata({axis_rq_tdata_write, axis_rq_tdata_read}),
-    .s_axis_tkeep({axis_rq_tkeep_write, axis_rq_tkeep_read}),
-    .s_axis_tvalid({axis_rq_tvalid_write, axis_rq_tvalid_read}),
-    .s_axis_tready({axis_rq_tready_write, axis_rq_tready_read}),
-    .s_axis_tlast({axis_rq_tlast_write, axis_rq_tlast_read}),
-    .s_axis_tid(0),
-    .s_axis_tdest(0),
-    .s_axis_tuser({axis_rq_tuser_write, axis_rq_tuser_read}),
-    .m_axis_tdata(m_axis_rq_tdata),
-    .m_axis_tkeep(m_axis_rq_tkeep),
-    .m_axis_tvalid(m_axis_rq_tvalid),
-    .m_axis_tready(m_axis_rq_tready),
-    .m_axis_tlast(m_axis_rq_tlast),
-    .m_axis_tid(),
-    .m_axis_tdest(),
-    .m_axis_tuser(m_axis_rq_tuser)
 );
 
 endmodule

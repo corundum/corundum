@@ -62,6 +62,11 @@ def bench():
     rst = Signal(bool(0))
     current_test = Signal(intbv(0)[8:])
 
+    s_axis_rq_tdata = Signal(intbv(0)[AXIS_PCIE_DATA_WIDTH:])
+    s_axis_rq_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
+    s_axis_rq_tvalid = Signal(bool(0))
+    s_axis_rq_tlast = Signal(bool(0))
+    s_axis_rq_tuser = Signal(intbv(0)[60:])
     m_axis_rq_tready = Signal(bool(0))
     s_axis_write_desc_pcie_addr = Signal(intbv(0)[PCIE_ADDR_WIDTH:])
     s_axis_write_desc_axi_addr = Signal(intbv(0)[AXI_ADDR_WIDTH:])
@@ -80,6 +85,7 @@ def bench():
     max_payload_size = Signal(intbv(0)[3:])
 
     # Outputs
+    s_axis_rq_tready = Signal(bool(0))
     m_axis_rq_tdata = Signal(intbv(0)[AXIS_PCIE_DATA_WIDTH:])
     m_axis_rq_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     m_axis_rq_tvalid = Signal(bool(0))
@@ -257,6 +263,12 @@ def bench():
         clk=user_clk,
         rst=user_reset,
         current_test=current_test,
+        s_axis_rq_tdata=s_axis_rq_tdata,
+        s_axis_rq_tkeep=s_axis_rq_tkeep,
+        s_axis_rq_tvalid=s_axis_rq_tvalid,
+        s_axis_rq_tready=s_axis_rq_tready,
+        s_axis_rq_tlast=s_axis_rq_tlast,
+        s_axis_rq_tuser=s_axis_rq_tuser,
         m_axis_rq_tdata=m_axis_rq_tdata,
         m_axis_rq_tkeep=m_axis_rq_tkeep,
         m_axis_rq_tvalid=m_axis_rq_tvalid,

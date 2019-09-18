@@ -48,6 +48,11 @@ reg clk = 0;
 reg rst = 0;
 reg [7:0] current_test = 0;
 
+reg [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_rq_tdata = 0;
+reg [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_rq_tkeep = 0;
+reg s_axis_rq_tvalid = 0;
+reg s_axis_rq_tlast = 0;
+reg [59:0] s_axis_rq_tuser = 0;
 reg m_axis_rq_tready = 0;
 reg [PCIE_ADDR_WIDTH-1:0] s_axis_write_desc_pcie_addr = 0;
 reg [AXI_ADDR_WIDTH-1:0] s_axis_write_desc_axi_addr = 0;
@@ -66,6 +71,7 @@ reg requester_id_enable = 0;
 reg [2:0] max_payload_size = 0;
 
 // Outputs
+wire s_axis_rq_tready;
 wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata;
 wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rq_tkeep;
 wire m_axis_rq_tvalid;
@@ -91,6 +97,11 @@ initial begin
         clk,
         rst,
         current_test,
+        s_axis_rq_tdata,
+        s_axis_rq_tkeep,
+        s_axis_rq_tvalid,
+        s_axis_rq_tlast,
+        s_axis_rq_tuser,
         m_axis_rq_tready,
         s_axis_write_desc_pcie_addr,
         s_axis_write_desc_axi_addr,
@@ -109,6 +120,7 @@ initial begin
         max_payload_size
     );
     $to_myhdl(
+        s_axis_rq_tready,
         m_axis_rq_tdata,
         m_axis_rq_tkeep,
         m_axis_rq_tvalid,
@@ -149,6 +161,12 @@ pcie_us_axi_dma_wr #(
 UUT (
     .clk(clk),
     .rst(rst),
+    .s_axis_rq_tdata(s_axis_rq_tdata),
+    .s_axis_rq_tkeep(s_axis_rq_tkeep),
+    .s_axis_rq_tvalid(s_axis_rq_tvalid),
+    .s_axis_rq_tready(s_axis_rq_tready),
+    .s_axis_rq_tlast(s_axis_rq_tlast),
+    .s_axis_rq_tuser(s_axis_rq_tuser),
     .m_axis_rq_tdata(m_axis_rq_tdata),
     .m_axis_rq_tkeep(m_axis_rq_tkeep),
     .m_axis_rq_tvalid(m_axis_rq_tvalid),

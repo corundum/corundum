@@ -64,6 +64,8 @@ module fpga_core #
     input  wire                            btnc,
     input  wire [3:0]                      sw,
     output wire [7:0]                      led,
+    output wire [7:0]                      pmod0,
+    output wire [7:0]                      pmod1,
 
     /*
      * I2C
@@ -1835,9 +1837,18 @@ ptp_clock_inst (
     .output_pps(ptp_pps)
 );
 
-assign sma_out = ptp_perout_pulse;
-assign sma_out_en = 1'b0;
-assign sma_term_en = 1'b0;
+reg [26:0] pps_led_counter_reg = 0;
+reg pps_led_reg = 0;
+
+always @(posedge clk_250mhz) begin
+    if (ptp_pps) begin
+        pps_led_counter_reg <= 125000000;
+    end else if (pps_led_counter_reg > 0) begin
+        pps_led_counter_reg <= pps_led_counter_reg - 1;
+    end
+
+    pps_led_reg <= pps_led_counter_reg > 0;
+end
 
 ptp_perout #(
     .FNS_ENABLE(0),
@@ -1868,18 +1879,10 @@ ptp_perout_inst (
     .output_pulse(ptp_perout_pulse)
 );
 
-reg [26:0] pps_led_counter_reg = 0;
-reg pps_led_reg = 0;
-
-always @(posedge clk_250mhz) begin
-    if (ptp_pps) begin
-        pps_led_counter_reg <= 125000000;
-    end else if (pps_led_counter_reg > 0) begin
-        pps_led_counter_reg <= pps_led_counter_reg - 1;
-    end
-
-    pps_led_reg <= pps_led_counter_reg > 0;
-end
+assign pmod0[0] = ptp_perout_pulse;
+assign pmod0[7:1] = 0;
+assign pmod1[0] = ptp_perout_pulse;
+assign pmod1[7:1] = 0;
 
 // BER tester
 tdma_ber #(

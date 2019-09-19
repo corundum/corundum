@@ -55,6 +55,8 @@ module fpga (
     input  wire       btnc,
     input  wire [3:0] sw,
     output wire [7:0] led,
+    output wire [7:0] pmod0,
+    output wire [7:0] pmod1,
 
     /*
      * I2C for board management
@@ -1182,6 +1184,8 @@ core_inst (
     .btnc(btnc_int),
     .sw(sw_int),
     .led(led),
+    .pmod0(pmod0),
+    .pmod1(pmod1),
 
     /*
      * I2C

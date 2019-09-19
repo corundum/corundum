@@ -1,4 +1,4 @@
-# Corundum mqnic for VCU108
+# Corundum mqnic_tdma for VCU108
 
 ## Introduction
 

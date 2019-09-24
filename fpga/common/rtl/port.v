@@ -1449,7 +1449,7 @@ axi_dma #(
     .LEN_WIDTH(AXI_DMA_LEN_WIDTH),
     .TAG_WIDTH(AXI_DMA_TAG_WIDTH),
     .ENABLE_SG(0),
-    .ENABLE_UNALIGNED(1)
+    .ENABLE_UNALIGNED(0)
 )
 axi_dma_inst (
     .clk(clk),

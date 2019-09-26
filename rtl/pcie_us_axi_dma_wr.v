@@ -386,7 +386,7 @@ always @* begin
         AXI_STATE_REQ: begin
             // request state, generate AXI read requests
             if (!m_axi_arvalid) begin
-                if (tlp_count_reg <= AXI_MAX_BURST_SIZE-axi_addr_reg[1:0]) begin
+                if (tlp_count_reg <= AXI_MAX_BURST_SIZE-axi_addr_reg[OFFSET_WIDTH-1:0]) begin
                     // packet smaller than max burst size
                     if (axi_addr_reg[12] != axi_addr_plus_tlp_count[12]) begin
                         // crosses 4k boundary

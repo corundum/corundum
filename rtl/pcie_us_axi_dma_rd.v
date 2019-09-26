@@ -266,7 +266,6 @@ reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
 reg axi_addr_valid_reg = 1'b0, axi_addr_valid_next;
 reg [9:0] op_dword_count_reg = 10'd0, op_dword_count_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
-reg op_count_leq_axi_max_burst_reg = 1'b0, op_count_leq_axi_max_burst_next;
 reg [12:0] tr_count_reg = 13'd0, tr_count_next;
 reg [CYCLE_COUNT_WIDTH-1:0] input_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, input_cycle_count_next;
 reg [CYCLE_COUNT_WIDTH-1:0] output_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, output_cycle_count_next;
@@ -353,9 +352,6 @@ assign status_error_uncor = status_error_uncor_reg;
 wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_max_read_request = req_pcie_addr_reg + {max_read_request_size_dw_reg, 2'b00};
 wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_op_count = req_pcie_addr_reg + req_op_count_reg;
 wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_tlp_count = req_pcie_addr_reg + req_tlp_count_reg;
-
-wire [AXI_ADDR_WIDTH-1:0] axi_addr_plus_max_burst = axi_addr_reg + AXI_MAX_BURST_SIZE;
-wire [AXI_ADDR_WIDTH-1:0] axi_addr_plus_op_count = axi_addr_reg + op_count_reg;
 
 wire [3:0] first_be = 4'b1111 << req_pcie_addr_reg[1:0];
 wire [3:0] last_be = 4'b1111 >> (3 - ((req_pcie_addr_reg[1:0] + req_tlp_count_next[1:0] - 1) & 3));
@@ -656,7 +652,6 @@ always @* begin
     axi_addr_next = axi_addr_reg;
     axi_addr_valid_next = axi_addr_valid_reg;
     op_count_next = op_count_reg;
-    op_count_leq_axi_max_burst_next = op_count_leq_axi_max_burst_reg;
     tr_count_next = tr_count_reg;
     op_dword_count_next = op_dword_count_reg;
     input_cycle_count_next = input_cycle_count_reg;
@@ -748,7 +743,26 @@ always @* begin
                     first_cycle_offset_next = axi_addr_next[OFFSET_WIDTH-1:0];
                     first_cycle_next = 1'b1;
 
-                    op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
+                    // AXI transfer size computation
+                    if (op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[OFFSET_WIDTH-1:0] || AXI_MAX_BURST_SIZE >= 4096) begin
+                        // packet smaller than max burst size
+                        if ((axi_addr_next ^ (axi_addr_next + op_count_next)) & (1 << 12)) begin
+                            // crosses 4k boundary
+                            tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                        end else begin
+                            // does not cross 4k boundary, send one request
+                            tr_count_next = op_count_next;
+                        end
+                    end else begin
+                        // packet larger than max burst size
+                        if ((axi_addr_next ^ (axi_addr_next + AXI_MAX_BURST_SIZE)) & (1 << 12)) begin
+                            // crosses 4k boundary
+                            tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                        end else begin
+                            // does not cross 4k boundary, send one request
+                            tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_next[OFFSET_WIDTH-1:0];
+                        end
+                    end
 
                     op_tag_next = tag_table_op_tag[pcie_tag_next];
 
@@ -864,7 +878,26 @@ always @* begin
                 first_cycle_offset_next = axi_addr_next[OFFSET_WIDTH-1:0];
                 first_cycle_next = 1'b1;
 
-                op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
+                // AXI transfer size computation
+                if (op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[OFFSET_WIDTH-1:0] || AXI_MAX_BURST_SIZE >= 4096) begin
+                    // packet smaller than max burst size
+                    if ((axi_addr_next ^ (axi_addr_next + op_count_next)) & (1 << 12)) begin
+                        // crosses 4k boundary
+                        tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                    end else begin
+                        // does not cross 4k boundary, send one request
+                        tr_count_next = op_count_next;
+                    end
+                end else begin
+                    // packet larger than max burst size
+                    if ((axi_addr_next ^ (axi_addr_next + AXI_MAX_BURST_SIZE)) & (1 << 12)) begin
+                        // crosses 4k boundary
+                        tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                    end else begin
+                        // does not cross 4k boundary, send one request
+                        tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_next[OFFSET_WIDTH-1:0];
+                    end
+                end
 
                 op_tag_next = tag_table_op_tag[pcie_tag_next];
 
@@ -919,26 +952,6 @@ always @* begin
             if (s_axis_rc_tready && s_axis_rc_tvalid) begin
                 transfer_in_save = 1'b1;
 
-                if (op_count_leq_axi_max_burst_reg) begin
-                    // packet smaller than max burst size
-                    if (axi_addr_reg[12] != axi_addr_plus_op_count[12]) begin
-                        // crosses 4k boundary
-                        tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                    end else begin
-                        // does not cross 4k boundary, send one request
-                        tr_count_next = op_count_reg;
-                    end
-                end else begin
-                    // packet larger than max burst size
-                    if (axi_addr_reg[12] != axi_addr_plus_max_burst[12]) begin
-                        // crosses 4k boundary
-                        tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                    end else begin
-                        // does not cross 4k boundary, send one request
-                        tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_reg[OFFSET_WIDTH-1:0];
-                    end
-                end
-
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
                     input_cycle_count_next = (tr_count_next + 4+lower_addr_reg[1:0] - 1) >> (AXI_BURST_SIZE);
                 end else begin
@@ -957,7 +970,26 @@ always @* begin
                 axi_addr_next = axi_addr_reg + tr_count_next;
                 op_count_next = op_count_reg - tr_count_next;
 
-                op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
+                // AXI transfer size computation
+                if (op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[OFFSET_WIDTH-1:0] || AXI_MAX_BURST_SIZE >= 4096) begin
+                    // packet smaller than max burst size
+                    if ((axi_addr_next ^ (axi_addr_next + op_count_next)) & (1 << 12)) begin
+                        // crosses 4k boundary
+                        tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                    end else begin
+                        // does not cross 4k boundary, send one request
+                        tr_count_next = op_count_next;
+                    end
+                end else begin
+                    // packet larger than max burst size
+                    if ((axi_addr_next ^ (axi_addr_next + AXI_MAX_BURST_SIZE)) & (1 << 12)) begin
+                        // crosses 4k boundary
+                        tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                    end else begin
+                        // does not cross 4k boundary, send one request
+                        tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_next[OFFSET_WIDTH-1:0];
+                    end
+                end
 
                 op_table_write_start_ptr = op_tag_reg;
                 op_table_write_start_commit = op_count_next == 0 && final_cpl_reg && op_table_read_commit[op_table_write_start_ptr] && (op_table_read_count_start[op_table_write_start_ptr] == op_table_read_count_finish[op_table_write_start_ptr]);
@@ -1009,30 +1041,6 @@ always @* begin
                     tlp_state_next = TLP_STATE_TRANSFER;
                 end else if (op_count_reg != 0) begin
                     // current transfer done, but operation not finished yet
-                    if (op_count_leq_axi_max_burst_reg) begin
-                        // packet smaller than max burst size
-                        if (axi_addr_reg[12] != axi_addr_plus_op_count[12]) begin
-                            // crosses 4k boundary
-                            tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                            m_axi_awlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
-                        end else begin
-                            // does not cross 4k boundary, send one request
-                            tr_count_next = op_count_reg;
-                            m_axi_awlen_next = (tr_count_next + axi_addr_reg[OFFSET_WIDTH-1:0] - 1) >> AXI_BURST_SIZE;
-                        end
-                    end else begin
-                        // packet larger than max burst size
-                        if (axi_addr_reg[12] != axi_addr_plus_max_burst[12]) begin
-                            // crosses 4k boundary
-                            tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                            m_axi_awlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
-                        end else begin
-                            // does not cross 4k boundary, send one request
-                            tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_reg[OFFSET_WIDTH-1:0];
-                            m_axi_awlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
-                        end
-                    end
-
                     m_axi_awaddr_next = axi_addr_reg;
 
                     // keep offset, no bubble cycles, not first cycle
@@ -1048,7 +1056,26 @@ always @* begin
                     axi_addr_next = axi_addr_reg + tr_count_next;
                     op_count_next = op_count_reg - tr_count_next;
 
-                    op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
+                    // AXI transfer size computation
+                    if (op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[OFFSET_WIDTH-1:0] || AXI_MAX_BURST_SIZE >= 4096) begin
+                        // packet smaller than max burst size
+                        if ((axi_addr_next ^ (axi_addr_next + op_count_next)) & (1 << 12)) begin
+                            // crosses 4k boundary
+                            tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                        end else begin
+                            // does not cross 4k boundary, send one request
+                            tr_count_next = op_count_next;
+                        end
+                    end else begin
+                        // packet larger than max burst size
+                        if ((axi_addr_next ^ (axi_addr_next + AXI_MAX_BURST_SIZE)) & (1 << 12)) begin
+                            // crosses 4k boundary
+                            tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                        end else begin
+                            // does not cross 4k boundary, send one request
+                            tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_next[OFFSET_WIDTH-1:0];
+                        end
+                    end
 
                     m_axi_awvalid_next = 1'b1;
 
@@ -1213,7 +1240,6 @@ always @(posedge clk) begin
     error_code_reg <= error_code_next;
     axi_addr_reg <= axi_addr_next;
     op_count_reg <= op_count_next;
-    op_count_leq_axi_max_burst_reg <= op_count_leq_axi_max_burst_next;
     tr_count_reg <= tr_count_next;
     op_dword_count_reg <= op_dword_count_next;
     input_cycle_count_reg <= input_cycle_count_next;

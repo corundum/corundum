@@ -36,43 +36,45 @@ module pcie_us_axis_rc_demux #
     // Width of PCIe AXI stream interfaces in bits
     parameter AXIS_PCIE_DATA_WIDTH = 256,
     // PCIe AXI stream tkeep signal width (words per cycle)
-    parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
+    parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    // PCIe AXI stream RC tuser signal width
+    parameter AXIS_PCIE_RC_USER_WIDTH = 75
 )
 (
-    input  wire                                    clk,
-    input  wire                                    rst,
+    input  wire                                       clk,
+    input  wire                                       rst,
 
     /*
      * AXI input (RC)
      */
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]         s_axis_rc_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]         s_axis_rc_tkeep,
-    input  wire                                    s_axis_rc_tvalid,
-    output wire                                    s_axis_rc_tready,
-    input  wire                                    s_axis_rc_tlast,
-    input  wire [74:0]                             s_axis_rc_tuser,
+    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]            s_axis_rc_tdata,
+    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]            s_axis_rc_tkeep,
+    input  wire                                       s_axis_rc_tvalid,
+    output wire                                       s_axis_rc_tready,
+    input  wire                                       s_axis_rc_tlast,
+    input  wire [AXIS_PCIE_RC_USER_WIDTH-1:0]         s_axis_rc_tuser,
 
     /*
      * AXI output (RC)
      */
-    output wire [M_COUNT*AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rc_tdata,
-    output wire [M_COUNT*AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rc_tkeep,
-    output wire [M_COUNT-1:0]                      m_axis_rc_tvalid,
-    input  wire [M_COUNT-1:0]                      m_axis_rc_tready,
-    output wire [M_COUNT-1:0]                      m_axis_rc_tlast,
-    output wire [M_COUNT*75-1:0]                   m_axis_rc_tuser,
+    output wire [M_COUNT*AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_rc_tdata,
+    output wire [M_COUNT*AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_rc_tkeep,
+    output wire [M_COUNT-1:0]                         m_axis_rc_tvalid,
+    input  wire [M_COUNT-1:0]                         m_axis_rc_tready,
+    output wire [M_COUNT-1:0]                         m_axis_rc_tlast,
+    output wire [M_COUNT*AXIS_PCIE_RC_USER_WIDTH-1:0] m_axis_rc_tuser,
 
     /*
      * Fields
      */
-    output wire [15:0]                             requester_id,
+    output wire [15:0]                                requester_id,
 
     /*
      * Control
      */
-    input  wire                                    enable,
-    input  wire                                    drop,
-    input  wire [M_COUNT-1:0]                      select
+    input  wire                                       enable,
+    input  wire                                       drop,
+    input  wire [M_COUNT-1:0]                         select
 );
 
 parameter CL_M_COUNT = $clog2(M_COUNT);
@@ -97,13 +99,13 @@ reg frame_reg = 1'b0, frame_ctl, frame_next;
 reg s_axis_rc_tready_reg = 1'b0, s_axis_rc_tready_next;
 
 // internal datapath
-reg  [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rc_tdata_int;
-reg  [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rc_tkeep_int;
-reg  [M_COUNT-1:0]              m_axis_rc_tvalid_int;
-reg                             m_axis_rc_tready_int_reg = 1'b0;
-reg                             m_axis_rc_tlast_int;
-reg  [74:0]                     m_axis_rc_tuser_int;
-wire                            m_axis_rc_tready_int_early;
+reg  [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_rc_tdata_int;
+reg  [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_rc_tkeep_int;
+reg  [M_COUNT-1:0]                 m_axis_rc_tvalid_int;
+reg                                m_axis_rc_tready_int_reg = 1'b0;
+reg                                m_axis_rc_tlast_int;
+reg  [AXIS_PCIE_RC_USER_WIDTH-1:0] m_axis_rc_tuser_int;
+wire                               m_axis_rc_tready_int_early;
 
 assign s_axis_rc_tready = s_axis_rc_tready_reg && enable;
 
@@ -172,17 +174,17 @@ always @(posedge clk) begin
 end
 
 // output datapath logic
-reg [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rc_tdata_reg  = {AXIS_PCIE_DATA_WIDTH{1'b0}};
-reg [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rc_tkeep_reg  = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
-reg [M_COUNT-1:0]              m_axis_rc_tvalid_reg = {M_COUNT{1'b0}}, m_axis_rc_tvalid_next;
-reg                            m_axis_rc_tlast_reg  = 1'b0;
-reg [74:0]                     m_axis_rc_tuser_reg  = 75'd0;
+reg [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_rc_tdata_reg  = {AXIS_PCIE_DATA_WIDTH{1'b0}};
+reg [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_rc_tkeep_reg  = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
+reg [M_COUNT-1:0]                 m_axis_rc_tvalid_reg = {M_COUNT{1'b0}}, m_axis_rc_tvalid_next;
+reg                               m_axis_rc_tlast_reg  = 1'b0;
+reg [AXIS_PCIE_RC_USER_WIDTH-1:0] m_axis_rc_tuser_reg  = {AXIS_PCIE_RC_USER_WIDTH{1'b0}};
 
-reg [AXIS_PCIE_DATA_WIDTH-1:0] temp_m_axis_rc_tdata_reg  = {AXIS_PCIE_DATA_WIDTH{1'b0}};
-reg [AXIS_PCIE_KEEP_WIDTH-1:0] temp_m_axis_rc_tkeep_reg  = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
-reg [M_COUNT-1:0]              temp_m_axis_rc_tvalid_reg = {M_COUNT{1'b0}}, temp_m_axis_rc_tvalid_next;
-reg                            temp_m_axis_rc_tlast_reg  = 1'b0;
-reg [74:0]                     temp_m_axis_rc_tuser_reg  = 75'd0;
+reg [AXIS_PCIE_DATA_WIDTH-1:0]    temp_m_axis_rc_tdata_reg  = {AXIS_PCIE_DATA_WIDTH{1'b0}};
+reg [AXIS_PCIE_KEEP_WIDTH-1:0]    temp_m_axis_rc_tkeep_reg  = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
+reg [M_COUNT-1:0]                 temp_m_axis_rc_tvalid_reg = {M_COUNT{1'b0}}, temp_m_axis_rc_tvalid_next;
+reg                               temp_m_axis_rc_tlast_reg  = 1'b0;
+reg [AXIS_PCIE_RC_USER_WIDTH-1:0] temp_m_axis_rc_tuser_reg  = {AXIS_PCIE_RC_USER_WIDTH{1'b0}};
 
 // datapath control
 reg store_axis_int_to_output;

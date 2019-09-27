@@ -35,6 +35,10 @@ module pcie_us_axi_dma_rd #
     parameter AXIS_PCIE_DATA_WIDTH = 256,
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    // PCIe AXI stream RC tuser signal width
+    parameter AXIS_PCIE_RC_USER_WIDTH = 75,
+    // PCIe AXI stream RQ tuser signal width
+    parameter AXIS_PCIE_RQ_USER_WIDTH = 60,
     // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     // Width of AXI address bus in bits
@@ -63,88 +67,88 @@ module pcie_us_axi_dma_rd #
     parameter OP_TAG_WIDTH = AXI_ID_WIDTH < PCIE_TAG_WIDTH ? AXI_ID_WIDTH : PCIE_TAG_WIDTH
 )
 (
-    input  wire                            clk,
-    input  wire                            rst,
+    input  wire                               clk,
+    input  wire                               rst,
 
     /*
      * AXI input (RC)
      */
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_rc_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_rc_tkeep,
-    input  wire                            s_axis_rc_tvalid,
-    output wire                            s_axis_rc_tready,
-    input  wire                            s_axis_rc_tlast,
-    input  wire [74:0]                     s_axis_rc_tuser,
+    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]    s_axis_rc_tdata,
+    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]    s_axis_rc_tkeep,
+    input  wire                               s_axis_rc_tvalid,
+    output wire                               s_axis_rc_tready,
+    input  wire                               s_axis_rc_tlast,
+    input  wire [AXIS_PCIE_RC_USER_WIDTH-1:0] s_axis_rc_tuser,
 
     /*
      * AXI output (RQ)
      */
-    output wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata,
-    output wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rq_tkeep,
-    output wire                            m_axis_rq_tvalid,
-    input  wire                            m_axis_rq_tready,
-    output wire                            m_axis_rq_tlast,
-    output wire [59:0]                     m_axis_rq_tuser,
+    output wire [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_rq_tdata,
+    output wire [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_rq_tkeep,
+    output wire                               m_axis_rq_tvalid,
+    input  wire                               m_axis_rq_tready,
+    output wire                               m_axis_rq_tlast,
+    output wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser,
 
     /*
      * Tag input
      */
-    input  wire [PCIE_TAG_WIDTH-1:0]       s_axis_pcie_rq_tag,
-    input  wire                            s_axis_pcie_rq_tag_valid,
+    input  wire [PCIE_TAG_WIDTH-1:0]          s_axis_pcie_rq_tag,
+    input  wire                               s_axis_pcie_rq_tag_valid,
 
     /*
      * AXI read descriptor input
      */
-    input  wire [PCIE_ADDR_WIDTH-1:0]      s_axis_read_desc_pcie_addr,
-    input  wire [AXI_ADDR_WIDTH-1:0]       s_axis_read_desc_axi_addr,
-    input  wire [LEN_WIDTH-1:0]            s_axis_read_desc_len,
-    input  wire [TAG_WIDTH-1:0]            s_axis_read_desc_tag,
-    input  wire                            s_axis_read_desc_valid,
-    output wire                            s_axis_read_desc_ready,
+    input  wire [PCIE_ADDR_WIDTH-1:0]         s_axis_read_desc_pcie_addr,
+    input  wire [AXI_ADDR_WIDTH-1:0]          s_axis_read_desc_axi_addr,
+    input  wire [LEN_WIDTH-1:0]               s_axis_read_desc_len,
+    input  wire [TAG_WIDTH-1:0]               s_axis_read_desc_tag,
+    input  wire                               s_axis_read_desc_valid,
+    output wire                               s_axis_read_desc_ready,
 
     /*
      * AXI read descriptor status output
      */
-    output wire [TAG_WIDTH-1:0]            m_axis_read_desc_status_tag,
-    output wire                            m_axis_read_desc_status_valid,
+    output wire [TAG_WIDTH-1:0]               m_axis_read_desc_status_tag,
+    output wire                               m_axis_read_desc_status_valid,
 
     /*
      * AXI master interface
      */
-    output wire [AXI_ID_WIDTH-1:0]         m_axi_awid,
-    output wire [AXI_ADDR_WIDTH-1:0]       m_axi_awaddr,
-    output wire [7:0]                      m_axi_awlen,
-    output wire [2:0]                      m_axi_awsize,
-    output wire [1:0]                      m_axi_awburst,
-    output wire                            m_axi_awlock,
-    output wire [3:0]                      m_axi_awcache,
-    output wire [2:0]                      m_axi_awprot,
-    output wire                            m_axi_awvalid,
-    input  wire                            m_axi_awready,
-    output wire [AXI_DATA_WIDTH-1:0]       m_axi_wdata,
-    output wire [AXI_STRB_WIDTH-1:0]       m_axi_wstrb,
-    output wire                            m_axi_wlast,
-    output wire                            m_axi_wvalid,
-    input  wire                            m_axi_wready,
-    input  wire [AXI_ID_WIDTH-1:0]         m_axi_bid,
-    input  wire [1:0]                      m_axi_bresp,
-    input  wire                            m_axi_bvalid,
-    output wire                            m_axi_bready,
+    output wire [AXI_ID_WIDTH-1:0]            m_axi_awid,
+    output wire [AXI_ADDR_WIDTH-1:0]          m_axi_awaddr,
+    output wire [7:0]                         m_axi_awlen,
+    output wire [2:0]                         m_axi_awsize,
+    output wire [1:0]                         m_axi_awburst,
+    output wire                               m_axi_awlock,
+    output wire [3:0]                         m_axi_awcache,
+    output wire [2:0]                         m_axi_awprot,
+    output wire                               m_axi_awvalid,
+    input  wire                               m_axi_awready,
+    output wire [AXI_DATA_WIDTH-1:0]          m_axi_wdata,
+    output wire [AXI_STRB_WIDTH-1:0]          m_axi_wstrb,
+    output wire                               m_axi_wlast,
+    output wire                               m_axi_wvalid,
+    input  wire                               m_axi_wready,
+    input  wire [AXI_ID_WIDTH-1:0]            m_axi_bid,
+    input  wire [1:0]                         m_axi_bresp,
+    input  wire                               m_axi_bvalid,
+    output wire                               m_axi_bready,
 
     /*
      * Configuration
      */
-    input  wire                            enable,
-    input  wire                            ext_tag_enable,
-    input  wire [15:0]                     requester_id,
-    input  wire                            requester_id_enable,
-    input  wire [2:0]                      max_read_request_size,
+    input  wire                               enable,
+    input  wire                               ext_tag_enable,
+    input  wire [15:0]                        requester_id,
+    input  wire                               requester_id_enable,
+    input  wire [2:0]                         max_read_request_size,
 
     /*
      * Status
      */
-    output wire                            status_error_cor,
-    output wire                            status_error_uncor
+    output wire                               status_error_cor,
+    output wire                               status_error_uncor
 );
 
 parameter AXI_WORD_WIDTH = AXI_STRB_WIDTH;
@@ -170,6 +174,16 @@ initial begin
 
     if (AXIS_PCIE_KEEP_WIDTH * 32 != AXIS_PCIE_DATA_WIDTH) begin
         $error("Error: PCIe interface requires dword (32-bit) granularity (instance %m)");
+        $finish;
+    end
+
+    if (AXIS_PCIE_RC_USER_WIDTH != 75) begin
+        $error("Error: PCIe RC tuser width must be 75 (instance %m)");
+        $finish;
+    end
+
+    if (AXIS_PCIE_RQ_USER_WIDTH != 60) begin
+        $error("Error: PCIe RQ tuser width must be 60 (instance %m)");
         $finish;
     end
 
@@ -266,7 +280,6 @@ reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
 reg axi_addr_valid_reg = 1'b0, axi_addr_valid_next;
 reg [9:0] op_dword_count_reg = 10'd0, op_dword_count_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
-reg op_count_leq_axi_max_burst_reg = 1'b0, op_count_leq_axi_max_burst_next;
 reg [12:0] tr_count_reg = 13'd0, tr_count_next;
 reg [CYCLE_COUNT_WIDTH-1:0] input_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, input_cycle_count_next;
 reg [CYCLE_COUNT_WIDTH-1:0] output_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, output_cycle_count_next;
@@ -315,13 +328,13 @@ reg [AXIS_PCIE_DATA_WIDTH-1:0] save_axis_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}
 wire [AXI_DATA_WIDTH-1:0] shift_axis_tdata = {s_axis_rc_tdata, save_axis_tdata_reg} >> ((AXI_STRB_WIDTH-offset_reg)*AXI_WORD_SIZE);
 
 // internal datapath
-reg  [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata_int;
-reg  [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rq_tkeep_int;
-reg                             m_axis_rq_tvalid_int;
-reg                             m_axis_rq_tready_int_reg = 1'b0;
-reg                             m_axis_rq_tlast_int;
-reg  [59:0]                     m_axis_rq_tuser_int;
-wire                            m_axis_rq_tready_int_early;
+reg  [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_rq_tdata_int;
+reg  [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_rq_tkeep_int;
+reg                                m_axis_rq_tvalid_int;
+reg                                m_axis_rq_tready_int_reg = 1'b0;
+reg                                m_axis_rq_tlast_int;
+reg  [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser_int;
+wire                               m_axis_rq_tready_int_early;
 
 reg  [AXI_DATA_WIDTH-1:0]  m_axi_wdata_int;
 reg  [AXI_STRB_WIDTH-1:0]  m_axi_wstrb_int;
@@ -353,9 +366,6 @@ assign status_error_uncor = status_error_uncor_reg;
 wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_max_read_request = req_pcie_addr_reg + {max_read_request_size_dw_reg, 2'b00};
 wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_op_count = req_pcie_addr_reg + req_op_count_reg;
 wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_tlp_count = req_pcie_addr_reg + req_tlp_count_reg;
-
-wire [AXI_ADDR_WIDTH-1:0] axi_addr_plus_max_burst = axi_addr_reg + AXI_MAX_BURST_SIZE;
-wire [AXI_ADDR_WIDTH-1:0] axi_addr_plus_op_count = axi_addr_reg + op_count_reg;
 
 wire [3:0] first_be = 4'b1111 << req_pcie_addr_reg[1:0];
 wire [3:0] last_be = 4'b1111 >> (3 - ((req_pcie_addr_reg[1:0] + req_tlp_count_next[1:0] - 1) & 3));
@@ -477,7 +487,7 @@ always @* begin
     end else begin
         m_axis_rq_tlast_int = 1'b0;
     end
-    m_axis_rq_tuser_int = 60'd0;
+    m_axis_rq_tuser_int = {AXIS_PCIE_RQ_USER_WIDTH{1'b0}};
 
     m_axis_rq_tdata_int[1:0] = 2'b0; // address type
     m_axis_rq_tdata_int[63:2] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:2]; // address
@@ -656,7 +666,6 @@ always @* begin
     axi_addr_next = axi_addr_reg;
     axi_addr_valid_next = axi_addr_valid_reg;
     op_count_next = op_count_reg;
-    op_count_leq_axi_max_burst_next = op_count_leq_axi_max_burst_reg;
     tr_count_next = tr_count_reg;
     op_dword_count_next = op_dword_count_reg;
     input_cycle_count_next = input_cycle_count_reg;
@@ -748,7 +757,26 @@ always @* begin
                     first_cycle_offset_next = axi_addr_next[OFFSET_WIDTH-1:0];
                     first_cycle_next = 1'b1;
 
-                    op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
+                    // AXI transfer size computation
+                    if (op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[OFFSET_WIDTH-1:0] || AXI_MAX_BURST_SIZE >= 4096) begin
+                        // packet smaller than max burst size
+                        if ((axi_addr_next ^ (axi_addr_next + op_count_next)) & (1 << 12)) begin
+                            // crosses 4k boundary
+                            tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                        end else begin
+                            // does not cross 4k boundary, send one request
+                            tr_count_next = op_count_next;
+                        end
+                    end else begin
+                        // packet larger than max burst size
+                        if ((axi_addr_next ^ (axi_addr_next + AXI_MAX_BURST_SIZE)) & (1 << 12)) begin
+                            // crosses 4k boundary
+                            tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                        end else begin
+                            // does not cross 4k boundary, send one request
+                            tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_next[OFFSET_WIDTH-1:0];
+                        end
+                    end
 
                     op_tag_next = tag_table_op_tag[pcie_tag_next];
 
@@ -864,7 +892,26 @@ always @* begin
                 first_cycle_offset_next = axi_addr_next[OFFSET_WIDTH-1:0];
                 first_cycle_next = 1'b1;
 
-                op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
+                // AXI transfer size computation
+                if (op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[OFFSET_WIDTH-1:0] || AXI_MAX_BURST_SIZE >= 4096) begin
+                    // packet smaller than max burst size
+                    if ((axi_addr_next ^ (axi_addr_next + op_count_next)) & (1 << 12)) begin
+                        // crosses 4k boundary
+                        tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                    end else begin
+                        // does not cross 4k boundary, send one request
+                        tr_count_next = op_count_next;
+                    end
+                end else begin
+                    // packet larger than max burst size
+                    if ((axi_addr_next ^ (axi_addr_next + AXI_MAX_BURST_SIZE)) & (1 << 12)) begin
+                        // crosses 4k boundary
+                        tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                    end else begin
+                        // does not cross 4k boundary, send one request
+                        tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_next[OFFSET_WIDTH-1:0];
+                    end
+                end
 
                 op_tag_next = tag_table_op_tag[pcie_tag_next];
 
@@ -919,26 +966,6 @@ always @* begin
             if (s_axis_rc_tready && s_axis_rc_tvalid) begin
                 transfer_in_save = 1'b1;
 
-                if (op_count_leq_axi_max_burst_reg) begin
-                    // packet smaller than max burst size
-                    if (axi_addr_reg[12] != axi_addr_plus_op_count[12]) begin
-                        // crosses 4k boundary
-                        tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                    end else begin
-                        // does not cross 4k boundary, send one request
-                        tr_count_next = op_count_reg;
-                    end
-                end else begin
-                    // packet larger than max burst size
-                    if (axi_addr_reg[12] != axi_addr_plus_max_burst[12]) begin
-                        // crosses 4k boundary
-                        tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                    end else begin
-                        // does not cross 4k boundary, send one request
-                        tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_reg[OFFSET_WIDTH-1:0];
-                    end
-                end
-
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
                     input_cycle_count_next = (tr_count_next + 4+lower_addr_reg[1:0] - 1) >> (AXI_BURST_SIZE);
                 end else begin
@@ -957,7 +984,26 @@ always @* begin
                 axi_addr_next = axi_addr_reg + tr_count_next;
                 op_count_next = op_count_reg - tr_count_next;
 
-                op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
+                // AXI transfer size computation
+                if (op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[OFFSET_WIDTH-1:0] || AXI_MAX_BURST_SIZE >= 4096) begin
+                    // packet smaller than max burst size
+                    if ((axi_addr_next ^ (axi_addr_next + op_count_next)) & (1 << 12)) begin
+                        // crosses 4k boundary
+                        tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                    end else begin
+                        // does not cross 4k boundary, send one request
+                        tr_count_next = op_count_next;
+                    end
+                end else begin
+                    // packet larger than max burst size
+                    if ((axi_addr_next ^ (axi_addr_next + AXI_MAX_BURST_SIZE)) & (1 << 12)) begin
+                        // crosses 4k boundary
+                        tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                    end else begin
+                        // does not cross 4k boundary, send one request
+                        tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_next[OFFSET_WIDTH-1:0];
+                    end
+                end
 
                 op_table_write_start_ptr = op_tag_reg;
                 op_table_write_start_commit = op_count_next == 0 && final_cpl_reg && op_table_read_commit[op_table_write_start_ptr] && (op_table_read_count_start[op_table_write_start_ptr] == op_table_read_count_finish[op_table_write_start_ptr]);
@@ -1009,30 +1055,6 @@ always @* begin
                     tlp_state_next = TLP_STATE_TRANSFER;
                 end else if (op_count_reg != 0) begin
                     // current transfer done, but operation not finished yet
-                    if (op_count_leq_axi_max_burst_reg) begin
-                        // packet smaller than max burst size
-                        if (axi_addr_reg[12] != axi_addr_plus_op_count[12]) begin
-                            // crosses 4k boundary
-                            tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                            m_axi_awlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
-                        end else begin
-                            // does not cross 4k boundary, send one request
-                            tr_count_next = op_count_reg;
-                            m_axi_awlen_next = (tr_count_next + axi_addr_reg[OFFSET_WIDTH-1:0] - 1) >> AXI_BURST_SIZE;
-                        end
-                    end else begin
-                        // packet larger than max burst size
-                        if (axi_addr_reg[12] != axi_addr_plus_max_burst[12]) begin
-                            // crosses 4k boundary
-                            tr_count_next = 13'h1000 - axi_addr_reg[11:0];
-                            m_axi_awlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
-                        end else begin
-                            // does not cross 4k boundary, send one request
-                            tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_reg[OFFSET_WIDTH-1:0];
-                            m_axi_awlen_next = (tr_count_next - 1) >> AXI_BURST_SIZE;
-                        end
-                    end
-
                     m_axi_awaddr_next = axi_addr_reg;
 
                     // keep offset, no bubble cycles, not first cycle
@@ -1045,12 +1067,33 @@ always @* begin
                     last_cycle_next = output_cycle_count_next == 0;
                     input_active_next = tr_count_next > offset_reg;
 
+                    m_axi_awaddr_next = axi_addr_reg;
+                    m_axi_awlen_next = output_cycle_count_next;
+                    m_axi_awvalid_next = 1'b1;
+
                     axi_addr_next = axi_addr_reg + tr_count_next;
                     op_count_next = op_count_reg - tr_count_next;
 
-                    op_count_leq_axi_max_burst_next = op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[1:0];
-
-                    m_axi_awvalid_next = 1'b1;
+                    // AXI transfer size computation
+                    if (op_count_next <= AXI_MAX_BURST_SIZE-axi_addr_next[OFFSET_WIDTH-1:0] || AXI_MAX_BURST_SIZE >= 4096) begin
+                        // packet smaller than max burst size
+                        if ((axi_addr_next ^ (axi_addr_next + op_count_next)) & (1 << 12)) begin
+                            // crosses 4k boundary
+                            tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                        end else begin
+                            // does not cross 4k boundary, send one request
+                            tr_count_next = op_count_next;
+                        end
+                    end else begin
+                        // packet larger than max burst size
+                        if ((axi_addr_next ^ (axi_addr_next + AXI_MAX_BURST_SIZE)) & (1 << 12)) begin
+                            // crosses 4k boundary
+                            tr_count_next = 13'h1000 - axi_addr_next[11:0];
+                        end else begin
+                            // does not cross 4k boundary, send one request
+                            tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_next[OFFSET_WIDTH-1:0];
+                        end
+                    end
 
                     op_table_write_start_ptr = op_tag_reg;
                     op_table_write_start_commit = op_count_next == 0 && final_cpl_reg && op_table_read_commit[op_table_write_start_ptr] && (op_table_read_count_start[op_table_write_start_ptr] == op_table_read_count_finish[op_table_write_start_ptr]);
@@ -1213,7 +1256,6 @@ always @(posedge clk) begin
     error_code_reg <= error_code_next;
     axi_addr_reg <= axi_addr_next;
     op_count_reg <= op_count_next;
-    op_count_leq_axi_max_burst_reg <= op_count_leq_axi_max_burst_next;
     tr_count_reg <= tr_count_next;
     op_dword_count_reg <= op_dword_count_next;
     input_cycle_count_reg <= input_cycle_count_next;
@@ -1296,17 +1338,17 @@ always @(posedge clk) begin
 end
 
 // output datapath logic (PCIe TLP)
-reg [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
-reg [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rq_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
-reg                            m_axis_rq_tvalid_reg = 1'b0, m_axis_rq_tvalid_next;
-reg                            m_axis_rq_tlast_reg = 1'b0;
-reg [59:0]                     m_axis_rq_tuser_reg = 60'd0;
+reg [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_rq_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
+reg [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_rq_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
+reg                               m_axis_rq_tvalid_reg = 1'b0, m_axis_rq_tvalid_next;
+reg                               m_axis_rq_tlast_reg = 1'b0;
+reg [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser_reg = {AXIS_PCIE_RQ_USER_WIDTH{1'b0}};
 
-reg [AXIS_PCIE_DATA_WIDTH-1:0] temp_m_axis_rq_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
-reg [AXIS_PCIE_KEEP_WIDTH-1:0] temp_m_axis_rq_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
-reg                            temp_m_axis_rq_tvalid_reg = 1'b0, temp_m_axis_rq_tvalid_next;
-reg                            temp_m_axis_rq_tlast_reg = 1'b0;
-reg [59:0]                     temp_m_axis_rq_tuser_reg = 60'd0;
+reg [AXIS_PCIE_DATA_WIDTH-1:0]    temp_m_axis_rq_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
+reg [AXIS_PCIE_KEEP_WIDTH-1:0]    temp_m_axis_rq_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
+reg                               temp_m_axis_rq_tvalid_reg = 1'b0, temp_m_axis_rq_tvalid_next;
+reg                               temp_m_axis_rq_tlast_reg = 1'b0;
+reg [AXIS_PCIE_RQ_USER_WIDTH-1:0] temp_m_axis_rq_tuser_reg = {AXIS_PCIE_RQ_USER_WIDTH{1'b0}};
 
 // datapath control
 reg store_axis_rq_int_to_output;

@@ -40,8 +40,6 @@ srcs.append("../rtl/%s.v" % module)
 srcs.append("../rtl/pcie_us_axi_dma_rd.v")
 srcs.append("../rtl/pcie_us_axi_dma_wr.v")
 srcs.append("../rtl/pcie_tag_manager.v")
-srcs.append("../rtl/axis_arb_mux.v")
-srcs.append("../rtl/arbiter.v")
 srcs.append("../rtl/priority_encoder.v")
 srcs.append("%s.v" % testbench)
 
@@ -54,6 +52,8 @@ def bench():
     # Parameters
     AXIS_PCIE_DATA_WIDTH = 256
     AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
+    AXIS_PCIE_RC_USER_WIDTH = 75
+    AXIS_PCIE_RQ_USER_WIDTH = 60
     AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH
     AXI_ADDR_WIDTH = 64
     AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8)
@@ -76,7 +76,7 @@ def bench():
     s_axis_rc_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     s_axis_rc_tvalid = Signal(bool(0))
     s_axis_rc_tlast = Signal(bool(0))
-    s_axis_rc_tuser = Signal(intbv(0)[75:])
+    s_axis_rc_tuser = Signal(intbv(0)[AXIS_PCIE_RC_USER_WIDTH:])
     m_axis_rq_tready = Signal(bool(0))
     s_axis_pcie_rq_tag = Signal(intbv(0)[PCIE_TAG_WIDTH:])
     s_axis_pcie_rq_tag_valid = Signal(bool(0))
@@ -115,7 +115,7 @@ def bench():
     m_axis_rq_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     m_axis_rq_tvalid = Signal(bool(0))
     m_axis_rq_tlast = Signal(bool(0))
-    m_axis_rq_tuser = Signal(intbv(0)[60:])
+    m_axis_rq_tuser = Signal(intbv(0)[AXIS_PCIE_RQ_USER_WIDTH:])
     s_axis_read_desc_ready = Signal(bool(0))
     m_axis_read_desc_status_tag = Signal(intbv(0)[TAG_WIDTH:])
     m_axis_read_desc_status_valid = Signal(bool(0))
@@ -461,6 +461,7 @@ def bench():
         test_data = b'\x11\x22\x33\x44'
 
         axi_ram_inst.write_mem(axi_addr, test_data)
+        mem_data[pcie_addr:pcie_addr+len(test_data)] = b'\x00'*len(test_data)
 
         data = axi_ram_inst.read_mem(axi_addr, 32)
         for i in range(0, len(data), 16):
@@ -495,6 +496,7 @@ def bench():
         axi_addr = 0x00000000
         test_data = b'\x11\x22\x33\x44'
 
+        axi_ram_inst.write_mem(axi_addr, b'\x00'*len(test_data))
         mem_data[pcie_addr:pcie_addr+len(test_data)] = test_data
 
         data = mem_data[pcie_addr:pcie_addr+32]

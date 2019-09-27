@@ -35,6 +35,10 @@ module pcie_us_axi_dma #
     parameter AXIS_PCIE_DATA_WIDTH = 256,
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    // PCIe AXI stream RC tuser signal width
+    parameter AXIS_PCIE_RC_USER_WIDTH = 75,
+    // PCIe AXI stream RQ tuser signal width
+    parameter AXIS_PCIE_RQ_USER_WIDTH = 60,
     // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     // Width of AXI address bus in bits
@@ -61,141 +65,136 @@ module pcie_us_axi_dma #
     parameter TAG_WIDTH = 8
 )
 (
-    input  wire                            clk,
-    input  wire                            rst,
+    input  wire                               clk,
+    input  wire                               rst,
 
     /*
      * AXI input (RC)
      */
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_rc_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_rc_tkeep,
-    input  wire                            s_axis_rc_tvalid,
-    output wire                            s_axis_rc_tready,
-    input  wire                            s_axis_rc_tlast,
-    input  wire [74:0]                     s_axis_rc_tuser,
+    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]    s_axis_rc_tdata,
+    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]    s_axis_rc_tkeep,
+    input  wire                               s_axis_rc_tvalid,
+    output wire                               s_axis_rc_tready,
+    input  wire                               s_axis_rc_tlast,
+    input  wire [AXIS_PCIE_RC_USER_WIDTH-1:0] s_axis_rc_tuser,
 
     /*
      * AXI output (RQ)
      */
-    output wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata,
-    output wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rq_tkeep,
-    output wire                            m_axis_rq_tvalid,
-    input  wire                            m_axis_rq_tready,
-    output wire                            m_axis_rq_tlast,
-    output wire [59:0]                     m_axis_rq_tuser,
+    output wire [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_rq_tdata,
+    output wire [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_rq_tkeep,
+    output wire                               m_axis_rq_tvalid,
+    input  wire                               m_axis_rq_tready,
+    output wire                               m_axis_rq_tlast,
+    output wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser,
 
     /*
      * Tag input
      */
-    input  wire [PCIE_TAG_WIDTH-1:0]       s_axis_pcie_rq_tag,
-    input  wire                            s_axis_pcie_rq_tag_valid,
+    input  wire [PCIE_TAG_WIDTH-1:0]          s_axis_pcie_rq_tag,
+    input  wire                               s_axis_pcie_rq_tag_valid,
 
     /*
      * AXI read descriptor input
      */
-    input  wire [PCIE_ADDR_WIDTH-1:0]      s_axis_read_desc_pcie_addr,
-    input  wire [AXI_ADDR_WIDTH-1:0]       s_axis_read_desc_axi_addr,
-    input  wire [LEN_WIDTH-1:0]            s_axis_read_desc_len,
-    input  wire [TAG_WIDTH-1:0]            s_axis_read_desc_tag,
-    input  wire                            s_axis_read_desc_valid,
-    output wire                            s_axis_read_desc_ready,
+    input  wire [PCIE_ADDR_WIDTH-1:0]         s_axis_read_desc_pcie_addr,
+    input  wire [AXI_ADDR_WIDTH-1:0]          s_axis_read_desc_axi_addr,
+    input  wire [LEN_WIDTH-1:0]               s_axis_read_desc_len,
+    input  wire [TAG_WIDTH-1:0]               s_axis_read_desc_tag,
+    input  wire                               s_axis_read_desc_valid,
+    output wire                               s_axis_read_desc_ready,
 
     /*
      * AXI read descriptor status output
      */
-    output wire [TAG_WIDTH-1:0]            m_axis_read_desc_status_tag,
-    output wire                            m_axis_read_desc_status_valid,
+    output wire [TAG_WIDTH-1:0]               m_axis_read_desc_status_tag,
+    output wire                               m_axis_read_desc_status_valid,
 
     /*
      * AXI write descriptor input
      */
-    input  wire [PCIE_ADDR_WIDTH-1:0]      s_axis_write_desc_pcie_addr,
-    input  wire [AXI_ADDR_WIDTH-1:0]       s_axis_write_desc_axi_addr,
-    input  wire [LEN_WIDTH-1:0]            s_axis_write_desc_len,
-    input  wire [TAG_WIDTH-1:0]            s_axis_write_desc_tag,
-    input  wire                            s_axis_write_desc_valid,
-    output wire                            s_axis_write_desc_ready,
+    input  wire [PCIE_ADDR_WIDTH-1:0]         s_axis_write_desc_pcie_addr,
+    input  wire [AXI_ADDR_WIDTH-1:0]          s_axis_write_desc_axi_addr,
+    input  wire [LEN_WIDTH-1:0]               s_axis_write_desc_len,
+    input  wire [TAG_WIDTH-1:0]               s_axis_write_desc_tag,
+    input  wire                               s_axis_write_desc_valid,
+    output wire                               s_axis_write_desc_ready,
 
     /*
      * AXI write descriptor status output
      */
-    output wire [TAG_WIDTH-1:0]            m_axis_write_desc_status_tag,
-    output wire                            m_axis_write_desc_status_valid,
+    output wire [TAG_WIDTH-1:0]               m_axis_write_desc_status_tag,
+    output wire                               m_axis_write_desc_status_valid,
 
     /*
      * AXI master interface
      */
-    output wire [AXI_ID_WIDTH-1:0]         m_axi_awid,
-    output wire [AXI_ADDR_WIDTH-1:0]       m_axi_awaddr,
-    output wire [7:0]                      m_axi_awlen,
-    output wire [2:0]                      m_axi_awsize,
-    output wire [1:0]                      m_axi_awburst,
-    output wire                            m_axi_awlock,
-    output wire [3:0]                      m_axi_awcache,
-    output wire [2:0]                      m_axi_awprot,
-    output wire                            m_axi_awvalid,
-    input  wire                            m_axi_awready,
-    output wire [AXI_DATA_WIDTH-1:0]       m_axi_wdata,
-    output wire [AXI_STRB_WIDTH-1:0]       m_axi_wstrb,
-    output wire                            m_axi_wlast,
-    output wire                            m_axi_wvalid,
-    input  wire                            m_axi_wready,
-    input  wire [AXI_ID_WIDTH-1:0]         m_axi_bid,
-    input  wire [1:0]                      m_axi_bresp,
-    input  wire                            m_axi_bvalid,
-    output wire                            m_axi_bready,
-    output wire [AXI_ID_WIDTH-1:0]         m_axi_arid,
-    output wire [AXI_ADDR_WIDTH-1:0]       m_axi_araddr,
-    output wire [7:0]                      m_axi_arlen,
-    output wire [2:0]                      m_axi_arsize,
-    output wire [1:0]                      m_axi_arburst,
-    output wire                            m_axi_arlock,
-    output wire [3:0]                      m_axi_arcache,
-    output wire [2:0]                      m_axi_arprot,
-    output wire                            m_axi_arvalid,
-    input  wire                            m_axi_arready,
-    input  wire [AXI_ID_WIDTH-1:0]         m_axi_rid,
-    input  wire [AXI_DATA_WIDTH-1:0]       m_axi_rdata,
-    input  wire [1:0]                      m_axi_rresp,
-    input  wire                            m_axi_rlast,
-    input  wire                            m_axi_rvalid,
-    output wire                            m_axi_rready,
+    output wire [AXI_ID_WIDTH-1:0]            m_axi_awid,
+    output wire [AXI_ADDR_WIDTH-1:0]          m_axi_awaddr,
+    output wire [7:0]                         m_axi_awlen,
+    output wire [2:0]                         m_axi_awsize,
+    output wire [1:0]                         m_axi_awburst,
+    output wire                               m_axi_awlock,
+    output wire [3:0]                         m_axi_awcache,
+    output wire [2:0]                         m_axi_awprot,
+    output wire                               m_axi_awvalid,
+    input  wire                               m_axi_awready,
+    output wire [AXI_DATA_WIDTH-1:0]          m_axi_wdata,
+    output wire [AXI_STRB_WIDTH-1:0]          m_axi_wstrb,
+    output wire                               m_axi_wlast,
+    output wire                               m_axi_wvalid,
+    input  wire                               m_axi_wready,
+    input  wire [AXI_ID_WIDTH-1:0]            m_axi_bid,
+    input  wire [1:0]                         m_axi_bresp,
+    input  wire                               m_axi_bvalid,
+    output wire                               m_axi_bready,
+    output wire [AXI_ID_WIDTH-1:0]            m_axi_arid,
+    output wire [AXI_ADDR_WIDTH-1:0]          m_axi_araddr,
+    output wire [7:0]                         m_axi_arlen,
+    output wire [2:0]                         m_axi_arsize,
+    output wire [1:0]                         m_axi_arburst,
+    output wire                               m_axi_arlock,
+    output wire [3:0]                         m_axi_arcache,
+    output wire [2:0]                         m_axi_arprot,
+    output wire                               m_axi_arvalid,
+    input  wire                               m_axi_arready,
+    input  wire [AXI_ID_WIDTH-1:0]            m_axi_rid,
+    input  wire [AXI_DATA_WIDTH-1:0]          m_axi_rdata,
+    input  wire [1:0]                         m_axi_rresp,
+    input  wire                               m_axi_rlast,
+    input  wire                               m_axi_rvalid,
+    output wire                               m_axi_rready,
 
     /*
      * Configuration
      */
-    input  wire                            read_enable,
-    input  wire                            write_enable,
-    input  wire                            ext_tag_enable,
-    input  wire [15:0]                     requester_id,
-    input  wire                            requester_id_enable,
-    input  wire [2:0]                      max_read_request_size,
-    input  wire [2:0]                      max_payload_size,
+    input  wire                               read_enable,
+    input  wire                               write_enable,
+    input  wire                               ext_tag_enable,
+    input  wire [15:0]                        requester_id,
+    input  wire                               requester_id_enable,
+    input  wire [2:0]                         max_read_request_size,
+    input  wire [2:0]                         max_payload_size,
 
     /*
      * Status
      */
-    output wire                            status_error_cor,
-    output wire                            status_error_uncor
+    output wire                               status_error_cor,
+    output wire                               status_error_uncor
 );
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0] axis_rq_tdata_read;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0] axis_rq_tkeep_read;
-wire                            axis_rq_tvalid_read;
-wire                            axis_rq_tready_read;
-wire                            axis_rq_tlast_read;
-wire [59:0]                     axis_rq_tuser_read;
-
-wire [AXIS_PCIE_DATA_WIDTH-1:0] axis_rq_tdata_write;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0] axis_rq_tkeep_write;
-wire                            axis_rq_tvalid_write;
-wire                            axis_rq_tready_write;
-wire                            axis_rq_tlast_write;
-wire [59:0]                     axis_rq_tuser_write;
+wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_rq_tdata_read;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_rq_tkeep_read;
+wire                               axis_rq_tvalid_read;
+wire                               axis_rq_tready_read;
+wire                               axis_rq_tlast_read;
+wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] axis_rq_tuser_read;
 
 pcie_us_axi_dma_rd #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_RC_USER_WIDTH(AXIS_PCIE_RC_USER_WIDTH),
+    .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
@@ -297,6 +296,7 @@ pcie_us_axi_dma_rd_inst (
 pcie_us_axi_dma_wr #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
@@ -311,14 +311,24 @@ pcie_us_axi_dma_wr_inst (
     .rst(rst),
 
     /*
+     * AXI input (RQ from read DMA)
+     */
+    .s_axis_rq_tdata(axis_rq_tdata_read),
+    .s_axis_rq_tkeep(axis_rq_tkeep_read),
+    .s_axis_rq_tvalid(axis_rq_tvalid_read),
+    .s_axis_rq_tready(axis_rq_tready_read),
+    .s_axis_rq_tlast(axis_rq_tlast_read),
+    .s_axis_rq_tuser(axis_rq_tuser_read),
+
+    /*
      * AXI output (RQ)
      */
-    .m_axis_rq_tdata(axis_rq_tdata_write),
-    .m_axis_rq_tkeep(axis_rq_tkeep_write),
-    .m_axis_rq_tvalid(axis_rq_tvalid_write),
-    .m_axis_rq_tready(axis_rq_tready_write),
-    .m_axis_rq_tlast(axis_rq_tlast_write),
-    .m_axis_rq_tuser(axis_rq_tuser_write),
+    .m_axis_rq_tdata(m_axis_rq_tdata),
+    .m_axis_rq_tkeep(m_axis_rq_tkeep),
+    .m_axis_rq_tvalid(m_axis_rq_tvalid),
+    .m_axis_rq_tready(m_axis_rq_tready),
+    .m_axis_rq_tlast(m_axis_rq_tlast),
+    .m_axis_rq_tuser(m_axis_rq_tuser),
 
     /*
      * AXI write descriptor input
@@ -363,39 +373,6 @@ pcie_us_axi_dma_wr_inst (
     .requester_id(requester_id),
     .requester_id_enable(requester_id_enable),
     .max_payload_size(max_payload_size)
-);
-
-axis_arb_mux #(
-    .S_COUNT(2),
-    .DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
-    .KEEP_ENABLE(1),
-    .KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
-    .ID_ENABLE(0),
-    .DEST_ENABLE(0),
-    .USER_ENABLE(1),
-    .USER_WIDTH(60),
-    .ARB_TYPE("PRIORITY"),
-    .LSB_PRIORITY("HIGH")
-)
-request_mux_inst (
-    .clk(clk),
-    .rst(rst),
-    .s_axis_tdata({axis_rq_tdata_write, axis_rq_tdata_read}),
-    .s_axis_tkeep({axis_rq_tkeep_write, axis_rq_tkeep_read}),
-    .s_axis_tvalid({axis_rq_tvalid_write, axis_rq_tvalid_read}),
-    .s_axis_tready({axis_rq_tready_write, axis_rq_tready_read}),
-    .s_axis_tlast({axis_rq_tlast_write, axis_rq_tlast_read}),
-    .s_axis_tid(0),
-    .s_axis_tdest(0),
-    .s_axis_tuser({axis_rq_tuser_write, axis_rq_tuser_read}),
-    .m_axis_tdata(m_axis_rq_tdata),
-    .m_axis_tkeep(m_axis_rq_tkeep),
-    .m_axis_tvalid(m_axis_rq_tvalid),
-    .m_axis_tready(m_axis_rq_tready),
-    .m_axis_tlast(m_axis_rq_tlast),
-    .m_axis_tid(),
-    .m_axis_tdest(),
-    .m_axis_tuser(m_axis_rq_tuser)
 );
 
 endmodule

@@ -35,6 +35,8 @@ module pcie_us_axi_master_wr #
     parameter AXIS_PCIE_DATA_WIDTH = 256,
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    // PCIe AXI stream CQ tuser signal width
+    parameter AXIS_PCIE_CQ_USER_WIDTH = 85,
     // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     // Width of AXI address bus in bits
@@ -47,46 +49,46 @@ module pcie_us_axi_master_wr #
     parameter AXI_MAX_BURST_LEN = 256
 )
 (
-    input  wire                            clk,
-    input  wire                            rst,
+    input  wire                               clk,
+    input  wire                               rst,
 
     /*
      * AXI input (CQ)
      */
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_cq_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_cq_tkeep,
-    input  wire                            s_axis_cq_tvalid,
-    output wire                            s_axis_cq_tready,
-    input  wire                            s_axis_cq_tlast,
-    input  wire [84:0]                     s_axis_cq_tuser,
+    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]    s_axis_cq_tdata,
+    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]    s_axis_cq_tkeep,
+    input  wire                               s_axis_cq_tvalid,
+    output wire                               s_axis_cq_tready,
+    input  wire                               s_axis_cq_tlast,
+    input  wire [AXIS_PCIE_CQ_USER_WIDTH-1:0] s_axis_cq_tuser,
 
     /*
      * AXI Master output
      */
-    output wire [AXI_ID_WIDTH-1:0]         m_axi_awid,
-    output wire [AXI_ADDR_WIDTH-1:0]       m_axi_awaddr,
-    output wire [7:0]                      m_axi_awlen,
-    output wire [2:0]                      m_axi_awsize,
-    output wire [1:0]                      m_axi_awburst,
-    output wire                            m_axi_awlock,
-    output wire [3:0]                      m_axi_awcache,
-    output wire [2:0]                      m_axi_awprot,
-    output wire                            m_axi_awvalid,
-    input  wire                            m_axi_awready,
-    output wire [AXI_DATA_WIDTH-1:0]       m_axi_wdata,
-    output wire [AXI_STRB_WIDTH-1:0]       m_axi_wstrb,
-    output wire                            m_axi_wlast,
-    output wire                            m_axi_wvalid,
-    input  wire                            m_axi_wready,
-    input  wire [AXI_ID_WIDTH-1:0]         m_axi_bid,
-    input  wire [1:0]                      m_axi_bresp,
-    input  wire                            m_axi_bvalid,
-    output wire                            m_axi_bready,
+    output wire [AXI_ID_WIDTH-1:0]            m_axi_awid,
+    output wire [AXI_ADDR_WIDTH-1:0]          m_axi_awaddr,
+    output wire [7:0]                         m_axi_awlen,
+    output wire [2:0]                         m_axi_awsize,
+    output wire [1:0]                         m_axi_awburst,
+    output wire                               m_axi_awlock,
+    output wire [3:0]                         m_axi_awcache,
+    output wire [2:0]                         m_axi_awprot,
+    output wire                               m_axi_awvalid,
+    input  wire                               m_axi_awready,
+    output wire [AXI_DATA_WIDTH-1:0]          m_axi_wdata,
+    output wire [AXI_STRB_WIDTH-1:0]          m_axi_wstrb,
+    output wire                               m_axi_wlast,
+    output wire                               m_axi_wvalid,
+    input  wire                               m_axi_wready,
+    input  wire [AXI_ID_WIDTH-1:0]            m_axi_bid,
+    input  wire [1:0]                         m_axi_bresp,
+    input  wire                               m_axi_bvalid,
+    output wire                               m_axi_bready,
 
     /*
      * Status
      */
-    output wire                            status_error_uncor
+    output wire                               status_error_uncor
 );
 
 parameter AXI_WORD_WIDTH = AXI_STRB_WIDTH;
@@ -108,6 +110,11 @@ initial begin
 
     if (AXIS_PCIE_KEEP_WIDTH * 32 != AXIS_PCIE_DATA_WIDTH) begin
         $error("Error: PCIe interface requires dword (32-bit) granularity (instance %m)");
+        $finish;
+    end
+
+    if (AXIS_PCIE_CQ_USER_WIDTH != 85) begin
+        $error("Error: PCIe CQ tuser width must be 85 (instance %m)");
         $finish;
     end
 

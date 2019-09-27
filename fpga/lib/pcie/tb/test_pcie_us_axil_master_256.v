@@ -34,6 +34,8 @@ module test_pcie_us_axil_master_256;
 // Parameters
 parameter AXIS_PCIE_DATA_WIDTH = 256;
 parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
+parameter AXIS_PCIE_CQ_USER_WIDTH = 85;
+parameter AXIS_PCIE_CC_USER_WIDTH = 33;
 parameter AXI_DATA_WIDTH = 32;
 parameter AXI_ADDR_WIDTH = 64;
 parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8);
@@ -48,7 +50,7 @@ reg [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_cq_tdata = 0;
 reg [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_cq_tkeep = 0;
 reg s_axis_cq_tvalid = 0;
 reg s_axis_cq_tlast = 0;
-reg [84:0] s_axis_cq_tuser = 0;
+reg [AXIS_PCIE_CQ_USER_WIDTH-1:0] s_axis_cq_tuser = 0;
 reg m_axis_cc_tready = 0;
 reg m_axil_awready = 0;
 reg m_axil_wready = 0;
@@ -67,7 +69,7 @@ wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_cc_tdata;
 wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_cc_tkeep;
 wire m_axis_cc_tvalid;
 wire m_axis_cc_tlast;
-wire [32:0] m_axis_cc_tuser;
+wire [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser;
 wire [AXI_ADDR_WIDTH-1:0] m_axil_awaddr;
 wire [2:0] m_axil_awprot;
 wire m_axil_awvalid;
@@ -135,6 +137,8 @@ end
 pcie_us_axil_master #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
+    .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),

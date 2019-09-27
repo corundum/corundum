@@ -34,6 +34,7 @@ module test_pcie_us_axi_master_wr_256;
 // Parameters
 parameter AXIS_PCIE_DATA_WIDTH = 256;
 parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
+parameter AXIS_PCIE_CQ_USER_WIDTH = 85;
 parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH;
 parameter AXI_ADDR_WIDTH = 64;
 parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8);
@@ -49,7 +50,7 @@ reg [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_cq_tdata = 0;
 reg [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_cq_tkeep = 0;
 reg s_axis_cq_tvalid = 0;
 reg s_axis_cq_tlast = 0;
-reg [84:0] s_axis_cq_tuser = 0;
+reg [AXIS_PCIE_CQ_USER_WIDTH-1:0] s_axis_cq_tuser = 0;
 reg m_axi_awready = 0;
 reg m_axi_wready = 0;
 reg [AXI_ID_WIDTH-1:0] m_axi_bid = 0;
@@ -118,6 +119,7 @@ end
 pcie_us_axi_master_wr #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),

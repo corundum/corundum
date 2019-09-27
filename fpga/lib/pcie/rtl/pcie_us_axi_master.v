@@ -35,6 +35,10 @@ module pcie_us_axi_master #
     parameter AXIS_PCIE_DATA_WIDTH = 256,
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    // PCIe AXI stream CQ tuser signal width
+    parameter AXIS_PCIE_CQ_USER_WIDTH = 85,
+    // PCIe AXI stream CC tuser signal width
+    parameter AXIS_PCIE_CC_USER_WIDTH = 33,
     // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     // Width of AXI address bus in bits
@@ -53,22 +57,22 @@ module pcie_us_axi_master #
     /*
      * AXI input (CQ)
      */
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_cq_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_cq_tkeep,
-    input  wire                            s_axis_cq_tvalid,
-    output wire                            s_axis_cq_tready,
-    input  wire                            s_axis_cq_tlast,
-    input  wire [84:0]                     s_axis_cq_tuser,
+    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]    s_axis_cq_tdata,
+    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]    s_axis_cq_tkeep,
+    input  wire                               s_axis_cq_tvalid,
+    output wire                               s_axis_cq_tready,
+    input  wire                               s_axis_cq_tlast,
+    input  wire [AXIS_PCIE_CQ_USER_WIDTH-1:0] s_axis_cq_tuser,
 
     /*
      * AXI output (CC)
      */
-    output wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_cc_tdata,
-    output wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_cc_tkeep,
-    output wire                            m_axis_cc_tvalid,
-    input  wire                            m_axis_cc_tready,
-    output wire                            m_axis_cc_tlast,
-    output wire [32:0]                     m_axis_cc_tuser,
+    output wire [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_cc_tdata,
+    output wire [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_cc_tkeep,
+    output wire                               m_axis_cc_tvalid,
+    input  wire                               m_axis_cc_tready,
+    output wire                               m_axis_cc_tlast,
+    output wire [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser,
 
     /*
      * AXI Master output
@@ -123,19 +127,19 @@ module pcie_us_axi_master #
     output wire                            status_error_uncor
 );
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0] axis_cq_tdata_read;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0] axis_cq_tkeep_read;
-wire                            axis_cq_tvalid_read;
-wire                            axis_cq_tready_read;
-wire                            axis_cq_tlast_read;
-wire [84:0]                     axis_cq_tuser_read;
+wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_cq_tdata_read;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_cq_tkeep_read;
+wire                               axis_cq_tvalid_read;
+wire                               axis_cq_tready_read;
+wire                               axis_cq_tlast_read;
+wire [AXIS_PCIE_CQ_USER_WIDTH-1:0] axis_cq_tuser_read;
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0] axis_cq_tdata_write;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0] axis_cq_tkeep_write;
-wire                            axis_cq_tvalid_write;
-wire                            axis_cq_tready_write;
-wire                            axis_cq_tlast_write;
-wire [84:0]                     axis_cq_tuser_write;
+wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_cq_tdata_write;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_cq_tkeep_write;
+wire                               axis_cq_tvalid_write;
+wire                               axis_cq_tready_write;
+wire                               axis_cq_tlast_write;
+wire [AXIS_PCIE_CQ_USER_WIDTH-1:0] axis_cq_tuser_write;
 
 wire [3:0] req_type;
 wire [1:0] select;
@@ -145,7 +149,8 @@ wire [1:0] status_error_uncor_int;
 pcie_us_axis_cq_demux #(
     .M_COUNT(2),
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
-    .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH)
+    .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH)
 )
 cq_demux_inst (
     .clk(clk),
@@ -182,6 +187,8 @@ assign select[0] = ~select[1];
 pcie_us_axi_master_rd #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
+    .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
@@ -249,6 +256,7 @@ pcie_us_axi_master_rd_inst (
 pcie_us_axi_master_wr #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),

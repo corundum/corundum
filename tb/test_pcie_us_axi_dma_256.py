@@ -52,6 +52,8 @@ def bench():
     # Parameters
     AXIS_PCIE_DATA_WIDTH = 256
     AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
+    AXIS_PCIE_RC_USER_WIDTH = 75
+    AXIS_PCIE_RQ_USER_WIDTH = 60
     AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH
     AXI_ADDR_WIDTH = 64
     AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8)
@@ -74,7 +76,7 @@ def bench():
     s_axis_rc_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     s_axis_rc_tvalid = Signal(bool(0))
     s_axis_rc_tlast = Signal(bool(0))
-    s_axis_rc_tuser = Signal(intbv(0)[75:])
+    s_axis_rc_tuser = Signal(intbv(0)[AXIS_PCIE_RC_USER_WIDTH:])
     m_axis_rq_tready = Signal(bool(0))
     s_axis_pcie_rq_tag = Signal(intbv(0)[PCIE_TAG_WIDTH:])
     s_axis_pcie_rq_tag_valid = Signal(bool(0))
@@ -113,7 +115,7 @@ def bench():
     m_axis_rq_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     m_axis_rq_tvalid = Signal(bool(0))
     m_axis_rq_tlast = Signal(bool(0))
-    m_axis_rq_tuser = Signal(intbv(0)[60:])
+    m_axis_rq_tuser = Signal(intbv(0)[AXIS_PCIE_RQ_USER_WIDTH:])
     s_axis_read_desc_ready = Signal(bool(0))
     m_axis_read_desc_status_tag = Signal(intbv(0)[TAG_WIDTH:])
     m_axis_read_desc_status_valid = Signal(bool(0))

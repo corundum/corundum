@@ -35,6 +35,10 @@ module pcie_us_axil_master #
     parameter AXIS_PCIE_DATA_WIDTH = 256,
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    // PCIe AXI stream CQ tuser signal width
+    parameter AXIS_PCIE_CQ_USER_WIDTH = 85,
+    // PCIe AXI stream CC tuser signal width
+    parameter AXIS_PCIE_CC_USER_WIDTH = 33,
     // Width of AXI lite data bus in bits
     parameter AXI_DATA_WIDTH = 32,
     // Width of AXI lite address bus in bits
@@ -45,63 +49,63 @@ module pcie_us_axil_master #
     parameter ENABLE_PARITY = 0
 )
 (
-    input  wire                            clk,
-    input  wire                            rst,
+    input  wire                               clk,
+    input  wire                               rst,
 
     /*
      * AXI input (CQ)
      */
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_cq_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_cq_tkeep,
-    input  wire                            s_axis_cq_tvalid,
-    output wire                            s_axis_cq_tready,
-    input  wire                            s_axis_cq_tlast,
-    input  wire [84:0]                     s_axis_cq_tuser,
+    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]    s_axis_cq_tdata,
+    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]    s_axis_cq_tkeep,
+    input  wire                               s_axis_cq_tvalid,
+    output wire                               s_axis_cq_tready,
+    input  wire                               s_axis_cq_tlast,
+    input  wire [AXIS_PCIE_CQ_USER_WIDTH-1:0] s_axis_cq_tuser,
 
     /*
      * AXI output (CC)
      */
-    output wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_cc_tdata,
-    output wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_cc_tkeep,
-    output wire                            m_axis_cc_tvalid,
-    input  wire                            m_axis_cc_tready,
-    output wire                            m_axis_cc_tlast,
-    output wire [32:0]                     m_axis_cc_tuser,
+    output wire [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_cc_tdata,
+    output wire [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_cc_tkeep,
+    output wire                               m_axis_cc_tvalid,
+    input  wire                               m_axis_cc_tready,
+    output wire                               m_axis_cc_tlast,
+    output wire [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser,
 
     /*
      * AXI Lite Master output
      */
-    output wire [AXI_ADDR_WIDTH-1:0]       m_axil_awaddr,
-    output wire [2:0]                      m_axil_awprot,
-    output wire                            m_axil_awvalid,
-    input  wire                            m_axil_awready,
-    output wire [AXI_DATA_WIDTH-1:0]       m_axil_wdata,
-    output wire [AXI_STRB_WIDTH-1:0]       m_axil_wstrb,
-    output wire                            m_axil_wvalid,
-    input  wire                            m_axil_wready,
-    input  wire [1:0]                      m_axil_bresp,
-    input  wire                            m_axil_bvalid,
-    output wire                            m_axil_bready,
-    output wire [AXI_ADDR_WIDTH-1:0]       m_axil_araddr,
-    output wire [2:0]                      m_axil_arprot,
-    output wire                            m_axil_arvalid,
-    input  wire                            m_axil_arready,
-    input  wire [AXI_DATA_WIDTH-1:0]       m_axil_rdata,
-    input  wire [1:0]                      m_axil_rresp,
-    input  wire                            m_axil_rvalid,
-    output wire                            m_axil_rready,
+    output wire [AXI_ADDR_WIDTH-1:0]          m_axil_awaddr,
+    output wire [2:0]                         m_axil_awprot,
+    output wire                               m_axil_awvalid,
+    input  wire                               m_axil_awready,
+    output wire [AXI_DATA_WIDTH-1:0]          m_axil_wdata,
+    output wire [AXI_STRB_WIDTH-1:0]          m_axil_wstrb,
+    output wire                               m_axil_wvalid,
+    input  wire                               m_axil_wready,
+    input  wire [1:0]                         m_axil_bresp,
+    input  wire                               m_axil_bvalid,
+    output wire                               m_axil_bready,
+    output wire [AXI_ADDR_WIDTH-1:0]          m_axil_araddr,
+    output wire [2:0]                         m_axil_arprot,
+    output wire                               m_axil_arvalid,
+    input  wire                               m_axil_arready,
+    input  wire [AXI_DATA_WIDTH-1:0]          m_axil_rdata,
+    input  wire [1:0]                         m_axil_rresp,
+    input  wire                               m_axil_rvalid,
+    output wire                               m_axil_rready,
 
     /*
      * Configuration
      */
-    input  wire [15:0]                     completer_id,
-    input  wire                            completer_id_enable,
+    input  wire [15:0]                        completer_id,
+    input  wire                               completer_id_enable,
 
     /*
      * Status
      */
-    output wire                            status_error_cor,
-    output wire                            status_error_uncor
+    output wire                               status_error_cor,
+    output wire                               status_error_uncor
 );
 
 // bus width assertions
@@ -113,6 +117,16 @@ initial begin
 
     if (AXIS_PCIE_KEEP_WIDTH * 32 != AXIS_PCIE_DATA_WIDTH) begin
         $error("Error: PCIe interface requires dword (32-bit) granularity (instance %m)");
+        $finish;
+    end
+
+    if (AXIS_PCIE_CQ_USER_WIDTH != 85) begin
+        $error("Error: PCIe CQ tuser width must be 85 (instance %m)");
+        $finish;
+    end
+
+    if (AXIS_PCIE_CC_USER_WIDTH != 33) begin
+        $error("Error: PCIe CC tuser width must be 33 (instance %m)");
         $finish;
     end
 
@@ -189,13 +203,13 @@ reg status_error_cor_reg = 1'b0, status_error_cor_next;
 reg status_error_uncor_reg = 1'b0, status_error_uncor_next;
 
 // internal datapath
-reg  [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_cc_tdata_int;
-reg  [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_cc_tkeep_int;
-reg                             m_axis_cc_tvalid_int;
-reg                             m_axis_cc_tready_int_reg = 1'b0;
-reg                             m_axis_cc_tlast_int;
-reg  [32:0]                     m_axis_cc_tuser_int;
-wire                            m_axis_cc_tready_int_early;
+reg  [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_cc_tdata_int;
+reg  [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_cc_tkeep_int;
+reg                                m_axis_cc_tvalid_int;
+reg                                m_axis_cc_tready_int_reg = 1'b0;
+reg                                m_axis_cc_tlast_int;
+reg  [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser_int;
+wire                               m_axis_cc_tready_int_early;
 
 assign s_axis_cq_tready = s_axis_cq_tready_reg;
 
@@ -235,7 +249,7 @@ always @* begin
     m_axis_cc_tkeep_int = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
     m_axis_cc_tvalid_int = 1'b0;
     m_axis_cc_tlast_int = 1'b0;
-    m_axis_cc_tuser_int = 33'd0;
+    m_axis_cc_tuser_int = {AXIS_PCIE_CC_USER_WIDTH{1'b0}};
 
     casez (first_be_reg)
         4'b0000: m_axis_cc_tdata_int[6:0] = {m_axil_addr_reg[6:2], 2'b00}; // lower address
@@ -763,17 +777,17 @@ always @(posedge clk) begin
 end
 
 // output datapath logic
-reg [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_cc_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
-reg [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_cc_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
-reg                            m_axis_cc_tvalid_reg = 1'b0, m_axis_cc_tvalid_next;
-reg                            m_axis_cc_tlast_reg = 1'b0;
-reg [32:0]                     m_axis_cc_tuser_reg = 33'd0;
+reg [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_cc_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
+reg [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_cc_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
+reg                               m_axis_cc_tvalid_reg = 1'b0, m_axis_cc_tvalid_next;
+reg                               m_axis_cc_tlast_reg = 1'b0;
+reg [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser_reg = {AXIS_PCIE_CC_USER_WIDTH{1'b0}};
 
-reg [AXIS_PCIE_DATA_WIDTH-1:0] temp_m_axis_cc_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
-reg [AXIS_PCIE_KEEP_WIDTH-1:0] temp_m_axis_cc_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
-reg                            temp_m_axis_cc_tvalid_reg = 1'b0, temp_m_axis_cc_tvalid_next;
-reg                            temp_m_axis_cc_tlast_reg = 1'b0;
-reg [32:0]                     temp_m_axis_cc_tuser_reg = 33'd0;
+reg [AXIS_PCIE_DATA_WIDTH-1:0]    temp_m_axis_cc_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
+reg [AXIS_PCIE_KEEP_WIDTH-1:0]    temp_m_axis_cc_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
+reg                               temp_m_axis_cc_tvalid_reg = 1'b0, temp_m_axis_cc_tvalid_next;
+reg                               temp_m_axis_cc_tlast_reg = 1'b0;
+reg [AXIS_PCIE_CC_USER_WIDTH-1:0] temp_m_axis_cc_tuser_reg = {AXIS_PCIE_CC_USER_WIDTH{1'b0}};
 
 // datapath control
 reg store_axis_int_to_output;

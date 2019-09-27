@@ -47,6 +47,8 @@ def bench():
     # Parameters
     AXIS_PCIE_DATA_WIDTH = 256
     AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
+    AXIS_PCIE_CQ_USER_WIDTH = 85
+    AXIS_PCIE_CC_USER_WIDTH = 33
     AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH
     AXI_ADDR_WIDTH = 64
     AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8)
@@ -62,7 +64,7 @@ def bench():
     s_axis_cq_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     s_axis_cq_tvalid = Signal(bool(0))
     s_axis_cq_tlast = Signal(bool(0))
-    s_axis_cq_tuser = Signal(intbv(0)[85:])
+    s_axis_cq_tuser = Signal(intbv(0)[AXIS_PCIE_CQ_USER_WIDTH:])
     m_axis_cc_tready = Signal(bool(0))
     m_axi_arready = Signal(bool(0))
     m_axi_rid = Signal(intbv(0)[AXI_ID_WIDTH:])
@@ -80,7 +82,7 @@ def bench():
     m_axis_cc_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     m_axis_cc_tvalid = Signal(bool(0))
     m_axis_cc_tlast = Signal(bool(0))
-    m_axis_cc_tuser = Signal(intbv(0)[33:])
+    m_axis_cc_tuser = Signal(intbv(0)[AXIS_PCIE_CC_USER_WIDTH:])
     m_axi_arid = Signal(intbv(0)[AXI_ID_WIDTH:])
     m_axi_araddr = Signal(intbv(0)[AXI_ADDR_WIDTH:])
     m_axi_arlen = Signal(intbv(0)[8:])

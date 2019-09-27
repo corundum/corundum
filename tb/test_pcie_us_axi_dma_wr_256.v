@@ -34,6 +34,7 @@ module test_pcie_us_axi_dma_wr_256;
 // Parameters
 parameter AXIS_PCIE_DATA_WIDTH = 256;
 parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
+parameter AXIS_PCIE_RQ_USER_WIDTH = 60;
 parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH;
 parameter AXI_ADDR_WIDTH = 64;
 parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8);
@@ -52,7 +53,7 @@ reg [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_rq_tdata = 0;
 reg [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_rq_tkeep = 0;
 reg s_axis_rq_tvalid = 0;
 reg s_axis_rq_tlast = 0;
-reg [59:0] s_axis_rq_tuser = 0;
+reg [AXIS_PCIE_RQ_USER_WIDTH-1:0] s_axis_rq_tuser = 0;
 reg m_axis_rq_tready = 0;
 reg [PCIE_ADDR_WIDTH-1:0] s_axis_write_desc_pcie_addr = 0;
 reg [AXI_ADDR_WIDTH-1:0] s_axis_write_desc_axi_addr = 0;
@@ -76,7 +77,7 @@ wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata;
 wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rq_tkeep;
 wire m_axis_rq_tvalid;
 wire m_axis_rq_tlast;
-wire [59:0] m_axis_rq_tuser;
+wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser;
 wire s_axis_write_desc_ready;
 wire [TAG_WIDTH-1:0] m_axis_write_desc_status_tag;
 wire m_axis_write_desc_status_valid;
@@ -149,6 +150,7 @@ end
 pcie_us_axi_dma_wr #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),

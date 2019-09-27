@@ -1053,6 +1053,10 @@ always @* begin
                     last_cycle_next = output_cycle_count_next == 0;
                     input_active_next = tr_count_next > offset_reg;
 
+                    m_axi_awaddr_next = axi_addr_reg;
+                    m_axi_awlen_next = output_cycle_count_next;
+                    m_axi_awvalid_next = 1'b1;
+
                     axi_addr_next = axi_addr_reg + tr_count_next;
                     op_count_next = op_count_reg - tr_count_next;
 
@@ -1076,8 +1080,6 @@ always @* begin
                             tr_count_next = AXI_MAX_BURST_SIZE - axi_addr_next[OFFSET_WIDTH-1:0];
                         end
                     end
-
-                    m_axi_awvalid_next = 1'b1;
 
                     op_table_write_start_ptr = op_tag_reg;
                     op_table_write_start_commit = op_count_next == 0 && final_cpl_reg && op_table_read_commit[op_table_write_start_ptr] && (op_table_read_count_start[op_table_write_start_ptr] == op_table_read_count_finish[op_table_write_start_ptr]);

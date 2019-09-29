@@ -1055,7 +1055,6 @@ always @* begin
                     tlp_state_next = TLP_STATE_TRANSFER;
                 end else if (op_count_reg != 0) begin
                     // current transfer done, but operation not finished yet
-                    m_axi_awaddr_next = axi_addr_reg;
 
                     // keep offset, no bubble cycles, not first cycle
                     bubble_cycle_next = 1'b0;

@@ -701,7 +701,7 @@ always @* begin
                     m_axi_rready_next = m_axis_rq_tready_int_early && input_active_next;
                     tlp_state_next = TLP_STATE_TRANSFER;
                 end else begin
-                    dword_count_next = dword_count_reg - AXI_STRB_WIDTH/4;
+                    dword_count_next = dword_count_reg - AXIS_PCIE_KEEP_WIDTH;
                     if (input_active_reg) begin
                         input_cycle_count_next = input_cycle_count_reg - 1;
                         input_active_next = input_cycle_count_reg != 0;
@@ -711,10 +711,10 @@ always @* begin
 
                     m_axis_rq_tdata_int = shift_axi_rdata;
                     m_axis_rq_tvalid_int = 1'b1;
-                    if (dword_count_reg >= AXI_STRB_WIDTH/4) begin
-                        m_axis_rq_tkeep_int = {AXI_STRB_WIDTH{1'b1}};
+                    if (dword_count_reg >= AXIS_PCIE_KEEP_WIDTH) begin
+                        m_axis_rq_tkeep_int = {AXIS_PCIE_KEEP_WIDTH{1'b1}};
                     end else begin
-                        m_axis_rq_tkeep_int = {AXI_STRB_WIDTH{1'b1}} >> (AXI_STRB_WIDTH - dword_count_reg);
+                        m_axis_rq_tkeep_int = {AXIS_PCIE_KEEP_WIDTH{1'b1}} >> (AXIS_PCIE_KEEP_WIDTH - dword_count_reg);
                     end
 
                     if (last_cycle_reg) begin

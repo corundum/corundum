@@ -30,6 +30,33 @@ import axis_ep
 from pcie import *
 
 
+REQ_MEM_READ        = 0b0000
+REQ_MEM_WRITE       = 0b0001
+REQ_IO_READ         = 0b0010
+REQ_IO_WRITE        = 0b0011
+REQ_MEM_FETCH_ADD   = 0b0100
+REQ_MEM_SWAP        = 0b0101
+REQ_MEM_CAS         = 0b0110
+REQ_MEM_READ_LOCKED = 0b0111
+REQ_CFG_READ_0      = 0b1000
+REQ_CFG_READ_1      = 0b1001
+REQ_CFG_WRITE_0     = 0b1010
+REQ_CFG_WRITE_1     = 0b1011
+REQ_MSG             = 0b1100
+REQ_MSG_VENDOR      = 0b1101
+REQ_MSG_ATS         = 0b1110
+
+RC_ERROR_NORMAL_TERMINATION = 0b0000
+RC_ERROR_POISONED           = 0b0001
+RC_ERROR_BAD_STATUS         = 0b0010
+RC_ERROR_INVALID_LENGTH     = 0b0011
+RC_ERROR_MISMATCH           = 0b0100
+RC_ERROR_INVALID_ADDRESS    = 0b0101
+RC_ERROR_INVALID_TAG        = 0b0110
+RC_ERROR_TIMEOUT            = 0b1001
+RC_ERROR_FLR                = 0b1000
+
+
 def dword_parity(d):
     d ^= d >> 4
     d ^= d >> 2

@@ -136,6 +136,12 @@ class UltrascalePlusPCIe(Device):
                     if f.function_num == tlp.requester_id.function:
 
                         tlp = TLP_us(tlp)
+
+                        tlp.error_code = RC_ERROR_NORMAL_TERMINATION
+
+                        if tlp.status != CPL_STATUS_SC:
+                            tlp.error = RC_ERROR_BAD_STATUS
+
                         self.rc_queue.append(tlp)
 
                         return

@@ -76,6 +76,7 @@ class TLP_us(TLP):
         self.completer_id_enable = False
         self.requester_id_enable = False
         self.discontinue = False
+        self.error_code = RC_ERROR_NORMAL_TERMINATION
 
         if isinstance(tlp, TLP_us):
             self.bar_id = tlp.bar_id
@@ -83,6 +84,7 @@ class TLP_us(TLP):
             self.completer_id_enable = tlp.completer_id_enable
             self.requester_id_enable = tlp.requester_id_enable
             self.discontinue = tlp.discontinue
+            self.error_code = tlp.error_code
 
     def pack_us_cq(self, dw):
         pkt = axis_ep.AXIStreamFrame([])
@@ -505,7 +507,7 @@ class TLP_us(TLP):
                 self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA):
             # Requester Completion descriptor
             l = self.lower_address & 0xfff
-            # TODO error code
+            l |= (self.error_code & 0xf) << 12
             l |= (self.byte_count & 0x1fff) << 16
             if self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA:
                 l |= 1 << 29
@@ -573,7 +575,7 @@ class TLP_us(TLP):
         self.fmt_type = TLP_CPL
 
         self.lower_address = pkt.data[0] & 0xfff
-        # error code
+        self.error_code = (pkt.data[0] >> 12) & 0xf
         self.byte_count = (pkt.data[0] >> 16) & 0x1fff
         if pkt.data[0] & (1 << 29):
             self.fmt_type = TLP_CPL_LOCKED
@@ -774,6 +776,12 @@ class UltrascalePCIe(Device):
                     if f.function_num == tlp.requester_id.function:
 
                         tlp = TLP_us(tlp)
+
+                        tlp.error_code = RC_ERROR_NORMAL_TERMINATION
+
+                        if tlp.status != CPL_STATUS_SC:
+                            tlp.error = RC_ERROR_BAD_STATUS
+
                         self.rc_queue.append(tlp)
 
                         return

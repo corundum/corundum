@@ -41,6 +41,12 @@ either expressed or implied, of The Regents of the University of California.
 module test_fpga_core;
 
 // Parameters
+parameter AXIS_PCIE_DATA_WIDTH = 256;
+parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
+parameter AXIS_PCIE_RC_USER_WIDTH = 75;
+parameter AXIS_PCIE_RQ_USER_WIDTH = 60;
+parameter AXIS_PCIE_CQ_USER_WIDTH = 85;
+parameter AXIS_PCIE_CC_USER_WIDTH = 33;
 
 // Inputs
 reg clk = 0;
@@ -52,15 +58,15 @@ reg rst_156mhz = 0;
 reg clk_250mhz = 0;
 reg rst_250mhz = 0;
 reg m_axis_rq_tready = 0;
-reg [255:0] s_axis_rc_tdata = 0;
-reg [7:0] s_axis_rc_tkeep = 0;
+reg [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_rc_tdata = 0;
+reg [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_rc_tkeep = 0;
 reg s_axis_rc_tlast = 0;
-reg [74:0] s_axis_rc_tuser = 0;
+reg [AXIS_PCIE_RC_USER_WIDTH-1:0] s_axis_rc_tuser = 0;
 reg s_axis_rc_tvalid = 0;
-reg [255:0] s_axis_cq_tdata = 0;
-reg [7:0] s_axis_cq_tkeep = 0;
+reg [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_cq_tdata = 0;
+reg [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_cq_tkeep = 0;
 reg s_axis_cq_tlast = 0;
-reg [84:0] s_axis_cq_tuser = 0;
+reg [AXIS_PCIE_CQ_USER_WIDTH-1:0] s_axis_cq_tuser = 0;
 reg s_axis_cq_tvalid = 0;
 reg m_axis_cc_tready = 0;
 reg [1:0] pcie_tfc_nph_av = 0;
@@ -99,17 +105,17 @@ reg [15:0] flash_dq_i = 0;
 wire [1:0] sfp_1_led;
 wire [1:0] sfp_2_led;
 wire [1:0] sma_led;
-wire [255:0] m_axis_rq_tdata;
-wire [7:0] m_axis_rq_tkeep;
+wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rq_tkeep;
 wire m_axis_rq_tlast;
-wire [59:0] m_axis_rq_tuser;
+wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser;
 wire m_axis_rq_tvalid;
 wire s_axis_rc_tready;
 wire s_axis_cq_tready;
-wire [255:0] m_axis_cc_tdata;
-wire [7:0] m_axis_cc_tkeep;
+wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_cc_tdata;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_cc_tkeep;
 wire m_axis_cc_tlast;
-wire [32:0] m_axis_cc_tuser;
+wire [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser;
 wire m_axis_cc_tvalid;
 wire [18:0] cfg_mgmt_addr;
 wire cfg_mgmt_write;
@@ -267,7 +273,14 @@ initial begin
     $dumpvars(0, test_fpga_core);
 end
 
-fpga_core
+fpga_core #(
+    .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
+    .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_RC_USER_WIDTH(AXIS_PCIE_RC_USER_WIDTH),
+    .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
+    .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
+    .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH)
+)
 UUT (
     .clk_156mhz(clk_156mhz),
     .rst_156mhz(rst_156mhz),

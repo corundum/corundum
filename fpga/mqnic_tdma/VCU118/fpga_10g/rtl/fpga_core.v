@@ -42,7 +42,11 @@ module fpga_core #
 (
     parameter TARGET = "XILINX",
     parameter AXIS_PCIE_DATA_WIDTH = 256,
-    parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
+    parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    parameter AXIS_PCIE_RC_USER_WIDTH = 75,
+    parameter AXIS_PCIE_RQ_USER_WIDTH = 62,
+    parameter AXIS_PCIE_CQ_USER_WIDTH = 88,
+    parameter AXIS_PCIE_CC_USER_WIDTH = 33
 )
 (
     /*
@@ -777,6 +781,9 @@ pcie_us_cfg_inst (
 
 pcie_us_axil_master #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
+    .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
+    .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
     .AXI_DATA_WIDTH(AXIL_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXIL_ADDR_WIDTH),
     .ENABLE_PARITY(0)
@@ -841,12 +848,12 @@ pcie_us_axil_master_inst (
     .status_error_uncor(status_error_uncor_int[0])
 );
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0] axis_rc_tdata_r;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0] axis_rc_tkeep_r;
-wire                            axis_rc_tlast_r;
-wire                            axis_rc_tready_r;
-wire [74:0]                     axis_rc_tuser_r;
-wire                            axis_rc_tvalid_r;
+wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_rc_tdata_r;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_rc_tkeep_r;
+wire                               axis_rc_tlast_r;
+wire                               axis_rc_tready_r;
+wire [AXIS_PCIE_RC_USER_WIDTH-1:0] axis_rc_tuser_r;
+wire                               axis_rc_tvalid_r;
 
 axis_register #(
     .DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
@@ -856,9 +863,9 @@ axis_register #(
     .ID_ENABLE(0),
     .DEST_ENABLE(0),
     .USER_ENABLE(1),
-    .USER_WIDTH(75)
+    .USER_WIDTH(AXIS_PCIE_RC_USER_WIDTH)
 )
-rq_reg (
+rc_reg (
     .clk(clk_250mhz),
     .rst(rst_250mhz),
 
@@ -890,6 +897,8 @@ rq_reg (
 pcie_us_axi_dma #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_RC_USER_WIDTH(AXIS_PCIE_RC_USER_WIDTH),
+    .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),

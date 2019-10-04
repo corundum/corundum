@@ -182,8 +182,8 @@ initial begin
         $finish;
     end
 
-    if (AXIS_PCIE_RQ_USER_WIDTH != 60) begin
-        $error("Error: PCIe RQ tuser width must be 60 (instance %m)");
+    if (AXIS_PCIE_RQ_USER_WIDTH != 60 && AXIS_PCIE_RQ_USER_WIDTH != 62) begin
+        $error("Error: PCIe RQ tuser width must be 60 or 62 (instance %m)");
         $finish;
     end
 

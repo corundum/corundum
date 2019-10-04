@@ -511,6 +511,8 @@ def bench():
 
         print(status)
 
+        assert status.data[0][0] == cur_tag
+
         data = axi_ram_inst.read_mem(axi_addr, 32)
         for i in range(0, len(data), 16):
             print(" ".join(("{:02x}".format(c) for c in bytearray(data[i:i+16]))))

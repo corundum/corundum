@@ -132,8 +132,8 @@ initial begin
         $finish;
     end
 
-    if (AXIS_PCIE_CQ_USER_WIDTH != 85) begin
-        $error("Error: PCIe CQ tuser width must be 85 (instance %m)");
+    if (AXIS_PCIE_CQ_USER_WIDTH != 85 && AXIS_PCIE_CQ_USER_WIDTH != 88) begin
+        $error("Error: PCIe CQ tuser width must be 85 or 88 (instance %m)");
         $finish;
     end
 
@@ -642,7 +642,7 @@ always @* begin
     end
 
     m_axis_cc_tuser_int[0] = 1'b0; // discontinue
-    m_axis_cc_tuser_int[33:1] = 32'd0; // parity
+    m_axis_cc_tuser_int[32:1] = 32'd0; // parity
 
     // AXI read response processing and TLP generation
     case (tlp_state_reg)

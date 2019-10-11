@@ -530,12 +530,22 @@ class TLP_us(TLP):
             # compute byte enables
             byte_en = [0]*3
 
+            first_be = (0xf << (self.lower_address&3)) & 0xf
+            if self.byte_count+(self.lower_address&3) > self.length*4:
+                last_be = 0xf
+            else:
+                last_be = 0xf >> ((self.byte_count+self.lower_address)&3)
+
+            if len(self.data) == 1:
+                first_be = first_be & last_be
+                last_be = 0
+
             if len(self.data) >= 1:
-                byte_en += [self.first_be]
+                byte_en += [first_be]
             if len(self.data) > 2:
                 byte_en += [0xf] * (len(self.data)-2)
             if len(self.data) > 1:
-                byte_en += [self.last_be]
+                byte_en += [last_be]
 
             # compute parity
             parity = [dword_parity(d) ^ 0xf for d in pkt.data]
@@ -596,12 +606,22 @@ class TLP_us(TLP):
         # compute byte enables
         byte_en = [0]*3
 
+        first_be = (0xf << (self.lower_address&3)) & 0xf
+        if self.byte_count+(self.lower_address&3) > self.length*4:
+            last_be = 0xf
+        else:
+            last_be = 0xf >> ((self.byte_count+self.lower_address)&3)
+
+        if len(self.data) == 1:
+            first_be = first_be & last_be
+            last_be = 0
+
         if len(self.data) >= 1:
-            byte_en += [self.first_be]
+            byte_en += [first_be]
         if len(self.data) > 2:
             byte_en += [0xf] * (len(self.data)-2)
         if len(self.data) > 1:
-            byte_en += [self.last_be]
+            byte_en += [last_be]
 
         # compute parity
         parity = [dword_parity(d) ^ 0xf for d in pkt.data]

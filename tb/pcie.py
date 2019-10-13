@@ -24,6 +24,7 @@ THE SOFTWARE.
 
 import inspect
 import math
+import mmap
 import struct
 from myhdl import *
 
@@ -3277,31 +3278,31 @@ class RootComplex(Switch):
 
     def alloc_region(self, size, read=None, write=None):
         addr = 0
-        arr = None
+        mem = None
 
         addr = align(self.region_limit, 2**math.ceil(math.log(size, 2))-1)
         self.region_limit = addr+size-1
         if not read and not write:
-            arr = bytearray(size)
-            self.regions.append((addr, size, arr))
+            mem = mmap.mmap(-1, size)
+            self.regions.append((addr, size, mem))
         else:
             self.regions.append((addr, size, read, write))
 
-        return addr, arr
+        return addr, mem
 
     def alloc_io_region(self, size, read=None, write=None):
         addr = 0
-        arr = None
+        mem = None
 
         addr = align(self.io_region_limit, 2**math.ceil(math.log(size, 2))-1)
         self.io_region_limit = addr+size-1
         if not read and not write:
-            arr = bytearray(size)
-            self.io_regions.append((addr, size, arr))
+            mem = mmap.mmap(-1, size)
+            self.io_regions.append((addr, size, mem))
         else:
             self.io_regions.append((addr, size, read, write))
 
-        return addr, arr
+        return addr, mem
 
     def find_region(self, addr):
         for region in self.regions:

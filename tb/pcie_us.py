@@ -1491,11 +1491,17 @@ class RCSink(object):
                         if u & (1 << 42):
                             frame.discontinue = True
 
+                        last_lane = 0
+
                         for i in range(len(tkeep)):
                             if tkeep & (1 << i):
                                 frame.data.append((d >> (i*32)) & 0xffffffff)
                                 frame.byte_en.append((u >> (i*4)) & 0xf)
                                 frame.parity.append((u >> (i*4+43)) & 0xf)
+                                last_lane = i
+
+                        if tlast:
+                            assert (u >> 34) & 0xf == 1 | last_lane << 1 # is_eof_0
 
                         first = False
                         if tlast:

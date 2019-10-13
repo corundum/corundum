@@ -80,10 +80,10 @@ class UltrascalePlusPCIe(Device):
 
         self.config_space_enable = False
 
-        self.cq_source = axis_ep.AXIStreamSource()
-        self.cc_sink = axis_ep.AXIStreamSink()
-        self.rq_sink = axis_ep.AXIStreamSink()
-        self.rc_source = axis_ep.AXIStreamSource()
+        self.cq_source = CQSource()
+        self.cc_sink = CCSink()
+        self.rq_sink = RQSink()
+        self.rc_source = RCSource()
 
         self.make_function()
 
@@ -748,7 +748,7 @@ class UltrascalePlusPCIe(Device):
                 while self.cq_np_queue and self.cq_np_req_count > 0:
                     tlp = self.cq_np_queue.pop(0)
                     self.cq_np_req_count -= 1
-                    self.cq_source.send(tlp.pack_us_cq(self.dw))
+                    self.cq_source.send(tlp.pack_us_cq())
 
                 # handle new requests
                 while self.cq_queue:
@@ -760,13 +760,13 @@ class UltrascalePlusPCIe(Device):
                         if self.cq_np_req_count > 0:
                             # have credit, can forward
                             self.cq_np_req_count -= 1
-                            self.cq_source.send(tlp.pack_us_cq(self.dw))
+                            self.cq_source.send(tlp.pack_us_cq())
                         else:
                             # no credits, put it in the queue
                             self.cq_np_queue.append(tlp)
                     else:
                         # posted request
-                        self.cq_source.send(tlp.pack_us_cq(self.dw))
+                        self.cq_source.send(tlp.pack_us_cq())
 
                 pcie_cq_np_req_count.next = self.cq_np_req_count
 
@@ -774,7 +774,7 @@ class UltrascalePlusPCIe(Device):
                 while not self.cc_sink.empty():
                     pkt = self.cc_sink.recv()
 
-                    tlp = TLP_us().unpack_us_cc(pkt, self.dw, self.enable_parity)
+                    tlp = TLP_us().unpack_us_cc(pkt, self.enable_parity)
 
                     if not tlp.completer_id_enable:
                         tlp.completer_id = PcieId(self.bus_num, self.device_num, tlp.completer_id.function)
@@ -786,7 +786,7 @@ class UltrascalePlusPCIe(Device):
                 while not self.rq_sink.empty():
                     pkt = self.rq_sink.recv()
 
-                    tlp = TLP_us().unpack_us_rq(pkt, self.dw, self.enable_parity)
+                    tlp = TLP_us().unpack_us_rq(pkt, self.enable_parity)
 
                     if not tlp.requester_id_enable:
                         tlp.requester_id = PcieId(self.bus_num, self.device_num, tlp.requester_id.function)
@@ -805,7 +805,7 @@ class UltrascalePlusPCIe(Device):
                 # handle requester completions
                 while self.rc_queue:
                     tlp = self.rc_queue.pop(0)
-                    self.rc_source.send(tlp.pack_us_rc(self.dw))
+                    self.rc_source.send(tlp.pack_us_rc())
 
                 # transmit flow control
                 #pcie_tfc_nph_av

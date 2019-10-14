@@ -38,7 +38,7 @@ module pcie_us_axis_rc_demux #
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     // PCIe AXI stream RC tuser signal width
-    parameter AXIS_PCIE_RC_USER_WIDTH = 75
+    parameter AXIS_PCIE_RC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 75 : 161
 )
 (
     input  wire                                       clk,
@@ -81,8 +81,8 @@ parameter CL_M_COUNT = $clog2(M_COUNT);
 
 // bus width assertions
 initial begin
-    if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256) begin
-        $error("Error: PCIe interface width must be 64, 128, or 256 (instance %m)");
+    if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256 && AXIS_PCIE_DATA_WIDTH != 512) begin
+        $error("Error: PCIe interface width must be 64, 128, 256, or 512 (instance %m)");
         $finish;
     end
 

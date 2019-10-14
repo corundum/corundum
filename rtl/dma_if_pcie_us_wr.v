@@ -36,7 +36,7 @@ module dma_if_pcie_us_wr #
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     // PCIe AXI stream RQ tuser signal width
-    parameter AXIS_PCIE_RQ_USER_WIDTH = 60,
+    parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 60 : 137,
     // RAM segment count
     parameter SEG_COUNT = AXIS_PCIE_DATA_WIDTH > 64 ? AXIS_PCIE_DATA_WIDTH*2 / 128 : 2,
     // RAM segment data width
@@ -132,7 +132,7 @@ parameter MASK_FIFO_ADDR_WIDTH = 5;
 
 // bus width assertions
 initial begin
-    if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256) begin
+    if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256 && AXIS_PCIE_DATA_WIDTH != 512) begin
         $error("Error: PCIe interface width must be 64, 128, or 256 (instance %m)");
         $finish;
     end
@@ -142,9 +142,16 @@ initial begin
         $finish;
     end
 
-    if (AXIS_PCIE_RQ_USER_WIDTH != 60 && AXIS_PCIE_RQ_USER_WIDTH != 62) begin
-        $error("Error: PCIe RQ tuser width must be 60 or 62 (instance %m)");
-        $finish;
+    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+        if (AXIS_PCIE_RQ_USER_WIDTH != 137) begin
+            $error("Error: PCIe RQ tuser width must be 137 (instance %m)");
+            $finish;
+        end
+    end else begin
+        if (AXIS_PCIE_RQ_USER_WIDTH != 60 && AXIS_PCIE_RQ_USER_WIDTH != 62) begin
+            $error("Error: PCIe RQ tuser width must be 60 or 62 (instance %m)");
+            $finish;
+        end
     end
 
     if (SEG_COUNT < 2) begin
@@ -378,7 +385,7 @@ always @* begin
         READ_STATE_START: begin
             // start state, compute TLP length
             if (!tlp_cmd_valid_reg) begin
-                if (AXIS_PCIE_DATA_WIDTH == 256) begin
+                if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                     read_cycle_count_next = (tlp_count_next + 16+pcie_addr_reg[1:0] - 1) >> $clog2(AXIS_PCIE_DATA_WIDTH/8);
                     end else begin
                     read_cycle_count_next = (tlp_count_next + pcie_addr_reg[1:0] - 1) >> $clog2(AXIS_PCIE_DATA_WIDTH/8);
@@ -386,7 +393,7 @@ always @* begin
                 read_last_cycle_next = read_cycle_count_next == 0;
                 tlp_cmd_cycle_count_next = read_cycle_count_next;
 
-                if (AXIS_PCIE_DATA_WIDTH == 256 && tlp_count_next > (AXIS_PCIE_DATA_WIDTH/8-16)-pcie_addr_reg[1:0]) begin
+                if (AXIS_PCIE_DATA_WIDTH >= 256 && tlp_count_next > (AXIS_PCIE_DATA_WIDTH/8-16)-pcie_addr_reg[1:0]) begin
                     cycle_byte_count_next = (AXIS_PCIE_DATA_WIDTH/8-16)-pcie_addr_reg[1:0];
                 end else if (AXIS_PCIE_DATA_WIDTH <= 128 && tlp_count_next > AXIS_PCIE_DATA_WIDTH/8-pcie_addr_reg[1:0]) begin
                     cycle_byte_count_next = AXIS_PCIE_DATA_WIDTH/8-pcie_addr_reg[1:0];
@@ -414,7 +421,7 @@ always @* begin
                 tlp_cmd_pcie_addr_next = pcie_addr_reg;
                 tlp_cmd_len_next = tlp_count_next;
                 tlp_cmd_dword_len_next = (tlp_count_next + pcie_addr_reg[1:0] + 3) >> 2;
-                if (AXIS_PCIE_DATA_WIDTH == 256) begin
+                if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                     tlp_cmd_offset_next = 16+pcie_addr_reg[1:0]-read_addr_reg[RAM_OFFSET_WIDTH-1:0];
                 end else begin
                     tlp_cmd_offset_next = pcie_addr_reg[1:0]-read_addr_reg[RAM_OFFSET_WIDTH-1:0];
@@ -568,16 +575,38 @@ always @* begin
         m_axis_rq_tkeep_int = 2'b11;
     end
 
-    m_axis_rq_tuser_int[3:0] = dword_count_reg == 1 ? first_be & last_be : first_be; // first BE
-    m_axis_rq_tuser_int[7:4] = dword_count_reg == 1 ? 4'b0000 : last_be; // last BE
-    m_axis_rq_tuser_int[10:8] = 3'd0; // addr_offset
-    m_axis_rq_tuser_int[11] = 1'b0; // discontinue
-    m_axis_rq_tuser_int[12] = 1'b0; // tph_present
-    m_axis_rq_tuser_int[14:13] = 2'b00; // tph_type
-    m_axis_rq_tuser_int[15] = 1'b0; // tph_indirect_tag_en
-    m_axis_rq_tuser_int[23:16] = 8'd0; // tph_st_tag
-    m_axis_rq_tuser_int[27:24] = 4'd0; // seq_num
-    m_axis_rq_tuser_int[59:28] = 32'd0; // parity
+    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+        m_axis_rq_tuser_int[3:0] = dword_count_reg == 1 ? first_be & last_be : first_be; // first BE 0
+        m_axis_rq_tuser_int[7:4] = 4'd0; // first BE 1
+        m_axis_rq_tuser_int[11:8] = dword_count_reg == 1 ? 4'b0000 : last_be; // last BE 0
+        m_axis_rq_tuser_int[15:12] = 4'd0; // last BE 1
+        m_axis_rq_tuser_int[19:16] = 3'd0; // addr_offset
+        m_axis_rq_tuser_int[21:20] = 2'b01; // is_sop
+        m_axis_rq_tuser_int[23:22] = 2'd0; // is_sop0_ptr
+        m_axis_rq_tuser_int[25:24] = 2'd0; // is_sop1_ptr
+        m_axis_rq_tuser_int[27:26] = 2'b01; // is_eop
+        m_axis_rq_tuser_int[31:28]  = 4'd3; // is_eop0_ptr
+        m_axis_rq_tuser_int[35:32] = 4'd0; // is_eop1_ptr
+        m_axis_rq_tuser_int[36] = 1'b0; // discontinue
+        m_axis_rq_tuser_int[38:37] = 2'b00; // tph_present
+        m_axis_rq_tuser_int[42:39] = 4'b0000; // tph_type
+        m_axis_rq_tuser_int[44:43] = 2'b00; // tph_indirect_tag_en
+        m_axis_rq_tuser_int[60:45] = 16'd0; // tph_st_tag
+        m_axis_rq_tuser_int[66:61] = 6'd0; // seq_num0
+        m_axis_rq_tuser_int[72:67] = 6'd0; // seq_num1
+        m_axis_rq_tuser_int[136:73] = 64'd0; // parity
+    end else begin
+        m_axis_rq_tuser_int[3:0] = dword_count_reg == 1 ? first_be & last_be : first_be; // first BE
+        m_axis_rq_tuser_int[7:4] = dword_count_reg == 1 ? 4'b0000 : last_be; // last BE
+        m_axis_rq_tuser_int[10:8] = 3'd0; // addr_offset
+        m_axis_rq_tuser_int[11] = 1'b0; // discontinue
+        m_axis_rq_tuser_int[12] = 1'b0; // tph_present
+        m_axis_rq_tuser_int[14:13] = 2'b00; // tph_type
+        m_axis_rq_tuser_int[15] = 1'b0; // tph_indirect_tag_en
+        m_axis_rq_tuser_int[23:16] = 8'd0; // tph_st_tag
+        m_axis_rq_tuser_int[27:24] = 4'd0; // seq_num
+        m_axis_rq_tuser_int[59:28] = 32'd0; // parity
+    end
 
     // AXI read response processing and TLP generation
     case (tlp_state_reg)
@@ -620,7 +649,7 @@ always @* begin
         end
         TLP_STATE_HEADER_1: begin
             // header 1 state, send TLP header
-            if (AXIS_PCIE_DATA_WIDTH == 256) begin
+            if (AXIS_PCIE_DATA_WIDTH >= 256) begin
 
                 ram_rd_resp_ready_cmb = {SEG_COUNT{1'b0}};
 
@@ -635,7 +664,7 @@ always @* begin
                     last_cycle_next = cycle_count_next == 0;
                     offset_next = offset_reg + AXIS_PCIE_DATA_WIDTH/8;
 
-                    m_axis_rq_tdata_int[255:128] = {2{ram_rd_resp_data}} >> (SEG_COUNT*SEG_DATA_WIDTH-offset_reg*8 + 128);
+                    m_axis_rq_tdata_int[AXIS_PCIE_DATA_WIDTH-1:128] = {2{ram_rd_resp_data}} >> (SEG_COUNT*SEG_DATA_WIDTH-offset_reg*8 + 128);
                     m_axis_rq_tvalid_int = 1'b1;
                     if (dword_count_reg >= AXIS_PCIE_KEEP_WIDTH-4) begin
                         m_axis_rq_tkeep_int = {AXIS_PCIE_KEEP_WIDTH{1'b1}};

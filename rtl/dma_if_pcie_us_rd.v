@@ -36,9 +36,9 @@ module dma_if_pcie_us_rd #
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     // PCIe AXI stream RC tuser signal width
-    parameter AXIS_PCIE_RC_USER_WIDTH = 75,
+    parameter AXIS_PCIE_RC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 75 : 161,
     // PCIe AXI stream RQ tuser signal width
-    parameter AXIS_PCIE_RQ_USER_WIDTH = 60,
+    parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 60 : 137,
     // RAM segment count
     parameter SEG_COUNT = AXIS_PCIE_DATA_WIDTH > 64 ? AXIS_PCIE_DATA_WIDTH*2 / 128 : 2,
     // RAM segment data width
@@ -147,7 +147,7 @@ parameter OP_TABLE_WRITE_COUNT_WIDTH = LEN_WIDTH;
 
 // bus width assertions
 initial begin
-    if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256) begin
+    if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256 && AXIS_PCIE_DATA_WIDTH != 512) begin
         $error("Error: PCIe interface width must be 64, 128, or 256 (instance %m)");
         $finish;
     end
@@ -157,14 +157,26 @@ initial begin
         $finish;
     end
 
-    if (AXIS_PCIE_RC_USER_WIDTH != 75) begin
-        $error("Error: PCIe RC tuser width must be 75 (instance %m)");
-        $finish;
-    end
+    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+        if (AXIS_PCIE_RC_USER_WIDTH != 161) begin
+            $error("Error: PCIe RC tuser width must be 161 (instance %m)");
+            $finish;
+        end
 
-    if (AXIS_PCIE_RQ_USER_WIDTH != 60 && AXIS_PCIE_RQ_USER_WIDTH != 62) begin
-        $error("Error: PCIe RQ tuser width must be 60 or 62 (instance %m)");
-        $finish;
+        if (AXIS_PCIE_RQ_USER_WIDTH != 137) begin
+            $error("Error: PCIe RQ tuser width must be 137 (instance %m)");
+            $finish;
+        end
+    end else begin
+        if (AXIS_PCIE_RC_USER_WIDTH != 75) begin
+            $error("Error: PCIe RC tuser width must be 75 (instance %m)");
+            $finish;
+        end
+
+        if (AXIS_PCIE_RQ_USER_WIDTH != 60 && AXIS_PCIE_RQ_USER_WIDTH != 62) begin
+            $error("Error: PCIe RQ tuser width must be 60 or 62 (instance %m)");
+            $finish;
+        end
     end
 
     if (SEG_COUNT < 2) begin
@@ -457,7 +469,9 @@ always @* begin
         m_axis_rq_tdata_int[127] = 1'b0; // force ECRC
     end
 
-    if (AXIS_PCIE_DATA_WIDTH == 256) begin
+    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+        m_axis_rq_tkeep_int = 16'b0000000000001111;
+    end else if (AXIS_PCIE_DATA_WIDTH == 256) begin
         m_axis_rq_tkeep_int = 8'b00001111;
     end else if (AXIS_PCIE_DATA_WIDTH == 128) begin
         m_axis_rq_tkeep_int = 4'b1111;
@@ -465,16 +479,38 @@ always @* begin
         m_axis_rq_tkeep_int = 2'b11;
     end
 
-    m_axis_rq_tuser_int[3:0] = dword_count == 1 ? first_be & last_be : first_be; // first BE
-    m_axis_rq_tuser_int[7:4] = dword_count == 1 ? 4'b0000 : last_be; // last BE
-    m_axis_rq_tuser_int[10:8] = 3'd0; // addr_offset
-    m_axis_rq_tuser_int[11] = 1'b0; // discontinue
-    m_axis_rq_tuser_int[12] = 1'b0; // tph_present
-    m_axis_rq_tuser_int[14:13] = 2'b00; // tph_type
-    m_axis_rq_tuser_int[15] = 1'b0; // tph_indirect_tag_en
-    m_axis_rq_tuser_int[23:16] = 8'd0; // tph_st_tag
-    m_axis_rq_tuser_int[27:24] = 4'd0; // seq_num
-    m_axis_rq_tuser_int[59:28] = 32'd0; // parity
+    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+        m_axis_rq_tuser_int[3:0] = dword_count == 1 ? first_be & last_be : first_be; // first BE 0
+        m_axis_rq_tuser_int[7:4] = 4'd0; // first BE 1
+        m_axis_rq_tuser_int[11:8] = dword_count == 1 ? 4'b0000 : last_be; // last BE 0
+        m_axis_rq_tuser_int[15:12] = 4'd0; // last BE 1
+        m_axis_rq_tuser_int[19:16] = 3'd0; // addr_offset
+        m_axis_rq_tuser_int[21:20] = 2'b01; // is_sop
+        m_axis_rq_tuser_int[23:22] = 2'd0; // is_sop0_ptr
+        m_axis_rq_tuser_int[25:24] = 2'd0; // is_sop1_ptr
+        m_axis_rq_tuser_int[27:26] = 2'b01; // is_eop
+        m_axis_rq_tuser_int[31:28]  = 4'd3; // is_eop0_ptr
+        m_axis_rq_tuser_int[35:32] = 4'd0; // is_eop1_ptr
+        m_axis_rq_tuser_int[36] = 1'b0; // discontinue
+        m_axis_rq_tuser_int[38:37] = 2'b00; // tph_present
+        m_axis_rq_tuser_int[42:39] = 4'b0000; // tph_type
+        m_axis_rq_tuser_int[44:43] = 2'b00; // tph_indirect_tag_en
+        m_axis_rq_tuser_int[60:45] = 16'd0; // tph_st_tag
+        m_axis_rq_tuser_int[66:61] = 6'd0; // seq_num0
+        m_axis_rq_tuser_int[72:67] = 6'd0; // seq_num1
+        m_axis_rq_tuser_int[136:73] = 64'd0; // parity
+    end else begin
+        m_axis_rq_tuser_int[3:0] = dword_count == 1 ? first_be & last_be : first_be; // first BE
+        m_axis_rq_tuser_int[7:4] = dword_count == 1 ? 4'b0000 : last_be; // last BE
+        m_axis_rq_tuser_int[10:8] = 3'd0; // addr_offset
+        m_axis_rq_tuser_int[11] = 1'b0; // discontinue
+        m_axis_rq_tuser_int[12] = 1'b0; // tph_present
+        m_axis_rq_tuser_int[14:13] = 2'b00; // tph_type
+        m_axis_rq_tuser_int[15] = 1'b0; // tph_indirect_tag_en
+        m_axis_rq_tuser_int[23:16] = 8'd0; // tph_st_tag
+        m_axis_rq_tuser_int[27:24] = 4'd0; // seq_num
+        m_axis_rq_tuser_int[59:28] = 32'd0; // parity
+    end
 
     new_tag_ready = 1'b0;
     op_table_start_tag = s_axis_read_desc_tag;

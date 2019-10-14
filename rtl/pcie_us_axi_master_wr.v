@@ -36,7 +36,7 @@ module pcie_us_axi_master_wr #
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     // PCIe AXI stream CQ tuser signal width
-    parameter AXIS_PCIE_CQ_USER_WIDTH = 85,
+    parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
     // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     // Width of AXI address bus in bits
@@ -103,8 +103,8 @@ parameter OFFSET_WIDTH = $clog2(AXIS_PCIE_DATA_WIDTH/32);
 
 // bus width assertions
 initial begin
-    if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256) begin
-        $error("Error: PCIe interface width must be 64, 128, or 256 (instance %m)");
+    if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256 && AXIS_PCIE_DATA_WIDTH != 512) begin
+        $error("Error: PCIe interface width must be 64, 128, 256, or 512 (instance %m)");
         $finish;
     end
 
@@ -113,9 +113,16 @@ initial begin
         $finish;
     end
 
-    if (AXIS_PCIE_CQ_USER_WIDTH != 85 && AXIS_PCIE_CQ_USER_WIDTH != 88) begin
-        $error("Error: PCIe CQ tuser width must be 85 or 88 (instance %m)");
-        $finish;
+    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+        if (AXIS_PCIE_CQ_USER_WIDTH != 183) begin
+            $error("Error: PCIe CQ tuser width must be 183 (instance %m)");
+            $finish;
+        end
+    end else begin
+        if (AXIS_PCIE_CQ_USER_WIDTH != 85 && AXIS_PCIE_CQ_USER_WIDTH != 88) begin
+            $error("Error: PCIe CQ tuser width must be 85 or 88 (instance %m)");
+            $finish;
+        end
     end
 
     if (AXI_DATA_WIDTH != AXIS_PCIE_DATA_WIDTH) begin
@@ -271,8 +278,13 @@ always @* begin
                     type_next = s_axis_cq_tdata[78:75];
 
                     // tuser fields
-                    first_be_next = s_axis_cq_tuser[3:0];
-                    last_be_next = s_axis_cq_tuser[7:4];
+                    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                        first_be_next = s_axis_cq_tuser[3:0];
+                        last_be_next = s_axis_cq_tuser[11:8];
+                    end else begin
+                        first_be_next = s_axis_cq_tuser[3:0];
+                        last_be_next = s_axis_cq_tuser[7:4];
+                    end
 
                     if (op_dword_count_next == 1) begin
                         // use first_be for both byte enables for single DWORD transfers
@@ -295,7 +307,7 @@ always @* begin
 
                     // required DWORD shift to place first DWORD from the TLP payload into proper position on AXI interface
                     // bubble cycle required if first TLP payload transfer does not fill first AXI transfer
-                    if (AXIS_PCIE_DATA_WIDTH == 256) begin
+                    if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                         offset_next = axi_addr_next[OFFSET_WIDTH+2-1:2] - 4;
                         bubble_cycle_next = axi_addr_next[OFFSET_WIDTH+2-1:2] < 4;
                     end else begin
@@ -306,7 +318,7 @@ always @* begin
                     first_cycle_next = 1'b1;
 
                     // number of bus transfers in TLP, DOWRD count plus payload start DWORD offset, divided by bus width in DWORDS
-                    if (AXIS_PCIE_DATA_WIDTH == 256) begin
+                    if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                         input_cycle_count_next = (tr_dword_count_next + 4 - 1) >> (AXI_BURST_SIZE-2);
                     end else begin
                         input_cycle_count_next = (tr_dword_count_next - 1) >> (AXI_BURST_SIZE-2);
@@ -323,7 +335,7 @@ always @* begin
                     if (type_next == REQ_MEM_WRITE) begin
                         // write request
                         m_axi_awvalid_next = 1'b1;
-                        if (AXIS_PCIE_DATA_WIDTH == 256) begin
+                        if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                             // some data is transferred with header
                             input_active_next = input_cycle_count_next > 0;
                             input_cycle_count_next = input_cycle_count_next - 1;
@@ -431,13 +443,13 @@ always @* begin
         end
         STATE_TRANSFER: begin
             // transfer state, transfer data
-            s_axis_cq_tready_next = m_axi_wready_int_early && input_active_reg && !(AXIS_PCIE_DATA_WIDTH == 256 && first_cycle_reg && !bubble_cycle_reg);
+            s_axis_cq_tready_next = m_axi_wready_int_early && input_active_reg && !(AXIS_PCIE_DATA_WIDTH >= 256 && first_cycle_reg && !bubble_cycle_reg);
 
-            if (m_axi_wready_int_reg && ((s_axis_cq_tready && s_axis_cq_tvalid) || !input_active_reg || (AXIS_PCIE_DATA_WIDTH == 256 && first_cycle_reg && !bubble_cycle_reg))) begin
+            if (m_axi_wready_int_reg && ((s_axis_cq_tready && s_axis_cq_tvalid) || !input_active_reg || (AXIS_PCIE_DATA_WIDTH >= 256 && first_cycle_reg && !bubble_cycle_reg))) begin
                 transfer_in_save = s_axis_cq_tready && s_axis_cq_tvalid;
 
                 // transfer data
-                if (AXIS_PCIE_DATA_WIDTH == 256 && first_cycle_reg && !bubble_cycle_reg) begin
+                if (AXIS_PCIE_DATA_WIDTH >= 256 && first_cycle_reg && !bubble_cycle_reg) begin
                     m_axi_wdata_int = {save_axis_tdata_reg, {AXIS_PCIE_DATA_WIDTH{1'b0}}} >> ((AXI_STRB_WIDTH/4-offset_reg)*32);
                     s_axis_cq_tready_next = m_axi_wready_int_early && input_active_reg;
                 end else begin
@@ -451,7 +463,7 @@ always @* begin
                 end
 
                 // update cycle counters
-                if (input_active_reg && !(AXIS_PCIE_DATA_WIDTH == 256 && first_cycle_reg && !bubble_cycle_reg)) begin
+                if (input_active_reg && !(AXIS_PCIE_DATA_WIDTH >= 256 && first_cycle_reg && !bubble_cycle_reg)) begin
                     input_cycle_count_next = input_cycle_count_reg - 1;
                     input_active_next = input_cycle_count_reg > 0;
                 end

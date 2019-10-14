@@ -478,7 +478,10 @@ class UltrascalePlusPCIe(Device):
 
         # Completer reQuest Interface
         assert len(m_axis_cq_tdata) == self.dw
-        assert len(m_axis_cq_tuser) == 88
+        if len(m_axis_cq_tdata) == 512:
+            assert len(m_axis_cq_tuser) == 183
+        else:
+            assert len(m_axis_cq_tuser) == 88
         assert len(m_axis_cq_tlast) == 1
         assert len(m_axis_cq_tkeep) == self.dw/32
         assert len(m_axis_cq_tvalid) == 1
@@ -488,7 +491,10 @@ class UltrascalePlusPCIe(Device):
 
         # Completer Completion Interface
         assert len(s_axis_cc_tdata) == self.dw
-        assert len(s_axis_cc_tuser) == 33
+        if len(m_axis_cq_tdata) == 512:
+            assert len(s_axis_cc_tuser) == 81
+        else:
+            assert len(s_axis_cc_tuser) == 33
         assert len(s_axis_cc_tlast) == 1
         assert len(s_axis_cc_tkeep) == self.dw/32
         assert len(s_axis_cc_tvalid) == 1
@@ -496,7 +502,10 @@ class UltrascalePlusPCIe(Device):
 
         # Requester reQuest Interface
         assert len(s_axis_rq_tdata) == self.dw
-        assert len(s_axis_rq_tuser) == 62
+        if len(m_axis_cq_tdata) == 512:
+            assert len(s_axis_rq_tuser) == 137
+        else:
+            assert len(s_axis_rq_tuser) == 62
         assert len(s_axis_rq_tlast) == 1
         assert len(s_axis_rq_tkeep) == self.dw/32
         assert len(s_axis_rq_tvalid) == 1
@@ -513,7 +522,10 @@ class UltrascalePlusPCIe(Device):
 
         # Requester Completion Interface
         assert len(m_axis_rc_tdata) == self.dw
-        assert len(m_axis_rc_tuser) == 75
+        if len(m_axis_cq_tdata) == 512:
+            assert len(m_axis_rc_tuser) == 161
+        else:
+            assert len(m_axis_rc_tuser) == 75
         assert len(m_axis_rc_tlast) == 1
         assert len(m_axis_rc_tkeep) == self.dw/32
         assert len(m_axis_rc_tvalid) == 1

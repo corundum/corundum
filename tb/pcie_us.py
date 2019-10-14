@@ -662,9 +662,14 @@ class CQSource(object):
                 name=None
             ):
 
-        assert len(tdata) in [64, 128, 256]
+        assert len(tdata) in [64, 128, 256, 512]
         assert len(tkeep)*32 == len(tdata)
-        assert len(tuser) in [85, 88]
+
+        if len(tdata) == 512:
+            assert len(tuser) == 183
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) in [85, 88]
 
         assert not self.has_logic
 
@@ -711,22 +716,48 @@ class CQSource(object):
                         k = 0
                         u = 0
 
-                        if first:
-                            u |= (frame.first_be & 0xf)
-                            u |= (frame.last_be & 0xf) << 4
-                            u |= 1 << 40 # sop
+                        if len(tdata) == 512:
+                            if first:
+                                u |= (frame.first_be & 0xf)
+                                u |= (frame.last_be & 0xf) << 8
+                                u |= 0b01 << 80 # is_sop
+                                u |= 0b00 << 82 # is_sop0_ptr
 
-                        if frame.discontinue:
-                            u |= 1 << 41 # discontinue
+                            if frame.discontinue:
+                                u |= 1 << 96 # discontinue
 
-                        for i in range(len(tkeep)):
-                            if data:
-                                d |= data.pop(0) << i*32
-                                k |= 1 << i
-                                u |= byte_en.pop(0) << i*4+8
-                                u |= parity.pop(0) << i*4+53
-                            else:
-                                u |= 0xf << i*4+53
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= byte_en.pop(0) << i*4+16
+                                    u |= parity.pop(0) << i*4+119
+                                    last_lane = i
+                                else:
+                                    u |= 0xf << i*4+119
+
+                            if not data:
+                                u |= 0b01 << 86 # is_eop
+                                u |= (last_lane & 0xf) << 88 # is_eop0_ptr
+                        else:
+                            if first:
+                                u |= (frame.first_be & 0xf)
+                                u |= (frame.last_be & 0xf) << 4
+                                u |= 1 << 40 # sop
+
+                            if frame.discontinue:
+                                u |= 1 << 41 # discontinue
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= byte_en.pop(0) << i*4+8
+                                    u |= parity.pop(0) << i*4+53
+                                else:
+                                    u |= 0xf << i*4+53
 
                         tdata.next = d
                         tkeep.next = k
@@ -778,9 +809,14 @@ class CQSink(object):
                 name=None
             ):
 
-        assert len(tdata) in [64, 128, 256]
+        assert len(tdata) in [64, 128, 256, 512]
         assert len(tkeep)*32 == len(tdata)
-        assert len(tuser) in [85, 88]
+
+        if len(tdata) == 512:
+            assert len(tuser) == 183
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) in [85, 88]
 
         assert not self.has_logic
 
@@ -831,19 +867,35 @@ class CQSink(object):
                         d = int(tdata)
                         u = int(tuser)
 
-                        if first:
-                            frame.first_be = u & 0xf
-                            frame.last_be = (u >> 4) & 0xf
-                            assert tuser & (1 << 40) # sop
+                        if len(tdata) == 512:
+                            if first:
+                                frame.first_be = u & 0xf
+                                frame.last_be = (u >> 8) & 0xf
 
-                        if tuser & (1 << 41):
-                            frame.discontinue = True
+                            if tuser & (1 << 96):
+                                frame.discontinue = True
 
-                        for i in range(len(tkeep)):
-                            if tkeep & (1 << i):
-                                frame.data.append((d >> (i*32)) & 0xffffffff)
-                                frame.byte_en.append((u >> (i*4+8)) & 0xf)
-                                frame.parity.append((u >> (i*4+53)) & 0xf)
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.byte_en.append((u >> (i*4+16)) & 0xf)
+                                    frame.parity.append((u >> (i*4+119)) & 0xf)
+                                    last_lane = i
+                        else:
+                            if first:
+                                frame.first_be = u & 0xf
+                                frame.last_be = (u >> 4) & 0xf
+
+                            if tuser & (1 << 41):
+                                frame.discontinue = True
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.byte_en.append((u >> (i*4+8)) & 0xf)
+                                    frame.parity.append((u >> (i*4+53)) & 0xf)
 
                         first = False
                         if tlast:
@@ -885,9 +937,14 @@ class CCSource(object):
                 name=None
             ):
 
-        assert len(tdata) in [64, 128, 256]
+        assert len(tdata) in [64, 128, 256, 512]
         assert len(tkeep)*32 == len(tdata)
-        assert len(tuser) == 33
+
+        if len(tdata) == 512:
+            assert len(tuser) == 81
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) == 33
 
         assert not self.has_logic
 
@@ -931,16 +988,39 @@ class CCSource(object):
                         k = 0
                         u = 0
 
-                        if frame.discontinue:
-                            u |= 1 # discontinue
+                        if len(tdata) == 512:
+                            if first:
+                                u |= 0b01 << 0 # is_sop
+                                u |= 0b00 << 2 # is_sop0_ptr
 
-                        for i in range(len(tkeep)):
-                            if data:
-                                d |= data.pop(0) << i*32
-                                k |= 1 << i
-                                u |= parity.pop(0) << i*4+1
-                            else:
-                                u |= 0xf << i*4+1
+                            if frame.discontinue:
+                                u |= 1 << 16 # discontinue
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= parity.pop(0) << i*4+17
+                                    last_lane = i
+                                else:
+                                    u |= 0xf << i*4+17
+
+                            if not data:
+                                u |= 0b01 << 6 # is_eop
+                                u |= (last_lane & 0xf) << 8 # is_eop0_ptr
+                        else:
+                            if frame.discontinue:
+                                u |= 1 # discontinue
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= parity.pop(0) << i*4+1
+                                else:
+                                    u |= 0xf << i*4+1
 
                         tdata.next = d
                         tkeep.next = k
@@ -992,9 +1072,14 @@ class CCSink(object):
                 name=None
             ):
 
-        assert len(tdata) in [64, 128, 256]
+        assert len(tdata) in [64, 128, 256, 512]
         assert len(tkeep)*32 == len(tdata)
-        assert len(tuser) == 33
+
+        if len(tdata) == 512:
+            assert len(tuser) == 81
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) == 33
 
         assert not self.has_logic
 
@@ -1045,13 +1130,25 @@ class CCSink(object):
                         d = int(tdata)
                         u = int(tuser)
 
-                        if u & 1:
-                            frame.discontinue = True
+                        if len(tdata) == 512:
+                            if u & (1 << 16):
+                                frame.discontinue = True
 
-                        for i in range(len(tkeep)):
-                            if tkeep & (1 << i):
-                                frame.data.append((d >> (i*32)) & 0xffffffff)
-                                frame.parity.append((u >> (i*4+1)) & 0xf)
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.parity.append((u >> (i*4+17)) & 0xf)
+                                    last_lane = i
+                        else:
+                            if u & 1:
+                                frame.discontinue = True
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.parity.append((u >> (i*4+1)) & 0xf)
 
                         first = False
                         if tlast:
@@ -1093,9 +1190,14 @@ class RQSource(object):
                 name=None
             ):
 
-        assert len(tdata) in [64, 128, 256]
+        assert len(tdata) in [64, 128, 256, 512]
         assert len(tkeep)*32 == len(tdata)
-        assert len(tuser) in [60, 62]
+
+        if len(tdata) == 512:
+            assert len(tuser) == 137
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) in [60, 62]
 
         assert not self.has_logic
 
@@ -1139,20 +1241,45 @@ class RQSource(object):
                         k = 0
                         u = 0
 
-                        if first:
-                            u |= (frame.first_be & 0xf)
-                            u |= (frame.last_be & 0xf) << 4
+                        if len(tdata) == 512:
+                            if first:
+                                u |= (frame.first_be & 0xf)
+                                u |= (frame.last_be & 0xf) << 8
+                                u |= 0b01 << 20 # is_sop
+                                u |= 0b00 << 22 # is_sop0_ptr
 
-                        if frame.discontinue:
-                            u |= 11 # discontinue
+                            if frame.discontinue:
+                                u |= 36 # discontinue
 
-                        for i in range(len(tkeep)):
-                            if data:
-                                d |= data.pop(0) << i*32
-                                k |= 1 << i
-                                u |= parity.pop(0) << i*4+28
-                            else:
-                                u |= 0xf << i*4+28
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= parity.pop(0) << i*4+73
+                                    last_lane = i
+                                else:
+                                    u |= 0xf << i*4+73
+
+                            if not data:
+                                u |= 0b01 << 26 # is_eop
+                                u |= (last_lane & 0xf) << 28 # is_eop0_ptr
+                        else:
+                            if first:
+                                u |= (frame.first_be & 0xf)
+                                u |= (frame.last_be & 0xf) << 4
+
+                            if frame.discontinue:
+                                u |= 11 # discontinue
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= parity.pop(0) << i*4+28
+                                else:
+                                    u |= 0xf << i*4+28
 
                             # TODO seq_num
                             # TODO tph
@@ -1207,9 +1334,14 @@ class RQSink(object):
                 name=None
             ):
 
-        assert len(tdata) in [64, 128, 256]
+        assert len(tdata) in [64, 128, 256, 512]
         assert len(tkeep)*32 == len(tdata)
-        assert len(tuser) in [60, 62]
+
+        if len(tdata) == 512:
+            assert len(tuser) == 137
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) in [60, 62]
 
         assert not self.has_logic
 
@@ -1260,17 +1392,33 @@ class RQSink(object):
                         d = int(tdata)
                         u = int(tuser)
 
-                        if first:
-                            frame.first_be = u & 0xf
-                            frame.last_be = (u >> 4) & 0xf
+                        if len(tdata) == 512:
+                            if first:
+                                frame.first_be = u & 0xf
+                                frame.last_be = (u >> 8) & 0xf
 
-                        if u & (1 << 11):
-                            frame.discontinue = True
+                            if u & (1 << 36):
+                                frame.discontinue = True
 
-                        for i in range(len(tkeep)):
-                            if tkeep & (1 << i):
-                                frame.data.append((d >> (i*32)) & 0xffffffff)
-                                frame.parity.append((u >> (i*4+28)) & 0xf)
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.parity.append((u >> (i*4+73)) & 0xf)
+                                    last_lane = i
+                        else:
+                            if first:
+                                frame.first_be = u & 0xf
+                                frame.last_be = (u >> 4) & 0xf
+
+                            if u & (1 << 11):
+                                frame.discontinue = True
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.parity.append((u >> (i*4+28)) & 0xf)
 
                         first = False
                         if tlast:
@@ -1312,9 +1460,14 @@ class RCSource(object):
                 name=None
             ):
 
-        assert len(tdata) in [64, 128, 256]
+        assert len(tdata) in [64, 128, 256, 512]
         assert len(tkeep)*32 == len(tdata)
-        assert len(tuser) == 75
+
+        if len(tdata) == 512:
+            assert len(tuser) == 161
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) == 75
 
         assert not self.has_logic
 
@@ -1361,26 +1514,50 @@ class RCSource(object):
                         k = 0
                         u = 0
 
-                        if first:
-                            u |= 1 << 32 # is_sof_0
+                        if len(tdata) == 512:
+                            if first:
+                                u |= 0b0001 << 64 # is_sop
+                                u |= 0b00 << 68 # is_sop0_ptr
 
-                        if frame.discontinue:
-                            u |= 1 << 42 # discontinue
+                            if frame.discontinue:
+                                u |= 1 << 96 # discontinue
 
-                        last_lane = 0
+                            last_lane = 0
 
-                        for i in range(len(tkeep)):
-                            if data:
-                                d |= data.pop(0) << i*32
-                                k |= 1 << i
-                                u |= byte_en.pop(0) << i*4
-                                u |= parity.pop(0) << i*4+43
-                                last_lane = i
-                            else:
-                                u |= 0xf << i*4+43
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= byte_en.pop(0) << i*4
+                                    u |= parity.pop(0) << i*4+97
+                                    last_lane = i
+                                else:
+                                    u |= 0xf << i*4+97
 
-                        if not data:
-                            u |= (1 | last_lane << 1) << 34 # is_eof_0
+                            if not data:
+                                u |= 0b0001 << 76 # is_eop
+                                u |= last_lane << 80 # is_eop0_ptr
+                        else:
+                            if first:
+                                u |= 1 << 32 # is_sof_0
+
+                            if frame.discontinue:
+                                u |= 1 << 42 # discontinue
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= byte_en.pop(0) << i*4
+                                    u |= parity.pop(0) << i*4+43
+                                    last_lane = i
+                                else:
+                                    u |= 0xf << i*4+43
+
+                            if not data:
+                                u |= (1 | last_lane << 1) << 34 # is_eof_0
 
                         tdata.next = d
                         tkeep.next = k
@@ -1432,9 +1609,14 @@ class RCSink(object):
                 name=None
             ):
 
-        assert len(tdata) in [64, 128, 256]
+        assert len(tdata) in [64, 128, 256, 512]
         assert len(tkeep)*32 == len(tdata)
-        assert len(tuser) == 75
+
+        if len(tdata) == 512:
+            assert len(tuser) == 161
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) == 75
 
         assert not self.has_logic
 
@@ -1485,23 +1667,30 @@ class RCSink(object):
                         d = int(tdata)
                         u = int(tuser)
 
-                        if first:
-                            assert tuser & (1 << 32) # is_sof_0
+                        if len(tdata) == 512:
+                            if u & (1 << 96):
+                                frame.discontinue = True
 
-                        if u & (1 << 42):
-                            frame.discontinue = True
+                            last_lane = 0
 
-                        last_lane = 0
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.byte_en.append((u >> (i*4)) & 0xf)
+                                    frame.parity.append((u >> (i*4+97)) & 0xf)
+                                    last_lane = i
+                        else:
+                            if u & (1 << 42):
+                                frame.discontinue = True
 
-                        for i in range(len(tkeep)):
-                            if tkeep & (1 << i):
-                                frame.data.append((d >> (i*32)) & 0xffffffff)
-                                frame.byte_en.append((u >> (i*4)) & 0xf)
-                                frame.parity.append((u >> (i*4+43)) & 0xf)
-                                last_lane = i
+                            last_lane = 0
 
-                        if tlast:
-                            assert (u >> 34) & 0xf == 1 | last_lane << 1 # is_eof_0
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.byte_en.append((u >> (i*4)) & 0xf)
+                                    frame.parity.append((u >> (i*4+43)) & 0xf)
+                                    last_lane = i
 
                         first = False
                         if tlast:

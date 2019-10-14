@@ -265,6 +265,8 @@ reg addr_valid_reg = 1'b0, addr_valid_next;
 reg [9:0] op_dword_count_reg = 10'd0, op_dword_count_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
 reg [SEG_COUNT-1:0] ram_mask_reg = {SEG_COUNT{1'b0}}, ram_mask_next;
+reg [SEG_COUNT-1:0] ram_mask_0_reg = {SEG_COUNT{1'b0}}, ram_mask_0_next;
+reg [SEG_COUNT-1:0] ram_mask_1_reg = {SEG_COUNT{1'b0}}, ram_mask_1_next;
 reg [SEG_COUNT*SEG_BE_WIDTH-1:0] ram_be_mask_0_reg = {SEG_COUNT*SEG_BE_WIDTH{1'b0}}, ram_be_mask_0_next;
 reg [SEG_COUNT*SEG_BE_WIDTH-1:0] ram_be_mask_1_reg = {SEG_COUNT*SEG_BE_WIDTH{1'b0}}, ram_be_mask_1_next;
 reg ram_wrap_reg = 1'b0, ram_wrap_next;
@@ -619,6 +621,8 @@ always @* begin
     addr_valid_next = addr_valid_reg;
     op_count_next = op_count_reg;
     ram_mask_next = ram_mask_reg;
+    ram_mask_0_next = ram_mask_0_reg;
+    ram_mask_1_next = ram_mask_1_reg;
     ram_be_mask_0_next = ram_be_mask_0_reg;
     ram_be_mask_1_next = ram_be_mask_1_reg;
     ram_wrap_next = ram_wrap_reg;
@@ -709,27 +713,26 @@ always @* begin
                     //     cycle_byte_count_next = op_count_next;
                     // end
                     start_offset_next = addr_next;
-                    end_offset_next = start_offset_next+cycle_byte_count_next;
+                    end_offset_next = start_offset_next+cycle_byte_count_next-1;
 
                     ram_wrap_next = {1'b0, start_offset_next}+cycle_byte_count_next > 2**RAM_OFFSET_WIDTH;
 
-                    ram_be_mask_0_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_next;
-                    if (end_offset_next) begin
-                        ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-end_offset_next);
-                    end else begin
-                        ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}};
+                    ram_mask_0_next = {SEG_COUNT{1'b1}} << (start_offset_next >> $clog2(SEG_BE_WIDTH));
+                    ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
+
+                    if (!ram_wrap_next) begin
+                        ram_mask_0_next = ram_mask_0_next & ram_mask_1_next;
+                        ram_mask_1_next = 0;
                     end
+
+                    ram_mask_next = ram_mask_0_next | ram_mask_1_next;
+
+                    ram_be_mask_0_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_next;
+                    ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_next);
 
                     if (!ram_wrap_next) begin
                         ram_be_mask_0_next = ram_be_mask_0_next & ram_be_mask_1_next;
                         ram_be_mask_1_next = 0;
-                    end
-
-                    ram_mask_next = 0;
-                    for (i = 0; i < SEG_COUNT; i = i + 1) begin
-                        if (ram_be_mask_0_next[i*SEG_BE_WIDTH +: SEG_BE_WIDTH] || ram_be_mask_1_next[i*SEG_BE_WIDTH +: SEG_BE_WIDTH]) begin
-                            ram_mask_next[i] = 1'b1;
-                        end
                     end
 
                     addr_delay_next = addr_next;
@@ -854,27 +857,26 @@ always @* begin
                     cycle_byte_count_next = op_count_next;
                 end
                 start_offset_next = addr_next;
-                end_offset_next = start_offset_next+cycle_byte_count_next;
+                end_offset_next = start_offset_next+cycle_byte_count_next-1;
 
                 ram_wrap_next = {1'b0, start_offset_next}+cycle_byte_count_next > 2**RAM_OFFSET_WIDTH;
 
-                ram_be_mask_0_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_next;
-                if (end_offset_next) begin
-                    ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-end_offset_next);
-                end else begin
-                    ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}};
+                ram_mask_0_next = {SEG_COUNT{1'b1}} << (start_offset_next >> $clog2(SEG_BE_WIDTH));
+                ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
+
+                if (!ram_wrap_next) begin
+                    ram_mask_0_next = ram_mask_0_next & ram_mask_1_next;
+                    ram_mask_1_next = 0;
                 end
+
+                ram_mask_next = ram_mask_0_next | ram_mask_1_next;
+
+                ram_be_mask_0_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_next;
+                ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_next);
 
                 if (!ram_wrap_next) begin
                     ram_be_mask_0_next = ram_be_mask_0_next & ram_be_mask_1_next;
                     ram_be_mask_1_next = 0;
-                end
-
-                ram_mask_next = 0;
-                for (i = 0; i < SEG_COUNT; i = i + 1) begin
-                    if (ram_be_mask_0_next[i*SEG_BE_WIDTH +: SEG_BE_WIDTH] || ram_be_mask_1_next[i*SEG_BE_WIDTH +: SEG_BE_WIDTH]) begin
-                        ram_mask_next[i] = 1'b1;
-                    end
                 end
 
                 addr_delay_next = addr_next;
@@ -937,11 +939,11 @@ always @* begin
                 ram_wr_cmd_be_int = ram_be_mask_0_reg | ram_be_mask_1_reg;
                 ram_wr_cmd_data_int = {3{s_axis_rc_tdata}} >> (AXIS_PCIE_DATA_WIDTH - offset_reg*8);
                 for (i = 0; i < SEG_COUNT; i = i + 1) begin
-                    if (ram_be_mask_0_reg[i*SEG_BE_WIDTH +: SEG_BE_WIDTH]) begin
+                    if (ram_mask_0_reg[i]) begin
                         ram_wr_cmd_addr_int[i*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH];
                         ram_wr_cmd_valid_int[i] = 1'b1;
                     end
-                    if (ram_be_mask_1_reg[i*SEG_BE_WIDTH +: SEG_BE_WIDTH]) begin
+                    if (ram_mask_1_reg[i]) begin
                         ram_wr_cmd_addr_int[i*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH]+1;
                         ram_wr_cmd_valid_int[i] = 1'b1;
                     end
@@ -953,27 +955,26 @@ always @* begin
                     cycle_byte_count_next = op_count_next;
                 end
                 start_offset_next = addr_next;
-                end_offset_next = start_offset_next+cycle_byte_count_next;
+                end_offset_next = start_offset_next+cycle_byte_count_next-1;
 
                 ram_wrap_next = {1'b0, start_offset_next}+cycle_byte_count_next > 2**RAM_OFFSET_WIDTH;
 
-                ram_be_mask_0_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_next;
-                if (end_offset_next) begin
-                    ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-end_offset_next);
-                end else begin
-                    ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}};
+                ram_mask_0_next = {SEG_COUNT{1'b1}} << (start_offset_next >> $clog2(SEG_BE_WIDTH));
+                ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
+
+                if (!ram_wrap_next) begin
+                    ram_mask_0_next = ram_mask_0_next & ram_mask_1_next;
+                    ram_mask_1_next = 0;
                 end
+
+                ram_mask_next = ram_mask_0_next | ram_mask_1_next;
+
+                ram_be_mask_0_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_next;
+                ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_next);
 
                 if (!ram_wrap_next) begin
                     ram_be_mask_0_next = ram_be_mask_0_next & ram_be_mask_1_next;
                     ram_be_mask_1_next = 0;
-                end
-
-                ram_mask_next = 0;
-                for (i = 0; i < SEG_COUNT; i = i + 1) begin
-                    if (ram_be_mask_0_next[i*SEG_BE_WIDTH +: SEG_BE_WIDTH] || ram_be_mask_1_next[i*SEG_BE_WIDTH +: SEG_BE_WIDTH]) begin
-                        ram_mask_next[i] = 1'b1;
-                    end
                 end
 
                 addr_delay_next = addr_reg;
@@ -1107,6 +1108,8 @@ always @(posedge clk) begin
     addr_valid_reg <= addr_valid_next;
     op_count_reg <= op_count_next;
     ram_mask_reg <= ram_mask_next;
+    ram_mask_0_reg <= ram_mask_0_next;
+    ram_mask_1_reg <= ram_mask_1_next;
     ram_be_mask_0_reg <= ram_be_mask_0_next;
     ram_be_mask_1_reg <= ram_be_mask_1_next;
     ram_wrap_reg <= ram_wrap_next;

@@ -722,7 +722,11 @@ always @* begin
                         op_count_next = (op_dword_count_next << 2) - lower_addr_next[1:0];
                         final_cpl_next = 1'b0;
 
-                        cycle_byte_count_next = (AXIS_PCIE_DATA_WIDTH/8-12)-lower_addr_next[1:0];
+                        if (op_count_next > (AXIS_PCIE_DATA_WIDTH/8-12)-lower_addr_next[1:0]) begin
+                            cycle_byte_count_next = (AXIS_PCIE_DATA_WIDTH/8-12)-lower_addr_next[1:0];
+                        end else begin
+                            cycle_byte_count_next = op_count_next;
+                        end
                     end else begin
                         // last completion
                         op_count_next = byte_count_next;

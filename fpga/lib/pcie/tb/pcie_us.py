@@ -26,7 +26,6 @@ import math
 import struct
 from myhdl import *
 
-import axis_ep
 from pcie import *
 
 
@@ -68,6 +67,52 @@ def dword_parity(d):
     return p
 
 
+class USPcieFrame(object):
+    def __init__(self, frame=None):
+        self.data = []
+        self.byte_en = []
+        self.parity = []
+        self.first_be = 0
+        self.last_be = 0
+        self.discontinue = False
+
+        if isinstance(frame, USPcieFrame):
+            self.data = list(frame.data)
+            self.byte_en = list(frame.byte_en)
+            self.parity = list(frame.parity)
+            self.first_be = frame.first_be
+            self.last_be = frame.last_be
+            self.discontinue = frame.discontinue
+
+    def update_parity(self):
+        self.parity = [dword_parity(d) ^ 0xf for d in self.data]
+
+    def check_parity(self):
+        return self.parity == [dword_parity(d) ^ 0xf for d in self.data]
+
+    def __eq__(self, other):
+        if isinstance(other, TLP_us):
+            return (
+                    self.data == other.data and
+                    self.byte_en == other.byte_en and
+                    self.parity == other.parity and
+                    self.first_be == other.first_be and
+                    self.last_be == other.last_be and
+                    self.discontinue == other.discontinue
+                )
+        return False
+
+    def __repr__(self):
+        return (
+                ('USPcieFrame(data=[{}], '.format(', '.join('{:#010x}'.format(x) for x in self.data))) +
+                ('byte_en=[{}], '.format(', '.join(hex(x) for x in self.byte_en))) +
+                ('parity=[{}], '.format(', '.join(hex(x) for x in self.parity))) +
+                ('first_be={:#x}, '.format(self.first_be)) +
+                ('last_be={:#x}, '.format(self.last_be)) +
+                ('discontinue={})'.format(self.discontinue))
+            )
+
+
 class TLP_us(TLP):
     def __init__(self, tlp=None):
         super(TLP_us, self).__init__(tlp)
@@ -86,8 +131,8 @@ class TLP_us(TLP):
             self.discontinue = tlp.discontinue
             self.error_code = tlp.error_code
 
-    def pack_us_cq(self, dw):
-        pkt = axis_ep.AXIStreamFrame([])
+    def pack_us_cq(self):
+        pkt = USPcieFrame()
 
         if (self.fmt_type == TLP_IO_READ or self.fmt_type == TLP_IO_WRITE or
                 self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64 or
@@ -125,52 +170,32 @@ class TLP_us(TLP):
             l |= (self.attr & 0x7) << 28
             pkt.data.append(l)
 
+            pkt.first_be = self.first_be
+            pkt.last_be = self.last_be
+
+            pkt.discontinue = self.discontinue
+
             # payload data
             pkt.data += self.data
 
             # compute byte enables
-            byte_en = [0]*4
+            pkt.byte_en = [0]*4
 
             if len(self.data) >= 1:
-                byte_en += [self.first_be]
+                pkt.byte_en += [self.first_be]
             if len(self.data) > 2:
-                byte_en += [0xf] * (len(self.data)-2)
+                pkt.byte_en += [0xf] * (len(self.data)-2)
             if len(self.data) > 1:
-                byte_en += [self.last_be]
+                pkt.byte_en += [self.last_be]
 
             # compute parity
-            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
-
-            # assemble sideband signal
-            pkt.user = []
-
-            for k in range(0, len(pkt.data), int(dw/32)):
-                u = 0
-
-                for l in range(int(dw/32)):
-                    if k+l < len(byte_en):
-                        u |= byte_en[k+l] << l*4+8
-                        u |= parity[k+l] << l*4+53
-                    else:
-                        u |= 0xf<< l*4+53
-
-                if k == 0:
-                    u |= (self.first_be & 0xf)
-                    u |= (self.last_be & 0xf) << 4
-                    u |= 1 << 40 # SOP
-                    
-                    # TODO tph
-
-                pkt.user.append(u)
-
-            # TODO discontinue?
-
+            pkt.update_parity()
         else:
             raise Exception("Invalid packet type for interface")
 
         return pkt
 
-    def unpack_us_cq(self, pkt, dw, check_parity=False):
+    def unpack_us_cq(self, pkt, check_parity=False):
         req_type = (pkt.data[2] >> 11) & 0xf
 
         if req_type == REQ_MEM_READ:
@@ -211,8 +236,10 @@ class TLP_us(TLP):
             self.bar_id = (pkt.data[3] >> 16) & 7
             self.bar_aperture = (pkt.data[3] >> 19) & 0x3f
 
-            self.first_be = pkt.user[0] & 0xf
-            self.last_be = (pkt.user[0] >> 4) & 0xf
+            self.first_be = pkt.first_be
+            self.last_be = pkt.last_be
+
+            self.discontinue = pkt.discontinue
 
             self.data = pkt.data[4:]
 
@@ -226,23 +253,17 @@ class TLP_us(TLP):
             if len(self.data) > 1:
                 byte_en += [self.last_be]
 
-            # compute parity
-            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
+            # check byte enables
+            assert byte_en == pkt.byte_en
 
-            # check sideband components
-            assert pkt.user[0] & (1 << 40) # SOP
-
-            for k in range(0, len(pkt.data), int(dw/32)):
-                for l in range(int(dw/32)):
-                    if k+l < len(byte_en):
-                        assert (pkt.user[int(k/(dw/32))] >> l*4+8) & 0xf == byte_en[k+l]
-                        if check_parity:
-                            assert (pkt.user[int(k/(dw/32))] >> l*4+53) & 0xf == parity[k+l]
+            # check parity
+            if check_parity:
+                assert pkt.check_parity()
 
         return self
 
-    def pack_us_cc(self, dw):
-        pkt = axis_ep.AXIStreamFrame([])
+    def pack_us_cc(self):
+        pkt = USPcieFrame()
 
         if (self.fmt_type == TLP_CPL or self.fmt_type == TLP_CPL_DATA or
                 self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA):
@@ -267,35 +288,19 @@ class TLP_us(TLP):
             l |= (self.attr & 0x7) << 28
             pkt.data.append(l)
 
+            pkt.discontinue = self.discontinue
+
             # payload data
             pkt.data += self.data
 
             # compute parity
-            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
-
-            # assemble sideband signal
-            pkt.user = []
-
-            for k in range(0, len(pkt.data), int(dw/32)):
-                u = 0
-
-                if self.discontinue:
-                    u |= 1
-
-                for l in range(int(dw/32)):
-                    if k+l < len(parity):
-                        u |= parity[k+l] << l*4+1
-                    else:
-                        u |= 0xf << l*4+1
-
-                pkt.user.append(u)
-
+            pkt.update_parity()
         else:
             raise Exception("Invalid packet type for interface")
 
         return pkt
 
-    def unpack_us_cc(self, pkt, dw, check_parity=False):
+    def unpack_us_cc(self, pkt, check_parity=False):
         self.fmt_type = TLP_CPL
 
         self.lower_address = pkt.data[0] & 0x7f
@@ -315,25 +320,19 @@ class TLP_us(TLP):
         self.tc = (pkt.data[2] >> 25) & 0x7
         self.attr = (pkt.data[2] >> 28) & 0x7
 
+        self.discontinue = pkt.discontinue
+
         if self.length > 0:
             self.data = pkt.data[3:3+self.length]
 
-        # compute parity
-        parity = [dword_parity(d) ^ 0xf for d in pkt.data]
-
-        # check sideband components
-        for k in range(0, len(pkt.data), int(dw/32)):
-            if pkt.user[int(k/(dw/32))] & 1:
-                self.discontinue = True
-            for l in range(int(dw/32)):
-                if k+l < len(parity):
-                    if check_parity:
-                        assert (pkt.user[int(k/(dw/32))] >> l*4+1) & 0xf == parity[k+l]
+        # check parity
+        if check_parity:
+            assert pkt.check_parity()
 
         return self
 
-    def pack_us_rq(self, dw):
-        pkt = axis_ep.AXIStreamFrame([])
+    def pack_us_rq(self):
+        pkt = USPcieFrame()
 
         if (self.fmt_type == TLP_IO_READ or self.fmt_type == TLP_IO_WRITE or
                 self.fmt_type == TLP_MEM_READ or self.fmt_type == TLP_MEM_READ_64 or
@@ -390,44 +389,22 @@ class TLP_us(TLP):
             # TODO force ecrc
             pkt.data.append(l)
 
+            pkt.first_be = self.first_be
+            pkt.last_be = self.last_be
+
+            pkt.discontinue = self.discontinue
+
             # payload data
             pkt.data += self.data
 
             # compute parity
-            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
-
-            # assemble sideband signal
-            pkt.user = []
-
-            for k in range(0, len(pkt.data), int(dw/32)):
-                u = 0
-
-                if self.discontinue:
-                    u |= 1 << 11
-
-                for l in range(int(dw/32)):
-                    if k+l < len(parity):
-                        u |= parity[k+l] << l*4+28
-                    else:
-                        u |= 0xf << l*4+28
-
-                if k == 0:
-                    u |= (self.first_be & 0xf)
-                    u |= (self.last_be & 0xf) << 4
-                    
-                    # TODO seq_num
-                    # TODO tph
-
-                # TODO addr_offset
-
-                pkt.user.append(u)
-
+            pkt.update_parity()
         else:
             raise Exception("Invalid packet type for interface")
 
         return pkt
 
-    def unpack_us_rq(self, pkt, dw, check_parity=False):
+    def unpack_us_rq(self, pkt, check_parity=False):
         req_type = (pkt.data[2] >> 11) & 0xf
 
         if req_type == REQ_MEM_READ:
@@ -479,29 +456,23 @@ class TLP_us(TLP):
             self.completer_id = PcieId.from_int(pkt.data[3] >> 8)
             self.requester_id_enable = pkt.data[3] >> 24 & 1 != 0
 
-            self.first_be = pkt.user[0] & 0xf
-            self.last_be = (pkt.user[0] >> 4) & 0xf
+            self.first_be = pkt.first_be
+            self.last_be = pkt.last_be
+
+            self.discontinue = pkt.discontinue
 
             self.data = pkt.data[4:]
 
-            # compute parity
-            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
-
-            # check sideband components
-            for k in range(0, len(pkt.data), int(dw/32)):
-                if pkt.user[int(k/(dw/32))] & (1 << 11):
-                    self.discontinue = True
-                for l in range(int(dw/32)):
-                    if k+l < len(parity):
-                        if check_parity:
-                            assert (pkt.user[int(k/(dw/32))] >> l*4+28) & 0xf == parity[k+l]
+            # check parity
+            if check_parity:
+                assert pkt.check_parity()
         else:
             raise Exception("TODO")
 
         return self
 
-    def pack_us_rc(self, dw):
-        pkt = axis_ep.AXIStreamFrame([])
+    def pack_us_rc(self):
+        pkt = USPcieFrame()
 
         if (self.fmt_type == TLP_CPL or self.fmt_type == TLP_CPL_DATA or
                 self.fmt_type == TLP_CPL_LOCKED or self.fmt_type == TLP_CPL_LOCKED_DATA):
@@ -524,54 +495,39 @@ class TLP_us(TLP):
             l |= (self.attr & 0x7) << 28
             pkt.data.append(l)
 
+            pkt.discontinue = self.discontinue
+
             # payload data
             pkt.data += self.data
 
             # compute byte enables
-            byte_en = [0]*3
+            pkt.byte_en = [0]*3
+
+            first_be = (0xf << (self.lower_address&3)) & 0xf
+            if self.byte_count+(self.lower_address&3) > self.length*4:
+                last_be = 0xf
+            else:
+                last_be = 0xf >> ((4-self.byte_count-self.lower_address)&3)
+
+            if len(self.data) == 1:
+                first_be = first_be & last_be
+                last_be = 0
 
             if len(self.data) >= 1:
-                byte_en += [self.first_be]
+                pkt.byte_en += [first_be]
             if len(self.data) > 2:
-                byte_en += [0xf] * (len(self.data)-2)
+                pkt.byte_en += [0xf] * (len(self.data)-2)
             if len(self.data) > 1:
-                byte_en += [self.last_be]
+                pkt.byte_en += [last_be]
 
             # compute parity
-            parity = [dword_parity(d) ^ 0xf for d in pkt.data]
-
-            # assemble sideband signal
-            pkt.user = []
-
-            for k in range(0, len(pkt.data), int(dw/32)):
-                u = 0
-
-                for l in range(int(dw/32)):
-                    if k+l < len(byte_en):
-                        u |= byte_en[k+l] << l*4
-                        u |= parity[k+l] << l*4+43
-                    else:
-                        u |= 0xf << l*4+43
-
-                if k == 0:
-                    u |= 1 << 32 # is_sof_0
-                    eof = 0
-                    if k+int(dw/32) > len(byte_en):
-                        eof = 1 | ((len(byte_en)-1) % int(dw/32)) << 1
-                    u |= eof << 34 # is_eof_0
-
-                    # TODO is_sof_1, is_eof_1 (straddle)
-
-                pkt.user.append(u)
-
-            # TODO discontinue
-
+            pkt.update_parity()
         else:
             raise Exception("Invalid packet type for interface")
 
         return pkt
 
-    def unpack_us_rc(self, pkt, dw, check_parity=False):
+    def unpack_us_rc(self, pkt, check_parity=False):
         self.fmt_type = TLP_CPL
 
         self.lower_address = pkt.data[0] & 0xfff
@@ -590,31 +546,37 @@ class TLP_us(TLP):
         self.tc = (pkt.data[2] >> 25) & 0x7
         self.attr = (pkt.data[2] >> 28) & 0x7
 
+        self.discontinue = pkt.discontinue
+
         if self.length > 0:
             self.data = pkt.data[3:3+self.length]
 
         # compute byte enables
         byte_en = [0]*3
 
+        first_be = (0xf << (self.lower_address&3)) & 0xf
+        if self.byte_count+(self.lower_address&3) > self.length*4:
+            last_be = 0xf
+        else:
+            last_be = 0xf >> ((4-self.byte_count-self.lower_address)&3)
+
+        if len(self.data) == 1:
+            first_be = first_be & last_be
+            last_be = 0
+
         if len(self.data) >= 1:
-            byte_en += [self.first_be]
+            byte_en += [first_be]
         if len(self.data) > 2:
             byte_en += [0xf] * (len(self.data)-2)
         if len(self.data) > 1:
-            byte_en += [self.last_be]
+            byte_en += [last_be]
 
-        # compute parity
-        parity = [dword_parity(d) ^ 0xf for d in pkt.data]
+        # check byte enables
+        assert byte_en == pkt.byte_en
 
-        # check sideband components
-        assert pkt.user[0] & (1 << 32) # is_sof_0
-
-        for k in range(0, len(pkt.data), int(dw/32)):
-            for l in range(int(dw/32)):
-                if k+l < len(byte_en):
-                    assert (pkt.user[int(k/(dw/32))] >> l*4) & 0xf == byte_en[k+l]
-                    if check_parity:
-                        assert (pkt.user[int(k/(dw/32))] >> l*4+43) & 0xf == parity[k+l]
+        # check parity
+        if check_parity:
+            assert pkt.check_parity()
 
         return self
 
@@ -672,6 +634,1076 @@ class TLP_us(TLP):
             )
 
 
+class CQSource(object):
+    def __init__(self):
+        self.active = False
+        self.has_logic = False
+        self.queue = []
+
+    def send(self, frame):
+        self.queue.append(USPcieFrame(frame))
+
+    def count(self):
+        return len(self.queue)
+
+    def empty(self):
+        return not self.queue
+
+    def create_logic(self,
+                clk,
+                rst,
+                tdata=None,
+                tkeep=Signal(bool(True)),
+                tvalid=Signal(bool(False)),
+                tready=Signal(bool(True)),
+                tlast=Signal(bool(False)),
+                tuser=Signal(intbv(0)),
+                pause=0,
+                name=None
+            ):
+
+        assert len(tdata) in [64, 128, 256, 512]
+        assert len(tkeep)*32 == len(tdata)
+
+        if len(tdata) == 512:
+            assert len(tuser) == 183
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) in [85, 88]
+
+        assert not self.has_logic
+
+        self.has_logic = True
+
+        @instance
+        def logic():
+            frame = USPcieFrame()
+            data = []
+            byte_en = []
+            parity = []
+            self.active = False
+            first = True
+
+            while True:
+                yield clk.posedge, rst.posedge
+
+                if rst:
+                    data = []
+                    byte_en = []
+                    parity = []
+                    self.active = False
+                    tdata.next = 0
+                    tkeep.next = 0
+                    tuser.next = 0
+                    tvalid.next = False
+                    tlast.next = False
+                    first = True
+                else:
+                    tvalid.next = self.active and (tvalid or not pause)
+                    if tready and tvalid:
+                        tvalid.next = False
+                        self.active = False
+                    if not data and self.queue:
+                        frame = self.queue.pop(0)
+                        data = list(frame.data)
+                        byte_en = list(frame.byte_en)
+                        parity = list(frame.parity)
+                        if name is not None:
+                            print("[%s] Sending frame %s" % (name, repr(frame)))
+                        first = True
+                    if data and not self.active:
+                        d = 0
+                        k = 0
+                        u = 0
+
+                        if len(tdata) == 512:
+                            if first:
+                                u |= (frame.first_be & 0xf)
+                                u |= (frame.last_be & 0xf) << 8
+                                u |= 0b01 << 80 # is_sop
+                                u |= 0b00 << 82 # is_sop0_ptr
+
+                            if frame.discontinue:
+                                u |= 1 << 96 # discontinue
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= byte_en.pop(0) << i*4+16
+                                    u |= parity.pop(0) << i*4+119
+                                    last_lane = i
+                                else:
+                                    u |= 0xf << i*4+119
+
+                            if not data:
+                                u |= 0b01 << 86 # is_eop
+                                u |= (last_lane & 0xf) << 88 # is_eop0_ptr
+                        else:
+                            if first:
+                                u |= (frame.first_be & 0xf)
+                                u |= (frame.last_be & 0xf) << 4
+                                u |= 1 << 40 # sop
+
+                            if frame.discontinue:
+                                u |= 1 << 41 # discontinue
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= byte_en.pop(0) << i*4+8
+                                    u |= parity.pop(0) << i*4+53
+                                else:
+                                    u |= 0xf << i*4+53
+
+                        tdata.next = d
+                        tkeep.next = k
+                        tuser.next = u
+                        tvalid.next = not pause
+                        tlast.next = len(data) == 0
+                        self.active = True
+                        first = False
+
+        return instances()
+
+
+class CQSink(object):
+    def __init__(self):
+        self.has_logic = False
+        self.queue = []
+        self.read_queue = []
+        self.sync = Signal(intbv(0))
+
+    def recv(self):
+        if self.queue:
+            return self.queue.pop(0)
+        return None
+
+    def count(self):
+        return len(self.queue)
+
+    def empty(self):
+        return not self.queue
+
+    def wait(self, timeout=0):
+        if self.queue:
+            return
+        if timeout:
+            yield self.sync, delay(timeout)
+        else:
+            yield self.sync
+
+    def create_logic(self,
+                clk,
+                rst,
+                tdata=None,
+                tkeep=Signal(bool(True)),
+                tvalid=Signal(bool(False)),
+                tready=Signal(bool(True)),
+                tlast=Signal(bool(True)),
+                tuser=Signal(intbv(0)),
+                pause=0,
+                name=None
+            ):
+
+        assert len(tdata) in [64, 128, 256, 512]
+        assert len(tkeep)*32 == len(tdata)
+
+        if len(tdata) == 512:
+            assert len(tuser) == 183
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) in [85, 88]
+
+        assert not self.has_logic
+
+        self.has_logic = True
+
+        tready_int = Signal(bool(False))
+        tvalid_int = Signal(bool(False))
+
+        @always_comb
+        def pause_logic():
+            tready.next = tready_int and not pause
+            tvalid_int.next = tvalid and not pause
+
+        @instance
+        def logic():
+            frame = USPcieFrame()
+            first = True
+
+            while True:
+                yield clk.posedge, rst.posedge
+
+                if rst:
+                    tready_int.next = False
+                    frame = USPcieFrame()
+                    first = True
+                else:
+                    tready_int.next = True
+
+                    if tvalid_int:
+                        # zero tkeep not allowed
+                        assert int(tkeep) != 0
+                        # tkeep must be contiguous
+                        # i.e. 0b00011110 allowed, but 0b00011010 not allowed
+                        b = int(tkeep)
+                        while b & 1 == 0:
+                            b = b >> 1
+                        while b & 1 == 1:
+                            b = b >> 1
+                        assert b == 0
+                        # tkeep must not have gaps across cycles
+                        if not first:
+                            # not first cycle; lowest bit must be set
+                            assert int(tkeep) & 1
+                        if not tlast:
+                            # not last cycle; highest bit must be set
+                            assert int(tkeep) & (1 << len(tkeep)-1)
+
+                        d = int(tdata)
+                        u = int(tuser)
+
+                        if len(tdata) == 512:
+                            if first:
+                                frame.first_be = u & 0xf
+                                frame.last_be = (u >> 8) & 0xf
+
+                            if tuser & (1 << 96):
+                                frame.discontinue = True
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.byte_en.append((u >> (i*4+16)) & 0xf)
+                                    frame.parity.append((u >> (i*4+119)) & 0xf)
+                                    last_lane = i
+                        else:
+                            if first:
+                                frame.first_be = u & 0xf
+                                frame.last_be = (u >> 4) & 0xf
+
+                            if tuser & (1 << 41):
+                                frame.discontinue = True
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.byte_en.append((u >> (i*4+8)) & 0xf)
+                                    frame.parity.append((u >> (i*4+53)) & 0xf)
+
+                        first = False
+                        if tlast:
+                            self.queue.append(frame)
+                            self.sync.next = not self.sync
+                            if name is not None:
+                                print("[%s] Got frame %s" % (name, repr(frame)))
+                            frame = USPcieFrame()
+                            first = True
+
+        return instances()
+
+
+class CCSource(object):
+    def __init__(self):
+        self.active = False
+        self.has_logic = False
+        self.queue = []
+
+    def send(self, frame):
+        self.queue.append(USPcieFrame(frame))
+
+    def count(self):
+        return len(self.queue)
+
+    def empty(self):
+        return not self.queue
+
+    def create_logic(self,
+                clk,
+                rst,
+                tdata=None,
+                tkeep=Signal(bool(True)),
+                tvalid=Signal(bool(False)),
+                tready=Signal(bool(True)),
+                tlast=Signal(bool(False)),
+                tuser=Signal(intbv(0)),
+                pause=0,
+                name=None
+            ):
+
+        assert len(tdata) in [64, 128, 256, 512]
+        assert len(tkeep)*32 == len(tdata)
+
+        if len(tdata) == 512:
+            assert len(tuser) == 81
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) == 33
+
+        assert not self.has_logic
+
+        self.has_logic = True
+
+        @instance
+        def logic():
+            frame = USPcieFrame()
+            data = []
+            parity = []
+            self.active = False
+            first = True
+
+            while True:
+                yield clk.posedge, rst.posedge
+
+                if rst:
+                    data = []
+                    parity = []
+                    self.active = False
+                    tdata.next = 0
+                    tkeep.next = 0
+                    tuser.next = 0
+                    tvalid.next = False
+                    tlast.next = False
+                    first = True
+                else:
+                    tvalid.next = self.active and (tvalid or not pause)
+                    if tready and tvalid:
+                        tvalid.next = False
+                        self.active = False
+                    if not data and self.queue:
+                        frame = self.queue.pop(0)
+                        data = list(frame.data)
+                        parity = list(frame.parity)
+                        if name is not None:
+                            print("[%s] Sending frame %s" % (name, repr(frame)))
+                        first = True
+                    if data and not self.active:
+                        d = 0
+                        k = 0
+                        u = 0
+
+                        if len(tdata) == 512:
+                            if first:
+                                u |= 0b01 << 0 # is_sop
+                                u |= 0b00 << 2 # is_sop0_ptr
+
+                            if frame.discontinue:
+                                u |= 1 << 16 # discontinue
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= parity.pop(0) << i*4+17
+                                    last_lane = i
+                                else:
+                                    u |= 0xf << i*4+17
+
+                            if not data:
+                                u |= 0b01 << 6 # is_eop
+                                u |= (last_lane & 0xf) << 8 # is_eop0_ptr
+                        else:
+                            if frame.discontinue:
+                                u |= 1 # discontinue
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= parity.pop(0) << i*4+1
+                                else:
+                                    u |= 0xf << i*4+1
+
+                        tdata.next = d
+                        tkeep.next = k
+                        tuser.next = u
+                        tvalid.next = not pause
+                        tlast.next = len(data) == 0
+                        self.active = True
+                        first = False
+
+        return instances()
+
+
+class CCSink(object):
+    def __init__(self):
+        self.has_logic = False
+        self.queue = []
+        self.read_queue = []
+        self.sync = Signal(intbv(0))
+
+    def recv(self):
+        if self.queue:
+            return self.queue.pop(0)
+        return None
+
+    def count(self):
+        return len(self.queue)
+
+    def empty(self):
+        return not self.queue
+
+    def wait(self, timeout=0):
+        if self.queue:
+            return
+        if timeout:
+            yield self.sync, delay(timeout)
+        else:
+            yield self.sync
+
+    def create_logic(self,
+                clk,
+                rst,
+                tdata=None,
+                tkeep=Signal(bool(True)),
+                tvalid=Signal(bool(False)),
+                tready=Signal(bool(True)),
+                tlast=Signal(bool(True)),
+                tuser=Signal(intbv(0)),
+                pause=0,
+                name=None
+            ):
+
+        assert len(tdata) in [64, 128, 256, 512]
+        assert len(tkeep)*32 == len(tdata)
+
+        if len(tdata) == 512:
+            assert len(tuser) == 81
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) == 33
+
+        assert not self.has_logic
+
+        self.has_logic = True
+
+        tready_int = Signal(bool(False))
+        tvalid_int = Signal(bool(False))
+
+        @always_comb
+        def pause_logic():
+            tready.next = tready_int and not pause
+            tvalid_int.next = tvalid and not pause
+
+        @instance
+        def logic():
+            frame = USPcieFrame()
+            first = True
+
+            while True:
+                yield clk.posedge, rst.posedge
+
+                if rst:
+                    tready_int.next = False
+                    frame = USPcieFrame()
+                    first = True
+                else:
+                    tready_int.next = True
+
+                    if tvalid_int:
+                        # zero tkeep not allowed
+                        assert int(tkeep) != 0
+                        # tkeep must be contiguous
+                        # i.e. 0b00011110 allowed, but 0b00011010 not allowed
+                        b = int(tkeep)
+                        while b & 1 == 0:
+                            b = b >> 1
+                        while b & 1 == 1:
+                            b = b >> 1
+                        assert b == 0
+                        # tkeep must not have gaps across cycles
+                        if not first:
+                            # not first cycle; lowest bit must be set
+                            assert int(tkeep) & 1
+                        if not tlast:
+                            # not last cycle; highest bit must be set
+                            assert int(tkeep) & (1 << len(tkeep)-1)
+
+                        d = int(tdata)
+                        u = int(tuser)
+
+                        if len(tdata) == 512:
+                            if u & (1 << 16):
+                                frame.discontinue = True
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.parity.append((u >> (i*4+17)) & 0xf)
+                                    last_lane = i
+                        else:
+                            if u & 1:
+                                frame.discontinue = True
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.parity.append((u >> (i*4+1)) & 0xf)
+
+                        first = False
+                        if tlast:
+                            self.queue.append(frame)
+                            self.sync.next = not self.sync
+                            if name is not None:
+                                print("[%s] Got frame %s" % (name, repr(frame)))
+                            frame = USPcieFrame()
+                            first = True
+
+        return instances()
+
+
+class RQSource(object):
+    def __init__(self):
+        self.active = False
+        self.has_logic = False
+        self.queue = []
+
+    def send(self, frame):
+        self.queue.append(USPcieFrame(frame))
+
+    def count(self):
+        return len(self.queue)
+
+    def empty(self):
+        return not self.queue
+
+    def create_logic(self,
+                clk,
+                rst,
+                tdata=None,
+                tkeep=Signal(bool(True)),
+                tvalid=Signal(bool(False)),
+                tready=Signal(bool(True)),
+                tlast=Signal(bool(False)),
+                tuser=Signal(intbv(0)),
+                pause=0,
+                name=None
+            ):
+
+        assert len(tdata) in [64, 128, 256, 512]
+        assert len(tkeep)*32 == len(tdata)
+
+        if len(tdata) == 512:
+            assert len(tuser) == 137
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) in [60, 62]
+
+        assert not self.has_logic
+
+        self.has_logic = True
+
+        @instance
+        def logic():
+            frame = USPcieFrame()
+            data = []
+            parity = []
+            self.active = False
+            first = True
+
+            while True:
+                yield clk.posedge, rst.posedge
+
+                if rst:
+                    data = []
+                    parity = []
+                    self.active = False
+                    tdata.next = 0
+                    tkeep.next = 0
+                    tuser.next = 0
+                    tvalid.next = False
+                    tlast.next = False
+                    first = True
+                else:
+                    tvalid.next = self.active and (tvalid or not pause)
+                    if tready and tvalid:
+                        tvalid.next = False
+                        self.active = False
+                    if not data and self.queue:
+                        frame = self.queue.pop(0)
+                        data = list(frame.data)
+                        parity = list(frame.parity)
+                        if name is not None:
+                            print("[%s] Sending frame %s" % (name, repr(frame)))
+                        first = True
+                    if data and not self.active:
+                        d = 0
+                        k = 0
+                        u = 0
+
+                        if len(tdata) == 512:
+                            if first:
+                                u |= (frame.first_be & 0xf)
+                                u |= (frame.last_be & 0xf) << 8
+                                u |= 0b01 << 20 # is_sop
+                                u |= 0b00 << 22 # is_sop0_ptr
+
+                            if frame.discontinue:
+                                u |= 36 # discontinue
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= parity.pop(0) << i*4+73
+                                    last_lane = i
+                                else:
+                                    u |= 0xf << i*4+73
+
+                            if not data:
+                                u |= 0b01 << 26 # is_eop
+                                u |= (last_lane & 0xf) << 28 # is_eop0_ptr
+                        else:
+                            if first:
+                                u |= (frame.first_be & 0xf)
+                                u |= (frame.last_be & 0xf) << 4
+
+                            if frame.discontinue:
+                                u |= 11 # discontinue
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= parity.pop(0) << i*4+28
+                                else:
+                                    u |= 0xf << i*4+28
+
+                            # TODO seq_num
+                            # TODO tph
+
+                        tdata.next = d
+                        tkeep.next = k
+                        tuser.next = u
+                        tvalid.next = not pause
+                        tlast.next = len(data) == 0
+                        self.active = True
+                        first = False
+
+        return instances()
+
+
+class RQSink(object):
+    def __init__(self):
+        self.has_logic = False
+        self.queue = []
+        self.read_queue = []
+        self.sync = Signal(intbv(0))
+
+    def recv(self):
+        if self.queue:
+            return self.queue.pop(0)
+        return None
+
+    def count(self):
+        return len(self.queue)
+
+    def empty(self):
+        return not self.queue
+
+    def wait(self, timeout=0):
+        if self.queue:
+            return
+        if timeout:
+            yield self.sync, delay(timeout)
+        else:
+            yield self.sync
+
+    def create_logic(self,
+                clk,
+                rst,
+                tdata=None,
+                tkeep=Signal(bool(True)),
+                tvalid=Signal(bool(False)),
+                tready=Signal(bool(True)),
+                tlast=Signal(bool(True)),
+                tuser=Signal(intbv(0)),
+                pause=0,
+                name=None
+            ):
+
+        assert len(tdata) in [64, 128, 256, 512]
+        assert len(tkeep)*32 == len(tdata)
+
+        if len(tdata) == 512:
+            assert len(tuser) == 137
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) in [60, 62]
+
+        assert not self.has_logic
+
+        self.has_logic = True
+
+        tready_int = Signal(bool(False))
+        tvalid_int = Signal(bool(False))
+
+        @always_comb
+        def pause_logic():
+            tready.next = tready_int and not pause
+            tvalid_int.next = tvalid and not pause
+
+        @instance
+        def logic():
+            frame = USPcieFrame()
+            first = True
+
+            while True:
+                yield clk.posedge, rst.posedge
+
+                if rst:
+                    tready_int.next = False
+                    frame = USPcieFrame()
+                    first = True
+                else:
+                    tready_int.next = True
+
+                    if tvalid_int:
+                        # zero tkeep not allowed
+                        assert int(tkeep) != 0
+                        # tkeep must be contiguous
+                        # i.e. 0b00011110 allowed, but 0b00011010 not allowed
+                        b = int(tkeep)
+                        while b & 1 == 0:
+                            b = b >> 1
+                        while b & 1 == 1:
+                            b = b >> 1
+                        assert b == 0
+                        # tkeep must not have gaps across cycles
+                        if not first:
+                            # not first cycle; lowest bit must be set
+                            assert int(tkeep) & 1
+                        if not tlast:
+                            # not last cycle; highest bit must be set
+                            assert int(tkeep) & (1 << len(tkeep)-1)
+
+                        d = int(tdata)
+                        u = int(tuser)
+
+                        if len(tdata) == 512:
+                            if first:
+                                frame.first_be = u & 0xf
+                                frame.last_be = (u >> 8) & 0xf
+
+                            if u & (1 << 36):
+                                frame.discontinue = True
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.parity.append((u >> (i*4+73)) & 0xf)
+                                    last_lane = i
+                        else:
+                            if first:
+                                frame.first_be = u & 0xf
+                                frame.last_be = (u >> 4) & 0xf
+
+                            if u & (1 << 11):
+                                frame.discontinue = True
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.parity.append((u >> (i*4+28)) & 0xf)
+
+                        first = False
+                        if tlast:
+                            self.queue.append(frame)
+                            self.sync.next = not self.sync
+                            if name is not None:
+                                print("[%s] Got frame %s" % (name, repr(frame)))
+                            frame = USPcieFrame()
+                            first = True
+
+        return instances()
+
+
+class RCSource(object):
+    def __init__(self):
+        self.active = False
+        self.has_logic = False
+        self.queue = []
+
+    def send(self, frame):
+        self.queue.append(USPcieFrame(frame))
+
+    def count(self):
+        return len(self.queue)
+
+    def empty(self):
+        return not self.queue
+
+    def create_logic(self,
+                clk,
+                rst,
+                tdata=None,
+                tkeep=Signal(bool(True)),
+                tvalid=Signal(bool(False)),
+                tready=Signal(bool(True)),
+                tlast=Signal(bool(False)),
+                tuser=Signal(intbv(0)),
+                pause=0,
+                name=None
+            ):
+
+        assert len(tdata) in [64, 128, 256, 512]
+        assert len(tkeep)*32 == len(tdata)
+
+        if len(tdata) == 512:
+            assert len(tuser) == 161
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) == 75
+
+        assert not self.has_logic
+
+        self.has_logic = True
+
+        @instance
+        def logic():
+            frame = USPcieFrame()
+            data = []
+            byte_en = []
+            parity = []
+            self.active = False
+            first = True
+
+            while True:
+                yield clk.posedge, rst.posedge
+
+                if rst:
+                    data = []
+                    byte_en = []
+                    parity = []
+                    self.active = False
+                    tdata.next = 0
+                    tkeep.next = 0
+                    tuser.next = 0
+                    tvalid.next = False
+                    tlast.next = False
+                    first = True
+                else:
+                    tvalid.next = self.active and (tvalid or not pause)
+                    if tready and tvalid:
+                        tvalid.next = False
+                        self.active = False
+                    if not data and self.queue:
+                        frame = self.queue.pop(0)
+                        data = list(frame.data)
+                        byte_en = list(frame.byte_en)
+                        parity = list(frame.parity)
+                        if name is not None:
+                            print("[%s] Sending frame %s" % (name, repr(frame)))
+                        first = True
+                    if data and not self.active:
+                        d = 0
+                        k = 0
+                        u = 0
+
+                        if len(tdata) == 512:
+                            if first:
+                                u |= 0b0001 << 64 # is_sop
+                                u |= 0b00 << 68 # is_sop0_ptr
+
+                            if frame.discontinue:
+                                u |= 1 << 96 # discontinue
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= byte_en.pop(0) << i*4
+                                    u |= parity.pop(0) << i*4+97
+                                    last_lane = i
+                                else:
+                                    u |= 0xf << i*4+97
+
+                            if not data:
+                                u |= 0b0001 << 76 # is_eop
+                                u |= last_lane << 80 # is_eop0_ptr
+                        else:
+                            if first:
+                                u |= 1 << 32 # is_sof_0
+
+                            if frame.discontinue:
+                                u |= 1 << 42 # discontinue
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if data:
+                                    d |= data.pop(0) << i*32
+                                    k |= 1 << i
+                                    u |= byte_en.pop(0) << i*4
+                                    u |= parity.pop(0) << i*4+43
+                                    last_lane = i
+                                else:
+                                    u |= 0xf << i*4+43
+
+                            if not data:
+                                u |= (1 | last_lane << 1) << 34 # is_eof_0
+
+                        tdata.next = d
+                        tkeep.next = k
+                        tuser.next = u
+                        tvalid.next = not pause
+                        tlast.next = len(data) == 0
+                        self.active = True
+                        first = False
+
+        return instances()
+
+
+class RCSink(object):
+    def __init__(self):
+        self.has_logic = False
+        self.queue = []
+        self.read_queue = []
+        self.sync = Signal(intbv(0))
+
+    def recv(self):
+        if self.queue:
+            return self.queue.pop(0)
+        return None
+
+    def count(self):
+        return len(self.queue)
+
+    def empty(self):
+        return not self.queue
+
+    def wait(self, timeout=0):
+        if self.queue:
+            return
+        if timeout:
+            yield self.sync, delay(timeout)
+        else:
+            yield self.sync
+
+    def create_logic(self,
+                clk,
+                rst,
+                tdata=None,
+                tkeep=Signal(bool(True)),
+                tvalid=Signal(bool(False)),
+                tready=Signal(bool(True)),
+                tlast=Signal(bool(True)),
+                tuser=Signal(intbv(0)),
+                pause=0,
+                name=None
+            ):
+
+        assert len(tdata) in [64, 128, 256, 512]
+        assert len(tkeep)*32 == len(tdata)
+
+        if len(tdata) == 512:
+            assert len(tuser) == 161
+        else:
+            assert len(tdata) in [64, 128, 256]
+            assert len(tuser) == 75
+
+        assert not self.has_logic
+
+        self.has_logic = True
+
+        tready_int = Signal(bool(False))
+        tvalid_int = Signal(bool(False))
+
+        @always_comb
+        def pause_logic():
+            tready.next = tready_int and not pause
+            tvalid_int.next = tvalid and not pause
+
+        @instance
+        def logic():
+            frame = USPcieFrame()
+            first = True
+
+            while True:
+                yield clk.posedge, rst.posedge
+
+                if rst:
+                    tready_int.next = False
+                    frame = USPcieFrame()
+                    first = True
+                else:
+                    tready_int.next = True
+
+                    if tvalid_int:
+                        # zero tkeep not allowed
+                        assert int(tkeep) != 0
+                        # tkeep must be contiguous
+                        # i.e. 0b00011110 allowed, but 0b00011010 not allowed
+                        b = int(tkeep)
+                        while b & 1 == 0:
+                            b = b >> 1
+                        while b & 1 == 1:
+                            b = b >> 1
+                        assert b == 0
+                        # tkeep must not have gaps across cycles
+                        if not first:
+                            # not first cycle; lowest bit must be set
+                            assert int(tkeep) & 1
+                        if not tlast:
+                            # not last cycle; highest bit must be set
+                            assert int(tkeep) & (1 << len(tkeep)-1)
+
+                        d = int(tdata)
+                        u = int(tuser)
+
+                        if len(tdata) == 512:
+                            if u & (1 << 96):
+                                frame.discontinue = True
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.byte_en.append((u >> (i*4)) & 0xf)
+                                    frame.parity.append((u >> (i*4+97)) & 0xf)
+                                    last_lane = i
+                        else:
+                            if u & (1 << 42):
+                                frame.discontinue = True
+
+                            last_lane = 0
+
+                            for i in range(len(tkeep)):
+                                if tkeep & (1 << i):
+                                    frame.data.append((d >> (i*32)) & 0xffffffff)
+                                    frame.byte_en.append((u >> (i*4)) & 0xf)
+                                    frame.parity.append((u >> (i*4+43)) & 0xf)
+                                    last_lane = i
+
+                        first = False
+                        if tlast:
+                            self.queue.append(frame)
+                            self.sync.next = not self.sync
+                            if name is not None:
+                                print("[%s] Got frame %s" % (name, repr(frame)))
+                            frame = USPcieFrame()
+                            first = True
+
+        return instances()
+
+
 class UltrascalePCIeFunction(Endpoint, MSICapability, MSIXCapability):
     def __init__(self):
         super(UltrascalePCIeFunction, self).__init__()
@@ -720,10 +1752,10 @@ class UltrascalePCIe(Device):
 
         self.config_space_enable = False
 
-        self.cq_source = axis_ep.AXIStreamSource()
-        self.cc_sink = axis_ep.AXIStreamSink()
-        self.rq_sink = axis_ep.AXIStreamSink()
-        self.rc_source = axis_ep.AXIStreamSource()
+        self.cq_source = CQSource()
+        self.cc_sink = CCSink()
+        self.rq_sink = RQSink()
+        self.rc_source = RCSource()
 
         self.make_function()
 
@@ -1383,7 +2415,7 @@ class UltrascalePCIe(Device):
                 while self.cq_np_queue and self.cq_np_req_count > 0:
                     tlp = self.cq_np_queue.pop(0)
                     self.cq_np_req_count -= 1
-                    self.cq_source.send(tlp.pack_us_cq(self.dw))
+                    self.cq_source.send(tlp.pack_us_cq())
 
                 # handle new requests
                 while self.cq_queue:
@@ -1395,13 +2427,13 @@ class UltrascalePCIe(Device):
                         if self.cq_np_req_count > 0:
                             # have credit, can forward
                             self.cq_np_req_count -= 1
-                            self.cq_source.send(tlp.pack_us_cq(self.dw))
+                            self.cq_source.send(tlp.pack_us_cq())
                         else:
                             # no credits, put it in the queue
                             self.cq_np_queue.append(tlp)
                     else:
                         # posted request
-                        self.cq_source.send(tlp.pack_us_cq(self.dw))
+                        self.cq_source.send(tlp.pack_us_cq())
 
                 pcie_cq_np_req_count.next = self.cq_np_req_count
 
@@ -1409,7 +2441,7 @@ class UltrascalePCIe(Device):
                 while not self.cc_sink.empty():
                     pkt = self.cc_sink.recv()
 
-                    tlp = TLP_us().unpack_us_cc(pkt, self.dw, self.enable_parity)
+                    tlp = TLP_us().unpack_us_cc(pkt, self.enable_parity)
 
                     if not tlp.completer_id_enable:
                         tlp.completer_id = PcieId(self.bus_num, self.device_num, tlp.completer_id.function)
@@ -1421,7 +2453,7 @@ class UltrascalePCIe(Device):
                 while not self.rq_sink.empty():
                     pkt = self.rq_sink.recv()
 
-                    tlp = TLP_us().unpack_us_rq(pkt, self.dw, self.enable_parity)
+                    tlp = TLP_us().unpack_us_rq(pkt, self.enable_parity)
 
                     if not tlp.requester_id_enable:
                         tlp.requester_id = PcieId(self.bus_num, self.device_num, tlp.requester_id.function)
@@ -1440,7 +2472,7 @@ class UltrascalePCIe(Device):
                 # handle requester completions
                 while self.rc_queue:
                     tlp = self.rc_queue.pop(0)
-                    self.rc_source.send(tlp.pack_us_rc(self.dw))
+                    self.rc_source.send(tlp.pack_us_rc())
 
                 # transmit flow control
                 #pcie_tfc_nph_av

@@ -36,9 +36,9 @@ module pcie_us_axi_master #
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     // PCIe AXI stream CQ tuser signal width
-    parameter AXIS_PCIE_CQ_USER_WIDTH = 85,
+    parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
     // PCIe AXI stream CC tuser signal width
-    parameter AXIS_PCIE_CC_USER_WIDTH = 33,
+    parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
     // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     // Width of AXI address bus in bits

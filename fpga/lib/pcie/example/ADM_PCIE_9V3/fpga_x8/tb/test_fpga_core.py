@@ -62,7 +62,12 @@ build_cmd = "iverilog -o %s.vvp %s" % (testbench, src)
 def bench():
 
     # Parameters
-
+    AXIS_PCIE_DATA_WIDTH = 256
+    AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
+    AXIS_PCIE_RC_USER_WIDTH = 75
+    AXIS_PCIE_RQ_USER_WIDTH = 62
+    AXIS_PCIE_CQ_USER_WIDTH = 88
+    AXIS_PCIE_CC_USER_WIDTH = 33
 
     # Inputs
     clk = Signal(bool(0))
@@ -70,15 +75,15 @@ def bench():
     current_test = Signal(intbv(0)[8:])
 
     m_axis_rq_tready = Signal(bool(0))
-    s_axis_rc_tdata = Signal(intbv(0)[256:])
-    s_axis_rc_tkeep = Signal(intbv(0)[8:])
+    s_axis_rc_tdata = Signal(intbv(0)[AXIS_PCIE_DATA_WIDTH:])
+    s_axis_rc_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     s_axis_rc_tlast = Signal(bool(0))
-    s_axis_rc_tuser = Signal(intbv(0)[75:])
+    s_axis_rc_tuser = Signal(intbv(0)[AXIS_PCIE_RC_USER_WIDTH:])
     s_axis_rc_tvalid = Signal(bool(0))
-    s_axis_cq_tdata = Signal(intbv(0)[256:])
-    s_axis_cq_tkeep = Signal(intbv(0)[8:])
+    s_axis_cq_tdata = Signal(intbv(0)[AXIS_PCIE_DATA_WIDTH:])
+    s_axis_cq_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     s_axis_cq_tlast = Signal(bool(0))
-    s_axis_cq_tuser = Signal(intbv(0)[88:])
+    s_axis_cq_tuser = Signal(intbv(0)[AXIS_PCIE_CQ_USER_WIDTH:])
     s_axis_cq_tvalid = Signal(bool(0))
     m_axis_cc_tready = Signal(bool(0))
     cfg_max_payload = Signal(intbv(0)[2:])
@@ -96,17 +101,17 @@ def bench():
     user_led_g = Signal(intbv(0)[2:])
     user_led_r = Signal(bool(0))
     front_led = Signal(intbv(0)[2:])
-    m_axis_rq_tdata = Signal(intbv(0)[256:])
-    m_axis_rq_tkeep = Signal(intbv(0)[8:])
+    m_axis_rq_tdata = Signal(intbv(0)[AXIS_PCIE_DATA_WIDTH:])
+    m_axis_rq_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     m_axis_rq_tlast = Signal(bool(0))
-    m_axis_rq_tuser = Signal(intbv(0)[62:])
+    m_axis_rq_tuser = Signal(intbv(0)[AXIS_PCIE_RQ_USER_WIDTH:])
     m_axis_rq_tvalid = Signal(bool(0))
     s_axis_rc_tready = Signal(bool(0))
     s_axis_cq_tready = Signal(bool(0))
-    m_axis_cc_tdata = Signal(intbv(0)[256:])
-    m_axis_cc_tkeep = Signal(intbv(0)[8:])
+    m_axis_cc_tdata = Signal(intbv(0)[AXIS_PCIE_DATA_WIDTH:])
+    m_axis_cc_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     m_axis_cc_tlast = Signal(bool(0))
-    m_axis_cc_tuser = Signal(intbv(0)[33:])
+    m_axis_cc_tuser = Signal(intbv(0)[AXIS_PCIE_CC_USER_WIDTH:])
     m_axis_cc_tvalid = Signal(bool(0))
     status_error_cor = Signal(bool(0))
     status_error_uncor = Signal(bool(0))

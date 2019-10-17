@@ -51,6 +51,10 @@ module fpga (
 
 parameter AXIS_PCIE_DATA_WIDTH = 256;
 parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
+parameter AXIS_PCIE_RC_USER_WIDTH = 75;
+parameter AXIS_PCIE_RQ_USER_WIDTH = 60;
+parameter AXIS_PCIE_CQ_USER_WIDTH = 85;
+parameter AXIS_PCIE_CC_USER_WIDTH = 33;
 
 // PCIe
 wire pcie_user_clk;
@@ -70,33 +74,33 @@ ibufds_gte3_pcie_mgt_refclk_inst (
     .ODIV2         (pcie_sys_clk)
 );
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0] axis_rq_tdata;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0] axis_rq_tkeep;
-wire                            axis_rq_tlast;
-wire                            axis_rq_tready;
-wire [59:0]                     axis_rq_tuser;
-wire                            axis_rq_tvalid;
+wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_rq_tdata;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_rq_tkeep;
+wire                               axis_rq_tlast;
+wire                               axis_rq_tready;
+wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] axis_rq_tuser;
+wire                               axis_rq_tvalid;
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0] axis_rc_tdata;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0] axis_rc_tkeep;
-wire                            axis_rc_tlast;
-wire                            axis_rc_tready;
-wire [74:0]                     axis_rc_tuser;
-wire                            axis_rc_tvalid;
+wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_rc_tdata;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_rc_tkeep;
+wire                               axis_rc_tlast;
+wire                               axis_rc_tready;
+wire [AXIS_PCIE_RC_USER_WIDTH-1:0] axis_rc_tuser;
+wire                               axis_rc_tvalid;
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0] axis_cq_tdata;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0] axis_cq_tkeep;
-wire                            axis_cq_tlast;
-wire                            axis_cq_tready;
-wire [84:0]                     axis_cq_tuser;
-wire                            axis_cq_tvalid;
+wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_cq_tdata;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_cq_tkeep;
+wire                               axis_cq_tlast;
+wire                               axis_cq_tready;
+wire [AXIS_PCIE_CQ_USER_WIDTH-1:0] axis_cq_tuser;
+wire                               axis_cq_tvalid;
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0] axis_cc_tdata;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0] axis_cc_tkeep;
-wire                            axis_cc_tlast;
-wire                            axis_cc_tready;
-wire [32:0]                     axis_cc_tuser;
-wire                            axis_cc_tvalid;
+wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_cc_tdata;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_cc_tkeep;
+wire                               axis_cc_tlast;
+wire                               axis_cc_tready;
+wire [AXIS_PCIE_CC_USER_WIDTH-1:0] axis_cc_tuser;
+wire                               axis_cc_tvalid;
 
 // ila_0 rq_ila (
 //     .clk(pcie_user_clk),
@@ -320,7 +324,12 @@ pcie3_ultrascale_inst (
 );
 
 fpga_core #(
-    .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH)
+    .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
+    .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
+    .AXIS_PCIE_RC_USER_WIDTH(AXIS_PCIE_RC_USER_WIDTH),
+    .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
+    .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
+    .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH)
 )
 core_inst (
     /*

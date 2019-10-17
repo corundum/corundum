@@ -36,9 +36,9 @@ module pcie_us_axil_master #
     // PCIe AXI stream tkeep signal width (words per cycle)
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     // PCIe AXI stream CQ tuser signal width
-    parameter AXIS_PCIE_CQ_USER_WIDTH = 85,
+    parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
     // PCIe AXI stream CC tuser signal width
-    parameter AXIS_PCIE_CC_USER_WIDTH = 33,
+    parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
     // Width of AXI lite data bus in bits
     parameter AXI_DATA_WIDTH = 32,
     // Width of AXI lite address bus in bits
@@ -110,8 +110,8 @@ module pcie_us_axil_master #
 
 // bus width assertions
 initial begin
-    if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256) begin
-        $error("Error: PCIe interface width must be 64, 128, or 256 (instance %m)");
+    if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256 && AXIS_PCIE_DATA_WIDTH != 512) begin
+        $error("Error: PCIe interface width must be 64, 128, 256, or 512 (instance %m)");
         $finish;
     end
 
@@ -120,14 +120,26 @@ initial begin
         $finish;
     end
 
-    if (AXIS_PCIE_CQ_USER_WIDTH != 85 && AXIS_PCIE_CQ_USER_WIDTH != 88) begin
-        $error("Error: PCIe CQ tuser width must be 85 or 88 (instance %m)");
-        $finish;
-    end
+    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+        if (AXIS_PCIE_CQ_USER_WIDTH != 183) begin
+            $error("Error: PCIe CQ tuser width must be 183 (instance %m)");
+            $finish;
+        end
 
-    if (AXIS_PCIE_CC_USER_WIDTH != 33) begin
-        $error("Error: PCIe CC tuser width must be 33 (instance %m)");
-        $finish;
+        if (AXIS_PCIE_CC_USER_WIDTH != 81) begin
+            $error("Error: PCIe CC tuser width must be 81 (instance %m)");
+            $finish;
+        end
+    end else begin
+        if (AXIS_PCIE_CQ_USER_WIDTH != 85 && AXIS_PCIE_CQ_USER_WIDTH != 88) begin
+            $error("Error: PCIe CQ tuser width must be 85 or 88 (instance %m)");
+            $finish;
+        end
+
+        if (AXIS_PCIE_CC_USER_WIDTH != 33) begin
+            $error("Error: PCIe CC tuser width must be 33 (instance %m)");
+            $finish;
+        end
     end
 
     if (AXI_DATA_WIDTH != 32) begin
@@ -285,9 +297,23 @@ always @* begin
         m_axis_cc_tdata_int[127:96] = m_axil_rdata;
     end
 
-    m_axis_cc_tuser_int[0] = 1'b0; // discontinue
-    m_axis_cc_tuser_int[32:1] = 32'd0; // parity
-    if (AXIS_PCIE_DATA_WIDTH == 256) begin
+    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+        m_axis_cc_tuser_int[1:0] = 2'b01; // is_sop
+        m_axis_cc_tuser_int[3:2] = 2'd0; // is_sop0_ptr
+        m_axis_cc_tuser_int[5:4] = 2'd0; // is_sop1_ptr
+        m_axis_cc_tuser_int[7:6] = 2'b01; // is_eop
+        m_axis_cc_tuser_int[11:8]  = 4'd3; // is_eop0_ptr
+        m_axis_cc_tuser_int[15:12] = 4'd0; // is_eop1_ptr
+        m_axis_cc_tuser_int[16] = 1'b0; // discontinue
+        m_axis_cc_tuser_int[80:17] = 64'd0; // parity
+    end else begin
+        m_axis_cc_tuser_int[0] = 1'b0; // discontinue
+        m_axis_cc_tuser_int[32:1] = 32'd0; // parity
+    end
+
+    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+        m_axis_cc_tkeep_int = 16'b0000000000001111;
+    end else if (AXIS_PCIE_DATA_WIDTH == 256) begin
         m_axis_cc_tkeep_int = 8'b00001111;
     end else if (AXIS_PCIE_DATA_WIDTH == 128) begin
         m_axis_cc_tkeep_int = 4'b1111;
@@ -325,14 +351,19 @@ always @* begin
                     attr_next = s_axis_cq_tdata[126:124];
 
                     // data
-                    if (AXIS_PCIE_DATA_WIDTH == 256) begin
+                    if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                         m_axil_wdata_next = s_axis_cq_tdata[159:128];
                     end
                 end
 
                 // tuser fields
-                first_be_next = s_axis_cq_tuser[3:0];
-                last_be_next = s_axis_cq_tuser[7:4];
+                if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                    first_be_next = s_axis_cq_tuser[3:0];
+                    last_be_next = s_axis_cq_tuser[11:8];
+                end else begin
+                    first_be_next = s_axis_cq_tuser[3:0];
+                    last_be_next = s_axis_cq_tuser[7:4];
+                end
 
                 m_axil_wstrb_next = first_be_next;
 
@@ -370,7 +401,7 @@ always @* begin
                         end
                     end else if (type_next == REQ_MEM_WRITE || type_next == REQ_IO_WRITE) begin
                         // write request
-                        if (AXIS_PCIE_DATA_WIDTH == 256 && s_axis_cq_tlast && dword_count_next == 11'd1) begin
+                        if (AXIS_PCIE_DATA_WIDTH >= 256 && s_axis_cq_tlast && dword_count_next == 11'd1) begin
                             m_axil_awvalid_next = 1'b1;
                             m_axil_wvalid_next = 1'b1;
                             m_axil_bready_next = 1'b1;
@@ -545,7 +576,16 @@ always @* begin
             m_axis_cc_tdata_int[45:43] = CPL_STATUS_SC; // status: successful completion
             m_axis_cc_tdata_int[127:96] = m_axil_rdata;
 
-            if (AXIS_PCIE_DATA_WIDTH == 256) begin
+            if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                m_axis_cc_tuser_int[7:6] = 2'b01; // is_eop
+                m_axis_cc_tuser_int[11:8]  = 4'd3; // is_eop0_ptr
+                m_axis_cc_tuser_int[15:12] = 4'd0; // is_eop1_ptr
+            end
+
+            if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                m_axis_cc_tkeep_int = 16'b0000000000001111;
+                m_axis_cc_tlast_int = 1'b1;
+            end else if (AXIS_PCIE_DATA_WIDTH == 256) begin
                 m_axis_cc_tkeep_int = 8'b00001111;
                 m_axis_cc_tlast_int = 1'b1;
             end else if (AXIS_PCIE_DATA_WIDTH == 128) begin
@@ -610,7 +650,16 @@ always @* begin
                     m_axis_cc_tdata_int[42:32] = 11'd0; // DWORD count
                     m_axis_cc_tdata_int[45:43] = CPL_STATUS_SC; // status: successful completion
 
-                    if (AXIS_PCIE_DATA_WIDTH == 256) begin
+                    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                        m_axis_cc_tuser_int[7:6] = 2'b01; // is_eop
+                        m_axis_cc_tuser_int[11:8]  = 4'd2; // is_eop0_ptr
+                        m_axis_cc_tuser_int[15:12] = 4'd0; // is_eop1_ptr
+                    end
+
+                    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                        m_axis_cc_tkeep_int = 16'b0000000000000111;
+                        m_axis_cc_tlast_int = 1'b1;
+                    end else if (AXIS_PCIE_DATA_WIDTH == 256) begin
                         m_axis_cc_tkeep_int = 8'b00000111;
                         m_axis_cc_tlast_int = 1'b1;
                     end else if (AXIS_PCIE_DATA_WIDTH == 128) begin
@@ -649,7 +698,16 @@ always @* begin
                         m_axis_cc_tvalid_int = 1'b1;
                         m_axis_cc_tdata_int[42:32] = 11'd0; // DWORD count
 
-                        if (AXIS_PCIE_DATA_WIDTH == 256) begin
+                        if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                            m_axis_cc_tuser_int[7:6] = 2'b01; // is_eop
+                            m_axis_cc_tuser_int[11:8]  = 4'd2; // is_eop0_ptr
+                            m_axis_cc_tuser_int[15:12] = 4'd0; // is_eop1_ptr
+                        end
+
+                        if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                            m_axis_cc_tkeep_int = 16'b0000000000000111;
+                            m_axis_cc_tlast_int = 1'b1;
+                        end else if (AXIS_PCIE_DATA_WIDTH == 256) begin
                             m_axis_cc_tkeep_int = 8'b00000111;
                             m_axis_cc_tlast_int = 1'b1;
                         end else if (AXIS_PCIE_DATA_WIDTH == 128) begin
@@ -686,7 +744,16 @@ always @* begin
             m_axis_cc_tdata_int[42:32] = 11'd0; // DWORD count
             m_axis_cc_tdata_int[45:43] = status_reg;
 
-            if (AXIS_PCIE_DATA_WIDTH == 256) begin
+            if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                m_axis_cc_tuser_int[7:6] = 2'b01; // is_eop
+                m_axis_cc_tuser_int[11:8]  = 4'd2; // is_eop0_ptr
+                m_axis_cc_tuser_int[15:12] = 4'd0; // is_eop1_ptr
+            end
+
+            if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                m_axis_cc_tkeep_int = 16'b0000000000000111;
+                m_axis_cc_tlast_int = 1'b1;
+            end else if (AXIS_PCIE_DATA_WIDTH == 256) begin
                 m_axis_cc_tkeep_int = 8'b00000111;
                 m_axis_cc_tlast_int = 1'b1;
             end else if (AXIS_PCIE_DATA_WIDTH == 128) begin

@@ -27,7 +27,6 @@ from myhdl import *
 import struct
 import os
 
-import axis_ep
 import pcie
 import pcie_us
 
@@ -223,7 +222,7 @@ def bench():
     pcie_perstn1_out=Signal(bool(0))
 
     # sources and sinks
-    cq_sink = axis_ep.AXIStreamSink()
+    cq_sink = pcie_us.CQSink()
 
     cq_sink_logic = cq_sink.create_logic(
         user_clk,
@@ -237,7 +236,7 @@ def bench():
         name='cq_sink'
     )
 
-    cc_source = axis_ep.AXIStreamSource()
+    cc_source = pcie_us.CCSource()
 
     cc_source_logic = cc_source.create_logic(
         user_clk,
@@ -251,7 +250,7 @@ def bench():
         name='cc_source'
     )
 
-    rq_source = axis_ep.AXIStreamSource()
+    rq_source = pcie_us.RQSource()
 
     rq_source_logic = rq_source.create_logic(
         user_clk,
@@ -265,7 +264,7 @@ def bench():
         name='rq_source'
     )
 
-    rc_sink = axis_ep.AXIStreamSink()
+    rc_sink = pcie_us.RCSink()
 
     rc_sink_logic = rc_sink.create_logic(
         user_clk,
@@ -501,7 +500,7 @@ def bench():
             if not cq_sink.empty():
                 pkt = cq_sink.recv()
 
-                tlp = pcie_us.TLP_us().unpack_us_cq(pkt, dw)
+                tlp = pcie_us.TLP_us().unpack_us_cq(pkt)
 
                 print(tlp)
 
@@ -539,7 +538,7 @@ def bench():
                     cpl.byte_count = 4
                     cpl.length = 1
 
-                    cc_source.send(cpl.pack_us_cc(dw))
+                    cc_source.send(cpl.pack_us_cc())
                 elif (tlp.fmt_type == pcie.TLP_IO_WRITE):
                     print("IO write")
 
@@ -569,7 +568,7 @@ def bench():
                     if start_offset is not None and offset != start_offset:
                         regions[region][addr+start_offset:addr+offset] = data[start_offset:offset]
 
-                    cc_source.send(cpl.pack_us_cc(dw))
+                    cc_source.send(cpl.pack_us_cc())
                 if (tlp.fmt_type == pcie.TLP_MEM_READ or tlp.fmt_type == pcie.TLP_MEM_READ_64):
                     print("Memory read")
 
@@ -604,7 +603,7 @@ def bench():
                         cpl.set_data(data[offset+n:offset+n+byte_length])
 
                         print("Completion: %s" % (repr(cpl)))
-                        cc_source.send(cpl.pack_us_cc(dw))
+                        cc_source.send(cpl.pack_us_cc())
 
                         n += byte_length
                         addr += byte_length
@@ -745,14 +744,14 @@ def bench():
 
             current_tag = (current_tag % 31) + 1
 
-            rq_source.send(tlp.pack_us_rq(dw))
+            rq_source.send(tlp.pack_us_rq())
             yield rc_sink.wait(100)
             pkt = rc_sink.recv()
 
             if not pkt:
                 raise Exception("Timeout")
 
-            cpl = pcie_us.TLP_us().unpack_us_rc(pkt, dw)
+            cpl = pcie_us.TLP_us().unpack_us_rc(pkt)
 
             if cpl.status != pcie.CPL_STATUS_SC:
                 raise Exception("Unsuccessful completion")
@@ -783,14 +782,14 @@ def bench():
 
             current_tag = (current_tag % 31) + 1
 
-            rq_source.send(tlp.pack_us_rq(dw))
+            rq_source.send(tlp.pack_us_rq())
             yield rc_sink.wait(100)
             pkt = rc_sink.recv()
 
             if not pkt:
                 raise Exception("Timeout")
 
-            cpl = pcie_us.TLP_us().unpack_us_rc(pkt, dw)
+            cpl = pcie_us.TLP_us().unpack_us_rc(pkt)
 
             if cpl.status != pcie.CPL_STATUS_SC:
                 raise Exception("Unsuccessful completion")
@@ -831,7 +830,7 @@ def bench():
 
             current_tag = (current_tag % 31) + 1
 
-            rq_source.send(tlp.pack_us_rq(dw))
+            rq_source.send(tlp.pack_us_rq())
 
             n += byte_length
             addr += byte_length
@@ -865,7 +864,7 @@ def bench():
 
             current_tag = (current_tag % 31) + 1
 
-            rq_source.send(tlp.pack_us_rq(dw))
+            rq_source.send(tlp.pack_us_rq())
 
             m = 0
 
@@ -876,7 +875,7 @@ def bench():
                 if not pkt:
                     raise Exception("Timeout")
 
-                cpl = pcie_us.TLP_us().unpack_us_rc(pkt, dw)
+                cpl = pcie_us.TLP_us().unpack_us_rc(pkt)
 
                 if cpl.status != pcie.CPL_STATUS_SC:
                     raise Exception("Unsuccessful completion")

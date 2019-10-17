@@ -26,7 +26,6 @@ THE SOFTWARE.
 from myhdl import *
 import os
 
-import axis_ep
 import axil
 import pcie_us
 
@@ -98,7 +97,7 @@ def bench():
     status_error_uncor = Signal(bool(0))
 
     # sources and sinks
-    cq_source = axis_ep.AXIStreamSource()
+    cq_source = pcie_us.CQSource()
 
     cq_source_logic = cq_source.create_logic(
         clk,
@@ -112,7 +111,7 @@ def bench():
         name='cq_source'
     )
 
-    cc_sink = axis_ep.AXIStreamSink()
+    cc_sink = pcie_us.CCSink()
 
     cc_sink_logic = cc_sink.create_logic(
         clk,
@@ -258,7 +257,7 @@ def bench():
         tlp.set_be_data(0x0000, b'\x11\x22\x33\x44')
         tlp.address = 0x0000
 
-        cq_source.send(tlp.pack_us_cq(AXIS_PCIE_DATA_WIDTH))
+        cq_source.send(tlp.pack_us_cq())
 
         yield delay(100)
 
@@ -287,12 +286,12 @@ def bench():
         tlp.set_be_data(0x0000, b'\x11\x22\x33\x44')
         tlp.address = 0x0000
 
-        cq_source.send(tlp.pack_us_cq(AXIS_PCIE_DATA_WIDTH))
+        cq_source.send(tlp.pack_us_cq())
 
         yield cc_sink.wait(500)
         pkt = cc_sink.recv()
 
-        rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt, AXIS_PCIE_DATA_WIDTH)
+        rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt)
 
         print(rx_tlp)
 
@@ -326,12 +325,12 @@ def bench():
         tlp.set_be(0x0000, 4)
         tlp.address = 0x0000
 
-        cq_source.send(tlp.pack_us_cq(AXIS_PCIE_DATA_WIDTH))
+        cq_source.send(tlp.pack_us_cq())
 
         yield cc_sink.wait(500)
         pkt = cc_sink.recv()
 
-        rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt, AXIS_PCIE_DATA_WIDTH)
+        rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt)
 
         print(rx_tlp)
 
@@ -364,12 +363,12 @@ def bench():
         tlp.set_be(0x0000, 4)
         tlp.address = 0x0000
 
-        cq_source.send(tlp.pack_us_cq(AXIS_PCIE_DATA_WIDTH))
+        cq_source.send(tlp.pack_us_cq())
 
         yield cc_sink.wait(500)
         pkt = cc_sink.recv()
 
-        rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt, AXIS_PCIE_DATA_WIDTH)
+        rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt)
 
         print(rx_tlp)
 
@@ -405,7 +404,7 @@ def bench():
                 tlp.set_be_data(256*(16*offset+length)+offset, b'\x11\x22\x33\x44'[0:length])
                 tlp.address = 256*(16*offset+length)+offset
 
-                cq_source.send(tlp.pack_us_cq(AXIS_PCIE_DATA_WIDTH))
+                cq_source.send(tlp.pack_us_cq())
 
                 yield delay(100)
 
@@ -439,12 +438,12 @@ def bench():
                 tlp.set_be(256*(16*offset+length)+offset, length)
                 tlp.address = 256*(16*offset+length)+offset
 
-                cq_source.send(tlp.pack_us_cq(AXIS_PCIE_DATA_WIDTH))
+                cq_source.send(tlp.pack_us_cq())
 
                 yield cc_sink.wait(500)
                 pkt = cc_sink.recv()
 
-                rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt, AXIS_PCIE_DATA_WIDTH)
+                rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt)
 
                 print(rx_tlp)
 
@@ -476,7 +475,7 @@ def bench():
         tlp.set_be_data(0x0000, bytearray(range(64)))
         tlp.address = 0x0000
 
-        cq_source.send(tlp.pack_us_cq(AXIS_PCIE_DATA_WIDTH))
+        cq_source.send(tlp.pack_us_cq())
 
         yield delay(100)
 
@@ -501,12 +500,12 @@ def bench():
         tlp.set_be(0x0000, 64)
         tlp.address = 0x0000
 
-        cq_source.send(tlp.pack_us_cq(AXIS_PCIE_DATA_WIDTH))
+        cq_source.send(tlp.pack_us_cq())
 
         yield cc_sink.wait(500)
         pkt = cc_sink.recv()
 
-        rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt, AXIS_PCIE_DATA_WIDTH)
+        rx_tlp = pcie_us.TLP_us().unpack_us_cc(pkt)
 
         print(rx_tlp)
 

@@ -279,8 +279,6 @@ reg [12:0] op_count_reg = 13'd0, op_count_next;
 reg [SEG_COUNT-1:0] ram_mask_reg = {SEG_COUNT{1'b0}}, ram_mask_next;
 reg [SEG_COUNT-1:0] ram_mask_0_reg = {SEG_COUNT{1'b0}}, ram_mask_0_next;
 reg [SEG_COUNT-1:0] ram_mask_1_reg = {SEG_COUNT{1'b0}}, ram_mask_1_next;
-reg [SEG_COUNT*SEG_BE_WIDTH-1:0] ram_be_mask_0_reg = {SEG_COUNT*SEG_BE_WIDTH{1'b0}}, ram_be_mask_0_next;
-reg [SEG_COUNT*SEG_BE_WIDTH-1:0] ram_be_mask_1_reg = {SEG_COUNT*SEG_BE_WIDTH{1'b0}}, ram_be_mask_1_next;
 reg ram_wrap_reg = 1'b0, ram_wrap_next;
 reg [OFFSET_WIDTH+1-1:0] cycle_byte_count_reg = {OFFSET_WIDTH+1{1'b0}}, cycle_byte_count_next;
 reg [RAM_OFFSET_WIDTH-1:0] start_offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, start_offset_next;
@@ -659,8 +657,6 @@ always @* begin
     ram_mask_next = ram_mask_reg;
     ram_mask_0_next = ram_mask_0_reg;
     ram_mask_1_next = ram_mask_1_reg;
-    ram_be_mask_0_next = ram_be_mask_0_reg;
-    ram_be_mask_1_next = ram_be_mask_1_reg;
     ram_wrap_next = ram_wrap_reg;
     cycle_byte_count_next = cycle_byte_count_reg;
     start_offset_next = start_offset_reg;
@@ -672,8 +668,19 @@ always @* begin
     offset_next = offset_reg;
 
     ram_wr_cmd_sel_int = {SEG_COUNT{ram_sel_reg}};
-    ram_wr_cmd_be_int = 0;
-    ram_wr_cmd_addr_int = {SEG_COUNT{addr_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH]}};
+    if (!ram_wrap_reg) begin
+        ram_wr_cmd_be_int = ({SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_reg) & ({SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_reg));
+    end else begin
+        ram_wr_cmd_be_int = ({SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_reg) | ({SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_reg));
+    end
+    for (i = 0; i < SEG_COUNT; i = i + 1) begin
+        if (ram_mask_0_reg[i]) begin
+            ram_wr_cmd_addr_int[i*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH];
+        end
+        if (ram_mask_1_reg[i]) begin
+            ram_wr_cmd_addr_int[i*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH]+1;
+        end
+    end
     ram_wr_cmd_data_int = {3{s_axis_rc_tdata}} >> (AXIS_PCIE_DATA_WIDTH - offset_reg*8);
     ram_wr_cmd_valid_int = {SEG_COUNT{1'b0}};
 
@@ -684,6 +691,7 @@ always @* begin
     op_table_finish_en = 1'b0;
     op_table_read_finish_ptr = op_tag_reg;
     op_table_read_finish_en = 1'b0;
+
 
     // TLP response handling and AXI operation generation
     case (tlp_state_reg)
@@ -766,14 +774,6 @@ always @* begin
                     end
 
                     ram_mask_next = ram_mask_0_next | ram_mask_1_next;
-
-                    ram_be_mask_0_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_next;
-                    ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_next);
-
-                    if (!ram_wrap_next) begin
-                        ram_be_mask_0_next = ram_be_mask_0_next & ram_be_mask_1_next;
-                        ram_be_mask_1_next = 0;
-                    end
 
                     addr_delay_next = addr_next;
                     addr_next = addr_next + cycle_byte_count_next;
@@ -911,14 +911,6 @@ always @* begin
 
                 ram_mask_next = ram_mask_0_next | ram_mask_1_next;
 
-                ram_be_mask_0_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_next;
-                ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_next);
-
-                if (!ram_wrap_next) begin
-                    ram_be_mask_0_next = ram_be_mask_0_next & ram_be_mask_1_next;
-                    ram_be_mask_1_next = 0;
-                end
-
                 addr_delay_next = addr_next;
                 addr_next = addr_next + cycle_byte_count_next;
                 op_count_next = op_count_next - cycle_byte_count_next;
@@ -976,18 +968,21 @@ always @* begin
 
             if (s_axis_rc_tready && s_axis_rc_tvalid) begin
                 ram_wr_cmd_sel_int = {SEG_COUNT{ram_sel_reg}};
-                ram_wr_cmd_be_int = ram_be_mask_0_reg | ram_be_mask_1_reg;
-                ram_wr_cmd_data_int = {3{s_axis_rc_tdata}} >> (AXIS_PCIE_DATA_WIDTH - offset_reg*8);
+                if (!ram_wrap_reg) begin
+                    ram_wr_cmd_be_int = ({SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_reg) & ({SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_reg));
+                end else begin
+                    ram_wr_cmd_be_int = ({SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_reg) | ({SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_reg));
+                end
                 for (i = 0; i < SEG_COUNT; i = i + 1) begin
                     if (ram_mask_0_reg[i]) begin
                         ram_wr_cmd_addr_int[i*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH];
-                        ram_wr_cmd_valid_int[i] = 1'b1;
                     end
                     if (ram_mask_1_reg[i]) begin
                         ram_wr_cmd_addr_int[i*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH]+1;
-                        ram_wr_cmd_valid_int[i] = 1'b1;
                     end
                 end
+                ram_wr_cmd_data_int = {3{s_axis_rc_tdata}} >> (AXIS_PCIE_DATA_WIDTH - offset_reg*8);
+                ram_wr_cmd_valid_int = ram_mask_reg;
 
                 if (op_count_next > AXIS_PCIE_DATA_WIDTH/8) begin
                     cycle_byte_count_next = AXIS_PCIE_DATA_WIDTH/8;
@@ -1008,14 +1003,6 @@ always @* begin
                 end
 
                 ram_mask_next = ram_mask_0_next | ram_mask_1_next;
-
-                ram_be_mask_0_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_next;
-                ram_be_mask_1_next = {SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_next);
-
-                if (!ram_wrap_next) begin
-                    ram_be_mask_0_next = ram_be_mask_0_next & ram_be_mask_1_next;
-                    ram_be_mask_1_next = 0;
-                end
 
                 addr_delay_next = addr_reg;
                 addr_next = addr_reg + cycle_byte_count_next;
@@ -1150,8 +1137,6 @@ always @(posedge clk) begin
     ram_mask_reg <= ram_mask_next;
     ram_mask_0_reg <= ram_mask_0_next;
     ram_mask_1_reg <= ram_mask_1_next;
-    ram_be_mask_0_reg <= ram_be_mask_0_next;
-    ram_be_mask_1_reg <= ram_be_mask_1_next;
     ram_wrap_reg <= ram_wrap_next;
     cycle_byte_count_reg <= cycle_byte_count_next;
     start_offset_reg <= start_offset_next;

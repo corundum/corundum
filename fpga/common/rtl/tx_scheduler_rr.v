@@ -46,8 +46,8 @@ module tx_scheduler_rr #
     parameter AXIL_ADDR_WIDTH = 16,
     // Width of AXI lite wstrb (width of data bus in words)
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
-    // AXI DMA length field width
-    parameter AXI_DMA_LEN_WIDTH = 16,
+    // DMA client length field width
+    parameter DMA_CLIENT_LEN_WIDTH = 16,
     // Transmit request tag field width
     parameter REQ_TAG_WIDTH = 8,
     // Number of outstanding operations
@@ -58,58 +58,58 @@ module tx_scheduler_rr #
     parameter PIPELINE = 2
 )
 (
-    input  wire                          clk,
-    input  wire                          rst,
+    input  wire                             clk,
+    input  wire                             rst,
 
     /*
      * Transmit request output (queue index)
      */
-    output wire [QUEUE_INDEX_WIDTH-1:0]  m_axis_tx_req_queue,
-    output wire [REQ_TAG_WIDTH-1:0]      m_axis_tx_req_tag,
-    output wire                          m_axis_tx_req_valid,
-    input  wire                          m_axis_tx_req_ready,
+    output wire [QUEUE_INDEX_WIDTH-1:0]     m_axis_tx_req_queue,
+    output wire [REQ_TAG_WIDTH-1:0]         m_axis_tx_req_tag,
+    output wire                             m_axis_tx_req_valid,
+    input  wire                             m_axis_tx_req_ready,
 
     /*
      * Transmit request status input
      */
-    input  wire [AXI_DMA_LEN_WIDTH-1:0]  s_axis_tx_req_status_len,
-    input  wire [REQ_TAG_WIDTH-1:0]      s_axis_tx_req_status_tag,
-    input  wire                          s_axis_tx_req_status_valid,
+    input  wire [DMA_CLIENT_LEN_WIDTH-1:0]  s_axis_tx_req_status_len,
+    input  wire [REQ_TAG_WIDTH-1:0]         s_axis_tx_req_status_tag,
+    input  wire                             s_axis_tx_req_status_valid,
 
     /*
      * Doorbell input
      */
-    input  wire [QUEUE_INDEX_WIDTH-1:0]  s_axis_doorbell_queue,
-    input  wire                          s_axis_doorbell_valid,
+    input  wire [QUEUE_INDEX_WIDTH-1:0]     s_axis_doorbell_queue,
+    input  wire                             s_axis_doorbell_valid,
 
     /*
      * AXI-Lite slave interface
      */
-    input  wire [AXIL_ADDR_WIDTH-1:0]    s_axil_awaddr,
-    input  wire [2:0]                    s_axil_awprot,
-    input  wire                          s_axil_awvalid,
-    output wire                          s_axil_awready,
-    input  wire [AXIL_DATA_WIDTH-1:0]    s_axil_wdata,
-    input  wire [AXIL_STRB_WIDTH-1:0]    s_axil_wstrb,
-    input  wire                          s_axil_wvalid,
-    output wire                          s_axil_wready,
-    output wire [1:0]                    s_axil_bresp,
-    output wire                          s_axil_bvalid,
-    input  wire                          s_axil_bready,
-    input  wire [AXIL_ADDR_WIDTH-1:0]    s_axil_araddr,
-    input  wire [2:0]                    s_axil_arprot,
-    input  wire                          s_axil_arvalid,
-    output wire                          s_axil_arready,
-    output wire [AXIL_DATA_WIDTH-1:0]    s_axil_rdata,
-    output wire [1:0]                    s_axil_rresp,
-    output wire                          s_axil_rvalid,
-    input  wire                          s_axil_rready,
+    input  wire [AXIL_ADDR_WIDTH-1:0]       s_axil_awaddr,
+    input  wire [2:0]                       s_axil_awprot,
+    input  wire                             s_axil_awvalid,
+    output wire                             s_axil_awready,
+    input  wire [AXIL_DATA_WIDTH-1:0]       s_axil_wdata,
+    input  wire [AXIL_STRB_WIDTH-1:0]       s_axil_wstrb,
+    input  wire                             s_axil_wvalid,
+    output wire                             s_axil_wready,
+    output wire [1:0]                       s_axil_bresp,
+    output wire                             s_axil_bvalid,
+    input  wire                             s_axil_bready,
+    input  wire [AXIL_ADDR_WIDTH-1:0]       s_axil_araddr,
+    input  wire [2:0]                       s_axil_arprot,
+    input  wire                             s_axil_arvalid,
+    output wire                             s_axil_arready,
+    output wire [AXIL_DATA_WIDTH-1:0]       s_axil_rdata,
+    output wire [1:0]                       s_axil_rresp,
+    output wire                             s_axil_rvalid,
+    input  wire                             s_axil_rready,
 
     /*
      * Control
      */
-    input  wire                          enable,
-    output wire                          active
+    input  wire                             enable,
+    output wire                             active
 );
 
 parameter QUEUE_COUNT = 2**QUEUE_INDEX_WIDTH;

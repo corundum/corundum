@@ -44,20 +44,24 @@ module cpl_write #
     parameter PORTS = 2,
     // Select field width
     parameter SELECT_WIDTH = $clog2(PORTS),
-    // Width of AXI data bus in bits
-    parameter AXI_DATA_WIDTH = 256,
-    // Width of AXI address bus in bits
-    parameter AXI_ADDR_WIDTH = 16,
-    // Width of AXI wstrb (width of data bus in words)
-    parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8),
-    // Width of AXI ID signal
-    parameter AXI_ID_WIDTH = 8,
-    // PCIe address width
-    parameter PCIE_ADDR_WIDTH = 64,
-    // PCIe DMA length field width
-    parameter PCIE_DMA_LEN_WIDTH = 20,
-    // PCIe DMA tag field width
-    parameter PCIE_DMA_TAG_WIDTH = 8,
+    // RAM segment count
+    parameter SEG_COUNT = 2,
+    // RAM segment data width
+    parameter SEG_DATA_WIDTH = 64,
+    // RAM segment address width
+    parameter SEG_ADDR_WIDTH = 8,
+    // RAM segment byte enable width
+    parameter SEG_BE_WIDTH = SEG_DATA_WIDTH/8,
+    // RAM address width
+    parameter RAM_ADDR_WIDTH = SEG_ADDR_WIDTH+$clog2(SEG_COUNT)+$clog2(SEG_BE_WIDTH),
+    // DMA RAM pipeline stages
+    parameter RAM_PIPELINE = 2,
+    // DMA address width
+    parameter DMA_ADDR_WIDTH = 64,
+    // DMA length field width
+    parameter DMA_LEN_WIDTH = 20,
+    // DMA tag field width
+    parameter DMA_TAG_WIDTH = 8,
     // Transmit request tag field width
     parameter REQ_TAG_WIDTH = 8,
     // Queue request tag field width
@@ -69,9 +73,7 @@ module cpl_write #
     // Completion size (in bytes)
     parameter CPL_SIZE = 32,
     // Descriptor table size (number of in-flight operations)
-    parameter DESC_TABLE_SIZE = 8,
-    // AXI base address of this module (as seen by PCIe DMA)
-    parameter AXI_BASE_ADDR = 16'h0000
+    parameter DESC_TABLE_SIZE = 8
 )
 (
     input  wire                                 clk,
@@ -106,7 +108,7 @@ module cpl_write #
     /*
      * Completion enqueue response input
      */
-    input  wire [PORTS*PCIE_ADDR_WIDTH-1:0]     s_axis_cpl_enqueue_resp_addr,
+    input  wire [PORTS*DMA_ADDR_WIDTH-1:0]      s_axis_cpl_enqueue_resp_addr,
     input  wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0] s_axis_cpl_enqueue_resp_tag,
     input  wire [PORTS*QUEUE_OP_TAG_WIDTH-1:0]  s_axis_cpl_enqueue_resp_op_tag,
     input  wire [PORTS-1:0]                     s_axis_cpl_enqueue_resp_full,
@@ -122,50 +124,36 @@ module cpl_write #
     input  wire [PORTS-1:0]                     m_axis_cpl_enqueue_commit_ready,
 
     /*
-     * PCIe AXI DMA write descriptor output
+     * DMA write descriptor output
      */
-    output wire [PCIE_ADDR_WIDTH-1:0]           m_axis_pcie_axi_dma_write_desc_pcie_addr,
-    output wire [AXI_ADDR_WIDTH-1:0]            m_axis_pcie_axi_dma_write_desc_axi_addr,
-    output wire [PCIE_DMA_LEN_WIDTH-1:0]        m_axis_pcie_axi_dma_write_desc_len,
-    output wire [PCIE_DMA_TAG_WIDTH-1:0]        m_axis_pcie_axi_dma_write_desc_tag,
-    output wire                                 m_axis_pcie_axi_dma_write_desc_valid,
-    input  wire                                 m_axis_pcie_axi_dma_write_desc_ready,
+    output wire [DMA_ADDR_WIDTH-1:0]            m_axis_dma_write_desc_dma_addr,
+    output wire [RAM_ADDR_WIDTH-1:0]            m_axis_dma_write_desc_ram_addr,
+    output wire [DMA_LEN_WIDTH-1:0]             m_axis_dma_write_desc_len,
+    output wire [DMA_TAG_WIDTH-1:0]             m_axis_dma_write_desc_tag,
+    output wire                                 m_axis_dma_write_desc_valid,
+    input  wire                                 m_axis_dma_write_desc_ready,
 
     /*
-     * PCIe AXI DMA write descriptor status input
+     * DMA write descriptor status input
      */
-    input  wire [PCIE_DMA_TAG_WIDTH-1:0]        s_axis_pcie_axi_dma_write_desc_status_tag,
-    input  wire                                 s_axis_pcie_axi_dma_write_desc_status_valid,
+    input  wire [DMA_TAG_WIDTH-1:0]             s_axis_dma_write_desc_status_tag,
+    input  wire                                 s_axis_dma_write_desc_status_valid,
 
     /*
-     * AXI slave interface (read)
+     * RAM interface
      */
-    input  wire [AXI_ID_WIDTH-1:0]              s_axi_arid,
-    input  wire [AXI_ADDR_WIDTH-1:0]            s_axi_araddr,
-    input  wire [7:0]                           s_axi_arlen,
-    input  wire [2:0]                           s_axi_arsize,
-    input  wire [1:0]                           s_axi_arburst,
-    input  wire                                 s_axi_arlock,
-    input  wire [3:0]                           s_axi_arcache,
-    input  wire [2:0]                           s_axi_arprot,
-    input  wire                                 s_axi_arvalid,
-    output wire                                 s_axi_arready,
-    output wire [AXI_ID_WIDTH-1:0]              s_axi_rid,
-    output wire [AXI_DATA_WIDTH-1:0]            s_axi_rdata,
-    output wire [1:0]                           s_axi_rresp,
-    output wire                                 s_axi_rlast,
-    output wire                                 s_axi_rvalid,
-    input  wire                                 s_axi_rready,
+    input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]  dma_ram_rd_cmd_addr,
+    input  wire [SEG_COUNT-1:0]                 dma_ram_rd_cmd_valid,
+    output wire [SEG_COUNT-1:0]                 dma_ram_rd_cmd_ready,
+    output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]  dma_ram_rd_resp_data,
+    output wire [SEG_COUNT-1:0]                 dma_ram_rd_resp_valid,
+    input  wire [SEG_COUNT-1:0]                 dma_ram_rd_resp_ready,
 
     /*
      * Configuration
      */
     input  wire                                 enable
 );
-
-parameter AXI_WORD_WIDTH = AXI_STRB_WIDTH;
-parameter AXI_WORD_SIZE = AXI_DATA_WIDTH/AXI_WORD_WIDTH;
-parameter AXI_BURST_SIZE = $clog2(AXI_STRB_WIDTH);
 
 parameter CL_DESC_TABLE_SIZE = $clog2(DESC_TABLE_SIZE);
 parameter DESC_PTR_MASK = {CL_DESC_TABLE_SIZE{1'b1}};
@@ -174,28 +162,13 @@ parameter CL_PORTS = $clog2(PORTS);
 
 // bus width assertions
 initial begin
-    if (PCIE_DMA_TAG_WIDTH < CL_DESC_TABLE_SIZE+1) begin
-        $error("Error: PCIe tag width insufficient for descriptor table size (instance %m)");
+    if (DMA_TAG_WIDTH < CL_DESC_TABLE_SIZE+1) begin
+        $error("Error: DMA tag width insufficient for descriptor table size (instance %m)");
         $finish;
     end
 
     if (QUEUE_REQ_TAG_WIDTH < CL_DESC_TABLE_SIZE) begin
         $error("Error: Queue request tag width insufficient for descriptor table size (instance %m)");
-        $finish;
-    end
-
-    if (AXI_STRB_WIDTH * 8 != AXI_DATA_WIDTH) begin
-        $error("Error: AXI interface requires byte (8-bit) granularity (instance %m)");
-        $finish;
-    end
-
-    if (AXI_STRB_WIDTH < CPL_SIZE) begin
-        $error("Error: AXI interface width must be at least as large as one descriptor (instance %m)");
-        $finish;
-    end
-
-    if (AXI_BASE_ADDR[$clog2(AXI_STRB_WIDTH)-1:0]) begin
-        $error("Error: AXI base address must be aligned to interface width (instance %m)");
         $finish;
     end
 end
@@ -216,11 +189,11 @@ reg [PORTS-1:0] s_axis_cpl_enqueue_resp_ready_reg = {PORTS{1'b0}}, s_axis_cpl_en
 reg [QUEUE_OP_TAG_WIDTH-1:0] m_axis_cpl_enqueue_commit_op_tag_reg = {QUEUE_OP_TAG_WIDTH{1'b0}}, m_axis_cpl_enqueue_commit_op_tag_next;
 reg [PORTS-1:0] m_axis_cpl_enqueue_commit_valid_reg = {PORTS{1'b0}}, m_axis_cpl_enqueue_commit_valid_next;
 
-reg [PCIE_ADDR_WIDTH-1:0] m_axis_pcie_axi_dma_write_desc_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, m_axis_pcie_axi_dma_write_desc_pcie_addr_next;
-reg [AXI_ADDR_WIDTH-1:0] m_axis_pcie_axi_dma_write_desc_axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, m_axis_pcie_axi_dma_write_desc_axi_addr_next;
-reg [PCIE_DMA_LEN_WIDTH-1:0] m_axis_pcie_axi_dma_write_desc_len_reg = {PCIE_DMA_LEN_WIDTH{1'b0}}, m_axis_pcie_axi_dma_write_desc_len_next;
-reg [PCIE_DMA_TAG_WIDTH-1:0] m_axis_pcie_axi_dma_write_desc_tag_reg = {PCIE_DMA_TAG_WIDTH{1'b0}}, m_axis_pcie_axi_dma_write_desc_tag_next;
-reg m_axis_pcie_axi_dma_write_desc_valid_reg = 1'b0, m_axis_pcie_axi_dma_write_desc_valid_next;
+reg [DMA_ADDR_WIDTH-1:0] m_axis_dma_write_desc_dma_addr_reg = {DMA_ADDR_WIDTH{1'b0}}, m_axis_dma_write_desc_dma_addr_next;
+reg [RAM_ADDR_WIDTH-1:0] m_axis_dma_write_desc_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, m_axis_dma_write_desc_ram_addr_next;
+reg [DMA_LEN_WIDTH-1:0] m_axis_dma_write_desc_len_reg = {DMA_LEN_WIDTH{1'b0}}, m_axis_dma_write_desc_len_next;
+reg [DMA_TAG_WIDTH-1:0] m_axis_dma_write_desc_tag_reg = {DMA_TAG_WIDTH{1'b0}}, m_axis_dma_write_desc_tag_next;
+reg m_axis_dma_write_desc_valid_reg = 1'b0, m_axis_dma_write_desc_valid_next;
 
 reg [DESC_TABLE_SIZE-1:0] desc_table_active = 0;
 reg [DESC_TABLE_SIZE-1:0] desc_table_invalid = 0;
@@ -228,12 +201,10 @@ reg [DESC_TABLE_SIZE-1:0] desc_table_cpl_write_done = 0;
 reg [CL_PORTS-1:0] desc_table_sel[DESC_TABLE_SIZE-1:0];
 reg [REQ_TAG_WIDTH-1:0] desc_table_tag[DESC_TABLE_SIZE-1:0];
 reg [QUEUE_OP_TAG_WIDTH-1:0] desc_table_queue_op_tag[DESC_TABLE_SIZE-1:0];
-reg [CPL_SIZE*8-1:0] desc_table_data[DESC_TABLE_SIZE-1:0];
 
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_start_ptr_reg = 0;
 reg [CL_PORTS-1:0] desc_table_start_sel;
 reg [REQ_TAG_WIDTH-1:0] desc_table_start_tag;
-reg [CPL_SIZE*8-1:0] desc_table_start_data;
 reg [QUEUE_INDEX_WIDTH-1:0] desc_table_start_cpl_queue;
 reg [QUEUE_OP_TAG_WIDTH-1:0] desc_table_start_queue_op_tag;
 reg desc_table_start_en;
@@ -245,6 +216,20 @@ reg [CL_DESC_TABLE_SIZE-1:0] desc_table_cpl_write_done_ptr;
 reg desc_table_cpl_write_done_en;
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_finish_ptr_reg = 0;
 reg desc_table_finish_en;
+
+reg [RAM_ADDR_WIDTH-1:0] dma_write_desc_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, dma_write_desc_ram_addr_next;
+reg [7:0] dma_write_desc_len_reg = 8'd0, dma_write_desc_len_next;
+reg [CL_DESC_TABLE_SIZE-1:0] dma_write_desc_tag_reg = {CL_DESC_TABLE_SIZE{1'b0}}, dma_write_desc_tag_next;
+reg dma_write_desc_user_reg = 1'b0, dma_write_desc_user_next;
+reg dma_write_desc_valid_reg = 1'b0, dma_write_desc_valid_next;
+wire dma_write_desc_ready;
+
+wire [CL_DESC_TABLE_SIZE-1:0] dma_write_desc_status_tag;
+wire dma_write_desc_status_valid;
+
+reg [CPL_SIZE*8-1:0] cpl_data_reg = 0, cpl_data_next;
+reg cpl_data_valid_reg = 1'b0, cpl_data_valid_next;
+wire cpl_data_ready;
 
 assign s_axis_req_ready = s_axis_req_ready_reg;
 
@@ -262,11 +247,11 @@ assign s_axis_cpl_enqueue_resp_ready = s_axis_cpl_enqueue_resp_ready_reg;
 assign m_axis_cpl_enqueue_commit_op_tag = {PORTS{m_axis_cpl_enqueue_commit_op_tag_reg}};
 assign m_axis_cpl_enqueue_commit_valid = m_axis_cpl_enqueue_commit_valid_reg;
 
-assign m_axis_pcie_axi_dma_write_desc_pcie_addr = m_axis_pcie_axi_dma_write_desc_pcie_addr_reg;
-assign m_axis_pcie_axi_dma_write_desc_axi_addr = m_axis_pcie_axi_dma_write_desc_axi_addr_reg;
-assign m_axis_pcie_axi_dma_write_desc_len = m_axis_pcie_axi_dma_write_desc_len_reg;
-assign m_axis_pcie_axi_dma_write_desc_tag = m_axis_pcie_axi_dma_write_desc_tag_reg;
-assign m_axis_pcie_axi_dma_write_desc_valid = m_axis_pcie_axi_dma_write_desc_valid_reg;
+assign m_axis_dma_write_desc_dma_addr = m_axis_dma_write_desc_dma_addr_reg;
+assign m_axis_dma_write_desc_ram_addr = m_axis_dma_write_desc_ram_addr_reg;
+assign m_axis_dma_write_desc_len = m_axis_dma_write_desc_len_reg;
+assign m_axis_dma_write_desc_tag = m_axis_dma_write_desc_tag_reg;
+assign m_axis_dma_write_desc_valid = m_axis_dma_write_desc_valid_reg;
 
 wire [CL_PORTS-1:0] enqueue_resp_enc;
 wire enqueue_resp_enc_valid;
@@ -282,88 +267,112 @@ op_table_start_enc_inst (
     .output_unencoded()
 );
 
-wire [AXI_ID_WIDTH-1:0]   ram_rd_cmd_id;
-wire [AXI_ADDR_WIDTH-1:0] ram_rd_cmd_addr;
-wire                      ram_rd_cmd_en;
-wire                      ram_rd_cmd_last;
-reg                       ram_rd_cmd_ready_reg = 1'b0;
-reg  [AXI_ID_WIDTH-1:0]   ram_rd_resp_id_reg = {AXI_ID_WIDTH{1'b0}};
-reg  [AXI_DATA_WIDTH-1:0] ram_rd_resp_data_reg = {AXI_DATA_WIDTH{1'b0}};
-reg                       ram_rd_resp_last_reg = 1'b0;
-reg                       ram_rd_resp_valid_reg = 1'b0;
-wire                      ram_rd_resp_ready;
+wire [SEG_COUNT*SEG_BE_WIDTH-1:0]    dma_ram_wr_cmd_be_int;
+wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]  dma_ram_wr_cmd_addr_int;
+wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]  dma_ram_wr_cmd_data_int;
+wire [SEG_COUNT-1:0]                 dma_ram_wr_cmd_valid_int;
+wire [SEG_COUNT-1:0]                 dma_ram_wr_cmd_ready_int;
 
-axi_ram_rd_if #(
-    .DATA_WIDTH(AXI_DATA_WIDTH),
-    .ADDR_WIDTH(AXI_ADDR_WIDTH),
-    .STRB_WIDTH(AXI_STRB_WIDTH),
-    .ID_WIDTH(AXI_ID_WIDTH),
-    .ARUSER_ENABLE(0),
-    .RUSER_ENABLE(0),
-    .PIPELINE_OUTPUT(0)
+dma_psdpram #(
+    .SIZE(DESC_TABLE_SIZE*SEG_COUNT*SEG_BE_WIDTH),
+    .SEG_COUNT(SEG_COUNT),
+    .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
+    .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
+    .SEG_BE_WIDTH(SEG_BE_WIDTH),
+    .PIPELINE(RAM_PIPELINE)
 )
-axi_ram_rd_if_inst (
-    .clk(clk),
-    .rst(rst),
-    .s_axi_arid(s_axi_arid),
-    .s_axi_araddr(s_axi_araddr),
-    .s_axi_arlen(s_axi_arlen),
-    .s_axi_arsize(s_axi_arsize),
-    .s_axi_arburst(s_axi_arburst),
-    .s_axi_arlock(s_axi_arlock),
-    .s_axi_arcache(s_axi_arcache),
-    .s_axi_arprot(s_axi_arprot),
-    .s_axi_arqos(0),
-    .s_axi_arregion(0),
-    .s_axi_aruser(0),
-    .s_axi_arvalid(s_axi_arvalid),
-    .s_axi_arready(s_axi_arready),
-    .s_axi_rid(s_axi_rid),
-    .s_axi_rdata(s_axi_rdata),
-    .s_axi_rresp(s_axi_rresp),
-    .s_axi_rlast(s_axi_rlast),
-    .s_axi_ruser(),
-    .s_axi_rvalid(s_axi_rvalid),
-    .s_axi_rready(s_axi_rready),
-    .ram_rd_cmd_id(ram_rd_cmd_id),
-    .ram_rd_cmd_addr(ram_rd_cmd_addr),
-    .ram_rd_cmd_lock(),
-    .ram_rd_cmd_cache(),
-    .ram_rd_cmd_prot(),
-    .ram_rd_cmd_qos(),
-    .ram_rd_cmd_region(),
-    .ram_rd_cmd_auser(),
-    .ram_rd_cmd_en(ram_rd_cmd_en),
-    .ram_rd_cmd_last(ram_rd_cmd_last),
-    .ram_rd_cmd_ready(ram_rd_cmd_ready_reg),
-    .ram_rd_resp_id(ram_rd_resp_id_reg),
-    .ram_rd_resp_data(ram_rd_resp_data_reg),
-    .ram_rd_resp_last(ram_rd_resp_last_reg),
-    .ram_rd_resp_user(0),
-    .ram_rd_resp_valid(ram_rd_resp_valid_reg),
-    .ram_rd_resp_ready(ram_rd_resp_ready)
+dma_psdpram_inst (
+    /*
+     * Write port
+     */
+    .clk_wr(clk),
+    .rst_wr(rst),
+    .wr_cmd_be(dma_ram_wr_cmd_be_int),
+    .wr_cmd_addr(dma_ram_wr_cmd_addr_int),
+    .wr_cmd_data(dma_ram_wr_cmd_data_int),
+    .wr_cmd_valid(dma_ram_wr_cmd_valid_int),
+    .wr_cmd_ready(dma_ram_wr_cmd_ready_int),
+
+    /*
+     * Read port
+     */
+    .clk_rd(clk),
+    .rst_rd(rst),
+    .rd_cmd_addr(dma_ram_rd_cmd_addr),
+    .rd_cmd_valid(dma_ram_rd_cmd_valid),
+    .rd_cmd_ready(dma_ram_rd_cmd_ready),
+    .rd_resp_data(dma_ram_rd_resp_data),
+    .rd_resp_valid(dma_ram_rd_resp_valid),
+    .rd_resp_ready(dma_ram_rd_resp_ready)
 );
 
-always @(posedge clk) begin
-    ram_rd_resp_valid_reg <= ram_rd_resp_valid_reg && !ram_rd_resp_ready;
-    ram_rd_cmd_ready_reg <= !ram_rd_resp_valid_reg || ram_rd_resp_ready;
+dma_client_axis_sink #(
+    .SEG_COUNT(SEG_COUNT),
+    .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
+    .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
+    .SEG_BE_WIDTH(SEG_BE_WIDTH),
+    .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+    .AXIS_DATA_WIDTH(CPL_SIZE*8),
+    .AXIS_KEEP_ENABLE(CPL_SIZE > 1),
+    .AXIS_KEEP_WIDTH(CPL_SIZE),
+    .AXIS_LAST_ENABLE(1),
+    .AXIS_ID_ENABLE(0),
+    .AXIS_DEST_ENABLE(0),
+    .AXIS_USER_ENABLE(1),
+    .AXIS_USER_WIDTH(1),
+    .LEN_WIDTH(8),
+    .TAG_WIDTH(CL_DESC_TABLE_SIZE)
+)
+dma_client_axis_sink_inst (
+    .clk(clk),
+    .rst(rst),
 
-    if (ram_rd_cmd_en && ram_rd_cmd_ready_reg) begin
-        // AXI read
-        ram_rd_resp_id_reg <= ram_rd_cmd_id;
-        ram_rd_resp_data_reg <= 0;
-        ram_rd_resp_last_reg <= ram_rd_cmd_last;
-        ram_rd_resp_valid_reg <= 1'b1;
-        ram_rd_cmd_ready_reg <= ram_rd_resp_ready;
+    /*
+     * DMA write descriptor input
+     */
+    .s_axis_write_desc_ram_addr(dma_write_desc_ram_addr_reg),
+    .s_axis_write_desc_len(dma_write_desc_len_reg),
+    .s_axis_write_desc_tag(dma_write_desc_tag_reg),
+    .s_axis_write_desc_valid(dma_write_desc_valid_reg),
+    .s_axis_write_desc_ready(dma_write_desc_ready),
 
-        ram_rd_resp_data_reg <= desc_table_data[ram_rd_cmd_addr[CL_DESC_TABLE_SIZE+5-1:5]];
-    end
+    /*
+     * DMA write descriptor status output
+     */
+    .m_axis_write_desc_status_len(),
+    .m_axis_write_desc_status_tag(dma_write_desc_status_tag),
+    .m_axis_write_desc_status_id(),
+    .m_axis_write_desc_status_dest(),
+    .m_axis_write_desc_status_user(),
+    .m_axis_write_desc_status_valid(dma_write_desc_status_valid),
 
-    if (rst) begin
-        ram_rd_cmd_ready_reg <= 1'b1;
-        ram_rd_resp_valid_reg <= 1'b0;
-    end
-end
+    /*
+     * AXI stream write data input
+     */
+    .s_axis_write_data_tdata(cpl_data_reg),
+    .s_axis_write_data_tkeep({CPL_SIZE{1'b1}}),
+    .s_axis_write_data_tvalid(cpl_data_valid_reg),
+    .s_axis_write_data_tready(cpl_data_ready),
+    .s_axis_write_data_tlast(1'b1),
+    .s_axis_write_data_tid(0),
+    .s_axis_write_data_tdest(0),
+    .s_axis_write_data_tuser(1'b0),
+
+    /*
+     * RAM interface
+     */
+    .ram_wr_cmd_be(dma_ram_wr_cmd_be_int),
+    .ram_wr_cmd_addr(dma_ram_wr_cmd_addr_int),
+    .ram_wr_cmd_data(dma_ram_wr_cmd_data_int),
+    .ram_wr_cmd_valid(dma_ram_wr_cmd_valid_int),
+    .ram_wr_cmd_ready(dma_ram_wr_cmd_ready_int),
+
+    /*
+     * Configuration
+     */
+    .enable(1'b1),
+    .abort(1'b0)
+);
 
 always @* begin
     s_axis_req_ready_next = 1'b0;
@@ -382,45 +391,68 @@ always @* begin
     m_axis_cpl_enqueue_commit_op_tag_next = m_axis_cpl_enqueue_commit_op_tag_reg;
     m_axis_cpl_enqueue_commit_valid_next = m_axis_cpl_enqueue_commit_valid_reg & ~m_axis_cpl_enqueue_commit_ready;
 
-    m_axis_pcie_axi_dma_write_desc_pcie_addr_next = m_axis_pcie_axi_dma_write_desc_pcie_addr_reg;
-    m_axis_pcie_axi_dma_write_desc_axi_addr_next = m_axis_pcie_axi_dma_write_desc_axi_addr_reg;
-    m_axis_pcie_axi_dma_write_desc_len_next = m_axis_pcie_axi_dma_write_desc_len_reg;
-    m_axis_pcie_axi_dma_write_desc_tag_next = m_axis_pcie_axi_dma_write_desc_tag_reg;
-    m_axis_pcie_axi_dma_write_desc_valid_next = m_axis_pcie_axi_dma_write_desc_valid_reg && !m_axis_pcie_axi_dma_write_desc_ready;
+    m_axis_dma_write_desc_dma_addr_next = m_axis_dma_write_desc_dma_addr_reg;
+    m_axis_dma_write_desc_ram_addr_next = m_axis_dma_write_desc_ram_addr_reg;
+    m_axis_dma_write_desc_len_next = m_axis_dma_write_desc_len_reg;
+    m_axis_dma_write_desc_tag_next = m_axis_dma_write_desc_tag_reg;
+    m_axis_dma_write_desc_valid_next = m_axis_dma_write_desc_valid_reg && !m_axis_dma_write_desc_ready;
+
+    dma_write_desc_ram_addr_next = dma_write_desc_ram_addr_reg;
+    dma_write_desc_len_next = dma_write_desc_len_reg;
+    dma_write_desc_tag_next = dma_write_desc_tag_reg;
+    dma_write_desc_user_next = dma_write_desc_user_reg;
+    dma_write_desc_valid_next = dma_write_desc_valid_reg && !dma_write_desc_ready;
+
+    cpl_data_next = cpl_data_reg;
+    cpl_data_valid_next = cpl_data_valid_reg && !cpl_data_ready;
 
     desc_table_start_sel = s_axis_req_sel;
     desc_table_start_tag = s_axis_req_tag;
-    desc_table_start_data = s_axis_req_data;
     desc_table_start_en = 1'b0;
     desc_table_enqueue_ptr = s_axis_cpl_enqueue_resp_tag[enqueue_resp_enc*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH] & DESC_PTR_MASK;
     desc_table_enqueue_queue_op_tag = s_axis_cpl_enqueue_resp_op_tag[enqueue_resp_enc*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH];
     desc_table_enqueue_invalid = 1'b0;
     desc_table_enqueue_en = 1'b0;
-    desc_table_cpl_write_done_ptr = s_axis_pcie_axi_dma_write_desc_status_tag & DESC_PTR_MASK;
+    desc_table_cpl_write_done_ptr = s_axis_dma_write_desc_status_tag & DESC_PTR_MASK;
     desc_table_cpl_write_done_en = 1'b0;
     desc_table_finish_en = 1'b0;
 
     // queue query
     // wait for descriptor request
-    s_axis_req_ready_next = enable && !desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] && ($unsigned(desc_table_start_ptr_reg - desc_table_finish_ptr_reg) < DESC_TABLE_SIZE) && (!m_axis_cpl_enqueue_req_valid || (m_axis_cpl_enqueue_req_valid & m_axis_cpl_enqueue_req_ready));
+    s_axis_req_ready_next = enable && !desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] && ($unsigned(desc_table_start_ptr_reg - desc_table_finish_ptr_reg) < DESC_TABLE_SIZE) && (!m_axis_cpl_enqueue_req_valid || (m_axis_cpl_enqueue_req_valid & m_axis_cpl_enqueue_req_ready)) && (!dma_write_desc_valid_reg) && (!cpl_data_valid_reg);
     if (s_axis_req_ready && s_axis_req_valid) begin
         s_axis_req_ready_next = 1'b0;
 
         // store in descriptor table
         desc_table_start_sel = s_axis_req_sel;
         desc_table_start_tag = s_axis_req_tag;
-        desc_table_start_data = s_axis_req_data;
         desc_table_start_en = 1'b1;
 
         // initiate queue query
         m_axis_cpl_enqueue_req_queue_next = s_axis_req_queue;
         m_axis_cpl_enqueue_req_tag_next = desc_table_start_ptr_reg & DESC_PTR_MASK;
         m_axis_cpl_enqueue_req_valid_next = 1 << s_axis_req_sel;
+
+        // initiate completion write to DMA RAM
+        cpl_data_next = s_axis_req_data;
+        cpl_data_valid_next = 1'b1;
+
+        dma_write_desc_ram_addr_next = (desc_table_start_ptr_reg & DESC_PTR_MASK) << 5;
+        dma_write_desc_len_next = CPL_SIZE;
+        dma_write_desc_tag_next = (desc_table_start_ptr_reg & DESC_PTR_MASK);
+        dma_write_desc_valid_next = 1'b1;
+    end
+
+    // finish completion write to DMA RAM
+    if (dma_write_desc_status_valid) begin
+        // update entry in descriptor table
+        // desc_table_cpl_write_done_ptr = s_axis_dma_write_desc_status_tag & DESC_PTR_MASK;
+        // desc_table_cpl_write_done_en = 1'b1;
     end
 
     // start completion write
     // wait for queue query response
-    if (enqueue_resp_enc_valid && !m_axis_pcie_axi_dma_write_desc_valid_reg) begin
+    if (enqueue_resp_enc_valid && !m_axis_dma_write_desc_valid_reg) begin
         s_axis_cpl_enqueue_resp_ready_next = 1 << enqueue_resp_enc;
 
         // update entry in descriptor table
@@ -436,10 +468,10 @@ always @* begin
         m_axis_req_status_valid_next = 1'b1;
 
         // initiate completion write
-        m_axis_pcie_axi_dma_write_desc_pcie_addr_next = s_axis_cpl_enqueue_resp_addr[enqueue_resp_enc*PCIE_ADDR_WIDTH +: PCIE_ADDR_WIDTH];
-        m_axis_pcie_axi_dma_write_desc_axi_addr_next = AXI_BASE_ADDR + ((s_axis_cpl_enqueue_resp_tag[enqueue_resp_enc*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH] & DESC_PTR_MASK) << 5);
-        m_axis_pcie_axi_dma_write_desc_len_next = CPL_SIZE;
-        m_axis_pcie_axi_dma_write_desc_tag_next = (s_axis_cpl_enqueue_resp_tag[enqueue_resp_enc*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH] & DESC_PTR_MASK);
+        m_axis_dma_write_desc_dma_addr_next = s_axis_cpl_enqueue_resp_addr[enqueue_resp_enc*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH];
+        m_axis_dma_write_desc_ram_addr_next = (s_axis_cpl_enqueue_resp_tag[enqueue_resp_enc*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH] & DESC_PTR_MASK) << 5;
+        m_axis_dma_write_desc_len_next = CPL_SIZE;
+        m_axis_dma_write_desc_tag_next = (s_axis_cpl_enqueue_resp_tag[enqueue_resp_enc*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH] & DESC_PTR_MASK);
 
         if (s_axis_cpl_enqueue_resp_error[enqueue_resp_enc*1 +: 1] || s_axis_cpl_enqueue_resp_full[enqueue_resp_enc*1 +: 1]) begin
             // queue empty or not active
@@ -450,14 +482,14 @@ always @* begin
             // descriptor available to enqueue
 
             // initiate completion write
-            m_axis_pcie_axi_dma_write_desc_valid_next = 1'b1;
+            m_axis_dma_write_desc_valid_next = 1'b1;
         end
     end
 
     // finish completion write
-    if (s_axis_pcie_axi_dma_write_desc_status_valid) begin
+    if (s_axis_dma_write_desc_status_valid) begin
         // update entry in descriptor table
-        desc_table_cpl_write_done_ptr = s_axis_pcie_axi_dma_write_desc_status_tag & DESC_PTR_MASK;
+        desc_table_cpl_write_done_ptr = s_axis_dma_write_desc_status_tag & DESC_PTR_MASK;
         desc_table_cpl_write_done_en = 1'b1;
     end
 
@@ -495,11 +527,20 @@ always @(posedge clk) begin
     m_axis_cpl_enqueue_commit_op_tag_reg <= m_axis_cpl_enqueue_commit_op_tag_next;
     m_axis_cpl_enqueue_commit_valid_reg <= m_axis_cpl_enqueue_commit_valid_next;
 
-    m_axis_pcie_axi_dma_write_desc_pcie_addr_reg <= m_axis_pcie_axi_dma_write_desc_pcie_addr_next;
-    m_axis_pcie_axi_dma_write_desc_axi_addr_reg <= m_axis_pcie_axi_dma_write_desc_axi_addr_next;
-    m_axis_pcie_axi_dma_write_desc_len_reg <= m_axis_pcie_axi_dma_write_desc_len_next;
-    m_axis_pcie_axi_dma_write_desc_tag_reg <= m_axis_pcie_axi_dma_write_desc_tag_next;
-    m_axis_pcie_axi_dma_write_desc_valid_reg <= m_axis_pcie_axi_dma_write_desc_valid_next;
+    m_axis_dma_write_desc_dma_addr_reg <= m_axis_dma_write_desc_dma_addr_next;
+    m_axis_dma_write_desc_ram_addr_reg <= m_axis_dma_write_desc_ram_addr_next;
+    m_axis_dma_write_desc_len_reg <= m_axis_dma_write_desc_len_next;
+    m_axis_dma_write_desc_tag_reg <= m_axis_dma_write_desc_tag_next;
+    m_axis_dma_write_desc_valid_reg <= m_axis_dma_write_desc_valid_next;
+
+    dma_write_desc_ram_addr_reg <= dma_write_desc_ram_addr_next;
+    dma_write_desc_len_reg <= dma_write_desc_len_next;
+    dma_write_desc_tag_reg <= dma_write_desc_tag_next;
+    dma_write_desc_user_reg <= dma_write_desc_user_next;
+    dma_write_desc_valid_reg <= dma_write_desc_valid_next;
+
+    cpl_data_reg <= cpl_data_next;
+    cpl_data_valid_reg <= cpl_data_valid_next;
 
     if (desc_table_start_en) begin
         desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b1;
@@ -507,7 +548,6 @@ always @(posedge clk) begin
         desc_table_cpl_write_done[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
         desc_table_sel[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_sel;
         desc_table_tag[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_tag;
-        desc_table_data[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_data;
         desc_table_start_ptr_reg <= desc_table_start_ptr_reg + 1;
     end
 
@@ -531,7 +571,10 @@ always @(posedge clk) begin
         m_axis_cpl_enqueue_req_valid_reg <= 1'b0;
         s_axis_cpl_enqueue_resp_ready_reg <= 1'b0;
         m_axis_cpl_enqueue_commit_valid_reg <= 1'b0;
-        m_axis_pcie_axi_dma_write_desc_valid_reg <= 1'b0;
+        m_axis_dma_write_desc_valid_reg <= 1'b0;
+
+        dma_write_desc_valid_reg <= 1'b0;
+        cpl_data_valid_reg <= 1'b0;
 
         desc_table_active <= 0;
         desc_table_invalid <= 0;

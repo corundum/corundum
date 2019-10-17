@@ -149,11 +149,11 @@ set_property -dict {LOC H7  } [get_ports qsfp2_tx4_p] ;# MGTYTXN2_232 GTYE3_CHAN
 #set_property -dict {LOC H6  } [get_ports qsfp2_tx4_n] ;# MGTYTXP2_232 GTYE3_CHANNEL_X1Y55 / GTYE3_COMMON_X1Y13
 set_property -dict {LOC M2  } [get_ports qsfp2_rx4_p] ;# MGTYTXN3_232 GTYE3_CHANNEL_X1Y55 / GTYE3_COMMON_X1Y13
 #set_property -dict {LOC M1  } [get_ports qsfp2_rx4_n] ;# MGTYTXP3_232 GTYE3_CHANNEL_X1Y55 / GTYE3_COMMON_X1Y13
-set_property -dict {LOC R9  } [get_ports qsfp2_mgt_refclk_0_p] ;# MGTREFCLK0P_232 from U104.13
+#set_property -dict {LOC R9  } [get_ports qsfp2_mgt_refclk_0_p] ;# MGTREFCLK0P_232 from U104.13
 #set_property -dict {LOC R8  } [get_ports qsfp2_mgt_refclk_0_n] ;# MGTREFCLK0N_232 from U104.14
-set_property -dict {LOC N9  } [get_ports qsfp2_mgt_refclk_1_p] ;# MGTREFCLK1P_232 from U57.35
+#set_property -dict {LOC N9  } [get_ports qsfp2_mgt_refclk_1_p] ;# MGTREFCLK1P_232 from U57.35
 #set_property -dict {LOC N8  } [get_ports qsfp2_mgt_refclk_1_n] ;# MGTREFCLK1N_232 from U57.34
-set_property -dict {LOC AP23 IOSTANDARD LVDS} [get_ports qsfp2_recclk_p] ;# to U57.12
+#set_property -dict {LOC AP23 IOSTANDARD LVDS} [get_ports qsfp2_recclk_p] ;# to U57.12
 #set_property -dict {LOC AP22 IOSTANDARD LVDS} [get_ports qsfp2_recclk_n] ;# to U57.13
 set_property -dict {LOC AN23 IOSTANDARD LVCMOS18} [get_ports qsfp2_modsell]
 set_property -dict {LOC AY22 IOSTANDARD LVCMOS18} [get_ports qsfp2_resetl]
@@ -162,7 +162,7 @@ set_property -dict {LOC AT21 IOSTANDARD LVCMOS18} [get_ports qsfp2_intl]
 set_property -dict {LOC AT24 IOSTANDARD LVCMOS18} [get_ports qsfp2_lpmode]
 
 # 156.25 MHz MGT reference clock
-create_clock -period 6.400 -name qsfp2_mgt_refclk_0 [get_ports qsfp2_mgt_refclk_0_p]
+#create_clock -period 6.400 -name qsfp2_mgt_refclk_0 [get_ports qsfp2_mgt_refclk_0_p]
 
 # I2C interface
 set_property -dict {LOC AM24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports i2c_scl]

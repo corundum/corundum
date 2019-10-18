@@ -41,12 +41,12 @@ either expressed or implied, of The Regents of the University of California.
 module fpga_core #
 (
     parameter TARGET = "XILINX",
-    parameter AXIS_PCIE_DATA_WIDTH = 256,
+    parameter AXIS_PCIE_DATA_WIDTH = 512,
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
-    parameter AXIS_PCIE_RC_USER_WIDTH = 75,
-    parameter AXIS_PCIE_RQ_USER_WIDTH = 62,
-    parameter AXIS_PCIE_CQ_USER_WIDTH = 88,
-    parameter AXIS_PCIE_CC_USER_WIDTH = 33
+    parameter AXIS_PCIE_RC_USER_WIDTH = 161,
+    parameter AXIS_PCIE_RQ_USER_WIDTH = 137,
+    parameter AXIS_PCIE_CQ_USER_WIDTH = 183,
+    parameter AXIS_PCIE_CC_USER_WIDTH = 81
 )
 (
     /*

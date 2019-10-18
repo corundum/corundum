@@ -128,12 +128,12 @@ def frame_checksum(frame):
 def bench():
 
     # Parameters
-    AXIS_PCIE_DATA_WIDTH = 256
+    AXIS_PCIE_DATA_WIDTH = 512
     AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
-    AXIS_PCIE_RC_USER_WIDTH = 75
-    AXIS_PCIE_RQ_USER_WIDTH = 62
-    AXIS_PCIE_CQ_USER_WIDTH = 88
-    AXIS_PCIE_CC_USER_WIDTH = 33
+    AXIS_PCIE_RC_USER_WIDTH = 161
+    AXIS_PCIE_RQ_USER_WIDTH = 137
+    AXIS_PCIE_CQ_USER_WIDTH = 183
+    AXIS_PCIE_CC_USER_WIDTH = 81
 
     # Inputs
     clk = Signal(bool(0))
@@ -354,8 +354,8 @@ def bench():
     dev = pcie_usp.UltrascalePlusPCIe()
 
     dev.pcie_generation = 3
-    dev.pcie_link_width = 8
-    dev.user_clock_frequency = 256e6
+    dev.pcie_link_width = 16
+    dev.user_clock_frequency = 250e6
 
     dev.functions[0].msi_multiple_message_capable = 5
 

@@ -5,16 +5,15 @@ GitHub repository: https://github.com/ucsdsysnet/corundum
 ## Introduction
 
 Corundum is an open-source, high-performance FPGA-based NIC.  Features include
-a high performance datapath (256 bit AXI), 10G Ethernet, PCI express gen 3, a
-custom, high performance, tightly-integrated PCIe DMA engine, many (1000+)
-transmit, receive, completion, and event queues, MSI interrupts, multiple
-interfaces, multiple ports per interface, per-port transmit scheduling
-including high precision TDMA, checksum offloading, and native IEEE 1588 PTP
-timestamping.  A Linux driver is included that integrates with the Linux
-networking stack.  Development and debugging is facilitated by an extensive
-simulation framwork that covers the entire system from a simulation model of
-the driver and PCI express interface on one side to the Ethernet interfaces on
-the other side.
+a high performance datapath, 10G/25G Ethernet, PCI express gen 3, a custom,
+high performance, tightly-integrated PCIe DMA engine, many (1000+) transmit,
+receive, completion, and event queues, MSI interrupts, multiple interfaces,
+multiple ports per interface, per-port transmit scheduling including high
+precision TDMA, checksum offloading, and native IEEE 1588 PTP timestamping.
+A Linux driver is included that integrates with the Linux networking stack.
+Development and debugging is facilitated by an extensive simulation framwork
+that covers the entire system from a simulation model of the driver and PCI
+express interface on one side to the Ethernet interfaces on the other side.
 
 Corundum has several unique architectural features.  First, transmit, receive,
 completion, and event queue states are stored efficiently in block RAM or
@@ -36,19 +35,33 @@ devices.  Desgins are included for the following FPGA boards:
 
 ### Modules
 
+#### cpl_op_mux module
+
+Completion operation multiplexer module.  Merges completion write operations
+from different sources to enable sharing a single cpl_write module instance.
+
 #### cpl_queue_manager module
 
 Completion queue manager module.  Stores device to host queue state in block
 RAM or ultra RAM.
 
+#### cpl_write module
+
+Completion write module.  Responsible for writing completion and event entries
+into host memory.
+
+#### desc_fetch module
+
+Descriptor fetch module.  Responsible for reading descriptors from host memory.
+
+#### desc_op_mux module
+
+Descriptor operation multiplexer module.  Merges descriptor fetch operations
+from different sources to enable sharing a single cpl_write module instance.
+
 #### event_mux module
 
 Event mux module.  Enables multiple event sources to feed the same event queue.
-
-#### event_queue module
-
-Event queue module.  Responsible for writing event queue entries into host
-memory.
 
 #### interface module
 
@@ -115,7 +128,11 @@ based on PTP time.
 
 ### Source Files
 
+    cpl_op_mux.v             : Completion operation mux
     cpl_queue_manager.v      : Completion queue manager
+    cpl_write.v              : Completion write module
+    desc_fetch.v             : Descriptor fetch module
+    desc_op_mux.v            : Descriptor operation mux
     event_mux.v              : Event mux
     event_queue.v            : Event queue
     interface.v              : Interface

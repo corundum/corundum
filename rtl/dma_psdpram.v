@@ -90,9 +90,6 @@ generate
         reg [PIPELINE-1:0] rd_resp_valid_pipe_reg = 0;
         reg [SEG_DATA_WIDTH-1:0] rd_resp_data_pipe_reg[PIPELINE-1:0];
 
-        wire [SEG_DATA_WIDTH-1:0] rd_resp_data_pipe_reg_0 = rd_resp_data_pipe_reg[0];
-        wire [SEG_DATA_WIDTH-1:0] rd_resp_data_pipe_reg_1 = rd_resp_data_pipe_reg[1];
-
         integer i, j;
 
         initial begin

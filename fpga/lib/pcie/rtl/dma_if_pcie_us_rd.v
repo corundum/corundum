@@ -674,9 +674,7 @@ always @* begin
         ram_wr_cmd_be_int = ({SEG_COUNT*SEG_BE_WIDTH{1'b1}} << start_offset_reg) | ({SEG_COUNT*SEG_BE_WIDTH{1'b1}} >> (SEG_COUNT*SEG_BE_WIDTH-1-end_offset_reg));
     end
     for (i = 0; i < SEG_COUNT; i = i + 1) begin
-        if (ram_mask_0_reg[i]) begin
-            ram_wr_cmd_addr_int[i*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH];
-        end
+        ram_wr_cmd_addr_int[i*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH];
         if (ram_mask_1_reg[i]) begin
             ram_wr_cmd_addr_int[i*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH]+1;
         end

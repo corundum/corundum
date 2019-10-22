@@ -637,7 +637,7 @@ always @* begin
                             last_tlp_next = tlp_cmd_last_reg;
                             tag_next = tlp_cmd_tag_reg;
 
-                            if (tlp_cmd_valid_reg) begin
+                            if (tlp_cmd_valid_reg && !s_axis_rq_tvalid) begin
                                 tlp_cmd_ready = 1'b1;
                                 if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                                     m_axi_rready_next = m_axis_rq_tready_int_early;
@@ -768,7 +768,7 @@ always @* begin
                         last_tlp_next = tlp_cmd_last_reg;
                         tag_next = tlp_cmd_tag_reg;
 
-                        if (tlp_cmd_valid_reg) begin
+                        if (tlp_cmd_valid_reg && !s_axis_rq_tvalid) begin
                             tlp_cmd_ready = 1'b1;
                             if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                                 m_axi_rready_next = m_axis_rq_tready_int_early;

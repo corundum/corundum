@@ -203,6 +203,13 @@ initial begin
         end
     end
 
+    $display("Addressing configuration for axi_interconnect instance %m");
+    for (i = 0; i < M_COUNT*M_REGIONS; i = i + 1) begin
+        if (M_ADDR_WIDTH[i*32 +: 32]) begin
+            $display("%2d (%2d): %x / %2d -- %x-%x", i/M_REGIONS, i%M_REGIONS, M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[i*32 +: 32], M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32]), M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32])));
+        end
+    end
+
     for (i = 0; i < M_COUNT*M_REGIONS; i = i + 1) begin
         for (j = i+1; j < M_COUNT*M_REGIONS; j = j + 1) begin
             if (M_ADDR_WIDTH[i*32 +: 32] && M_ADDR_WIDTH[j*32 +: 32]) begin

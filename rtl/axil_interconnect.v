@@ -128,8 +128,9 @@ initial begin
         for (j = i+1; j < M_COUNT*M_REGIONS; j = j + 1) begin
             if (M_ADDR_WIDTH[i*32 +: 32] && M_ADDR_WIDTH[j*32 +: 32]) begin
                 if (((M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32])) <= (M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[j*32 +: 32])))) && ((M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[j*32 +: 32])) <= (M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32]))))) begin
-                    $display("%d: %08x / %02d -- %08x-%08x", i, M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[i*32 +: 32], M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32]), M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32])));
-                    $display("%d: %08x / %02d -- %08x-%08x", j, M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[j*32 +: 32], M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[j*32 +: 32]), M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[j*32 +: 32])));
+                    $display("Overlapping regions:");
+                    $display("%2d (%2d): %x / %2d -- %x-%x", i/M_REGIONS, i%M_REGIONS, M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[i*32 +: 32], M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32]), M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32])));
+                    $display("%2d (%2d): %x / %2d -- %x-%x", j/M_REGIONS, j%M_REGIONS, M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[j*32 +: 32], M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[j*32 +: 32]), M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[j*32 +: 32])));
                     $error("Error: address ranges overlap (instance %m)");
                     $finish;
                 end

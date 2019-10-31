@@ -425,7 +425,7 @@ always @* begin
         end
         STATE_START: begin
             // start state - initiate new AXI transfer
-            if (op_word_count_reg <= AXI_MAX_BURST_SIZE - (addr_reg & OFFSET_MASK)) begin
+            if (op_word_count_reg <= AXI_MAX_BURST_SIZE - (addr_reg & OFFSET_MASK) || AXI_MAX_BURST_SIZE >= 4096) begin
                 // packet smaller than max burst size
                 if (addr_reg[12] != addr_plus_count[12]) begin
                     // crosses 4k boundary

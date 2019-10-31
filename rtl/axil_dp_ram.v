@@ -109,26 +109,20 @@ reg last_read_b_reg = 1'b0, last_read_b_next;
 
 reg s_axil_a_awready_reg = 1'b0, s_axil_a_awready_next;
 reg s_axil_a_wready_reg = 1'b0, s_axil_a_wready_next;
-reg [1:0] s_axil_a_bresp_reg = 2'b00, s_axil_a_bresp_next;
 reg s_axil_a_bvalid_reg = 1'b0, s_axil_a_bvalid_next;
 reg s_axil_a_arready_reg = 1'b0, s_axil_a_arready_next;
 reg [DATA_WIDTH-1:0] s_axil_a_rdata_reg = {DATA_WIDTH{1'b0}}, s_axil_a_rdata_next;
-reg [1:0] s_axil_a_rresp_reg = 2'b00, s_axil_a_rresp_next;
 reg s_axil_a_rvalid_reg = 1'b0, s_axil_a_rvalid_next;
 reg [DATA_WIDTH-1:0] s_axil_a_rdata_pipe_reg = {DATA_WIDTH{1'b0}};
-reg [1:0] s_axil_a_rresp_pipe_reg = 2'b00;
 reg s_axil_a_rvalid_pipe_reg = 1'b0;
 
 reg s_axil_b_awready_reg = 1'b0, s_axil_b_awready_next;
 reg s_axil_b_wready_reg = 1'b0, s_axil_b_wready_next;
-reg [1:0] s_axil_b_bresp_reg = 2'b00, s_axil_b_bresp_next;
 reg s_axil_b_bvalid_reg = 1'b0, s_axil_b_bvalid_next;
 reg s_axil_b_arready_reg = 1'b0, s_axil_b_arready_next;
 reg [DATA_WIDTH-1:0] s_axil_b_rdata_reg = {DATA_WIDTH{1'b0}}, s_axil_b_rdata_next;
-reg [1:0] s_axil_b_rresp_reg = 2'b00, s_axil_b_rresp_next;
 reg s_axil_b_rvalid_reg = 1'b0, s_axil_b_rvalid_next;
 reg [DATA_WIDTH-1:0] s_axil_b_rdata_pipe_reg = {DATA_WIDTH{1'b0}};
-reg [1:0] s_axil_b_rresp_pipe_reg = 2'b00;
 reg s_axil_b_rvalid_pipe_reg = 1'b0;
 
 // (* RAM_STYLE="BLOCK" *)
@@ -142,20 +136,20 @@ wire [VALID_ADDR_WIDTH-1:0] s_axil_b_araddr_valid = s_axil_b_araddr >> (ADDR_WID
 
 assign s_axil_a_awready = s_axil_a_awready_reg;
 assign s_axil_a_wready = s_axil_a_wready_reg;
-assign s_axil_a_bresp = s_axil_a_bresp_reg;
+assign s_axil_a_bresp = 2'b00;
 assign s_axil_a_bvalid = s_axil_a_bvalid_reg;
 assign s_axil_a_arready = s_axil_a_arready_reg;
 assign s_axil_a_rdata = PIPELINE_OUTPUT ? s_axil_a_rdata_pipe_reg : s_axil_a_rdata_reg;
-assign s_axil_a_rresp = PIPELINE_OUTPUT ? s_axil_a_rresp_pipe_reg : s_axil_a_rresp_reg;
+assign s_axil_a_rresp = 2'b00;
 assign s_axil_a_rvalid = PIPELINE_OUTPUT ? s_axil_a_rvalid_pipe_reg : s_axil_a_rvalid_reg;
 
 assign s_axil_b_awready = s_axil_b_awready_reg;
 assign s_axil_b_wready = s_axil_b_wready_reg;
-assign s_axil_b_bresp = s_axil_b_bresp_reg;
+assign s_axil_b_bresp = 2'b00;
 assign s_axil_b_bvalid = s_axil_b_bvalid_reg;
 assign s_axil_b_arready = s_axil_b_arready_reg;
 assign s_axil_b_rdata = PIPELINE_OUTPUT ? s_axil_b_rdata_pipe_reg : s_axil_b_rdata_reg;
-assign s_axil_b_rresp = PIPELINE_OUTPUT ? s_axil_b_rresp_pipe_reg : s_axil_b_rresp_reg;
+assign s_axil_b_rresp = 2'b00;
 assign s_axil_b_rvalid = PIPELINE_OUTPUT ? s_axil_b_rvalid_pipe_reg : s_axil_b_rvalid_reg;
 
 integer i, j;
@@ -178,11 +172,9 @@ always @* begin
 
     s_axil_a_awready_next = 1'b0;
     s_axil_a_wready_next = 1'b0;
-    s_axil_a_bresp_next = 2'b00;
     s_axil_a_bvalid_next = s_axil_a_bvalid_reg && !s_axil_a_bready;
 
     s_axil_a_arready_next = 1'b0;
-    s_axil_a_rresp_next = 2'b00;
     s_axil_a_rvalid_next = s_axil_a_rvalid_reg && !(s_axil_a_rready || (PIPELINE_OUTPUT && !s_axil_a_rvalid_pipe_reg));
 
     write_eligible_a = s_axil_a_awvalid && s_axil_a_wvalid && (!s_axil_a_bvalid || s_axil_a_bready) && (!s_axil_a_awready && !s_axil_a_wready);
@@ -193,7 +185,6 @@ always @* begin
 
         s_axil_a_awready_next = 1'b1;
         s_axil_a_wready_next = 1'b1;
-        s_axil_a_bresp_next = 2'b00;
         s_axil_a_bvalid_next = 1'b1;
 
         mem_wr_en_a = 1'b1;
@@ -201,7 +192,6 @@ always @* begin
         last_read_a_next = 1'b1;
 
         s_axil_a_arready_next = 1'b1;
-        s_axil_a_rresp_next = 2'b00;
         s_axil_a_rvalid_next = 1'b1;
 
         mem_rd_en_a = 1'b1;
@@ -217,7 +207,6 @@ always @(posedge a_clk) begin
         s_axil_a_bvalid_reg <= 1'b0;
 
         s_axil_a_arready_reg <= 1'b0;
-        s_axil_a_rresp_reg <= 2'b00;
         s_axil_a_rvalid_reg <= 1'b0;
         s_axil_a_rvalid_pipe_reg <= 1'b0;
     end else begin
@@ -228,15 +217,12 @@ always @(posedge a_clk) begin
         s_axil_a_bvalid_reg <= s_axil_a_bvalid_next;
 
         s_axil_a_arready_reg <= s_axil_a_arready_next;
-        s_axil_a_rresp_reg <= s_axil_a_rresp_next;
         s_axil_a_rvalid_reg <= s_axil_a_rvalid_next;
 
         if (!s_axil_a_rvalid_pipe_reg || s_axil_a_rready) begin
             s_axil_a_rvalid_pipe_reg <= s_axil_a_rvalid_reg;
         end
     end
-
-    s_axil_a_bresp_reg <= s_axil_a_bresp_next;
 
     if (mem_rd_en_a) begin
         s_axil_a_rdata_reg <= mem[s_axil_a_araddr_valid];
@@ -250,7 +236,6 @@ always @(posedge a_clk) begin
 
     if (!s_axil_a_rvalid_pipe_reg || s_axil_a_rready) begin
         s_axil_a_rdata_pipe_reg <= s_axil_a_rdata_reg;
-        s_axil_a_rresp_pipe_reg <= s_axil_a_rresp_reg;
     end
 end
 
@@ -262,11 +247,9 @@ always @* begin
 
     s_axil_b_awready_next = 1'b0;
     s_axil_b_wready_next = 1'b0;
-    s_axil_b_bresp_next = 2'b00;
     s_axil_b_bvalid_next = s_axil_b_bvalid_reg && !s_axil_b_bready;
 
     s_axil_b_arready_next = 1'b0;
-    s_axil_b_rresp_next = 2'b00;
     s_axil_b_rvalid_next = s_axil_b_rvalid_reg && !(s_axil_b_rready || (PIPELINE_OUTPUT && !s_axil_b_rvalid_pipe_reg));
 
     write_eligible_b = s_axil_b_awvalid && s_axil_b_wvalid && (!s_axil_b_bvalid || s_axil_b_bready) && (!s_axil_b_awready && !s_axil_b_wready);
@@ -277,7 +260,6 @@ always @* begin
 
         s_axil_b_awready_next = 1'b1;
         s_axil_b_wready_next = 1'b1;
-        s_axil_b_bresp_next = 2'b00;
         s_axil_b_bvalid_next = 1'b1;
 
         mem_wr_en_b = 1'b1;
@@ -285,7 +267,6 @@ always @* begin
         last_read_b_next = 1'b1;
 
         s_axil_b_arready_next = 1'b1;
-        s_axil_b_rresp_next = 2'b00;
         s_axil_b_rvalid_next = 1'b1;
 
         mem_rd_en_b = 1'b1;
@@ -301,7 +282,6 @@ always @(posedge b_clk) begin
         s_axil_b_bvalid_reg <= 1'b0;
 
         s_axil_b_arready_reg <= 1'b0;
-        s_axil_b_rresp_reg <= 2'b00;
         s_axil_b_rvalid_reg <= 1'b0;
         s_axil_b_rvalid_pipe_reg <= 1'b0;
     end else begin
@@ -312,15 +292,12 @@ always @(posedge b_clk) begin
         s_axil_b_bvalid_reg <= s_axil_b_bvalid_next;
 
         s_axil_b_arready_reg <= s_axil_b_arready_next;
-        s_axil_b_rresp_reg <= s_axil_b_rresp_next;
         s_axil_b_rvalid_reg <= s_axil_b_rvalid_next;
 
         if (!s_axil_b_rvalid_pipe_reg || s_axil_b_rready) begin
             s_axil_b_rvalid_pipe_reg <= s_axil_b_rvalid_reg;
         end
     end
-
-    s_axil_b_bresp_reg <= s_axil_b_bresp_next;
 
     if (mem_rd_en_b) begin
         s_axil_b_rdata_reg <= mem[s_axil_b_araddr_valid];
@@ -334,7 +311,6 @@ always @(posedge b_clk) begin
 
     if (!s_axil_b_rvalid_pipe_reg || s_axil_b_rready) begin
         s_axil_b_rdata_pipe_reg <= s_axil_b_rdata_reg;
-        s_axil_b_rresp_pipe_reg <= s_axil_b_rresp_reg;
     end
 end
 

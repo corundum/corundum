@@ -113,27 +113,27 @@ parameter SEGMENT_STRB_WIDTH = STRB_WIDTH / SEGMENT_COUNT;
 // bus width assertions
 initial begin
     if (AXI_WORD_SIZE * AXI_STRB_WIDTH != AXI_DATA_WIDTH) begin
-        $error("Error: AXI slave interface data width not evenly divisble");
+        $error("Error: AXI slave interface data width not evenly divisble (instance %m)");
         $finish;
     end
 
     if (AXIL_WORD_SIZE * AXIL_STRB_WIDTH != AXIL_DATA_WIDTH) begin
-        $error("Error: AXI lite master interface data width not evenly divisble");
+        $error("Error: AXI lite master interface data width not evenly divisble (instance %m)");
         $finish;
     end
 
     if (AXI_WORD_SIZE != AXIL_WORD_SIZE) begin
-        $error("Error: word size mismatch");
+        $error("Error: word size mismatch (instance %m)");
         $finish;
     end
 
     if (2**$clog2(AXI_WORD_WIDTH) != AXI_WORD_WIDTH) begin
-        $error("Error: AXI slave interface word width must be even power of two");
+        $error("Error: AXI slave interface word width must be even power of two (instance %m)");
         $finish;
     end
 
     if (2**$clog2(AXIL_WORD_WIDTH) != AXIL_WORD_WIDTH) begin
-        $error("Error: AXI lite master interface word width must be even power of two");
+        $error("Error: AXI lite master interface word width must be even power of two (instance %m)");
         $finish;
     end
 end

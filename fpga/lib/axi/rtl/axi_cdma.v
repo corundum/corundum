@@ -132,17 +132,17 @@ parameter STATUS_FIFO_ADDR_WIDTH = 5;
 // bus width assertions
 initial begin
     if (AXI_WORD_SIZE * AXI_STRB_WIDTH != AXI_DATA_WIDTH) begin
-        $error("Error: AXI data width not evenly divisble");
+        $error("Error: AXI data width not evenly divisble (instance %m)");
         $finish;
     end
 
     if (2**$clog2(AXI_WORD_WIDTH) != AXI_WORD_WIDTH) begin
-        $error("Error: AXI word width must be even power of two");
+        $error("Error: AXI word width must be even power of two (instance %m)");
         $finish;
     end
 
     if (AXI_MAX_BURST_LEN < 1 || AXI_MAX_BURST_LEN > 256) begin
-        $error("Error: AXI_MAX_BURST_LEN must be between 1 and 256");
+        $error("Error: AXI_MAX_BURST_LEN must be between 1 and 256 (instance %m)");
         $finish;
     end
 end

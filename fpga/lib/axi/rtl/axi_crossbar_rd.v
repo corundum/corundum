@@ -64,7 +64,8 @@ module axi_crossbar_rd #
     parameter M_REGIONS = 1,
     // Master interface base addresses
     // M_COUNT concatenated fields of M_REGIONS concatenated fields of ADDR_WIDTH bits
-    parameter M_BASE_ADDR = {32'h03000000, 32'h02000000, 32'h01000000, 32'h00000000},
+    // set to zero for default addressing based on M_ADDR_WIDTH
+    parameter M_BASE_ADDR = 0,
     // Master interface address widths
     // M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
     parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd24}}}},
@@ -152,13 +153,13 @@ integer i;
 // check configuration
 initial begin
     if (M_ID_WIDTH < S_ID_WIDTH+$clog2(S_COUNT)) begin
-        $error("Error: M_ID_WIDTH must be at least $clog2(S_COUNT) larger than S_ID_WIDTH");
+        $error("Error: M_ID_WIDTH must be at least $clog2(S_COUNT) larger than S_ID_WIDTH (instance %m)");
         $finish;
     end
 
     for (i = 0; i < M_COUNT*M_REGIONS; i = i + 1) begin
         if (M_ADDR_WIDTH[i*32 +: 32] && (M_ADDR_WIDTH[i*32 +: 32] < 12 || M_ADDR_WIDTH[i*32 +: 32] > ADDR_WIDTH)) begin
-            $error("Error: value out of range");
+            $error("Error: value out of range (instance %m)");
             $finish;
         end
     end
@@ -374,8 +375,8 @@ generate
             .ARUSER_WIDTH(ARUSER_WIDTH),
             .RUSER_ENABLE(RUSER_ENABLE),
             .RUSER_WIDTH(RUSER_WIDTH),
-            .AR_REG_TYPE(S_AR_REG_TYPE),
-            .R_REG_TYPE(S_R_REG_TYPE)
+            .AR_REG_TYPE(S_AR_REG_TYPE[m*2 +: 2]),
+            .R_REG_TYPE(S_R_REG_TYPE[m*2 +: 2])
         )
         reg_inst (
             .clk(clk),
@@ -508,8 +509,8 @@ generate
             .ARUSER_WIDTH(ARUSER_WIDTH),
             .RUSER_ENABLE(RUSER_ENABLE),
             .RUSER_WIDTH(RUSER_WIDTH),
-            .AR_REG_TYPE(M_AR_REG_TYPE),
-            .R_REG_TYPE(M_R_REG_TYPE)
+            .AR_REG_TYPE(M_AR_REG_TYPE[n*2 +: 2]),
+            .R_REG_TYPE(M_R_REG_TYPE[n*2 +: 2])
         )
         reg_inst (
             .clk(clk),

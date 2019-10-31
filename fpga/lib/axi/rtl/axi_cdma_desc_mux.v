@@ -89,7 +89,7 @@ parameter CL_PORTS = $clog2(PORTS);
 // check configuration
 initial begin
     if (M_TAG_WIDTH < S_TAG_WIDTH+$clog2(PORTS)) begin
-        $error("Error: M_TAG_WIDTH must be at least $clog2(PORTS) larger than S_TAG_WIDTH");
+        $error("Error: M_TAG_WIDTH must be at least $clog2(PORTS) larger than S_TAG_WIDTH (instance %m)");
         $finish;
     end
 end

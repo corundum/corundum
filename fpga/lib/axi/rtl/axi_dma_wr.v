@@ -155,37 +155,37 @@ parameter STATUS_FIFO_ADDR_WIDTH = 5;
 // bus width assertions
 initial begin
     if (AXI_WORD_SIZE * AXI_STRB_WIDTH != AXI_DATA_WIDTH) begin
-        $error("Error: AXI data width not evenly divisble");
+        $error("Error: AXI data width not evenly divisble (instance %m)");
         $finish;
     end
 
     if (AXIS_WORD_SIZE * AXIS_KEEP_WIDTH_INT != AXIS_DATA_WIDTH) begin
-        $error("Error: AXI stream data width not evenly divisble");
+        $error("Error: AXI stream data width not evenly divisble (instance %m)");
         $finish;
     end
 
     if (AXI_WORD_SIZE != AXIS_WORD_SIZE) begin
-        $error("Error: word size mismatch");
+        $error("Error: word size mismatch (instance %m)");
         $finish;
     end
 
     if (2**$clog2(AXI_WORD_WIDTH) != AXI_WORD_WIDTH) begin
-        $error("Error: AXI word width must be even power of two");
+        $error("Error: AXI word width must be even power of two (instance %m)");
         $finish;
     end
 
     if (AXI_DATA_WIDTH != AXIS_DATA_WIDTH) begin
-        $error("Error: AXI interface width must match AXI stream interface width");
+        $error("Error: AXI interface width must match AXI stream interface width (instance %m)");
         $finish;
     end
 
     if (AXI_MAX_BURST_LEN < 1 || AXI_MAX_BURST_LEN > 256) begin
-        $error("Error: AXI_MAX_BURST_LEN must be between 1 and 256");
+        $error("Error: AXI_MAX_BURST_LEN must be between 1 and 256 (instance %m)");
         $finish;
     end
 
     if (ENABLE_SG) begin
-        $error("Error: scatter/gather is not yet implemented");
+        $error("Error: scatter/gather is not yet implemented (instance %m)");
         $finish;
     end
 end
@@ -425,7 +425,7 @@ always @* begin
         end
         STATE_START: begin
             // start state - initiate new AXI transfer
-            if (op_word_count_reg <= AXI_MAX_BURST_SIZE - (addr_reg & OFFSET_MASK)) begin
+            if (op_word_count_reg <= AXI_MAX_BURST_SIZE - (addr_reg & OFFSET_MASK) || AXI_MAX_BURST_SIZE >= 4096) begin
                 // packet smaller than max burst size
                 if (addr_reg[12] != addr_plus_count[12]) begin
                     // crosses 4k boundary

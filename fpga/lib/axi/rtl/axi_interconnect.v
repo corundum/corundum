@@ -69,7 +69,8 @@ module axi_interconnect #
     parameter M_REGIONS = 1,
     // Master interface base addresses
     // M_COUNT concatenated fields of M_REGIONS concatenated fields of ADDR_WIDTH bits
-    parameter M_BASE_ADDR = {32'h03000000, 32'h02000000, 32'h01000000, 32'h00000000},
+    // set to zero for default addressing based on M_ADDR_WIDTH
+    parameter M_BASE_ADDR = 0,
     // Master interface address widths
     // M_COUNT concatenated fields of M_REGIONS concatenated fields of 32 bits
     parameter M_ADDR_WIDTH = {M_COUNT{{M_REGIONS{32'd24}}}},
@@ -187,29 +188,56 @@ parameter CL_M_COUNT = $clog2(M_COUNT);
 
 parameter AUSER_WIDTH = AWUSER_WIDTH > ARUSER_WIDTH ? AWUSER_WIDTH : ARUSER_WIDTH;
 
+// default address computation
+function [M_COUNT*M_REGIONS*ADDR_WIDTH-1:0] calcBaseAddrs(input [31:0] dummy);
+    integer i;
+    reg [ADDR_WIDTH-1:0] base;
+    begin
+        calcBaseAddrs = {M_COUNT*M_REGIONS*ADDR_WIDTH{1'b0}};
+        base = 0;
+        for (i = 1; i < M_COUNT*M_REGIONS; i = i + 1) begin
+            if (M_ADDR_WIDTH[i*32 +: 32]) begin
+                base = base + 2**M_ADDR_WIDTH[(i-1)*32 +: 32]; // increment
+                base = base - (base % 2**M_ADDR_WIDTH[i*32 +: 32]); // align
+                calcBaseAddrs[i * ADDR_WIDTH +: ADDR_WIDTH] = base;
+            end
+        end
+    end
+endfunction
+
+parameter M_BASE_ADDR_INT = M_BASE_ADDR ? M_BASE_ADDR : calcBaseAddrs(0);
+
 integer i, j;
 
 // check configuration
 initial begin
     if (M_REGIONS < 1 || M_REGIONS > 16) begin
-        $error("Error: M_REGIONS must be between 1 and 16");
+        $error("Error: M_REGIONS must be between 1 and 16 (instance %m)");
         $finish;
     end
 
     for (i = 0; i < M_COUNT*M_REGIONS; i = i + 1) begin
         if (M_ADDR_WIDTH[i*32 +: 32] && (M_ADDR_WIDTH[i*32 +: 32] < 12 || M_ADDR_WIDTH[i*32 +: 32] > ADDR_WIDTH)) begin
-            $error("Error: address width out of range");
+            $error("Error: address width out of range (instance %m)");
             $finish;
+        end
+    end
+
+    $display("Addressing configuration for axi_interconnect instance %m");
+    for (i = 0; i < M_COUNT*M_REGIONS; i = i + 1) begin
+        if (M_ADDR_WIDTH[i*32 +: 32]) begin
+            $display("%2d (%2d): %x / %2d -- %x-%x", i/M_REGIONS, i%M_REGIONS, M_BASE_ADDR_INT[i*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[i*32 +: 32], M_BASE_ADDR_INT[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32]), M_BASE_ADDR_INT[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32])));
         end
     end
 
     for (i = 0; i < M_COUNT*M_REGIONS; i = i + 1) begin
         for (j = i+1; j < M_COUNT*M_REGIONS; j = j + 1) begin
             if (M_ADDR_WIDTH[i*32 +: 32] && M_ADDR_WIDTH[j*32 +: 32]) begin
-                if (((M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32])) <= (M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[j*32 +: 32])))) && ((M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[j*32 +: 32])) <= (M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32]))))) begin
-                    $display("%d: %08x / %02d -- %08x-%08x", i, M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[i*32 +: 32], M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32]), M_BASE_ADDR[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32])));
-                    $display("%d: %08x / %02d -- %08x-%08x", j, M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[j*32 +: 32], M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[j*32 +: 32]), M_BASE_ADDR[j*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[j*32 +: 32])));
-                    $error("Error: address ranges overlap");
+                if (((M_BASE_ADDR_INT[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32])) <= (M_BASE_ADDR_INT[j*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[j*32 +: 32])))) && ((M_BASE_ADDR_INT[j*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[j*32 +: 32])) <= (M_BASE_ADDR_INT[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32]))))) begin
+                    $display("Overlapping regions:");
+                    $display("%2d (%2d): %x / %2d -- %x-%x", i/M_REGIONS, i%M_REGIONS, M_BASE_ADDR_INT[i*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[i*32 +: 32], M_BASE_ADDR_INT[i*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[i*32 +: 32]), M_BASE_ADDR_INT[i*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[i*32 +: 32])));
+                    $display("%2d (%2d): %x / %2d -- %x-%x", j/M_REGIONS, j%M_REGIONS, M_BASE_ADDR_INT[j*ADDR_WIDTH +: ADDR_WIDTH], M_ADDR_WIDTH[j*32 +: 32], M_BASE_ADDR_INT[j*ADDR_WIDTH +: ADDR_WIDTH] & ({ADDR_WIDTH{1'b1}} << M_ADDR_WIDTH[j*32 +: 32]), M_BASE_ADDR_INT[j*ADDR_WIDTH +: ADDR_WIDTH] | ({ADDR_WIDTH{1'b1}} >> (ADDR_WIDTH - M_ADDR_WIDTH[j*32 +: 32])));
+                    $error("Error: address ranges overlap (instance %m)");
                     $finish;
                 end
             end
@@ -541,7 +569,7 @@ always @* begin
             match = 1'b0;
             for (i = 0; i < M_COUNT; i = i + 1) begin
                 for (j = 0; j < M_REGIONS; j = j + 1) begin
-                    if (M_ADDR_WIDTH[(i*M_REGIONS+j)*32 +: 32] && (!M_SECURE[i] || !axi_prot_reg[1]) && ((read ? M_CONNECT_READ : M_CONNECT_WRITE) & (1 << (s_select+i*S_COUNT))) && (axi_addr_reg >> M_ADDR_WIDTH[(i*M_REGIONS+j)*32 +: 32]) == (M_BASE_ADDR[(i*M_REGIONS+j)*ADDR_WIDTH +: ADDR_WIDTH] >> M_ADDR_WIDTH[(i*M_REGIONS+j)*32 +: 32])) begin
+                    if (M_ADDR_WIDTH[(i*M_REGIONS+j)*32 +: 32] && (!M_SECURE[i] || !axi_prot_reg[1]) && ((read ? M_CONNECT_READ : M_CONNECT_WRITE) & (1 << (s_select+i*S_COUNT))) && (axi_addr_reg >> M_ADDR_WIDTH[(i*M_REGIONS+j)*32 +: 32]) == (M_BASE_ADDR_INT[(i*M_REGIONS+j)*ADDR_WIDTH +: ADDR_WIDTH] >> M_ADDR_WIDTH[(i*M_REGIONS+j)*32 +: 32])) begin
                         m_select_next = i;
                         axi_region_next = j;
                         match = 1'b1;
@@ -694,10 +722,8 @@ always @(posedge clk) begin
         s_axi_wready_reg <= 0;
         s_axi_bvalid_reg <= 0;
         s_axi_arready_reg <= 0;
-        s_axi_rvalid_reg <= 0;
 
         m_axi_awvalid_reg <= 0;
-        m_axi_wvalid_reg <= 0;
         m_axi_bready_reg <= 0;
         m_axi_arvalid_reg <= 0;
         m_axi_rready_reg <= 0;
@@ -708,10 +734,8 @@ always @(posedge clk) begin
         s_axi_wready_reg <= s_axi_wready_next;
         s_axi_bvalid_reg <= s_axi_bvalid_next;
         s_axi_arready_reg <= s_axi_arready_next;
-        s_axi_rvalid_reg <= s_axi_rvalid_next;
 
         m_axi_awvalid_reg <= m_axi_awvalid_next;
-        m_axi_wvalid_reg <= m_axi_wvalid_next;
         m_axi_bready_reg <= m_axi_bready_next;
         m_axi_arvalid_reg <= m_axi_arvalid_next;
         m_axi_rready_reg <= m_axi_rready_next;

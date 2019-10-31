@@ -97,6 +97,7 @@ int mqnic_init_i2c(struct mqnic_dev *mqnic)
     // eeprom i2c interface
     switch (mqnic->board_id) {
     case MQNIC_BOARD_ID_EXANIC_X10:
+    case MQNIC_BOARD_ID_EXANIC_X25:
     case MQNIC_BOARD_ID_ADM_PCIE_9V3:
         mqnic->eeprom_i2c_adap.owner = THIS_MODULE;
         mqnic->eeprom_i2c_priv.mqnic = mqnic;

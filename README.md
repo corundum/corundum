@@ -28,6 +28,7 @@ devices.  Desgins are included for the following FPGA boards:
 
 *  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex Ultrascale Plus XCVU3P)
 *  Exablaze ExaNIC X10 (Xilinx Kintex Ultrascale XCKU035)
+*  Exablaze ExaNIC X25 (Xilinx Kintex Ultrascale Plus XCKU3P)
 *  Xilinx VCU108 (Xilinx Virtex Ultrascale XCVU095)
 *  Xilinx VCU118 (Xilinx Virtex Ultrascale Plus XCVU9P)
 

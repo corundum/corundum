@@ -48,10 +48,6 @@ module interface #
     parameter DMA_LEN_WIDTH = 16,
     // DMA tag field width
     parameter DMA_TAG_WIDTH = 8,
-    // Request tag field width
-    parameter REQ_TAG_WIDTH = 8,
-    // Descriptor request tag field width
-    parameter DESC_REQ_TAG_WIDTH = 8,
     // Number of outstanding operations (event queue)
     parameter EVENT_QUEUE_OP_TABLE_SIZE = 16,
     // Number of outstanding operations (transmit queue)
@@ -62,10 +58,6 @@ module interface #
     parameter TX_CPL_QUEUE_OP_TABLE_SIZE = 16,
     // Number of outstanding operations (receive completion queue)
     parameter RX_CPL_QUEUE_OP_TABLE_SIZE = 16,
-    // Queue request tag field width
-    parameter QUEUE_REQ_TAG_WIDTH = 8,
-    // Queue operation tag field width
-    parameter QUEUE_OP_TAG_WIDTH = 8,
     // Event queue index width
     parameter EVENT_QUEUE_INDEX_WIDTH = 5,
     // Transmit queue index width
@@ -293,6 +285,14 @@ parameter AXIS_DESC_KEEP_WIDTH = AXIS_DESC_DATA_WIDTH/8;
 
 parameter EVENT_SOURCE_WIDTH = 16;
 parameter EVENT_TYPE_WIDTH = 16;
+
+parameter MAX_DESC_TABLE_SIZE = TX_DESC_TABLE_SIZE > RX_DESC_TABLE_SIZE ? TX_DESC_TABLE_SIZE : RX_DESC_TABLE_SIZE;
+
+parameter REQ_TAG_WIDTH = $clog2(MAX_DESC_TABLE_SIZE) + 1 + $clog2(PORTS+1);
+parameter DESC_REQ_TAG_WIDTH = $clog2(MAX_DESC_TABLE_SIZE) + 1 + $clog2(PORTS+1);
+
+parameter QUEUE_REQ_TAG_WIDTH = $clog2(MAX_DESC_TABLE_SIZE) + 1 + $clog2(PORTS+1);
+parameter QUEUE_OP_TAG_WIDTH = 6;
 
 parameter DMA_TAG_WIDTH_INT = DMA_TAG_WIDTH - $clog2(PORTS+1);
 

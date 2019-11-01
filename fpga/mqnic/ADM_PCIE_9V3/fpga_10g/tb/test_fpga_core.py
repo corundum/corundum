@@ -134,6 +134,7 @@ def bench():
     AXIS_PCIE_RQ_USER_WIDTH = 137
     AXIS_PCIE_CQ_USER_WIDTH = 183
     AXIS_PCIE_CC_USER_WIDTH = 81
+    BAR0_APERTURE = 24
 
     # Inputs
     clk = Signal(bool(0))
@@ -359,8 +360,7 @@ def bench():
 
     dev.functions[0].msi_multiple_message_capable = 5
 
-    dev.functions[0].configure_bar(0, 16*1024*1024)
-    dev.functions[0].configure_bar(1, 16*1024*1024)
+    dev.functions[0].configure_bar(0, 2**BAR0_APERTURE)
 
     rc.make_port().connect(dev)
 

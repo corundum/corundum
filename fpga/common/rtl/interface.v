@@ -301,6 +301,29 @@ parameter CPL_QUEUE_INDEX_WIDTH = TX_CPL_QUEUE_INDEX_WIDTH > RX_CPL_QUEUE_INDEX_
 
 parameter PORT_DESC_REQ_TAG_WIDTH = DESC_REQ_TAG_WIDTH - $clog2(PORTS+1);
 
+parameter AXIL_CSR_ADDR_WIDTH = AXIL_ADDR_WIDTH-5-$clog2((PORTS+3)/8);
+parameter AXIL_CTRL_ADDR_WIDTH = AXIL_ADDR_WIDTH-5-$clog2((PORTS+3)/8);
+parameter AXIL_EQM_ADDR_WIDTH = AXIL_ADDR_WIDTH-4-$clog2((PORTS+3)/8);
+parameter AXIL_TX_QM_ADDR_WIDTH = AXIL_ADDR_WIDTH-3-$clog2((PORTS+3)/8);
+parameter AXIL_TX_CQM_ADDR_WIDTH = AXIL_ADDR_WIDTH-3-$clog2((PORTS+3)/8);
+parameter AXIL_RX_QM_ADDR_WIDTH = AXIL_ADDR_WIDTH-4-$clog2((PORTS+3)/8);
+parameter AXIL_RX_CQM_ADDR_WIDTH = AXIL_ADDR_WIDTH-4-$clog2((PORTS+3)/8);
+parameter AXIL_PORT_ADDR_WIDTH = AXIL_ADDR_WIDTH-3-$clog2((PORTS+3)/8);
+
+parameter AXIL_CSR_BASE_ADDR = 0;
+parameter AXIL_CTRL_BASE_ADDR = AXIL_CSR_BASE_ADDR + 2**AXIL_CSR_ADDR_WIDTH;
+parameter AXIL_EQM_BASE_ADDR = AXIL_CTRL_BASE_ADDR + 2**AXIL_CTRL_ADDR_WIDTH;
+parameter AXIL_TX_QM_BASE_ADDR = AXIL_EQM_BASE_ADDR + 2**AXIL_EQM_ADDR_WIDTH;
+parameter AXIL_TX_CQM_BASE_ADDR = AXIL_TX_QM_BASE_ADDR + 2**AXIL_TX_QM_ADDR_WIDTH;
+parameter AXIL_RX_QM_BASE_ADDR = AXIL_TX_CQM_BASE_ADDR + 2**AXIL_TX_CQM_ADDR_WIDTH;
+parameter AXIL_RX_CQM_BASE_ADDR = AXIL_RX_QM_BASE_ADDR + 2**AXIL_RX_QM_ADDR_WIDTH;
+parameter AXIL_PORT_BASE_ADDR = AXIL_RX_CQM_BASE_ADDR + 2**AXIL_RX_CQM_ADDR_WIDTH;
+
+// parameter sizing helpers
+function [31:0] w_32(input [31:0] val);
+    w_32 = val;
+endfunction
+
 // AXI lite connections
 wire [AXIL_ADDR_WIDTH-1:0] axil_ctrl_awaddr;
 wire [2:0]                 axil_ctrl_awprot;
@@ -774,18 +797,18 @@ always @(posedge clk) begin
                 axil_ctrl_rdata_reg[9] <= RX_CHECKSUM_ENABLE;
             end
             16'h0010: axil_ctrl_rdata_reg <= 2**EVENT_QUEUE_INDEX_WIDTH;  // event_queue_count
-            16'h0014: axil_ctrl_rdata_reg <= 24'h080000;                  // event_queue_offset
+            16'h0014: axil_ctrl_rdata_reg <= AXIL_EQM_BASE_ADDR;          // event_queue_offset
             16'h0020: axil_ctrl_rdata_reg <= 2**TX_QUEUE_INDEX_WIDTH;     // tx_queue_count
-            16'h0024: axil_ctrl_rdata_reg <= 24'h100000;                  // tx_queue_offset
+            16'h0024: axil_ctrl_rdata_reg <= AXIL_TX_QM_BASE_ADDR;        // tx_queue_offset
             16'h0028: axil_ctrl_rdata_reg <= 2**TX_CPL_QUEUE_INDEX_WIDTH; // tx_cpl_queue_count
-            16'h002C: axil_ctrl_rdata_reg <= 24'h200000;                  // tx_cpl_queue_offset
+            16'h002C: axil_ctrl_rdata_reg <= AXIL_TX_CQM_BASE_ADDR;       // tx_cpl_queue_offset
             16'h0030: axil_ctrl_rdata_reg <= 2**RX_QUEUE_INDEX_WIDTH;     // rx_queue_count
-            16'h0034: axil_ctrl_rdata_reg <= 24'h300000;                  // rx_queue_offset
+            16'h0034: axil_ctrl_rdata_reg <= AXIL_RX_QM_BASE_ADDR;        // rx_queue_offset
             16'h0038: axil_ctrl_rdata_reg <= 2**RX_CPL_QUEUE_INDEX_WIDTH; // rx_cpl_queue_count
-            16'h003C: axil_ctrl_rdata_reg <= 24'h380000;                  // rx_cpl_queue_offset
+            16'h003C: axil_ctrl_rdata_reg <= AXIL_RX_CQM_BASE_ADDR;       // rx_cpl_queue_offset
             16'h0040: axil_ctrl_rdata_reg <= PORTS;                       // port_count
-            16'h0044: axil_ctrl_rdata_reg <= 24'h400000;                  // port_offset
-            16'h0048: axil_ctrl_rdata_reg <= 24'h100000;                  // port_stride
+            16'h0044: axil_ctrl_rdata_reg <= AXIL_PORT_BASE_ADDR;         // port_offset
+            16'h0048: axil_ctrl_rdata_reg <= 2**AXIL_PORT_ADDR_WIDTH;     // port_stride
         endcase
     end
 
@@ -808,8 +831,7 @@ axil_interconnect #(
     .STRB_WIDTH(AXIL_STRB_WIDTH),
     .S_COUNT(AXIL_S_COUNT),
     .M_COUNT(AXIL_M_COUNT),
-    .M_BASE_ADDR({23'h400000, 23'h380000, 23'h300000, 23'h200000, 23'h100000, 23'h080000, 23'h040000, 23'h000000}),
-    .M_ADDR_WIDTH({32'd20, 32'd19, 32'd19, 32'd20, 32'd20, 32'd19, 32'd18, 32'd18}),
+    .M_ADDR_WIDTH({{PORTS{w_32(AXIL_PORT_ADDR_WIDTH)}}, w_32(AXIL_RX_CQM_ADDR_WIDTH), w_32(AXIL_RX_QM_ADDR_WIDTH), w_32(AXIL_TX_CQM_ADDR_WIDTH), w_32(AXIL_TX_QM_ADDR_WIDTH), w_32(AXIL_EQM_ADDR_WIDTH), w_32(AXIL_CTRL_ADDR_WIDTH), w_32(AXIL_CSR_ADDR_WIDTH)}),
     .M_CONNECT_READ({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}}),
     .M_CONNECT_WRITE({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}})
 )
@@ -870,7 +892,7 @@ cpl_queue_manager #(
     .CPL_SIZE(EVENT_SIZE),
     .PIPELINE(3),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_EQM_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
 )
 event_queue_manager_inst (
@@ -954,7 +976,7 @@ queue_manager #(
     .DESC_SIZE(DESC_SIZE),
     .PIPELINE(3),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_TX_QM_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
 )
 tx_queue_manager_inst (
@@ -1037,7 +1059,7 @@ cpl_queue_manager #(
     .CPL_SIZE(CPL_SIZE),
     .PIPELINE(3),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_TX_CQM_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
 )
 tx_cpl_queue_manager_inst (
@@ -1121,7 +1143,7 @@ queue_manager #(
     .DESC_SIZE(DESC_SIZE),
     .PIPELINE(3),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_RX_QM_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
 )
 rx_queue_manager_inst (
@@ -1204,7 +1226,7 @@ cpl_queue_manager #(
     .CPL_SIZE(CPL_SIZE),
     .PIPELINE(3),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_RX_CQM_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
 )
 rx_cpl_queue_manager_inst (
@@ -1929,7 +1951,7 @@ generate
             .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
             .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
             .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-            .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
+            .AXIL_ADDR_WIDTH(AXIL_PORT_ADDR_WIDTH),
             .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
             .SEG_COUNT(SEG_COUNT),
             .SEG_DATA_WIDTH(SEG_DATA_WIDTH),

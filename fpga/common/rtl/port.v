@@ -304,6 +304,14 @@ parameter DMA_CLIENT_LEN_WIDTH = DMA_LEN_WIDTH;
 
 parameter DESC_REQ_TAG_WIDTH_INT = DESC_REQ_TAG_WIDTH - $clog2(2);
 
+parameter SCHED_COUNT = 1;
+parameter AXIL_SCHED_ADDR_WIDTH = AXIL_ADDR_WIDTH-$clog2(SCHED_COUNT+1);
+
+// parameter sizing helpers
+function [31:0] w_32(input [31:0] val);
+    w_32 = val;
+endfunction
+
 // AXI lite connections
 wire [AXIL_ADDR_WIDTH-1:0] axil_ctrl_awaddr;
 wire [2:0]                 axil_ctrl_awprot;
@@ -620,9 +628,9 @@ always @(posedge clk) begin
                 axil_ctrl_rdata_reg[8] <= TX_CHECKSUM_ENABLE;
                 axil_ctrl_rdata_reg[9] <= RX_CHECKSUM_ENABLE;
             end
-            16'h0010: axil_ctrl_rdata_reg <= 1;           // scheduler_count
-            16'h0014: axil_ctrl_rdata_reg <= 24'h040000;  // scheduler_offset
-            16'h0018: axil_ctrl_rdata_reg <= 24'h040000;  // scheduler_stride
+            16'h0010: axil_ctrl_rdata_reg <= SCHED_COUNT; // scheduler_count
+            16'h0014: axil_ctrl_rdata_reg <= 2**AXIL_SCHED_ADDR_WIDTH; // scheduler_offset
+            16'h0018: axil_ctrl_rdata_reg <= 2**AXIL_SCHED_ADDR_WIDTH; // scheduler_stride
             16'h001C: axil_ctrl_rdata_reg <= 32'd0;       // scheduler_type
             16'h0040: begin
                 // Scheduler enable
@@ -666,7 +674,7 @@ end
 
 // AXI lite interconnect
 parameter AXIL_S_COUNT = 1;
-parameter AXIL_M_COUNT = 2;
+parameter AXIL_M_COUNT = SCHED_COUNT+1;
 
 axil_interconnect #(
     .DATA_WIDTH(AXIL_DATA_WIDTH),
@@ -674,15 +682,14 @@ axil_interconnect #(
     .STRB_WIDTH(AXIL_STRB_WIDTH),
     .S_COUNT(AXIL_S_COUNT),
     .M_COUNT(AXIL_M_COUNT),
-    .M_BASE_ADDR({23'h040000, 23'h000000}),
-    .M_ADDR_WIDTH({32'd18, 32'd18}),
+    .M_ADDR_WIDTH({AXIL_M_COUNT{w_32(AXIL_SCHED_ADDR_WIDTH)}}),
     .M_CONNECT_READ({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}}),
     .M_CONNECT_WRITE({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}})
 )
 axil_interconnect_inst (
     .clk(clk),
     .rst(rst),
-    .s_axil_awaddr(s_axil_awaddr & 23'h0fffff),
+    .s_axil_awaddr(s_axil_awaddr),
     .s_axil_awprot(s_axil_awprot),
     .s_axil_awvalid(s_axil_awvalid),
     .s_axil_awready(s_axil_awready),
@@ -693,7 +700,7 @@ axil_interconnect_inst (
     .s_axil_bresp(s_axil_bresp),
     .s_axil_bvalid(s_axil_bvalid),
     .s_axil_bready(s_axil_bready),
-    .s_axil_araddr(s_axil_araddr & 23'h0fffff),
+    .s_axil_araddr(s_axil_araddr),
     .s_axil_arprot(s_axil_arprot),
     .s_axil_arvalid(s_axil_arvalid),
     .s_axil_arready(s_axil_arready),
@@ -859,7 +866,7 @@ if (TX_SCHEDULER == "RR") begin
 
     tx_scheduler_rr #(
         .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-        .AXIL_ADDR_WIDTH(20),
+        .AXIL_ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
         .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
         .DMA_CLIENT_LEN_WIDTH(DMA_CLIENT_LEN_WIDTH),
         .REQ_TAG_WIDTH(REQ_TAG_WIDTH),

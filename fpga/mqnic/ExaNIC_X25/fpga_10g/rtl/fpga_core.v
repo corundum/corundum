@@ -46,7 +46,8 @@ module fpga_core #
     parameter AXIS_PCIE_RC_USER_WIDTH = 75,
     parameter AXIS_PCIE_RQ_USER_WIDTH = 60,
     parameter AXIS_PCIE_CQ_USER_WIDTH = 85,
-    parameter AXIS_PCIE_CC_USER_WIDTH = 33
+    parameter AXIS_PCIE_CC_USER_WIDTH = 33,
+    parameter BAR0_APERTURE = 24
 )
 (
     /*
@@ -189,21 +190,6 @@ module fpga_core #
     output wire                               flash_adv_n
 );
 
-parameter PCIE_ADDR_WIDTH = 64;
-
-// AXI lite interface parameters
-parameter AXIL_DATA_WIDTH = 32;
-parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8);
-parameter AXIL_ADDR_WIDTH = 24;
-
-// AXI stream interface parameters
-parameter AXIS_DATA_WIDTH = 256;
-parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8;
-
-// PCIe DMA parameters
-parameter PCIE_DMA_LEN_WIDTH = 16;
-parameter PCIE_DMA_TAG_WIDTH = 16;
-
 // PHC parameters
 parameter PTP_PERIOD_NS_WIDTH = 4;
 parameter PTP_OFFSET_NS_WIDTH = 32;
@@ -266,7 +252,22 @@ parameter RX_FIFO_DEPTH = 16384;
 parameter MAX_TX_SIZE = 2048;
 parameter MAX_RX_SIZE = 2048;
 
+// AXI lite interface parameters
+parameter AXIL_DATA_WIDTH = 32;
+parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8);
+parameter AXIL_ADDR_WIDTH = BAR0_APERTURE;
+
+parameter IF_AXIL_ADDR_WIDTH = AXIL_ADDR_WIDTH-$clog2(IF_COUNT);
+parameter AXIL_CSR_ADDR_WIDTH = IF_AXIL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8);
+
+// AXI stream interface parameters
+parameter AXIS_DATA_WIDTH = 256;
+parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8;
+
 // PCIe DMA parameters
+parameter PCIE_ADDR_WIDTH = 64;
+parameter PCIE_DMA_LEN_WIDTH = 16;
+parameter PCIE_DMA_TAG_WIDTH = 16;
 parameter SEG_COUNT = AXIS_PCIE_DATA_WIDTH > 64 ? AXIS_PCIE_DATA_WIDTH*2 / 128 : 2;
 parameter SEG_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH*2/SEG_COUNT;
 parameter SEG_ADDR_WIDTH = 12;
@@ -277,6 +278,11 @@ parameter RAM_PIPELINE = 4;
 
 parameter TX_RAM_SIZE = TX_PKT_TABLE_SIZE*MAX_TX_SIZE;
 parameter RX_RAM_SIZE = RX_PKT_TABLE_SIZE*MAX_RX_SIZE;
+
+// parameter sizing helpers
+function [31:0] w_32(input [31:0] val);
+    w_32 = val;
+endfunction
 
 // AXI lite connections
 wire [AXIL_ADDR_WIDTH-1:0] axil_pcie_awaddr;
@@ -299,25 +305,25 @@ wire [1:0]                 axil_pcie_rresp;
 wire                       axil_pcie_rvalid;
 wire                       axil_pcie_rready;
 
-wire [AXIL_ADDR_WIDTH-1:0] axil_csr_awaddr;
-wire [2:0]                 axil_csr_awprot;
-wire                       axil_csr_awvalid;
-wire                       axil_csr_awready;
-wire [AXIL_DATA_WIDTH-1:0] axil_csr_wdata;
-wire [AXIL_STRB_WIDTH-1:0] axil_csr_wstrb;
-wire                       axil_csr_wvalid;
-wire                       axil_csr_wready;
-wire [1:0]                 axil_csr_bresp;
-wire                       axil_csr_bvalid;
-wire                       axil_csr_bready;
-wire [AXIL_ADDR_WIDTH-1:0] axil_csr_araddr;
-wire [2:0]                 axil_csr_arprot;
-wire                       axil_csr_arvalid;
-wire                       axil_csr_arready;
-wire [AXIL_DATA_WIDTH-1:0] axil_csr_rdata;
-wire [1:0]                 axil_csr_rresp;
-wire                       axil_csr_rvalid;
-wire                       axil_csr_rready;
+wire [AXIL_CSR_ADDR_WIDTH-1:0] axil_csr_awaddr;
+wire [2:0]                     axil_csr_awprot;
+wire                           axil_csr_awvalid;
+wire                           axil_csr_awready;
+wire [AXIL_DATA_WIDTH-1:0]     axil_csr_wdata;
+wire [AXIL_STRB_WIDTH-1:0]     axil_csr_wstrb;
+wire                           axil_csr_wvalid;
+wire                           axil_csr_wready;
+wire [1:0]                     axil_csr_bresp;
+wire                           axil_csr_bvalid;
+wire                           axil_csr_bready;
+wire [AXIL_CSR_ADDR_WIDTH-1:0] axil_csr_araddr;
+wire [2:0]                     axil_csr_arprot;
+wire                           axil_csr_arvalid;
+wire                           axil_csr_arready;
+wire [AXIL_DATA_WIDTH-1:0]     axil_csr_rdata;
+wire [1:0]                     axil_csr_rresp;
+wire                           axil_csr_rvalid;
+wire                           axil_csr_rready;
 
 // DMA connections
 wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]   dma_ram_wr_cmd_sel;
@@ -599,8 +605,8 @@ always @(posedge clk_250mhz) begin
             16'h0014: axil_csr_rdata_reg <= 16'h0200;   // phc_offset
             16'h0018: axil_csr_rdata_reg <= 16'h0080;   // phc_stride
             16'h0020: axil_csr_rdata_reg <= IF_COUNT;   // if_count
-            16'h0024: axil_csr_rdata_reg <= 24'h800000; // if_stride
-            16'h002C: axil_csr_rdata_reg <= 24'h040000; // if_csr_offset
+            16'h0024: axil_csr_rdata_reg <= 2**IF_AXIL_ADDR_WIDTH; // if_stride
+            16'h002C: axil_csr_rdata_reg <= 2**AXIL_CSR_ADDR_WIDTH; // if_csr_offset
             // GPIO
             16'h0100: begin
                 // GPIO out
@@ -1039,20 +1045,6 @@ pcie_us_msi_inst (
     .cfg_interrupt_msi_function_number(cfg_interrupt_msi_function_number)
 );
 
-parameter IF_AXIL_ADDR_WIDTH = 32'd23;
-parameter IF_AXIL_BASE_ADDR_WIDTH = IF_COUNT*AXIL_ADDR_WIDTH;
-parameter IF_AXIL_BASE_ADDR = calcIFAxiLiteBaseAddrs(IF_AXIL_ADDR_WIDTH);
-
-function [IF_AXIL_BASE_ADDR_WIDTH-1:0] calcIFAxiLiteBaseAddrs(input [31:0] if_addr_width);
-    integer i;
-    begin
-        calcIFAxiLiteBaseAddrs = {IF_AXIL_BASE_ADDR_WIDTH{1'b0}};
-        for (i = 0; i < IF_COUNT; i = i + 1) begin
-            calcIFAxiLiteBaseAddrs[i * AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH] = i * (2**if_addr_width);
-        end
-    end
-endfunction
-
 wire [IF_COUNT*AXIL_ADDR_WIDTH-1:0] axil_if_awaddr;
 wire [IF_COUNT*3-1:0]               axil_if_awprot;
 wire [IF_COUNT-1:0]                 axil_if_awvalid;
@@ -1073,33 +1065,33 @@ wire [IF_COUNT*2-1:0]               axil_if_rresp;
 wire [IF_COUNT-1:0]                 axil_if_rvalid;
 wire [IF_COUNT-1:0]                 axil_if_rready;
 
-wire [IF_COUNT*AXIL_ADDR_WIDTH-1:0] axil_if_csr_awaddr;
-wire [IF_COUNT*3-1:0]               axil_if_csr_awprot;
-wire [IF_COUNT-1:0]                 axil_if_csr_awvalid;
-wire [IF_COUNT-1:0]                 axil_if_csr_awready;
-wire [IF_COUNT*AXIL_DATA_WIDTH-1:0] axil_if_csr_wdata;
-wire [IF_COUNT*AXIL_STRB_WIDTH-1:0] axil_if_csr_wstrb;
-wire [IF_COUNT-1:0]                 axil_if_csr_wvalid;
-wire [IF_COUNT-1:0]                 axil_if_csr_wready;
-wire [IF_COUNT*2-1:0]               axil_if_csr_bresp;
-wire [IF_COUNT-1:0]                 axil_if_csr_bvalid;
-wire [IF_COUNT-1:0]                 axil_if_csr_bready;
-wire [IF_COUNT*AXIL_ADDR_WIDTH-1:0] axil_if_csr_araddr;
-wire [IF_COUNT*3-1:0]               axil_if_csr_arprot;
-wire [IF_COUNT-1:0]                 axil_if_csr_arvalid;
-wire [IF_COUNT-1:0]                 axil_if_csr_arready;
-wire [IF_COUNT*AXIL_DATA_WIDTH-1:0] axil_if_csr_rdata;
-wire [IF_COUNT*2-1:0]               axil_if_csr_rresp;
-wire [IF_COUNT-1:0]                 axil_if_csr_rvalid;
-wire [IF_COUNT-1:0]                 axil_if_csr_rready;
+wire [IF_COUNT*AXIL_CSR_ADDR_WIDTH-1:0] axil_if_csr_awaddr;
+wire [IF_COUNT*3-1:0]                   axil_if_csr_awprot;
+wire [IF_COUNT-1:0]                     axil_if_csr_awvalid;
+wire [IF_COUNT-1:0]                     axil_if_csr_awready;
+wire [IF_COUNT*AXIL_DATA_WIDTH-1:0]     axil_if_csr_wdata;
+wire [IF_COUNT*AXIL_STRB_WIDTH-1:0]     axil_if_csr_wstrb;
+wire [IF_COUNT-1:0]                     axil_if_csr_wvalid;
+wire [IF_COUNT-1:0]                     axil_if_csr_wready;
+wire [IF_COUNT*2-1:0]                   axil_if_csr_bresp;
+wire [IF_COUNT-1:0]                     axil_if_csr_bvalid;
+wire [IF_COUNT-1:0]                     axil_if_csr_bready;
+wire [IF_COUNT*AXIL_CSR_ADDR_WIDTH-1:0] axil_if_csr_araddr;
+wire [IF_COUNT*3-1:0]                   axil_if_csr_arprot;
+wire [IF_COUNT-1:0]                     axil_if_csr_arvalid;
+wire [IF_COUNT-1:0]                     axil_if_csr_arready;
+wire [IF_COUNT*AXIL_DATA_WIDTH-1:0]     axil_if_csr_rdata;
+wire [IF_COUNT*2-1:0]                   axil_if_csr_rresp;
+wire [IF_COUNT-1:0]                     axil_if_csr_rvalid;
+wire [IF_COUNT-1:0]                     axil_if_csr_rready;
 
 axil_interconnect #(
     .DATA_WIDTH(AXIL_DATA_WIDTH),
     .ADDR_WIDTH(AXIL_ADDR_WIDTH),
     .S_COUNT(1),
     .M_COUNT(IF_COUNT),
-    .M_BASE_ADDR(IF_AXIL_BASE_ADDR),
-    .M_ADDR_WIDTH({IF_COUNT{IF_AXIL_ADDR_WIDTH}}),
+    .M_BASE_ADDR(0),
+    .M_ADDR_WIDTH({IF_COUNT{w_32(IF_AXIL_ADDR_WIDTH)}}),
     .M_CONNECT_READ({IF_COUNT{1'b1}}),
     .M_CONNECT_WRITE({IF_COUNT{1'b1}})
 )
@@ -1148,13 +1140,13 @@ axil_interconnect_inst (
 
 axil_interconnect #(
     .DATA_WIDTH(AXIL_DATA_WIDTH),
-    .ADDR_WIDTH(AXIL_ADDR_WIDTH),
+    .ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .S_COUNT(IF_COUNT),
     .M_COUNT(1),
-    .M_BASE_ADDR({24'h000000}),
-    .M_ADDR_WIDTH({1{IF_AXIL_ADDR_WIDTH}}),
-    .M_CONNECT_READ({1{1'b1}}),
-    .M_CONNECT_WRITE({1{1'b1}})
+    .M_BASE_ADDR(0),
+    .M_ADDR_WIDTH({w_32(AXIL_CSR_ADDR_WIDTH-1)}),
+    .M_CONNECT_READ({1{{IF_COUNT{1'b1}}}}),
+    .M_CONNECT_WRITE({1{{IF_COUNT{1'b1}}}})
 )
 axil_csr_interconnect_inst (
     .clk(clk_250mhz),
@@ -1623,7 +1615,7 @@ generate
             /*
              * AXI-Lite master interface (passthrough for NIC control and status)
              */
-            .m_axil_csr_awaddr(axil_if_csr_awaddr[n*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
+            .m_axil_csr_awaddr(axil_if_csr_awaddr[n*AXIL_CSR_ADDR_WIDTH +: AXIL_CSR_ADDR_WIDTH]),
             .m_axil_csr_awprot(axil_if_csr_awprot[n*3 +: 3]),
             .m_axil_csr_awvalid(axil_if_csr_awvalid[n]),
             .m_axil_csr_awready(axil_if_csr_awready[n]),
@@ -1634,7 +1626,7 @@ generate
             .m_axil_csr_bresp(axil_if_csr_bresp[n*2 +: 2]),
             .m_axil_csr_bvalid(axil_if_csr_bvalid[n]),
             .m_axil_csr_bready(axil_if_csr_bready[n]),
-            .m_axil_csr_araddr(axil_if_csr_araddr[n*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
+            .m_axil_csr_araddr(axil_if_csr_araddr[n*AXIL_CSR_ADDR_WIDTH +: AXIL_CSR_ADDR_WIDTH]),
             .m_axil_csr_arprot(axil_if_csr_arprot[n*3 +: 3]),
             .m_axil_csr_arvalid(axil_if_csr_arvalid[n]),
             .m_axil_csr_arready(axil_if_csr_arready[n]),

@@ -37,7 +37,6 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr, int
 {
     struct device *dev = priv->dev;
     struct mqnic_port *port;
-    int k;
 
     port = kzalloc(sizeof(*port), GFP_KERNEL);
     if (!port)
@@ -45,6 +44,8 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr, int
         dev_err(dev, "Failed to allocate port");
         return -ENOMEM;
     }
+
+    *port_ptr = port;
 
     port->dev = dev;
     port->ndev = priv->ndev;
@@ -68,28 +69,13 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr, int
     port->sched_type = ioread32(port->hw_addr+MQNIC_PORT_REG_SCHED_TYPE);
     dev_info(dev, "Scheduler type: 0x%08x", port->sched_type);
 
-    // disable schedulers
-    iowrite32(0, port->hw_addr+MQNIC_PORT_REG_SCHED_ENABLE);
-
-    // enable schedulers
-    iowrite32(0xffffffff, port->hw_addr+MQNIC_PORT_REG_SCHED_ENABLE);
-
-    for (k = 0; k < priv->tx_queue_count; k++)
-    {
-        iowrite32(1, port->hw_addr+port->sched_offset+k*4);
-    }
-
-    // scheduler queue enable
-    iowrite32(0xffffffff, port->hw_addr+port->sched_offset+0x0200);
-    // scheduler global enable
-    iowrite32(0xffffffff, port->hw_addr+port->sched_offset+0x0300);
+    mqnic_deactivate_port(priv, port);
 
     return 0;
 }
 
 void mqnic_destroy_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr)
 {
-    struct device *dev = priv->dev;
     struct mqnic_port *port = *port_ptr;
     *port_ptr = NULL;
 
@@ -100,8 +86,20 @@ void mqnic_destroy_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr)
 
 int mqnic_activate_port(struct mqnic_priv *priv, struct mqnic_port *port)
 {
+    int k;
+
     // enable schedulers
     iowrite32(0xffffffff, port->hw_addr+MQNIC_PORT_REG_SCHED_ENABLE);
+
+    for (k = 0; k < priv->tx_queue_count; k++)
+    {
+        iowrite32(3, port->hw_addr+port->sched_offset+k*4);
+    }
+
+    // scheduler queue enable
+    iowrite32(0xffffffff, port->hw_addr+port->sched_offset+0x0200);
+    // scheduler global enable
+    iowrite32(0xffffffff, port->hw_addr+port->sched_offset+0x0300);
 
     return 0;
 }

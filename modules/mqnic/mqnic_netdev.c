@@ -88,6 +88,9 @@ static int mqnic_open(struct net_device *ndev)
         priv->tx_ring[k]->tx_queue = netdev_get_tx_queue(ndev, k);
     }
 
+    // enable first port
+    mqnic_activate_port(priv, priv->ports[0]);
+
     priv->port_up = true;
 
     netif_tx_start_all_queues(ndev);
@@ -119,6 +122,12 @@ static int mqnic_close(struct net_device *ndev)
     mqnic_update_stats(ndev);
     priv->port_up = false;
     spin_unlock_bh(&priv->stats_lock);
+
+    // disable ports
+    for (k = 0; k < priv->port_count; k++)
+    {
+        mqnic_deactivate_port(priv, priv->ports[k]);
+    }
 
     // deactivate TX queues
     for (k = 0; k < priv->tx_queue_count; k++)

@@ -102,8 +102,8 @@ module fpga_core #
     output wire [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser,
     output wire                               m_axis_cc_tvalid,
 
-    input  wire [1:0]                         pcie_tfc_nph_av,
-    input  wire [1:0]                         pcie_tfc_npd_av,
+    input  wire [3:0]                         pcie_tfc_nph_av,
+    input  wire [3:0]                         pcie_tfc_npd_av,
 
     input  wire [2:0]                         cfg_max_payload,
     input  wire [2:0]                         cfg_max_read_req,
@@ -118,7 +118,6 @@ module fpga_core #
     input  wire                               cfg_mgmt_read_write_done,
 
     input  wire [3:0]                         cfg_interrupt_msi_enable,
-    input  wire [7:0]                         cfg_interrupt_msi_vf_enable,
     input  wire [11:0]                        cfg_interrupt_msi_mmenable,
     input  wire                               cfg_interrupt_msi_mask_update,
     input  wire [31:0]                        cfg_interrupt_msi_data,
@@ -1027,7 +1026,7 @@ pcie_us_msi_inst (
     .msi_irq(msi_irq),
 
     .cfg_interrupt_msi_enable(cfg_interrupt_msi_enable),
-    .cfg_interrupt_msi_vf_enable(cfg_interrupt_msi_vf_enable),
+    .cfg_interrupt_msi_vf_enable(0),
     .cfg_interrupt_msi_mmenable(cfg_interrupt_msi_mmenable),
     .cfg_interrupt_msi_mask_update(cfg_interrupt_msi_mask_update),
     .cfg_interrupt_msi_data(cfg_interrupt_msi_data),

@@ -36,7 +36,7 @@ from myhdl import *
 import os
 
 import pcie
-import pcie_us
+import pcie_usp
 import xgmii_ep
 import axis_ep
 import eth_ep
@@ -129,8 +129,8 @@ def bench():
     AXIS_PCIE_DATA_WIDTH = 256
     AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
     AXIS_PCIE_RC_USER_WIDTH = 75
-    AXIS_PCIE_RQ_USER_WIDTH = 60
-    AXIS_PCIE_CQ_USER_WIDTH = 85
+    AXIS_PCIE_RQ_USER_WIDTH = 62
+    AXIS_PCIE_CQ_USER_WIDTH = 88
     AXIS_PCIE_CC_USER_WIDTH = 33
     BAR0_APERTURE = 24
 
@@ -155,14 +155,13 @@ def bench():
     s_axis_cq_tuser = Signal(intbv(0)[AXIS_PCIE_CQ_USER_WIDTH:])
     s_axis_cq_tvalid = Signal(bool(0))
     m_axis_cc_tready = Signal(bool(0))
-    pcie_tfc_nph_av = Signal(intbv(0)[2:])
-    pcie_tfc_npd_av = Signal(intbv(0)[2:])
-    cfg_max_payload = Signal(intbv(0)[3:])
+    pcie_tfc_nph_av = Signal(intbv(0)[4:])
+    pcie_tfc_npd_av = Signal(intbv(0)[4:])
+    cfg_max_payload = Signal(intbv(0)[2:])
     cfg_max_read_req = Signal(intbv(0)[3:])
     cfg_mgmt_read_data = Signal(intbv(0)[32:])
     cfg_mgmt_read_write_done = Signal(bool(0))
     cfg_interrupt_msi_enable = Signal(intbv(0)[4:])
-    cfg_interrupt_msi_vf_enable = Signal(intbv(0)[8:])
     cfg_interrupt_msi_mmenable = Signal(intbv(0)[12:])
     cfg_interrupt_msi_mask_update = Signal(bool(0))
     cfg_interrupt_msi_data = Signal(intbv(0)[32:])
@@ -205,21 +204,22 @@ def bench():
     m_axis_cc_tvalid = Signal(bool(0))
     status_error_cor = Signal(bool(0))
     status_error_uncor = Signal(bool(0))
-    cfg_mgmt_addr = Signal(intbv(0)[19:])
+    cfg_mgmt_addr = Signal(intbv(0)[10:])
+    cfg_mgmt_function_number = Signal(intbv(0)[8:])
     cfg_mgmt_write = Signal(bool(0))
     cfg_mgmt_write_data = Signal(intbv(0)[32:])
     cfg_mgmt_byte_enable = Signal(intbv(0)[4:])
     cfg_mgmt_read = Signal(bool(0))
     cfg_interrupt_msi_int = Signal(intbv(0)[32:])
     cfg_interrupt_msi_pending_status = Signal(intbv(0)[32:])
-    cfg_interrupt_msi_select = Signal(intbv(0)[4:])
-    cfg_interrupt_msi_pending_status_function_num = Signal(intbv(0)[4:])
+    cfg_interrupt_msi_select = Signal(intbv(0)[2:])
+    cfg_interrupt_msi_pending_status_function_num = Signal(intbv(0)[2:])
     cfg_interrupt_msi_pending_status_data_enable = Signal(bool(0))
     cfg_interrupt_msi_attr = Signal(intbv(0)[3:])
     cfg_interrupt_msi_tph_present = Signal(bool(0))
     cfg_interrupt_msi_tph_type = Signal(intbv(0)[2:])
-    cfg_interrupt_msi_tph_st_tag = Signal(intbv(0)[9:])
-    cfg_interrupt_msi_function_number = Signal(intbv(0)[4:])
+    cfg_interrupt_msi_tph_st_tag = Signal(intbv(0)[8:])
+    cfg_interrupt_msi_function_number = Signal(intbv(0)[8:])
     sfp_1_txd = Signal(intbv(0)[64:])
     sfp_1_txc = Signal(intbv(0)[8:])
     sfp_2_txd = Signal(intbv(0)[64:])
@@ -271,7 +271,7 @@ def bench():
 
     driver = mqnic.Driver(rc)
 
-    dev = pcie_us.UltrascalePCIe()
+    dev = pcie_usp.UltrascalePlusPCIe()
 
     dev.pcie_generation = 3
     dev.pcie_link_width = 8
@@ -292,7 +292,7 @@ def bench():
         m_axis_cq_tvalid=s_axis_cq_tvalid,
         m_axis_cq_tready=s_axis_cq_tready,
         #pcie_cq_np_req=pcie_cq_np_req,
-        pcie_cq_np_req=Signal(bool(1)),
+        pcie_cq_np_req=Signal(intbv(1)[2:]),
         #pcie_cq_np_req_count=pcie_cq_np_req_count,
 
         # Completer Completion Interface
@@ -414,7 +414,6 @@ def bench():
         #cfg_interrupt_sent=cfg_interrupt_sent,
         #cfg_interrupt_pending=cfg_interrupt_pending,
         cfg_interrupt_msi_enable=cfg_interrupt_msi_enable,
-        cfg_interrupt_msi_vf_enable=cfg_interrupt_msi_vf_enable,
         cfg_interrupt_msi_mmenable=cfg_interrupt_msi_mmenable,
         cfg_interrupt_msi_mask_update=cfg_interrupt_msi_mask_update,
         cfg_interrupt_msi_data=cfg_interrupt_msi_data,
@@ -513,7 +512,6 @@ def bench():
         cfg_mgmt_read_data=cfg_mgmt_read_data,
         cfg_mgmt_read_write_done=cfg_mgmt_read_write_done,
         cfg_interrupt_msi_enable=cfg_interrupt_msi_enable,
-        cfg_interrupt_msi_vf_enable=cfg_interrupt_msi_vf_enable,
         cfg_interrupt_msi_int=cfg_interrupt_msi_int,
         cfg_interrupt_msi_sent=cfg_interrupt_msi_sent,
         cfg_interrupt_msi_fail=cfg_interrupt_msi_fail,

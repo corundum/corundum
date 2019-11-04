@@ -908,7 +908,6 @@ core_inst (
     .cfg_mgmt_read_write_done(cfg_mgmt_read_write_done),
 
     .cfg_interrupt_msi_enable(cfg_interrupt_msi_enable),
-    .cfg_interrupt_msi_vf_enable(cfg_interrupt_msi_vf_enable),
     .cfg_interrupt_msi_mmenable(cfg_interrupt_msi_mmenable),
     .cfg_interrupt_msi_mask_update(cfg_interrupt_msi_mask_update),
     .cfg_interrupt_msi_data(cfg_interrupt_msi_data),

@@ -44,8 +44,8 @@ module test_fpga_core;
 parameter AXIS_PCIE_DATA_WIDTH = 256;
 parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
 parameter AXIS_PCIE_RC_USER_WIDTH = 75;
-parameter AXIS_PCIE_RQ_USER_WIDTH = 60;
-parameter AXIS_PCIE_CQ_USER_WIDTH = 85;
+parameter AXIS_PCIE_RQ_USER_WIDTH = 62;
+parameter AXIS_PCIE_CQ_USER_WIDTH = 88;
 parameter AXIS_PCIE_CC_USER_WIDTH = 33;
 parameter BAR0_APERTURE = 24;
 
@@ -70,14 +70,13 @@ reg s_axis_cq_tlast = 0;
 reg [AXIS_PCIE_CQ_USER_WIDTH-1:0] s_axis_cq_tuser = 0;
 reg s_axis_cq_tvalid = 0;
 reg m_axis_cc_tready = 0;
-reg [1:0] pcie_tfc_nph_av = 0;
-reg [1:0] pcie_tfc_npd_av = 0;
+reg [3:0] pcie_tfc_nph_av = 0;
+reg [3:0] pcie_tfc_npd_av = 0;
 reg [2:0] cfg_max_payload = 0;
 reg [2:0] cfg_max_read_req = 0;
 reg [31:0] cfg_mgmt_read_data = 0;
 reg cfg_mgmt_read_write_done = 0;
 reg [3:0] cfg_interrupt_msi_enable = 0;
-reg [7:0] cfg_interrupt_msi_vf_enable = 0;
 reg [11:0] cfg_interrupt_msi_mmenable = 0;
 reg cfg_interrupt_msi_mask_update = 0;
 reg [31:0] cfg_interrupt_msi_data = 0;
@@ -118,7 +117,8 @@ wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_cc_tkeep;
 wire m_axis_cc_tlast;
 wire [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser;
 wire m_axis_cc_tvalid;
-wire [18:0] cfg_mgmt_addr;
+wire [9:0] cfg_mgmt_addr;
+wire [7:0] cfg_mgmt_function_number;
 wire cfg_mgmt_write;
 wire [31:0] cfg_mgmt_write_data;
 wire [3:0] cfg_mgmt_byte_enable;
@@ -186,7 +186,6 @@ initial begin
         cfg_mgmt_read_data,
         cfg_mgmt_read_write_done,
         cfg_interrupt_msi_enable,
-        cfg_interrupt_msi_vf_enable,
         cfg_interrupt_msi_mmenable,
         cfg_interrupt_msi_mask_update,
         cfg_interrupt_msi_data,
@@ -320,6 +319,7 @@ UUT (
     .cfg_max_payload(cfg_max_payload),
     .cfg_max_read_req(cfg_max_read_req),
     .cfg_mgmt_addr(cfg_mgmt_addr),
+    .cfg_mgmt_function_number(cfg_mgmt_function_number),
     .cfg_mgmt_write(cfg_mgmt_write),
     .cfg_mgmt_write_data(cfg_mgmt_write_data),
     .cfg_mgmt_byte_enable(cfg_mgmt_byte_enable),
@@ -327,7 +327,6 @@ UUT (
     .cfg_mgmt_read_data(cfg_mgmt_read_data),
     .cfg_mgmt_read_write_done(cfg_mgmt_read_write_done),
     .cfg_interrupt_msi_enable(cfg_interrupt_msi_enable),
-    .cfg_interrupt_msi_vf_enable(cfg_interrupt_msi_vf_enable),
     .cfg_interrupt_msi_mmenable(cfg_interrupt_msi_mmenable),
     .cfg_interrupt_msi_mask_update(cfg_interrupt_msi_mask_update),
     .cfg_interrupt_msi_data(cfg_interrupt_msi_data),

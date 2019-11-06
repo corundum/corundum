@@ -45,6 +45,14 @@ either expressed or implied, of The Regents of the University of California.
 
 struct mqnic;
 
+struct mqnic_sched {
+    struct mqnic *mqnic;
+    struct mqnic_if *mqnic_if;
+    struct mqnic_port *mqnic_port;
+
+    volatile uint8_t *regs;
+};
+
 struct mqnic_port {
     struct mqnic *mqnic;
     struct mqnic_if *mqnic_if;
@@ -60,6 +68,8 @@ struct mqnic_port {
     uint32_t sched_type;
 
     uint32_t tdma_timeslot_count;
+
+    struct mqnic_sched sched[MQNIC_MAX_SCHED];
 };
 
 struct mqnic_if {

@@ -144,6 +144,12 @@ struct mqnic *mqnic_open(const char *dev_name)
             port->sched_type = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_TYPE);
 
             port->tdma_timeslot_count = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_COUNT);
+
+            for (int m = 0; m < port->sched_count; m++)
+            {
+                struct mqnic_sched *sched = &port->sched[m];
+                sched->regs = port->regs + port->sched_offset + port->sched_stride*m;
+            }
         }
     }
 

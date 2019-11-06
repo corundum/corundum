@@ -633,7 +633,7 @@ always @(posedge clk_250mhz) begin
                 axil_csr_rdata_reg[25] <= eeprom_i2c_sda_i;
             end
             // Flash
-            16'h0140: axil_csr_rdata_reg <= 32'd0; // Flash ID
+            16'h0140: axil_csr_rdata_reg <= {8'd24, 8'd16, 8'd2, 8'd1}; // Flash ID
             16'h0144: begin
                 // Flash address
                 axil_csr_rdata_reg[22:0] <= flash_addr_reg;

@@ -219,6 +219,8 @@ struct mqnic_port {
 
     int index;
 
+    u32 tx_queue_count;
+
     u32 port_id;
     u32 port_features;
     u32 sched_count;
@@ -283,8 +285,8 @@ void mqnic_destroy_netdev(struct net_device *ndev);
 // mqnic_port.c
 int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr, int index, u8 __iomem *hw_addr);
 void mqnic_destroy_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr);
-int mqnic_activate_port(struct mqnic_priv *priv, struct mqnic_port *port);
-void mqnic_deactivate_port(struct mqnic_priv *priv, struct mqnic_port *port);
+int mqnic_activate_port(struct mqnic_port *port);
+void mqnic_deactivate_port(struct mqnic_port *port);
 
 // mqnic_ptp.c
 void mqnic_register_phc(struct mqnic_dev *mdev);

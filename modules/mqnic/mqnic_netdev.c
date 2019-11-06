@@ -89,7 +89,7 @@ static int mqnic_open(struct net_device *ndev)
     }
 
     // enable first port
-    mqnic_activate_port(priv, priv->ports[0]);
+    mqnic_activate_port(priv->ports[0]);
 
     priv->port_up = true;
 
@@ -126,7 +126,7 @@ static int mqnic_close(struct net_device *ndev)
     // disable ports
     for (k = 0; k < priv->port_count; k++)
     {
-        mqnic_deactivate_port(priv, priv->ports[k]);
+        mqnic_deactivate_port(priv->ports[k]);
     }
 
     // deactivate TX queues

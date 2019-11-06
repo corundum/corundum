@@ -52,6 +52,8 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr, int
 
     port->index = index;
 
+    port->tx_queue_count = priv->tx_queue_count;
+
     port->hw_addr = hw_addr;
 
     // read ID registers
@@ -69,7 +71,7 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr, int
     port->sched_type = ioread32(port->hw_addr+MQNIC_PORT_REG_SCHED_TYPE);
     dev_info(dev, "Scheduler type: 0x%08x", port->sched_type);
 
-    mqnic_deactivate_port(priv, port);
+    mqnic_deactivate_port(port);
 
     return 0;
 }
@@ -79,12 +81,12 @@ void mqnic_destroy_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr)
     struct mqnic_port *port = *port_ptr;
     *port_ptr = NULL;
 
-    mqnic_deactivate_port(priv, port);
+    mqnic_deactivate_port(port);
 
     kfree(port);
 }
 
-int mqnic_activate_port(struct mqnic_priv *priv, struct mqnic_port *port)
+int mqnic_activate_port(struct mqnic_port *port)
 {
     int k;
 
@@ -92,7 +94,7 @@ int mqnic_activate_port(struct mqnic_priv *priv, struct mqnic_port *port)
     iowrite32(0xffffffff, port->hw_addr+MQNIC_PORT_REG_SCHED_ENABLE);
 
     // enable queues
-    for (k = 0; k < priv->tx_queue_count; k++)
+    for (k = 0; k < port->tx_queue_count; k++)
     {
         iowrite32(3, port->hw_addr+port->sched_offset+k*4);
     }
@@ -100,7 +102,7 @@ int mqnic_activate_port(struct mqnic_priv *priv, struct mqnic_port *port)
     return 0;
 }
 
-void mqnic_deactivate_port(struct mqnic_priv *priv, struct mqnic_port *port)
+void mqnic_deactivate_port(struct mqnic_port *port)
 {
     // disable schedulers
     iowrite32(0, port->hw_addr+MQNIC_PORT_REG_SCHED_ENABLE);

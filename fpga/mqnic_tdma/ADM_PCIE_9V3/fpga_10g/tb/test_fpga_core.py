@@ -64,7 +64,8 @@ srcs.append("../rtl/common/tx_engine.v")
 srcs.append("../rtl/common/rx_engine.v")
 srcs.append("../rtl/common/tx_checksum.v")
 srcs.append("../rtl/common/rx_checksum.v")
-srcs.append("../rtl/common/tx_scheduler_tdma_rr.v")
+srcs.append("../rtl/common/tx_scheduler_rr.v")
+srcs.append("../rtl/common/tx_scheduler_ctrl_tdma.v")
 srcs.append("../rtl/common/event_mux.v")
 srcs.append("../rtl/common/tdma_scheduler.v")
 srcs.append("../rtl/common/tdma_ber.v")
@@ -844,8 +845,9 @@ def bench():
         #yield from driver.interfaces[1].open()
 
         # enable queues
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x0200, 0xffffffff)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x0300, 0xffffffff)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
+        for k in range(driver.interfaces[0].tx_queue_count):
+            yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+4*k, 0x00000003)
 
         yield from rc.mem_read(driver.hw_addr, 4) # wait for all writes to complete
 
@@ -1016,34 +1018,30 @@ def bench():
         # configure TDMA
 
         # configure TDMA scheduler
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00120, 0) # schedule period fns
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00124, 40000) # schedule period ns
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00128, 0) # schedule period sec (low)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x0012c, 0) # schedule period sec (high)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00130, 0) # timeslot period fns
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00134, 10000) # timeslot period ns
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00138, 0) # timeslot period sec (low)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x0013c, 0) # timeslot period sec (high)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00140, 0) # active period fns
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00144, 5000) # active period ns
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00148, 0) # active period sec (low)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x0014c, 0) # active period sec (high)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00110, 0) # schedule start fns
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00114, 200000) # schedule start ns
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00118, 0) # schedule start sec (low)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x0011c, 0) # schedule start sec (high)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00100, 0x00000001)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_FNS,   0) # schedule period fns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_NS,    40000) # schedule period ns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_L, 0) # schedule period sec (low)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_H, 0) # schedule period sec (high)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_FNS,   0) # timeslot period fns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_NS,    10000) # timeslot period ns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_L, 0) # timeslot period sec (low)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_H, 0) # timeslot period sec (high)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_FNS,   0) # active period fns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_NS,    5000) # active period ns
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L, 0) # active period sec (low)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H, 0) # active period sec (high)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_CTRL, 0x00000001) # enable TDMA
 
-        # enable queues
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00200, 0xffffffff)
-        # disable global enable
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x00300, 0x00000000)
+        # enable queues with global enable off
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
+        for k in range(driver.interfaces[0].tx_queue_count):
+            yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+4*k, 0x00000001)
 
         # configure slots
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x10000, 0x00000001)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x10100, 0x00000002)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x10200, 0x00000004)
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+0x10300, 0x00000008)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[1].hw_addr+8*0, 0x00000001)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[1].hw_addr+8*1, 0x00000002)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[1].hw_addr+8*2, 0x00000004)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[1].hw_addr+8*3, 0x00000008)
 
         yield from rc.mem_read(driver.hw_addr, 4) # wait for all writes to complete
 

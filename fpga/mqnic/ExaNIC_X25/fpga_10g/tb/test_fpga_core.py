@@ -630,21 +630,6 @@ def bench():
         dev_pf0_bar0 = dev.functions[0].bar[0] & 0xfffffffc
         dev_pf0_bar1 = dev.functions[0].bar[1] & 0xfffffffc
 
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x270, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x274, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x278, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x27C, 0);
-
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x290, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x294, 1000);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x298, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x29C, 0);
-
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x280, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x284, 2000);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x288, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x28C, 0);
-
         yield delay(100)
 
         yield clk.posedge

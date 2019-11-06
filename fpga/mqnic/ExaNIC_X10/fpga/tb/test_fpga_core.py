@@ -657,9 +657,9 @@ def bench():
         yield from driver.interfaces[0].open()
 
         # enable queues
-        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+0x0040, 0x00000001)
-        for k in range(32):
-            yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+4*k, 0x00000001)
+        yield from rc.mem_write_dword(driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
+        for k in range(driver.interfaces[0].tx_queue_count):
+            yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+4*k, 0x00000003)
 
         yield from rc.mem_read(driver.hw_addr, 4) # wait for all writes to complete
 

@@ -197,6 +197,8 @@ int main(int argc, char *argv[])
     printf("Sched stride: 0x%08x\n", dev_port->sched_stride);
     printf("Sched type: 0x%08x\n", dev_port->sched_type);
 
+    printf("Timeslot count: %d\n", dev_port->tdma_timeslot_count);
+
     if (period_nsec > 0)
     {
         printf("Configure port TDMA schedule\n");

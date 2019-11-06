@@ -58,6 +58,8 @@ struct mqnic_port {
     uint32_t sched_offset;
     uint32_t sched_stride;
     uint32_t sched_type;
+
+    uint32_t tdma_timeslot_count;
 };
 
 struct mqnic_if {

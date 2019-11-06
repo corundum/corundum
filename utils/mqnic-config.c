@@ -48,49 +48,11 @@ either expressed or implied, of The Regents of the University of California.
 #include <time.h>
 #include <unistd.h>
 
+#include "timespec.h"
+
+#include "mqnic.h"
+
 #define NSEC_PER_SEC 1000000000
-
-void ts_mod(int64_t *m_sec, int64_t *m_nsec, int64_t n_sec, int64_t n_nsec)
-{
-    int i = 0;
-
-    // shift until larger
-    while (n_sec < *m_sec || (n_sec == *m_sec && n_nsec < *m_nsec))
-    {
-        i++;
-        n_nsec <<= 1;
-        n_sec <<= 1;
-        if (n_nsec > NSEC_PER_SEC)
-        {
-            n_nsec -= NSEC_PER_SEC;
-            n_sec++;
-        }
-    }
-
-    // subtract and shift back
-    while (i > 0)
-    {
-        i--;
-        if (n_sec & 1)
-        {
-            n_nsec += NSEC_PER_SEC;
-        }
-        n_nsec >>= 1;
-        n_sec >>= 1;
-
-        if (n_sec < *m_sec || (n_sec == *m_sec && n_nsec < *m_nsec))
-        {
-            *m_nsec -= n_nsec;
-            *m_sec -= n_sec;
-
-            if (*m_nsec < 0)
-            {
-                *m_nsec += NSEC_PER_SEC;
-                (*m_sec)--;
-            }
-        }
-    }
-}
 
 static void usage(char *name)
 {
@@ -112,44 +74,19 @@ int main(int argc, char *argv[])
     int opt;
 
     char *device = NULL;
+    struct mqnic *dev;
     int interface = 0;
     int port = 0;
-    int dev_fd;
 
-    uint32_t fw_id;
-    uint32_t fw_ver;
-    uint32_t board_id;
-    uint32_t board_ver;
-    uint32_t phc_count;
-    uint32_t phc_offset;
-    uint32_t if_count;
-    uint32_t if_stride;
-    uint32_t if_csr_offset;
+    struct timespec ts_now;
+    struct timespec ts_start;
+    struct timespec ts_period;
+    struct timespec ts_timeslot_period;
+    struct timespec ts_active_period;
 
-    uint32_t if_id;
-    uint32_t event_queue_count;
-    uint32_t event_queue_offset;
-    uint32_t tx_queue_count;
-    uint32_t tx_queue_offset;
-    uint32_t tx_cpl_queue_count;
-    uint32_t tx_cpl_queue_offset;
-    uint32_t rx_queue_count;
-    uint32_t rx_queue_offset;
-    uint32_t rx_cpl_queue_count;
-    uint32_t rx_cpl_queue_offset;
-    uint32_t port_count;
-    uint32_t port_offset;
-    uint32_t port_stride;
-
-    int64_t cur_sec = 0;
-    int64_t cur_nsec = 0;
-    int64_t start_sec = 0;
     int64_t start_nsec = 0;
-    int64_t period_sec = 0;
     int64_t period_nsec = 0;
-    int64_t timeslot_period_sec = 0;
     int64_t timeslot_period_nsec = 0;
-    int64_t active_period_sec = 0;
     int64_t active_period_nsec = 0;
 
     name = strrchr(argv[0], '/');
@@ -197,159 +134,114 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    dev_fd = open(device, O_RDWR);
+    dev = mqnic_open(device);
 
-    uint32_t *regs = mmap(NULL, 0x1000000, PROT_READ | PROT_WRITE, MAP_SHARED, dev_fd, 0);
-    if (regs == MAP_FAILED)
+    if (!dev)
     {
-        perror("Registers mmap failed");
-        goto err_mmap_registers;
+        fprintf(stderr, "Failed to open device\n");
+        return -1;
     }
 
-    fw_id = regs[0];
-    fw_ver = regs[1];
-    board_id = regs[2];
-    board_ver = regs[3];
+    printf("FW ID: 0x%08x\n", dev->fw_id);
+    printf("FW version: %d.%d\n", dev->fw_ver >> 16, dev->fw_ver & 0xffff);
+    printf("Board ID: 0x%08x\n", dev->board_id);
+    printf("Board version: %d.%d\n", dev->board_ver >> 16, dev->board_ver & 0xffff);
+    printf("PHC count: %d\n", dev->phc_count);
+    printf("PHC offset: 0x%08x\n", dev->phc_offset);
+    printf("IF count: %d\n", dev->if_count);
+    printf("IF stride: 0x%08x\n", dev->if_stride);
+    printf("IF CSR offset: 0x%08x\n", dev->if_csr_offset);
 
-    phc_count = regs[4];
-    phc_offset = regs[5];
-
-    if_count = regs[8];
-    if_stride = regs[9];
-    if_csr_offset = regs[11];
-
-    printf("FW ID: 0x%08x\n", fw_id);
-    printf("FW version: %d.%d\n", fw_ver >> 16, fw_ver & 0xffff);
-    printf("Board ID: 0x%08x\n", board_id);
-    printf("Board version: %d.%d\n", board_ver >> 16, board_ver & 0xffff);
-    printf("PHC count: %d\n", phc_count);
-    printf("PHC offset: 0x%08x\n", phc_offset);
-    printf("IF count: %d\n", if_count);
-    printf("IF stride: 0x%08x\n", if_stride);
-    printf("IF CSR offset: 0x%08x\n", if_csr_offset);
-
-    if (phc_count == 0)
+    if (dev->phc_count == 0)
     {
         fprintf(stderr, "No PHC on card\n");
         goto err;
     }
 
-    uint32_t *phc_regs = (uint32_t *)((uint8_t *)regs + phc_offset);
-
-    if (interface < 0 || interface >= if_count)
+    if (interface < 0 || interface >= dev->if_count)
     {
         fprintf(stderr, "Interface out of range\n");
         goto err;
     }
 
-    uint32_t *if_regs = (uint32_t *)((uint8_t *)regs + interface * if_stride);
-    uint32_t *if_csr_regs = (uint32_t *)((uint8_t *)if_regs + if_csr_offset);
+    struct mqnic_if *dev_interface = &dev->interfaces[interface];
 
-    if_id = if_csr_regs[0];
-    printf("IF ID: 0x%08x\n", if_id);
-
-    event_queue_count = if_csr_regs[4];
-    event_queue_offset = if_csr_regs[5];
-    tx_queue_count = if_csr_regs[8];
-    tx_queue_offset = if_csr_regs[9];
-    tx_cpl_queue_count = if_csr_regs[10];
-    tx_cpl_queue_offset = if_csr_regs[11];
-    rx_queue_count = if_csr_regs[12];
-    rx_queue_offset = if_csr_regs[13];
-    rx_cpl_queue_count = if_csr_regs[14];
-    rx_cpl_queue_offset = if_csr_regs[15];
-    port_count = if_csr_regs[16];
-    port_offset = if_csr_regs[17];
-    port_stride = if_csr_regs[18];
+    printf("IF ID: 0x%08x\n", dev_interface->if_id);
     
-    printf("Event queue count: %d\n", event_queue_count);
-    printf("Event queue offset: 0x%08x\n", event_queue_offset);
-    printf("TX queue count: %d\n", tx_queue_count);
-    printf("TX queue offset: 0x%08x\n", tx_queue_offset);
-    printf("TX completion queue count: %d\n", tx_cpl_queue_count);
-    printf("TX completion queue offset: 0x%08x\n", tx_cpl_queue_offset);
-    printf("RX queue count: %d\n", rx_queue_count);
-    printf("RX queue offset: 0x%08x\n", rx_queue_offset);
-    printf("RX completion queue count: %d\n", rx_cpl_queue_count);
-    printf("RX completion queue offset: 0x%08x\n", rx_cpl_queue_offset);
-    printf("Port count: %d\n", port_count);
-    printf("Port offset: 0x%08x\n", port_offset);
-    printf("Port stride: 0x%08x\n", port_stride);
+    printf("Event queue count: %d\n", dev_interface->event_queue_count);
+    printf("Event queue offset: 0x%08x\n", dev_interface->event_queue_offset);
+    printf("TX queue count: %d\n", dev_interface->tx_queue_count);
+    printf("TX queue offset: 0x%08x\n", dev_interface->tx_queue_offset);
+    printf("TX completion queue count: %d\n", dev_interface->tx_cpl_queue_count);
+    printf("TX completion queue offset: 0x%08x\n", dev_interface->tx_cpl_queue_offset);
+    printf("RX queue count: %d\n", dev_interface->rx_queue_count);
+    printf("RX queue offset: 0x%08x\n", dev_interface->rx_queue_offset);
+    printf("RX completion queue count: %d\n", dev_interface->rx_cpl_queue_count);
+    printf("RX completion queue offset: 0x%08x\n", dev_interface->rx_cpl_queue_offset);
+    printf("Port count: %d\n", dev_interface->port_count);
+    printf("Port offset: 0x%08x\n", dev_interface->port_offset);
+    printf("Port stride: 0x%08x\n", dev_interface->port_stride);
 
-    if (port < 0 || port >= port_count)
+    if (port < 0 || port >= dev_interface->port_count)
     {
         fprintf(stderr, "Port out of range\n");
         goto err;
     }
 
-    uint32_t *port_regs = (uint32_t *)((uint8_t *)if_regs + port_offset + port * port_stride);
+    struct mqnic_port *dev_port = &dev_interface->ports[port];
+
+    printf("Port ID: 0x%08x\n", dev_port->port_id);
+    
+    printf("Sched count: %d\n", dev_port->sched_count);
+    printf("Sched offset: 0x%08x\n", dev_port->sched_offset);
+    printf("Sched stride: 0x%08x\n", dev_port->sched_stride);
+    printf("Sched type: 0x%08x\n", dev_port->sched_type);
 
     if (period_nsec > 0)
     {
         printf("Configure port TDMA schedule\n");
 
-        cur_nsec = phc_regs[5];
-        cur_sec = phc_regs[6] + (((int64_t)phc_regs[7]) << 32);
+        ts_now.tv_nsec = mqnic_reg_read32(dev->phc_regs, MQNIC_PHC_REG_PTP_CUR_NS);
+        ts_now.tv_sec = mqnic_reg_read32(dev->phc_regs, MQNIC_PHC_REG_PTP_CUR_SEC_L) + (((int64_t)mqnic_reg_read32(dev->phc_regs, MQNIC_PHC_REG_PTP_CUR_SEC_H)) << 32);
 
         // normalize start
-        start_sec = start_nsec / NSEC_PER_SEC;
-        start_nsec -= start_sec * NSEC_PER_SEC;
+        ts_start.tv_sec = start_nsec / NSEC_PER_SEC;
+        ts_start.tv_nsec = start_nsec - ts_start.tv_sec * NSEC_PER_SEC;
 
         // normalize period
-        period_sec = period_nsec / NSEC_PER_SEC;
-        period_nsec -= period_sec * NSEC_PER_SEC;
+        ts_period.tv_sec = period_nsec / NSEC_PER_SEC;
+        ts_period.tv_nsec = period_nsec - ts_period.tv_sec * NSEC_PER_SEC;
 
-        printf("time   %ld.%09ld\n", cur_sec, cur_nsec);
-        printf("start  %ld.%09ld\n", start_sec, start_nsec);
-        printf("period %ld.%09ld\n", period_sec, period_nsec);
+        printf("time   %ld.%09ld s\n", ts_now.tv_sec, ts_now.tv_nsec);
+        printf("start  %ld.%09ld s\n", ts_start.tv_sec, ts_start.tv_nsec);
+        printf("period %ld.%09ld s\n", ts_period.tv_sec, ts_period.tv_nsec);
 
-        if (start_sec < cur_sec || (start_sec == cur_sec && start_nsec < cur_sec))
+        if (timespec_lt(ts_start, ts_now))
         {
             // start time is in the past
 
             // modulo start with period
-            ts_mod(&start_sec, &start_nsec, period_sec, period_nsec);
+            ts_start = timespec_mod(ts_start, ts_period);
 
             // align time with period
-            int64_t m_sec = cur_sec;
-            int64_t m_nsec = cur_nsec;
+            struct timespec ts_aligned = timespec_sub(ts_now, timespec_mod(ts_now, ts_period));
 
-            ts_mod(&m_sec, &m_nsec, period_sec, period_nsec);
-
-            // add current time and normalize
-            start_nsec += cur_nsec;
-            start_sec += cur_sec;
-
-            if (start_nsec > NSEC_PER_SEC)
-            {
-                start_nsec -= NSEC_PER_SEC;
-                start_sec++;
-            }
-
-            // subtract remainder
-            start_nsec -= m_nsec;
-            start_sec -= m_sec;
-
-            // re-normalize
-            if (start_nsec < 0)
-            {
-                start_nsec += NSEC_PER_SEC;
-                start_sec--;
-            }
+            // add aligned time
+            ts_start = timespec_add(ts_start, ts_aligned);
         }
 
-        printf("time   %ld.%09ld\n", cur_sec, cur_nsec);
-        printf("start  %ld.%09ld\n", start_sec, start_nsec);
-        printf("period %ld.%09ld\n", period_sec, period_nsec);
+        printf("time   %ld.%09ld s\n", ts_now.tv_sec, ts_now.tv_nsec);
+        printf("start  %ld.%09ld s\n", ts_start.tv_sec, ts_start.tv_nsec);
+        printf("period %ld.%09ld s\n", ts_period.tv_sec, ts_period.tv_nsec);
 
-        port_regs[0x45] = start_nsec;
-        port_regs[0x46] = start_sec & 0xffffffff;
-        port_regs[0x47] = start_sec >> 32;
-        port_regs[0x49] = period_nsec;
-        port_regs[0x4a] = period_sec & 0xffffffff;
-        port_regs[0x4b] = period_sec >> 32;
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_START_NS, ts_start.tv_nsec);
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_START_SEC_L, ts_start.tv_sec & 0xffffffff);
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_START_SEC_H, ts_start.tv_sec >> 32);
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_PERIOD_NS, ts_period.tv_nsec);
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_L, ts_period.tv_sec & 0xffffffff);
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_H, ts_period.tv_sec >> 32);
 
-        port_regs[0x40] = 0x00000001;
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_CTRL, 0x00000001);
     }
 
     if (timeslot_period_nsec > 0)
@@ -357,14 +249,14 @@ int main(int argc, char *argv[])
         printf("Configure port TDMA timeslot period\n");
 
         // normalize period
-        timeslot_period_sec = timeslot_period_nsec / NSEC_PER_SEC;
-        timeslot_period_nsec -= timeslot_period_sec * NSEC_PER_SEC;
+        ts_timeslot_period.tv_sec = timeslot_period_nsec / NSEC_PER_SEC;
+        ts_timeslot_period.tv_nsec = timeslot_period_nsec - ts_timeslot_period.tv_sec * NSEC_PER_SEC;
 
-        printf("period %ld.%09ld\n", timeslot_period_sec, timeslot_period_nsec);
+        printf("period %ld.%09ld s\n", ts_timeslot_period.tv_sec, ts_timeslot_period.tv_nsec);
 
-        port_regs[0x4d] = timeslot_period_nsec;
-        port_regs[0x4e] = timeslot_period_sec & 0xffffffff;
-        port_regs[0x4f] = timeslot_period_sec >> 32;
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_NS, ts_timeslot_period.tv_nsec);
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_L, ts_timeslot_period.tv_sec & 0xffffffff);
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_H, ts_timeslot_period.tv_sec >> 32);
     }
 
     if (active_period_nsec > 0)
@@ -372,23 +264,19 @@ int main(int argc, char *argv[])
         printf("Configure port TDMA active period\n");
 
         // normalize period
-        active_period_sec = active_period_nsec / NSEC_PER_SEC;
-        active_period_nsec -= active_period_sec * NSEC_PER_SEC;
+        ts_active_period.tv_sec = active_period_nsec / NSEC_PER_SEC;
+        ts_active_period.tv_nsec = active_period_nsec - ts_active_period.tv_sec * NSEC_PER_SEC;
 
-        printf("period %ld.%09ld\n", active_period_sec, active_period_nsec);
+        printf("period %ld.%09ld s\n", ts_active_period.tv_sec, ts_active_period.tv_nsec);
 
-        port_regs[0x51] = active_period_nsec;
-        port_regs[0x52] = active_period_sec & 0xffffffff;
-        port_regs[0x53] = active_period_sec >> 32;
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_NS, ts_active_period.tv_nsec);
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L, ts_active_period.tv_sec & 0xffffffff);
+        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H, ts_active_period.tv_sec >> 32);
     }
 
 err:
 
-    munmap(regs, 0x1000000);
-
-err_mmap_registers:
-
-    close(dev_fd);
+    mqnic_close(dev);
 
     return 0;
 }

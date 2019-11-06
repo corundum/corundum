@@ -116,16 +116,15 @@ Transmit engine.  Manages receive descriptor dequeue and fetch via DMA, packet
 data fetch via DMA, packet transmission, and completion enqueue and writeback
 via DMA.  Handles PTP timestamps for inclusion in completion records.
 
+#### tx_scheduler_ctrl_tdma module
+
+TDMA transmit scheduler control module.  Controls queues in a transmit
+scheduler based on PTP time, via a tdma_scheduler instance.
+
 #### tx_scheduler_rr module
 
 Round-robin transmit scheduler.  Determines which queues from which to send
 packets.
-
-#### tx_scheduler_tdma_rr module
-
-Round-robin TDMA transmit scheduler.  Determines which queues from which to
-send packets.  Contains a tdma_scheduler instance to control configuration
-based on PTP time.
 
 ### Source Files
 
@@ -146,8 +145,8 @@ based on PTP time.
     tdma_scheduler.v         : TDMA scheduler
     tx_checksum.v            : Transmit checksum offload
     tx_engine.v              : Transmit engine
+    tx_scheduler_ctrl_tdma.v : TDMA transmit scheduler controller
     tx_scheduler_rr.v        : Round robin transmit scheduler
-    tx_scheduler_tdma_rr.v   : Round robin TDMA transmit scheduler
 
 ## Testing
 

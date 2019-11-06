@@ -140,6 +140,7 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_PORT_REG_SCHED_ENABLE               0x0040
 #define MQNIC_PORT_REG_TDMA_CTRL                  0x0100
 #define MQNIC_PORT_REG_TDMA_STATUS                0x0104
+#define MQNIC_PORT_REG_TDMA_TIMESLOT_COUNT        0x0108
 #define MQNIC_PORT_REG_TDMA_SCHED_START_FNS       0x0110
 #define MQNIC_PORT_REG_TDMA_SCHED_START_NS        0x0114
 #define MQNIC_PORT_REG_TDMA_SCHED_START_SEC_L     0x0118

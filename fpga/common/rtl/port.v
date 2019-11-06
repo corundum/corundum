@@ -645,6 +645,7 @@ always @(posedge clk) begin
                 axil_ctrl_rdata_reg[0] <= tdma_locked;
                 axil_ctrl_rdata_reg[1] <= tdma_error;
             end
+            16'h0108: axil_ctrl_rdata_reg <= 2**TDMA_INDEX_WIDTH; // TDMA timeslot count
             16'h0114: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[29:0]; // TDMA schedule start ns
             16'h0118: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[63:32]; // TDMA schedule start sec l
             16'h011C: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[79:64]; // TDMA schedule start sec h

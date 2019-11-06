@@ -91,15 +91,11 @@ int mqnic_activate_port(struct mqnic_priv *priv, struct mqnic_port *port)
     // enable schedulers
     iowrite32(0xffffffff, port->hw_addr+MQNIC_PORT_REG_SCHED_ENABLE);
 
+    // enable queues
     for (k = 0; k < priv->tx_queue_count; k++)
     {
         iowrite32(3, port->hw_addr+port->sched_offset+k*4);
     }
-
-    // scheduler queue enable
-    iowrite32(0xffffffff, port->hw_addr+port->sched_offset+0x0200);
-    // scheduler global enable
-    iowrite32(0xffffffff, port->hw_addr+port->sched_offset+0x0300);
 
     return 0;
 }

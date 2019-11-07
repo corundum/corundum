@@ -9,7 +9,7 @@ BIN=mqnic-config mqnic-fw perout
 
 all: $(BIN)
 
-mqnic-config: mqnic-config.c mqnic.c
+mqnic-config: mqnic-config.c mqnic.c timespec.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 mqnic-fw: mqnic-fw.c mqnic.c

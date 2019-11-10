@@ -302,6 +302,7 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
     mqnic->misc_dev.name = mqnic->name;
     mqnic->misc_dev.fops = &mqnic_fops;
+    mqnic->misc_dev.parent = dev;
 
     ret = misc_register(&mqnic->misc_dev);
     if (ret)

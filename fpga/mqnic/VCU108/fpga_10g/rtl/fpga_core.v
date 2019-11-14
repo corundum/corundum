@@ -288,7 +288,7 @@ parameter IF_AXIL_ADDR_WIDTH = AXIL_ADDR_WIDTH-$clog2(IF_COUNT);
 parameter AXIL_CSR_ADDR_WIDTH = IF_AXIL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8);
 
 // AXI stream interface parameters
-parameter AXIS_DATA_WIDTH = 256;
+parameter AXIS_DATA_WIDTH = 64;
 parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8;
 
 // PCIe DMA parameters

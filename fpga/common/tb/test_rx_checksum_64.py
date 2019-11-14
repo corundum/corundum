@@ -39,7 +39,7 @@ import axis_ep
 import eth_ep
 
 module = 'rx_checksum'
-testbench = 'test_%s' % module
+testbench = 'test_%s_64' % module
 
 srcs = []
 
@@ -77,7 +77,7 @@ def frame_checksum(frame):
 def bench():
 
     # Parameters
-    DATA_WIDTH = 256
+    DATA_WIDTH = 64
     KEEP_WIDTH = (DATA_WIDTH/8)
 
     # Inputs

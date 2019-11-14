@@ -38,7 +38,7 @@ either expressed or implied, of The Regents of the University of California.
 /*
  * Testbench for tx_checksum
  */
-module test_tx_checksum;
+module test_tx_checksum_256;
 
 // Parameters
 parameter DATA_WIDTH = 256;
@@ -116,8 +116,8 @@ initial begin
     );
 
     // dump file
-    $dumpfile("test_tx_checksum.lxt");
-    $dumpvars(0, test_tx_checksum);
+    $dumpfile("test_tx_checksum_256.lxt");
+    $dumpvars(0, test_tx_checksum_256);
 end
 
 tx_checksum #(

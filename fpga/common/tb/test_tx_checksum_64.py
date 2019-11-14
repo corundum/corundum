@@ -42,7 +42,7 @@ import eth_ep
 import udp_ep
 
 module = 'tx_checksum'
-testbench = 'test_%s' % module
+testbench = 'test_%s_64' % module
 
 srcs = []
 
@@ -81,7 +81,7 @@ def frame_checksum(frame, offset=14):
 def bench():
 
     # Parameters
-    DATA_WIDTH = 256
+    DATA_WIDTH = 64
     KEEP_WIDTH = (DATA_WIDTH/8)
     ID_ENABLE = 0
     ID_WIDTH = 8

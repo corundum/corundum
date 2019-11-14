@@ -43,7 +43,9 @@ module rx_checksum #
     // Width of AXI stream interfaces in bits
     parameter DATA_WIDTH = 256,
     // AXI stream tkeep signal width (words per cycle)
-    parameter KEEP_WIDTH = (DATA_WIDTH/8)
+    parameter KEEP_WIDTH = (DATA_WIDTH/8),
+    // Checksum start offset
+    parameter START_OFFSET = 14
 )
 (
     input  wire                   clk,
@@ -64,51 +66,27 @@ module rx_checksum #
     output wire                   m_axis_csum_valid
 );
 
+parameter LEVELS = $clog2(DATA_WIDTH/8);
+parameter OFFSET_WIDTH = START_OFFSET/KEEP_WIDTH > 1 ? $clog2(START_OFFSET/KEEP_WIDTH) : 1;
+
 // bus width assertions
 initial begin
-    if (DATA_WIDTH != 256) begin
-        $error("Error: AXI stream interface width must be 256 (instance %m)");
-        $finish;
-    end
-
     if (KEEP_WIDTH * 8 != DATA_WIDTH) begin
         $error("Error: AXI stream interface requires byte (8-bit) granularity (instance %m)");
         $finish;
     end
 end
 
-reg [KEEP_WIDTH-1:0] mask_reg = 32'hffffc000;
+reg [OFFSET_WIDTH-1:0] offset_reg = START_OFFSET/KEEP_WIDTH;
+reg [KEEP_WIDTH-1:0] mask_reg = {KEEP_WIDTH{1'b1}} << START_OFFSET;
 reg [DATA_WIDTH-1:0] s_axis_tdata_masked;
 
-reg [16:0] sum_1_1_reg = 0;
-reg [16:0] sum_1_2_reg = 0;
-reg [16:0] sum_1_3_reg = 0;
-reg [16:0] sum_1_4_reg = 0;
-reg [16:0] sum_1_5_reg = 0;
-reg [16:0] sum_1_6_reg = 0;
-reg [16:0] sum_1_7_reg = 0;
-reg [16:0] sum_1_8_reg = 0;
-reg sum_1_valid_reg = 1'b0;
-reg sum_1_last_reg = 1'b0;
+reg [DATA_WIDTH-1:0] sum_reg[LEVELS-2:0];
+reg [LEVELS-2:0] sum_valid_reg = 0;
+reg [LEVELS-2:0] sum_last_reg = 0;
 
-reg [17:0] sum_2_1_reg = 0;
-reg [17:0] sum_2_2_reg = 0;
-reg [17:0] sum_2_3_reg = 0;
-reg [17:0] sum_2_4_reg = 0;
-reg sum_2_valid_reg = 1'b0;
-reg sum_2_last_reg = 1'b0;
-
-reg [18:0] sum_3_1_reg = 0;
-reg [18:0] sum_3_2_reg = 0;
-reg sum_3_valid_reg = 1'b0;
-reg sum_3_last_reg = 1'b0;
-
-reg [19:0] sum_4_reg = 0;
-reg sum_4_valid_reg = 1'b0;
-reg sum_4_last_reg = 1'b0;
-
-reg [20:0] sum_5_temp = 0;
-reg [15:0] sum_5_reg = 0;
+reg [16+LEVELS-1:0] sum_acc_temp = 0;
+reg [15:0] sum_acc_reg = 0;
 
 reg [15:0] m_axis_csum_reg = 0;
 reg m_axis_csum_valid_reg = 1'b0;
@@ -125,74 +103,84 @@ always @* begin
     end
 end
 
+integer i;
+
 always @(posedge clk) begin
-    sum_1_valid_reg <= 1'b0;
-    sum_2_valid_reg <= 1'b0;
-    sum_3_valid_reg <= 1'b0;
-    sum_4_valid_reg <= 1'b0;
-    m_axis_csum_valid_reg <= 1'b0;
+    sum_valid_reg[0] <= 1'b0;
 
     if (s_axis_tvalid) begin
-        sum_1_1_reg <= {s_axis_tdata_masked[ 0*8 +: 8], s_axis_tdata_masked[ 1*8 +: 8]} + {s_axis_tdata_masked[ 2*8 +: 8], s_axis_tdata_masked[ 3*8 +: 8]};
-        sum_1_2_reg <= {s_axis_tdata_masked[ 4*8 +: 8], s_axis_tdata_masked[ 5*8 +: 8]} + {s_axis_tdata_masked[ 6*8 +: 8], s_axis_tdata_masked[ 7*8 +: 8]};
-        sum_1_3_reg <= {s_axis_tdata_masked[ 8*8 +: 8], s_axis_tdata_masked[ 9*8 +: 8]} + {s_axis_tdata_masked[10*8 +: 8], s_axis_tdata_masked[11*8 +: 8]};
-        sum_1_4_reg <= {s_axis_tdata_masked[12*8 +: 8], s_axis_tdata_masked[13*8 +: 8]} + {s_axis_tdata_masked[14*8 +: 8], s_axis_tdata_masked[15*8 +: 8]};
-        sum_1_5_reg <= {s_axis_tdata_masked[16*8 +: 8], s_axis_tdata_masked[17*8 +: 8]} + {s_axis_tdata_masked[18*8 +: 8], s_axis_tdata_masked[19*8 +: 8]};
-        sum_1_6_reg <= {s_axis_tdata_masked[20*8 +: 8], s_axis_tdata_masked[21*8 +: 8]} + {s_axis_tdata_masked[22*8 +: 8], s_axis_tdata_masked[23*8 +: 8]};
-        sum_1_7_reg <= {s_axis_tdata_masked[24*8 +: 8], s_axis_tdata_masked[25*8 +: 8]} + {s_axis_tdata_masked[26*8 +: 8], s_axis_tdata_masked[27*8 +: 8]};
-        sum_1_8_reg <= {s_axis_tdata_masked[28*8 +: 8], s_axis_tdata_masked[29*8 +: 8]} + {s_axis_tdata_masked[30*8 +: 8], s_axis_tdata_masked[31*8 +: 8]};
-        sum_1_valid_reg <= 1'b1;
-        sum_1_last_reg <= s_axis_tlast;
+        for (i = 0; i < DATA_WIDTH/8/4; i = i + 1) begin
+            sum_reg[0][i*17 +: 17] <= {s_axis_tdata_masked[(4*i+0)*8 +: 8], s_axis_tdata_masked[(4*i+1)*8 +: 8]} + {s_axis_tdata_masked[(4*i+2)*8 +: 8], s_axis_tdata_masked[(4*i+3)*8 +: 8]};
+        end
+        sum_valid_reg[0] <= 1'b1;
+        sum_last_reg[0] <= s_axis_tlast;
 
         if (s_axis_tlast) begin
-            mask_reg <= 32'hffffc000;
-        end else begin
+            offset_reg <= START_OFFSET/KEEP_WIDTH;
+            mask_reg <= {KEEP_WIDTH{1'b1}} << START_OFFSET;
+        end else if (START_OFFSET < KEEP_WIDTH || offset_reg == 0) begin
             mask_reg <= {KEEP_WIDTH{1'b1}};
-        end
-    end
-
-    if (sum_1_valid_reg) begin
-        sum_2_1_reg <= sum_1_1_reg + sum_1_2_reg;
-        sum_2_2_reg <= sum_1_3_reg + sum_1_4_reg;
-        sum_2_3_reg <= sum_1_5_reg + sum_1_6_reg;
-        sum_2_4_reg <= sum_1_7_reg + sum_1_8_reg;
-        sum_2_valid_reg <= 1'b1;
-        sum_2_last_reg <= sum_1_last_reg;
-    end
-
-    if (sum_2_valid_reg) begin
-        sum_3_1_reg <= sum_2_1_reg + sum_2_2_reg;
-        sum_3_2_reg <= sum_2_3_reg + sum_2_4_reg;
-        sum_3_valid_reg <= 1'b1;
-        sum_3_last_reg <= sum_2_last_reg;
-    end
-
-    if (sum_3_valid_reg) begin
-        sum_4_reg <= sum_3_1_reg + sum_3_2_reg;
-        sum_4_valid_reg <= 1'b1;
-        sum_4_last_reg <= sum_3_last_reg;
-    end
-
-    if (sum_4_valid_reg) begin
-        sum_5_temp = sum_4_reg + sum_5_reg;
-        sum_5_temp = sum_5_temp[15:0] + sum_5_temp[20:16];
-        sum_5_temp = sum_5_temp[15:0] + sum_5_temp[16];
-
-        if (sum_4_last_reg) begin
-            m_axis_csum_reg <= sum_5_temp;
-            m_axis_csum_valid_reg <= 1'b1;
-            sum_5_reg <= 0;
         end else begin
-            sum_5_reg <= sum_5_temp;
+            offset_reg <= offset_reg - 1;
+            if (offset_reg == 1) begin
+                mask_reg <= {KEEP_WIDTH{1'b1}} << (START_OFFSET%KEEP_WIDTH);
+            end else begin
+                mask_reg <= {KEEP_WIDTH{1'b0}};
+            end
         end
     end
 
     if (rst) begin
-        mask_reg <= 32'hffffc000;
-        sum_1_valid_reg <= 1'b0;
-        sum_2_valid_reg <= 1'b0;
-        sum_3_valid_reg <= 1'b0;
-        sum_4_valid_reg <= 1'b0;
+        offset_reg <= START_OFFSET/KEEP_WIDTH;
+        mask_reg <= {KEEP_WIDTH{1'b1}} << START_OFFSET;
+        sum_valid_reg[0] <= 1'b0;
+    end
+end
+
+generate
+
+    genvar l;
+
+    for (l = 1; l < LEVELS-1; l = l + 1) begin
+
+        always @(posedge clk) begin
+            sum_valid_reg[l] <= 1'b0;
+
+            if (sum_valid_reg[l-1]) begin
+                for (i = 0; i < DATA_WIDTH/8/4/2**l; i = i + 1) begin
+                    sum_reg[l][i*(17+l) +: (17+l)] <= sum_reg[l-1][(i*2+0)*(17+l-1) +: (17+l-1)] + sum_reg[l-1][(i*2+1)*(17+l-1) +: (17+l-1)];
+                end
+                sum_valid_reg[l] <= 1'b1;
+                sum_last_reg[l] <= sum_last_reg[l-1];
+            end
+
+            if (rst) begin
+                sum_valid_reg[l] <= 1'b0;
+            end
+        end
+
+    end
+
+endgenerate
+
+always @(posedge clk) begin
+    m_axis_csum_valid_reg <= 1'b0;
+
+    if (sum_valid_reg[LEVELS-2]) begin
+        sum_acc_temp = sum_reg[LEVELS-2][16+LEVELS-1-1:0] + sum_acc_reg;
+        sum_acc_temp = sum_acc_temp[15:0] + (sum_acc_temp >> 16);
+        sum_acc_temp = sum_acc_temp[15:0] + sum_acc_temp[16];
+
+        if (sum_last_reg[LEVELS-2]) begin
+            m_axis_csum_reg <= sum_acc_temp;
+            m_axis_csum_valid_reg <= 1'b1;
+            sum_acc_reg <= 0;
+        end else begin
+            sum_acc_reg <= sum_acc_temp;
+        end
+    end
+
+    if (rst) begin
         m_axis_csum_valid_reg <= 1'b0;
     end
 end

@@ -54,7 +54,7 @@ module dma_if_pcie_us #
     // PCIe address width
     parameter PCIE_ADDR_WIDTH = 64,
     // PCIe tag count
-    parameter PCIE_TAG_COUNT = 32,
+    parameter PCIE_TAG_COUNT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 256,
     // PCIe tag field width
     parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT),
     // Support PCIe extended tags

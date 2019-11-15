@@ -862,7 +862,6 @@ pcie_us_axi_dma #(
     .AXI_ID_WIDTH(AXI_ID_WIDTH),
     .AXI_MAX_BURST_LEN(256),
     .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
-    .PCIE_CLIENT_TAG(1),
     //.PCIE_TAG_WIDTH(8),
     .PCIE_TAG_COUNT(64),
     .PCIE_EXT_TAG_ENABLE(1),
@@ -892,12 +891,6 @@ pcie_us_axi_dma_inst (
     .m_axis_rq_tready(m_axis_rq_tready),
     .m_axis_rq_tlast(m_axis_rq_tlast),
     .m_axis_rq_tuser(m_axis_rq_tuser),
-
-    /*
-     * Tag input
-     */
-    .s_axis_pcie_rq_tag(0),
-    .s_axis_pcie_rq_tag_valid(0),
 
     /*
      * AXI read descriptor input

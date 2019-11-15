@@ -60,7 +60,6 @@ def bench():
     AXI_ID_WIDTH = 8
     AXI_MAX_BURST_LEN = 256
     PCIE_ADDR_WIDTH = 64
-    PCIE_CLIENT_TAG = 1
     PCIE_TAG_WIDTH = 8
     PCIE_TAG_COUNT = 256
     PCIE_EXT_TAG_ENABLE = 1
@@ -78,8 +77,6 @@ def bench():
     s_axis_rc_tlast = Signal(bool(0))
     s_axis_rc_tuser = Signal(intbv(0)[AXIS_PCIE_RC_USER_WIDTH:])
     m_axis_rq_tready = Signal(bool(0))
-    s_axis_pcie_rq_tag = Signal(intbv(0)[PCIE_TAG_WIDTH:])
-    s_axis_pcie_rq_tag_valid = Signal(bool(0))
     s_axis_read_desc_pcie_addr = Signal(intbv(0)[PCIE_ADDR_WIDTH:])
     s_axis_read_desc_axi_addr = Signal(intbv(0)[AXI_ADDR_WIDTH:])
     s_axis_read_desc_len = Signal(intbv(0)[LEN_WIDTH:])
@@ -350,8 +347,6 @@ def bench():
         m_axis_rq_tready=m_axis_rq_tready,
         m_axis_rq_tlast=m_axis_rq_tlast,
         m_axis_rq_tuser=m_axis_rq_tuser,
-        s_axis_pcie_rq_tag=s_axis_pcie_rq_tag,
-        s_axis_pcie_rq_tag_valid=s_axis_pcie_rq_tag_valid,
         s_axis_read_desc_pcie_addr=s_axis_read_desc_pcie_addr,
         s_axis_read_desc_axi_addr=s_axis_read_desc_axi_addr,
         s_axis_read_desc_len=s_axis_read_desc_len,

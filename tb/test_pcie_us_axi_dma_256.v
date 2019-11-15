@@ -42,7 +42,6 @@ parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8);
 parameter AXI_ID_WIDTH = 8;
 parameter AXI_MAX_BURST_LEN = 256;
 parameter PCIE_ADDR_WIDTH = 64;
-parameter PCIE_CLIENT_TAG = 1;
 parameter PCIE_TAG_WIDTH = 8;
 parameter PCIE_TAG_COUNT = 256;
 parameter PCIE_EXT_TAG_ENABLE = 1;
@@ -60,8 +59,6 @@ reg s_axis_rc_tvalid = 0;
 reg s_axis_rc_tlast = 0;
 reg [AXIS_PCIE_RC_USER_WIDTH-1:0] s_axis_rc_tuser = 0;
 reg m_axis_rq_tready = 0;
-reg [PCIE_TAG_WIDTH-1:0] s_axis_pcie_rq_tag = 0;
-reg s_axis_pcie_rq_tag_valid = 0;
 reg [PCIE_ADDR_WIDTH-1:0] s_axis_read_desc_pcie_addr = 0;
 reg [AXI_ADDR_WIDTH-1:0] s_axis_read_desc_axi_addr = 0;
 reg [LEN_WIDTH-1:0] s_axis_read_desc_len = 0;
@@ -143,8 +140,6 @@ initial begin
         s_axis_rc_tlast,
         s_axis_rc_tuser,
         m_axis_rq_tready,
-        s_axis_pcie_rq_tag,
-        s_axis_pcie_rq_tag_valid,
         s_axis_read_desc_pcie_addr,
         s_axis_read_desc_axi_addr,
         s_axis_read_desc_len,
@@ -253,8 +248,6 @@ UUT (
     .m_axis_rq_tready(m_axis_rq_tready),
     .m_axis_rq_tlast(m_axis_rq_tlast),
     .m_axis_rq_tuser(m_axis_rq_tuser),
-    .s_axis_pcie_rq_tag(s_axis_pcie_rq_tag),
-    .s_axis_pcie_rq_tag_valid(s_axis_pcie_rq_tag_valid),
     .s_axis_read_desc_pcie_addr(s_axis_read_desc_pcie_addr),
     .s_axis_read_desc_axi_addr(s_axis_read_desc_axi_addr),
     .s_axis_read_desc_len(s_axis_read_desc_len),

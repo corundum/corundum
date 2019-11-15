@@ -51,8 +51,6 @@ module pcie_us_axi_dma #
     parameter AXI_MAX_BURST_LEN = 256,
     // PCIe address width
     parameter PCIE_ADDR_WIDTH = 64,
-    // Enable PCIe client tag
-    parameter PCIE_CLIENT_TAG = 1,
     // PCIe tag count
     parameter PCIE_TAG_COUNT = 32,
     // PCIe tag field width
@@ -89,12 +87,6 @@ module pcie_us_axi_dma #
     input  wire                               m_axis_rq_tready,
     output wire                               m_axis_rq_tlast,
     output wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser,
-
-    /*
-     * Tag input
-     */
-    input  wire [PCIE_TAG_WIDTH-1:0]          s_axis_pcie_rq_tag,
-    input  wire                               s_axis_pcie_rq_tag_valid,
 
     /*
      * AXI read descriptor input
@@ -203,7 +195,6 @@ pcie_us_axi_dma_rd #(
     .AXI_ID_WIDTH(AXI_ID_WIDTH),
     .AXI_MAX_BURST_LEN(AXI_MAX_BURST_LEN),
     .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
-    .PCIE_CLIENT_TAG(PCIE_CLIENT_TAG),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .PCIE_TAG_WIDTH(PCIE_TAG_WIDTH),
     .PCIE_EXT_TAG_ENABLE(PCIE_EXT_TAG_ENABLE),
@@ -234,12 +225,6 @@ pcie_us_axi_dma_rd_inst (
     .m_axis_rq_tready(axis_rq_tready_read),
     .m_axis_rq_tlast(axis_rq_tlast_read),
     .m_axis_rq_tuser(axis_rq_tuser_read),
-
-    /*
-     * Tag input
-     */
-    .s_axis_pcie_rq_tag(s_axis_pcie_rq_tag),
-    .s_axis_pcie_rq_tag_valid(s_axis_pcie_rq_tag_valid),
 
     /*
      * AXI read descriptor input

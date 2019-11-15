@@ -51,8 +51,6 @@ module pcie_us_axi_dma_rd #
     parameter AXI_MAX_BURST_LEN = 256,
     // PCIe address width
     parameter PCIE_ADDR_WIDTH = 64,
-    // Enable PCIe client tag
-    parameter PCIE_CLIENT_TAG = 1,
     // PCIe tag count
     parameter PCIE_TAG_COUNT = 32,
     // PCIe tag field width
@@ -89,12 +87,6 @@ module pcie_us_axi_dma_rd #
     input  wire                               m_axis_rq_tready,
     output wire                               m_axis_rq_tlast,
     output wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser,
-
-    /*
-     * Tag input
-     */
-    input  wire [PCIE_TAG_WIDTH-1:0]          s_axis_pcie_rq_tag,
-    input  wire                               s_axis_pcie_rq_tag_valid,
 
     /*
      * AXI read descriptor input

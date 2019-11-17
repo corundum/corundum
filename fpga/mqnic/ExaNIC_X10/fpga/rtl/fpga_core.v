@@ -201,6 +201,7 @@ parameter FW_ID = 32'd0;
 parameter FW_VER = {16'd0, 16'd1};
 parameter BOARD_ID = {16'h1ce4, 16'h0003};
 parameter BOARD_VER = {16'd0, 16'd1};
+parameter FPGA_ID = 32'h3823093;
 
 // Structural parameters
 parameter IF_COUNT = 2;
@@ -606,6 +607,7 @@ always @(posedge clk_250mhz) begin
             16'h0020: axil_csr_rdata_reg <= IF_COUNT;   // if_count
             16'h0024: axil_csr_rdata_reg <= 2**IF_AXIL_ADDR_WIDTH; // if_stride
             16'h002C: axil_csr_rdata_reg <= 2**AXIL_CSR_ADDR_WIDTH; // if_csr_offset
+            16'h0040: axil_csr_rdata_reg <= FPGA_ID;    // fpga_id
             // GPIO
             16'h0100: begin
                 // GPIO out

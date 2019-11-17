@@ -60,6 +60,8 @@ MQNIC_REG_IF_COUNT               = 0x0020
 MQNIC_REG_IF_STRIDE              = 0x0024
 MQNIC_REG_IF_CSR_OFFSET          = 0x002C
 
+MQNIC_REG_FPGA_ID                = 0x0040
+
 MQNIC_REG_GPIO_OUT               = 0x0100
 MQNIC_REG_GPIO_IN                = 0x0104
 

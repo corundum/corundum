@@ -117,7 +117,10 @@ module fpga (
 
     inout  wire         eeprom_i2c_scl,
     inout  wire         eeprom_i2c_sda,
-    output wire         eeprom_wp
+    output wire         eeprom_wp,
+
+    inout  wire [3:0]   qspi_1_dq,
+    output wire         qspi_1_cs
 );
 
 parameter AXIS_PCIE_DATA_WIDTH = 512;
@@ -278,6 +281,55 @@ assign qsfp_i2c_scl = qsfp_i2c_scl_t ? 1'bz : qsfp_i2c_scl_o;
 assign qsfp_i2c_sda = qsfp_i2c_sda_t ? 1'bz : qsfp_i2c_sda_o;
 assign eeprom_i2c_scl = eeprom_i2c_scl_t ? 1'bz : eeprom_i2c_scl_o;
 assign eeprom_i2c_sda = eeprom_i2c_sda_t ? 1'bz : eeprom_i2c_sda_o;
+
+// Flash
+wire qspi_clk_int;
+wire [3:0] qspi_0_dq_int;
+wire [3:0] qspi_0_dq_i_int;
+wire [3:0] qspi_0_dq_o_int;
+wire [3:0] qspi_0_dq_oe_int;
+wire qspi_0_cs_int;
+wire [3:0] qspi_1_dq_i_int;
+wire [3:0] qspi_1_dq_o_int;
+wire [3:0] qspi_1_dq_oe_int;
+wire qspi_1_cs_int;
+
+assign qspi_1_dq[0] = qspi_1_dq_oe_int[0] ? qspi_1_dq_o_int[0] : 1'bz;
+assign qspi_1_dq[1] = qspi_1_dq_oe_int[1] ? qspi_1_dq_o_int[1] : 1'bz;
+assign qspi_1_dq[2] = qspi_1_dq_oe_int[2] ? qspi_1_dq_o_int[2] : 1'bz;
+assign qspi_1_dq[3] = qspi_1_dq_oe_int[3] ? qspi_1_dq_o_int[3] : 1'bz;
+assign qspi_1_cs = qspi_1_cs_int;
+
+sync_signal #(
+    .WIDTH(8),
+    .N(2)
+)
+flash_sync_signal_inst (
+    .clk(pcie_user_clk),
+    .in({qspi_1_dq, qspi_0_dq_int}),
+    .out({qspi_1_dq_i_int, qspi_0_dq_i_int})
+);
+
+STARTUPE3
+startupe3_inst (
+    .CFGCLK(),
+    .CFGMCLK(),
+    .DI(qspi_0_dq_int),
+    .DO(qspi_0_dq_o_int),
+    .DTS(~qspi_0_dq_oe_int),
+    .EOS(),
+    .FCSBO(qspi_0_cs_int),
+    .FCSBTS(1'b0),
+    .GSR(1'b0),
+    .GTS(1'b0),
+    .KEYCLEARB(1'b1),
+    .PACK(1'b0),
+    .PREQ(),
+    .USRCCLKO(qspi_clk_int),
+    .USRCCLKTS(1'b0),
+    .USRDONEO(1'b0),
+    .USRDONETS(1'b1)
+);
 
 // PCIe
 wire pcie_sys_clk;
@@ -1392,7 +1444,20 @@ core_inst (
     .eeprom_i2c_sda_i(eeprom_i2c_sda_i),
     .eeprom_i2c_sda_o(eeprom_i2c_sda_o),
     .eeprom_i2c_sda_t(eeprom_i2c_sda_t),
-    .eeprom_wp(eeprom_wp)
+    .eeprom_wp(eeprom_wp),
+
+    /*
+     * QSPI flash
+     */
+    .qspi_clk(qspi_clk_int),
+    .qspi_0_dq_i(qspi_0_dq_i_int),
+    .qspi_0_dq_o(qspi_0_dq_o_int),
+    .qspi_0_dq_oe(qspi_0_dq_oe_int),
+    .qspi_0_cs(qspi_0_cs_int),
+    .qspi_1_dq_i(qspi_1_dq_i_int),
+    .qspi_1_dq_o(qspi_1_dq_o_int),
+    .qspi_1_dq_oe(qspi_1_dq_oe_int),
+    .qspi_1_cs(qspi_1_cs_int)
 );
 
 endmodule

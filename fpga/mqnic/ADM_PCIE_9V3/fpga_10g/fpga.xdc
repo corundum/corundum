@@ -170,9 +170,9 @@ create_clock -period 10 -name pcie_mgt_refclk_1 [get_ports pcie_refclk_1_p]
 #create_clock -period 10 -name pcie_mgt_refclk_2 [get_ports pcie_refclk_2_p]
 
 # Flash
-#set_property -dict {LOC AF30 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {qspi1_dq[0]}]
-#set_property -dict {LOC AG30 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {qspi1_dq[1]}]
-#set_property -dict {LOC AF28 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {qspi1_dq[2]}]
-#set_property -dict {LOC AG28 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {qspi1_dq[3]}]
-#set_property -dict {LOC AV30 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {qspi1_cs}]
+set_property -dict {LOC AF30 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {qspi_1_dq[0]}]
+set_property -dict {LOC AG30 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {qspi_1_dq[1]}]
+set_property -dict {LOC AF28 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {qspi_1_dq[2]}]
+set_property -dict {LOC AG28 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {qspi_1_dq[3]}]
+set_property -dict {LOC AV30 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {qspi_1_cs}]
 

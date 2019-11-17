@@ -248,7 +248,20 @@ module fpga_core #
     input  wire                               eeprom_i2c_sda_i,
     output wire                               eeprom_i2c_sda_o,
     output wire                               eeprom_i2c_sda_t,
-    output wire                               eeprom_wp
+    output wire                               eeprom_wp,
+
+    /*
+     * QSPI flash
+     */
+    output wire                               qspi_clk,
+    input  wire [3:0]                         qspi_0_dq_i,
+    output wire [3:0]                         qspi_0_dq_o,
+    output wire [3:0]                         qspi_0_dq_oe,
+    output wire                               qspi_0_cs,
+    input  wire [3:0]                         qspi_1_dq_i,
+    output wire [3:0]                         qspi_1_dq_o,
+    output wire [3:0]                         qspi_1_dq_oe,
+    output wire                               qspi_1_cs
 );
 
 // PHC parameters
@@ -478,6 +491,14 @@ reg eeprom_i2c_scl_o_reg = 1'b1;
 reg eeprom_i2c_sda_o_reg = 1'b1;
 reg eeprom_wp_reg = 1'b1;
 
+reg qspi_clk_reg = 1'b0;
+reg qspi_0_cs_reg = 1'b1;
+reg [3:0] qspi_0_dq_o_reg = 4'd0;
+reg [3:0] qspi_0_dq_oe_reg = 4'd0;
+reg qspi_1_cs_reg = 1'b1;
+reg [3:0] qspi_1_dq_o_reg = 4'd0;
+reg [3:0] qspi_1_dq_oe_reg = 4'd0;
+
 reg pcie_dma_enable_reg = 0;
 
 reg [95:0] get_ptp_ts_96_reg = 0;
@@ -516,6 +537,14 @@ assign eeprom_i2c_scl_t = eeprom_i2c_scl_o_reg;
 assign eeprom_i2c_sda_o = eeprom_i2c_sda_o_reg;
 assign eeprom_i2c_sda_t = eeprom_i2c_sda_o_reg;
 assign eeprom_wp = eeprom_wp_reg;
+
+assign qspi_clk = qspi_clk_reg;
+assign qspi_0_cs = qspi_0_cs_reg;
+assign qspi_0_dq_o = qspi_0_dq_o_reg;
+assign qspi_0_dq_oe = qspi_0_dq_oe_reg;
+assign qspi_1_cs = qspi_1_cs_reg;
+assign qspi_1_dq_o = qspi_1_dq_o_reg;
+assign qspi_1_dq_oe = qspi_1_dq_oe_reg;
 
 //assign pcie_dma_enable = pcie_dma_enable_reg;
 
@@ -557,6 +586,33 @@ always @(posedge clk_250mhz) begin
                     eeprom_i2c_scl_o_reg <= axil_csr_wdata[24];
                     eeprom_i2c_sda_o_reg <= axil_csr_wdata[25];
                     eeprom_wp_reg <= axil_csr_wdata[26];
+                end
+            end
+            // Flash
+            16'h0144: begin
+                // QSPI 0 control
+                if (axil_csr_wstrb[0]) begin
+                    qspi_0_dq_o_reg <= axil_csr_wdata[3:0];
+                end
+                if (axil_csr_wstrb[1]) begin
+                    qspi_0_dq_oe_reg <= axil_csr_wdata[11:8];
+                end
+                if (axil_csr_wstrb[2]) begin
+                    qspi_clk_reg <= axil_csr_wdata[16];
+                    qspi_0_cs_reg <= axil_csr_wdata[17];
+                end
+            end
+            16'h0148: begin
+                // QSPI 1 control
+                if (axil_csr_wstrb[0]) begin
+                    qspi_1_dq_o_reg <= axil_csr_wdata[3:0];
+                end
+                if (axil_csr_wstrb[1]) begin
+                    qspi_1_dq_oe_reg <= axil_csr_wdata[11:8];
+                end
+                if (axil_csr_wstrb[2]) begin
+                    qspi_clk_reg <= axil_csr_wdata[16];
+                    qspi_1_cs_reg <= axil_csr_wdata[17];
                 end
             end
             // PHC
@@ -627,6 +683,22 @@ always @(posedge clk_250mhz) begin
                 axil_csr_rdata_reg[25] <= eeprom_i2c_sda_i;
                 axil_csr_rdata_reg[26] <= eeprom_wp;
             end
+            // Flash
+            16'h0140: axil_csr_rdata_reg <= {8'd2, 8'd8, 8'd2, 8'd0}; // Flash ID
+            16'h0144: begin
+                // QSPI 0 control
+                axil_csr_rdata_reg[3:0] <= qspi_0_dq_i;
+                axil_csr_rdata_reg[11:8] <= qspi_0_dq_oe;
+                axil_csr_rdata_reg[16] <= qspi_clk;
+                axil_csr_rdata_reg[17] <= qspi_0_cs;
+            end
+            16'h0148: begin
+                // QSPI 1 control
+                axil_csr_rdata_reg[3:0] <= qspi_1_dq_i;
+                axil_csr_rdata_reg[11:8] <= qspi_1_dq_oe;
+                axil_csr_rdata_reg[16] <= qspi_clk;
+                axil_csr_rdata_reg[17] <= qspi_1_cs;
+            end
             // PHC
             16'h0200: axil_csr_rdata_reg <= {8'd0, 8'd0, 8'd0, 8'd0};  // PHC features
             16'h0210: axil_csr_rdata_reg <= ptp_ts_96[15:0];  // PTP cur fns
@@ -674,6 +746,14 @@ always @(posedge clk_250mhz) begin
         eeprom_i2c_scl_o_reg <= 1'b1;
         eeprom_i2c_sda_o_reg <= 1'b1;
         eeprom_wp_reg <= 1'b1;
+
+        qspi_clk_reg <= 1'b0;
+        qspi_0_cs_reg <= 1'b1;
+        qspi_0_dq_o_reg <= 4'd0;
+        qspi_0_dq_oe_reg <= 4'd0;
+        qspi_1_cs_reg <= 1'b1;
+        qspi_1_dq_o_reg <= 4'd0;
+        qspi_1_dq_oe_reg <= 4'd0;
 
         pcie_dma_enable_reg <= 1'b0;
     end

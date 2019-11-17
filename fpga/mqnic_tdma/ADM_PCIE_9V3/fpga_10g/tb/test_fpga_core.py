@@ -226,6 +226,8 @@ def bench():
     qsfp_i2c_sda_i = Signal(bool(1))
     eeprom_i2c_scl_i = Signal(bool(1))
     eeprom_i2c_sda_i = Signal(bool(1))
+    qspi_0_dq_i = Signal(intbv(0)[4:])
+    qspi_1_dq_i = Signal(intbv(0)[4:])
 
     # Outputs
     user_led_g = Signal(intbv(0)[2:])
@@ -289,6 +291,13 @@ def bench():
     eeprom_i2c_sda_o = Signal(bool(1))
     eeprom_i2c_sda_t = Signal(bool(1))
     eeprom_wp = Signal(bool(1))
+    qspi_clk = Signal(bool(0))
+    qspi_0_dq_o = Signal(intbv(0)[4:])
+    qspi_0_dq_oe = Signal(intbv(0)[4:])
+    qspi_0_cs = Signal(bool(1))
+    qspi_1_dq_o = Signal(intbv(0)[4:])
+    qspi_1_dq_oe = Signal(intbv(0)[4:])
+    qspi_1_cs = Signal(bool(1))
 
     # sources and sinks
     qsfp_0_0_source = xgmii_ep.XGMIISource()
@@ -705,7 +714,16 @@ def bench():
         eeprom_i2c_sda_i=eeprom_i2c_sda_i,
         eeprom_i2c_sda_o=eeprom_i2c_sda_o,
         eeprom_i2c_sda_t=eeprom_i2c_sda_t,
-        eeprom_wp=eeprom_wp
+        eeprom_wp=eeprom_wp,
+        qspi_clk=qspi_clk,
+        qspi_0_dq_i=qspi_0_dq_i,
+        qspi_0_dq_o=qspi_0_dq_o,
+        qspi_0_dq_oe=qspi_0_dq_oe,
+        qspi_0_cs=qspi_0_cs,
+        qspi_1_dq_i=qspi_1_dq_i,
+        qspi_1_dq_o=qspi_1_dq_o,
+        qspi_1_dq_oe=qspi_1_dq_oe,
+        qspi_1_cs=qspi_1_cs
     )
 
     @always(delay(5))

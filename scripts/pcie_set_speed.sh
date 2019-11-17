@@ -18,7 +18,7 @@ if [ ! -e "/sys/bus/pci/devices/$dev" ]; then
 fi
 
 pciec=$(setpci -s $dev CAP_EXP+02.W)
-pt=$((("0x$pciec" & 0xF0) >> 4))
+pt=$(((0x$pciec & 0xF0) >> 4))
 
 port=$(basename $(dirname $(readlink "/sys/bus/pci/devices/$dev")))
 
@@ -29,12 +29,12 @@ fi
 lc=$(setpci -s $dev CAP_EXP+0c.L)
 ls=$(setpci -s $dev CAP_EXP+12.W)
 
-max_speed=$(("0x$lc" & 0xF))
+max_speed=$((0x$lc & 0xF))
 
 echo "Link capabilities:" $lc
 echo "Max link speed:" $max_speed
 echo "Link status:" $ls
-echo "Current link speed:" $(("0x$ls" & 0xF))
+echo "Current link speed:" $((0x$ls & 0xF))
 
 if [ -z "$speed" ]; then
     speed=$max_speed
@@ -49,9 +49,9 @@ echo "Configuring $dev..."
 lc2=$(setpci -s $dev CAP_EXP+30.L)
 
 echo "Original link control 2:" $lc2
-echo "Original link target speed:" $(("0x$lc2" & 0xF))
+echo "Original link target speed:" $((0x$lc2 & 0xF))
 
-lc2n=$(printf "%08x" $((("0x$lc2" & 0xFFFFFFF0) | $speed)))
+lc2n=$(printf "%08x" $(((0x$lc2 & 0xFFFFFFF0) | $speed)))
 
 echo "New target link speed:" $speed
 echo "New link control 2:" $lc2n
@@ -64,7 +64,7 @@ lc=$(setpci -s $dev CAP_EXP+10.L)
 
 echo "Original link control:" $lc
 
-lcn=$(printf "%08x" $(("0x$lc" | 0x20)))
+lcn=$(printf "%08x" $((0x$lc | 0x20)))
 
 echo "New link control:" $lcn
 
@@ -75,4 +75,4 @@ sleep 0.1
 ls=$(setpci -s $dev CAP_EXP+12.W)
 
 echo "Link status:" $ls
-echo "Current link speed:" $(("0x$ls" & 0xF))
+echo "Current link speed:" $((0x$ls & 0xF))

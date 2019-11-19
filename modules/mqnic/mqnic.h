@@ -148,6 +148,8 @@ struct mqnic_ring {
 
     u32 cpl_index;
 
+    u32 mtu;
+
     size_t buf_size;
     u8 *buf;
     dma_addr_t buf_dma_addr;

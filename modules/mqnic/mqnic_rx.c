@@ -199,7 +199,7 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int 
     struct mqnic_desc *rx_desc = (struct mqnic_desc *)(ring->buf + index * sizeof(*rx_desc));
     struct sk_buff *skb = rx_info->skb;
 
-    rx_info->len = 2048;
+    rx_info->len = ring->mtu+ETH_HLEN;
 
     if (skb)
     {
@@ -207,7 +207,7 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int 
         return -1;
     }
 
-    skb = __netdev_alloc_skb_ip_align(priv->ndev, 2048, GFP_ATOMIC);
+    skb = netdev_alloc_skb_ip_align(priv->ndev, rx_info->len);
     if (!skb)
     {
         dev_err(&priv->mdev->pdev->dev, "mqnic_prepare_rx_desc failed to allocate skb on port %d", priv->port);

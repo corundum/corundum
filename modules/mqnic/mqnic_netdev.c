@@ -65,6 +65,7 @@ static int mqnic_start_port(struct net_device *ndev)
     // set up RX queues
     for (k = 0; k < priv->rx_queue_count; k++)
     {
+        priv->rx_ring[k]->mtu = ndev->mtu;
         mqnic_activate_rx_ring(priv, priv->rx_ring[k], k);
     }
 
@@ -338,6 +339,34 @@ static int mqnic_hwtstamp_get(struct net_device *ndev, struct ifreq *ifr)
     }
 }
 
+static int mqnic_change_mtu(struct net_device *ndev, int new_mtu)
+{
+    struct mqnic_priv *priv = netdev_priv(ndev);
+    struct mqnic_dev *mdev = priv->mdev;
+
+    if (new_mtu < ndev->min_mtu || new_mtu > ndev->max_mtu)
+    {
+        dev_err(&mdev->pdev->dev, "Bad MTU: %d", new_mtu);
+        return -EPERM;
+    }
+
+    dev_info(&mdev->pdev->dev, "New MTU: %d", new_mtu);
+
+    ndev->mtu = new_mtu;
+
+    if (netif_running(ndev))
+    {
+        mutex_lock(&mdev->state_lock);
+
+        mqnic_stop_port(ndev);
+        mqnic_start_port(ndev);
+
+        mutex_unlock(&mdev->state_lock);
+    }
+
+    return 0;
+}
+
 static int mqnic_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 {
     switch (cmd) {
@@ -356,6 +385,7 @@ static const struct net_device_ops mqnic_netdev_ops = {
     .ndo_start_xmit         = mqnic_start_xmit,
     .ndo_get_stats64        = mqnic_get_stats64,
     .ndo_validate_addr      = eth_validate_addr,
+    .ndo_change_mtu         = mqnic_change_mtu,
     .ndo_do_ioctl           = mqnic_ioctl,
 };
 
@@ -535,7 +565,12 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
     ndev->hw_features |= 0;
 
     ndev->min_mtu = ETH_MIN_MTU;
-    ndev->max_mtu = 2048; // TODO
+    ndev->max_mtu = 1500;
+
+    if (priv->ports[0] && priv->ports[0]->port_mtu)
+    {
+        ndev->max_mtu = priv->ports[0]->port_mtu-ETH_HLEN;
+    }
 
     netif_carrier_off(ndev);
 

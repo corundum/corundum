@@ -73,6 +73,8 @@ struct mqnic_dev {
     u8 __iomem *hw_addr;
     u8 __iomem *phc_hw_addr;
 
+    struct mutex state_lock;
+
     u8 base_mac[ETH_ALEN];
 
     char name[16];

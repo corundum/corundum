@@ -33,7 +33,7 @@ either expressed or implied, of The Regents of the University of California.
 
 #include "mqnic.h"
 
-static int mqnic_open(struct net_device *ndev)
+static int mqnic_start_port(struct net_device *ndev)
 {
     struct mqnic_priv *priv = netdev_priv(ndev);
     struct mqnic_dev *mdev = priv->mdev;
@@ -102,7 +102,7 @@ static int mqnic_open(struct net_device *ndev)
     return 0;
 }
 
-static int mqnic_close(struct net_device *ndev)
+static int mqnic_stop_port(struct net_device *ndev)
 {
     struct mqnic_priv *priv = netdev_priv(ndev);
     struct mqnic_dev *mdev = priv->mdev;
@@ -181,6 +181,44 @@ static int mqnic_close(struct net_device *ndev)
 
     netif_carrier_off(ndev);
     return 0;
+}
+
+static int mqnic_open(struct net_device *ndev)
+{
+    struct mqnic_priv *priv = netdev_priv(ndev);
+    struct mqnic_dev *mdev = priv->mdev;
+    int ret = 0;
+
+    mutex_lock(&mdev->state_lock);
+
+    ret = mqnic_start_port(ndev);
+
+    if (ret)
+    {
+        dev_err(&mdev->pdev->dev, "Failed to start port: %d", priv->port);
+    }
+
+    mutex_unlock(&mdev->state_lock);
+    return ret;
+}
+
+static int mqnic_close(struct net_device *ndev)
+{
+    struct mqnic_priv *priv = netdev_priv(ndev);
+    struct mqnic_dev *mdev = priv->mdev;
+    int ret = 0;
+
+    mutex_lock(&mdev->state_lock);
+
+    ret = mqnic_stop_port(ndev);
+
+    if (ret)
+    {
+        dev_err(&mdev->pdev->dev, "Failed to stop port: %d", priv->port);
+    }
+
+    mutex_unlock(&mdev->state_lock);
+    return ret;
 }
 
 void mqnic_update_stats(struct net_device *ndev)

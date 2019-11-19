@@ -313,6 +313,8 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
     pci_save_state(pdev);
 
+    mutex_init(&mqnic->state_lock);
+
     // probe complete
     return 0;
 

@@ -634,6 +634,7 @@ always @(posedge clk) begin
                 axil_ctrl_rdata_reg[8] <= TX_CHECKSUM_ENABLE;
                 axil_ctrl_rdata_reg[9] <= RX_CHECKSUM_ENABLE;
             end
+            16'h0008: axil_ctrl_rdata_reg <= MAX_TX_SIZE; // port_mtu
             16'h0010: axil_ctrl_rdata_reg <= SCHED_COUNT; // scheduler_count
             16'h0014: axil_ctrl_rdata_reg <= 2**AXIL_SCHED_ADDR_WIDTH; // scheduler_offset
             16'h0018: axil_ctrl_rdata_reg <= 2**AXIL_SCHED_ADDR_WIDTH; // scheduler_stride

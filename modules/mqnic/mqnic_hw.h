@@ -134,6 +134,7 @@ either expressed or implied, of The Regents of the University of California.
 // Port CSRs
 #define MQNIC_PORT_REG_PORT_ID                    0x0000
 #define MQNIC_PORT_REG_PORT_FEATURES              0x0004
+#define MQNIC_PORT_REG_PORT_MTU                   0x0008
 
 #define MQNIC_PORT_REG_SCHED_COUNT                0x0010
 #define MQNIC_PORT_REG_SCHED_OFFSET               0x0014

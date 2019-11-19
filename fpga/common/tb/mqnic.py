@@ -128,6 +128,7 @@ MQNIC_IF_FEATURE_RX_CSUM         = (1 << 9)
 # Port CSRs
 MQNIC_PORT_REG_PORT_ID                    = 0x0000
 MQNIC_PORT_REG_PORT_FEATURES              = 0x0004
+MQNIC_PORT_REG_PORT_MTU                   = 0x0008
 
 MQNIC_PORT_REG_SCHED_COUNT                = 0x0010
 MQNIC_PORT_REG_SCHED_OFFSET               = 0x0014
@@ -577,6 +578,7 @@ class Port(object):
 
         self.port_id = None
         self.port_features = None
+        self.port_mtu = 0
         self.sched_count = None
         self.sched_offset = None
         self.sched_stride = None
@@ -588,6 +590,8 @@ class Port(object):
         print("Port ID: {:#010x}".format(self.port_id))
         self.port_features = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_FEATURES)
         print("Port features: {:#010x}".format(self.port_features))
+        self.port_mtu = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_MTU)
+        print("Port MTU: {}".format(self.port_mtu))
 
         self.sched_count = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_COUNT)
         print("Scheduler count: {}".format(self.sched_count))

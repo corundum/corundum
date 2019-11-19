@@ -225,6 +225,7 @@ struct mqnic_port {
 
     u32 port_id;
     u32 port_features;
+    u32 port_mtu;
     u32 sched_count;
     u32 sched_offset;
     u32 sched_stride;

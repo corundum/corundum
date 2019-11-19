@@ -186,6 +186,10 @@ int mqnic_free_tx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring)
         cnt++;
     }
 
+    ring->head_ptr = 0;
+    ring->tail_ptr = 0;
+    ring->clean_tail_ptr = 0;
+
     return cnt;
 }
 

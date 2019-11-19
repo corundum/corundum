@@ -1440,7 +1440,7 @@ if (TX_CHECKSUM_ENABLE) begin
         .USER_ENABLE(1),
         .USER_WIDTH(1),
         .USE_INIT_VALUE(0),
-        .DATA_FIFO_DEPTH(4096),
+        .DATA_FIFO_DEPTH(MAX_TX_SIZE),
         .CHECKSUM_FIFO_DEPTH(64)
     )
     tx_checksum_inst (

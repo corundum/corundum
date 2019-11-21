@@ -597,7 +597,9 @@ always @* begin
             end
             3'd3: begin
                 // event index
-                s_axil_rdata_next = queue_ram_read_data_event;
+                s_axil_rdata_next[29:0] = queue_ram_read_data_event;
+                s_axil_rdata_next[30] = queue_ram_read_data_continuous;
+                s_axil_rdata_next[31] = queue_ram_read_data_armed;
             end
             3'd4: begin
                 // head pointer

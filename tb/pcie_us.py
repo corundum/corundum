@@ -1249,7 +1249,7 @@ class RQSource(object):
                                 u |= 0b00 << 22 # is_sop0_ptr
 
                             if frame.discontinue:
-                                u |= 36 # discontinue
+                                u |= 1 << 36 # discontinue
 
                             last_lane = 0
 
@@ -1271,7 +1271,7 @@ class RQSource(object):
                                 u |= (frame.last_be & 0xf) << 4
 
                             if frame.discontinue:
-                                u |= 11 # discontinue
+                                u |= 1 << 11 # discontinue
 
                             for i in range(len(tkeep)):
                                 if data:

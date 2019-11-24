@@ -43,7 +43,7 @@ parameter SEG_BE_WIDTH = SEG_DATA_WIDTH/8;
 parameter RAM_SEL_WIDTH = 2;
 parameter RAM_ADDR_WIDTH = SEG_ADDR_WIDTH+$clog2(SEG_COUNT)+$clog2(SEG_BE_WIDTH);
 parameter PCIE_ADDR_WIDTH = 64;
-parameter PCIE_TAG_COUNT = 32;
+parameter PCIE_TAG_COUNT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 256;
 parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT);
 parameter PCIE_EXT_TAG_ENABLE = (PCIE_TAG_COUNT>32);
 parameter LEN_WIDTH = 16;

@@ -54,7 +54,7 @@ def bench():
     SEG_ADDR_WIDTH = 12
     SEG_BE_WIDTH = int(SEG_DATA_WIDTH/8)
     RAM_SEL_WIDTH = 2
-    RAM_ADDR_WIDTH = SEG_ADDR_WIDTH+SEG_COUNT.bit_length()+SEG_BE_WIDTH.bit_length()
+    RAM_ADDR_WIDTH = SEG_ADDR_WIDTH+(SEG_COUNT-1).bit_length()+(SEG_BE_WIDTH-1).bit_length()
     PCIE_ADDR_WIDTH = 64
     LEN_WIDTH = 16
     TAG_WIDTH = 8

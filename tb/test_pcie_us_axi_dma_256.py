@@ -61,7 +61,7 @@ def bench():
     AXI_MAX_BURST_LEN = 256
     PCIE_ADDR_WIDTH = 64
     PCIE_TAG_COUNT = 64 if AXIS_PCIE_RQ_USER_WIDTH == 60 else 256
-    PCIE_TAG_WIDTH = PCIE_TAG_COUNT.bit_length()
+    PCIE_TAG_WIDTH = (PCIE_TAG_COUNT-1).bit_length()
     PCIE_EXT_TAG_ENABLE = 1
     LEN_WIDTH = 20
     TAG_WIDTH = 8

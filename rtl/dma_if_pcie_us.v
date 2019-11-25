@@ -63,8 +63,8 @@ module dma_if_pcie_us #
     parameter LEN_WIDTH = 16,
     // Tag field width
     parameter TAG_WIDTH = 8,
-    // Operation tag width
-    parameter OP_TAG_WIDTH = PCIE_TAG_WIDTH
+    // Operation table size (read)
+    parameter READ_OP_TABLE_SIZE = PCIE_TAG_COUNT
 )
 (
     input  wire                                 clk,
@@ -183,7 +183,7 @@ dma_if_pcie_us_rd #(
     .PCIE_EXT_TAG_ENABLE(PCIE_EXT_TAG_ENABLE),
     .LEN_WIDTH(LEN_WIDTH),
     .TAG_WIDTH(TAG_WIDTH),
-    .OP_TAG_WIDTH(OP_TAG_WIDTH)
+    .OP_TABLE_SIZE(READ_OP_TABLE_SIZE)
 )
 dma_if_pcie_us_rd_inst (
     .clk(clk),

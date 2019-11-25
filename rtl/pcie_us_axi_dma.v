@@ -61,8 +61,8 @@ module pcie_us_axi_dma #
     parameter LEN_WIDTH = 20,
     // Tag field width
     parameter TAG_WIDTH = 8,
-    // Operation tag width
-    parameter OP_TAG_WIDTH = AXI_ID_WIDTH < PCIE_TAG_WIDTH ? AXI_ID_WIDTH : PCIE_TAG_WIDTH
+    // Operation table size (read)
+    parameter READ_OP_TABLE_SIZE = 2**(AXI_ID_WIDTH < PCIE_TAG_WIDTH ? AXI_ID_WIDTH : PCIE_TAG_WIDTH)
 )
 (
     input  wire                               clk,
@@ -200,7 +200,7 @@ pcie_us_axi_dma_rd #(
     .PCIE_EXT_TAG_ENABLE(PCIE_EXT_TAG_ENABLE),
     .LEN_WIDTH(LEN_WIDTH),
     .TAG_WIDTH(TAG_WIDTH),
-    .OP_TAG_WIDTH(OP_TAG_WIDTH)
+    .OP_TABLE_SIZE(READ_OP_TABLE_SIZE)
 )
 pcie_us_axi_dma_rd_inst (
     .clk(clk),

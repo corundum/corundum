@@ -61,8 +61,8 @@ module pcie_us_axi_dma_rd #
     parameter LEN_WIDTH = 20,
     // Tag field width
     parameter TAG_WIDTH = 8,
-    // Operation tag width
-    parameter OP_TAG_WIDTH = AXI_ID_WIDTH < PCIE_TAG_WIDTH ? AXI_ID_WIDTH : PCIE_TAG_WIDTH
+    // Operation table size
+    parameter OP_TABLE_SIZE = 2**(AXI_ID_WIDTH < PCIE_TAG_WIDTH ? AXI_ID_WIDTH : PCIE_TAG_WIDTH)
 )
 (
     input  wire                               clk,
@@ -154,6 +154,7 @@ parameter AXIS_PCIE_WORD_SIZE = AXIS_PCIE_DATA_WIDTH/AXIS_PCIE_WORD_WIDTH;
 parameter OFFSET_WIDTH = $clog2(AXIS_PCIE_DATA_WIDTH/8);
 parameter CYCLE_COUNT_WIDTH = 13-AXI_BURST_SIZE;
 
+parameter OP_TAG_WIDTH = $clog2(OP_TABLE_SIZE);
 parameter OP_TABLE_READ_COUNT_WIDTH = PCIE_TAG_WIDTH+1;
 parameter OP_TABLE_WRITE_COUNT_WIDTH = LEN_WIDTH;
 

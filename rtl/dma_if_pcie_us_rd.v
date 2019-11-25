@@ -63,8 +63,8 @@ module dma_if_pcie_us_rd #
     parameter LEN_WIDTH = 16,
     // Tag field width
     parameter TAG_WIDTH = 8,
-    // Operation tag width
-    parameter OP_TAG_WIDTH = PCIE_TAG_WIDTH
+    // Operation table size
+    parameter OP_TABLE_SIZE = PCIE_TAG_COUNT
 )
 (
     input  wire                                 clk,
@@ -142,6 +142,7 @@ parameter AXIS_PCIE_WORD_SIZE = AXIS_PCIE_DATA_WIDTH/AXIS_PCIE_WORD_WIDTH;
 parameter OFFSET_WIDTH = $clog2(AXIS_PCIE_DATA_WIDTH/8);
 parameter RAM_OFFSET_WIDTH = $clog2(SEG_COUNT*SEG_DATA_WIDTH/8);
 
+parameter OP_TAG_WIDTH = $clog2(OP_TABLE_SIZE);
 parameter OP_TABLE_READ_COUNT_WIDTH = PCIE_TAG_WIDTH+1;
 parameter OP_TABLE_WRITE_COUNT_WIDTH = LEN_WIDTH;
 

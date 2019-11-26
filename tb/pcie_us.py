@@ -75,6 +75,7 @@ class USPcieFrame(object):
         self.first_be = 0
         self.last_be = 0
         self.discontinue = False
+        self.seq_num = 0
 
         if isinstance(frame, USPcieFrame):
             self.data = list(frame.data)
@@ -83,6 +84,7 @@ class USPcieFrame(object):
             self.first_be = frame.first_be
             self.last_be = frame.last_be
             self.discontinue = frame.discontinue
+            self.seq_num = frame.seq_num
 
     def update_parity(self):
         self.parity = [dword_parity(d) ^ 0xf for d in self.data]
@@ -98,7 +100,8 @@ class USPcieFrame(object):
                     self.parity == other.parity and
                     self.first_be == other.first_be and
                     self.last_be == other.last_be and
-                    self.discontinue == other.discontinue
+                    self.discontinue == other.discontinue and
+                    self.seq_num == other.seq_num
                 )
         return False
 
@@ -109,7 +112,8 @@ class USPcieFrame(object):
                 ('parity=[{}], '.format(', '.join(hex(x) for x in self.parity))) +
                 ('first_be={:#x}, '.format(self.first_be)) +
                 ('last_be={:#x}, '.format(self.last_be)) +
-                ('discontinue={})'.format(self.discontinue))
+                ('discontinue={}, '.format(self.discontinue)) +
+                ('seq_num={})'.format(self.seq_num))
             )
 
 
@@ -121,6 +125,7 @@ class TLP_us(TLP):
         self.completer_id_enable = False
         self.requester_id_enable = False
         self.discontinue = False
+        self.seq_num = 0
         self.error_code = RC_ERROR_NORMAL_TERMINATION
 
         if isinstance(tlp, TLP_us):
@@ -129,6 +134,7 @@ class TLP_us(TLP):
             self.completer_id_enable = tlp.completer_id_enable
             self.requester_id_enable = tlp.requester_id_enable
             self.discontinue = tlp.discontinue
+            self.seq_num = tlp.seq_num
             self.error_code = tlp.error_code
 
     def pack_us_cq(self):
@@ -394,6 +400,8 @@ class TLP_us(TLP):
 
             pkt.discontinue = self.discontinue
 
+            pkt.seq_num = self.seq_num
+
             # payload data
             pkt.data += self.data
 
@@ -460,6 +468,8 @@ class TLP_us(TLP):
             self.last_be = pkt.last_be
 
             self.discontinue = pkt.discontinue
+
+            self.seq_num = pkt.seq_num
 
             self.data = pkt.data[4:]
 
@@ -1251,6 +1261,8 @@ class RQSource(object):
                             if frame.discontinue:
                                 u |= 1 << 36 # discontinue
 
+                            u |= (frame.seq_num & 0x3f) << 61
+
                             last_lane = 0
 
                             for i in range(len(tkeep)):
@@ -1272,6 +1284,11 @@ class RQSource(object):
 
                             if frame.discontinue:
                                 u |= 1 << 11 # discontinue
+
+                            u |= (frame.seq_num & 0xf) << 24
+
+                            if len(tuser) == 62:
+                                u |= ((frame.seq_num >> 4) & 0x3) << 60
 
                             for i in range(len(tkeep)):
                                 if data:
@@ -1400,6 +1417,8 @@ class RQSink(object):
                             if u & (1 << 36):
                                 frame.discontinue = True
 
+                            frame.seq_num = (u >> 61) & 0x3f
+
                             last_lane = 0
 
                             for i in range(len(tkeep)):
@@ -1414,6 +1433,11 @@ class RQSink(object):
 
                             if u & (1 << 11):
                                 frame.discontinue = True
+
+                            frame.seq_num = (u >> 24) & 0xf
+
+                            if len(tuser) == 62:
+                                frame.seq_num |= ((u >> 60) & 0x3) << 4
 
                             for i in range(len(tkeep)):
                                 if tkeep & (1 << i):
@@ -1756,6 +1780,8 @@ class UltrascalePCIe(Device):
         self.cc_sink = CCSink()
         self.rq_sink = RQSink()
         self.rc_source = RCSource()
+
+        self.rq_seq_num = []
 
         self.make_function()
 
@@ -2460,13 +2486,19 @@ class UltrascalePCIe(Device):
 
                     if not tlp.discontinue:
                         if self.functions[tlp.requester_id.function].bus_master_enable:
+                            self.rq_seq_num.append(tlp.seq_num)
                             yield from self.send(TLP(tlp))
                         else:
                             print("Bus mastering disabled")
 
                             # TODO: internal response
 
-                # TODO pcie_rq_seq_num
+                # transmit sequence number
+                pcie_rq_seq_num_vld.next = 0
+                if self.rq_seq_num:
+                    pcie_rq_seq_num.next = self.rq_seq_num.pop(0)
+                    pcie_rq_seq_num_vld.next = 1
+
                 # TODO pcie_rq_tag
 
                 # handle requester completions

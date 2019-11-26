@@ -64,6 +64,7 @@ def bench():
     PCIE_EXT_TAG_ENABLE = 1
     LEN_WIDTH = 20
     TAG_WIDTH = 8
+    OP_TABLE_SIZE = PCIE_TAG_COUNT
 
     # Inputs
     clk = Signal(bool(0))

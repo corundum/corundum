@@ -47,6 +47,7 @@ parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT);
 parameter PCIE_EXT_TAG_ENABLE = 1;
 parameter LEN_WIDTH = 20;
 parameter TAG_WIDTH = 8;
+parameter READ_OP_TABLE_SIZE = PCIE_TAG_COUNT;
 
 // Inputs
 reg clk = 0;
@@ -230,7 +231,8 @@ pcie_us_axi_dma #(
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .PCIE_EXT_TAG_ENABLE(PCIE_EXT_TAG_ENABLE),
     .LEN_WIDTH(LEN_WIDTH),
-    .TAG_WIDTH(TAG_WIDTH)
+    .TAG_WIDTH(TAG_WIDTH),
+    .READ_OP_TABLE_SIZE(READ_OP_TABLE_SIZE)
 )
 UUT (
     .clk(clk),

@@ -52,6 +52,8 @@ def bench():
     AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
     AXIS_PCIE_RC_USER_WIDTH = 161
     AXIS_PCIE_RQ_USER_WIDTH = 137
+    RQ_SEQ_NUM_WIDTH = 4 if AXIS_PCIE_RQ_USER_WIDTH == 60 else 6
+    RQ_SEQ_NUM_ENABLE = 1
     SEG_COUNT = max(2, int(AXIS_PCIE_DATA_WIDTH*2/128))
     SEG_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH*2/SEG_COUNT
     SEG_ADDR_WIDTH = 12
@@ -65,6 +67,7 @@ def bench():
     LEN_WIDTH = 16
     TAG_WIDTH = 8
     OP_TABLE_SIZE = PCIE_TAG_COUNT
+    TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
 
     # Inputs
     clk = Signal(bool(0))
@@ -77,6 +80,10 @@ def bench():
     s_axis_rc_tlast = Signal(bool(0))
     s_axis_rc_tuser = Signal(intbv(0)[AXIS_PCIE_RC_USER_WIDTH:])
     m_axis_rq_tready = Signal(bool(0))
+    s_axis_rq_seq_num_0 = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
+    s_axis_rq_seq_num_valid_0 = Signal(bool(0))
+    s_axis_rq_seq_num_1 = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
+    s_axis_rq_seq_num_valid_1 = Signal(bool(0))
     s_axis_read_desc_pcie_addr = Signal(intbv(0)[PCIE_ADDR_WIDTH:])
     s_axis_read_desc_ram_sel = Signal(intbv(0)[SEG_SEL_WIDTH:])
     s_axis_read_desc_ram_addr = Signal(intbv(0)[RAM_ADDR_WIDTH:])
@@ -195,10 +202,10 @@ def bench():
         s_axis_rq_tkeep=m_axis_rq_tkeep,
         s_axis_rq_tvalid=m_axis_rq_tvalid,
         s_axis_rq_tready=m_axis_rq_tready,
-        # pcie_rq_seq_num0=pcie_rq_seq_num0,
-        # pcie_rq_seq_num_vld0=pcie_rq_seq_num_vld0,
-        # pcie_rq_seq_num1=pcie_rq_seq_num1,
-        # pcie_rq_seq_num_vld1=pcie_rq_seq_num_vld1,
+        pcie_rq_seq_num0=s_axis_rq_seq_num_0,
+        pcie_rq_seq_num_vld0=s_axis_rq_seq_num_valid_0,
+        pcie_rq_seq_num1=s_axis_rq_seq_num_1,
+        pcie_rq_seq_num_vld1=s_axis_rq_seq_num_valid_1,
         # pcie_rq_tag0=pcie_rq_tag0,
         # pcie_rq_tag1=pcie_rq_tag1,
         # pcie_rq_tag_av=pcie_rq_tag_av,
@@ -272,6 +279,10 @@ def bench():
         m_axis_rq_tready=m_axis_rq_tready,
         m_axis_rq_tlast=m_axis_rq_tlast,
         m_axis_rq_tuser=m_axis_rq_tuser,
+        s_axis_rq_seq_num_0=s_axis_rq_seq_num_0,
+        s_axis_rq_seq_num_valid_0=s_axis_rq_seq_num_valid_0,
+        s_axis_rq_seq_num_1=s_axis_rq_seq_num_1,
+        s_axis_rq_seq_num_valid_1=s_axis_rq_seq_num_valid_1,
         s_axis_read_desc_pcie_addr=s_axis_read_desc_pcie_addr,
         s_axis_read_desc_ram_sel=s_axis_read_desc_ram_sel,
         s_axis_read_desc_ram_addr=s_axis_read_desc_ram_addr,

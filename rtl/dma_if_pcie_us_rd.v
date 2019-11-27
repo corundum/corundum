@@ -39,6 +39,10 @@ module dma_if_pcie_us_rd #
     parameter AXIS_PCIE_RC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 75 : 161,
     // PCIe AXI stream RQ tuser signal width
     parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 60 : 137,
+    // RQ sequence number width
+    parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
+    // RQ sequence number tracking enable
+    parameter RQ_SEQ_NUM_ENABLE = 0,
     // RAM segment count
     parameter SEG_COUNT = AXIS_PCIE_DATA_WIDTH > 64 ? AXIS_PCIE_DATA_WIDTH*2 / 128 : 2,
     // RAM segment data width
@@ -64,7 +68,9 @@ module dma_if_pcie_us_rd #
     // Tag field width
     parameter TAG_WIDTH = 8,
     // Operation table size
-    parameter OP_TABLE_SIZE = PCIE_TAG_COUNT
+    parameter OP_TABLE_SIZE = PCIE_TAG_COUNT,
+    // In-flight transmit limit
+    parameter TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
 )
 (
     input  wire                                 clk,
@@ -89,6 +95,14 @@ module dma_if_pcie_us_rd #
     input  wire                                 m_axis_rq_tready,
     output wire                                 m_axis_rq_tlast,
     output wire [AXIS_PCIE_RQ_USER_WIDTH-1:0]   m_axis_rq_tuser,
+
+    /*
+     * Transmit sequence number input
+     */
+    input  wire [RQ_SEQ_NUM_WIDTH-1:0]          s_axis_rq_seq_num_0,
+    input  wire                                 s_axis_rq_seq_num_valid_0,
+    input  wire [RQ_SEQ_NUM_WIDTH-1:0]          s_axis_rq_seq_num_1,
+    input  wire                                 s_axis_rq_seq_num_valid_1,
 
     /*
      * AXI read descriptor input
@@ -180,8 +194,30 @@ initial begin
         end
     end
 
-    if ((AXIS_PCIE_RQ_USER_WIDTH == 60 && PCIE_TAG_COUNT > 64) || PCIE_TAG_COUNT > 256) begin
-        $error("Error: PCIe tag count out of range (instance %m)");
+    if (AXIS_PCIE_RQ_USER_WIDTH == 60) begin
+        if (RQ_SEQ_NUM_ENABLE && RQ_SEQ_NUM_WIDTH != 4) begin
+            $error("Error: RQ sequence number width must be 4 (instance %m)");
+            $finish;
+        end
+
+        if (PCIE_TAG_COUNT > 64) begin
+            $error("Error: PCIe tag count must be no larger than 64 (instance %m)");
+            $finish;
+        end
+    end else begin
+        if (RQ_SEQ_NUM_ENABLE && RQ_SEQ_NUM_WIDTH != 6) begin
+            $error("Error: RQ sequence number width must be 6 (instance %m)");
+            $finish;
+        end
+
+        if (PCIE_TAG_COUNT > 256) begin
+            $error("Error: PCIe tag count must be no larger than 256 (instance %m)");
+            $finish;
+        end
+    end
+
+    if (RQ_SEQ_NUM_ENABLE && TX_LIMIT > 2**(RQ_SEQ_NUM_WIDTH-1)) begin
+        $error("Error: TX limit out of range (instance %m)");
         $finish;
     end
 
@@ -309,6 +345,10 @@ reg [OP_TAG_WIDTH-1:0] tag_table_op_tag[(2**PCIE_TAG_WIDTH)-1:0];
 reg tag_table_we_tlp_reg = 1'b0, tag_table_we_tlp_next;
 
 reg [10:0] max_read_request_size_dw_reg = 11'd0;
+
+reg [RQ_SEQ_NUM_WIDTH-1:0] active_tx_count_reg = {RQ_SEQ_NUM_WIDTH{1'b0}};
+reg active_tx_count_av_reg = 1'b1;
+reg inc_active_tx;
 
 reg s_axis_rc_tready_reg = 1'b0, s_axis_rc_tready_next;
 reg s_axis_read_desc_ready_reg = 1'b0, s_axis_read_desc_ready_next;
@@ -448,6 +488,8 @@ always @* begin
     tlp_cmd_last_next = tlp_cmd_last_reg;
     tlp_cmd_valid_next = tlp_cmd_valid_reg && !tlp_cmd_ready;
 
+    inc_active_tx = 1'b0;
+
     m_axis_rq_tdata_int = {AXIS_PCIE_DATA_WIDTH{1'b0}};
     m_axis_rq_tkeep_int = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
     m_axis_rq_tvalid_int = 1'b0;
@@ -514,6 +556,9 @@ always @* begin
         m_axis_rq_tuser_int[23:16] = 8'd0; // tph_st_tag
         m_axis_rq_tuser_int[27:24] = 4'd0; // seq_num
         m_axis_rq_tuser_int[59:28] = 32'd0; // parity
+        if (AXIS_PCIE_RQ_USER_WIDTH == 62) begin
+            m_axis_rq_tuser_int[61:60] = 2'd0; // seq_num
+        end
     end
 
     new_tag_ready = 1'b0;
@@ -545,7 +590,7 @@ always @* begin
             end
         end
         REQ_STATE_START: begin
-            if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid) begin
+            if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                 if (req_op_count_reg <= {max_read_request_size_dw_reg, 2'b00}-req_pcie_addr_reg[1:0]) begin
                     // packet smaller than max read request size
                     if (req_pcie_addr_reg[12] != req_pcie_addr_plus_op_count[12]) begin
@@ -567,6 +612,8 @@ always @* begin
                 end
 
                 m_axis_rq_tvalid_int = 1'b1;
+
+                inc_active_tx = 1'b1;
 
                 if (AXIS_PCIE_DATA_WIDTH > 64) begin
                     req_pcie_addr_next = req_pcie_addr_reg + req_tlp_count_next;
@@ -1168,6 +1215,22 @@ always @(posedge clk) begin
 
     max_read_request_size_dw_reg <= 11'd32 << (max_read_request_size > 5 ? 5 : max_read_request_size);
 
+    if (active_tx_count_reg < TX_LIMIT && inc_active_tx && !s_axis_rq_seq_num_valid_0 && !s_axis_rq_seq_num_valid_1) begin
+        // inc by 1
+        active_tx_count_reg <= active_tx_count_reg + 1;
+        active_tx_count_av_reg <= active_tx_count_reg < (TX_LIMIT-1);
+    end else if (active_tx_count_reg > 0 && ((inc_active_tx && s_axis_rq_seq_num_valid_0 && s_axis_rq_seq_num_valid_1) || (!inc_active_tx && (s_axis_rq_seq_num_valid_0 ^ s_axis_rq_seq_num_valid_1)))) begin
+        // dec by 1
+        active_tx_count_reg <= active_tx_count_reg - 1;
+        active_tx_count_av_reg <= 1'b1;
+    end else if (active_tx_count_reg > 1 && !inc_active_tx && s_axis_rq_seq_num_valid_0 && s_axis_rq_seq_num_valid_1) begin
+        // dec by 2
+        active_tx_count_reg <= active_tx_count_reg - 2;
+        active_tx_count_av_reg <= 1'b1;
+    end else begin
+        active_tx_count_av_reg <= active_tx_count_reg < TX_LIMIT;
+    end
+
     tag_table_we_tlp_reg <= tag_table_we_tlp_next;
 
     if (tag_table_we_tlp_reg) begin
@@ -1213,6 +1276,9 @@ always @(posedge clk) begin
         s_axis_rc_tready_reg <= 1'b0;
         s_axis_read_desc_ready_reg <= 1'b0;
         m_axis_read_desc_status_valid_reg <= 1'b0;
+
+        active_tx_count_reg <= {RQ_SEQ_NUM_WIDTH{1'b0}};
+        active_tx_count_av_reg = 1'b1;
 
         tag_table_we_tlp_reg <= 1'b0;
         op_table_active <= 0;

@@ -67,6 +67,7 @@ def bench():
     LEN_WIDTH = 16
     TAG_WIDTH = 8
     READ_OP_TABLE_SIZE = PCIE_TAG_COUNT
+    READ_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
 
     # Inputs
     clk = Signal(bool(0))

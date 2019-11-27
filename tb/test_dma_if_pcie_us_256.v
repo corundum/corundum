@@ -48,7 +48,8 @@ parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT);
 parameter PCIE_EXT_TAG_ENABLE = (PCIE_TAG_COUNT>32);
 parameter LEN_WIDTH = 16;
 parameter TAG_WIDTH = 8;
-parameter OP_TABLE_SIZE = PCIE_TAG_COUNT;
+parameter READ_OP_TABLE_SIZE = PCIE_TAG_COUNT;
+parameter READ_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1);
 
 // Inputs
 reg clk = 0;

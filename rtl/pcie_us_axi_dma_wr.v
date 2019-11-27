@@ -813,25 +813,8 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        axi_state_reg <= AXI_STATE_IDLE;
-        tlp_state_reg <= TLP_STATE_IDLE;
-        tlp_cmd_valid_reg <= 1'b0;
-        s_axis_rq_tready_reg <= 1'b0;
-        s_axis_write_desc_ready_reg <= 1'b0;
-        m_axis_write_desc_status_valid_reg <= 1'b0;
-        m_axi_arvalid_reg <= 1'b0;
-        m_axi_rready_reg <= 1'b0;
-    end else begin
-        axi_state_reg <= axi_state_next;
-        tlp_state_reg <= tlp_state_next;
-        tlp_cmd_valid_reg <= tlp_cmd_valid_next;
-        s_axis_rq_tready_reg <= s_axis_rq_tready_next;
-        s_axis_write_desc_ready_reg <= s_axis_write_desc_ready_next;
-        m_axis_write_desc_status_valid_reg <= m_axis_write_desc_status_valid_next;
-        m_axi_arvalid_reg <= m_axi_arvalid_next;
-        m_axi_rready_reg <= m_axi_rready_next;
-    end
+    axi_state_reg <= axi_state_next;
+    tlp_state_reg <= tlp_state_next;
 
     pcie_addr_reg <= pcie_addr_next;
     axi_addr_reg <= axi_addr_next;
@@ -860,11 +843,19 @@ always @(posedge clk) begin
     tlp_cmd_bubble_cycle_reg <= tlp_cmd_bubble_cycle_next;
     tlp_cmd_tag_reg <= tlp_cmd_tag_next;
     tlp_cmd_last_reg <= tlp_cmd_last_next;
+    tlp_cmd_valid_reg <= tlp_cmd_valid_next;
+
+    s_axis_rq_tready_reg <= s_axis_rq_tready_next;
+
+    s_axis_write_desc_ready_reg <= s_axis_write_desc_ready_next;
 
     m_axis_write_desc_status_tag_reg <= m_axis_write_desc_status_tag_next;
+    m_axis_write_desc_status_valid_reg <= m_axis_write_desc_status_valid_next;
 
     m_axi_araddr_reg <= m_axi_araddr_next;
     m_axi_arlen_reg <= m_axi_arlen_next;
+    m_axi_arvalid_reg <= m_axi_arvalid_next;
+    m_axi_rready_reg <= m_axi_rready_next;
 
     max_payload_size_dw_reg <= 11'd32 << (max_payload_size > 5 ? 5 : max_payload_size);
 
@@ -957,6 +948,17 @@ always @(posedge clk) begin
         temp_m_axis_rq_tkeep_reg <= m_axis_rq_tkeep_int;
         temp_m_axis_rq_tlast_reg <= m_axis_rq_tlast_int;
         temp_m_axis_rq_tuser_reg <= m_axis_rq_tuser_int;
+    end
+
+    if (rst) begin
+        axi_state_reg <= AXI_STATE_IDLE;
+        tlp_state_reg <= TLP_STATE_IDLE;
+        tlp_cmd_valid_reg <= 1'b0;
+        s_axis_rq_tready_reg <= 1'b0;
+        s_axis_write_desc_ready_reg <= 1'b0;
+        m_axis_write_desc_status_valid_reg <= 1'b0;
+        m_axi_arvalid_reg <= 1'b0;
+        m_axi_rready_reg <= 1'b0;
     end
 end
 

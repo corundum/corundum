@@ -1286,64 +1286,11 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        req_state_reg <= REQ_STATE_IDLE;
-        tlp_state_reg <= TLP_STATE_IDLE;
-        axi_addr_valid_reg <= 1'b0;
-        tlp_cmd_valid_reg <= 1'b0;
-        s_axis_rc_tready_reg <= 1'b0;
-        s_axis_read_desc_ready_reg <= 1'b0;
-        m_axis_read_desc_status_valid_reg <= 1'b0;
-        m_axi_awvalid_reg <= 1'b0;
-        m_axi_bready_reg <= 1'b0;
+    req_state_reg <= req_state_next;
+    tlp_state_reg <= tlp_state_next;
 
-        active_tx_count_reg <= {RQ_SEQ_NUM_WIDTH{1'b0}};
-        active_tx_count_av_reg = 1'b1;
-
-        tag_table_we_tlp_reg <= 1'b0;
-        op_table_active <= 0;
-
-        status_error_cor_reg <= 1'b0;
-        status_error_uncor_reg <= 1'b0;
-    end else begin
-        req_state_reg <= req_state_next;
-        tlp_state_reg <= tlp_state_next;
-        axi_addr_valid_reg <= axi_addr_valid_next;
-        tlp_cmd_valid_reg <= tlp_cmd_valid_next;
-        s_axis_rc_tready_reg <= s_axis_rc_tready_next;
-        s_axis_read_desc_ready_reg <= s_axis_read_desc_ready_next;
-        m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
-        m_axi_awvalid_reg <= m_axi_awvalid_next;
-        m_axi_bready_reg <= m_axi_bready_next;
-
-        if (inc_active_tx && !s_axis_rq_seq_num_valid_0 && !s_axis_rq_seq_num_valid_1) begin
-            // inc by 1
-            active_tx_count_reg <= active_tx_count_reg + 1;
-            active_tx_count_av_reg <= active_tx_count_reg < (TX_LIMIT-1);
-        end else if ((inc_active_tx && s_axis_rq_seq_num_valid_0 && s_axis_rq_seq_num_valid_1) || (!inc_active_tx && (s_axis_rq_seq_num_valid_0 ^ s_axis_rq_seq_num_valid_1))) begin
-            // dec by 1
-            active_tx_count_reg <= active_tx_count_reg - 1;
-            active_tx_count_av_reg <= 1'b1;
-        end else if (!inc_active_tx && s_axis_rq_seq_num_valid_0 && s_axis_rq_seq_num_valid_1) begin
-            // dec by 2
-            active_tx_count_reg <= active_tx_count_reg - 2;
-            active_tx_count_av_reg <= 1'b1;
-        end else begin
-            active_tx_count_av_reg <= active_tx_count_reg < TX_LIMIT;
-        end
-
-        tag_table_we_tlp_reg <= tag_table_we_tlp_next;
-
-        if (op_table_start_en) begin
-            op_table_active[op_table_start_ptr] <= 1'b1;
-        end
-        if (op_table_finish_en) begin
-            op_table_active[op_table_finish_ptr] <= 1'b0;
-        end
-
-        status_error_cor_reg <= status_error_cor_next;
-        status_error_uncor_reg <= status_error_uncor_next;
-    end
+    status_error_cor_reg <= status_error_cor_next;
+    status_error_uncor_reg <= status_error_uncor_next;
 
     req_pcie_addr_reg <= req_pcie_addr_next;
     req_axi_addr_reg <= req_axi_addr_next;
@@ -1354,6 +1301,7 @@ always @(posedge clk) begin
     byte_count_reg <= byte_count_next;
     error_code_reg <= error_code_next;
     axi_addr_reg <= axi_addr_next;
+    axi_addr_valid_reg <= axi_addr_valid_next;
     op_count_reg <= op_count_next;
     tr_count_reg <= tr_count_next;
     op_dword_count_reg <= op_dword_count_next;
@@ -1376,18 +1324,44 @@ always @(posedge clk) begin
     tlp_cmd_tag_reg <= tlp_cmd_tag_next;
     tlp_cmd_pcie_tag_reg <= tlp_cmd_pcie_tag_next;
     tlp_cmd_last_reg <= tlp_cmd_last_next;
+    tlp_cmd_valid_reg <= tlp_cmd_valid_next;
+
+    s_axis_rc_tready_reg <= s_axis_rc_tready_next;
+
+    s_axis_read_desc_ready_reg <= s_axis_read_desc_ready_next;
 
     m_axis_read_desc_status_tag_reg <= m_axis_read_desc_status_tag_next;
+    m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
 
     m_axi_awid_reg <= m_axi_awid_next;
     m_axi_awaddr_reg <= m_axi_awaddr_next;
     m_axi_awlen_reg <= m_axi_awlen_next;
+    m_axi_awvalid_reg <= m_axi_awvalid_next;
+    m_axi_bready_reg <= m_axi_bready_next;
 
     max_read_request_size_dw_reg <= 11'd32 << (max_read_request_size > 5 ? 5 : max_read_request_size);
+
+    if (inc_active_tx && !s_axis_rq_seq_num_valid_0 && !s_axis_rq_seq_num_valid_1) begin
+        // inc by 1
+        active_tx_count_reg <= active_tx_count_reg + 1;
+        active_tx_count_av_reg <= active_tx_count_reg < (TX_LIMIT-1);
+    end else if ((inc_active_tx && s_axis_rq_seq_num_valid_0 && s_axis_rq_seq_num_valid_1) || (!inc_active_tx && (s_axis_rq_seq_num_valid_0 ^ s_axis_rq_seq_num_valid_1))) begin
+        // dec by 1
+        active_tx_count_reg <= active_tx_count_reg - 1;
+        active_tx_count_av_reg <= 1'b1;
+    end else if (!inc_active_tx && s_axis_rq_seq_num_valid_0 && s_axis_rq_seq_num_valid_1) begin
+        // dec by 2
+        active_tx_count_reg <= active_tx_count_reg - 2;
+        active_tx_count_av_reg <= 1'b1;
+    end else begin
+        active_tx_count_av_reg <= active_tx_count_reg < TX_LIMIT;
+    end
 
     if (transfer_in_save) begin
         save_axis_tdata_reg <= s_axis_rc_tdata;
     end
+
+    tag_table_we_tlp_reg <= tag_table_we_tlp_next;
 
     if (tag_table_we_tlp_reg) begin
         tag_table_axi_addr[pcie_tag_reg] <= axi_addr_reg;
@@ -1397,10 +1371,13 @@ always @(posedge clk) begin
     end
 
     if (op_table_start_en) begin
+        op_table_active[op_table_start_ptr] <= 1'b1;
         op_table_tag[op_table_start_ptr] <= op_table_start_tag;
         op_table_init[op_table_start_ptr] <= !op_table_init[op_table_start_ptr];
-        //op_table_read_init[op_table_start_ptr] <= 1'b1;
-        //op_table_write_init[op_table_start_ptr] <= 1'b1;
+    end
+
+    if (op_table_finish_en) begin
+        op_table_active[op_table_finish_ptr] <= 1'b0;
     end
 
     if (op_table_read_start_en) begin
@@ -1433,6 +1410,27 @@ always @(posedge clk) begin
 
     if (op_table_write_finish_en) begin
         op_table_write_count_finish[op_table_write_finish_ptr] <= op_table_write_count_finish[op_table_write_finish_ptr] + 1;
+    end
+
+    if (rst) begin
+        req_state_reg <= REQ_STATE_IDLE;
+        tlp_state_reg <= TLP_STATE_IDLE;
+        axi_addr_valid_reg <= 1'b0;
+        tlp_cmd_valid_reg <= 1'b0;
+        s_axis_rc_tready_reg <= 1'b0;
+        s_axis_read_desc_ready_reg <= 1'b0;
+        m_axis_read_desc_status_valid_reg <= 1'b0;
+        m_axi_awvalid_reg <= 1'b0;
+        m_axi_bready_reg <= 1'b0;
+
+        active_tx_count_reg <= {RQ_SEQ_NUM_WIDTH{1'b0}};
+        active_tx_count_av_reg = 1'b1;
+
+        tag_table_we_tlp_reg <= 1'b0;
+        op_table_active <= 0;
+
+        status_error_cor_reg <= 1'b0;
+        status_error_uncor_reg <= 1'b0;
     end
 end
 

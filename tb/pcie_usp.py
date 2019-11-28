@@ -815,12 +815,12 @@ class UltrascalePlusPCIe(Device):
                             # TODO: internal response
 
                 # transmit sequence number
-                pcie_rq_seq_num0.next = 0
+                pcie_rq_seq_num_vld0.next = 0
                 if self.rq_seq_num:
                     pcie_rq_seq_num0.next = self.rq_seq_num.pop(0)
                     pcie_rq_seq_num_vld0.next = 1
 
-                pcie_rq_seq_num1.next = 0
+                pcie_rq_seq_num_vld1.next = 0
                 if self.rq_seq_num:
                     pcie_rq_seq_num1.next = self.rq_seq_num.pop(0)
                     pcie_rq_seq_num_vld1.next = 1

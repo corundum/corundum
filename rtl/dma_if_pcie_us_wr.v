@@ -889,6 +889,8 @@ always @(posedge clk) begin
         s_axis_write_desc_ready_reg <= 1'b0;
         m_axis_write_desc_status_valid_reg <= 1'b0;
         ram_rd_cmd_valid_reg <= {SEG_COUNT{1'b0}};
+        mask_fifo_wr_ptr_reg <= 0;
+        mask_fifo_rd_ptr_reg <= 0;
     end
 end
 

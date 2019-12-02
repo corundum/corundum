@@ -265,6 +265,9 @@ reg [MASK_FIFO_ADDR_WIDTH+1-1:0] mask_fifo_rd_ptr_reg = 0, mask_fifo_rd_ptr_next
 reg [SEG_COUNT-1:0] mask_fifo_mask[(2**MASK_FIFO_ADDR_WIDTH)-1:0];
 reg [SEG_COUNT-1:0] mask_fifo_wr_mask;
 
+wire mask_fifo_empty = mask_fifo_wr_ptr_reg == mask_fifo_rd_ptr_reg;
+wire mask_fifo_full = mask_fifo_wr_ptr_reg == (mask_fifo_rd_ptr_reg ^ (1 << MASK_FIFO_ADDR_WIDTH));
+
 reg [10:0] max_payload_size_dw_reg = 11'd0;
 
 reg s_axis_rq_tready_reg = 1'b0, s_axis_rq_tready_next;
@@ -437,8 +440,7 @@ always @* begin
         READ_STATE_READ: begin
             // read state - start new read operations
 
-            // TODO check FIFO fill level
-            if (!(ram_rd_cmd_valid & ~ram_rd_cmd_ready & read_ram_mask_reg)) begin
+            if (!(ram_rd_cmd_valid & ~ram_rd_cmd_ready & read_ram_mask_reg) && !mask_fifo_full) begin
 
                 // update counters
                 read_addr_next = read_addr_reg + cycle_byte_count_reg;
@@ -812,12 +814,10 @@ always @* begin
         end
     endcase
 
-    if (!ram_mask_valid_next) begin
-        if (mask_fifo_rd_ptr_reg != mask_fifo_wr_ptr_reg) begin
-            ram_mask_next = mask_fifo_mask[mask_fifo_rd_ptr_reg[MASK_FIFO_ADDR_WIDTH-1:0]];
-            ram_mask_valid_next = 1'b1;
-            mask_fifo_rd_ptr_next = mask_fifo_rd_ptr_reg+1;
-        end
+    if (!ram_mask_valid_next && !mask_fifo_empty) begin
+        ram_mask_next = mask_fifo_mask[mask_fifo_rd_ptr_reg[MASK_FIFO_ADDR_WIDTH-1:0]];
+        ram_mask_valid_next = 1'b1;
+        mask_fifo_rd_ptr_next = mask_fifo_rd_ptr_reg+1;
     end
 end
 

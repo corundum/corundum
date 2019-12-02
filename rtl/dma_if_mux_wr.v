@@ -481,8 +481,8 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     wire                      seg_if_ram_rd_resp_valid;
     wire                      seg_if_ram_rd_resp_ready = if_ram_rd_resp_ready[n];
 
-    assign if_ram_rd_resp_data[n*SEG_DATA_WIDTH +: SEG_DATA_WIDTH] = seg_if_ram_rd_resp_data_reg;
-    assign if_ram_rd_resp_valid[n] = seg_if_ram_rd_resp_valid_reg;
+    assign if_ram_rd_resp_data[n*SEG_DATA_WIDTH +: SEG_DATA_WIDTH] = seg_if_ram_rd_resp_data;
+    assign if_ram_rd_resp_valid[n] = seg_if_ram_rd_resp_valid;
 
     // internal datapath
     reg  [SEG_DATA_WIDTH-1:0] seg_if_ram_rd_resp_data_int;

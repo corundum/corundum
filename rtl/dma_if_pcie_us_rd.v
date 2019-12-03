@@ -1278,7 +1278,7 @@ always @(posedge clk) begin
         m_axis_read_desc_status_valid_reg <= 1'b0;
 
         active_tx_count_reg <= {RQ_SEQ_NUM_WIDTH{1'b0}};
-        active_tx_count_av_reg = 1'b1;
+        active_tx_count_av_reg <= 1'b1;
 
         tag_table_we_tlp_reg <= 1'b0;
         op_table_active <= 0;

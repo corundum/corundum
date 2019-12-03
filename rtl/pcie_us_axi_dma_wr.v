@@ -37,6 +37,10 @@ module pcie_us_axi_dma_wr #
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     // PCIe AXI stream RQ tuser signal width
     parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 60 : 137,
+    // RQ sequence number width
+    parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
+    // RQ sequence number tracking enable
+    parameter RQ_SEQ_NUM_ENABLE = 0,
     // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     // Width of AXI address bus in bits
@@ -52,7 +56,11 @@ module pcie_us_axi_dma_wr #
     // Length field width
     parameter LEN_WIDTH = 20,
     // Tag field width
-    parameter TAG_WIDTH = 8
+    parameter TAG_WIDTH = 8,
+    // Operation table size
+    parameter OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1),
+    // In-flight transmit limit
+    parameter TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
 )
 (
     input  wire                               clk,
@@ -77,6 +85,22 @@ module pcie_us_axi_dma_wr #
     input  wire                               m_axis_rq_tready,
     output wire                               m_axis_rq_tlast,
     output wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser,
+
+    /*
+     * Transmit sequence number input
+     */
+    input  wire [RQ_SEQ_NUM_WIDTH-1:0]          s_axis_rq_seq_num_0,
+    input  wire                                 s_axis_rq_seq_num_valid_0,
+    input  wire [RQ_SEQ_NUM_WIDTH-1:0]          s_axis_rq_seq_num_1,
+    input  wire                                 s_axis_rq_seq_num_valid_1,
+
+    /*
+     * Transmit sequence number output (to read DMA)
+     */
+    output wire [RQ_SEQ_NUM_WIDTH-1:0]          m_axis_rq_seq_num_0,
+    output wire                                 m_axis_rq_seq_num_valid_0,
+    output wire [RQ_SEQ_NUM_WIDTH-1:0]          m_axis_rq_seq_num_1,
+    output wire                                 m_axis_rq_seq_num_valid_1,
 
     /*
      * AXI write descriptor input
@@ -135,7 +159,10 @@ parameter OFFSET_WIDTH = $clog2(AXI_DATA_WIDTH/8);
 parameter WORD_LEN_WIDTH = LEN_WIDTH - $clog2(AXIS_PCIE_KEEP_WIDTH);
 parameter CYCLE_COUNT_WIDTH = 13-AXI_BURST_SIZE;
 
-parameter TLP_CMD_FIFO_ADDR_WIDTH = 3;
+parameter SEQ_NUM_MASK = {RQ_SEQ_NUM_WIDTH-1{1'b1}};
+parameter SEQ_NUM_FLAG = {1'b1, {RQ_SEQ_NUM_WIDTH-1{1'b0}}};
+
+parameter OP_TAG_WIDTH = $clog2(OP_TABLE_SIZE);
 
 // bus width assertions
 initial begin
@@ -159,6 +186,28 @@ initial begin
             $error("Error: PCIe RQ tuser width must be 60 or 62 (instance %m)");
             $finish;
         end
+    end
+
+    if (AXIS_PCIE_RQ_USER_WIDTH == 60) begin
+        if (RQ_SEQ_NUM_ENABLE && RQ_SEQ_NUM_WIDTH != 4) begin
+            $error("Error: RQ sequence number width must be 4 (instance %m)");
+            $finish;
+        end
+    end else begin
+        if (RQ_SEQ_NUM_ENABLE && RQ_SEQ_NUM_WIDTH != 6) begin
+            $error("Error: RQ sequence number width must be 6 (instance %m)");
+            $finish;
+        end
+    end
+
+    if (RQ_SEQ_NUM_ENABLE && OP_TABLE_SIZE > 2**(RQ_SEQ_NUM_WIDTH-1)) begin
+        $error("Error: Operation table size of range (instance %m)");
+        $finish;
+    end
+
+    if (RQ_SEQ_NUM_ENABLE && TX_LIMIT > 2**(RQ_SEQ_NUM_WIDTH-1)) begin
+        $error("Error: TX limit out of range (instance %m)");
+        $finish;
     end
 
     if (AXI_DATA_WIDTH != AXIS_PCIE_DATA_WIDTH) begin
@@ -219,8 +268,6 @@ reg [2:0] tlp_state_reg = TLP_STATE_IDLE, tlp_state_next;
 // datapath control signals
 reg transfer_in_save;
 
-reg tlp_cmd_ready;
-
 reg [PCIE_ADDR_WIDTH-1:0] pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, pcie_addr_next;
 reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
 reg [LEN_WIDTH-1:0] op_count_reg = {LEN_WIDTH{1'b0}}, op_count_next;
@@ -239,18 +286,14 @@ reg last_cycle_reg = 1'b0, last_cycle_next;
 reg last_tlp_reg = 1'b0, last_tlp_next;
 reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
 
-reg [PCIE_ADDR_WIDTH-1:0] tlp_cmd_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, tlp_cmd_addr_next;
-reg [11:0] tlp_cmd_len_reg = 12'd0, tlp_cmd_len_next;
-reg [9:0] tlp_cmd_dword_len_reg = 10'd0, tlp_cmd_dword_len_next;
-reg [CYCLE_COUNT_WIDTH-1:0] tlp_cmd_input_cycle_len_reg = {CYCLE_COUNT_WIDTH{1'b0}}, tlp_cmd_input_cycle_len_next;
-reg [CYCLE_COUNT_WIDTH-1:0] tlp_cmd_output_cycle_len_reg = {CYCLE_COUNT_WIDTH{1'b0}}, tlp_cmd_output_cycle_len_next;
-reg [OFFSET_WIDTH-1:0] tlp_cmd_offset_reg = {OFFSET_WIDTH{1'b0}}, tlp_cmd_offset_next;
 reg [TAG_WIDTH-1:0] tlp_cmd_tag_reg = {TAG_WIDTH{1'b0}}, tlp_cmd_tag_next;
-reg tlp_cmd_bubble_cycle_reg = 1'b0, tlp_cmd_bubble_cycle_next;
 reg tlp_cmd_last_reg = 1'b0, tlp_cmd_last_next;
-reg tlp_cmd_valid_reg = 1'b0, tlp_cmd_valid_next;
 
 reg [10:0] max_payload_size_dw_reg = 11'd0;
+
+reg [RQ_SEQ_NUM_WIDTH-1:0] active_tx_count_reg = {RQ_SEQ_NUM_WIDTH{1'b0}};
+reg active_tx_count_av_reg = 1'b1;
+reg inc_active_tx;
 
 reg s_axis_rq_tready_reg = 1'b0, s_axis_rq_tready_next;
 
@@ -279,6 +322,14 @@ wire                               m_axis_rq_tready_int_early;
 
 assign s_axis_rq_tready = s_axis_rq_tready_reg;
 
+assign m_axis_rq_seq_num_0 = s_axis_rq_seq_num_0 & SEQ_NUM_MASK;
+assign m_axis_rq_seq_num_valid_0 = s_axis_rq_seq_num_valid_0 && (s_axis_rq_seq_num_0 & SEQ_NUM_FLAG);
+assign m_axis_rq_seq_num_1 = s_axis_rq_seq_num_1 & SEQ_NUM_MASK;
+assign m_axis_rq_seq_num_valid_1 = s_axis_rq_seq_num_valid_1 && (s_axis_rq_seq_num_1 & SEQ_NUM_FLAG);
+
+wire axis_rq_seq_num_valid_0_int = s_axis_rq_seq_num_valid_0 && !(s_axis_rq_seq_num_0 & SEQ_NUM_FLAG);
+wire axis_rq_seq_num_valid_1_int = s_axis_rq_seq_num_valid_1 && !(s_axis_rq_seq_num_1 & SEQ_NUM_FLAG);
+
 assign s_axis_write_desc_ready = s_axis_write_desc_ready_reg;
 
 assign m_axis_write_desc_status_tag = m_axis_write_desc_status_tag_reg;
@@ -303,6 +354,53 @@ wire [AXI_ADDR_WIDTH-1:0] axi_addr_plus_max_burst = axi_addr_reg + AXI_MAX_BURST
 wire [AXI_ADDR_WIDTH-1:0] axi_addr_plus_op_count = axi_addr_reg + op_count_reg;
 wire [AXI_ADDR_WIDTH-1:0] axi_addr_plus_tlp_count = axi_addr_reg + tlp_count_reg;
 
+// operation tag management
+reg [OP_TAG_WIDTH+1-1:0] op_table_start_ptr_reg = 0;
+reg [PCIE_ADDR_WIDTH-1:0] op_table_start_pcie_addr;
+reg [11:0] op_table_start_len;
+reg [9:0] op_table_start_dword_len;
+reg [CYCLE_COUNT_WIDTH-1:0] op_table_start_input_cycle_count;
+reg [CYCLE_COUNT_WIDTH-1:0] op_table_start_output_cycle_count;
+reg [OFFSET_WIDTH-1:0] op_table_start_offset;
+reg op_table_start_bubble_cycle;
+reg [TAG_WIDTH-1:0] op_table_start_tag;
+reg op_table_start_last;
+reg op_table_start_en;
+reg [OP_TAG_WIDTH+1-1:0] op_table_tx_start_ptr_reg = 0;
+reg op_table_tx_start_en;
+reg [OP_TAG_WIDTH+1-1:0] op_table_tx_finish_ptr_reg = 0;
+reg op_table_tx_finish_en;
+reg [OP_TAG_WIDTH+1-1:0] op_table_finish_ptr_reg = 0;
+reg op_table_finish_en;
+
+reg [2**OP_TAG_WIDTH-1:0] op_table_active = 0;
+reg [2**OP_TAG_WIDTH-1:0] op_table_tx_done = 0;
+reg [PCIE_ADDR_WIDTH-1:0] op_table_pcie_addr[2**OP_TAG_WIDTH-1:0];
+reg [11:0] op_table_len[2**OP_TAG_WIDTH-1:0];
+reg [9:0] op_table_dword_len[2**OP_TAG_WIDTH-1:0];
+reg [CYCLE_COUNT_WIDTH-1:0] op_table_input_cycle_count[2**OP_TAG_WIDTH-1:0];
+reg [CYCLE_COUNT_WIDTH-1:0] op_table_output_cycle_count[2**OP_TAG_WIDTH-1:0];
+reg [OFFSET_WIDTH-1:0] op_table_offset[2**OP_TAG_WIDTH-1:0];
+reg op_table_bubble_cycle[2**OP_TAG_WIDTH-1:0];
+reg [TAG_WIDTH-1:0] op_table_tag[2**OP_TAG_WIDTH-1:0];
+reg op_table_last[2**OP_TAG_WIDTH-1:0];
+
+integer i;
+
+initial begin
+    for (i = 0; i < 2**OP_TAG_WIDTH; i = i + 1) begin
+        op_table_pcie_addr[i] = 0;
+        op_table_len[i] = 0;
+        op_table_dword_len[i] = 0;
+        op_table_input_cycle_count[i] = 0;
+        op_table_output_cycle_count[i] = 0;
+        op_table_offset[i] = 0;
+        op_table_tag[i] = 0;
+        op_table_bubble_cycle[i] = 0;
+        op_table_last[i] = 0;
+    end
+end
+
 always @* begin
     axi_state_next = AXI_STATE_IDLE;
 
@@ -318,22 +416,25 @@ always @* begin
     tr_count_next = tr_count_reg;
     tlp_count_next = tlp_count_reg;
 
-    tlp_cmd_addr_next = tlp_cmd_addr_reg;
-    tlp_cmd_len_next = tlp_cmd_len_reg;
-    tlp_cmd_dword_len_next = tlp_cmd_dword_len_reg;
-    tlp_cmd_input_cycle_len_next = tlp_cmd_input_cycle_len_reg;
-    tlp_cmd_output_cycle_len_next = tlp_cmd_output_cycle_len_reg;
-    tlp_cmd_offset_next = tlp_cmd_offset_reg;
     tlp_cmd_tag_next = tlp_cmd_tag_reg;
-    tlp_cmd_bubble_cycle_next = tlp_cmd_bubble_cycle_reg;
     tlp_cmd_last_next = tlp_cmd_last_reg;
-    tlp_cmd_valid_next = tlp_cmd_valid_reg && !tlp_cmd_ready;
+
+    op_table_start_pcie_addr = pcie_addr_reg;
+    op_table_start_len = 0;
+    op_table_start_dword_len = 0;
+    op_table_start_input_cycle_count = 0;
+    op_table_start_output_cycle_count = 0;
+    op_table_start_offset = 0;
+    op_table_start_bubble_cycle = 0;
+    op_table_start_tag = tlp_cmd_tag_reg;
+    op_table_start_last = 0;
+    op_table_start_en = 1'b0;
 
     // TLP segmentation and AXI read request generation
     case (axi_state_reg)
         AXI_STATE_IDLE: begin
             // idle state, wait for incoming descriptor
-            s_axis_write_desc_ready_next = !tlp_cmd_valid_reg && enable;
+            s_axis_write_desc_ready_next = !op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] && ($unsigned(op_table_start_ptr_reg - op_table_finish_ptr_reg) < 2**OP_TAG_WIDTH) && enable;
 
             if (s_axis_write_desc_ready & s_axis_write_desc_valid) begin
                 s_axis_write_desc_ready_next = 1'b0;
@@ -348,7 +449,7 @@ always @* begin
         end
         AXI_STATE_START: begin
             // start state, compute TLP length
-            if (!tlp_cmd_valid_reg) begin
+            if (!op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] && ($unsigned(op_table_start_ptr_reg - op_table_finish_ptr_reg) < 2**OP_TAG_WIDTH)) begin
                 if (op_count_reg <= {max_payload_size_dw_reg, 2'b00}-pcie_addr_reg[1:0]) begin
                     // packet smaller than max payload size
                     if (pcie_addr_reg[12] != pcie_addr_plus_op_count[12]) begin
@@ -369,28 +470,31 @@ always @* begin
                     end
                 end
 
-                tlp_cmd_input_cycle_len_next = (tlp_count_next + axi_addr_reg[OFFSET_WIDTH-1:0] - 1) >> AXI_BURST_SIZE;
+                op_table_start_input_cycle_count = (tlp_count_next + axi_addr_reg[OFFSET_WIDTH-1:0] - 1) >> AXI_BURST_SIZE;
                 if (AXIS_PCIE_DATA_WIDTH >= 256) begin
-                    tlp_cmd_output_cycle_len_next = (tlp_count_next + 16+pcie_addr_reg[1:0] - 1) >> AXI_BURST_SIZE;
+                    op_table_start_output_cycle_count = (tlp_count_next + 16+pcie_addr_reg[1:0] - 1) >> AXI_BURST_SIZE;
                 end else begin
-                    tlp_cmd_output_cycle_len_next = (tlp_count_next + pcie_addr_reg[1:0] - 1) >> AXI_BURST_SIZE;
+                    op_table_start_output_cycle_count = (tlp_count_next + pcie_addr_reg[1:0] - 1) >> AXI_BURST_SIZE;
                 end
 
                 pcie_addr_next = pcie_addr_reg + tlp_count_next;
                 op_count_next = op_count_reg - tlp_count_next;
 
-                tlp_cmd_addr_next = pcie_addr_reg;
-                tlp_cmd_len_next = tlp_count_next;
-                tlp_cmd_dword_len_next = (tlp_count_next + pcie_addr_reg[1:0] + 3) >> 2;
+                op_table_start_pcie_addr = pcie_addr_reg;
+                op_table_start_len = tlp_count_next;
+                op_table_start_dword_len = (tlp_count_next + pcie_addr_reg[1:0] + 3) >> 2;
                 if (AXIS_PCIE_DATA_WIDTH >= 256) begin
-                    tlp_cmd_offset_next = 16+pcie_addr_reg[1:0]-axi_addr_reg[OFFSET_WIDTH-1:0];
-                    tlp_cmd_bubble_cycle_next = axi_addr_reg[OFFSET_WIDTH-1:0] > 16+pcie_addr_reg[1:0];
+                    op_table_start_offset = 16+pcie_addr_reg[1:0]-axi_addr_reg[OFFSET_WIDTH-1:0];
+                    op_table_start_bubble_cycle = axi_addr_reg[OFFSET_WIDTH-1:0] > 16+pcie_addr_reg[1:0];
                 end else begin
-                    tlp_cmd_offset_next = pcie_addr_reg[1:0]-axi_addr_reg[OFFSET_WIDTH-1:0];
-                    tlp_cmd_bubble_cycle_next = axi_addr_reg[OFFSET_WIDTH-1:0] > pcie_addr_reg[1:0];
+                    op_table_start_offset = pcie_addr_reg[1:0]-axi_addr_reg[OFFSET_WIDTH-1:0];
+                    op_table_start_bubble_cycle = axi_addr_reg[OFFSET_WIDTH-1:0] > pcie_addr_reg[1:0];
                 end
                 tlp_cmd_last_next = op_count_next == 0;
-                tlp_cmd_valid_next = 1'b1;
+                op_table_start_last = op_count_next == 0;
+
+                op_table_start_tag = tlp_cmd_tag_reg;
+                op_table_start_en = 1'b1;
 
                 axi_state_next = AXI_STATE_REQ;
             end else begin
@@ -429,10 +533,10 @@ always @* begin
 
                 if (tlp_count_next != 0) begin
                     axi_state_next = AXI_STATE_REQ;
-                end else if (op_count_next != 0) begin
+                end else if (!tlp_cmd_last_reg) begin
                     axi_state_next = AXI_STATE_START;
                 end else begin
-                    s_axis_write_desc_ready_next = !tlp_cmd_valid_reg && enable;
+                    s_axis_write_desc_ready_next = !op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] && ($unsigned(op_table_start_ptr_reg - op_table_finish_ptr_reg) < 2**OP_TAG_WIDTH) && enable;
                     axi_state_next = AXI_STATE_IDLE;
                 end
             end else begin
@@ -449,8 +553,6 @@ always @* begin
     tlp_state_next = TLP_STATE_IDLE;
 
     transfer_in_save = 1'b0;
-
-    tlp_cmd_ready = 1'b0;
 
     s_axis_rq_tready_next = 1'b0;
 
@@ -470,6 +572,11 @@ always @* begin
     last_cycle_next = last_cycle_reg;
     last_tlp_next = last_tlp_reg;
     tag_next = tag_reg;
+
+    op_table_tx_start_en = 1'b0;
+    op_table_tx_finish_en = 1'b0;
+
+    inc_active_tx = 1'b0;
 
     m_axis_rq_tdata_int = {AXIS_PCIE_DATA_WIDTH{1'b0}};
     m_axis_rq_tkeep_int = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
@@ -519,7 +626,7 @@ always @* begin
         m_axis_rq_tuser_int[42:39] = 4'b0000; // tph_type
         m_axis_rq_tuser_int[44:43] = 2'b00; // tph_indirect_tag_en
         m_axis_rq_tuser_int[60:45] = 16'd0; // tph_st_tag
-        m_axis_rq_tuser_int[66:61] = 6'd0; // seq_num0
+        m_axis_rq_tuser_int[66:61] = op_table_tx_finish_ptr_reg[OP_TAG_WIDTH-1:0] & SEQ_NUM_MASK; // seq_num0
         m_axis_rq_tuser_int[72:67] = 6'd0; // seq_num1
         m_axis_rq_tuser_int[136:73] = 64'd0; // parity
     end else begin
@@ -531,8 +638,11 @@ always @* begin
         m_axis_rq_tuser_int[14:13] = 2'b00; // tph_type
         m_axis_rq_tuser_int[15] = 1'b0; // tph_indirect_tag_en
         m_axis_rq_tuser_int[23:16] = 8'd0; // tph_st_tag
-        m_axis_rq_tuser_int[27:24] = 4'd0; // seq_num
+        m_axis_rq_tuser_int[27:24] = op_table_tx_finish_ptr_reg[OP_TAG_WIDTH-1:0] & SEQ_NUM_MASK; // seq_num
         m_axis_rq_tuser_int[59:28] = 32'd0; // parity
+        if (AXIS_PCIE_RQ_USER_WIDTH == 62) begin
+            m_axis_rq_tuser_int[61:60] = (op_table_tx_finish_ptr_reg[OP_TAG_WIDTH-1:0] & SEQ_NUM_MASK) >> 4; // seq_num
+        end
     end
 
     // AXI read response processing and TLP generation
@@ -547,20 +657,29 @@ always @* begin
             m_axis_rq_tvalid_int = s_axis_rq_tready && s_axis_rq_tvalid;
             m_axis_rq_tlast_int = s_axis_rq_tlast;
             m_axis_rq_tuser_int = s_axis_rq_tuser;
+            if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                m_axis_rq_tuser_int[61+RQ_SEQ_NUM_WIDTH-1] = 1'b1;
+            end else begin
+                if (RQ_SEQ_NUM_WIDTH > 4) begin
+                    m_axis_rq_tuser_int[60+RQ_SEQ_NUM_WIDTH-4-1] = 1'b1;
+                end else begin
+                    m_axis_rq_tuser_int[24+RQ_SEQ_NUM_WIDTH-1] = 1'b1;
+                end
+            end
 
             m_axi_rready_next = 1'b0;
 
-            tlp_addr_next = tlp_cmd_addr_reg;
-            tlp_len_next = tlp_cmd_len_reg;
-            dword_count_next = tlp_cmd_dword_len_reg;
-            offset_next = tlp_cmd_offset_reg;
-            input_cycle_count_next = tlp_cmd_input_cycle_len_reg;
-            output_cycle_count_next = tlp_cmd_output_cycle_len_reg;
+            tlp_addr_next = op_table_pcie_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            tlp_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            dword_count_next = op_table_dword_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            offset_next = op_table_offset[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            input_cycle_count_next = op_table_input_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            output_cycle_count_next = op_table_output_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             input_active_next = 1'b1;
-            bubble_cycle_next = tlp_cmd_bubble_cycle_reg;
-            last_cycle_next = tlp_cmd_output_cycle_len_reg == 0;
-            last_tlp_next = tlp_cmd_last_reg;
-            tag_next = tlp_cmd_tag_reg;
+            bubble_cycle_next = op_table_bubble_cycle[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            last_cycle_next = op_table_output_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
+            last_tlp_next =  op_table_last[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            tag_next = op_table_tag[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
 
             if (s_axis_rq_tready && s_axis_rq_tvalid) begin
                 // pass through read request TLP
@@ -569,9 +688,9 @@ always @* begin
                 end else begin
                     tlp_state_next = TLP_STATE_PASSTHROUGH;
                 end
-            end else if (tlp_cmd_valid_reg) begin
+            end else if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                 s_axis_rq_tready_next = 1'b0;
-                tlp_cmd_ready = 1'b1;
+                op_table_tx_start_en = 1'b1;
                 if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                     m_axi_rready_next = m_axis_rq_tready_int_early;
                 end else if (AXIS_PCIE_DATA_WIDTH == 128) begin
@@ -617,28 +736,27 @@ always @* begin
                             m_axis_rq_tkeep_int = {AXIS_PCIE_KEEP_WIDTH{1'b1}} >> (AXIS_PCIE_KEEP_WIDTH-4 - dword_count_reg);
                         end
 
+                        inc_active_tx = 1'b1;
+
                         if (last_cycle_reg) begin
                             m_axis_rq_tlast_int = 1'b1;
-                            if (last_tlp_reg) begin
-                                m_axis_write_desc_status_tag_next = tag_reg;
-                                m_axis_write_desc_status_valid_next = 1'b1;
-                            end
+                            op_table_tx_finish_en = 1'b1;
 
                             // skip idle state if possible
-                            tlp_addr_next = tlp_cmd_addr_reg;
-                            tlp_len_next = tlp_cmd_len_reg;
-                            dword_count_next = tlp_cmd_dword_len_reg;
-                            offset_next = tlp_cmd_offset_reg;
-                            input_cycle_count_next = tlp_cmd_input_cycle_len_reg;
-                            output_cycle_count_next = tlp_cmd_output_cycle_len_reg;
+                            tlp_addr_next = op_table_pcie_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                            tlp_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                            dword_count_next = op_table_dword_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                            offset_next = op_table_offset[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                            input_cycle_count_next = op_table_input_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                            output_cycle_count_next = op_table_output_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                             input_active_next = 1'b1;
-                            bubble_cycle_next = tlp_cmd_bubble_cycle_reg;
-                            last_cycle_next = tlp_cmd_output_cycle_len_reg == 0;
-                            last_tlp_next = tlp_cmd_last_reg;
-                            tag_next = tlp_cmd_tag_reg;
+                            bubble_cycle_next = op_table_bubble_cycle[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                            last_cycle_next = op_table_output_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
+                            last_tlp_next =  op_table_last[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                            tag_next = op_table_tag[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
 
-                            if (tlp_cmd_valid_reg && !s_axis_rq_tvalid) begin
-                                tlp_cmd_ready = 1'b1;
+                            if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && !s_axis_rq_tvalid && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+                                op_table_tx_start_en = 1'b1;
                                 if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                                     m_axi_rready_next = m_axis_rq_tready_int_early;
                                 end else if (AXIS_PCIE_DATA_WIDTH == 128) begin
@@ -663,6 +781,8 @@ always @* begin
             end else begin
                 if (m_axis_rq_tready_int_reg) begin
                     m_axis_rq_tvalid_int = 1'b1;
+
+                    inc_active_tx = 1'b1;
 
                     if (AXIS_PCIE_DATA_WIDTH == 128) begin
                         m_axi_rready_next = m_axis_rq_tready_int_early;
@@ -750,26 +870,23 @@ always @* begin
 
                     if (last_cycle_reg) begin
                         m_axis_rq_tlast_int = 1'b1;
-                        if (last_tlp_reg) begin
-                            m_axis_write_desc_status_tag_next = tag_reg;
-                            m_axis_write_desc_status_valid_next = 1'b1;
-                        end
+                        op_table_tx_finish_en = 1'b1;
 
                         // skip idle state if possible
-                        tlp_addr_next = tlp_cmd_addr_reg;
-                        tlp_len_next = tlp_cmd_len_reg;
-                        dword_count_next = tlp_cmd_dword_len_reg;
-                        offset_next = tlp_cmd_offset_reg;
-                        input_cycle_count_next = tlp_cmd_input_cycle_len_reg;
-                        output_cycle_count_next = tlp_cmd_output_cycle_len_reg;
+                        tlp_addr_next = op_table_pcie_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                        tlp_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                        dword_count_next = op_table_dword_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                        offset_next = op_table_offset[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                        input_cycle_count_next = op_table_input_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                        output_cycle_count_next = op_table_output_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                         input_active_next = 1'b1;
-                        bubble_cycle_next = tlp_cmd_bubble_cycle_reg;
-                        last_cycle_next = tlp_cmd_output_cycle_len_reg == 0;
-                        last_tlp_next = tlp_cmd_last_reg;
-                        tag_next = tlp_cmd_tag_reg;
+                        bubble_cycle_next = op_table_bubble_cycle[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                        last_cycle_next = op_table_output_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
+                        last_tlp_next =  op_table_last[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                        tag_next = op_table_tag[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
 
-                        if (tlp_cmd_valid_reg && !s_axis_rq_tvalid) begin
-                            tlp_cmd_ready = 1'b1;
+                        if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && !s_axis_rq_tvalid && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+                            op_table_tx_start_en = 1'b1;
                             if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                                 m_axi_rready_next = m_axis_rq_tready_int_early;
                             end else if (AXIS_PCIE_DATA_WIDTH == 128) begin
@@ -802,6 +919,15 @@ always @* begin
             m_axis_rq_tvalid_int = s_axis_rq_tready && s_axis_rq_tvalid;
             m_axis_rq_tlast_int = s_axis_rq_tlast;
             m_axis_rq_tuser_int = s_axis_rq_tuser;
+            if (AXIS_PCIE_DATA_WIDTH == 512) begin
+                m_axis_rq_tuser_int[61+RQ_SEQ_NUM_WIDTH-1] = 1'b1;
+            end else begin
+                if (RQ_SEQ_NUM_WIDTH > 4) begin
+                    m_axis_rq_tuser_int[60+RQ_SEQ_NUM_WIDTH-4-1] = 1'b1;
+                end else begin
+                    m_axis_rq_tuser_int[24+RQ_SEQ_NUM_WIDTH-1] = 1'b1;
+                end
+            end
 
             if (s_axis_rq_tready && s_axis_rq_tvalid && s_axis_rq_tlast) begin
                 tlp_state_next = TLP_STATE_IDLE;
@@ -810,6 +936,17 @@ always @* begin
             end
         end
     endcase
+
+    op_table_finish_en = 1'b0;
+
+    if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_done[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_finish_ptr_reg != op_table_start_ptr_reg) begin
+        op_table_finish_en = 1'b1;
+
+        if (op_table_last[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
+            m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
+            m_axis_write_desc_status_valid_next = 1'b1;
+        end
+    end
 end
 
 always @(posedge clk) begin
@@ -834,16 +971,8 @@ always @(posedge clk) begin
     last_tlp_reg <= last_tlp_next;
     tag_reg <= tag_next;
 
-    tlp_cmd_addr_reg <= tlp_cmd_addr_next;
-    tlp_cmd_len_reg <= tlp_cmd_len_next;
-    tlp_cmd_dword_len_reg <= tlp_cmd_dword_len_next;
-    tlp_cmd_input_cycle_len_reg <= tlp_cmd_input_cycle_len_next;
-    tlp_cmd_output_cycle_len_reg <= tlp_cmd_output_cycle_len_next;
-    tlp_cmd_offset_reg <= tlp_cmd_offset_next;
-    tlp_cmd_bubble_cycle_reg <= tlp_cmd_bubble_cycle_next;
     tlp_cmd_tag_reg <= tlp_cmd_tag_next;
     tlp_cmd_last_reg <= tlp_cmd_last_next;
-    tlp_cmd_valid_reg <= tlp_cmd_valid_next;
 
     s_axis_rq_tready_reg <= s_axis_rq_tready_next;
 
@@ -859,8 +988,80 @@ always @(posedge clk) begin
 
     max_payload_size_dw_reg <= 11'd32 << (max_payload_size > 5 ? 5 : max_payload_size);
 
+    if (active_tx_count_reg < TX_LIMIT && inc_active_tx && !axis_rq_seq_num_valid_0_int && !axis_rq_seq_num_valid_1_int) begin
+        // inc by 1
+        active_tx_count_reg <= active_tx_count_reg + 1;
+        active_tx_count_av_reg <= active_tx_count_reg < (TX_LIMIT-1);
+    end else if (active_tx_count_reg > 0 && ((inc_active_tx && axis_rq_seq_num_valid_0_int && axis_rq_seq_num_valid_1_int) || (!inc_active_tx && (axis_rq_seq_num_valid_0_int ^ axis_rq_seq_num_valid_1_int)))) begin
+        // dec by 1
+        active_tx_count_reg <= active_tx_count_reg - 1;
+        active_tx_count_av_reg <= 1'b1;
+    end else if (active_tx_count_reg > 1 && !inc_active_tx && axis_rq_seq_num_valid_0_int && axis_rq_seq_num_valid_1_int) begin
+        // dec by 2
+        active_tx_count_reg <= active_tx_count_reg - 2;
+        active_tx_count_av_reg <= 1'b1;
+    end else begin
+        active_tx_count_av_reg <= active_tx_count_reg < TX_LIMIT;
+    end
+
+    if (op_table_start_en) begin
+        op_table_start_ptr_reg <= op_table_start_ptr_reg + 1;
+        op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= 1'b1;
+        op_table_tx_done[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= 1'b0;
+        op_table_pcie_addr[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_pcie_addr;
+        op_table_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_len;
+        op_table_dword_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_dword_len;
+        op_table_input_cycle_count[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_input_cycle_count;
+        op_table_output_cycle_count[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_output_cycle_count;
+        op_table_offset[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_offset;
+        op_table_bubble_cycle[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_bubble_cycle;
+        op_table_tag[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_tag;
+        op_table_last[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_last;
+    end
+
+    if (op_table_tx_start_en) begin
+        op_table_tx_start_ptr_reg <= op_table_tx_start_ptr_reg + 1;
+    end
+
+    if (op_table_tx_finish_en) begin
+        op_table_tx_finish_ptr_reg <= op_table_tx_finish_ptr_reg + 1;
+    end
+
+    if (axis_rq_seq_num_valid_0_int) begin
+        op_table_tx_done[s_axis_rq_seq_num_0[OP_TAG_WIDTH-1:0]] <= 1'b1;
+    end
+
+    if (axis_rq_seq_num_valid_1_int) begin
+        op_table_tx_done[s_axis_rq_seq_num_1[OP_TAG_WIDTH-1:0]] <= 1'b1;
+    end
+
+    if (op_table_finish_en) begin
+        op_table_finish_ptr_reg <= op_table_finish_ptr_reg + 1;
+        op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] <= 1'b0;
+    end
+
     if (transfer_in_save) begin
         save_axi_rdata_reg <= m_axi_rdata;
+    end
+
+    if (rst) begin
+        axi_state_reg <= AXI_STATE_IDLE;
+        tlp_state_reg <= TLP_STATE_IDLE;
+
+        s_axis_rq_tready_reg <= 1'b0;
+        s_axis_write_desc_ready_reg <= 1'b0;
+        m_axis_write_desc_status_valid_reg <= 1'b0;
+        m_axi_arvalid_reg <= 1'b0;
+        m_axi_rready_reg <= 1'b0;
+
+        active_tx_count_reg <= {RQ_SEQ_NUM_WIDTH{1'b0}};
+        active_tx_count_av_reg <= 1'b1;
+
+        op_table_start_ptr_reg <= 0;
+        op_table_tx_start_ptr_reg <= 0;
+        op_table_tx_finish_ptr_reg <= 0;
+        op_table_finish_ptr_reg <= 0;
+        op_table_active <= 0;
     end
 end
 
@@ -948,17 +1149,6 @@ always @(posedge clk) begin
         temp_m_axis_rq_tkeep_reg <= m_axis_rq_tkeep_int;
         temp_m_axis_rq_tlast_reg <= m_axis_rq_tlast_int;
         temp_m_axis_rq_tuser_reg <= m_axis_rq_tuser_int;
-    end
-
-    if (rst) begin
-        axi_state_reg <= AXI_STATE_IDLE;
-        tlp_state_reg <= TLP_STATE_IDLE;
-        tlp_cmd_valid_reg <= 1'b0;
-        s_axis_rq_tready_reg <= 1'b0;
-        s_axis_write_desc_ready_reg <= 1'b0;
-        m_axis_write_desc_status_valid_reg <= 1'b0;
-        m_axi_arvalid_reg <= 1'b0;
-        m_axi_rready_reg <= 1'b0;
     end
 end
 

@@ -49,6 +49,8 @@ def bench():
     AXIS_PCIE_DATA_WIDTH = 512
     AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
     AXIS_PCIE_RQ_USER_WIDTH = 137
+    RQ_SEQ_NUM_WIDTH = 4 if AXIS_PCIE_RQ_USER_WIDTH == 60 else 6
+    RQ_SEQ_NUM_ENABLE = 1
     AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH
     AXI_ADDR_WIDTH = 64
     AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8)
@@ -57,6 +59,8 @@ def bench():
     PCIE_ADDR_WIDTH = 64
     LEN_WIDTH = 20
     TAG_WIDTH = 8
+    OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1)
+    TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
 
     # Inputs
     clk = Signal(bool(0))
@@ -69,6 +73,10 @@ def bench():
     s_axis_rq_tlast = Signal(bool(0))
     s_axis_rq_tuser = Signal(intbv(0)[AXIS_PCIE_RQ_USER_WIDTH:])
     m_axis_rq_tready = Signal(bool(0))
+    s_axis_rq_seq_num_0 = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
+    s_axis_rq_seq_num_valid_0 = Signal(bool(0))
+    s_axis_rq_seq_num_1 = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
+    s_axis_rq_seq_num_valid_1 = Signal(bool(0))
     s_axis_write_desc_pcie_addr = Signal(intbv(0)[PCIE_ADDR_WIDTH:])
     s_axis_write_desc_axi_addr = Signal(intbv(0)[AXI_ADDR_WIDTH:])
     s_axis_write_desc_len = Signal(intbv(0)[LEN_WIDTH:])
@@ -92,6 +100,10 @@ def bench():
     m_axis_rq_tvalid = Signal(bool(0))
     m_axis_rq_tlast = Signal(bool(0))
     m_axis_rq_tuser = Signal(intbv(0)[AXIS_PCIE_RQ_USER_WIDTH:])
+    m_axis_rq_seq_num_0 = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
+    m_axis_rq_seq_num_valid_0 = Signal(bool(0))
+    m_axis_rq_seq_num_1 = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
+    m_axis_rq_seq_num_valid_1 = Signal(bool(0))
     s_axis_write_desc_ready = Signal(bool(0))
     m_axis_write_desc_status_tag = Signal(intbv(0)[TAG_WIDTH:])
     m_axis_write_desc_status_valid = Signal(bool(0))
@@ -201,10 +213,10 @@ def bench():
         s_axis_rq_tkeep=m_axis_rq_tkeep,
         s_axis_rq_tvalid=m_axis_rq_tvalid,
         s_axis_rq_tready=m_axis_rq_tready,
-        # pcie_rq_seq_num0=pcie_rq_seq_num0,
-        # pcie_rq_seq_num_vld0=pcie_rq_seq_num_vld0,
-        # pcie_rq_seq_num1=pcie_rq_seq_num1,
-        # pcie_rq_seq_num_vld1=pcie_rq_seq_num_vld1,
+        pcie_rq_seq_num0=s_axis_rq_seq_num_0,
+        pcie_rq_seq_num_vld0=s_axis_rq_seq_num_valid_0,
+        pcie_rq_seq_num1=s_axis_rq_seq_num_1,
+        pcie_rq_seq_num_vld1=s_axis_rq_seq_num_valid_1,
         # pcie_rq_tag0=pcie_rq_tag0,
         # pcie_rq_tag1=pcie_rq_tag1,
         # pcie_rq_tag_av=pcie_rq_tag_av,
@@ -278,6 +290,14 @@ def bench():
         m_axis_rq_tready=m_axis_rq_tready,
         m_axis_rq_tlast=m_axis_rq_tlast,
         m_axis_rq_tuser=m_axis_rq_tuser,
+        s_axis_rq_seq_num_0=s_axis_rq_seq_num_0,
+        s_axis_rq_seq_num_valid_0=s_axis_rq_seq_num_valid_0,
+        s_axis_rq_seq_num_1=s_axis_rq_seq_num_1,
+        s_axis_rq_seq_num_valid_1=s_axis_rq_seq_num_valid_1,
+        m_axis_rq_seq_num_0=m_axis_rq_seq_num_0,
+        m_axis_rq_seq_num_valid_0=m_axis_rq_seq_num_valid_0,
+        m_axis_rq_seq_num_1=m_axis_rq_seq_num_1,
+        m_axis_rq_seq_num_valid_1=m_axis_rq_seq_num_valid_1,
         s_axis_write_desc_pcie_addr=s_axis_write_desc_pcie_addr,
         s_axis_write_desc_axi_addr=s_axis_write_desc_axi_addr,
         s_axis_write_desc_len=s_axis_write_desc_len,

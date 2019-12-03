@@ -39,6 +39,10 @@ module pcie_us_axi_dma #
     parameter AXIS_PCIE_RC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 75 : 161,
     // PCIe AXI stream RQ tuser signal width
     parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 60 : 137,
+    // RQ sequence number width
+    parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
+    // RQ sequence number tracking enable
+    parameter RQ_SEQ_NUM_ENABLE = 0,
     // Width of AXI data bus in bits
     parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     // Width of AXI address bus in bits
@@ -62,7 +66,13 @@ module pcie_us_axi_dma #
     // Tag field width
     parameter TAG_WIDTH = 8,
     // Operation table size (read)
-    parameter READ_OP_TABLE_SIZE = 2**(AXI_ID_WIDTH < PCIE_TAG_WIDTH ? AXI_ID_WIDTH : PCIE_TAG_WIDTH)
+    parameter READ_OP_TABLE_SIZE = 2**(AXI_ID_WIDTH < PCIE_TAG_WIDTH ? AXI_ID_WIDTH : PCIE_TAG_WIDTH),
+    // In-flight transmit limit (read)
+    parameter READ_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
+    // Operation table size (write)
+    parameter WRITE_OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1),
+    // In-flight transmit limit (write)
+    parameter WRITE_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
 )
 (
     input  wire                               clk,
@@ -87,6 +97,14 @@ module pcie_us_axi_dma #
     input  wire                               m_axis_rq_tready,
     output wire                               m_axis_rq_tlast,
     output wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser,
+
+    /*
+     * Transmit sequence number input
+     */
+    input  wire [RQ_SEQ_NUM_WIDTH-1:0]          s_axis_rq_seq_num_0,
+    input  wire                                 s_axis_rq_seq_num_valid_0,
+    input  wire [RQ_SEQ_NUM_WIDTH-1:0]          s_axis_rq_seq_num_1,
+    input  wire                                 s_axis_rq_seq_num_valid_1,
 
     /*
      * AXI read descriptor input
@@ -184,11 +202,18 @@ wire                               axis_rq_tready_read;
 wire                               axis_rq_tlast_read;
 wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] axis_rq_tuser_read;
 
+wire [RQ_SEQ_NUM_WIDTH-1:0]        axis_rq_seq_num_read_0;
+wire                               axis_rq_seq_num_valid_read_0;
+wire [RQ_SEQ_NUM_WIDTH-1:0]        axis_rq_seq_num_read_1;
+wire                               axis_rq_seq_num_valid_read_1;
+
 pcie_us_axi_dma_rd #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
     .AXIS_PCIE_RC_USER_WIDTH(AXIS_PCIE_RC_USER_WIDTH),
     .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
+    .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
+    .RQ_SEQ_NUM_ENABLE(RQ_SEQ_NUM_ENABLE),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
@@ -200,7 +225,8 @@ pcie_us_axi_dma_rd #(
     .PCIE_EXT_TAG_ENABLE(PCIE_EXT_TAG_ENABLE),
     .LEN_WIDTH(LEN_WIDTH),
     .TAG_WIDTH(TAG_WIDTH),
-    .OP_TABLE_SIZE(READ_OP_TABLE_SIZE)
+    .OP_TABLE_SIZE(READ_OP_TABLE_SIZE),
+    .TX_LIMIT(READ_TX_LIMIT)
 )
 pcie_us_axi_dma_rd_inst (
     .clk(clk),
@@ -225,6 +251,14 @@ pcie_us_axi_dma_rd_inst (
     .m_axis_rq_tready(axis_rq_tready_read),
     .m_axis_rq_tlast(axis_rq_tlast_read),
     .m_axis_rq_tuser(axis_rq_tuser_read),
+
+    /*
+     * Transmit sequence number input
+     */
+    .s_axis_rq_seq_num_0(axis_rq_seq_num_read_0),
+    .s_axis_rq_seq_num_valid_0(axis_rq_seq_num_valid_read_0),
+    .s_axis_rq_seq_num_1(axis_rq_seq_num_read_1),
+    .s_axis_rq_seq_num_valid_1(axis_rq_seq_num_valid_read_1),
 
     /*
      * AXI read descriptor input
@@ -285,6 +319,8 @@ pcie_us_axi_dma_wr #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
     .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
+    .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
+    .RQ_SEQ_NUM_ENABLE(RQ_SEQ_NUM_ENABLE),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
@@ -292,7 +328,9 @@ pcie_us_axi_dma_wr #(
     .AXI_MAX_BURST_LEN(AXI_MAX_BURST_LEN),
     .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
     .LEN_WIDTH(LEN_WIDTH),
-    .TAG_WIDTH(TAG_WIDTH)
+    .TAG_WIDTH(TAG_WIDTH),
+    .OP_TABLE_SIZE(WRITE_OP_TABLE_SIZE),
+    .TX_LIMIT(WRITE_TX_LIMIT)
 )
 pcie_us_axi_dma_wr_inst (
     .clk(clk),
@@ -317,6 +355,22 @@ pcie_us_axi_dma_wr_inst (
     .m_axis_rq_tready(m_axis_rq_tready),
     .m_axis_rq_tlast(m_axis_rq_tlast),
     .m_axis_rq_tuser(m_axis_rq_tuser),
+
+    /*
+     * Transmit sequence number input
+     */
+    .s_axis_rq_seq_num_0(s_axis_rq_seq_num_0),
+    .s_axis_rq_seq_num_valid_0(s_axis_rq_seq_num_valid_0),
+    .s_axis_rq_seq_num_1(s_axis_rq_seq_num_1),
+    .s_axis_rq_seq_num_valid_1(s_axis_rq_seq_num_valid_1),
+
+    /*
+     * Transmit sequence number output (to read DMA)
+     */
+    .m_axis_rq_seq_num_0(axis_rq_seq_num_read_0),
+    .m_axis_rq_seq_num_valid_0(axis_rq_seq_num_valid_read_0),
+    .m_axis_rq_seq_num_1(axis_rq_seq_num_read_1),
+    .m_axis_rq_seq_num_valid_1(axis_rq_seq_num_valid_read_1),
 
     /*
      * AXI write descriptor input

@@ -35,6 +35,8 @@ module test_pcie_us_axi_dma_wr_64;
 parameter AXIS_PCIE_DATA_WIDTH = 64;
 parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
 parameter AXIS_PCIE_RQ_USER_WIDTH = 60;
+parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6;
+parameter RQ_SEQ_NUM_ENABLE = 1;
 parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH;
 parameter AXI_ADDR_WIDTH = 64;
 parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8);
@@ -43,6 +45,8 @@ parameter AXI_MAX_BURST_LEN = 256;
 parameter PCIE_ADDR_WIDTH = 64;
 parameter LEN_WIDTH = 20;
 parameter TAG_WIDTH = 8;
+parameter OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1);
+parameter TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1);
 
 // Inputs
 reg clk = 0;
@@ -55,6 +59,10 @@ reg s_axis_rq_tvalid = 0;
 reg s_axis_rq_tlast = 0;
 reg [AXIS_PCIE_RQ_USER_WIDTH-1:0] s_axis_rq_tuser = 0;
 reg m_axis_rq_tready = 0;
+reg [RQ_SEQ_NUM_WIDTH-1:0] s_axis_rq_seq_num_0 = 0;
+reg s_axis_rq_seq_num_valid_0 = 0;
+reg [RQ_SEQ_NUM_WIDTH-1:0] s_axis_rq_seq_num_1 = 0;
+reg s_axis_rq_seq_num_valid_1 = 0;
 reg [PCIE_ADDR_WIDTH-1:0] s_axis_write_desc_pcie_addr = 0;
 reg [AXI_ADDR_WIDTH-1:0] s_axis_write_desc_axi_addr = 0;
 reg [LEN_WIDTH-1:0] s_axis_write_desc_len = 0;
@@ -78,6 +86,10 @@ wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rq_tkeep;
 wire m_axis_rq_tvalid;
 wire m_axis_rq_tlast;
 wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser;
+wire [RQ_SEQ_NUM_WIDTH-1:0] m_axis_rq_seq_num_0;
+wire m_axis_rq_seq_num_valid_0;
+wire [RQ_SEQ_NUM_WIDTH-1:0] m_axis_rq_seq_num_1;
+wire m_axis_rq_seq_num_valid_1;
 wire s_axis_write_desc_ready;
 wire [TAG_WIDTH-1:0] m_axis_write_desc_status_tag;
 wire m_axis_write_desc_status_valid;
@@ -104,6 +116,10 @@ initial begin
         s_axis_rq_tlast,
         s_axis_rq_tuser,
         m_axis_rq_tready,
+        s_axis_rq_seq_num_0,
+        s_axis_rq_seq_num_valid_0,
+        s_axis_rq_seq_num_1,
+        s_axis_rq_seq_num_valid_1,
         s_axis_write_desc_pcie_addr,
         s_axis_write_desc_axi_addr,
         s_axis_write_desc_len,
@@ -127,6 +143,10 @@ initial begin
         m_axis_rq_tvalid,
         m_axis_rq_tlast,
         m_axis_rq_tuser,
+        m_axis_rq_seq_num_0,
+        m_axis_rq_seq_num_valid_0,
+        m_axis_rq_seq_num_1,
+        m_axis_rq_seq_num_valid_1,
         s_axis_write_desc_ready,
         m_axis_write_desc_status_tag,
         m_axis_write_desc_status_valid,
@@ -151,6 +171,8 @@ pcie_us_axi_dma_wr #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
     .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
+    .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
+    .RQ_SEQ_NUM_ENABLE(RQ_SEQ_NUM_ENABLE),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
@@ -158,7 +180,9 @@ pcie_us_axi_dma_wr #(
     .AXI_MAX_BURST_LEN(AXI_MAX_BURST_LEN),
     .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
     .LEN_WIDTH(LEN_WIDTH),
-    .TAG_WIDTH(TAG_WIDTH)
+    .TAG_WIDTH(TAG_WIDTH),
+    .OP_TABLE_SIZE(OP_TABLE_SIZE),
+    .TX_LIMIT(TX_LIMIT)
 )
 UUT (
     .clk(clk),
@@ -175,6 +199,14 @@ UUT (
     .m_axis_rq_tready(m_axis_rq_tready),
     .m_axis_rq_tlast(m_axis_rq_tlast),
     .m_axis_rq_tuser(m_axis_rq_tuser),
+    .s_axis_rq_seq_num_0(s_axis_rq_seq_num_0),
+    .s_axis_rq_seq_num_valid_0(s_axis_rq_seq_num_valid_0),
+    .s_axis_rq_seq_num_1(s_axis_rq_seq_num_1),
+    .s_axis_rq_seq_num_valid_1(s_axis_rq_seq_num_valid_1),
+    .m_axis_rq_seq_num_0(m_axis_rq_seq_num_0),
+    .m_axis_rq_seq_num_valid_0(m_axis_rq_seq_num_valid_0),
+    .m_axis_rq_seq_num_1(m_axis_rq_seq_num_1),
+    .m_axis_rq_seq_num_valid_1(m_axis_rq_seq_num_valid_1),
     .s_axis_write_desc_pcie_addr(s_axis_write_desc_pcie_addr),
     .s_axis_write_desc_axi_addr(s_axis_write_desc_axi_addr),
     .s_axis_write_desc_len(s_axis_write_desc_len),

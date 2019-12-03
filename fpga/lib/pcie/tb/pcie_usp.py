@@ -85,6 +85,8 @@ class UltrascalePlusPCIe(Device):
         self.rq_sink = RQSink()
         self.rc_source = RCSource()
 
+        self.rq_seq_num = []
+
         self.make_function()
 
 
@@ -805,13 +807,24 @@ class UltrascalePlusPCIe(Device):
 
                     if not tlp.discontinue:
                         if self.functions[tlp.requester_id.function].bus_master_enable:
+                            self.rq_seq_num.append(tlp.seq_num)
                             yield from self.send(TLP(tlp))
                         else:
                             print("Bus mastering disabled")
 
                             # TODO: internal response
 
-                # TODO pcie_rq_seq_num
+                # transmit sequence number
+                pcie_rq_seq_num_vld0.next = 0
+                if self.rq_seq_num:
+                    pcie_rq_seq_num0.next = self.rq_seq_num.pop(0)
+                    pcie_rq_seq_num_vld0.next = 1
+
+                pcie_rq_seq_num_vld1.next = 0
+                if self.rq_seq_num:
+                    pcie_rq_seq_num1.next = self.rq_seq_num.pop(0)
+                    pcie_rq_seq_num_vld1.next = 1
+
                 # TODO pcie_rq_tag
 
                 # handle requester completions

@@ -34,8 +34,8 @@ module fpga_core #
     parameter AXIS_PCIE_DATA_WIDTH = 256,
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     parameter AXIS_PCIE_RC_USER_WIDTH = 75,
-    parameter AXIS_PCIE_RQ_USER_WIDTH = 60,
-    parameter AXIS_PCIE_CQ_USER_WIDTH = 85,
+    parameter AXIS_PCIE_RQ_USER_WIDTH = 62,
+    parameter AXIS_PCIE_CQ_USER_WIDTH = 88,
     parameter AXIS_PCIE_CC_USER_WIDTH = 33
 )
 (
@@ -87,7 +87,8 @@ module fpga_core #
     input  wire [2:0]                         cfg_max_payload,
     input  wire [2:0]                         cfg_max_read_req,
 
-    output wire [18:0]                        cfg_mgmt_addr,
+    output wire [9:0]                         cfg_mgmt_addr,
+    output wire [7:0]                         cfg_mgmt_function_number,
     output wire                               cfg_mgmt_write,
     output wire [31:0]                        cfg_mgmt_write_data,
     output wire [3:0]                         cfg_mgmt_byte_enable,
@@ -96,7 +97,6 @@ module fpga_core #
     input  wire                               cfg_mgmt_read_write_done,
 
     input  wire [3:0]                         cfg_interrupt_msi_enable,
-    input  wire [7:0]                         cfg_interrupt_msi_vf_enable,
     input  wire [11:0]                        cfg_interrupt_msi_mmenable,
     input  wire                               cfg_interrupt_msi_mask_update,
     input  wire [31:0]                        cfg_interrupt_msi_data,
@@ -584,8 +584,8 @@ assign sma_led = 2'b00;
 pcie_us_cfg #(
     .PF_COUNT(1),
     .VF_COUNT(0),
-    .VF_OFFSET(64),
-    .PCIE_CAP_OFFSET(12'h0C0)
+    .VF_OFFSET(4),
+    .PCIE_CAP_OFFSET(12'h070)
 )
 pcie_us_cfg_inst (
     .clk(clk),
@@ -601,8 +601,8 @@ pcie_us_cfg_inst (
     /*
      * Interface to Ultrascale PCIe IP core
      */
-    .cfg_mgmt_addr(cfg_mgmt_addr[9:0]),
-    .cfg_mgmt_function_number(cfg_mgmt_addr[17:10]),
+    .cfg_mgmt_addr(cfg_mgmt_addr),
+    .cfg_mgmt_function_number(cfg_mgmt_function_number),
     .cfg_mgmt_write(cfg_mgmt_write),
     .cfg_mgmt_write_data(cfg_mgmt_write_data),
     .cfg_mgmt_byte_enable(cfg_mgmt_byte_enable),
@@ -610,8 +610,6 @@ pcie_us_cfg_inst (
     .cfg_mgmt_read_data(cfg_mgmt_read_data),
     .cfg_mgmt_read_write_done(cfg_mgmt_read_write_done)
 );
-
-assign cfg_mgmt_addr[18] = 1'b0;
 
 pcie_us_axil_master #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
@@ -872,9 +870,8 @@ pcie_us_axi_dma #(
     .AXI_ID_WIDTH(AXI_ID_WIDTH),
     .AXI_MAX_BURST_LEN(256),
     .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
-    .PCIE_CLIENT_TAG(1),
     //.PCIE_TAG_WIDTH(8),
-    .PCIE_TAG_COUNT(64),
+    .PCIE_TAG_COUNT(256),
     .PCIE_EXT_TAG_ENABLE(1),
     .LEN_WIDTH(16),
     .TAG_WIDTH(DMA_TAG_WIDTH)
@@ -902,12 +899,6 @@ pcie_us_axi_dma_inst (
     .m_axis_rq_tready(m_axis_rq_tready),
     .m_axis_rq_tlast(m_axis_rq_tlast),
     .m_axis_rq_tuser(m_axis_rq_tuser),
-
-    /*
-     * Tag input
-     */
-    .s_axis_pcie_rq_tag(0),
-    .s_axis_pcie_rq_tag_valid(0),
 
     /*
      * AXI read descriptor input
@@ -1080,7 +1071,7 @@ pcie_us_msi_inst (
     .msi_irq(msi_irq),
 
     .cfg_interrupt_msi_enable(cfg_interrupt_msi_enable),
-    .cfg_interrupt_msi_vf_enable(cfg_interrupt_msi_vf_enable),
+    .cfg_interrupt_msi_vf_enable(0),
     .cfg_interrupt_msi_mmenable(cfg_interrupt_msi_mmenable),
     .cfg_interrupt_msi_mask_update(cfg_interrupt_msi_mask_update),
     .cfg_interrupt_msi_data(cfg_interrupt_msi_data),

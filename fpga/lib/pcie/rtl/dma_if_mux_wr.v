@@ -371,17 +371,17 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
 
     assign seg_if_ram_rd_cmd_ready = seg_ram_rd_cmd_ready_int_reg && !fifo_full;
 
-    wire [CL_PORTS-1:0] select = PORTS > 1 ? (seg_if_ram_rd_cmd_sel >> (M_RAM_SEL_WIDTH - CL_PORTS)) : 0;
+    wire [CL_PORTS-1:0] select_cmd = PORTS > 1 ? (seg_if_ram_rd_cmd_sel >> (M_RAM_SEL_WIDTH - CL_PORTS)) : 0;
 
     always @* begin
         seg_ram_rd_cmd_sel_int   = seg_if_ram_rd_cmd_sel;
         seg_ram_rd_cmd_addr_int  = seg_if_ram_rd_cmd_addr;
-        seg_ram_rd_cmd_valid_int = (seg_if_ram_rd_cmd_valid && seg_if_ram_rd_cmd_ready) << select;
+        seg_ram_rd_cmd_valid_int = (seg_if_ram_rd_cmd_valid && seg_if_ram_rd_cmd_ready) << select_cmd;
     end
 
     always @(posedge clk) begin
         if (seg_if_ram_rd_cmd_valid && seg_if_ram_rd_cmd_ready) begin
-            fifo_sel[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= select;
+            fifo_sel[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= select_cmd;
             fifo_wr_ptr_reg <= fifo_wr_ptr_reg + 1;
         end
 
@@ -481,8 +481,8 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     wire                      seg_if_ram_rd_resp_valid;
     wire                      seg_if_ram_rd_resp_ready = if_ram_rd_resp_ready[n];
 
-    assign if_ram_rd_resp_data[n*SEG_DATA_WIDTH +: SEG_DATA_WIDTH] = seg_if_ram_rd_resp_data_reg;
-    assign if_ram_rd_resp_valid[n] = seg_if_ram_rd_resp_valid_reg;
+    assign if_ram_rd_resp_data[n*SEG_DATA_WIDTH +: SEG_DATA_WIDTH] = seg_if_ram_rd_resp_data;
+    assign if_ram_rd_resp_valid[n] = seg_if_ram_rd_resp_valid;
 
     // internal datapath
     reg  [SEG_DATA_WIDTH-1:0] seg_if_ram_rd_resp_data_int;
@@ -490,12 +490,14 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     reg                       seg_if_ram_rd_resp_ready_int_reg = 1'b0;
     wire                      seg_if_ram_rd_resp_ready_int_early;
 
-    assign seg_ram_rd_resp_ready = (seg_if_ram_rd_resp_ready_int_reg && !fifo_empty) << fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
+    wire [CL_PORTS-1:0] select_resp = fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
+
+    assign seg_ram_rd_resp_ready = (seg_if_ram_rd_resp_ready_int_reg && !fifo_empty) << select_resp;
 
     // mux for incoming packet
-    wire [SEG_DATA_WIDTH-1:0] current_resp_data  = seg_ram_rd_resp_data[fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]]*SEG_DATA_WIDTH +: SEG_DATA_WIDTH];
-    wire                      current_resp_valid = seg_ram_rd_resp_valid[fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]]];
-    wire                      current_resp_ready = seg_ram_rd_resp_ready[fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]]];
+    wire [SEG_DATA_WIDTH-1:0] current_resp_data  = seg_ram_rd_resp_data[select_resp*SEG_DATA_WIDTH +: SEG_DATA_WIDTH];
+    wire                      current_resp_valid = seg_ram_rd_resp_valid[select_resp];
+    wire                      current_resp_ready = seg_ram_rd_resp_ready[select_resp];
 
     always @* begin
         // pass through selected packet data

@@ -30,7 +30,7 @@ if (($en > 0)); then
 
     echo "Device control:" $ctrl
 
-    setpci -s $dev CAP_EXP+8.w=$(printf "%04x" $(("0x$ctrl" | 0x0100)))
+    setpci -s $dev CAP_EXP+8.w=$(printf "%04x" $((0x$ctrl | 0x0100)))
 
 else
 
@@ -38,7 +38,7 @@ else
 
     echo "Device control:" $ctrl
 
-    setpci -s $dev CAP_EXP+8.w=$(printf "%04x" $(("0x$ctrl" & ~0x0100)))
+    setpci -s $dev CAP_EXP+8.w=$(printf "%04x" $((0x$ctrl & ~0x0100)))
 
 fi
 

@@ -1810,15 +1810,14 @@ class Function(PMCapability, PCIECapability):
         return None
 
     def get_free_tag(self):
-        tag = None
         tag_count = 256 if self.extended_tag_field_enable else 32
 
         for k in range(tag_count):
-            if not self.rx_cpl_queues[self.current_tag]:
-                tag = self.current_tag
             self.current_tag = (self.current_tag + 1) % tag_count
+            if not self.rx_cpl_queues[self.current_tag]:
+                return self.current_tag
 
-        return tag
+        return None
 
     def handle_config_0_tlp(self, tlp):
         if tlp.dest_id.device == self.device_num and tlp.dest_id.function == self.function_num:
@@ -3411,15 +3410,14 @@ class RootComplex(Switch):
         return None
 
     def get_free_tag(self):
-        tag = None
         tag_count = 32
 
         for k in range(tag_count):
-            if not self.rx_cpl_queues[self.current_tag]:
-                tag = self.current_tag
             self.current_tag = (self.current_tag + 1) % tag_count
+            if not self.rx_cpl_queues[self.current_tag]:
+                return self.current_tag
 
-        return tag
+        return None
 
     def handle_io_read_tlp(self, tlp):
         if self.find_io_region(tlp.address):

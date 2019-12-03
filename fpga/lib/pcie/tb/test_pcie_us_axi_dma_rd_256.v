@@ -36,18 +36,21 @@ parameter AXIS_PCIE_DATA_WIDTH = 256;
 parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
 parameter AXIS_PCIE_RC_USER_WIDTH = 75;
 parameter AXIS_PCIE_RQ_USER_WIDTH = 60;
+parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6;
+parameter RQ_SEQ_NUM_ENABLE = 1;
 parameter AXI_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH;
 parameter AXI_ADDR_WIDTH = 64;
 parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8);
 parameter AXI_ID_WIDTH = 8;
 parameter AXI_MAX_BURST_LEN = 256;
 parameter PCIE_ADDR_WIDTH = 64;
-parameter PCIE_CLIENT_TAG = 1;
-parameter PCIE_TAG_WIDTH = 8;
-parameter PCIE_TAG_COUNT = 256;
+parameter PCIE_TAG_COUNT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 256;
+parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT);
 parameter PCIE_EXT_TAG_ENABLE = 1;
 parameter LEN_WIDTH = 20;
 parameter TAG_WIDTH = 8;
+parameter OP_TABLE_SIZE = PCIE_TAG_COUNT;
+parameter TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1);
 
 // Inputs
 reg clk = 0;
@@ -60,8 +63,10 @@ reg s_axis_rc_tvalid = 0;
 reg s_axis_rc_tlast = 0;
 reg [AXIS_PCIE_RC_USER_WIDTH-1:0] s_axis_rc_tuser = 0;
 reg m_axis_rq_tready = 0;
-reg [PCIE_TAG_WIDTH-1:0] s_axis_pcie_rq_tag = 0;
-reg s_axis_pcie_rq_tag_valid = 0;
+reg [RQ_SEQ_NUM_WIDTH-1:0] s_axis_rq_seq_num_0 = 0;
+reg s_axis_rq_seq_num_valid_0 = 0;
+reg [RQ_SEQ_NUM_WIDTH-1:0] s_axis_rq_seq_num_1 = 0;
+reg s_axis_rq_seq_num_valid_1 = 0;
 reg [PCIE_ADDR_WIDTH-1:0] s_axis_read_desc_pcie_addr = 0;
 reg [AXI_ADDR_WIDTH-1:0] s_axis_read_desc_axi_addr = 0;
 reg [LEN_WIDTH-1:0] s_axis_read_desc_len = 0;
@@ -117,8 +122,10 @@ initial begin
         s_axis_rc_tlast,
         s_axis_rc_tuser,
         m_axis_rq_tready,
-        s_axis_pcie_rq_tag,
-        s_axis_pcie_rq_tag_valid,
+        s_axis_rq_seq_num_0,
+        s_axis_rq_seq_num_valid_0,
+        s_axis_rq_seq_num_1,
+        s_axis_rq_seq_num_valid_1,
         s_axis_read_desc_pcie_addr,
         s_axis_read_desc_axi_addr,
         s_axis_read_desc_len,
@@ -173,18 +180,21 @@ pcie_us_axi_dma_rd #(
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
     .AXIS_PCIE_RC_USER_WIDTH(AXIS_PCIE_RC_USER_WIDTH),
     .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
+    .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
+    .RQ_SEQ_NUM_ENABLE(RQ_SEQ_NUM_ENABLE),
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
     .AXI_ID_WIDTH(AXI_ID_WIDTH),
     .AXI_MAX_BURST_LEN(AXI_MAX_BURST_LEN),
     .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
-    .PCIE_CLIENT_TAG(PCIE_CLIENT_TAG),
     .PCIE_TAG_WIDTH(PCIE_TAG_WIDTH),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .PCIE_EXT_TAG_ENABLE(PCIE_EXT_TAG_ENABLE),
     .LEN_WIDTH(LEN_WIDTH),
-    .TAG_WIDTH(TAG_WIDTH)
+    .TAG_WIDTH(TAG_WIDTH),
+    .OP_TABLE_SIZE(OP_TABLE_SIZE),
+    .TX_LIMIT(TX_LIMIT)
 )
 UUT (
     .clk(clk),
@@ -201,8 +211,10 @@ UUT (
     .m_axis_rq_tready(m_axis_rq_tready),
     .m_axis_rq_tlast(m_axis_rq_tlast),
     .m_axis_rq_tuser(m_axis_rq_tuser),
-    .s_axis_pcie_rq_tag(s_axis_pcie_rq_tag),
-    .s_axis_pcie_rq_tag_valid(s_axis_pcie_rq_tag_valid),
+    .s_axis_rq_seq_num_0(s_axis_rq_seq_num_0),
+    .s_axis_rq_seq_num_valid_0(s_axis_rq_seq_num_valid_0),
+    .s_axis_rq_seq_num_1(s_axis_rq_seq_num_1),
+    .s_axis_rq_seq_num_valid_1(s_axis_rq_seq_num_valid_1),
     .s_axis_read_desc_pcie_addr(s_axis_read_desc_pcie_addr),
     .s_axis_read_desc_axi_addr(s_axis_read_desc_axi_addr),
     .s_axis_read_desc_len(s_axis_read_desc_len),

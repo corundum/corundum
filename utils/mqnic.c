@@ -173,6 +173,9 @@ fail_alloc:
 
 void mqnic_close(struct mqnic *dev)
 {
+    if (!dev)
+        return;
+
     munmap((void *)dev->regs, dev->regs_size);
     close(dev->fd);
     free(dev);

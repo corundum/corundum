@@ -72,6 +72,13 @@ struct mqnic *mqnic_open(const char *dev_name)
         goto fail_mmap_regs;
     }
 
+    if (mqnic_reg_read32(dev->regs, MQNIC_REG_FW_ID) == 0xffffffff)
+    {
+        fprintf(stderr, "Error: device needs to be reset\n");
+        munmap((void *)dev->regs, dev->regs_size);
+        goto fail_mmap_regs;
+    }
+
     dev->fw_id = mqnic_reg_read32(dev->regs, MQNIC_REG_FW_ID);
     dev->fw_ver = mqnic_reg_read32(dev->regs, MQNIC_REG_FW_VER);
     dev->board_id = mqnic_reg_read32(dev->regs, MQNIC_REG_BOARD_ID);

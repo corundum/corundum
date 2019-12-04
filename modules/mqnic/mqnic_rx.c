@@ -201,14 +201,14 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int 
 
     rx_info->len = ring->mtu+ETH_HLEN;
 
-    if (skb)
+    if (unlikely(skb))
     {
-        // skb has not been processed yet
+        dev_err(&priv->mdev->pdev->dev, "mqnic_prepare_rx_desc skb not yet processed on port %d", priv->port);
         return -1;
     }
 
     skb = netdev_alloc_skb_ip_align(priv->ndev, rx_info->len);
-    if (!skb)
+    if (unlikely(!skb))
     {
         dev_err(&priv->mdev->pdev->dev, "mqnic_prepare_rx_desc failed to allocate skb on port %d", priv->port);
         return -1;
@@ -287,6 +287,13 @@ bool mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
         ring_index = cpl->index & ring->size_mask;
         rx_info = &ring->rx_info[ring_index];
         skb = rx_info->skb;
+
+        if (unlikely(!skb))
+        {
+            dev_err(&priv->mdev->pdev->dev, "mqnic_process_rx_cq ring %d null SKB at index %d", cq_ring->ring_index, ring_index);
+            print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1, cpl, MQNIC_CPL_SIZE, true);
+            break;
+        }
 
         // set length
         if (cpl->len <= rx_info->len)

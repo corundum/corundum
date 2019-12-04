@@ -109,6 +109,7 @@ parameter AXIS_PCIE_RC_USER_WIDTH = 75;
 parameter AXIS_PCIE_RQ_USER_WIDTH = 62;
 parameter AXIS_PCIE_CQ_USER_WIDTH = 88;
 parameter AXIS_PCIE_CC_USER_WIDTH = 33;
+parameter RQ_SEQ_NUM_WIDTH = 6;
 parameter BAR0_APERTURE = 24;
 
 // Clock and reset
@@ -312,6 +313,11 @@ wire                               axis_cc_tready;
 wire [AXIS_PCIE_CC_USER_WIDTH-1:0] axis_cc_tuser;
 wire                               axis_cc_tvalid;
 
+wire [RQ_SEQ_NUM_WIDTH-1:0]        pcie_rq_seq_num0;
+wire                               pcie_rq_seq_num_vld0;
+wire [RQ_SEQ_NUM_WIDTH-1:0]        pcie_rq_seq_num1;
+wire                               pcie_rq_seq_num_vld1;
+
 wire [3:0] pcie_tfc_nph_av;
 wire [3:0] pcie_tfc_npd_av;
 
@@ -413,10 +419,10 @@ pcie4_uscale_plus_inst (
     .s_axis_cc_tuser(axis_cc_tuser),
     .s_axis_cc_tvalid(axis_cc_tvalid),
 
-    .pcie_rq_seq_num0(),
-    .pcie_rq_seq_num_vld0(),
-    .pcie_rq_seq_num1(),
-    .pcie_rq_seq_num_vld1(),
+    .pcie_rq_seq_num0(pcie_rq_seq_num0),
+    .pcie_rq_seq_num_vld0(pcie_rq_seq_num_vld0),
+    .pcie_rq_seq_num1(pcie_rq_seq_num1),
+    .pcie_rq_seq_num_vld1(pcie_rq_seq_num_vld1),
     .pcie_rq_tag0(),
     .pcie_rq_tag1(),
     .pcie_rq_tag_av(),
@@ -837,6 +843,7 @@ fpga_core #(
     .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
     .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
     .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
+    .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
     .BAR0_APERTURE(BAR0_APERTURE)
 )
 core_inst (
@@ -891,6 +898,11 @@ core_inst (
     .m_axis_cc_tready(axis_cc_tready),
     .m_axis_cc_tuser(axis_cc_tuser),
     .m_axis_cc_tvalid(axis_cc_tvalid),
+
+    .s_axis_rq_seq_num_0(pcie_rq_seq_num0),
+    .s_axis_rq_seq_num_valid_0(pcie_rq_seq_num_vld0),
+    .s_axis_rq_seq_num_1(pcie_rq_seq_num1),
+    .s_axis_rq_seq_num_valid_1(pcie_rq_seq_num_vld1),
 
     .pcie_tfc_nph_av(pcie_tfc_nph_av),
     .pcie_tfc_npd_av(pcie_tfc_npd_av),

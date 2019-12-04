@@ -133,6 +133,7 @@ def bench():
     AXIS_PCIE_RQ_USER_WIDTH = 60
     AXIS_PCIE_CQ_USER_WIDTH = 85
     AXIS_PCIE_CC_USER_WIDTH = 33
+    RQ_SEQ_NUM_WIDTH = 4
     BAR0_APERTURE = 24
 
     # Inputs
@@ -156,6 +157,8 @@ def bench():
     s_axis_cq_tuser = Signal(intbv(0)[AXIS_PCIE_CQ_USER_WIDTH:])
     s_axis_cq_tvalid = Signal(bool(0))
     m_axis_cc_tready = Signal(bool(0))
+    s_axis_rq_seq_num = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
+    s_axis_rq_seq_num_valid = Signal(bool(0))
     pcie_tfc_nph_av = Signal(intbv(0)[2:])
     pcie_tfc_npd_av = Signal(intbv(0)[2:])
     cfg_max_payload = Signal(intbv(0)[3:])
@@ -311,8 +314,8 @@ def bench():
         s_axis_rq_tkeep=m_axis_rq_tkeep,
         s_axis_rq_tvalid=m_axis_rq_tvalid,
         s_axis_rq_tready=m_axis_rq_tready,
-        #pcie_rq_seq_num=pcie_rq_seq_num,
-        #pcie_rq_seq_num_vld=pcie_rq_seq_num_vld,
+        pcie_rq_seq_num=s_axis_rq_seq_num,
+        pcie_rq_seq_num_vld=s_axis_rq_seq_num_valid,
         #pcie_rq_tag=pcie_rq_tag,
         #pcie_rq_tag_vld=pcie_rq_tag_vld,
 
@@ -502,6 +505,8 @@ def bench():
         m_axis_cc_tready=m_axis_cc_tready,
         m_axis_cc_tuser=m_axis_cc_tuser,
         m_axis_cc_tvalid=m_axis_cc_tvalid,
+        s_axis_rq_seq_num=s_axis_rq_seq_num,
+        s_axis_rq_seq_num_valid=s_axis_rq_seq_num_valid,
         pcie_tfc_nph_av=pcie_tfc_nph_av,
         pcie_tfc_npd_av=pcie_tfc_npd_av,
         cfg_max_payload=cfg_max_payload,

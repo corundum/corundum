@@ -47,6 +47,7 @@ parameter AXIS_PCIE_RC_USER_WIDTH = 75;
 parameter AXIS_PCIE_RQ_USER_WIDTH = 60;
 parameter AXIS_PCIE_CQ_USER_WIDTH = 85;
 parameter AXIS_PCIE_CC_USER_WIDTH = 33;
+parameter RQ_SEQ_NUM_WIDTH = 4;
 parameter BAR0_APERTURE = 24;
 
 // Inputs
@@ -118,6 +119,8 @@ wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_cc_tkeep;
 wire m_axis_cc_tlast;
 wire [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser;
 wire m_axis_cc_tvalid;
+reg [RQ_SEQ_NUM_WIDTH-1:0] s_axis_rq_seq_num = 0;
+reg s_axis_rq_seq_num_valid = 0;
 wire [18:0] cfg_mgmt_addr;
 wire cfg_mgmt_write;
 wire [31:0] cfg_mgmt_write_data;
@@ -179,6 +182,8 @@ initial begin
         s_axis_cq_tuser,
         s_axis_cq_tvalid,
         m_axis_cc_tready,
+        s_axis_rq_seq_num,
+        s_axis_rq_seq_num_valid,
         pcie_tfc_nph_av,
         pcie_tfc_npd_av,
         cfg_max_payload,
@@ -281,6 +286,7 @@ fpga_core #(
     .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
     .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
     .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
+    .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
     .BAR0_APERTURE(BAR0_APERTURE)
 )
 UUT (
@@ -315,6 +321,8 @@ UUT (
     .m_axis_cc_tready(m_axis_cc_tready),
     .m_axis_cc_tuser(m_axis_cc_tuser),
     .m_axis_cc_tvalid(m_axis_cc_tvalid),
+    .s_axis_rq_seq_num(s_axis_rq_seq_num),
+    .s_axis_rq_seq_num_valid(s_axis_rq_seq_num_valid),
     .pcie_tfc_nph_av(pcie_tfc_nph_av),
     .pcie_tfc_npd_av(pcie_tfc_npd_av),
     .cfg_max_payload(cfg_max_payload),

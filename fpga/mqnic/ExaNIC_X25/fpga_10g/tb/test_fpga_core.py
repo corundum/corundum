@@ -132,6 +132,7 @@ def bench():
     AXIS_PCIE_RQ_USER_WIDTH = 62
     AXIS_PCIE_CQ_USER_WIDTH = 88
     AXIS_PCIE_CC_USER_WIDTH = 33
+    RQ_SEQ_NUM_WIDTH = 6
     BAR0_APERTURE = 24
 
     # Inputs
@@ -155,6 +156,10 @@ def bench():
     s_axis_cq_tuser = Signal(intbv(0)[AXIS_PCIE_CQ_USER_WIDTH:])
     s_axis_cq_tvalid = Signal(bool(0))
     m_axis_cc_tready = Signal(bool(0))
+    s_axis_rq_seq_num_0 = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
+    s_axis_rq_seq_num_valid_0 = Signal(bool(0))
+    s_axis_rq_seq_num_1 = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
+    s_axis_rq_seq_num_valid_1 = Signal(bool(0))
     pcie_tfc_nph_av = Signal(intbv(0)[4:])
     pcie_tfc_npd_av = Signal(intbv(0)[4:])
     cfg_max_payload = Signal(intbv(0)[2:])
@@ -310,10 +315,15 @@ def bench():
         s_axis_rq_tkeep=m_axis_rq_tkeep,
         s_axis_rq_tvalid=m_axis_rq_tvalid,
         s_axis_rq_tready=m_axis_rq_tready,
-        #pcie_rq_seq_num=pcie_rq_seq_num,
-        #pcie_rq_seq_num_vld=pcie_rq_seq_num_vld,
-        #pcie_rq_tag=pcie_rq_tag,
-        #pcie_rq_tag_vld=pcie_rq_tag_vld,
+        pcie_rq_seq_num0=s_axis_rq_seq_num_0,
+        pcie_rq_seq_num_vld0=s_axis_rq_seq_num_valid_0,
+        pcie_rq_seq_num1=s_axis_rq_seq_num_1,
+        pcie_rq_seq_num_vld1=s_axis_rq_seq_num_valid_1,
+        #pcie_rq_tag0=pcie_rq_tag0,
+        #pcie_rq_tag1=pcie_rq_tag1,
+        #pcie_rq_tag_av=pcie_rq_tag_av,
+        #pcie_rq_tag_vld0=pcie_rq_tag_vld0,
+        #pcie_rq_tag_vld1=pcie_rq_tag_vld1,
 
         # Requester Completion Interface
         m_axis_rc_tdata=s_axis_rc_tdata,
@@ -500,6 +510,10 @@ def bench():
         m_axis_cc_tready=m_axis_cc_tready,
         m_axis_cc_tuser=m_axis_cc_tuser,
         m_axis_cc_tvalid=m_axis_cc_tvalid,
+        s_axis_rq_seq_num_0=s_axis_rq_seq_num_0,
+        s_axis_rq_seq_num_valid_0=s_axis_rq_seq_num_valid_0,
+        s_axis_rq_seq_num_1=s_axis_rq_seq_num_1,
+        s_axis_rq_seq_num_valid_1=s_axis_rq_seq_num_valid_1,
         pcie_tfc_nph_av=pcie_tfc_nph_av,
         pcie_tfc_npd_av=pcie_tfc_npd_av,
         cfg_max_payload=cfg_max_payload,

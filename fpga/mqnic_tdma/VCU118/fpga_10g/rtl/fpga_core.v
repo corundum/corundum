@@ -47,6 +47,7 @@ module fpga_core #
     parameter AXIS_PCIE_RQ_USER_WIDTH = 137,
     parameter AXIS_PCIE_CQ_USER_WIDTH = 183,
     parameter AXIS_PCIE_CC_USER_WIDTH = 81,
+    parameter RQ_SEQ_NUM_WIDTH = 6,
     parameter BAR0_APERTURE = 24
 )
 (
@@ -112,6 +113,11 @@ module fpga_core #
     input  wire                               m_axis_cc_tready,
     output wire [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser,
     output wire                               m_axis_cc_tvalid,
+
+    input  wire [RQ_SEQ_NUM_WIDTH-1:0]        s_axis_rq_seq_num_0,
+    input  wire                               s_axis_rq_seq_num_valid_0,
+    input  wire [RQ_SEQ_NUM_WIDTH-1:0]        s_axis_rq_seq_num_1,
+    input  wire                               s_axis_rq_seq_num_valid_1,
 
     input  wire [1:0]                         pcie_tfc_nph_av,
     input  wire [1:0]                         pcie_tfc_npd_av,
@@ -896,6 +902,8 @@ dma_if_pcie_us #
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
     .AXIS_PCIE_RC_USER_WIDTH(AXIS_PCIE_RC_USER_WIDTH),
     .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
+    .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
+    .RQ_SEQ_NUM_ENABLE(1),
     .SEG_COUNT(SEG_COUNT),
     .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
     .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
@@ -906,7 +914,11 @@ dma_if_pcie_us #
     .PCIE_TAG_COUNT(64),
     .PCIE_EXT_TAG_ENABLE(1),
     .LEN_WIDTH(PCIE_DMA_LEN_WIDTH),
-    .TAG_WIDTH(PCIE_DMA_TAG_WIDTH)
+    .TAG_WIDTH(PCIE_DMA_TAG_WIDTH),
+    .READ_OP_TABLE_SIZE(64),
+    .READ_TX_LIMIT(16),
+    .WRITE_OP_TABLE_SIZE(16),
+    .WRITE_TX_LIMIT(3)
 )
 dma_if_pcie_us_inst (
     .clk(clk_250mhz),
@@ -931,6 +943,14 @@ dma_if_pcie_us_inst (
     .m_axis_rq_tready(m_axis_rq_tready),
     .m_axis_rq_tlast(m_axis_rq_tlast),
     .m_axis_rq_tuser(m_axis_rq_tuser),
+
+    /*
+     * Transmit sequence number input
+     */
+    .s_axis_rq_seq_num_0(s_axis_rq_seq_num_0),
+    .s_axis_rq_seq_num_valid_0(s_axis_rq_seq_num_valid_0),
+    .s_axis_rq_seq_num_1(s_axis_rq_seq_num_1),
+    .s_axis_rq_seq_num_valid_1(s_axis_rq_seq_num_valid_1),
 
     /*
      * AXI read descriptor input

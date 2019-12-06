@@ -292,6 +292,8 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr, int
 void mqnic_destroy_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr);
 int mqnic_activate_port(struct mqnic_port *port);
 void mqnic_deactivate_port(struct mqnic_port *port);
+u32 mqnic_port_get_rss_mask(struct mqnic_port *port);
+void mqnic_port_set_rss_mask(struct mqnic_port *port, u32 rss_mask);
 
 // mqnic_ptp.c
 void mqnic_register_phc(struct mqnic_dev *mdev);

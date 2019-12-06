@@ -94,6 +94,10 @@ module interface #
     parameter PTP_TS_WIDTH = 96,
     // Enable TX checksum offload
     parameter TX_CHECKSUM_ENABLE = 1,
+    // Enable RX RSS
+    parameter RX_RSS_ENABLE = 1,
+    // Enable RX hashing
+    parameter RX_HASH_ENABLE = 1,
     // Enable RX checksum offload
     parameter RX_CHECKSUM_ENABLE = 1,
     // Width of AXI lite data bus in bits
@@ -792,9 +796,11 @@ always @(posedge clk) begin
             16'h0000: axil_ctrl_rdata_reg <= 32'd0;                       // if_id
             16'h0004: begin
                 // if_features
+                axil_ctrl_rdata_reg[0] <= RX_RSS_ENABLE && RX_HASH_ENABLE;
                 axil_ctrl_rdata_reg[4] <= PTP_TS_ENABLE;
                 axil_ctrl_rdata_reg[8] <= TX_CHECKSUM_ENABLE;
                 axil_ctrl_rdata_reg[9] <= RX_CHECKSUM_ENABLE;
+                axil_ctrl_rdata_reg[10] <= RX_HASH_ENABLE;
             end
             16'h0010: axil_ctrl_rdata_reg <= 2**EVENT_QUEUE_INDEX_WIDTH;  // event_queue_count
             16'h0014: axil_ctrl_rdata_reg <= AXIL_EQM_BASE_ADDR;          // event_queue_offset
@@ -1949,6 +1955,8 @@ generate
             .PTP_TS_ENABLE(PTP_TS_ENABLE),
             .PTP_TS_WIDTH(PTP_TS_WIDTH),
             .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
+            .RX_RSS_ENABLE(RX_RSS_ENABLE),
+            .RX_HASH_ENABLE(RX_HASH_ENABLE),
             .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
             .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
             .AXIL_ADDR_WIDTH(AXIL_PORT_ADDR_WIDTH),

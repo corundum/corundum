@@ -130,6 +130,7 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_IF_FEATURE_PTP_TS           (1 << 4)
 #define MQNIC_IF_FEATURE_TX_CSUM          (1 << 8)
 #define MQNIC_IF_FEATURE_RX_CSUM          (1 << 9)
+#define MQNIC_IF_FEATURE_RX_HASH          (1 << 10)
 
 // Port CSRs
 #define MQNIC_PORT_REG_PORT_ID                    0x0000
@@ -141,6 +142,9 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_PORT_REG_SCHED_STRIDE               0x0018
 #define MQNIC_PORT_REG_SCHED_TYPE                 0x001C
 #define MQNIC_PORT_REG_SCHED_ENABLE               0x0040
+
+#define MQNIC_PORT_REG_RSS_MASK                   0x0080
+
 #define MQNIC_PORT_REG_TDMA_CTRL                  0x0100
 #define MQNIC_PORT_REG_TDMA_STATUS                0x0104
 #define MQNIC_PORT_REG_TDMA_TIMESLOT_COUNT        0x0108
@@ -165,6 +169,7 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_PORT_FEATURE_PTP_TS                 (1 << 4)
 #define MQNIC_PORT_FEATURE_TX_CSUM                (1 << 8)
 #define MQNIC_PORT_FEATURE_RX_CSUM                (1 << 9)
+#define MQNIC_PORT_FEATURE_RX_HASH                (1 << 10)
 
 #define MQNIC_QUEUE_STRIDE        0x00000020
 #define MQNIC_CPL_QUEUE_STRIDE    0x00000020
@@ -222,6 +227,13 @@ struct mqnic_cpl {
     __u32 ts_ns;
     __u16 ts_s;
     __u16 rx_csum;
+    __u32 rx_hash;
+    __u8 rx_hash_type;
+    __u8 rsvd1;
+    __u8 rsvd2;
+    __u8 rsvd3;
+    __u32 rsvd4;
+    __u32 rsvd5;
 };
 
 struct mqnic_event {

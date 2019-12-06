@@ -82,6 +82,8 @@ module rx_engine #
     parameter AXIS_DESC_KEEP_WIDTH = AXIS_DESC_DATA_WIDTH/8,
     // Enable PTP timestamping
     parameter PTP_TS_ENABLE = 1,
+    // Enable RX hashing
+    parameter RX_HASH_ENABLE = 1,
     // Enable RX checksum offload
     parameter RX_CHECKSUM_ENABLE = 1
 )
@@ -192,6 +194,14 @@ module rx_engine #
     output wire                             s_axis_rx_ptp_ts_ready,
 
     /*
+     * Receive hash input
+     */
+    input  wire [31:0]                      s_axis_rx_hash,
+    input  wire [3:0]                       s_axis_rx_hash_type,
+    input  wire                             s_axis_rx_hash_valid,
+    output wire                             s_axis_rx_hash_ready,
+
+    /*
      * Receive checksum input
      */
     input  wire [15:0]                      s_axis_rx_csum,
@@ -263,6 +273,8 @@ reg m_axis_rx_desc_valid_reg = 1'b0, m_axis_rx_desc_valid_next;
 
 reg s_axis_rx_ptp_ts_ready_reg = 1'b0, s_axis_rx_ptp_ts_ready_next;
 
+reg s_axis_rx_hash_ready_reg = 1'b0, s_axis_rx_hash_ready_next;
+
 reg s_axis_rx_csum_ready_reg = 1'b0, s_axis_rx_csum_ready_next;
 
 reg [DESC_TABLE_SIZE-1:0] desc_table_active = 0;
@@ -280,6 +292,8 @@ reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_desc_len[DESC_TABLE_SIZE-1:0];
 reg [DMA_ADDR_WIDTH-1:0] desc_table_dma_addr[DESC_TABLE_SIZE-1:0];
 reg [CL_PKT_TABLE_SIZE-1:0] desc_table_pkt[DESC_TABLE_SIZE-1:0];
 reg [95:0] desc_table_ptp_ts[DESC_TABLE_SIZE-1:0];
+reg [31:0] desc_table_hash[DESC_TABLE_SIZE-1:0];
+reg [3:0] desc_table_hash_type[DESC_TABLE_SIZE-1:0];
 reg [15:0] desc_table_csum[DESC_TABLE_SIZE-1:0];
 
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_start_ptr_reg = 0;
@@ -308,6 +322,10 @@ reg desc_table_data_written_en;
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_store_ptp_ts_ptr_reg = 0;
 reg [95:0] desc_table_store_ptp_ts;
 reg desc_table_store_ptp_ts_en;
+reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_store_hash_ptr_reg = 0;
+reg [31:0] desc_table_store_hash;
+reg [3:0] desc_table_store_hash_type;
+reg desc_table_store_hash_en;
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_store_csum_ptr_reg = 0;
 reg [15:0] desc_table_store_csum;
 reg desc_table_store_csum_en;
@@ -353,6 +371,8 @@ assign m_axis_rx_desc_tag = m_axis_rx_desc_tag_reg;
 assign m_axis_rx_desc_valid = m_axis_rx_desc_valid_reg;
 
 assign s_axis_rx_ptp_ts_ready = s_axis_rx_ptp_ts_ready_reg;
+
+assign s_axis_rx_hash_ready = s_axis_rx_hash_ready_reg;
 
 assign s_axis_rx_csum_ready = s_axis_rx_csum_ready_reg;
 
@@ -436,6 +456,8 @@ always @* begin
 
     s_axis_rx_ptp_ts_ready_next = 1'b0;
 
+    s_axis_rx_hash_ready_next = 1'b0;
+
     s_axis_rx_csum_ready_next = 1'b0;
 
     desc_table_start_tag = s_axis_rx_req_tag;
@@ -460,6 +482,9 @@ always @* begin
     desc_table_data_written_en = 1'b0;
     desc_table_store_ptp_ts = s_axis_rx_ptp_ts_96;
     desc_table_store_ptp_ts_en = 1'b0;
+    desc_table_store_hash = s_axis_rx_hash;
+    desc_table_store_hash_type = s_axis_rx_hash_type;
+    desc_table_store_hash_en = 1'b0;
     desc_table_store_csum = s_axis_rx_csum;
     desc_table_store_csum_en = 1'b0;
     desc_table_cpl_enqueue_start_en = 1'b0;
@@ -602,6 +627,24 @@ always @* begin
         end
     end
 
+    // store RX hash
+    if (desc_table_active[desc_table_store_hash_ptr_reg & DESC_PTR_MASK] && desc_table_store_hash_ptr_reg != desc_table_start_ptr_reg && RX_HASH_ENABLE) begin
+        s_axis_rx_hash_ready_next = 1'b1;
+        if (desc_table_invalid[desc_table_store_hash_ptr_reg & DESC_PTR_MASK]) begin
+            // invalid entry; skip
+            desc_table_store_hash_en = 1'b1;
+
+            s_axis_rx_hash_ready_next = 1'b0;
+        end else if (s_axis_rx_hash_ready && s_axis_rx_hash_valid) begin
+            // update entry in descriptor table
+            desc_table_store_hash = s_axis_rx_hash;
+            desc_table_store_hash_type = s_axis_rx_hash_type;
+            desc_table_store_hash_en = 1'b1;
+
+            s_axis_rx_hash_ready_next = 1'b0;
+        end
+    end
+
     // store RX checksum
     if (desc_table_active[desc_table_store_csum_ptr_reg & DESC_PTR_MASK] && desc_table_store_csum_ptr_reg != desc_table_start_ptr_reg && RX_CHECKSUM_ENABLE) begin
         s_axis_rx_csum_ready_next = 1'b1;
@@ -620,7 +663,12 @@ always @* begin
     end
 
     // finish write data; start completion enqueue
-    if (desc_table_active[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] && desc_table_cpl_enqueue_start_ptr_reg != desc_table_start_ptr_reg && desc_table_cpl_enqueue_start_ptr_reg != desc_table_data_write_start_ptr_reg && (desc_table_cpl_enqueue_start_ptr_reg != desc_table_store_ptp_ts_ptr_reg || !PTP_TS_ENABLE) && (desc_table_cpl_enqueue_start_ptr_reg != desc_table_store_csum_ptr_reg || !RX_CHECKSUM_ENABLE)) begin
+    if (desc_table_active[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] &&
+            desc_table_cpl_enqueue_start_ptr_reg != desc_table_start_ptr_reg &&
+            desc_table_cpl_enqueue_start_ptr_reg != desc_table_data_write_start_ptr_reg &&
+            (desc_table_cpl_enqueue_start_ptr_reg != desc_table_store_ptp_ts_ptr_reg || !PTP_TS_ENABLE) &&
+            (desc_table_cpl_enqueue_start_ptr_reg != desc_table_store_hash_ptr_reg || !RX_HASH_ENABLE) &&
+            (desc_table_cpl_enqueue_start_ptr_reg != desc_table_store_csum_ptr_reg || !RX_CHECKSUM_ENABLE)) begin
         if (desc_table_invalid[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK]) begin
             // invalid entry; skip
             desc_table_cpl_enqueue_start_en = 1'b1;
@@ -647,6 +695,10 @@ always @* begin
             if (PTP_TS_ENABLE) begin
                 //m_axis_cpl_req_data_next[127:64] = desc_table_ptp_ts[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] >> 16;
                 m_axis_cpl_req_data_next[111:64] = desc_table_ptp_ts[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] >> 16;
+            end
+            if (RX_HASH_ENABLE) begin
+                m_axis_cpl_req_data_next[159:128] = desc_table_hash[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK];
+                m_axis_cpl_req_data_next[167:160] = desc_table_hash_type[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK];
             end
             if (RX_CHECKSUM_ENABLE) begin
                 m_axis_cpl_req_data_next[127:112] = desc_table_csum[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK];
@@ -695,6 +747,7 @@ always @(posedge clk) begin
         m_axis_dma_write_desc_valid_reg <= 1'b0;
         m_axis_rx_desc_valid_reg <= 1'b0;
         s_axis_rx_ptp_ts_ready_reg <= 1'b0;
+        s_axis_rx_hash_ready_reg <= 1'b0;
         s_axis_rx_csum_ready_reg <= 1'b0;
 
         desc_table_active <= 0;
@@ -707,6 +760,7 @@ always @(posedge clk) begin
         desc_table_dequeue_start_ptr_reg <= 0;
         desc_table_data_write_start_ptr_reg <= 0;
         desc_table_store_ptp_ts_ptr_reg <= 0;
+        desc_table_store_hash_ptr_reg <= 0;
         desc_table_store_csum_ptr_reg <= 0;
         desc_table_cpl_enqueue_start_ptr_reg <= 0;
         desc_table_finish_ptr_reg <= 0;
@@ -721,6 +775,7 @@ always @(posedge clk) begin
         m_axis_dma_write_desc_valid_reg <= m_axis_dma_write_desc_valid_next;
         m_axis_rx_desc_valid_reg <= m_axis_rx_desc_valid_next;
         s_axis_rx_ptp_ts_ready_reg <= s_axis_rx_ptp_ts_ready_next;
+        s_axis_rx_hash_ready_reg <= s_axis_rx_hash_ready_next;
         s_axis_rx_csum_ready_reg <= s_axis_rx_csum_ready_next;
         
         if (desc_table_start_en) begin
@@ -754,6 +809,9 @@ always @(posedge clk) begin
         end
         if (desc_table_store_ptp_ts_en) begin
             desc_table_store_ptp_ts_ptr_reg <= desc_table_store_ptp_ts_ptr_reg + 1;
+        end
+        if (desc_table_store_hash_en) begin
+            desc_table_store_hash_ptr_reg <= desc_table_store_hash_ptr_reg + 1;
         end
         if (desc_table_store_csum_en) begin
             desc_table_store_csum_ptr_reg <= desc_table_store_csum_ptr_reg + 1;
@@ -814,6 +872,10 @@ always @(posedge clk) begin
     end
     if (desc_table_store_ptp_ts_en) begin
         desc_table_ptp_ts[desc_table_store_ptp_ts_ptr_reg & DESC_PTR_MASK] <= desc_table_store_ptp_ts;
+    end
+    if (desc_table_store_hash_en) begin
+        desc_table_hash[desc_table_store_hash_ptr_reg & DESC_PTR_MASK] <= desc_table_store_hash;
+        desc_table_hash_type[desc_table_store_hash_ptr_reg & DESC_PTR_MASK] <= desc_table_store_hash_type;
     end
     if (desc_table_store_csum_en) begin
         desc_table_csum[desc_table_store_csum_ptr_reg & DESC_PTR_MASK] <= desc_table_store_csum;

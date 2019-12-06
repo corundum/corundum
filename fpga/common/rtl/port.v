@@ -88,6 +88,10 @@ module port #
     parameter PTP_TS_WIDTH = 96,
     // Enable TX checksum offload
     parameter TX_CHECKSUM_ENABLE = 1,
+    // Enable RX RSS
+    parameter RX_RSS_ENABLE = 1,
+    // Enable RX hashing
+    parameter RX_HASH_ENABLE = 1,
     // Enable RX checksum offload
     parameter RX_CHECKSUM_ENABLE = 1,
     // Width of AXI lite data bus in bits
@@ -353,7 +357,14 @@ wire [SCHED_COUNT*2-1:0]               axil_sched_rresp;
 wire [SCHED_COUNT-1:0]                 axil_sched_rvalid;
 wire [SCHED_COUNT-1:0]                 axil_sched_rready;
 
-// Checksumming
+// Checksumming and RSS
+wire [AXIS_DATA_WIDTH-1:0] rx_axis_tdata_int;
+wire [AXIS_KEEP_WIDTH-1:0] rx_axis_tkeep_int;
+wire                       rx_axis_tvalid_int;
+wire                       rx_axis_tready_int;
+wire                       rx_axis_tlast_int;
+wire                       rx_axis_tuser_int;
+
 wire [AXIS_DATA_WIDTH-1:0] tx_axis_tdata_int;
 wire [AXIS_KEEP_WIDTH-1:0] tx_axis_tkeep_int;
 wire                       tx_axis_tvalid_int;
@@ -447,25 +458,13 @@ wire [REQ_TAG_WIDTH-1:0]        tx_req_status_tag;
 wire                            tx_req_status_valid;
 
 // RX engine
-reg rx_frame_reg = 0;
-
-wire [RX_QUEUE_INDEX_WIDTH-1:0] rx_req_queue = 0; // TODO RSS of some form
-wire [REQ_TAG_WIDTH-1:0]        rx_req_tag = 0;
-wire                            rx_req_valid = rx_axis_tvalid && !rx_frame_reg;
+wire [RX_QUEUE_INDEX_WIDTH-1:0] rx_req_queue;
+wire [REQ_TAG_WIDTH-1:0]        rx_req_tag;
+wire                            rx_req_valid;
 wire                            rx_req_ready;
 
 wire [REQ_TAG_WIDTH-1:0]        rx_req_status_tag;
 wire                            rx_req_status_valid;
-
-always @(posedge clk) begin
-    if (rx_axis_tready && rx_axis_tvalid) begin
-        rx_frame_reg <= !rx_axis_tlast;
-    end
-
-    if (rst) begin
-        rx_frame_reg <= 1'b0;
-    end
-end
 
 // Timestamps
 wire [95:0]              rx_ptp_ts_96;
@@ -475,6 +474,16 @@ wire                     rx_ptp_ts_ready;
 wire [95:0]              tx_ptp_ts_96;
 wire                     tx_ptp_ts_valid;
 wire                     tx_ptp_ts_ready;
+
+// RX hashing
+wire [31:0]              rx_hash;
+wire [3:0]               rx_hash_type;
+wire                     rx_hash_valid;
+
+wire [31:0]              rx_fifo_hash;
+wire [3:0]               rx_fifo_hash_type;
+wire                     rx_fifo_hash_valid;
+wire                     rx_fifo_hash_ready;
 
 // Checksums
 wire [15:0]              rx_csum;
@@ -530,6 +539,8 @@ reg axil_ctrl_rvalid_reg = 1'b0;
 
 reg sched_enable_reg = 1'b0;
 
+reg [RX_QUEUE_INDEX_WIDTH-1:0] rss_mask_reg = 0;
+
 reg tdma_enable_reg = 1'b0;
 wire tdma_locked;
 wire tdma_error;
@@ -583,6 +594,7 @@ always @(posedge clk) begin
                     sched_enable_reg <= axil_ctrl_wdata[0];
                 end
             end
+            16'h0080: rss_mask_reg <= axil_ctrl_wdata; // RSS mask
             16'h0100: begin
                 // TDMA control
                 if (axil_ctrl_wstrb[0]) begin
@@ -630,9 +642,11 @@ always @(posedge clk) begin
             16'h0000: axil_ctrl_rdata_reg <= 32'd0;       // port_id
             16'h0004: begin
                 // port_features
+                axil_ctrl_rdata_reg[0] <= RX_RSS_ENABLE && RX_HASH_ENABLE;
                 axil_ctrl_rdata_reg[4] <= PTP_TS_ENABLE;
                 axil_ctrl_rdata_reg[8] <= TX_CHECKSUM_ENABLE;
                 axil_ctrl_rdata_reg[9] <= RX_CHECKSUM_ENABLE;
+                axil_ctrl_rdata_reg[10] <= RX_HASH_ENABLE;
             end
             16'h0008: axil_ctrl_rdata_reg <= MAX_TX_SIZE; // port_mtu
             16'h0010: axil_ctrl_rdata_reg <= SCHED_COUNT; // scheduler_count
@@ -643,6 +657,7 @@ always @(posedge clk) begin
                 // Scheduler enable
                 axil_ctrl_rdata_reg[0] <= sched_enable_reg;
             end
+            16'h0080: axil_ctrl_rdata_reg <= rss_mask_reg; // RSS mask
             16'h0100: begin
                 // TDMA control
                 axil_ctrl_rdata_reg[0] <= tdma_enable_reg;
@@ -676,6 +691,7 @@ always @(posedge clk) begin
         axil_ctrl_rvalid_reg <= 1'b0;
 
         sched_enable_reg <= 1'b0;
+        rss_mask_reg <= 0;
         tdma_enable_reg <= 1'b0;
     end
 end
@@ -1207,6 +1223,7 @@ rx_engine #(
     .AXIS_DESC_KEEP_WIDTH(AXIS_DESC_KEEP_WIDTH),
     .PKT_TABLE_SIZE(RX_PKT_TABLE_SIZE),
     .PTP_TS_ENABLE(PTP_TS_ENABLE),
+    .RX_HASH_ENABLE(RX_HASH_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE)
 )
 rx_engine_inst (
@@ -1315,6 +1332,14 @@ rx_engine_inst (
     .s_axis_rx_ptp_ts_ready(s_axis_rx_ptp_ts_ready),
 
     /*
+     * Receive hash input
+     */
+    .s_axis_rx_hash(rx_fifo_hash),
+    .s_axis_rx_hash_type(rx_fifo_hash_type),
+    .s_axis_rx_hash_valid(rx_fifo_hash_valid),
+    .s_axis_rx_hash_ready(rx_fifo_hash_ready),
+
+    /*
      * Receive checksum input
      */
     .s_axis_rx_csum(rx_fifo_csum),
@@ -1329,6 +1354,196 @@ rx_engine_inst (
 
 generate
 
+if (RX_HASH_ENABLE) begin
+
+    rx_hash #(
+        .DATA_WIDTH(AXIS_DATA_WIDTH)
+    )
+    rx_hash_inst (
+        .clk(clk),
+        .rst(rst),
+        .s_axis_tdata(rx_axis_tdata),
+        .s_axis_tkeep(rx_axis_tkeep),
+        .s_axis_tvalid(rx_axis_tvalid & rx_axis_tready),
+        .s_axis_tlast(rx_axis_tlast),
+        .hash_key(320'h6d5a56da255b0ec24167253d43a38fb0d0ca2bcbae7b30b477cb2da38030f20c6a42b73bbeac01fa),
+        .m_axis_hash(rx_hash),
+        .m_axis_hash_type(rx_hash_type),
+        .m_axis_hash_valid(rx_hash_valid)
+    );
+
+    axis_fifo #(
+        .DEPTH(32),
+        .DATA_WIDTH(32+4),
+        .KEEP_ENABLE(0),
+        .LAST_ENABLE(0),
+        .ID_ENABLE(0),
+        .DEST_ENABLE(0),
+        .USER_ENABLE(0),
+        .FRAME_FIFO(0)
+    )
+    rx_hash_fifo (
+        .clk(clk),
+        .rst(rst),
+
+        // AXI input
+        .s_axis_tdata({rx_hash_type, rx_hash}),
+        .s_axis_tkeep(0),
+        .s_axis_tvalid(rx_hash_valid),
+        .s_axis_tready(),
+        .s_axis_tlast(0),
+        .s_axis_tid(0),
+        .s_axis_tdest(0),
+        .s_axis_tuser(0),
+
+        // AXI output
+        .m_axis_tdata({rx_fifo_hash_type, rx_fifo_hash}),
+        .m_axis_tkeep(),
+        .m_axis_tvalid(rx_fifo_hash_valid),
+        .m_axis_tready(rx_fifo_hash_ready),
+        .m_axis_tlast(),
+        .m_axis_tid(),
+        .m_axis_tdest(),
+        .m_axis_tuser(),
+
+        // Status
+        .status_overflow(),
+        .status_bad_frame(),
+        .status_good_frame()
+    );
+
+end else begin
+
+    assign rx_fifo_hash = 32'd0;
+    assign rx_fifo_type = 4'd0;
+    assign rx_fifo_hash_valid = 1'b0;
+
+end
+
+if (RX_RSS_ENABLE && RX_HASH_ENABLE) begin
+
+    axis_fifo #(
+        .DEPTH(AXIS_KEEP_WIDTH*32),
+        .DATA_WIDTH(AXIS_DATA_WIDTH),
+        .KEEP_ENABLE(AXIS_KEEP_WIDTH > 1),
+        .KEEP_WIDTH(AXIS_KEEP_WIDTH),
+        .LAST_ENABLE(1),
+        .ID_ENABLE(0),
+        .DEST_ENABLE(0),
+        .USER_ENABLE(1),
+        .USER_WIDTH(1),
+        .FRAME_FIFO(0)
+    )
+    rx_hash_data_fifo (
+        .clk(clk),
+        .rst(rst),
+
+        // AXI input
+        .s_axis_tdata(rx_axis_tdata),
+        .s_axis_tkeep(rx_axis_tkeep),
+        .s_axis_tvalid(rx_axis_tvalid),
+        .s_axis_tready(rx_axis_tready),
+        .s_axis_tlast(rx_axis_tlast),
+        .s_axis_tid(0),
+        .s_axis_tdest(0),
+        .s_axis_tuser(rx_axis_tuser),
+
+        // AXI output
+        .m_axis_tdata(rx_axis_tdata_int),
+        .m_axis_tkeep(rx_axis_tkeep_int),
+        .m_axis_tvalid(rx_axis_tvalid_int),
+        .m_axis_tready(rx_axis_tready_int),
+        .m_axis_tlast(rx_axis_tlast_int),
+        .m_axis_tid(),
+        .m_axis_tdest(),
+        .m_axis_tuser(rx_axis_tuser_int),
+
+        // Status
+        .status_overflow(),
+        .status_bad_frame(),
+        .status_good_frame()
+    );
+
+    // Generate RX requests (RSS)
+    assign rx_req_tag = 0;
+
+    axis_fifo #(
+        .DEPTH(32),
+        .DATA_WIDTH(RX_QUEUE_INDEX_WIDTH),
+        .KEEP_ENABLE(0),
+        .LAST_ENABLE(0),
+        .ID_ENABLE(0),
+        .DEST_ENABLE(0),
+        .USER_ENABLE(0),
+        .FRAME_FIFO(0)
+    )
+    rx_req_fifo (
+        .clk(clk),
+        .rst(rst),
+
+        // AXI input
+        .s_axis_tdata(rx_hash & rss_mask_reg),
+        .s_axis_tkeep(0),
+        .s_axis_tvalid(rx_hash_valid),
+        .s_axis_tready(),
+        .s_axis_tlast(0),
+        .s_axis_tid(0),
+        .s_axis_tdest(0),
+        .s_axis_tuser(0),
+
+        // AXI output
+        .m_axis_tdata(rx_req_queue),
+        .m_axis_tkeep(),
+        .m_axis_tvalid(rx_req_valid),
+        .m_axis_tready(rx_req_ready),
+        .m_axis_tlast(),
+        .m_axis_tid(),
+        .m_axis_tdest(),
+        .m_axis_tuser(),
+
+        // Status
+        .status_overflow(),
+        .status_bad_frame(),
+        .status_good_frame()
+    );
+
+end else begin
+
+    assign rx_axis_tdata_int = rx_axis_tdata;
+    assign rx_axis_tkeep_int = rx_axis_tkeep;
+    assign rx_axis_tvalid_int = rx_axis_tvalid;
+    assign rx_axis_tready = rx_axis_tready_int;
+    assign rx_axis_tlast_int = rx_axis_tlast;
+    assign rx_axis_tuser_int = rx_axis_tuser;
+
+    // Generate RX requests (no RSS)
+    reg rx_frame_reg = 1'b0;
+    reg rx_req_valid_reg = 1'b0;
+
+    assign rx_req_queue = 0;
+    assign rx_req_tag = 0;
+    assign rx_req_valid = rx_axis_tvalid_int && !rx_frame_reg;
+
+    always @(posedge clk) begin
+        if (rx_req_ready) begin
+            rx_req_valid_reg <= 1'b0;
+        end
+
+        if (rx_axis_tready_int && rx_axis_tvalid_int) begin
+            if (!rx_frame_reg) begin
+                rx_req_valid_reg <= 1'b1;
+            end
+            rx_frame_reg <= !rx_axis_tlast_int;
+        end
+
+        if (rst) begin
+            rx_frame_reg <= 1'b0;
+            rx_req_valid_reg <= 1'b0;
+        end
+    end
+
+end
+
 if (RX_CHECKSUM_ENABLE) begin
 
     rx_checksum #(
@@ -1337,16 +1552,16 @@ if (RX_CHECKSUM_ENABLE) begin
     rx_checksum_inst (
         .clk(clk),
         .rst(rst),
-        .s_axis_tdata(rx_axis_tdata),
-        .s_axis_tkeep(rx_axis_tkeep),
-        .s_axis_tvalid(rx_axis_tvalid & rx_axis_tready),
-        .s_axis_tlast(rx_axis_tlast),
+        .s_axis_tdata(rx_axis_tdata_int),
+        .s_axis_tkeep(rx_axis_tkeep_int),
+        .s_axis_tvalid(rx_axis_tvalid_int & rx_axis_tready_int),
+        .s_axis_tlast(rx_axis_tlast_int),
         .m_axis_csum(rx_csum),
         .m_axis_csum_valid(rx_csum_valid)
     );
 
     axis_fifo #(
-        .DEPTH(16),
+        .DEPTH(32),
         .DATA_WIDTH(16),
         .KEEP_ENABLE(0),
         .LAST_ENABLE(0),
@@ -1395,7 +1610,7 @@ end
 if (TX_CHECKSUM_ENABLE) begin
 
     axis_fifo #(
-        .DEPTH(16),
+        .DEPTH(32),
         .DATA_WIDTH(1+8+8),
         .KEEP_ENABLE(0),
         .LAST_ENABLE(0),
@@ -1687,14 +1902,14 @@ dma_client_axis_sink_inst (
     /*
      * AXI stream write data input
      */
-    .s_axis_write_data_tdata(rx_axis_tdata),
-    .s_axis_write_data_tkeep(rx_axis_tkeep),
-    .s_axis_write_data_tvalid(rx_axis_tvalid),
-    .s_axis_write_data_tready(rx_axis_tready),
-    .s_axis_write_data_tlast(rx_axis_tlast),
+    .s_axis_write_data_tdata(rx_axis_tdata_int),
+    .s_axis_write_data_tkeep(rx_axis_tkeep_int),
+    .s_axis_write_data_tvalid(rx_axis_tvalid_int),
+    .s_axis_write_data_tready(rx_axis_tready_int),
+    .s_axis_write_data_tlast(rx_axis_tlast_int),
     .s_axis_write_data_tid(0),
     .s_axis_write_data_tdest(0),
-    .s_axis_write_data_tuser(rx_axis_tuser),
+    .s_axis_write_data_tuser(rx_axis_tuser_int),
 
     /*
      * RAM interface

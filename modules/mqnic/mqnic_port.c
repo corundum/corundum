@@ -110,3 +110,13 @@ void mqnic_deactivate_port(struct mqnic_port *port)
     iowrite32(0, port->hw_addr+MQNIC_PORT_REG_SCHED_ENABLE);
 }
 
+u32 mqnic_port_get_rss_mask(struct mqnic_port *port)
+{
+    return ioread32(port->hw_addr+MQNIC_PORT_REG_RSS_MASK);
+}
+
+void mqnic_port_set_rss_mask(struct mqnic_port *port, u32 rss_mask)
+{
+    iowrite32(rss_mask, port->hw_addr+MQNIC_PORT_REG_RSS_MASK);
+}
+

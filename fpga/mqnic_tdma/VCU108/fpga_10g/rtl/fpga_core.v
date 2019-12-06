@@ -275,6 +275,8 @@ parameter RX_PTP_TS_FIFO_DEPTH = 32;
 
 // Interface parameters (port)
 parameter TX_CHECKSUM_ENABLE = 1;
+parameter RX_RSS_ENABLE = 1;
+parameter RX_HASH_ENABLE = 1;
 parameter RX_CHECKSUM_ENABLE = 1;
 parameter ENABLE_PADDING = 1;
 parameter ENABLE_DIC = 1;
@@ -1700,6 +1702,8 @@ generate
             .PTP_TS_ENABLE(PTP_TS_ENABLE),
             .PTP_TS_WIDTH(PTP_TS_WIDTH),
             .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
+            .RX_RSS_ENABLE(RX_RSS_ENABLE),
+            .RX_HASH_ENABLE(RX_HASH_ENABLE),
             .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
             .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
             .AXIL_ADDR_WIDTH(IF_AXIL_ADDR_WIDTH),

@@ -9,11 +9,12 @@ a high performance datapath, 10G/25G Ethernet, PCI express gen 3, a custom,
 high performance, tightly-integrated PCIe DMA engine, many (1000+) transmit,
 receive, completion, and event queues, MSI interrupts, multiple interfaces,
 multiple ports per interface, per-port transmit scheduling including high
-precision TDMA, checksum offloading, and native IEEE 1588 PTP timestamping.
-A Linux driver is included that integrates with the Linux networking stack.
-Development and debugging is facilitated by an extensive simulation framwork
-that covers the entire system from a simulation model of the driver and PCI
-express interface on one side to the Ethernet interfaces on the other side.
+precision TDMA, flow hashing, RSS, checksum offloading, and native IEEE 1588
+PTP timestamping.  A Linux driver is included that integrates with the Linux
+networking stack.  Development and debugging is facilitated by an extensive
+simulation framework that covers the entire system from a simulation model of
+the driver and PCI express interface on one side to the Ethernet interfaces on
+the other side.
 
 Corundum has several unique architectural features.  First, transmit, receive,
 completion, and event queue states are stored efficiently in block RAM or
@@ -24,7 +25,7 @@ extremely fine-grained control over packet transmission.  Coupled with PTP time
 synchronization, this enables high precision TDMA.
 
 Corundum currently supports Xilinx Ultrascale and Ultrascale Plus series
-devices.  Desgins are included for the following FPGA boards:
+devices.  Designs are included for the following FPGA boards:
 
 *  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex Ultrascale Plus XCVU3P)
 *  Exablaze ExaNIC X10 (Xilinx Kintex Ultrascale XCKU035)
@@ -88,6 +89,11 @@ Receive engine.  Manages receive descriptor dequeue and fetch via DMA, packet
 reception, data writeback via DMA, and completion enqueue and writeback via
 DMA.  Handles PTP timestamps for inclusion in completion records.
 
+#### rx_hash module
+
+Receive hash computation module.  Extracts IP addresses and ports from packet
+headers and computes 32 bit Toeplitz flow hash.
+
 #### tdma_ber_ch module
 
 TDMA bit error ratio test channel module.  Controls PRBS logic in Ethernet PHY
@@ -140,6 +146,7 @@ packets.
     queue_manager.v          : Queue manager
     rx_checksum.v            : Receive checksum offload
     rx_engine.v              : Receive engine
+    rx_hash.v                : Receive hashing module
     tdma_ber_ch.v            : TDMA BER channel
     tdma_ber.v               : TDMA BER
     tdma_scheduler.v         : TDMA scheduler

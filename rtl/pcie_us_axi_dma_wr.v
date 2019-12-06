@@ -89,18 +89,18 @@ module pcie_us_axi_dma_wr #
     /*
      * Transmit sequence number input
      */
-    input  wire [RQ_SEQ_NUM_WIDTH-1:0]          s_axis_rq_seq_num_0,
-    input  wire                                 s_axis_rq_seq_num_valid_0,
-    input  wire [RQ_SEQ_NUM_WIDTH-1:0]          s_axis_rq_seq_num_1,
-    input  wire                                 s_axis_rq_seq_num_valid_1,
+    input  wire [RQ_SEQ_NUM_WIDTH-1:0]        s_axis_rq_seq_num_0,
+    input  wire                               s_axis_rq_seq_num_valid_0,
+    input  wire [RQ_SEQ_NUM_WIDTH-1:0]        s_axis_rq_seq_num_1,
+    input  wire                               s_axis_rq_seq_num_valid_1,
 
     /*
      * Transmit sequence number output (to read DMA)
      */
-    output wire [RQ_SEQ_NUM_WIDTH-1:0]          m_axis_rq_seq_num_0,
-    output wire                                 m_axis_rq_seq_num_valid_0,
-    output wire [RQ_SEQ_NUM_WIDTH-1:0]          m_axis_rq_seq_num_1,
-    output wire                                 m_axis_rq_seq_num_valid_1,
+    output wire [RQ_SEQ_NUM_WIDTH-1:0]        m_axis_rq_seq_num_0,
+    output wire                               m_axis_rq_seq_num_valid_0,
+    output wire [RQ_SEQ_NUM_WIDTH-1:0]        m_axis_rq_seq_num_1,
+    output wire                               m_axis_rq_seq_num_valid_1,
 
     /*
      * AXI write descriptor input

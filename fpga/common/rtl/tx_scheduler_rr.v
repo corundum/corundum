@@ -690,6 +690,16 @@ always @* begin
 
         if (write_data_pipeline_reg[PIPELINE-1][0]) begin
             queue_ram_write_data[6] = 1'b1; // queue active
+
+            // schedule if disabled
+            if ((!SCHED_CTRL_ENABLE || write_data_pipeline_reg[PIPELINE-1][1] || queue_ram_read_data_sched_enable) && !queue_ram_read_data_scheduled) begin
+                queue_ram_write_data[7] = 1'b1; // queue scheduled
+
+                axis_scheduler_fifo_in_queue = queue_ram_addr_pipeline_reg[PIPELINE-1];
+                axis_scheduler_fifo_in_valid = 1'b1;
+
+                active_queue_count_next = active_queue_count_reg + 1;
+            end
         end else begin
             queue_ram_write_data[6] = 1'b0; // queue active
         end

@@ -2507,8 +2507,9 @@ class UltrascalePCIe(Device):
                     self.rc_source.send(tlp.pack_us_rc())
 
                 # transmit flow control
-                #pcie_tfc_nph_av
-                #pcie_tfc_npd_av
+                # TODO
+                pcie_tfc_nph_av.next = 0x3
+                pcie_tfc_npd_av.next = 0x3
 
                 # configuration management
                 if cfg_mgmt_read_write_done:
@@ -2599,13 +2600,77 @@ class UltrascalePCIe(Device):
                 #cfg_msg_transmit_done
 
                 # configuration flow control
-                #cfg_fc_ph
-                #cfg_fc_pd
-                #cfg_fc_nph
-                #cfg_fc_npd
-                #cfg_fc_cplh
-                #cfg_fc_cpld
-                #cfg_fc_sel
+                if (cfg_fc_sel == 0b000):
+                    # Receive credits at link partner
+                    # TODO
+                    cfg_fc_ph.next = 0
+                    cfg_fc_pd.next = 0
+                    cfg_fc_nph.next = 0
+                    cfg_fc_npd.next = 0
+                    cfg_fc_cplh.next = 0
+                    cfg_fc_cpld.next = 0
+                elif (cfg_fc_sel == 0b001):
+                    # Receive credit limit
+                    # TODO
+                    cfg_fc_ph.next = 0x80
+                    cfg_fc_pd.next = 0x800
+                    cfg_fc_nph.next = 0x80
+                    cfg_fc_npd.next = 0x800
+                    cfg_fc_cplh.next = 0x80
+                    cfg_fc_cpld.next = 0x800
+                elif (cfg_fc_sel == 0b010):
+                    # Receive credits consumed
+                    # TODO
+                    cfg_fc_ph.next = 0
+                    cfg_fc_pd.next = 0
+                    cfg_fc_nph.next = 0
+                    cfg_fc_npd.next = 0
+                    cfg_fc_cplh.next = 0
+                    cfg_fc_cpld.next = 0
+                elif (cfg_fc_sel == 0b011):
+                    # Available space in receive buffer
+                    # TODO
+                    cfg_fc_ph.next = 0
+                    cfg_fc_pd.next = 0
+                    cfg_fc_nph.next = 0
+                    cfg_fc_npd.next = 0
+                    cfg_fc_cplh.next = 0
+                    cfg_fc_cpld.next = 0
+                elif (cfg_fc_sel == 0b100):
+                    # Transmit credits available
+                    # TODO
+                    cfg_fc_ph.next = 0x80
+                    cfg_fc_pd.next = 0x800
+                    cfg_fc_nph.next = 0x80
+                    cfg_fc_npd.next = 0x800
+                    cfg_fc_cplh.next = 0x80
+                    cfg_fc_cpld.next = 0x800
+                elif (cfg_fc_sel == 0b101):
+                    # Transmit credit limit
+                    # TODO
+                    cfg_fc_ph.next = 0x80
+                    cfg_fc_pd.next = 0x800
+                    cfg_fc_nph.next = 0x80
+                    cfg_fc_npd.next = 0x800
+                    cfg_fc_cplh.next = 0x80
+                    cfg_fc_cpld.next = 0x800
+                elif (cfg_fc_sel == 0b110):
+                    # Transmit credits consumed
+                    # TODO
+                    cfg_fc_ph.next = 0
+                    cfg_fc_pd.next = 0
+                    cfg_fc_nph.next = 0
+                    cfg_fc_npd.next = 0
+                    cfg_fc_cplh.next = 0
+                    cfg_fc_cpld.next = 0
+                else:
+                    # Reserved
+                    cfg_fc_ph.next = 0
+                    cfg_fc_pd.next = 0
+                    cfg_fc_nph.next = 0
+                    cfg_fc_npd.next = 0
+                    cfg_fc_cplh.next = 0
+                    cfg_fc_cpld.next = 0
 
                 # per-function status
                 #cfg_per_func_status_control

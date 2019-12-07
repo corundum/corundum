@@ -70,7 +70,9 @@ module dma_if_pcie_us_rd #
     // Operation table size
     parameter OP_TABLE_SIZE = PCIE_TAG_COUNT,
     // In-flight transmit limit
-    parameter TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
+    parameter TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
+    // Transmit flow control
+    parameter TX_FC_ENABLE = 0
 )
 (
     input  wire                                 clk,
@@ -103,6 +105,11 @@ module dma_if_pcie_us_rd #
     input  wire                                 s_axis_rq_seq_num_valid_0,
     input  wire [RQ_SEQ_NUM_WIDTH-1:0]          s_axis_rq_seq_num_1,
     input  wire                                 s_axis_rq_seq_num_valid_1,
+
+    /*
+     * Transmit flow control
+     */
+    input  wire [7:0]                           pcie_tx_fc_nph_av,
 
     /*
      * AXI read descriptor input
@@ -345,6 +352,8 @@ reg [OP_TAG_WIDTH-1:0] tag_table_op_tag[(2**PCIE_TAG_WIDTH)-1:0];
 reg tag_table_we_tlp_reg = 1'b0, tag_table_we_tlp_next;
 
 reg [10:0] max_read_request_size_dw_reg = 11'd0;
+
+reg have_credit_reg = 1'b0;
 
 reg [RQ_SEQ_NUM_WIDTH-1:0] active_tx_count_reg = {RQ_SEQ_NUM_WIDTH{1'b0}};
 reg active_tx_count_av_reg = 1'b1;
@@ -590,7 +599,7 @@ always @* begin
             end
         end
         REQ_STATE_START: begin
-            if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+            if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                 if (req_op_count_reg <= {max_read_request_size_dw_reg, 2'b00}-req_pcie_addr_reg[1:0]) begin
                     // packet smaller than max read request size
                     if (req_pcie_addr_reg[12] != req_pcie_addr_plus_op_count[12]) begin
@@ -1214,6 +1223,8 @@ always @(posedge clk) begin
     m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
 
     max_read_request_size_dw_reg <= 11'd32 << (max_read_request_size > 5 ? 5 : max_read_request_size);
+
+    have_credit_reg <= pcie_tx_fc_nph_av > 4;
 
     if (active_tx_count_reg < TX_LIMIT && inc_active_tx && !s_axis_rq_seq_num_valid_0 && !s_axis_rq_seq_num_valid_1) begin
         // inc by 1

@@ -60,7 +60,9 @@ module pcie_us_axi_dma_wr #
     // Operation table size
     parameter OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1),
     // In-flight transmit limit
-    parameter TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
+    parameter TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
+    // Transmit flow control
+    parameter TX_FC_ENABLE = 0
 )
 (
     input  wire                               clk,
@@ -101,6 +103,12 @@ module pcie_us_axi_dma_wr #
     output wire                               m_axis_rq_seq_num_valid_0,
     output wire [RQ_SEQ_NUM_WIDTH-1:0]        m_axis_rq_seq_num_1,
     output wire                               m_axis_rq_seq_num_valid_1,
+
+    /*
+     * Transmit flow control
+     */
+    input  wire [7:0]                         pcie_tx_fc_ph_av,
+    input  wire [11:0]                        pcie_tx_fc_pd_av,
 
     /*
      * AXI write descriptor input
@@ -290,6 +298,8 @@ reg [TAG_WIDTH-1:0] tlp_cmd_tag_reg = {TAG_WIDTH{1'b0}}, tlp_cmd_tag_next;
 reg tlp_cmd_last_reg = 1'b0, tlp_cmd_last_next;
 
 reg [10:0] max_payload_size_dw_reg = 11'd0;
+
+reg have_credit_reg = 1'b0;
 
 reg [RQ_SEQ_NUM_WIDTH-1:0] active_tx_count_reg = {RQ_SEQ_NUM_WIDTH{1'b0}};
 reg active_tx_count_av_reg = 1'b1;
@@ -688,7 +698,7 @@ always @* begin
                 end else begin
                     tlp_state_next = TLP_STATE_PASSTHROUGH;
                 end
-            end else if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+            end else if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                 s_axis_rq_tready_next = 1'b0;
                 op_table_tx_start_en = 1'b1;
                 if (AXIS_PCIE_DATA_WIDTH >= 256) begin
@@ -755,7 +765,7 @@ always @* begin
                             last_tlp_next =  op_table_last[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                             tag_next = op_table_tag[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
 
-                            if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && !s_axis_rq_tvalid && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+                            if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && !s_axis_rq_tvalid && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                                 op_table_tx_start_en = 1'b1;
                                 if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                                     m_axi_rready_next = m_axis_rq_tready_int_early;
@@ -885,7 +895,7 @@ always @* begin
                         last_tlp_next =  op_table_last[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                         tag_next = op_table_tag[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
 
-                        if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && !s_axis_rq_tvalid && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+                        if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && !s_axis_rq_tvalid && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                             op_table_tx_start_en = 1'b1;
                             if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                                 m_axi_rready_next = m_axis_rq_tready_int_early;
@@ -987,6 +997,8 @@ always @(posedge clk) begin
     m_axi_rready_reg <= m_axi_rready_next;
 
     max_payload_size_dw_reg <= 11'd32 << (max_payload_size > 5 ? 5 : max_payload_size);
+
+    have_credit_reg <= (pcie_tx_fc_ph_av > 4) && (pcie_tx_fc_pd_av > (max_payload_size_dw_reg >> 1));
 
     if (active_tx_count_reg < TX_LIMIT && inc_active_tx && !axis_rq_seq_num_valid_0_int && !axis_rq_seq_num_valid_1_int) begin
         // inc by 1

@@ -61,6 +61,7 @@ def bench():
     TAG_WIDTH = 8
     OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1)
     TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
+    TX_FC_ENABLE = 1
 
     # Inputs
     clk = Signal(bool(0))
@@ -77,6 +78,8 @@ def bench():
     s_axis_rq_seq_num_valid_0 = Signal(bool(0))
     s_axis_rq_seq_num_1 = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
     s_axis_rq_seq_num_valid_1 = Signal(bool(0))
+    pcie_tx_fc_ph_av = Signal(intbv(0)[8:])
+    pcie_tx_fc_pd_av = Signal(intbv(0)[12:])
     s_axis_write_desc_pcie_addr = Signal(intbv(0)[PCIE_ADDR_WIDTH:])
     s_axis_write_desc_axi_addr = Signal(intbv(0)[AXI_ADDR_WIDTH:])
     s_axis_write_desc_len = Signal(intbv(0)[LEN_WIDTH:])
@@ -231,6 +234,15 @@ def bench():
         # pcie_tfc_nph_av=pcie_tfc_nph_av,
         # pcie_tfc_npd_av=pcie_tfc_npd_av,
 
+        # Configuration Flow Control Interface
+        cfg_fc_ph=pcie_tx_fc_ph_av,
+        cfg_fc_pd=pcie_tx_fc_pd_av,
+        #cfg_fc_nph=cfg_fc_nph,
+        #cfg_fc_npd=cfg_fc_npd,
+        #cfg_fc_cplh=cfg_fc_cplh,
+        #cfg_fc_cpld=cfg_fc_cpld,
+        cfg_fc_sel=Signal(intbv(0b100)[3:]),
+
         # Configuration Control Interface
         # cfg_hot_reset_in=cfg_hot_reset_in,
         # cfg_hot_reset_out=cfg_hot_reset_out,
@@ -296,6 +308,8 @@ def bench():
         m_axis_rq_seq_num_valid_0=m_axis_rq_seq_num_valid_0,
         m_axis_rq_seq_num_1=m_axis_rq_seq_num_1,
         m_axis_rq_seq_num_valid_1=m_axis_rq_seq_num_valid_1,
+        pcie_tx_fc_ph_av=pcie_tx_fc_ph_av,
+        pcie_tx_fc_pd_av=pcie_tx_fc_pd_av,
         s_axis_write_desc_pcie_addr=s_axis_write_desc_pcie_addr,
         s_axis_write_desc_axi_addr=s_axis_write_desc_axi_addr,
         s_axis_write_desc_len=s_axis_write_desc_len,

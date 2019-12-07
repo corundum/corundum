@@ -71,10 +71,14 @@ module dma_if_pcie_us #
     parameter READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
     // In-flight transmit limit (read)
     parameter READ_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
+    // Transmit flow control (read)
+    parameter READ_TX_FC_ENABLE = 0,
     // Operation table size (write)
     parameter WRITE_OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1),
     // In-flight transmit limit (write)
-    parameter WRITE_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
+    parameter WRITE_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
+    // Transmit flow control (write)
+    parameter WRITE_TX_FC_ENABLE = 0
 )
 (
     input  wire                                 clk,
@@ -107,6 +111,13 @@ module dma_if_pcie_us #
     input  wire                                 s_axis_rq_seq_num_valid_0,
     input  wire [RQ_SEQ_NUM_WIDTH-1:0]          s_axis_rq_seq_num_1,
     input  wire                                 s_axis_rq_seq_num_valid_1,
+
+    /*
+     * Transmit flow control
+     */
+    input  wire [7:0]                           pcie_tx_fc_nph_av,
+    input  wire [7:0]                           pcie_tx_fc_ph_av,
+    input  wire [11:0]                          pcie_tx_fc_pd_av,
 
     /*
      * AXI read descriptor input
@@ -209,7 +220,8 @@ dma_if_pcie_us_rd #(
     .LEN_WIDTH(LEN_WIDTH),
     .TAG_WIDTH(TAG_WIDTH),
     .OP_TABLE_SIZE(READ_OP_TABLE_SIZE),
-    .TX_LIMIT(READ_TX_LIMIT)
+    .TX_LIMIT(READ_TX_LIMIT),
+    .TX_FC_ENABLE(READ_TX_FC_ENABLE)
 )
 dma_if_pcie_us_rd_inst (
     .clk(clk),
@@ -242,6 +254,11 @@ dma_if_pcie_us_rd_inst (
     .s_axis_rq_seq_num_valid_0(axis_rq_seq_num_valid_read_0),
     .s_axis_rq_seq_num_1(axis_rq_seq_num_read_1),
     .s_axis_rq_seq_num_valid_1(axis_rq_seq_num_valid_read_1),
+
+    /*
+     * Transmit flow control
+     */
+    .pcie_tx_fc_nph_av(pcie_tx_fc_nph_av),
 
     /*
      * AXI read descriptor input
@@ -302,7 +319,8 @@ dma_if_pcie_us_wr #(
     .LEN_WIDTH(LEN_WIDTH),
     .TAG_WIDTH(TAG_WIDTH),
     .OP_TABLE_SIZE(WRITE_OP_TABLE_SIZE),
-    .TX_LIMIT(WRITE_TX_LIMIT)
+    .TX_LIMIT(WRITE_TX_LIMIT),
+    .TX_FC_ENABLE(WRITE_TX_FC_ENABLE)
 )
 dma_if_pcie_us_wr_inst (
     .clk(clk),
@@ -343,6 +361,12 @@ dma_if_pcie_us_wr_inst (
     .m_axis_rq_seq_num_valid_0(axis_rq_seq_num_valid_read_0),
     .m_axis_rq_seq_num_1(axis_rq_seq_num_read_1),
     .m_axis_rq_seq_num_valid_1(axis_rq_seq_num_valid_read_1),
+
+    /*
+     * Transmit flow control
+     */
+    .pcie_tx_fc_ph_av(pcie_tx_fc_ph_av),
+    .pcie_tx_fc_pd_av(pcie_tx_fc_pd_av),
 
     /*
      * AXI write descriptor input

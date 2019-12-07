@@ -546,6 +546,10 @@ class TLP(object):
         """Return size of TLP in bytes, including overhead"""
         return self.get_size()+12
 
+    def get_data_credits(self):
+        """Return size of TLP in data credits (1 credit per 4 DW)"""
+        return int((len(self.data)+3)/4)
+
     def pack(self):
         """Pack TLP as DWORD array"""
         pkt = []

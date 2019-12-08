@@ -53,7 +53,7 @@ def bench():
     AXIS_PCIE_RC_USER_WIDTH = 75
     AXIS_PCIE_RQ_USER_WIDTH = 60
     RQ_SEQ_NUM_WIDTH = 4 if AXIS_PCIE_RQ_USER_WIDTH == 60 else 6
-    RQ_SEQ_NUM_ENABLE = 1c
+    RQ_SEQ_NUM_ENABLE = 1
     SEG_COUNT = max(2, int(AXIS_PCIE_DATA_WIDTH*2/128))
     SEG_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH*2/SEG_COUNT
     SEG_ADDR_WIDTH = 12
@@ -68,6 +68,7 @@ def bench():
     TAG_WIDTH = 8
     OP_TABLE_SIZE = PCIE_TAG_COUNT
     TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1)
+    TX_FC_ENABLE = 1
 
     # Inputs
     clk = Signal(bool(0))
@@ -84,6 +85,7 @@ def bench():
     s_axis_rq_seq_num_valid_0 = Signal(bool(0))
     s_axis_rq_seq_num_1 = Signal(intbv(0)[RQ_SEQ_NUM_WIDTH:])
     s_axis_rq_seq_num_valid_1 = Signal(bool(0))
+    pcie_tx_fc_nph_av = Signal(intbv(0)[8:])
     s_axis_read_desc_pcie_addr = Signal(intbv(0)[PCIE_ADDR_WIDTH:])
     s_axis_read_desc_ram_sel = Signal(intbv(0)[RAM_SEL_WIDTH:])
     s_axis_read_desc_ram_addr = Signal(intbv(0)[RAM_ADDR_WIDTH:])
@@ -220,6 +222,15 @@ def bench():
         # pcie_tfc_nph_av=pcie_tfc_nph_av,
         # pcie_tfc_npd_av=pcie_tfc_npd_av,
 
+        # Configuration Flow Control Interface
+        #cfg_fc_ph=cfg_fc_ph,
+        #cfg_fc_pd=cfg_fc_pd,
+        cfg_fc_nph=pcie_tx_fc_nph_av,
+        #cfg_fc_npd=cfg_fc_npd,
+        #cfg_fc_cplh=cfg_fc_cplh,
+        #cfg_fc_cpld=cfg_fc_cpld,
+        cfg_fc_sel=Signal(intbv(0b100)[3:]),
+
         # Configuration Control Interface
         # cfg_hot_reset_in=cfg_hot_reset_in,
         # cfg_hot_reset_out=cfg_hot_reset_out,
@@ -281,6 +292,7 @@ def bench():
         s_axis_rq_seq_num_valid_0=s_axis_rq_seq_num_valid_0,
         s_axis_rq_seq_num_1=s_axis_rq_seq_num_1,
         s_axis_rq_seq_num_valid_1=s_axis_rq_seq_num_valid_1,
+        pcie_tx_fc_nph_av=pcie_tx_fc_nph_av,
         s_axis_read_desc_pcie_addr=s_axis_read_desc_pcie_addr,
         s_axis_read_desc_ram_sel=s_axis_read_desc_ram_sel,
         s_axis_read_desc_ram_addr=s_axis_read_desc_ram_addr,

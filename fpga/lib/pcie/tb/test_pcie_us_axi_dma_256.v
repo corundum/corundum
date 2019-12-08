@@ -51,8 +51,10 @@ parameter LEN_WIDTH = 20;
 parameter TAG_WIDTH = 8;
 parameter READ_OP_TABLE_SIZE = PCIE_TAG_COUNT;
 parameter READ_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1);
+parameter READ_TX_FC_ENABLE = 1;
 parameter WRITE_OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1);
 parameter WRITE_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1);
+parameter WRITE_TX_FC_ENABLE = 1;
 
 // Inputs
 reg clk = 0;
@@ -69,6 +71,9 @@ reg [RQ_SEQ_NUM_WIDTH-1:0] s_axis_rq_seq_num_0 = 0;
 reg s_axis_rq_seq_num_valid_0 = 0;
 reg [RQ_SEQ_NUM_WIDTH-1:0] s_axis_rq_seq_num_1 = 0;
 reg s_axis_rq_seq_num_valid_1 = 0;
+reg [7:0] pcie_tx_fc_nph_av = 0;
+reg [7:0] pcie_tx_fc_ph_av = 0;
+reg [11:0] pcie_tx_fc_pd_av = 0;
 reg [PCIE_ADDR_WIDTH-1:0] s_axis_read_desc_pcie_addr = 0;
 reg [AXI_ADDR_WIDTH-1:0] s_axis_read_desc_axi_addr = 0;
 reg [LEN_WIDTH-1:0] s_axis_read_desc_len = 0;
@@ -154,6 +159,9 @@ initial begin
         s_axis_rq_seq_num_valid_0,
         s_axis_rq_seq_num_1,
         s_axis_rq_seq_num_valid_1,
+        pcie_tx_fc_nph_av,
+        pcie_tx_fc_ph_av,
+        pcie_tx_fc_pd_av,
         s_axis_read_desc_pcie_addr,
         s_axis_read_desc_axi_addr,
         s_axis_read_desc_len,
@@ -249,8 +257,10 @@ pcie_us_axi_dma #(
     .TAG_WIDTH(TAG_WIDTH),
     .READ_OP_TABLE_SIZE(READ_OP_TABLE_SIZE),
     .READ_TX_LIMIT(READ_TX_LIMIT),
+    .READ_TX_FC_ENABLE(READ_TX_FC_ENABLE),
     .WRITE_OP_TABLE_SIZE(WRITE_OP_TABLE_SIZE),
-    .WRITE_TX_LIMIT(WRITE_TX_LIMIT)
+    .WRITE_TX_LIMIT(WRITE_TX_LIMIT),
+    .WRITE_TX_FC_ENABLE(WRITE_TX_FC_ENABLE)
 )
 UUT (
     .clk(clk),
@@ -271,6 +281,9 @@ UUT (
     .s_axis_rq_seq_num_valid_0(s_axis_rq_seq_num_valid_0),
     .s_axis_rq_seq_num_1(s_axis_rq_seq_num_1),
     .s_axis_rq_seq_num_valid_1(s_axis_rq_seq_num_valid_1),
+    .pcie_tx_fc_nph_av(pcie_tx_fc_nph_av),
+    .pcie_tx_fc_ph_av(pcie_tx_fc_ph_av),
+    .pcie_tx_fc_pd_av(pcie_tx_fc_pd_av),
     .s_axis_read_desc_pcie_addr(s_axis_read_desc_pcie_addr),
     .s_axis_read_desc_axi_addr(s_axis_read_desc_axi_addr),
     .s_axis_read_desc_len(s_axis_read_desc_len),

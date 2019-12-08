@@ -47,6 +47,7 @@ parameter LEN_WIDTH = 20;
 parameter TAG_WIDTH = 8;
 parameter OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1);
 parameter TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1);
+parameter TX_FC_ENABLE = 1;
 
 // Inputs
 reg clk = 0;
@@ -63,6 +64,8 @@ reg [RQ_SEQ_NUM_WIDTH-1:0] s_axis_rq_seq_num_0 = 0;
 reg s_axis_rq_seq_num_valid_0 = 0;
 reg [RQ_SEQ_NUM_WIDTH-1:0] s_axis_rq_seq_num_1 = 0;
 reg s_axis_rq_seq_num_valid_1 = 0;
+reg [7:0] pcie_tx_fc_ph_av = 0;
+reg [11:0] pcie_tx_fc_pd_av = 0;
 reg [PCIE_ADDR_WIDTH-1:0] s_axis_write_desc_pcie_addr = 0;
 reg [AXI_ADDR_WIDTH-1:0] s_axis_write_desc_axi_addr = 0;
 reg [LEN_WIDTH-1:0] s_axis_write_desc_len = 0;
@@ -120,6 +123,8 @@ initial begin
         s_axis_rq_seq_num_valid_0,
         s_axis_rq_seq_num_1,
         s_axis_rq_seq_num_valid_1,
+        pcie_tx_fc_ph_av,
+        pcie_tx_fc_pd_av,
         s_axis_write_desc_pcie_addr,
         s_axis_write_desc_axi_addr,
         s_axis_write_desc_len,
@@ -182,7 +187,8 @@ pcie_us_axi_dma_wr #(
     .LEN_WIDTH(LEN_WIDTH),
     .TAG_WIDTH(TAG_WIDTH),
     .OP_TABLE_SIZE(OP_TABLE_SIZE),
-    .TX_LIMIT(TX_LIMIT)
+    .TX_LIMIT(TX_LIMIT),
+    .TX_FC_ENABLE(TX_FC_ENABLE)
 )
 UUT (
     .clk(clk),
@@ -207,6 +213,8 @@ UUT (
     .m_axis_rq_seq_num_valid_0(m_axis_rq_seq_num_valid_0),
     .m_axis_rq_seq_num_1(m_axis_rq_seq_num_1),
     .m_axis_rq_seq_num_valid_1(m_axis_rq_seq_num_valid_1),
+    .pcie_tx_fc_ph_av(pcie_tx_fc_ph_av),
+    .pcie_tx_fc_pd_av(pcie_tx_fc_pd_av),
     .s_axis_write_desc_pcie_addr(s_axis_write_desc_pcie_addr),
     .s_axis_write_desc_axi_addr(s_axis_write_desc_axi_addr),
     .s_axis_write_desc_len(s_axis_write_desc_len),

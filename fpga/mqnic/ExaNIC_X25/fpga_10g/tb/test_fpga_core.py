@@ -167,6 +167,12 @@ def bench():
     cfg_max_read_req = Signal(intbv(0)[3:])
     cfg_mgmt_read_data = Signal(intbv(0)[32:])
     cfg_mgmt_read_write_done = Signal(bool(0))
+    cfg_fc_ph = Signal(intbv(0)[8:])
+    cfg_fc_pd = Signal(intbv(0)[12:])
+    cfg_fc_nph = Signal(intbv(0)[8:])
+    cfg_fc_npd = Signal(intbv(0)[12:])
+    cfg_fc_cplh = Signal(intbv(0)[8:])
+    cfg_fc_cpld = Signal(intbv(0)[12:])
     cfg_interrupt_msi_enable = Signal(intbv(0)[4:])
     cfg_interrupt_msi_mmenable = Signal(intbv(0)[12:])
     cfg_interrupt_msi_mask_update = Signal(bool(0))
@@ -216,6 +222,7 @@ def bench():
     cfg_mgmt_write_data = Signal(intbv(0)[32:])
     cfg_mgmt_byte_enable = Signal(intbv(0)[4:])
     cfg_mgmt_read = Signal(bool(0))
+    cfg_fc_sel = Signal(intbv(4)[3:])
     cfg_interrupt_msi_int = Signal(intbv(0)[32:])
     cfg_interrupt_msi_pending_status = Signal(intbv(0)[32:])
     cfg_interrupt_msi_select = Signal(intbv(0)[2:])
@@ -386,13 +393,13 @@ def bench():
         #cfg_msg_transmit_done=cfg_msg_transmit_done,
 
         # Configuration Flow Control Interface
-        #cfg_fc_ph=cfg_fc_ph,
-        #cfg_fc_pd=cfg_fc_pd,
-        #cfg_fc_nph=cfg_fc_nph,
-        #cfg_fc_npd=cfg_fc_npd,
-        #cfg_fc_cplh=cfg_fc_cplh,
-        #cfg_fc_cpld=cfg_fc_cpld,
-        #cfg_fc_sel=cfg_fc_sel,
+        cfg_fc_ph=cfg_fc_ph,
+        cfg_fc_pd=cfg_fc_pd,
+        cfg_fc_nph=cfg_fc_nph,
+        cfg_fc_npd=cfg_fc_npd,
+        cfg_fc_cplh=cfg_fc_cplh,
+        cfg_fc_cpld=cfg_fc_cpld,
+        cfg_fc_sel=cfg_fc_sel,
 
         # Per-Function Status Interface
         #cfg_per_func_status_control=cfg_per_func_status_control,
@@ -526,6 +533,13 @@ def bench():
         cfg_mgmt_read=cfg_mgmt_read,
         cfg_mgmt_read_data=cfg_mgmt_read_data,
         cfg_mgmt_read_write_done=cfg_mgmt_read_write_done,
+        cfg_fc_ph=cfg_fc_ph,
+        cfg_fc_pd=cfg_fc_pd,
+        cfg_fc_nph=cfg_fc_nph,
+        cfg_fc_npd=cfg_fc_npd,
+        cfg_fc_cplh=cfg_fc_cplh,
+        cfg_fc_cpld=cfg_fc_cpld,
+        cfg_fc_sel=cfg_fc_sel,
         cfg_interrupt_msi_enable=cfg_interrupt_msi_enable,
         cfg_interrupt_msi_int=cfg_interrupt_msi_int,
         cfg_interrupt_msi_sent=cfg_interrupt_msi_sent,

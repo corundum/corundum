@@ -120,6 +120,14 @@ module fpga_core #
     input  wire [31:0]                        cfg_mgmt_read_data,
     input  wire                               cfg_mgmt_read_write_done,
 
+    input  wire [7:0]                         cfg_fc_ph,
+    input  wire [11:0]                        cfg_fc_pd,
+    input  wire [7:0]                         cfg_fc_nph,
+    input  wire [11:0]                        cfg_fc_npd,
+    input  wire [7:0]                         cfg_fc_cplh,
+    input  wire [11:0]                        cfg_fc_cpld,
+    output wire [2:0]                         cfg_fc_sel,
+
     input  wire [3:0]                         cfg_interrupt_msi_enable,
     input  wire [7:0]                         cfg_interrupt_msi_vf_enable,
     input  wire [11:0]                        cfg_interrupt_msi_mmenable,
@@ -889,6 +897,12 @@ rc_reg (
     .m_axis_tuser(axis_rc_tuser_r)
 );
 
+assign cfg_fc_sel = 3'b100;
+
+wire [7:0] pcie_tx_fc_nph_av = cfg_fc_nph;
+wire [7:0] pcie_tx_fc_ph_av = cfg_fc_ph;
+wire [11:0] pcie_tx_fc_pd_av = cfg_fc_pd;
+
 dma_if_pcie_us #
 (
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
@@ -910,8 +924,10 @@ dma_if_pcie_us #
     .TAG_WIDTH(PCIE_DMA_TAG_WIDTH),
     .READ_OP_TABLE_SIZE(64),
     .READ_TX_LIMIT(8),
+    .READ_TX_FC_ENABLE(1),
     .WRITE_OP_TABLE_SIZE(8),
-    .WRITE_TX_LIMIT(3)
+    .WRITE_TX_LIMIT(3),
+    .WRITE_TX_FC_ENABLE(1)
 )
 dma_if_pcie_us_inst (
     .clk(clk_250mhz),
@@ -944,6 +960,13 @@ dma_if_pcie_us_inst (
     .s_axis_rq_seq_num_valid_0(s_axis_rq_seq_num_valid),
     .s_axis_rq_seq_num_1(4'd0),
     .s_axis_rq_seq_num_valid_1(1'b0),
+
+    /*
+     * Transmit flow control
+     */
+    .pcie_tx_fc_nph_av(pcie_tx_fc_nph_av),
+    .pcie_tx_fc_ph_av(pcie_tx_fc_ph_av),
+    .pcie_tx_fc_pd_av(pcie_tx_fc_pd_av),
 
     /*
      * AXI read descriptor input

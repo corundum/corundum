@@ -333,6 +333,14 @@ wire        cfg_mgmt_read;
 wire [31:0] cfg_mgmt_read_data;
 wire        cfg_mgmt_read_write_done;
 
+wire [7:0]  cfg_fc_ph;
+wire [11:0] cfg_fc_pd;
+wire [7:0]  cfg_fc_nph;
+wire [11:0] cfg_fc_npd;
+wire [7:0]  cfg_fc_cplh;
+wire [11:0] cfg_fc_cpld;
+wire [2:0]  cfg_fc_sel;
+
 wire [3:0]  cfg_interrupt_msi_enable;
 wire [11:0] cfg_interrupt_msi_mmenable;
 wire        cfg_interrupt_msi_mask_update;
@@ -481,13 +489,13 @@ pcie4_uscale_plus_inst (
     .cfg_msg_transmit_data(32'd0),
     .cfg_msg_transmit_done(),
 
-    .cfg_fc_ph(),
-    .cfg_fc_pd(),
-    .cfg_fc_nph(),
-    .cfg_fc_npd(),
-    .cfg_fc_cplh(),
-    .cfg_fc_cpld(),
-    .cfg_fc_sel(3'd0),
+    .cfg_fc_ph(cfg_fc_ph),
+    .cfg_fc_pd(cfg_fc_pd),
+    .cfg_fc_nph(cfg_fc_nph),
+    .cfg_fc_npd(cfg_fc_npd),
+    .cfg_fc_cplh(cfg_fc_cplh),
+    .cfg_fc_cpld(cfg_fc_cpld),
+    .cfg_fc_sel(cfg_fc_sel),
 
     .cfg_dsn(64'd0),
 
@@ -918,6 +926,14 @@ core_inst (
     .cfg_mgmt_read(cfg_mgmt_read),
     .cfg_mgmt_read_data(cfg_mgmt_read_data),
     .cfg_mgmt_read_write_done(cfg_mgmt_read_write_done),
+
+    .cfg_fc_ph(cfg_fc_ph),
+    .cfg_fc_pd(cfg_fc_pd),
+    .cfg_fc_nph(cfg_fc_nph),
+    .cfg_fc_npd(cfg_fc_npd),
+    .cfg_fc_cplh(cfg_fc_cplh),
+    .cfg_fc_cpld(cfg_fc_cpld),
+    .cfg_fc_sel(cfg_fc_sel),
 
     .cfg_interrupt_msi_enable(cfg_interrupt_msi_enable),
     .cfg_interrupt_msi_mmenable(cfg_interrupt_msi_mmenable),

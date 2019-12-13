@@ -89,6 +89,12 @@ reg [2:0] cfg_max_payload = 0;
 reg [2:0] cfg_max_read_req = 0;
 reg [31:0] cfg_mgmt_read_data = 0;
 reg cfg_mgmt_read_write_done = 0;
+reg [7:0] cfg_fc_ph = 0;
+reg [11:0] cfg_fc_pd = 0;
+reg [7:0] cfg_fc_nph = 0;
+reg [11:0] cfg_fc_npd = 0;
+reg [7:0] cfg_fc_cplh = 0;
+reg [11:0] cfg_fc_cpld = 0;
 reg [3:0] cfg_interrupt_msi_enable = 0;
 reg [11:0] cfg_interrupt_msi_mmenable = 0;
 reg cfg_interrupt_msi_mask_update = 0;
@@ -172,6 +178,7 @@ wire cfg_mgmt_write;
 wire [31:0] cfg_mgmt_write_data;
 wire [3:0] cfg_mgmt_byte_enable;
 wire cfg_mgmt_read;
+wire [2:0] cfg_fc_sel;
 wire [3:0] cfg_interrupt_msi_select;
 wire [31:0] cfg_interrupt_msi_int;
 wire [31:0] cfg_interrupt_msi_pending_status;
@@ -245,6 +252,12 @@ initial begin
         cfg_max_read_req,
         cfg_mgmt_read_data,
         cfg_mgmt_read_write_done,
+        cfg_fc_ph,
+        cfg_fc_pd,
+        cfg_fc_nph,
+        cfg_fc_npd,
+        cfg_fc_cplh,
+        cfg_fc_cpld,
         cfg_interrupt_msi_enable,
         cfg_interrupt_msi_mmenable,
         cfg_interrupt_msi_mask_update,
@@ -328,6 +341,7 @@ initial begin
         cfg_mgmt_write_data,
         cfg_mgmt_byte_enable,
         cfg_mgmt_read,
+        cfg_fc_sel,
         cfg_interrupt_msi_select,
         cfg_interrupt_msi_int,
         cfg_interrupt_msi_pending_status,
@@ -437,6 +451,13 @@ UUT (
     .cfg_mgmt_read(cfg_mgmt_read),
     .cfg_mgmt_read_data(cfg_mgmt_read_data),
     .cfg_mgmt_read_write_done(cfg_mgmt_read_write_done),
+    .cfg_fc_ph(cfg_fc_ph),
+    .cfg_fc_pd(cfg_fc_pd),
+    .cfg_fc_nph(cfg_fc_nph),
+    .cfg_fc_npd(cfg_fc_npd),
+    .cfg_fc_cplh(cfg_fc_cplh),
+    .cfg_fc_cpld(cfg_fc_cpld),
+    .cfg_fc_sel(cfg_fc_sel),
     .cfg_interrupt_msi_enable(cfg_interrupt_msi_enable),
     .cfg_interrupt_msi_mmenable(cfg_interrupt_msi_mmenable),
     .cfg_interrupt_msi_mask_update(cfg_interrupt_msi_mask_update),

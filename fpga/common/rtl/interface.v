@@ -115,7 +115,7 @@ module interface #
     // DMA RAM segment byte enable width
     parameter SEG_BE_WIDTH = SEG_DATA_WIDTH/8,
     // DMA RAM segment select width
-    parameter RAM_SEL_WIDTH = $clog2(PORTS+1),
+    parameter RAM_SEL_WIDTH = $clog2(PORTS),
     // DMA RAM address width
     parameter RAM_ADDR_WIDTH = SEG_ADDR_WIDTH+$clog2(SEG_COUNT)+$clog2(SEG_BE_WIDTH),
     // DMA RAM pipeline stages
@@ -138,38 +138,72 @@ module interface #
     input  wire                                rst,
 
     /*
-     * DMA read descriptor output
+     * DMA read descriptor output (control)
      */
-    output wire [DMA_ADDR_WIDTH-1:0]           m_axis_dma_read_desc_dma_addr,
-    output wire [RAM_SEL_WIDTH-1:0]            m_axis_dma_read_desc_ram_sel,
-    output wire [RAM_ADDR_WIDTH-1:0]           m_axis_dma_read_desc_ram_addr,
-    output wire [DMA_LEN_WIDTH-1:0]            m_axis_dma_read_desc_len,
-    output wire [DMA_TAG_WIDTH-1:0]            m_axis_dma_read_desc_tag,
-    output wire                                m_axis_dma_read_desc_valid,
-    input  wire                                m_axis_dma_read_desc_ready,
+    output wire [DMA_ADDR_WIDTH-1:0]           m_axis_ctrl_dma_read_desc_dma_addr,
+    output wire [RAM_SEL_WIDTH-1:0]            m_axis_ctrl_dma_read_desc_ram_sel,
+    output wire [RAM_ADDR_WIDTH-1:0]           m_axis_ctrl_dma_read_desc_ram_addr,
+    output wire [DMA_LEN_WIDTH-1:0]            m_axis_ctrl_dma_read_desc_len,
+    output wire [DMA_TAG_WIDTH-1:0]            m_axis_ctrl_dma_read_desc_tag,
+    output wire                                m_axis_ctrl_dma_read_desc_valid,
+    input  wire                                m_axis_ctrl_dma_read_desc_ready,
 
     /*
-     * DMA read descriptor status input
+     * DMA read descriptor status input (control)
      */
-    input  wire [DMA_TAG_WIDTH-1:0]            s_axis_dma_read_desc_status_tag,
-    input  wire                                s_axis_dma_read_desc_status_valid,
+    input  wire [DMA_TAG_WIDTH-1:0]            s_axis_ctrl_dma_read_desc_status_tag,
+    input  wire                                s_axis_ctrl_dma_read_desc_status_valid,
 
     /*
-     * DMA write descriptor output
+     * DMA write descriptor output (control)
      */
-    output wire [DMA_ADDR_WIDTH-1:0]           m_axis_dma_write_desc_dma_addr,
-    output wire [RAM_SEL_WIDTH-1:0]            m_axis_dma_write_desc_ram_sel,
-    output wire [RAM_ADDR_WIDTH-1:0]           m_axis_dma_write_desc_ram_addr,
-    output wire [DMA_LEN_WIDTH-1:0]            m_axis_dma_write_desc_len,
-    output wire [DMA_TAG_WIDTH-1:0]            m_axis_dma_write_desc_tag,
-    output wire                                m_axis_dma_write_desc_valid,
-    input  wire                                m_axis_dma_write_desc_ready,
+    output wire [DMA_ADDR_WIDTH-1:0]           m_axis_ctrl_dma_write_desc_dma_addr,
+    output wire [RAM_SEL_WIDTH-1:0]            m_axis_ctrl_dma_write_desc_ram_sel,
+    output wire [RAM_ADDR_WIDTH-1:0]           m_axis_ctrl_dma_write_desc_ram_addr,
+    output wire [DMA_LEN_WIDTH-1:0]            m_axis_ctrl_dma_write_desc_len,
+    output wire [DMA_TAG_WIDTH-1:0]            m_axis_ctrl_dma_write_desc_tag,
+    output wire                                m_axis_ctrl_dma_write_desc_valid,
+    input  wire                                m_axis_ctrl_dma_write_desc_ready,
 
     /*
-     * DMA write descriptor status input
+     * DMA write descriptor status input (control)
      */
-    input  wire [DMA_TAG_WIDTH-1:0]            s_axis_dma_write_desc_status_tag,
-    input  wire                                s_axis_dma_write_desc_status_valid,
+    input  wire [DMA_TAG_WIDTH-1:0]            s_axis_ctrl_dma_write_desc_status_tag,
+    input  wire                                s_axis_ctrl_dma_write_desc_status_valid,
+
+    /*
+     * DMA read descriptor output (data)
+     */
+    output wire [DMA_ADDR_WIDTH-1:0]           m_axis_data_dma_read_desc_dma_addr,
+    output wire [RAM_SEL_WIDTH-1:0]            m_axis_data_dma_read_desc_ram_sel,
+    output wire [RAM_ADDR_WIDTH-1:0]           m_axis_data_dma_read_desc_ram_addr,
+    output wire [DMA_LEN_WIDTH-1:0]            m_axis_data_dma_read_desc_len,
+    output wire [DMA_TAG_WIDTH-1:0]            m_axis_data_dma_read_desc_tag,
+    output wire                                m_axis_data_dma_read_desc_valid,
+    input  wire                                m_axis_data_dma_read_desc_ready,
+
+    /*
+     * DMA read descriptor status input (data)
+     */
+    input  wire [DMA_TAG_WIDTH-1:0]            s_axis_data_dma_read_desc_status_tag,
+    input  wire                                s_axis_data_dma_read_desc_status_valid,
+
+    /*
+     * DMA write descriptor output (data)
+     */
+    output wire [DMA_ADDR_WIDTH-1:0]           m_axis_data_dma_write_desc_dma_addr,
+    output wire [RAM_SEL_WIDTH-1:0]            m_axis_data_dma_write_desc_ram_sel,
+    output wire [RAM_ADDR_WIDTH-1:0]           m_axis_data_dma_write_desc_ram_addr,
+    output wire [DMA_LEN_WIDTH-1:0]            m_axis_data_dma_write_desc_len,
+    output wire [DMA_TAG_WIDTH-1:0]            m_axis_data_dma_write_desc_tag,
+    output wire                                m_axis_data_dma_write_desc_valid,
+    input  wire                                m_axis_data_dma_write_desc_ready,
+
+    /*
+     * DMA write descriptor status input (data)
+     */
+    input  wire [DMA_TAG_WIDTH-1:0]            s_axis_data_dma_write_desc_status_tag,
+    input  wire                                s_axis_data_dma_write_desc_status_valid,
 
     /*
      * AXI-Lite slave interface
@@ -218,21 +252,38 @@ module interface #
     output wire                                m_axil_csr_rready,
 
     /*
-     * RAM interface
+     * RAM interface (control)
      */
-    input  wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]  dma_ram_wr_cmd_sel,
-    input  wire [SEG_COUNT*SEG_BE_WIDTH-1:0]   dma_ram_wr_cmd_be,
-    input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0] dma_ram_wr_cmd_addr,
-    input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0] dma_ram_wr_cmd_data,
-    input  wire [SEG_COUNT-1:0]                dma_ram_wr_cmd_valid,
-    output wire [SEG_COUNT-1:0]                dma_ram_wr_cmd_ready,
-    input  wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]  dma_ram_rd_cmd_sel,
-    input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0] dma_ram_rd_cmd_addr,
-    input  wire [SEG_COUNT-1:0]                dma_ram_rd_cmd_valid,
-    output wire [SEG_COUNT-1:0]                dma_ram_rd_cmd_ready,
-    output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0] dma_ram_rd_resp_data,
-    output wire [SEG_COUNT-1:0]                dma_ram_rd_resp_valid,
-    input  wire [SEG_COUNT-1:0]                dma_ram_rd_resp_ready,
+    input  wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]  ctrl_dma_ram_wr_cmd_sel,
+    input  wire [SEG_COUNT*SEG_BE_WIDTH-1:0]   ctrl_dma_ram_wr_cmd_be,
+    input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0] ctrl_dma_ram_wr_cmd_addr,
+    input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0] ctrl_dma_ram_wr_cmd_data,
+    input  wire [SEG_COUNT-1:0]                ctrl_dma_ram_wr_cmd_valid,
+    output wire [SEG_COUNT-1:0]                ctrl_dma_ram_wr_cmd_ready,
+    input  wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]  ctrl_dma_ram_rd_cmd_sel,
+    input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0] ctrl_dma_ram_rd_cmd_addr,
+    input  wire [SEG_COUNT-1:0]                ctrl_dma_ram_rd_cmd_valid,
+    output wire [SEG_COUNT-1:0]                ctrl_dma_ram_rd_cmd_ready,
+    output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0] ctrl_dma_ram_rd_resp_data,
+    output wire [SEG_COUNT-1:0]                ctrl_dma_ram_rd_resp_valid,
+    input  wire [SEG_COUNT-1:0]                ctrl_dma_ram_rd_resp_ready,
+
+    /*
+     * RAM interface (data)
+     */
+    input  wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]  data_dma_ram_wr_cmd_sel,
+    input  wire [SEG_COUNT*SEG_BE_WIDTH-1:0]   data_dma_ram_wr_cmd_be,
+    input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0] data_dma_ram_wr_cmd_addr,
+    input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0] data_dma_ram_wr_cmd_data,
+    input  wire [SEG_COUNT-1:0]                data_dma_ram_wr_cmd_valid,
+    output wire [SEG_COUNT-1:0]                data_dma_ram_wr_cmd_ready,
+    input  wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]  data_dma_ram_rd_cmd_sel,
+    input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0] data_dma_ram_rd_cmd_addr,
+    input  wire [SEG_COUNT-1:0]                data_dma_ram_rd_cmd_valid,
+    output wire [SEG_COUNT-1:0]                data_dma_ram_rd_cmd_ready,
+    output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0] data_dma_ram_rd_resp_data,
+    output wire [SEG_COUNT-1:0]                data_dma_ram_rd_resp_valid,
+    input  wire [SEG_COUNT-1:0]                data_dma_ram_rd_resp_ready,
 
     /*
      * Transmit data output
@@ -298,7 +349,7 @@ parameter DESC_REQ_TAG_WIDTH = $clog2(MAX_DESC_TABLE_SIZE) + 1 + $clog2(PORTS+1)
 parameter QUEUE_REQ_TAG_WIDTH = $clog2(MAX_DESC_TABLE_SIZE) + 1 + $clog2(PORTS+1);
 parameter QUEUE_OP_TAG_WIDTH = 6;
 
-parameter DMA_TAG_WIDTH_INT = DMA_TAG_WIDTH - $clog2(PORTS+1);
+parameter DMA_TAG_WIDTH_INT = DMA_TAG_WIDTH - $clog2(PORTS);
 
 parameter QUEUE_INDEX_WIDTH = TX_QUEUE_INDEX_WIDTH > RX_QUEUE_INDEX_WIDTH ? TX_QUEUE_INDEX_WIDTH : RX_QUEUE_INDEX_WIDTH;
 parameter CPL_QUEUE_INDEX_WIDTH = TX_CPL_QUEUE_INDEX_WIDTH > RX_CPL_QUEUE_INDEX_WIDTH ? TX_CPL_QUEUE_INDEX_WIDTH : RX_CPL_QUEUE_INDEX_WIDTH;
@@ -470,38 +521,6 @@ wire [PORTS-1:0]                 axil_port_rvalid;
 wire [PORTS-1:0]                 axil_port_rready;
 
 // DMA
-wire [DMA_ADDR_WIDTH-1:0]    desc_dma_read_desc_dma_addr;
-wire [RAM_ADDR_WIDTH-1:0]    desc_dma_read_desc_ram_addr;
-wire [DMA_LEN_WIDTH-1:0]     desc_dma_read_desc_len;
-wire [DMA_TAG_WIDTH_INT-1:0] desc_dma_read_desc_tag;
-wire                         desc_dma_read_desc_valid;
-wire                         desc_dma_read_desc_ready;
-
-wire [DMA_TAG_WIDTH_INT-1:0] desc_dma_read_desc_status_tag;
-wire                         desc_dma_read_desc_status_valid;
-
-wire [DMA_ADDR_WIDTH-1:0]    desc_dma_write_desc_dma_addr;
-wire [RAM_ADDR_WIDTH-1:0]    desc_dma_write_desc_ram_addr;
-wire [DMA_LEN_WIDTH-1:0]     desc_dma_write_desc_len;
-wire [DMA_TAG_WIDTH_INT-1:0] desc_dma_write_desc_tag;
-wire                         desc_dma_write_desc_valid;
-wire                         desc_dma_write_desc_ready;
-
-wire [DMA_TAG_WIDTH_INT-1:0] desc_dma_write_desc_status_tag;
-wire                         desc_dma_write_desc_status_valid;
-
-wire [SEG_COUNT*SEG_BE_WIDTH-1:0]    desc_dma_ram_wr_cmd_be;
-wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]  desc_dma_ram_wr_cmd_addr;
-wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]  desc_dma_ram_wr_cmd_data;
-wire [SEG_COUNT-1:0]                 desc_dma_ram_wr_cmd_valid;
-wire [SEG_COUNT-1:0]                 desc_dma_ram_wr_cmd_ready;
-wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]  desc_dma_ram_rd_cmd_addr;
-wire [SEG_COUNT-1:0]                 desc_dma_ram_rd_cmd_valid;
-wire [SEG_COUNT-1:0]                 desc_dma_ram_rd_cmd_ready;
-wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]  desc_dma_ram_rd_resp_data;
-wire [SEG_COUNT-1:0]                 desc_dma_ram_rd_resp_valid;
-wire [SEG_COUNT-1:0]                 desc_dma_ram_rd_resp_ready;
-
 wire [PORTS*DMA_ADDR_WIDTH-1:0]    port_dma_read_desc_dma_addr;
 wire [PORTS*RAM_ADDR_WIDTH-1:0]    port_dma_read_desc_ram_addr;
 wire [PORTS*DMA_LEN_WIDTH-1:0]     port_dma_read_desc_len;
@@ -1502,33 +1521,35 @@ desc_fetch_inst (
     /*
      * DMA read descriptor output
      */
-    .m_axis_dma_read_desc_dma_addr(desc_dma_read_desc_dma_addr),
-    .m_axis_dma_read_desc_ram_addr(desc_dma_read_desc_ram_addr),
-    .m_axis_dma_read_desc_len(desc_dma_read_desc_len),
-    .m_axis_dma_read_desc_tag(desc_dma_read_desc_tag),
-    .m_axis_dma_read_desc_valid(desc_dma_read_desc_valid),
-    .m_axis_dma_read_desc_ready(desc_dma_read_desc_ready),
+    .m_axis_dma_read_desc_dma_addr(m_axis_ctrl_dma_read_desc_dma_addr),
+    .m_axis_dma_read_desc_ram_addr(m_axis_ctrl_dma_read_desc_ram_addr),
+    .m_axis_dma_read_desc_len(m_axis_ctrl_dma_read_desc_len),
+    .m_axis_dma_read_desc_tag(m_axis_ctrl_dma_read_desc_tag),
+    .m_axis_dma_read_desc_valid(m_axis_ctrl_dma_read_desc_valid),
+    .m_axis_dma_read_desc_ready(m_axis_ctrl_dma_read_desc_ready),
 
     /*
      * DMA read descriptor status input
      */
-    .s_axis_dma_read_desc_status_tag(desc_dma_read_desc_status_tag),
-    .s_axis_dma_read_desc_status_valid(desc_dma_read_desc_status_valid),
+    .s_axis_dma_read_desc_status_tag(s_axis_ctrl_dma_read_desc_status_tag),
+    .s_axis_dma_read_desc_status_valid(s_axis_ctrl_dma_read_desc_status_valid),
 
     /*
      * RAM interface
      */
-    .dma_ram_wr_cmd_be(desc_dma_ram_wr_cmd_be),
-    .dma_ram_wr_cmd_addr(desc_dma_ram_wr_cmd_addr),
-    .dma_ram_wr_cmd_data(desc_dma_ram_wr_cmd_data),
-    .dma_ram_wr_cmd_valid(desc_dma_ram_wr_cmd_valid),
-    .dma_ram_wr_cmd_ready(desc_dma_ram_wr_cmd_ready),
+    .dma_ram_wr_cmd_be(ctrl_dma_ram_wr_cmd_be),
+    .dma_ram_wr_cmd_addr(ctrl_dma_ram_wr_cmd_addr),
+    .dma_ram_wr_cmd_data(ctrl_dma_ram_wr_cmd_data),
+    .dma_ram_wr_cmd_valid(ctrl_dma_ram_wr_cmd_valid),
+    .dma_ram_wr_cmd_ready(ctrl_dma_ram_wr_cmd_ready),
 
     /*
      * Configuration
      */
     .enable(1'b1)
 );
+
+assign m_axis_ctrl_dma_read_desc_ram_sel = 0;
 
 cpl_op_mux #(
     .PORTS(PORTS+1),
@@ -1651,28 +1672,28 @@ cpl_write_inst (
     /*
      * DMA write descriptor output
      */
-    .m_axis_dma_write_desc_dma_addr(desc_dma_write_desc_dma_addr),
-    .m_axis_dma_write_desc_ram_addr(desc_dma_write_desc_ram_addr),
-    .m_axis_dma_write_desc_len(desc_dma_write_desc_len),
-    .m_axis_dma_write_desc_tag(desc_dma_write_desc_tag),
-    .m_axis_dma_write_desc_valid(desc_dma_write_desc_valid),
-    .m_axis_dma_write_desc_ready(desc_dma_write_desc_ready),
+    .m_axis_dma_write_desc_dma_addr(m_axis_ctrl_dma_write_desc_dma_addr),
+    .m_axis_dma_write_desc_ram_addr(m_axis_ctrl_dma_write_desc_ram_addr),
+    .m_axis_dma_write_desc_len(m_axis_ctrl_dma_write_desc_len),
+    .m_axis_dma_write_desc_tag(m_axis_ctrl_dma_write_desc_tag),
+    .m_axis_dma_write_desc_valid(m_axis_ctrl_dma_write_desc_valid),
+    .m_axis_dma_write_desc_ready(m_axis_ctrl_dma_write_desc_ready),
 
     /*
      * DMA write descriptor status input
      */
-    .s_axis_dma_write_desc_status_tag(desc_dma_write_desc_status_tag),
-    .s_axis_dma_write_desc_status_valid(desc_dma_write_desc_status_valid),
+    .s_axis_dma_write_desc_status_tag(s_axis_ctrl_dma_write_desc_status_tag),
+    .s_axis_dma_write_desc_status_valid(s_axis_ctrl_dma_write_desc_status_valid),
 
     /*
      * RAM interface
      */
-    .dma_ram_rd_cmd_addr(desc_dma_ram_rd_cmd_addr),
-    .dma_ram_rd_cmd_valid(desc_dma_ram_rd_cmd_valid),
-    .dma_ram_rd_cmd_ready(desc_dma_ram_rd_cmd_ready),
-    .dma_ram_rd_resp_data(desc_dma_ram_rd_resp_data),
-    .dma_ram_rd_resp_valid(desc_dma_ram_rd_resp_valid),
-    .dma_ram_rd_resp_ready(desc_dma_ram_rd_resp_ready),
+    .dma_ram_rd_cmd_addr(ctrl_dma_ram_rd_cmd_addr),
+    .dma_ram_rd_cmd_valid(ctrl_dma_ram_rd_cmd_valid),
+    .dma_ram_rd_cmd_ready(ctrl_dma_ram_rd_cmd_ready),
+    .dma_ram_rd_resp_data(ctrl_dma_ram_rd_resp_data),
+    .dma_ram_rd_resp_valid(ctrl_dma_ram_rd_resp_valid),
+    .dma_ram_rd_resp_ready(ctrl_dma_ram_rd_resp_ready),
 
     /*
      * Configuration
@@ -1680,129 +1701,171 @@ cpl_write_inst (
     .enable(1'b1)
 );
 
-dma_if_mux #
-(
-    .PORTS(PORTS+1),
-    .SEG_COUNT(SEG_COUNT),
-    .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
-    .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
-    .SEG_BE_WIDTH(SEG_BE_WIDTH),
-    .S_RAM_SEL_WIDTH(0),
-    .M_RAM_SEL_WIDTH(RAM_SEL_WIDTH),
-    .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
-    .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
-    .LEN_WIDTH(DMA_LEN_WIDTH),
-    .S_TAG_WIDTH(DMA_TAG_WIDTH_INT),
-    .M_TAG_WIDTH(DMA_TAG_WIDTH),
-    .ARB_TYPE("ROUND_ROBIN"),
-    .LSB_PRIORITY("HIGH")
-)
-dma_if_mux_inst (
-    .clk(clk),
-    .rst(rst),
+assign m_axis_ctrl_dma_write_desc_ram_sel = 0;
 
-    /*
-     * Read descriptor output (to DMA interface)
-     */
-    .m_axis_read_desc_dma_addr(m_axis_dma_read_desc_dma_addr),
-    .m_axis_read_desc_ram_sel(m_axis_dma_read_desc_ram_sel),
-    .m_axis_read_desc_ram_addr(m_axis_dma_read_desc_ram_addr),
-    .m_axis_read_desc_len(m_axis_dma_read_desc_len),
-    .m_axis_read_desc_tag(m_axis_dma_read_desc_tag),
-    .m_axis_read_desc_valid(m_axis_dma_read_desc_valid),
-    .m_axis_read_desc_ready(m_axis_dma_read_desc_ready),
+if (PORTS > 1) begin
 
-    /*
-     * Read descriptor status input (from DMA interface)
-     */
-    .s_axis_read_desc_status_tag(s_axis_dma_read_desc_status_tag),
-    .s_axis_read_desc_status_valid(s_axis_dma_read_desc_status_valid),
+    dma_if_mux #
+    (
+        .PORTS(PORTS),
+        .SEG_COUNT(SEG_COUNT),
+        .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
+        .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
+        .SEG_BE_WIDTH(SEG_BE_WIDTH),
+        .S_RAM_SEL_WIDTH(0),
+        .M_RAM_SEL_WIDTH(RAM_SEL_WIDTH),
+        .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+        .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+        .LEN_WIDTH(DMA_LEN_WIDTH),
+        .S_TAG_WIDTH(DMA_TAG_WIDTH_INT),
+        .M_TAG_WIDTH(DMA_TAG_WIDTH),
+        .ARB_TYPE("ROUND_ROBIN"),
+        .LSB_PRIORITY("HIGH")
+    )
+    dma_if_mux_inst (
+        .clk(clk),
+        .rst(rst),
 
-    /*
-     * Read descriptor input
-     */
-    .s_axis_read_desc_dma_addr({port_dma_read_desc_dma_addr, desc_dma_read_desc_dma_addr}),
-    .s_axis_read_desc_ram_sel(0),
-    .s_axis_read_desc_ram_addr({port_dma_read_desc_ram_addr, desc_dma_read_desc_ram_addr}),
-    .s_axis_read_desc_len({port_dma_read_desc_len, desc_dma_read_desc_len}),
-    .s_axis_read_desc_tag({port_dma_read_desc_tag, desc_dma_read_desc_tag}),
-    .s_axis_read_desc_valid({port_dma_read_desc_valid, desc_dma_read_desc_valid}),
-    .s_axis_read_desc_ready({port_dma_read_desc_ready, desc_dma_read_desc_ready}),
+        /*
+         * Read descriptor output (to DMA interface)
+         */
+        .m_axis_read_desc_dma_addr(m_axis_data_dma_read_desc_dma_addr),
+        .m_axis_read_desc_ram_sel(m_axis_data_dma_read_desc_ram_sel),
+        .m_axis_read_desc_ram_addr(m_axis_data_dma_read_desc_ram_addr),
+        .m_axis_read_desc_len(m_axis_data_dma_read_desc_len),
+        .m_axis_read_desc_tag(m_axis_data_dma_read_desc_tag),
+        .m_axis_read_desc_valid(m_axis_data_dma_read_desc_valid),
+        .m_axis_read_desc_ready(m_axis_data_dma_read_desc_ready),
 
-    /*
-     * Read descriptor status output
-     */
-    .m_axis_read_desc_status_tag({port_dma_read_desc_status_tag, desc_dma_read_desc_status_tag}),
-    .m_axis_read_desc_status_valid({port_dma_read_desc_status_valid, desc_dma_read_desc_status_valid}),
+        /*
+         * Read descriptor status input (from DMA interface)
+         */
+        .s_axis_read_desc_status_tag(s_axis_data_dma_read_desc_status_tag),
+        .s_axis_read_desc_status_valid(s_axis_data_dma_read_desc_status_valid),
 
-    /*
-     * Write descriptor output (to DMA interface)
-     */
-    .m_axis_write_desc_dma_addr(m_axis_dma_write_desc_dma_addr),
-    .m_axis_write_desc_ram_sel(m_axis_dma_write_desc_ram_sel),
-    .m_axis_write_desc_ram_addr(m_axis_dma_write_desc_ram_addr),
-    .m_axis_write_desc_len(m_axis_dma_write_desc_len),
-    .m_axis_write_desc_tag(m_axis_dma_write_desc_tag),
-    .m_axis_write_desc_valid(m_axis_dma_write_desc_valid),
-    .m_axis_write_desc_ready(m_axis_dma_write_desc_ready),
+        /*
+         * Read descriptor input
+         */
+        .s_axis_read_desc_dma_addr(port_dma_read_desc_dma_addr),
+        .s_axis_read_desc_ram_sel(0),
+        .s_axis_read_desc_ram_addr(port_dma_read_desc_ram_addr),
+        .s_axis_read_desc_len(port_dma_read_desc_len),
+        .s_axis_read_desc_tag(port_dma_read_desc_tag),
+        .s_axis_read_desc_valid(port_dma_read_desc_valid),
+        .s_axis_read_desc_ready(port_dma_read_desc_ready),
 
-    /*
-     * Write descriptor status input (from DMA interface)
-     */
-    .s_axis_write_desc_status_tag(s_axis_dma_write_desc_status_tag),
-    .s_axis_write_desc_status_valid(s_axis_dma_write_desc_status_valid),
+        /*
+         * Read descriptor status output
+         */
+        .m_axis_read_desc_status_tag(port_dma_read_desc_status_tag),
+        .m_axis_read_desc_status_valid(port_dma_read_desc_status_valid),
 
-    /*
-     * Write descriptor input
-     */
-    .s_axis_write_desc_dma_addr({port_dma_write_desc_dma_addr, desc_dma_write_desc_dma_addr}),
-    .s_axis_write_desc_ram_sel(0),
-    .s_axis_write_desc_ram_addr({port_dma_write_desc_ram_addr, desc_dma_write_desc_ram_addr}),
-    .s_axis_write_desc_len({port_dma_write_desc_len, desc_dma_write_desc_len}),
-    .s_axis_write_desc_tag({port_dma_write_desc_tag, desc_dma_write_desc_tag}),
-    .s_axis_write_desc_valid({port_dma_write_desc_valid, desc_dma_write_desc_valid}),
-    .s_axis_write_desc_ready({port_dma_write_desc_ready, desc_dma_write_desc_ready}),
+        /*
+         * Write descriptor output (to DMA interface)
+         */
+        .m_axis_write_desc_dma_addr(m_axis_data_dma_write_desc_dma_addr),
+        .m_axis_write_desc_ram_sel(m_axis_data_dma_write_desc_ram_sel),
+        .m_axis_write_desc_ram_addr(m_axis_data_dma_write_desc_ram_addr),
+        .m_axis_write_desc_len(m_axis_data_dma_write_desc_len),
+        .m_axis_write_desc_tag(m_axis_data_dma_write_desc_tag),
+        .m_axis_write_desc_valid(m_axis_data_dma_write_desc_valid),
+        .m_axis_write_desc_ready(m_axis_data_dma_write_desc_ready),
 
-    /*
-     * Write descriptor status output
-     */
-    .m_axis_write_desc_status_tag({port_dma_write_desc_status_tag, desc_dma_write_desc_status_tag}),
-    .m_axis_write_desc_status_valid({port_dma_write_desc_status_valid, desc_dma_write_desc_status_valid}),
+        /*
+         * Write descriptor status input (from DMA interface)
+         */
+        .s_axis_write_desc_status_tag(s_axis_data_dma_write_desc_status_tag),
+        .s_axis_write_desc_status_valid(s_axis_data_dma_write_desc_status_valid),
 
-    /*
-     * RAM interface (from DMA interface)
-     */
-    .if_ram_wr_cmd_sel(dma_ram_wr_cmd_sel),
-    .if_ram_wr_cmd_be(dma_ram_wr_cmd_be),
-    .if_ram_wr_cmd_addr(dma_ram_wr_cmd_addr),
-    .if_ram_wr_cmd_data(dma_ram_wr_cmd_data),
-    .if_ram_wr_cmd_valid(dma_ram_wr_cmd_valid),
-    .if_ram_wr_cmd_ready(dma_ram_wr_cmd_ready),
-    .if_ram_rd_cmd_sel(dma_ram_rd_cmd_sel),
-    .if_ram_rd_cmd_addr(dma_ram_rd_cmd_addr),
-    .if_ram_rd_cmd_valid(dma_ram_rd_cmd_valid),
-    .if_ram_rd_cmd_ready(dma_ram_rd_cmd_ready),
-    .if_ram_rd_resp_data(dma_ram_rd_resp_data),
-    .if_ram_rd_resp_valid(dma_ram_rd_resp_valid),
-    .if_ram_rd_resp_ready(dma_ram_rd_resp_ready),
+        /*
+         * Write descriptor input
+         */
+        .s_axis_write_desc_dma_addr(port_dma_write_desc_dma_addr),
+        .s_axis_write_desc_ram_sel(0),
+        .s_axis_write_desc_ram_addr(port_dma_write_desc_ram_addr),
+        .s_axis_write_desc_len(port_dma_write_desc_len),
+        .s_axis_write_desc_tag(port_dma_write_desc_tag),
+        .s_axis_write_desc_valid(port_dma_write_desc_valid),
+        .s_axis_write_desc_ready(port_dma_write_desc_ready),
 
-    /*
-     * RAM interface
-     */
-    .ram_wr_cmd_sel(),
-    .ram_wr_cmd_be({port_dma_ram_wr_cmd_be, desc_dma_ram_wr_cmd_be}),
-    .ram_wr_cmd_addr({port_dma_ram_wr_cmd_addr, desc_dma_ram_wr_cmd_addr}),
-    .ram_wr_cmd_data({port_dma_ram_wr_cmd_data, desc_dma_ram_wr_cmd_data}),
-    .ram_wr_cmd_valid({port_dma_ram_wr_cmd_valid, desc_dma_ram_wr_cmd_valid}),
-    .ram_wr_cmd_ready({port_dma_ram_wr_cmd_ready, desc_dma_ram_wr_cmd_ready}),
-    .ram_rd_cmd_sel(),
-    .ram_rd_cmd_addr({port_dma_ram_rd_cmd_addr, desc_dma_ram_rd_cmd_addr}),
-    .ram_rd_cmd_valid({port_dma_ram_rd_cmd_valid, desc_dma_ram_rd_cmd_valid}),
-    .ram_rd_cmd_ready({port_dma_ram_rd_cmd_ready, desc_dma_ram_rd_cmd_ready}),
-    .ram_rd_resp_data({port_dma_ram_rd_resp_data, desc_dma_ram_rd_resp_data}),
-    .ram_rd_resp_valid({port_dma_ram_rd_resp_valid, desc_dma_ram_rd_resp_valid}),
-    .ram_rd_resp_ready({port_dma_ram_rd_resp_ready, desc_dma_ram_rd_resp_ready})
-);
+        /*
+         * Write descriptor status output
+         */
+        .m_axis_write_desc_status_tag(port_dma_write_desc_status_tag),
+        .m_axis_write_desc_status_valid(port_dma_write_desc_status_valid),
+
+        /*
+         * RAM interface (from DMA interface)
+         */
+        .if_ram_wr_cmd_sel(data_dma_ram_wr_cmd_sel),
+        .if_ram_wr_cmd_be(data_dma_ram_wr_cmd_be),
+        .if_ram_wr_cmd_addr(data_dma_ram_wr_cmd_addr),
+        .if_ram_wr_cmd_data(data_dma_ram_wr_cmd_data),
+        .if_ram_wr_cmd_valid(data_dma_ram_wr_cmd_valid),
+        .if_ram_wr_cmd_ready(data_dma_ram_wr_cmd_ready),
+        .if_ram_rd_cmd_sel(data_dma_ram_rd_cmd_sel),
+        .if_ram_rd_cmd_addr(data_dma_ram_rd_cmd_addr),
+        .if_ram_rd_cmd_valid(data_dma_ram_rd_cmd_valid),
+        .if_ram_rd_cmd_ready(data_dma_ram_rd_cmd_ready),
+        .if_ram_rd_resp_data(data_dma_ram_rd_resp_data),
+        .if_ram_rd_resp_valid(data_dma_ram_rd_resp_valid),
+        .if_ram_rd_resp_ready(data_dma_ram_rd_resp_ready),
+
+        /*
+         * RAM interface
+         */
+        .ram_wr_cmd_sel(),
+        .ram_wr_cmd_be(port_dma_ram_wr_cmd_be),
+        .ram_wr_cmd_addr(port_dma_ram_wr_cmd_addr),
+        .ram_wr_cmd_data(port_dma_ram_wr_cmd_data),
+        .ram_wr_cmd_valid(port_dma_ram_wr_cmd_valid),
+        .ram_wr_cmd_ready(port_dma_ram_wr_cmd_ready),
+        .ram_rd_cmd_sel(),
+        .ram_rd_cmd_addr(port_dma_ram_rd_cmd_addr),
+        .ram_rd_cmd_valid(port_dma_ram_rd_cmd_valid),
+        .ram_rd_cmd_ready(port_dma_ram_rd_cmd_ready),
+        .ram_rd_resp_data(port_dma_ram_rd_resp_data),
+        .ram_rd_resp_valid(port_dma_ram_rd_resp_valid),
+        .ram_rd_resp_ready(port_dma_ram_rd_resp_ready)
+    );
+
+end else begin
+
+    assign m_axis_data_dma_read_desc_dma_addr = port_dma_read_desc_dma_addr;
+    assign m_axis_data_dma_read_desc_ram_sel = 0;
+    assign m_axis_data_dma_read_desc_ram_addr = port_dma_read_desc_ram_addr;
+    assign m_axis_data_dma_read_desc_len = port_dma_read_desc_len;
+    assign m_axis_data_dma_read_desc_tag = port_dma_read_desc_tag;
+    assign m_axis_data_dma_read_desc_valid = port_dma_read_desc_valid;
+    assign port_dma_read_desc_ready = m_axis_data_dma_read_desc_ready;
+
+    assign port_dma_read_desc_status_tag = s_axis_data_dma_read_desc_status_tag;
+    assign port_dma_read_desc_status_valid = s_axis_data_dma_read_desc_status_valid;
+
+    assign m_axis_data_dma_write_desc_dma_addr = port_dma_write_desc_dma_addr;
+    assign m_axis_data_dma_write_desc_ram_sel = 0;
+    assign m_axis_data_dma_write_desc_ram_addr = port_dma_write_desc_ram_addr;
+    assign m_axis_data_dma_write_desc_len = port_dma_write_desc_len;
+    assign m_axis_data_dma_write_desc_tag = port_dma_write_desc_tag;
+    assign m_axis_data_dma_write_desc_valid = port_dma_write_desc_valid;
+    assign port_dma_write_desc_ready = m_axis_data_dma_write_desc_ready;
+
+    assign port_dma_write_desc_status_tag = s_axis_data_dma_write_desc_status_tag;
+    assign port_dma_write_desc_status_valid = s_axis_data_dma_write_desc_status_valid;
+
+    assign port_dma_ram_wr_cmd_be = data_dma_ram_wr_cmd_be;
+    assign port_dma_ram_wr_cmd_addr = data_dma_ram_wr_cmd_addr;
+    assign port_dma_ram_wr_cmd_data = data_dma_ram_wr_cmd_data;
+    assign port_dma_ram_wr_cmd_valid = data_dma_ram_wr_cmd_valid;
+    assign data_dma_ram_wr_cmd_ready = port_dma_ram_wr_cmd_ready;
+    assign port_dma_ram_rd_cmd_addr = data_dma_ram_rd_cmd_addr;
+    assign port_dma_ram_rd_cmd_valid = data_dma_ram_rd_cmd_valid;
+    assign data_dma_ram_rd_cmd_ready = port_dma_ram_rd_cmd_ready;
+    assign data_dma_ram_rd_resp_data = port_dma_ram_rd_resp_data;
+    assign data_dma_ram_rd_resp_valid = port_dma_ram_rd_resp_valid;
+    assign port_dma_ram_rd_resp_ready = data_dma_ram_rd_resp_ready;
+
+end
 
 event_mux #(
     .PORTS(2),

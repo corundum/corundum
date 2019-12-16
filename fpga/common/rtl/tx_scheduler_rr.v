@@ -562,7 +562,7 @@ always @* begin
 
         queue_ram_read_ptr = s_axis_sched_ctrl_queue;
         queue_ram_addr_pipeline_next[0] = s_axis_sched_ctrl_queue;
-    end else if (enable && op_table_start_ptr_valid && axis_scheduler_fifo_out_valid && (!m_axis_tx_req_valid || m_axis_tx_req_ready) && !op_req_pipe_reg[0] && !op_req_pipe_hazard) begin
+    end else if (enable && op_table_start_ptr_valid && axis_scheduler_fifo_out_valid && (!m_axis_tx_req_valid || m_axis_tx_req_ready) && !op_req_pipe_reg && !op_req_pipe_hazard) begin
         // transmit request
         op_req_pipe_next[0] = 1'b1;
 

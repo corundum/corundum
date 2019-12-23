@@ -291,8 +291,6 @@ reg [CYCLE_COUNT_WIDTH-1:0] output_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, 
 reg input_active_reg = 1'b0, input_active_next;
 reg bubble_cycle_reg = 1'b0, bubble_cycle_next;
 reg last_cycle_reg = 1'b0, last_cycle_next;
-reg last_tlp_reg = 1'b0, last_tlp_next;
-reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
 
 reg [TAG_WIDTH-1:0] tlp_cmd_tag_reg = {TAG_WIDTH{1'b0}}, tlp_cmd_tag_next;
 reg tlp_cmd_last_reg = 1'b0, tlp_cmd_last_next;
@@ -580,8 +578,6 @@ always @* begin
     input_active_next = input_active_reg;
     bubble_cycle_next = bubble_cycle_reg;
     last_cycle_next = last_cycle_reg;
-    last_tlp_next = last_tlp_reg;
-    tag_next = tag_reg;
 
     op_table_tx_start_en = 1'b0;
     op_table_tx_finish_en = 1'b0;
@@ -688,8 +684,6 @@ always @* begin
             input_active_next = 1'b1;
             bubble_cycle_next = op_table_bubble_cycle[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             last_cycle_next = op_table_output_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
-            last_tlp_next =  op_table_last[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
-            tag_next = op_table_tag[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
 
             if (s_axis_rq_tready && s_axis_rq_tvalid) begin
                 // pass through read request TLP
@@ -762,8 +756,6 @@ always @* begin
                             input_active_next = 1'b1;
                             bubble_cycle_next = op_table_bubble_cycle[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                             last_cycle_next = op_table_output_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
-                            last_tlp_next =  op_table_last[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
-                            tag_next = op_table_tag[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
 
                             if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && !s_axis_rq_tvalid && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                                 op_table_tx_start_en = 1'b1;
@@ -892,8 +884,6 @@ always @* begin
                         input_active_next = 1'b1;
                         bubble_cycle_next = op_table_bubble_cycle[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                         last_cycle_next = op_table_output_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
-                        last_tlp_next =  op_table_last[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
-                        tag_next = op_table_tag[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
 
                         if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && !s_axis_rq_tvalid && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                             op_table_tx_start_en = 1'b1;
@@ -978,8 +968,6 @@ always @(posedge clk) begin
     input_active_reg <= input_active_next;
     bubble_cycle_reg <= bubble_cycle_next;
     last_cycle_reg <= last_cycle_next;
-    last_tlp_reg <= last_tlp_next;
-    tag_reg <= tag_next;
 
     tlp_cmd_tag_reg <= tlp_cmd_tag_next;
     tlp_cmd_last_reg <= tlp_cmd_last_next;

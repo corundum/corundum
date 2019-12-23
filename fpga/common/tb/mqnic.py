@@ -898,7 +898,7 @@ class Interface(object):
         else:
             data = skb
 
-        data = data[:2048] # TODO
+        data = data[:16384] # TODO
         ring_index = tx_ring # TODO!
 
         ring = self.tx_queues[ring_index];
@@ -962,7 +962,7 @@ class Driver(object):
         self.if_count = 1
         self.interfaces = []
 
-        self.pkt_buf_size = 2048
+        self.pkt_buf_size = 16384
         self.allocated_packets = []
         self.free_packets = []
 

@@ -68,6 +68,16 @@ module interface #
     parameter TX_CPL_QUEUE_INDEX_WIDTH = 8,
     // Receive completion queue index width
     parameter RX_CPL_QUEUE_INDEX_WIDTH = 8,
+    // Pipeline setting (event queue)
+    parameter EVENT_QUEUE_PIPELINE = 3,
+    // Pipeline setting (transmit queue)
+    parameter TX_QUEUE_PIPELINE = 3,
+    // Pipeline setting (receive queue)
+    parameter RX_QUEUE_PIPELINE = 3,
+    // Pipeline setting (transmit completion queue)
+    parameter TX_CPL_QUEUE_PIPELINE = 3,
+    // Pipeline setting (receive completion queue)
+    parameter RX_CPL_QUEUE_PIPELINE = 3,
     // Transmit descriptor table size (number of in-flight operations)
     parameter TX_DESC_TABLE_SIZE = 16,
     // Transmit packet table size (number of in-progress packets)
@@ -80,6 +90,8 @@ module interface #
     parameter TX_SCHEDULER = "RR",
     // Scheduler operation table size
     parameter TX_SCHEDULER_OP_TABLE_SIZE = 32,
+    // Scheduler pipeline setting
+    parameter TX_SCHEDULER_PIPELINE = 3,
     // Scheduler TDMA index width
     parameter TDMA_INDEX_WIDTH = 8,
     // Interrupt number width
@@ -915,7 +927,7 @@ cpl_queue_manager #(
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .QUEUE_LOG_SIZE_WIDTH(QUEUE_LOG_SIZE_WIDTH),
     .CPL_SIZE(EVENT_SIZE),
-    .PIPELINE(3),
+    .PIPELINE(EVENT_QUEUE_PIPELINE),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
     .AXIL_ADDR_WIDTH(AXIL_EQM_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
@@ -999,7 +1011,7 @@ queue_manager #(
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .QUEUE_LOG_SIZE_WIDTH(QUEUE_LOG_SIZE_WIDTH),
     .DESC_SIZE(DESC_SIZE),
-    .PIPELINE(3),
+    .PIPELINE(TX_QUEUE_PIPELINE),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
     .AXIL_ADDR_WIDTH(AXIL_TX_QM_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
@@ -1082,7 +1094,7 @@ cpl_queue_manager #(
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .QUEUE_LOG_SIZE_WIDTH(QUEUE_LOG_SIZE_WIDTH),
     .CPL_SIZE(CPL_SIZE),
-    .PIPELINE(3),
+    .PIPELINE(TX_CPL_QUEUE_PIPELINE),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
     .AXIL_ADDR_WIDTH(AXIL_TX_CQM_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
@@ -1166,7 +1178,7 @@ queue_manager #(
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .QUEUE_LOG_SIZE_WIDTH(QUEUE_LOG_SIZE_WIDTH),
     .DESC_SIZE(DESC_SIZE),
-    .PIPELINE(3),
+    .PIPELINE(RX_QUEUE_PIPELINE),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
     .AXIL_ADDR_WIDTH(AXIL_RX_QM_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
@@ -1249,7 +1261,7 @@ cpl_queue_manager #(
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .QUEUE_LOG_SIZE_WIDTH(QUEUE_LOG_SIZE_WIDTH),
     .CPL_SIZE(CPL_SIZE),
-    .PIPELINE(3),
+    .PIPELINE(RX_CPL_QUEUE_PIPELINE),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
     .AXIL_ADDR_WIDTH(AXIL_RX_CQM_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
@@ -2013,6 +2025,7 @@ generate
             .RX_PKT_TABLE_SIZE(RX_PKT_TABLE_SIZE),
             .TX_SCHEDULER(TX_SCHEDULER),
             .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
+            .TX_SCHEDULER_PIPELINE(TX_SCHEDULER_PIPELINE),
             .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
             .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
             .PTP_TS_ENABLE(PTP_TS_ENABLE),

@@ -78,6 +78,8 @@ module port #
     parameter TX_SCHEDULER = "RR",
     // Scheduler operation table size
     parameter TX_SCHEDULER_OP_TABLE_SIZE = 32,
+    // Scheduler pipeline setting
+    parameter TX_SCHEDULER_PIPELINE = 3,
     // Scheduler TDMA index width
     parameter TDMA_INDEX_WIDTH = 8,
     // Queue element pointer width
@@ -896,7 +898,7 @@ if (TX_SCHEDULER == "RR" || TX_SCHEDULER == "TDMA_RR") begin
         .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
         .OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
         .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
-        .PIPELINE(3),
+        .PIPELINE(TX_SCHEDULER_PIPELINE),
         .SCHED_CTRL_ENABLE(TX_SCHEDULER == "TDMA_RR")
     )
     tx_scheduler_inst (

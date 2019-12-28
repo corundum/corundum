@@ -288,7 +288,7 @@ def bench():
         data = axil_master_inst.get_read_data()
         assert struct.unpack('<L', data[1])[0] == 0x80000004
         data = axil_master_inst.get_read_data()
-        assert struct.unpack('<L', data[1])[0] == 0x00000001
+        assert struct.unpack('<L', data[1])[0] == 0x80000001
 
         yield delay(100)
 

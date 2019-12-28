@@ -171,8 +171,8 @@ initial begin
         $finish;
     end
 
-    if (PIPELINE < 1) begin
-        $error("Error: PIPELINE must be at least 1 (instance %m)");
+    if (PIPELINE < 2) begin
+        $error("Error: PIPELINE must be at least 2 (instance %m)");
         $finish;
     end
 end
@@ -189,7 +189,6 @@ reg [PIPELINE-1:0] op_req_pipe_reg = {PIPELINE{1'b0}}, op_req_pipe_next;
 reg [PIPELINE-1:0] op_commit_pipe_reg = {PIPELINE{1'b0}}, op_commit_pipe_next;
 
 reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_addr_pipeline_reg[PIPELINE-1:0], queue_ram_addr_pipeline_next[PIPELINE-1:0];
-reg [QUEUE_RAM_WIDTH-1:0] queue_ram_read_data_pipeline_reg[PIPELINE-1:0];
 reg [2:0] axil_reg_pipeline_reg[PIPELINE-1:0], axil_reg_pipeline_next[PIPELINE-1:0];
 reg [AXIL_DATA_WIDTH-1:0] write_data_pipeline_reg[PIPELINE-1:0], write_data_pipeline_next[PIPELINE-1:0];
 reg [AXIL_STRB_WIDTH-1:0] write_strobe_pipeline_reg[PIPELINE-1:0], write_strobe_pipeline_next[PIPELINE-1:0];
@@ -225,6 +224,8 @@ reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_write_ptr;
 reg [QUEUE_RAM_WIDTH-1:0] queue_ram_write_data;
 reg queue_ram_wr_en;
 reg [QUEUE_RAM_BE_WIDTH-1:0] queue_ram_be;
+reg [QUEUE_RAM_WIDTH-1:0] queue_ram_read_data_reg = 0;
+reg [QUEUE_RAM_WIDTH-1:0] queue_ram_read_data_pipeline_reg[PIPELINE-1:1];
 
 wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_head_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][15:0];
 wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_tail_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][31:16];
@@ -656,8 +657,9 @@ always @(posedge clk) begin
             end
         end
     end
-    queue_ram_read_data_pipeline_reg[0] <= queue_ram[queue_ram_read_ptr];
-    for (i = 1; i < PIPELINE; i = i + 1) begin
+    queue_ram_read_data_reg <= queue_ram[queue_ram_read_ptr];
+    queue_ram_read_data_pipeline_reg[1] <= queue_ram_read_data_reg;
+    for (i = 2; i < PIPELINE; i = i + 1) begin
         queue_ram_read_data_pipeline_reg[i] <= queue_ram_read_data_pipeline_reg[i-1];
     end
 

@@ -41,10 +41,10 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_MAX_SCHED 8
 
 #define MQNIC_MAX_EVENT_RINGS   256
-#define MQNIC_MAX_TX_RINGS      256
-#define MQNIC_MAX_TX_CPL_RINGS  256
-#define MQNIC_MAX_RX_RINGS      256
-#define MQNIC_MAX_RX_CPL_RINGS  256
+#define MQNIC_MAX_TX_RINGS      8192
+#define MQNIC_MAX_TX_CPL_RINGS  8192
+#define MQNIC_MAX_RX_RINGS      8192
+#define MQNIC_MAX_RX_CPL_RINGS  8192
 
 #define MQNIC_BOARD_ID_VCU108        0x10ee806c
 #define MQNIC_BOARD_ID_VCU118        0x10ee9076

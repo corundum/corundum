@@ -190,7 +190,7 @@ int main(int argc, char *argv[])
 
     printf("RX queue info\n");
     printf("  Queue      Base Address     E  LS   CPL    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->tx_queue_count; k++)
+    for (int k = 0; k < dev_interface->rx_queue_count; k++)
     {
         volatile uint8_t *base = dev_interface->regs+dev_interface->rx_queue_offset+k*MQNIC_QUEUE_STRIDE;
 
@@ -207,7 +207,7 @@ int main(int argc, char *argv[])
 
     printf("RX completion queue info\n");
     printf("  Queue       Base Address     E  LS  A C   Int    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->tx_queue_count; k++)
+    for (int k = 0; k < dev_interface->rx_queue_count; k++)
     {
         volatile uint8_t *base = dev_interface->regs+dev_interface->rx_cpl_queue_offset+k*MQNIC_CPL_QUEUE_STRIDE;
 

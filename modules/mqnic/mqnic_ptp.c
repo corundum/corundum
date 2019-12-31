@@ -168,7 +168,7 @@ static int mqnic_phc_perout(struct ptp_clock_info *ptp, int on, struct ptp_perou
         return -EINVAL;
     }
 
-    hw_addr = mdev->phc_hw_addr + 0x60;
+    hw_addr = mdev->phc_hw_addr + MQNIC_PHC_PEROUT_OFFSET;
 
     if (!on)
     {

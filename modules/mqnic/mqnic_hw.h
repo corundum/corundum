@@ -93,6 +93,9 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_PHC_REG_PTP_ADJ_COUNT       0x0058
 #define MQNIC_PHC_REG_PTP_ADJ_ACTIVE      0x005C
 
+#define MQNIC_PHC_PEROUT_OFFSET           0x60
+#define MQNIC_PHC_PEROUT_STRIDE           0x40
+
 #define MQNIC_PHC_REG_PEROUT_CTRL         0x0000
 #define MQNIC_PHC_REG_PEROUT_STATUS       0x0004
 #define MQNIC_PHC_REG_PEROUT_START_FNS    0x0010

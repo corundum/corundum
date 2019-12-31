@@ -86,6 +86,7 @@ struct mqnic *mqnic_open(const char *dev_name)
 
     dev->phc_count = mqnic_reg_read32(dev->regs, MQNIC_REG_PHC_COUNT);
     dev->phc_offset = mqnic_reg_read32(dev->regs, MQNIC_REG_PHC_OFFSET);
+    dev->phc_stride = mqnic_reg_read32(dev->regs, MQNIC_REG_PHC_STRIDE);
 
     if (dev->phc_count)
     {

@@ -113,6 +113,7 @@ struct mqnic {
 
     uint32_t phc_count;
     uint32_t phc_offset;
+    uint32_t phc_stride;
 
     uint32_t if_count;
     uint32_t if_stride;

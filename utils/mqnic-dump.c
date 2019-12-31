@@ -110,6 +110,28 @@ int main(int argc, char *argv[])
     printf("IF stride: 0x%08x\n", dev->if_stride);
     printf("IF CSR offset: 0x%08x\n", dev->if_csr_offset);
 
+    for (int k = 0; k < dev->phc_count; k++)
+    {
+        volatile uint8_t *phc_base = dev->phc_regs + k*dev->phc_stride;
+
+        printf("PHC%d features: 0x%08x\n", k, mqnic_reg_read32(phc_base, MQNIC_PHC_REG_FEATURES));
+
+        printf("PHC%d time: %ld.%09d s\n", k, mqnic_reg_read32(phc_base, MQNIC_PHC_REG_PTP_CUR_SEC_L) + (((int64_t)mqnic_reg_read32(phc_base, MQNIC_PHC_REG_PTP_CUR_SEC_H)) << 32), mqnic_reg_read32(phc_base, MQNIC_PHC_REG_PTP_CUR_NS));
+        printf("PHC%d period:     %d ns 0x%08x fns\n", k, mqnic_reg_read32(phc_base, MQNIC_PHC_REG_PTP_PERIOD_NS), mqnic_reg_read32(phc_base, MQNIC_PHC_REG_PTP_PERIOD_FNS));
+        printf("PHC%d nom period: %d ns 0x%08x fns\n", k, mqnic_reg_read32(phc_base, MQNIC_PHC_REG_PTP_NOM_PERIOD_NS), mqnic_reg_read32(phc_base, MQNIC_PHC_REG_PTP_NOM_PERIOD_FNS));
+
+        for (int ch = 0; ch < (mqnic_reg_read32(phc_base, MQNIC_PHC_REG_FEATURES) & 0xff); ch++)
+        {
+            volatile uint8_t *perout_base = phc_base + MQNIC_PHC_PEROUT_OFFSET + MQNIC_PHC_PEROUT_STRIDE*ch;
+
+            printf("PHC%d perout ch %d ctrl:   0x%08x\n", k, ch, mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_CTRL));
+            printf("PHC%d perout ch %d status: 0x%08x\n", k, ch, mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_STATUS));
+            printf("PHC%d perout ch %d start:  %ld.%09d s\n", k, ch, mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_START_SEC_L) + (((int64_t)mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_START_SEC_H)) << 32), mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_START_NS));
+            printf("PHC%d perout ch %d period: %ld.%09d s\n", k, ch, mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_PERIOD_SEC_L) + (((int64_t)mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_PERIOD_SEC_H)) << 32), mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_PERIOD_NS));
+            printf("PHC%d perout ch %d width:  %ld.%09d s\n", k, ch, mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_WIDTH_SEC_L) + (((int64_t)mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_WIDTH_SEC_H)) << 32), mqnic_reg_read32(perout_base, MQNIC_PHC_REG_PEROUT_WIDTH_NS));
+        }
+    }
+
     if (interface < 0 || interface >= dev->if_count)
     {
         fprintf(stderr, "Interface out of range\n");
@@ -151,7 +173,17 @@ int main(int argc, char *argv[])
     printf("Sched stride: 0x%08x\n", dev_port->sched_stride);
     printf("Sched type: 0x%08x\n", dev_port->sched_type);
 
-    printf("Timeslot count: %d\n", dev_port->tdma_timeslot_count);
+    if (dev->phc_count > 0)
+    {
+        printf("TDMA control: 0x%08x\n", mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_CTRL));
+        printf("TDMA status:  0x%08x\n", mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_STATUS));
+        printf("TDMA timeslot count: %d\n", dev_port->tdma_timeslot_count);
+
+        printf("TDMA schedule start:  %ld.%09d s\n", mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_START_SEC_L) + (((int64_t)mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_START_SEC_H)) << 32), mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_START_NS));
+        printf("TDMA schedule period: %ld.%09d s\n", mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_L) + (((int64_t)mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_H)) << 32), mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_PERIOD_NS));
+        printf("TDMA timeslot period: %ld.%09d s\n", mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_L) + (((int64_t)mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_H)) << 32), mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_NS));
+        printf("TDMA active period:   %ld.%09d s\n", mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L) + (((int64_t)mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H)) << 32), mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_NS));
+    }
 
     printf("TX queue info\n");
     printf("  Queue      Base Address     E  LS   CPL    Head    Tail     Len\n");

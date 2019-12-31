@@ -210,10 +210,8 @@ wire queue_ram_read_data_scheduled = queue_ram_read_data_pipeline_reg[PIPELINE-1
 wire [CL_OP_TABLE_SIZE-1:0] queue_ram_read_data_op_tail_index = queue_ram_read_data_pipeline_reg[PIPELINE-1][15:8];
 
 reg [OP_TABLE_SIZE-1:0] op_table_active = 0;
-reg [OP_TABLE_SIZE-1:0] op_table_complete = 0;
 reg [QUEUE_INDEX_WIDTH-1:0] op_table_queue[OP_TABLE_SIZE-1:0];
 reg op_table_doorbell[OP_TABLE_SIZE-1:0];
-reg op_table_tx_status[OP_TABLE_SIZE-1:0];
 reg op_table_is_head[OP_TABLE_SIZE-1:0];
 reg [CL_OP_TABLE_SIZE-1:0] op_table_next_index[OP_TABLE_SIZE-1:0];
 reg [CL_OP_TABLE_SIZE-1:0] op_table_prev_index[OP_TABLE_SIZE-1:0];
@@ -396,7 +394,6 @@ initial begin
         op_table_next_index[i] = 0;
         op_table_prev_index[i] = 0;
         op_table_doorbell[i] = 0;
-        op_table_tx_status[i] = 0;
         op_table_is_head[i] = 0;
     end
 end
@@ -869,7 +866,6 @@ always @(posedge clk) begin
     end
 
     if (op_table_start_en) begin
-        op_table_complete[op_table_start_ptr] <= 1'b0;
         op_table_queue[op_table_start_ptr] <= op_table_start_queue;
         op_table_doorbell[op_table_start_ptr] <= 1'b0;
     end

@@ -5,16 +5,16 @@ GitHub repository: https://github.com/ucsdsysnet/corundum
 ## Introduction
 
 Corundum is an open-source, high-performance FPGA-based NIC.  Features include
-a high performance datapath, 10G/25G Ethernet, PCI express gen 3, a custom,
-high performance, tightly-integrated PCIe DMA engine, many (1000+) transmit,
-receive, completion, and event queues, MSI interrupts, multiple interfaces,
-multiple ports per interface, per-port transmit scheduling including high
-precision TDMA, flow hashing, RSS, checksum offloading, and native IEEE 1588
-PTP timestamping.  A Linux driver is included that integrates with the Linux
-networking stack.  Development and debugging is facilitated by an extensive
-simulation framework that covers the entire system from a simulation model of
-the driver and PCI express interface on one side to the Ethernet interfaces on
-the other side.
+a high performance datapath, 10G/25G/100G Ethernet, PCI express gen 3, a
+custom, high performance, tightly-integrated PCIe DMA engine, many (1000+)
+transmit, receive, completion, and event queues, MSI interrupts, multiple
+interfaces, multiple ports per interface, per-port transmit scheduling
+including high precision TDMA, flow hashing, RSS, checksum offloading, and
+native IEEE 1588 PTP timestamping.  A Linux driver is included that integrates
+with the Linux networking stack.  Development and debugging is facilitated by
+an extensive simulation framework that covers the entire system from a
+simulation model of the driver and PCI express interface on one side to the
+Ethernet interfaces on the other side.
 
 Corundum has several unique architectural features.  First, transmit, receive,
 completion, and event queue states are stored efficiently in block RAM or
@@ -33,9 +33,20 @@ devices.  Designs are included for the following FPGA boards:
 *  Xilinx VCU108 (Xilinx Virtex Ultrascale XCVU095)
 *  Xilinx VCU118 (Xilinx Virtex Ultrascale Plus XCVU9P)
 
+For operation at 10G and 25G, Corundum uses the open source 10G/25G MAC and
+PHY modules from the verilog-ethernet repository, no extra licenses are
+required.  However, it is possible to use other MAC and/or PHY modules.
+Operation at 100G currently requires using the Xilinx CMAC core with RS-FEC
+enabled, which is covered by the free CMAC license on Xilinx Ultrascale+ parts.
+
 ## Documentation
 
 ### Modules
+
+#### cmac_pad module
+
+Frame pad module for 512 bit 100G CMAC TX interface.  Zero pads transmit
+frames to minimum 64 bytes.
 
 #### cpl_op_mux module
 
@@ -134,6 +145,7 @@ packets.
 
 ### Source Files
 
+    cmac_pad.v               : Pad frames to 64 bytes for CMAC TX
     cpl_op_mux.v             : Completion operation mux
     cpl_queue_manager.v      : Completion queue manager
     cpl_write.v              : Completion write module

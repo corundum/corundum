@@ -321,6 +321,10 @@ reg tlp_cmd_ready;
 
 reg finish_tag;
 
+reg [3:0] first_be;
+reg [3:0] last_be;
+reg [10:0] dword_count;
+
 reg [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, req_pcie_addr_next;
 reg [AXI_ADDR_WIDTH-1:0] req_axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, req_axi_addr_next;
 reg [LEN_WIDTH-1:0] req_op_count_reg = {LEN_WIDTH{1'b0}}, req_op_count_next;
@@ -425,10 +429,6 @@ assign status_error_uncor = status_error_uncor_reg;
 wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_max_read_request = req_pcie_addr_reg + {max_read_request_size_dw_reg, 2'b00};
 wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_op_count = req_pcie_addr_reg + req_op_count_reg;
 wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_tlp_count = req_pcie_addr_reg + req_tlp_count_reg;
-
-wire [3:0] first_be = 4'b1111 << req_pcie_addr_reg[1:0];
-wire [3:0] last_be = 4'b1111 >> (3 - ((req_pcie_addr_reg[1:0] + req_tlp_count_next[1:0] - 1) & 3));
-wire [10:0] dword_count = (req_tlp_count_next + req_pcie_addr_reg[1:0] + 3) >> 2;
 
 // PCIe tag management
 wire [PCIE_TAG_WIDTH-1:0] new_tag;
@@ -554,7 +554,7 @@ always @* begin
     m_axis_rq_tdata_int[1:0] = 2'b0; // address type
     m_axis_rq_tdata_int[63:2] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:2]; // address
     if (AXIS_PCIE_DATA_WIDTH > 64) begin
-        m_axis_rq_tdata_int[74:64] = dword_count; // DWORD count
+        m_axis_rq_tdata_int[74:64] = 11'd0; // DWORD count
         m_axis_rq_tdata_int[78:75] = REQ_MEM_READ; // request type - memory read
         m_axis_rq_tdata_int[79] = 1'b0; // poisoned request
         m_axis_rq_tdata_int[95:80] = requester_id;
@@ -577,9 +577,9 @@ always @* begin
     end
 
     if (AXIS_PCIE_DATA_WIDTH == 512) begin
-        m_axis_rq_tuser_int[3:0] = dword_count == 1 ? first_be & last_be : first_be; // first BE 0
+        m_axis_rq_tuser_int[3:0] = 4'd0; // first BE 0
         m_axis_rq_tuser_int[7:4] = 4'd0; // first BE 1
-        m_axis_rq_tuser_int[11:8] = dword_count == 1 ? 4'b0000 : last_be; // last BE 0
+        m_axis_rq_tuser_int[11:8] = 4'd0; // last BE 0
         m_axis_rq_tuser_int[15:12] = 4'd0; // last BE 1
         m_axis_rq_tuser_int[19:16] = 3'd0; // addr_offset
         m_axis_rq_tuser_int[21:20] = 2'b01; // is_sop
@@ -597,8 +597,8 @@ always @* begin
         m_axis_rq_tuser_int[72:67] = 6'd0; // seq_num1
         m_axis_rq_tuser_int[136:73] = 64'd0; // parity
     end else begin
-        m_axis_rq_tuser_int[3:0] = dword_count == 1 ? first_be & last_be : first_be; // first BE
-        m_axis_rq_tuser_int[7:4] = dword_count == 1 ? 4'b0000 : last_be; // last BE
+        m_axis_rq_tuser_int[3:0] = 4'd0; // first BE
+        m_axis_rq_tuser_int[7:4] = 4'd0; // last BE
         m_axis_rq_tuser_int[10:8] = 3'd0; // addr_offset
         m_axis_rq_tuser_int[11] = 1'b0; // discontinue
         m_axis_rq_tuser_int[12] = 1'b0; // tph_present
@@ -619,6 +619,48 @@ always @* begin
     op_table_read_start_ptr = tlp_cmd_op_tag_reg;
     op_table_read_start_commit = 1'b0;
     op_table_read_start_en = 1'b0;
+
+    // TLP size computation
+    if (req_op_count_reg + req_pcie_addr_reg[1:0] <= {max_read_request_size_dw_reg, 2'b00}) begin
+        // packet smaller than max read request size
+        if (req_pcie_addr_reg[12] != req_pcie_addr_plus_op_count[12]) begin
+            // crosses 4k boundary
+            req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
+            dword_count = 11'h400 - req_pcie_addr_reg[11:2];
+        end else begin
+            // does not cross 4k boundary, send one TLP
+            req_tlp_count_next = req_op_count_reg;
+            dword_count = (req_op_count_reg + req_pcie_addr_reg[1:0] + 3) >> 2;
+        end
+    end else begin
+        // packet larger than max read request size
+        if (req_pcie_addr_reg[12] != req_pcie_addr_plus_max_read_request[12]) begin
+            // crosses 4k boundary
+            req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
+            dword_count = 11'h400 - req_pcie_addr_reg[11:2];
+        end else begin
+            // does not cross 4k boundary, send one TLP
+            req_tlp_count_next = {max_read_request_size_dw_reg, 2'b00}-req_pcie_addr_reg[1:0];
+            dword_count = max_read_request_size_dw_reg;
+        end
+    end
+
+    first_be = 4'b1111 << req_pcie_addr_reg[1:0];
+    last_be = 4'b1111 >> (3 - ((req_pcie_addr_reg[1:0] + req_tlp_count_next[1:0] - 1) & 3));
+
+    if (AXIS_PCIE_DATA_WIDTH > 64) begin
+        m_axis_rq_tdata_int[74:64] = dword_count; // DWORD count
+    end
+
+    if (AXIS_PCIE_DATA_WIDTH == 512) begin
+        m_axis_rq_tuser_int[3:0] = dword_count == 1 ? first_be & last_be : first_be; // first BE 0
+        m_axis_rq_tuser_int[7:4] = 4'd0; // first BE 1
+        m_axis_rq_tuser_int[11:8] = dword_count == 1 ? 4'b0000 : last_be; // last BE 0
+        m_axis_rq_tuser_int[15:12] = 4'd0; // last BE 1
+    end else begin
+        m_axis_rq_tuser_int[3:0] = dword_count == 1 ? first_be & last_be : first_be; // first BE
+        m_axis_rq_tuser_int[7:4] = dword_count == 1 ? 4'b0000 : last_be; // last BE
+    end
 
     // TLP segmentation and request generation
     case (req_state_reg)
@@ -641,25 +683,6 @@ always @* begin
         end
         REQ_STATE_START: begin
             if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
-                if (req_op_count_reg <= {max_read_request_size_dw_reg, 2'b00}-req_pcie_addr_reg[1:0]) begin
-                    // packet smaller than max read request size
-                    if (req_pcie_addr_reg[12] != req_pcie_addr_plus_op_count[12]) begin
-                        // crosses 4k boundary
-                        req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
-                    end else begin
-                        // does not cross 4k boundary, send one TLP
-                        req_tlp_count_next = req_op_count_reg;
-                    end
-                end else begin
-                    // packet larger than max read request size
-                    if (req_pcie_addr_reg[12] != req_pcie_addr_plus_max_read_request[12]) begin
-                        // crosses 4k boundary
-                        req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
-                    end else begin
-                        // does not cross 4k boundary, send one TLP
-                        req_tlp_count_next = {max_read_request_size_dw_reg, 2'b00}-req_pcie_addr_reg[1:0];
-                    end
-                end
 
                 m_axis_rq_tvalid_int = 1'b1;
 
@@ -1400,8 +1423,6 @@ always @(posedge clk) begin
         end else begin
             op_table_read_count_start[op_table_read_start_ptr] <= op_table_read_count_start[op_table_read_start_ptr] + 1;
         end
-    end else if (op_table_read_start_commit) begin
-        op_table_read_commit[op_table_read_start_ptr] <= op_table_read_start_commit;
     end
 
     if (op_table_read_finish_en) begin

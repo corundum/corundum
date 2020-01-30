@@ -590,6 +590,9 @@ pcie4_uscale_plus_inst (
 );
 
 // CMAC
+assign qsfp0_refclk_reset = qsfp_refclk_reset_reg;
+assign qsfp0_fs = 2'b10;
+
 wire                           qsfp0_tx_clk_int;
 wire                           qsfp0_tx_rst_int;
 
@@ -615,6 +618,9 @@ wire [AXIS_ETH_KEEP_WIDTH-1:0] qsfp0_rx_axis_tkeep_int;
 wire                           qsfp0_rx_axis_tvalid_int;
 wire                           qsfp0_rx_axis_tlast_int;
 wire                           qsfp0_rx_axis_tuser_int;
+
+assign qsfp1_refclk_reset = qsfp_refclk_reset_reg;
+assign qsfp1_fs = 2'b10;
 
 wire                           qsfp1_tx_clk_int;
 wire                           qsfp1_tx_rst_int;

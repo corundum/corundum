@@ -453,6 +453,9 @@ assign axil_csr_rvalid = axil_csr_rvalid_reg;
 assign qsfp0_modsell = qsfp0_modsell_reg;
 assign qsfp1_modsell = qsfp1_modsell_reg;
 
+assign qsfp0_lpmode = qsfp0_lpmode_reg;
+assign qsfp1_lpmode = qsfp1_lpmode_reg;
+
 assign qsfp0_resetl = qsfp0_resetl_reg;
 assign qsfp1_resetl = qsfp1_resetl_reg;
 

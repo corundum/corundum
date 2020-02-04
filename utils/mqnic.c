@@ -38,10 +38,12 @@ either expressed or implied, of The Regents of the University of California.
 #include <stdlib.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 
 struct mqnic *mqnic_open(const char *dev_name)
 {
     struct mqnic *dev = calloc(1, sizeof(struct mqnic));
+    struct stat st;
 
     if (!dev)
     {
@@ -57,14 +59,26 @@ struct mqnic *mqnic_open(const char *dev_name)
         goto fail_open;
     }
 
-    struct mqnic_ioctl_info info;
-    if (ioctl(dev->fd, MQNIC_IOCTL_INFO, &info) != 0)
+    if (fstat(dev->fd, &st) == -1)
     {
-        perror("MQNICCTL_INFO ioctl failed");
-        goto fail_ioctl;
+        perror("fstat failed");
+        goto fail_fstat;
     }
 
-    dev->regs_size = info.regs_size;
+    dev->regs_size = st.st_size;
+
+    if (dev->regs_size == 0)
+    {
+        struct mqnic_ioctl_info info;
+        if (ioctl(dev->fd, MQNIC_IOCTL_INFO, &info) != 0)
+        {
+            perror("MQNIC_IOCTL_INFO ioctl failed");
+            goto fail_ioctl;
+        }
+
+        dev->regs_size = info.regs_size;
+    }
+
     dev->regs = (volatile uint8_t *)mmap(NULL, dev->regs_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, 0);
     if (dev->regs == MAP_FAILED)
     {
@@ -179,6 +193,7 @@ fail_reset:
     munmap((void *)dev->regs, dev->regs_size);
 fail_mmap_regs:
 fail_ioctl:
+fail_fstat:
     close(dev->fd);
 fail_open:
     free(dev);

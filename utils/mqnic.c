@@ -105,6 +105,11 @@ struct mqnic *mqnic_open(const char *dev_name)
         interface->regs = dev->regs + k*dev->if_stride;
         interface->csr_regs = interface->regs + dev->if_csr_offset;
 
+        if (interface->regs >= dev->regs+dev->regs_size)
+            goto fail_range;
+        if (interface->csr_regs >= dev->regs+dev->regs_size)
+            goto fail_range;
+
         interface->if_id = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_ID);
         interface->if_features = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_FEATURES);
 
@@ -142,6 +147,9 @@ struct mqnic *mqnic_open(const char *dev_name)
             struct mqnic_port *port = &interface->ports[l];
             port->regs = interface->regs + interface->port_offset + interface->port_stride*l;
 
+            if (port->regs >= dev->regs+dev->regs_size)
+                goto fail_range;
+
             port->port_id = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_ID);
             port->port_features = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_FEATURES);
 
@@ -156,12 +164,17 @@ struct mqnic *mqnic_open(const char *dev_name)
             {
                 struct mqnic_sched *sched = &port->sched[m];
                 sched->regs = port->regs + port->sched_offset + port->sched_stride*m;
+
+                if (sched->regs >= dev->regs+dev->regs_size)
+                    goto fail_range;
             }
         }
     }
 
     return dev;
 
+fail_range:
+    fprintf(stderr, "Error: computed pointer out of range\n");
 fail_reset:
     munmap((void *)dev->regs, dev->regs_size);
 fail_mmap_regs:

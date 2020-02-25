@@ -33,8 +33,12 @@ either expressed or implied, of The Regents of the University of California.
 
 #include "mqnic.h"
 #include <linux/module.h>
-#include <linux/pci-aspm.h>
+#include <linux/version.h>
 #include <linux/delay.h>
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)
+#include <linux/pci-aspm.h>
+#endif
 
 MODULE_DESCRIPTION("mqnic driver");
 MODULE_AUTHOR("Alex Forencich");

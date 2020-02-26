@@ -40,6 +40,10 @@ sleep 0.5
 
 echo "Rescanning bus..."
 
-echo 1 > "/sys/bus/pci/devices/$port/rescan"
+if [ -e "/sys/bus/pci/devices/$port/dev_rescan" ]; then
+    echo 1 > "/sys/bus/pci/devices/$port/dev_rescan"
+else
+    echo 1 > "/sys/bus/pci/devices/$port/rescan"
+fi
 
 

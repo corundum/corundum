@@ -72,6 +72,19 @@ module cmac_pad #
     output wire [USER_WIDTH-1:0]  m_axis_tuser
 );
 
+// check configuration
+initial begin
+    if (DATA_WIDTH != 512) begin
+        $error("Error: AXI stream data width must be 512 (instance %m)");
+        $finish;
+    end
+
+    if (KEEP_WIDTH * 8 != DATA_WIDTH) begin
+        $error("Error: AXI stream interface requires byte (8-bit) granularity (instance %m)");
+        $finish;
+    end
+end
+
 reg frame_reg = 1'b0;
 
 generate
@@ -82,7 +95,7 @@ generate
     end
 endgenerate
 
-assign m_axis_tkeep = frame_reg ? s_axis_tkeep : {KEEP_WIDTH{1'b1}};
+assign m_axis_tkeep = frame_reg ? s_axis_tkeep : {60{1'b1}};
 assign m_axis_tvalid = s_axis_tvalid;
 assign s_axis_tready = m_axis_tready;
 assign m_axis_tlast = s_axis_tlast;

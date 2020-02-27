@@ -293,7 +293,7 @@ reg [RAM_SEL_WIDTH-1:0] ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, ram_addr_next;
 reg [LEN_WIDTH-1:0] op_count_reg = {LEN_WIDTH{1'b0}}, op_count_next;
 reg [LEN_WIDTH-1:0] tr_count_reg = {LEN_WIDTH{1'b0}}, tr_count_next;
-reg [LEN_WIDTH-1:0] tlp_count_reg = {LEN_WIDTH{1'b0}}, tlp_count_next;
+reg [12:0] tlp_count_reg = 13'd0, tlp_count_next;
 
 reg [PCIE_ADDR_WIDTH-1:0] read_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, read_pcie_addr_next;
 reg [RAM_SEL_WIDTH-1:0] read_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, read_ram_sel_next;

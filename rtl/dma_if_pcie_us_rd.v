@@ -319,7 +319,7 @@ reg [PCIE_ADDR_WIDTH-1:0] req_pcie_addr;
 reg [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, req_pcie_addr_next;
 reg [RAM_ADDR_WIDTH-1:0] req_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, req_addr_next;
 reg [LEN_WIDTH-1:0] req_op_count_reg = {LEN_WIDTH{1'b0}}, req_op_count_next;
-reg [LEN_WIDTH-1:0] req_tlp_count_reg = {LEN_WIDTH{1'b0}}, req_tlp_count_next;
+reg [12:0] req_tlp_count_reg = 13'd0, req_tlp_count_next;
 
 reg [11:0] lower_addr_reg = 12'd0, lower_addr_next;
 reg [12:0] byte_count_reg = 13'd0, byte_count_next;

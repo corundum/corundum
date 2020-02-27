@@ -280,7 +280,7 @@ reg [PCIE_ADDR_WIDTH-1:0] pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, pcie_addr_nex
 reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
 reg [LEN_WIDTH-1:0] op_count_reg = {LEN_WIDTH{1'b0}}, op_count_next;
 reg [LEN_WIDTH-1:0] tr_count_reg = {LEN_WIDTH{1'b0}}, tr_count_next;
-reg [LEN_WIDTH-1:0] tlp_count_reg = {LEN_WIDTH{1'b0}}, tlp_count_next;
+reg [12:0] tlp_count_reg = 13'd0, tlp_count_next;
 
 reg [PCIE_ADDR_WIDTH-1:0] tlp_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, tlp_addr_next;
 reg [11:0] tlp_len_reg = 12'd0, tlp_len_next;

@@ -861,9 +861,7 @@ always @* begin
                     //     cycle_byte_count_next = op_count_next;
                     // end
                     start_offset_next = addr_next;
-                    end_offset_next = start_offset_next+cycle_byte_count_next-1;
-
-                    ram_wrap_next = {1'b0, start_offset_next}+cycle_byte_count_next > 2**RAM_OFFSET_WIDTH;
+                    {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
 
                     ram_mask_0_next = {SEG_COUNT{1'b1}} << (start_offset_next >> $clog2(SEG_BE_WIDTH));
                     ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
@@ -998,9 +996,7 @@ always @* begin
                     cycle_byte_count_next = op_count_next;
                 end
                 start_offset_next = addr_next;
-                end_offset_next = start_offset_next+cycle_byte_count_next-1;
-
-                ram_wrap_next = {1'b0, start_offset_next}+cycle_byte_count_next > 2**RAM_OFFSET_WIDTH;
+                {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
 
                 ram_mask_0_next = {SEG_COUNT{1'b1}} << (start_offset_next >> $clog2(SEG_BE_WIDTH));
                 ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
@@ -1092,9 +1088,7 @@ always @* begin
                     cycle_byte_count_next = op_count_next;
                 end
                 start_offset_next = addr_next;
-                end_offset_next = start_offset_next+cycle_byte_count_next-1;
-
-                ram_wrap_next = {1'b0, start_offset_next}+cycle_byte_count_next > 2**RAM_OFFSET_WIDTH;
+                {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
 
                 ram_mask_0_next = {SEG_COUNT{1'b1}} << (start_offset_next >> $clog2(SEG_BE_WIDTH));
                 ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));

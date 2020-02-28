@@ -623,11 +623,12 @@ always @* begin
             read_ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
 
             if (!ram_wrap_next) begin
+                read_ram_mask_next = read_ram_mask_0_next & read_ram_mask_1_next;
                 read_ram_mask_0_next = read_ram_mask_0_next & read_ram_mask_1_next;
                 read_ram_mask_1_next = 0;
+            end else begin
+                read_ram_mask_next = read_ram_mask_0_next | read_ram_mask_1_next;
             end
-
-            read_ram_mask_next = read_ram_mask_0_next | read_ram_mask_1_next;
 
             if (read_cmd_valid_reg) begin
                 read_cmd_ready = 1'b1;
@@ -677,11 +678,12 @@ always @* begin
                 read_ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
 
                 if (!ram_wrap_next) begin
+                    read_ram_mask_next = read_ram_mask_0_next & read_ram_mask_1_next;
                     read_ram_mask_0_next = read_ram_mask_0_next & read_ram_mask_1_next;
                     read_ram_mask_1_next = 0;
+                end else begin
+                    read_ram_mask_next = read_ram_mask_0_next | read_ram_mask_1_next;
                 end
-
-                read_ram_mask_next = read_ram_mask_0_next | read_ram_mask_1_next;
 
                 if (!read_last_cycle_reg) begin
                     read_state_next = READ_STATE_READ;
@@ -710,11 +712,12 @@ always @* begin
                     read_ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
 
                     if (!ram_wrap_next) begin
+                        read_ram_mask_next = read_ram_mask_0_next & read_ram_mask_1_next;
                         read_ram_mask_0_next = read_ram_mask_0_next & read_ram_mask_1_next;
                         read_ram_mask_1_next = 0;
+                    end else begin
+                        read_ram_mask_next = read_ram_mask_0_next | read_ram_mask_1_next;
                     end
-
-                    read_ram_mask_next = read_ram_mask_0_next | read_ram_mask_1_next;
 
                     read_cmd_ready = 1'b1;
 

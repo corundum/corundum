@@ -869,11 +869,12 @@ always @* begin
                     ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
 
                     if (!ram_wrap_next) begin
+                        ram_mask_next = ram_mask_0_next & ram_mask_1_next;
                         ram_mask_0_next = ram_mask_0_next & ram_mask_1_next;
                         ram_mask_1_next = 0;
+                    end else begin
+                        ram_mask_next = ram_mask_0_next | ram_mask_1_next;
                     end
-
-                    ram_mask_next = ram_mask_0_next | ram_mask_1_next;
 
                     addr_delay_next = addr_next;
                     addr_next = addr_next + cycle_byte_count_next;
@@ -1005,11 +1006,12 @@ always @* begin
                 ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
 
                 if (!ram_wrap_next) begin
+                    ram_mask_next = ram_mask_0_next & ram_mask_1_next;
                     ram_mask_0_next = ram_mask_0_next & ram_mask_1_next;
                     ram_mask_1_next = 0;
+                end else begin
+                    ram_mask_next = ram_mask_0_next | ram_mask_1_next;
                 end
-
-                ram_mask_next = ram_mask_0_next | ram_mask_1_next;
 
                 addr_delay_next = addr_next;
                 addr_next = addr_next + cycle_byte_count_next;
@@ -1098,11 +1100,12 @@ always @* begin
                 ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
 
                 if (!ram_wrap_next) begin
+                    ram_mask_next = ram_mask_0_next & ram_mask_1_next;
                     ram_mask_0_next = ram_mask_0_next & ram_mask_1_next;
                     ram_mask_1_next = 0;
+                end else begin
+                    ram_mask_next = ram_mask_0_next | ram_mask_1_next;
                 end
-
-                ram_mask_next = ram_mask_0_next | ram_mask_1_next;
 
                 addr_delay_next = addr_reg;
                 addr_next = addr_reg + cycle_byte_count_next;

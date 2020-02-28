@@ -531,7 +531,7 @@ always @* begin
                 end else begin
                     op_table_start_offset = pcie_addr_reg[1:0]-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
                 end
-                op_table_start_last = op_count_next == 0;
+                op_table_start_last = op_count_reg == tlp_count_next;
 
                 op_table_start_tag = tlp_cmd_tag_reg;
                 op_table_start_en = 1'b1;
@@ -556,7 +556,7 @@ always @* begin
                     end
                 end
 
-                if (op_count_next != 0) begin
+                if (!op_table_start_last) begin
                     req_state_next = REQ_STATE_START;
                 end else begin
                     s_axis_write_desc_ready_next = !op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] && ($unsigned(op_table_start_ptr_reg - op_table_finish_ptr_reg) < 2**OP_TAG_WIDTH) && enable;

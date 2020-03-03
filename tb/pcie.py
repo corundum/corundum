@@ -4126,12 +4126,18 @@ class RootComplex(Switch):
         if self.msi_addr is None:
             self.msi_addr, _ = self.alloc_region(4, self.msi_region_read, self.msi_region_write)
         if not self.tree:
+            # device tree missing
             return False
         ti = self.tree.find_dev(dev)
         if not ti:
+            # device not found
             return False
         if ti.get_capability_offset(MSI_CAP_ID) is None:
+            # does not support MSI
             return False
+        if ti.msi_addr is not None and ti.msi_data is not None:
+            # already configured
+            return True
 
         msg_ctrl = yield from self.capability_read_dword(dev, MSI_CAP_ID, 0)
 

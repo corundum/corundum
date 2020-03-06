@@ -566,7 +566,7 @@ wire [PORTS*SEG_COUNT-1:0]                 port_dma_ram_rd_resp_valid;
 wire [PORTS*SEG_COUNT-1:0]                 port_dma_ram_rd_resp_ready;
 
 // Queue management
-wire [EVENT_QUEUE_INDEX_WIDTH-1:0]  event_enqueue_req_queue;
+wire [CPL_QUEUE_INDEX_WIDTH-1:0]    event_enqueue_req_queue;
 wire [QUEUE_REQ_TAG_WIDTH-1:0]      event_enqueue_req_tag;
 wire                                event_enqueue_req_valid;
 wire                                event_enqueue_req_ready;
@@ -583,15 +583,15 @@ wire [QUEUE_OP_TAG_WIDTH-1:0]       event_enqueue_commit_op_tag;
 wire                                event_enqueue_commit_valid;
 wire                                event_enqueue_commit_ready;
 
-wire [TX_QUEUE_INDEX_WIDTH-1:0]     tx_desc_dequeue_req_queue;
+wire [QUEUE_INDEX_WIDTH-1:0]        tx_desc_dequeue_req_queue;
 wire [QUEUE_REQ_TAG_WIDTH-1:0]      tx_desc_dequeue_req_tag;
 wire                                tx_desc_dequeue_req_valid;
 wire                                tx_desc_dequeue_req_ready;
 
-wire [TX_QUEUE_INDEX_WIDTH-1:0]     tx_desc_dequeue_resp_queue;
+wire [QUEUE_INDEX_WIDTH-1:0]        tx_desc_dequeue_resp_queue;
 wire [QUEUE_PTR_WIDTH-1:0]          tx_desc_dequeue_resp_ptr;
 wire [DMA_ADDR_WIDTH-1:0]           tx_desc_dequeue_resp_addr;
-wire [TX_CPL_QUEUE_INDEX_WIDTH-1:0] tx_desc_dequeue_resp_cpl;
+wire [CPL_QUEUE_INDEX_WIDTH-1:0]    tx_desc_dequeue_resp_cpl;
 wire [QUEUE_REQ_TAG_WIDTH-1:0]      tx_desc_dequeue_resp_tag;
 wire [QUEUE_OP_TAG_WIDTH-1:0]       tx_desc_dequeue_resp_op_tag;
 wire                                tx_desc_dequeue_resp_empty;
@@ -606,7 +606,7 @@ wire                                tx_desc_dequeue_commit_ready;
 wire [TX_QUEUE_INDEX_WIDTH-1:0]     tx_doorbell_queue;
 wire                                tx_doorbell_valid;
 
-wire [TX_CPL_QUEUE_INDEX_WIDTH-1:0] tx_cpl_enqueue_req_queue;
+wire [CPL_QUEUE_INDEX_WIDTH-1:0]    tx_cpl_enqueue_req_queue;
 wire [QUEUE_REQ_TAG_WIDTH-1:0]      tx_cpl_enqueue_req_tag;
 wire                                tx_cpl_enqueue_req_valid;
 wire                                tx_cpl_enqueue_req_ready;
@@ -623,15 +623,15 @@ wire [QUEUE_OP_TAG_WIDTH-1:0]       tx_cpl_enqueue_commit_op_tag;
 wire                                tx_cpl_enqueue_commit_valid;
 wire                                tx_cpl_enqueue_commit_ready;
 
-wire [TX_QUEUE_INDEX_WIDTH-1:0]     rx_desc_dequeue_req_queue;
+wire [QUEUE_INDEX_WIDTH-1:0]        rx_desc_dequeue_req_queue;
 wire [QUEUE_REQ_TAG_WIDTH-1:0]      rx_desc_dequeue_req_tag;
 wire                                rx_desc_dequeue_req_valid;
 wire                                rx_desc_dequeue_req_ready;
 
-wire [TX_QUEUE_INDEX_WIDTH-1:0]     rx_desc_dequeue_resp_queue;
+wire [QUEUE_INDEX_WIDTH-1:0]        rx_desc_dequeue_resp_queue;
 wire [QUEUE_PTR_WIDTH-1:0]          rx_desc_dequeue_resp_ptr;
 wire [DMA_ADDR_WIDTH-1:0]           rx_desc_dequeue_resp_addr;
-wire [RX_CPL_QUEUE_INDEX_WIDTH-1:0] rx_desc_dequeue_resp_cpl;
+wire [CPL_QUEUE_INDEX_WIDTH-1:0]    rx_desc_dequeue_resp_cpl;
 wire [QUEUE_REQ_TAG_WIDTH-1:0]      rx_desc_dequeue_resp_tag;
 wire [QUEUE_OP_TAG_WIDTH-1:0]       rx_desc_dequeue_resp_op_tag;
 wire                                rx_desc_dequeue_resp_empty;
@@ -643,7 +643,7 @@ wire [QUEUE_OP_TAG_WIDTH-1:0]       rx_desc_dequeue_commit_op_tag;
 wire                                rx_desc_dequeue_commit_valid;
 wire                                rx_desc_dequeue_commit_ready;
 
-wire [RX_CPL_QUEUE_INDEX_WIDTH-1:0] rx_cpl_enqueue_req_queue;
+wire [CPL_QUEUE_INDEX_WIDTH-1:0]    rx_cpl_enqueue_req_queue;
 wire [QUEUE_REQ_TAG_WIDTH-1:0]      rx_cpl_enqueue_req_tag;
 wire                                rx_cpl_enqueue_req_valid;
 wire                                rx_cpl_enqueue_req_ready;

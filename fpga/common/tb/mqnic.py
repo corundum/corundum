@@ -724,7 +724,7 @@ class Interface(object):
             yield from q.arm()
 
         for q in self.rx_cpl_queues:
-            yield from q.activate(0) # TODO
+            yield from q.activate(q.index % self.event_queue_count)
             q.ring_index = q.index
             q.handler = None # TODO
             yield from q.arm()
@@ -733,7 +733,7 @@ class Interface(object):
             yield from q.activate(q.index)
 
         for q in self.tx_cpl_queues:
-            yield from q.activate(0) # TODO
+            yield from q.activate(q.index % self.event_queue_count)
             q.ring_index = q.index
             q.handler = None # TODO
             yield from q.arm()

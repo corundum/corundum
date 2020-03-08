@@ -397,6 +397,14 @@ wire                                 rx_desc_tlast;
 wire [DESC_REQ_TAG_WIDTH_INT-1:0]    rx_desc_tid;
 wire                                 rx_desc_tuser;
 
+wire [AXIS_DESC_DATA_WIDTH-1:0]      rx_fifo_desc_tdata;
+wire [AXIS_DESC_KEEP_WIDTH-1:0]      rx_fifo_desc_tkeep;
+wire                                 rx_fifo_desc_tvalid;
+wire                                 rx_fifo_desc_tready;
+wire                                 rx_fifo_desc_tlast;
+wire [DESC_REQ_TAG_WIDTH_INT-1:0]    rx_fifo_desc_tid;
+wire                                 rx_fifo_desc_tuser;
+
 wire [0:0]                           tx_desc_req_sel = 1'b0;
 wire [QUEUE_INDEX_WIDTH-1:0]         tx_desc_req_queue;
 wire [DESC_REQ_TAG_WIDTH_INT-1:0]    tx_desc_req_tag;
@@ -418,6 +426,14 @@ wire                                 tx_desc_tready;
 wire                                 tx_desc_tlast;
 wire [DESC_REQ_TAG_WIDTH_INT-1:0]    tx_desc_tid;
 wire                                 tx_desc_tuser;
+
+wire [AXIS_DESC_DATA_WIDTH-1:0]      tx_fifo_desc_tdata;
+wire [AXIS_DESC_KEEP_WIDTH-1:0]      tx_fifo_desc_tkeep;
+wire                                 tx_fifo_desc_tvalid;
+wire                                 tx_fifo_desc_tready;
+wire                                 tx_fifo_desc_tlast;
+wire [DESC_REQ_TAG_WIDTH_INT-1:0]    tx_fifo_desc_tid;
+wire                                 tx_fifo_desc_tuser;
 
 wire [0:0]                           rx_cpl_req_sel = 1'b1;
 wire [QUEUE_INDEX_WIDTH-1:0]         rx_cpl_req_queue;
@@ -1059,6 +1075,47 @@ end
 
 endgenerate
 
+axis_fifo #(
+    .DEPTH(32*AXIS_DESC_DATA_WIDTH/8),
+    .DATA_WIDTH(AXIS_DESC_DATA_WIDTH),
+    .KEEP_WIDTH(AXIS_DESC_KEEP_WIDTH),
+    .LAST_ENABLE(1),
+    .ID_ENABLE(1),
+    .ID_WIDTH(DESC_REQ_TAG_WIDTH_INT),
+    .DEST_ENABLE(0),
+    .USER_ENABLE(0),
+    .FRAME_FIFO(0)
+)
+tx_desc_fifo (
+    .clk(clk),
+    .rst(rst),
+
+    // AXI input
+    .s_axis_tdata(tx_desc_tdata),
+    .s_axis_tkeep(tx_desc_tkeep),
+    .s_axis_tvalid(tx_desc_tvalid),
+    .s_axis_tready(tx_desc_tready),
+    .s_axis_tlast(tx_desc_tlast),
+    .s_axis_tid(tx_desc_tid),
+    .s_axis_tdest(0),
+    .s_axis_tuser(tx_desc_tuser),
+
+    // AXI output
+    .m_axis_tdata(tx_fifo_desc_tdata),
+    .m_axis_tkeep(tx_fifo_desc_tkeep),
+    .m_axis_tvalid(tx_fifo_desc_tvalid),
+    .m_axis_tready(tx_fifo_desc_tready),
+    .m_axis_tlast(tx_fifo_desc_tlast),
+    .m_axis_tid(tx_fifo_desc_tid),
+    .m_axis_tdest(),
+    .m_axis_tuser(tx_fifo_desc_tuser),
+
+    // Status
+    .status_overflow(),
+    .status_bad_frame(),
+    .status_good_frame()
+);
+
 tx_engine #(
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
     .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
@@ -1124,13 +1181,13 @@ tx_engine_inst (
     /*
      * Descriptor data input
      */
-    .s_axis_desc_tdata(tx_desc_tdata),
-    .s_axis_desc_tkeep(tx_desc_tkeep),
-    .s_axis_desc_tvalid(tx_desc_tvalid),
-    .s_axis_desc_tready(tx_desc_tready),
-    .s_axis_desc_tlast(tx_desc_tlast),
-    .s_axis_desc_tid(tx_desc_tid),
-    .s_axis_desc_tuser(tx_desc_tuser),
+    .s_axis_desc_tdata(tx_fifo_desc_tdata),
+    .s_axis_desc_tkeep(tx_fifo_desc_tkeep),
+    .s_axis_desc_tvalid(tx_fifo_desc_tvalid),
+    .s_axis_desc_tready(tx_fifo_desc_tready),
+    .s_axis_desc_tlast(tx_fifo_desc_tlast),
+    .s_axis_desc_tid(tx_fifo_desc_tid),
+    .s_axis_desc_tuser(tx_fifo_desc_tuser),
 
     /*
      * Completion request output
@@ -1203,6 +1260,47 @@ tx_engine_inst (
     .enable(1'b1)
 );
 
+axis_fifo #(
+    .DEPTH(32*AXIS_DESC_DATA_WIDTH/8),
+    .DATA_WIDTH(AXIS_DESC_DATA_WIDTH),
+    .KEEP_WIDTH(AXIS_DESC_KEEP_WIDTH),
+    .LAST_ENABLE(1),
+    .ID_ENABLE(1),
+    .ID_WIDTH(DESC_REQ_TAG_WIDTH_INT),
+    .DEST_ENABLE(0),
+    .USER_ENABLE(0),
+    .FRAME_FIFO(0)
+)
+rx_desc_fifo (
+    .clk(clk),
+    .rst(rst),
+
+    // AXI input
+    .s_axis_tdata(rx_desc_tdata),
+    .s_axis_tkeep(rx_desc_tkeep),
+    .s_axis_tvalid(rx_desc_tvalid),
+    .s_axis_tready(rx_desc_tready),
+    .s_axis_tlast(rx_desc_tlast),
+    .s_axis_tid(rx_desc_tid),
+    .s_axis_tdest(0),
+    .s_axis_tuser(rx_desc_tuser),
+
+    // AXI output
+    .m_axis_tdata(rx_fifo_desc_tdata),
+    .m_axis_tkeep(rx_fifo_desc_tkeep),
+    .m_axis_tvalid(rx_fifo_desc_tvalid),
+    .m_axis_tready(rx_fifo_desc_tready),
+    .m_axis_tlast(rx_fifo_desc_tlast),
+    .m_axis_tid(rx_fifo_desc_tid),
+    .m_axis_tdest(),
+    .m_axis_tuser(rx_fifo_desc_tuser),
+
+    // Status
+    .status_overflow(),
+    .status_bad_frame(),
+    .status_good_frame()
+);
+
 rx_engine #(
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
     .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
@@ -1268,13 +1366,13 @@ rx_engine_inst (
     /*
      * Descriptor data input
      */
-    .s_axis_desc_tdata(rx_desc_tdata),
-    .s_axis_desc_tkeep(rx_desc_tkeep),
-    .s_axis_desc_tvalid(rx_desc_tvalid),
-    .s_axis_desc_tready(rx_desc_tready),
-    .s_axis_desc_tlast(rx_desc_tlast),
-    .s_axis_desc_tid(rx_desc_tid),
-    .s_axis_desc_tuser(rx_desc_tuser),
+    .s_axis_desc_tdata(rx_fifo_desc_tdata),
+    .s_axis_desc_tkeep(rx_fifo_desc_tkeep),
+    .s_axis_desc_tvalid(rx_fifo_desc_tvalid),
+    .s_axis_desc_tready(rx_fifo_desc_tready),
+    .s_axis_desc_tlast(rx_fifo_desc_tlast),
+    .s_axis_desc_tid(rx_fifo_desc_tid),
+    .s_axis_desc_tuser(rx_fifo_desc_tuser),
 
     /*
      * Completion request output

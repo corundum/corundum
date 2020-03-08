@@ -723,6 +723,104 @@ always @* begin
 end
 
 always @(posedge clk) begin
+    s_axis_rx_req_ready_reg <= s_axis_rx_req_ready_next;
+
+    m_axis_rx_req_status_len_reg <= m_axis_rx_req_status_len_next;
+    m_axis_rx_req_status_tag_reg <= m_axis_rx_req_status_tag_next;
+    m_axis_rx_req_status_valid_reg <= m_axis_rx_req_status_valid_next;
+
+    m_axis_desc_req_queue_reg <= m_axis_desc_req_queue_next;
+    m_axis_desc_req_tag_reg <= m_axis_desc_req_tag_next;
+    m_axis_desc_req_valid_reg <= m_axis_desc_req_valid_next;
+
+    s_axis_desc_tready_reg <= s_axis_desc_tready_next;
+
+    m_axis_cpl_req_queue_reg <= m_axis_cpl_req_queue_next;
+    m_axis_cpl_req_tag_reg <= m_axis_cpl_req_tag_next;
+    m_axis_cpl_req_data_reg <= m_axis_cpl_req_data_next;
+    m_axis_cpl_req_valid_reg <= m_axis_cpl_req_valid_next;
+
+    m_axis_dma_write_desc_dma_addr_reg <= m_axis_dma_write_desc_dma_addr_next;
+    m_axis_dma_write_desc_ram_addr_reg <= m_axis_dma_write_desc_ram_addr_next;
+    m_axis_dma_write_desc_len_reg <= m_axis_dma_write_desc_len_next;
+    m_axis_dma_write_desc_tag_reg <= m_axis_dma_write_desc_tag_next;
+    m_axis_dma_write_desc_valid_reg <= m_axis_dma_write_desc_valid_next;
+
+    m_axis_rx_desc_addr_reg <= m_axis_rx_desc_addr_next;
+    m_axis_rx_desc_len_reg <= m_axis_rx_desc_len_next;
+    m_axis_rx_desc_tag_reg <= m_axis_rx_desc_tag_next;
+    m_axis_rx_desc_valid_reg <= m_axis_rx_desc_valid_next;
+
+    s_axis_rx_ptp_ts_ready_reg <= s_axis_rx_ptp_ts_ready_next;
+
+    s_axis_rx_hash_ready_reg <= s_axis_rx_hash_ready_next;
+
+    s_axis_rx_csum_ready_reg <= s_axis_rx_csum_ready_next;
+
+    if (desc_table_start_en) begin
+        desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b1;
+        desc_table_rx_done[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
+        desc_table_invalid[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
+        desc_table_desc_fetched[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
+        desc_table_data_written[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
+        desc_table_cpl_write_done[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
+        desc_table_queue[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_queue;
+        desc_table_tag[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_tag;
+        desc_table_pkt[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_pkt;
+        desc_table_start_ptr_reg <= desc_table_start_ptr_reg + 1;
+    end
+    if (desc_table_rx_finish_en) begin
+        desc_table_dma_len[desc_table_rx_finish_ptr & DESC_PTR_MASK] <= desc_table_rx_finish_len;
+        desc_table_rx_done[desc_table_rx_finish_ptr & DESC_PTR_MASK] <= 1'b1;
+    end
+    if (desc_table_dequeue_start_en) begin
+        desc_table_dequeue_start_ptr_reg <= desc_table_dequeue_start_ptr_reg + 1;
+    end
+    if (desc_table_dequeue_en) begin
+        desc_table_queue_ptr[desc_table_dequeue_ptr & DESC_PTR_MASK] <= desc_table_dequeue_queue_ptr;
+        desc_table_cpl_queue[desc_table_dequeue_ptr & DESC_PTR_MASK] <= desc_table_dequeue_cpl_queue;
+        if (desc_table_dequeue_invalid) begin
+            desc_table_invalid[desc_table_dequeue_ptr & DESC_PTR_MASK] <= 1'b1;
+        end
+    end
+    if (desc_table_desc_fetched_en) begin
+        desc_table_desc_len[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= desc_table_desc_fetched_len;
+        desc_table_desc_fetched[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= 1'b1;
+    end
+    if (desc_table_data_written_en) begin
+        desc_table_data_written[desc_table_data_written_ptr & DESC_PTR_MASK] <= 1'b1;
+    end
+    if (desc_table_store_ptp_ts_en) begin
+        desc_table_ptp_ts[desc_table_store_ptp_ts_ptr_reg & DESC_PTR_MASK] <= desc_table_store_ptp_ts;
+        desc_table_store_ptp_ts_ptr_reg <= desc_table_store_ptp_ts_ptr_reg + 1;
+    end
+    if (desc_table_store_hash_en) begin
+        desc_table_hash[desc_table_store_hash_ptr_reg & DESC_PTR_MASK] <= desc_table_store_hash;
+        desc_table_hash_type[desc_table_store_hash_ptr_reg & DESC_PTR_MASK] <= desc_table_store_hash_type;
+        desc_table_store_hash_ptr_reg <= desc_table_store_hash_ptr_reg + 1;
+    end
+    if (desc_table_store_csum_en) begin
+        desc_table_csum[desc_table_store_csum_ptr_reg & DESC_PTR_MASK] <= desc_table_store_csum;
+        desc_table_store_csum_ptr_reg <= desc_table_store_csum_ptr_reg + 1;
+    end
+    if (desc_table_cpl_enqueue_start_en) begin
+        desc_table_cpl_enqueue_start_ptr_reg <= desc_table_cpl_enqueue_start_ptr_reg + 1;
+    end
+    if (desc_table_cpl_write_done_en) begin
+        desc_table_cpl_write_done[desc_table_cpl_write_done_ptr & DESC_PTR_MASK] <= 1'b1;
+    end
+    if (desc_table_finish_en) begin
+        desc_table_active[desc_table_finish_ptr_reg & DESC_PTR_MASK] <= 1'b0;
+        desc_table_finish_ptr_reg <= desc_table_finish_ptr_reg + 1;
+    end
+
+    if (pkt_table_start_en) begin
+        pkt_table_active[pkt_table_start_ptr] <= 1'b1;
+    end
+    if (pkt_table_finish_en) begin
+        pkt_table_active[pkt_table_finish_ptr] <= 1'b0;
+    end
+
     if (rst) begin
         s_axis_rx_req_ready_reg <= 1'b0;
         m_axis_rx_req_status_valid_reg <= 1'b0;
@@ -750,115 +848,6 @@ always @(posedge clk) begin
         desc_table_finish_ptr_reg <= 0;
 
         pkt_table_active <= 0;
-    end else begin
-        s_axis_rx_req_ready_reg <= s_axis_rx_req_ready_next;
-        m_axis_rx_req_status_valid_reg <= m_axis_rx_req_status_valid_next;
-        m_axis_desc_req_valid_reg <= m_axis_desc_req_valid_next;
-        s_axis_desc_tready_reg <= s_axis_desc_tready_next;
-        m_axis_cpl_req_valid_reg <= m_axis_cpl_req_valid_next;
-        m_axis_dma_write_desc_valid_reg <= m_axis_dma_write_desc_valid_next;
-        m_axis_rx_desc_valid_reg <= m_axis_rx_desc_valid_next;
-        s_axis_rx_ptp_ts_ready_reg <= s_axis_rx_ptp_ts_ready_next;
-        s_axis_rx_hash_ready_reg <= s_axis_rx_hash_ready_next;
-        s_axis_rx_csum_ready_reg <= s_axis_rx_csum_ready_next;
-        
-        if (desc_table_start_en) begin
-            desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b1;
-            desc_table_invalid[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
-            desc_table_desc_fetched[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
-            desc_table_data_written[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
-            desc_table_rx_done[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
-            desc_table_cpl_write_done[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
-            desc_table_start_ptr_reg <= desc_table_start_ptr_reg + 1;
-        end
-        if (desc_table_rx_finish_en) begin
-            desc_table_rx_done[desc_table_rx_finish_ptr & DESC_PTR_MASK] <= 1'b1;
-        end
-        if (desc_table_dequeue_start_en) begin
-            desc_table_dequeue_start_ptr_reg <= desc_table_dequeue_start_ptr_reg + 1;
-        end
-        if (desc_table_dequeue_en) begin
-            if (desc_table_dequeue_invalid) begin
-                desc_table_invalid[desc_table_dequeue_ptr & DESC_PTR_MASK] <= 1'b1;
-            end
-        end
-        if (desc_table_desc_fetched_en) begin
-            desc_table_desc_fetched[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= 1'b1;
-        end
-        if (desc_table_data_written_en) begin
-            desc_table_data_written[desc_table_data_written_ptr & DESC_PTR_MASK] <= 1'b1;
-        end
-        if (desc_table_store_ptp_ts_en) begin
-            desc_table_store_ptp_ts_ptr_reg <= desc_table_store_ptp_ts_ptr_reg + 1;
-        end
-        if (desc_table_store_hash_en) begin
-            desc_table_store_hash_ptr_reg <= desc_table_store_hash_ptr_reg + 1;
-        end
-        if (desc_table_store_csum_en) begin
-            desc_table_store_csum_ptr_reg <= desc_table_store_csum_ptr_reg + 1;
-        end
-        if (desc_table_cpl_enqueue_start_en) begin
-            desc_table_cpl_enqueue_start_ptr_reg <= desc_table_cpl_enqueue_start_ptr_reg + 1;
-        end
-        if (desc_table_cpl_write_done_en) begin
-            desc_table_cpl_write_done[desc_table_cpl_write_done_ptr & DESC_PTR_MASK] <= 1'b1;
-        end
-        if (desc_table_finish_en) begin
-            desc_table_active[desc_table_finish_ptr_reg & DESC_PTR_MASK] <= 1'b0;
-            desc_table_finish_ptr_reg <= desc_table_finish_ptr_reg + 1;
-        end
-
-        if (pkt_table_start_en) begin
-            pkt_table_active[pkt_table_start_ptr] <= 1'b1;
-        end
-        if (pkt_table_finish_en) begin
-            pkt_table_active[pkt_table_finish_ptr] <= 1'b0;
-        end
-    end
-
-    m_axis_rx_req_status_len_reg <= m_axis_rx_req_status_len_next;
-    m_axis_rx_req_status_tag_reg <= m_axis_rx_req_status_tag_next;
-
-    m_axis_desc_req_queue_reg <= m_axis_desc_req_queue_next;
-    m_axis_desc_req_tag_reg <= m_axis_desc_req_tag_next;
-
-    m_axis_cpl_req_queue_reg <= m_axis_cpl_req_queue_next;
-    m_axis_cpl_req_tag_reg <= m_axis_cpl_req_tag_next;
-    m_axis_cpl_req_data_reg <= m_axis_cpl_req_data_next;
-
-    m_axis_dma_write_desc_dma_addr_reg <= m_axis_dma_write_desc_dma_addr_next;
-    m_axis_dma_write_desc_ram_addr_reg <= m_axis_dma_write_desc_ram_addr_next;
-    m_axis_dma_write_desc_len_reg <= m_axis_dma_write_desc_len_next;
-    m_axis_dma_write_desc_tag_reg <= m_axis_dma_write_desc_tag_next;
-
-    m_axis_rx_desc_addr_reg <= m_axis_rx_desc_addr_next;
-    m_axis_rx_desc_len_reg <= m_axis_rx_desc_len_next;
-    m_axis_rx_desc_tag_reg <= m_axis_rx_desc_tag_next;
-
-    if (desc_table_start_en) begin
-        desc_table_queue[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_queue;
-        desc_table_tag[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_tag;
-        desc_table_pkt[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_pkt;
-    end
-    if (desc_table_rx_finish_en) begin
-        desc_table_dma_len[desc_table_rx_finish_ptr & DESC_PTR_MASK] <= desc_table_rx_finish_len;
-    end
-    if (desc_table_dequeue_en) begin
-        desc_table_queue_ptr[desc_table_dequeue_ptr & DESC_PTR_MASK] <= desc_table_dequeue_queue_ptr;
-        desc_table_cpl_queue[desc_table_dequeue_ptr & DESC_PTR_MASK] <= desc_table_dequeue_cpl_queue;
-    end
-    if (desc_table_desc_fetched_en) begin
-        desc_table_desc_len[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= desc_table_desc_fetched_len;
-    end
-    if (desc_table_store_ptp_ts_en) begin
-        desc_table_ptp_ts[desc_table_store_ptp_ts_ptr_reg & DESC_PTR_MASK] <= desc_table_store_ptp_ts;
-    end
-    if (desc_table_store_hash_en) begin
-        desc_table_hash[desc_table_store_hash_ptr_reg & DESC_PTR_MASK] <= desc_table_store_hash;
-        desc_table_hash_type[desc_table_store_hash_ptr_reg & DESC_PTR_MASK] <= desc_table_store_hash_type;
-    end
-    if (desc_table_store_csum_en) begin
-        desc_table_csum[desc_table_store_csum_ptr_reg & DESC_PTR_MASK] <= desc_table_store_csum;
     end
 end
 

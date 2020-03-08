@@ -289,7 +289,6 @@ reg [QUEUE_PTR_WIDTH-1:0] desc_table_queue_ptr[DESC_TABLE_SIZE-1:0];
 reg [CPL_QUEUE_INDEX_WIDTH-1:0] desc_table_cpl_queue[DESC_TABLE_SIZE-1:0];
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_dma_len[DESC_TABLE_SIZE-1:0];
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_desc_len[DESC_TABLE_SIZE-1:0];
-reg [DMA_ADDR_WIDTH-1:0] desc_table_dma_addr[DESC_TABLE_SIZE-1:0];
 reg [CL_PKT_TABLE_SIZE-1:0] desc_table_pkt[DESC_TABLE_SIZE-1:0];
 reg [95:0] desc_table_ptp_ts[DESC_TABLE_SIZE-1:0];
 reg [31:0] desc_table_hash[DESC_TABLE_SIZE-1:0];
@@ -313,10 +312,7 @@ reg desc_table_dequeue_invalid;
 reg desc_table_dequeue_en;
 reg [CL_DESC_TABLE_SIZE-1:0] desc_table_desc_fetched_ptr;
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_desc_fetched_len;
-reg [DMA_ADDR_WIDTH-1:0] desc_table_desc_fetched_dma_addr;
 reg desc_table_desc_fetched_en;
-reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_data_write_start_ptr_reg = 0;
-reg desc_table_data_write_start_en;
 reg [CL_DESC_TABLE_SIZE-1:0] desc_table_data_written_ptr;
 reg desc_table_data_written_en;
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_store_ptp_ts_ptr_reg = 0;
@@ -474,10 +470,8 @@ always @* begin
     desc_table_dequeue_invalid = 1'b0;
     desc_table_dequeue_en = 1'b0;
     desc_table_desc_fetched_ptr = s_axis_desc_tid & DESC_PTR_MASK;
-    desc_table_desc_fetched_len = s_axis_desc_tdata[64:32];
-    desc_table_desc_fetched_dma_addr = s_axis_desc_tdata[127:64];
+    desc_table_desc_fetched_len = s_axis_desc_tdata[63:32];
     desc_table_desc_fetched_en = 1'b0;
-    desc_table_data_write_start_en = 1'b0;
     desc_table_data_written_ptr = s_axis_dma_write_desc_status_tag & DESC_PTR_MASK;
     desc_table_data_written_en = 1'b0;
     desc_table_store_ptp_ts = s_axis_rx_ptp_ts_96;
@@ -566,39 +560,30 @@ always @* begin
         end
     end
 
-    // descriptor data write
-    s_axis_desc_tready_next = 1'b1;
-    if (s_axis_desc_tready && s_axis_desc_tvalid) begin
-        // update entry in descriptor table
-        desc_table_desc_fetched_ptr = s_axis_desc_tid & DESC_PTR_MASK;
-        desc_table_desc_fetched_len = s_axis_desc_tdata[64:32];
-        desc_table_desc_fetched_dma_addr = s_axis_desc_tdata[127:64];
-        desc_table_desc_fetched_en = 1'b1;
-    end
-
-    // data write
-    // wait for descriptor fetch completion
+    // descriptor processing and DMA request generation
     // TODO descriptor validation?
-    if (desc_table_active[desc_table_data_write_start_ptr_reg & DESC_PTR_MASK] && desc_table_data_write_start_ptr_reg != desc_table_start_ptr_reg && desc_table_data_write_start_ptr_reg != desc_table_dequeue_start_ptr_reg) begin
-        if (desc_table_invalid[desc_table_data_write_start_ptr_reg & DESC_PTR_MASK]) begin
-            // invalid entry; skip
-            desc_table_data_write_start_en = 1'b1;
-        end else if (desc_table_desc_fetched[desc_table_data_write_start_ptr_reg & DESC_PTR_MASK] && !m_axis_dma_write_desc_valid_reg) begin
+    s_axis_desc_tready_next = !m_axis_dma_write_desc_valid;
+    if (s_axis_desc_tready && s_axis_desc_tvalid) begin
+        if (desc_table_active[s_axis_desc_tid & DESC_PTR_MASK]) begin
             // update entry in descriptor table
-            desc_table_data_write_start_en = 1'b1;
+            desc_table_desc_fetched_ptr = s_axis_desc_tid & DESC_PTR_MASK;
+            desc_table_desc_fetched_len = s_axis_desc_tdata[63:32];
+            desc_table_desc_fetched_en = 1'b1;
 
             // initiate data write
-            m_axis_dma_write_desc_dma_addr_next = desc_table_dma_addr[desc_table_data_write_start_ptr_reg & DESC_PTR_MASK];
-            m_axis_dma_write_desc_ram_addr_next = (desc_table_pkt[desc_table_data_write_start_ptr_reg & DESC_PTR_MASK] & DESC_PTR_MASK) << CL_MAX_RX_SIZE;
-            if (desc_table_desc_len[desc_table_data_write_start_ptr_reg & DESC_PTR_MASK] < desc_table_dma_len[desc_table_data_write_start_ptr_reg & DESC_PTR_MASK]) begin
+            m_axis_dma_write_desc_dma_addr_next = s_axis_desc_tdata[127:64];
+            m_axis_dma_write_desc_ram_addr_next = desc_table_pkt[s_axis_desc_tid & DESC_PTR_MASK] << CL_MAX_RX_SIZE;
+            if (s_axis_desc_tdata[63:32] < desc_table_dma_len[s_axis_desc_tid & DESC_PTR_MASK]) begin
                 // limit write to length provided in descriptor
-                m_axis_dma_write_desc_len_next = desc_table_desc_len[desc_table_data_write_start_ptr_reg & DESC_PTR_MASK];
+                m_axis_dma_write_desc_len_next = s_axis_desc_tdata[63:32];
             end else begin
                 // write actual packet length
-                m_axis_dma_write_desc_len_next = desc_table_dma_len[desc_table_data_write_start_ptr_reg & DESC_PTR_MASK];
+                m_axis_dma_write_desc_len_next = desc_table_dma_len[s_axis_desc_tid & DESC_PTR_MASK];
             end
-            m_axis_dma_write_desc_tag_next = desc_table_data_write_start_ptr_reg & DESC_PTR_MASK;
+            m_axis_dma_write_desc_tag_next = s_axis_desc_tid & DESC_PTR_MASK;
             m_axis_dma_write_desc_valid_next = 1'b1;
+
+            s_axis_desc_tready_next = 1'b0;
         end
     end
 
@@ -665,7 +650,7 @@ always @* begin
     // finish write data; start completion enqueue
     if (desc_table_active[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] &&
             desc_table_cpl_enqueue_start_ptr_reg != desc_table_start_ptr_reg &&
-            desc_table_cpl_enqueue_start_ptr_reg != desc_table_data_write_start_ptr_reg &&
+            desc_table_cpl_enqueue_start_ptr_reg != desc_table_dequeue_start_ptr_reg &&
             (desc_table_cpl_enqueue_start_ptr_reg != desc_table_store_ptp_ts_ptr_reg || !PTP_TS_ENABLE) &&
             (desc_table_cpl_enqueue_start_ptr_reg != desc_table_store_hash_ptr_reg || !RX_HASH_ENABLE) &&
             (desc_table_cpl_enqueue_start_ptr_reg != desc_table_store_csum_ptr_reg || !RX_CHECKSUM_ENABLE)) begin
@@ -758,7 +743,6 @@ always @(posedge clk) begin
 
         desc_table_start_ptr_reg <= 0;
         desc_table_dequeue_start_ptr_reg <= 0;
-        desc_table_data_write_start_ptr_reg <= 0;
         desc_table_store_ptp_ts_ptr_reg <= 0;
         desc_table_store_hash_ptr_reg <= 0;
         desc_table_store_csum_ptr_reg <= 0;
@@ -800,9 +784,6 @@ always @(posedge clk) begin
         end
         if (desc_table_desc_fetched_en) begin
             desc_table_desc_fetched[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= 1'b1;
-        end
-        if (desc_table_data_write_start_en) begin
-            desc_table_data_write_start_ptr_reg <= desc_table_data_write_start_ptr_reg + 1;
         end
         if (desc_table_data_written_en) begin
             desc_table_data_written[desc_table_data_written_ptr & DESC_PTR_MASK] <= 1'b1;
@@ -868,7 +849,6 @@ always @(posedge clk) begin
     end
     if (desc_table_desc_fetched_en) begin
         desc_table_desc_len[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= desc_table_desc_fetched_len;
-        desc_table_dma_addr[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= desc_table_desc_fetched_dma_addr;
     end
     if (desc_table_store_ptp_ts_en) begin
         desc_table_ptp_ts[desc_table_store_ptp_ts_ptr_reg & DESC_PTR_MASK] <= desc_table_store_ptp_ts;

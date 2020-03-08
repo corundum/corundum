@@ -297,7 +297,6 @@ reg [6:0] desc_table_csum_start[DESC_TABLE_SIZE-1:0];
 reg [7:0] desc_table_csum_offset[DESC_TABLE_SIZE-1:0];
 reg desc_table_csum_enable[DESC_TABLE_SIZE-1:0];
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_len[DESC_TABLE_SIZE-1:0];
-reg [DMA_ADDR_WIDTH-1:0] desc_table_dma_addr[DESC_TABLE_SIZE-1:0];
 reg [CL_PKT_TABLE_SIZE-1:0] desc_table_pkt[DESC_TABLE_SIZE-1:0];
 reg [95:0] desc_table_ptp_ts[DESC_TABLE_SIZE-1:0];
 
@@ -313,14 +312,11 @@ reg desc_table_dequeue_invalid;
 reg desc_table_dequeue_en;
 reg [CL_DESC_TABLE_SIZE-1:0] desc_table_desc_fetched_ptr;
 reg desc_table_desc_fetched_en;
-reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_data_fetch_start_ptr_reg = 0;
-reg desc_table_data_fetch_start_en;
 reg [CL_DESC_TABLE_SIZE-1:0] desc_table_data_fetched_ptr;
 reg [6:0] desc_table_desc_fetched_csum_start;
 reg [7:0] desc_table_desc_fetched_csum_offset;
 reg desc_table_desc_fetched_csum_enable;
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_desc_fetched_len;
-reg [DMA_ADDR_WIDTH-1:0] desc_table_desc_fetched_dma_addr;
 reg desc_table_data_fetched_en;
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_tx_start_ptr_reg = 0;
 reg desc_table_tx_start_en;
@@ -493,10 +489,8 @@ always @* begin
         desc_table_desc_fetched_csum_offset = 0;
         desc_table_desc_fetched_csum_enable = 0;
     end
-    desc_table_desc_fetched_len = s_axis_desc_tdata[64:32];
-    desc_table_desc_fetched_dma_addr = s_axis_desc_tdata[127:64];
+    desc_table_desc_fetched_len = s_axis_desc_tdata[63:32];
     desc_table_desc_fetched_en = 1'b0;
-    desc_table_data_fetch_start_en = 1'b0;
     desc_table_data_fetched_ptr = s_axis_dma_read_desc_status_tag & DESC_PTR_MASK;
     desc_table_data_fetched_en = 1'b0;
     desc_table_tx_start_en = 1'b0;
@@ -570,38 +564,29 @@ always @* begin
         end
     end
 
-    // descriptor data write
-    s_axis_desc_tready_next = 1'b1;
-    if (s_axis_desc_tready && s_axis_desc_tvalid) begin
-        // update entry in descriptor table
-        desc_table_desc_fetched_ptr = s_axis_desc_tid & DESC_PTR_MASK;
-        if (TX_CHECKSUM_ENABLE) begin
-            desc_table_desc_fetched_csum_start = s_axis_desc_tdata[23:16];
-            desc_table_desc_fetched_csum_offset = s_axis_desc_tdata[30:24];
-            desc_table_desc_fetched_csum_enable = s_axis_desc_tdata[31];
-        end
-        desc_table_desc_fetched_len = s_axis_desc_tdata[64:32];
-        desc_table_desc_fetched_dma_addr = s_axis_desc_tdata[127:64];
-        desc_table_desc_fetched_en = 1'b1;
-    end
-
-    // data fetch
-    // wait for descriptor fetch completion
+    // descriptor processing and DMA request generation
     // TODO descriptor validation?
-    if (desc_table_active[desc_table_data_fetch_start_ptr_reg & DESC_PTR_MASK] && desc_table_data_fetch_start_ptr_reg != desc_table_start_ptr_reg) begin
-        if (desc_table_invalid[desc_table_data_fetch_start_ptr_reg & DESC_PTR_MASK]) begin
-            // invalid entry; skip
-            desc_table_data_fetch_start_en = 1'b1;
-        end else if (desc_table_desc_fetched[desc_table_data_fetch_start_ptr_reg & DESC_PTR_MASK] && !m_axis_dma_read_desc_valid_reg) begin
+    s_axis_desc_tready_next = !m_axis_dma_read_desc_valid;
+    if (s_axis_desc_tready && s_axis_desc_tvalid) begin
+        if (desc_table_active[s_axis_desc_tid & DESC_PTR_MASK]) begin
             // update entry in descriptor table
-            desc_table_data_fetch_start_en = 1'b1;
+            desc_table_desc_fetched_ptr = s_axis_desc_tid & DESC_PTR_MASK;
+            if (TX_CHECKSUM_ENABLE) begin
+                desc_table_desc_fetched_csum_start = s_axis_desc_tdata[23:16];
+                desc_table_desc_fetched_csum_offset = s_axis_desc_tdata[30:24];
+                desc_table_desc_fetched_csum_enable = s_axis_desc_tdata[31];
+            end
+            desc_table_desc_fetched_len = s_axis_desc_tdata[63:32];
+            desc_table_desc_fetched_en = 1'b1;
 
             // initiate data fetch to onboard RAM
-            m_axis_dma_read_desc_dma_addr_next = desc_table_dma_addr[desc_table_data_fetch_start_ptr_reg & DESC_PTR_MASK];
-            m_axis_dma_read_desc_ram_addr_next = desc_table_pkt[desc_table_data_fetch_start_ptr_reg & DESC_PTR_MASK] << CL_MAX_TX_SIZE;
-            m_axis_dma_read_desc_len_next = desc_table_len[desc_table_data_fetch_start_ptr_reg & DESC_PTR_MASK];
-            m_axis_dma_read_desc_tag_next = desc_table_data_fetch_start_ptr_reg & DESC_PTR_MASK;
+            m_axis_dma_read_desc_dma_addr_next = s_axis_desc_tdata[127:64];
+            m_axis_dma_read_desc_ram_addr_next = desc_table_pkt[s_axis_desc_tid & DESC_PTR_MASK] << CL_MAX_TX_SIZE;
+            m_axis_dma_read_desc_len_next = s_axis_desc_tdata[63:32];
+            m_axis_dma_read_desc_tag_next = s_axis_desc_tid & DESC_PTR_MASK;
             m_axis_dma_read_desc_valid_next = 1'b1;
+
+            s_axis_desc_tready_next = 1'b0;
         end
     end
 
@@ -615,7 +600,7 @@ always @* begin
 
     // transmit
     // wait for data fetch completion
-    if (desc_table_active[desc_table_tx_start_ptr_reg & DESC_PTR_MASK] && desc_table_tx_start_ptr_reg != desc_table_start_ptr_reg && desc_table_tx_start_ptr_reg != desc_table_data_fetch_start_ptr_reg) begin
+    if (desc_table_active[desc_table_tx_start_ptr_reg & DESC_PTR_MASK] && desc_table_tx_start_ptr_reg != desc_table_start_ptr_reg) begin
         if (desc_table_invalid[desc_table_tx_start_ptr_reg & DESC_PTR_MASK]) begin
             // invalid entry; skip
             desc_table_tx_start_en = 1'b1;
@@ -753,7 +738,6 @@ always @(posedge clk) begin
         desc_table_tx_done <= 0;
 
         desc_table_start_ptr_reg <= 0;
-        desc_table_data_fetch_start_ptr_reg <= 0;
         desc_table_tx_start_ptr_reg <= 0;
         desc_table_store_ptp_ts_ptr_reg <= 0;
         desc_table_cpl_enqueue_start_ptr_reg <= 0;
@@ -790,9 +774,6 @@ always @(posedge clk) begin
         end
         if (desc_table_desc_fetched_en) begin
             desc_table_desc_fetched[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= 1'b1;
-        end
-        if (desc_table_data_fetch_start_en) begin
-            desc_table_data_fetch_start_ptr_reg <= desc_table_data_fetch_start_ptr_reg + 1;
         end
         if (desc_table_data_fetched_en) begin
             desc_table_data_fetched[desc_table_data_fetched_ptr & DESC_PTR_MASK] <= 1'b1;
@@ -873,7 +854,6 @@ always @(posedge clk) begin
         desc_table_csum_offset[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= desc_table_desc_fetched_csum_offset;
         desc_table_csum_enable[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= desc_table_desc_fetched_csum_enable;
         desc_table_len[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= desc_table_desc_fetched_len;
-        desc_table_dma_addr[desc_table_desc_fetched_ptr & DESC_PTR_MASK] <= desc_table_desc_fetched_dma_addr;
     end
     if (desc_table_store_ptp_ts_en) begin
         desc_table_ptp_ts[desc_table_store_ptp_ts_ptr_reg & DESC_PTR_MASK] <= desc_table_store_ptp_ts;

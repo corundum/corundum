@@ -543,7 +543,7 @@ class RxRing(object):
         self.rx_info[index] = pkt
 
         # write descriptor
-        struct.pack_into("<LLQ", self.buf, index*16, 0, len(pkt[1]), pkt[0])
+        struct.pack_into("<LLQ", self.buf, index*16, 0, len(pkt[1])-10, pkt[0]+10)
 
     def refill_buffers(self):
         missing = self.size - (self.head_ptr - self.clean_tail_ptr)
@@ -853,7 +853,7 @@ class Interface(object):
             length = cpl_data[2]
 
             skb = Packet()
-            skb.data = pkt[1][:length]
+            skb.data = pkt[1][10:length+10]
             skb.timestamp_ns = cpl_data[3]
             skb.timestamp_s = cpl_data[4]
             skb.rx_checksum = cpl_data[5]
@@ -915,7 +915,7 @@ class Interface(object):
         ring.tx_info[index] = pkt
 
         # put data in packet buffer
-        pkt[1][0:len(data)] = data
+        pkt[1][10:len(data)+10] = data
 
         csum_cmd = 0
 
@@ -923,7 +923,7 @@ class Interface(object):
             csum_cmd = 0x8000 | (csum_offset << 8) | csum_start
 
         # write descriptor
-        struct.pack_into("<HHLQ", ring.buf, index*16, 0, csum_cmd, len(data), pkt[0])
+        struct.pack_into("<HHLQ", ring.buf, index*16, 0, csum_cmd, len(data), pkt[0]+10)
 
         ring.head_ptr += 1;
 

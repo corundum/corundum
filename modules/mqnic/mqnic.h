@@ -115,15 +115,15 @@ struct mqnic_dev {
 
 struct mqnic_tx_info {
     struct sk_buff *skb;
-    dma_addr_t dma_addr;
-    int len;
+    DEFINE_DMA_UNMAP_ADDR(dma_addr);
+    DEFINE_DMA_UNMAP_LEN(len);
     int ts_requested;
 };
 
 struct mqnic_rx_info {
     struct sk_buff *skb;
-    dma_addr_t dma_addr;
-    int len;
+    DEFINE_DMA_UNMAP_ADDR(dma_addr);
+    DEFINE_DMA_UNMAP_LEN(len);
 };
 
 struct mqnic_ring {

@@ -166,10 +166,11 @@ void mqnic_tx_write_head_ptr(struct mqnic_ring *ring)
 void mqnic_free_tx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int index, int napi_budget)
 {
     struct mqnic_tx_info *tx_info = &ring->tx_info[index];
+    struct sk_buff *skb = tx_info->skb;
 
-    dma_unmap_single(priv->dev, tx_info->dma_addr, tx_info->len, PCI_DMA_TODEVICE);
-    tx_info->dma_addr = 0;
-    napi_consume_skb(tx_info->skb, napi_budget);
+    dma_unmap_single(priv->dev, dma_unmap_addr(tx_info, dma_addr), dma_unmap_len(tx_info, len), PCI_DMA_TODEVICE);
+    dma_unmap_addr_set(tx_info, dma_addr, 0);
+    napi_consume_skb(skb, napi_budget);
     tx_info->skb = NULL;
 }
 
@@ -329,6 +330,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
     u32 index;
     bool stop_queue;
     u32 clean_tail_ptr;
+    dma_addr_t dma_addr;
 
     if (unlikely(!priv->port_up))
     {
@@ -355,8 +357,6 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
     tx_desc = (struct mqnic_desc *)(ring->buf + index * sizeof(*tx_desc));
 
     tx_info = &ring->tx_info[index];
-    tx_info->skb = skb;
-    tx_info->len = skb->len;
 
     // TX hardware timestamp
     tx_info->ts_requested = 0;
@@ -393,21 +393,27 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
         tx_desc->tx_csum_cmd = 0;
     }
 
-    ring->packets++;
-    ring->bytes += tx_info->len;
-
     // map skb
-    tx_info->dma_addr = dma_map_single(priv->dev, skb->data, skb->len, PCI_DMA_TODEVICE);
+    dma_addr = dma_map_single(priv->dev, skb->data, skb->len, PCI_DMA_TODEVICE);
 
-    if (unlikely(dma_mapping_error(priv->dev, tx_info->dma_addr)))
+    if (unlikely(dma_mapping_error(priv->dev, dma_addr)))
     {
         // mapping failed
         goto tx_drop_count;
     }
 
     // write descriptor
-    tx_desc->len = tx_info->len;
-    tx_desc->addr = tx_info->dma_addr;
+    tx_desc->len = skb->len;
+    tx_desc->addr = dma_addr;
+
+    // update tx_info
+    tx_info->skb = skb;
+    dma_unmap_addr_set(tx_info, dma_addr, dma_addr);
+    dma_unmap_len_set(tx_info, len, skb->len);
+
+    // count packet
+    ring->packets++;
+    ring->bytes += skb->len;
 
     // enqueue
     ring->head_ptr++;

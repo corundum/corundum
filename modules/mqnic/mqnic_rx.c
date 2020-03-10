@@ -166,10 +166,11 @@ void mqnic_rx_write_head_ptr(struct mqnic_ring *ring)
 void mqnic_free_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int index)
 {
     struct mqnic_rx_info *rx_info = &ring->rx_info[index];
+    struct sk_buff *skb = rx_info->skb;
 
-    dma_unmap_single(priv->dev, rx_info->dma_addr, rx_info->len, PCI_DMA_FROMDEVICE);
-    rx_info->dma_addr = 0;
-    napi_consume_skb(rx_info->skb, 0);
+    dma_unmap_single(priv->dev, dma_unmap_addr(rx_info, dma_addr), dma_unmap_len(rx_info, len), PCI_DMA_FROMDEVICE);
+    dma_unmap_addr_set(rx_info, dma_addr, 0);
+    napi_consume_skb(skb, 0);
     rx_info->skb = NULL;
 }
 
@@ -198,8 +199,8 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int 
     struct mqnic_rx_info *rx_info = &ring->rx_info[index];
     struct mqnic_desc *rx_desc = (struct mqnic_desc *)(ring->buf + index * sizeof(*rx_desc));
     struct sk_buff *skb = rx_info->skb;
-
-    rx_info->len = ring->mtu+ETH_HLEN;
+    u32 len = ring->mtu+ETH_HLEN;
+    dma_addr_t dma_addr;
 
     if (unlikely(skb))
     {
@@ -207,20 +208,18 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int 
         return -1;
     }
 
-    skb = netdev_alloc_skb_ip_align(priv->ndev, rx_info->len);
+    skb = netdev_alloc_skb_ip_align(priv->ndev, len);
     if (unlikely(!skb))
     {
         dev_err(&priv->mdev->pdev->dev, "mqnic_prepare_rx_desc failed to allocate skb on port %d", priv->port);
         return -1;
     }
 
-    rx_info->skb = skb;
-
 map_skb:
     // map skb
-    rx_info->dma_addr = dma_map_single(priv->dev, skb->data, rx_info->len, PCI_DMA_FROMDEVICE);
+    dma_addr = dma_map_single(priv->dev, skb->data, len, PCI_DMA_FROMDEVICE);
 
-    if (unlikely(dma_mapping_error(priv->dev, rx_info->dma_addr)))
+    if (unlikely(dma_mapping_error(priv->dev, dma_addr)))
     {
         dev_err(&priv->mdev->pdev->dev, "mqnic_prepare_rx_desc failed to map skb on port %d", priv->port);
         napi_consume_skb(rx_info->skb, 0);
@@ -228,8 +227,13 @@ map_skb:
     }
 
     // write descriptor
-    rx_desc->len = rx_info->len;
-    rx_desc->addr = rx_info->dma_addr;
+    rx_desc->len = len;
+    rx_desc->addr = dma_addr;
+
+    // update rx_info
+    rx_info->skb = skb;
+    dma_unmap_addr_set(rx_info, dma_addr, dma_addr);
+    dma_unmap_len_set(rx_info, len, len);
 
     return 0;
 }
@@ -296,9 +300,13 @@ bool mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
         }
 
         // set length
-        if (cpl->len <= rx_info->len)
+        if (cpl->len <= skb_tailroom(skb))
         {
             skb_put(skb, cpl->len);
+        }
+        else
+        {
+            skb_put(skb, skb_tailroom(skb));
         }
         skb->protocol = eth_type_trans(skb, priv->ndev);
 
@@ -320,8 +328,8 @@ bool mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
         }
 
         // unmap
-        dma_unmap_single(priv->dev, rx_info->dma_addr, rx_info->len, PCI_DMA_FROMDEVICE);
-        rx_info->dma_addr = 0;
+        dma_unmap_single(priv->dev, dma_unmap_addr(rx_info, dma_addr), dma_unmap_len(rx_info, len), PCI_DMA_FROMDEVICE);
+        dma_unmap_addr_set(rx_info, dma_addr, 0);
 
         // hand off SKB
         napi_gro_receive(&cq_ring->napi, skb);

@@ -197,7 +197,7 @@ int mqnic_free_rx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring)
 int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int index)
 {
     struct mqnic_rx_info *rx_info = &ring->rx_info[index];
-    struct mqnic_desc *rx_desc = (struct mqnic_desc *)(ring->buf + index * sizeof(*rx_desc));
+    struct mqnic_desc *rx_desc = (struct mqnic_desc *)(ring->buf + index*ring->stride);
     struct page *page = rx_info->page;
     u32 page_order = ring->page_order;
     u32 len = PAGE_SIZE << page_order;
@@ -291,7 +291,7 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
 
     while (cq_ring->head_ptr != cq_tail_ptr && done < budget)
     {
-        cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index * MQNIC_CPL_SIZE);
+        cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index*cq_ring->stride);
         ring_index = cpl->index & ring->size_mask;
         rx_info = &ring->rx_info[ring_index];
         page = rx_info->page;

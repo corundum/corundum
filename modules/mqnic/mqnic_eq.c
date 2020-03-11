@@ -177,7 +177,7 @@ void mqnic_process_eq(struct net_device *ndev, struct mqnic_eq_ring *eq_ring)
 
     while (eq_ring->head_ptr != eq_tail_ptr)
     {
-        event = (struct mqnic_event *)(eq_ring->buf + eq_index * MQNIC_EVENT_SIZE);
+        event = (struct mqnic_event *)(eq_ring->buf + eq_index*eq_ring->stride);
 
         if (event->type == MQNIC_EVENT_TYPE_TX_CPL)
         {

@@ -226,7 +226,7 @@ int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
 
     while (cq_ring->head_ptr != cq_tail_ptr && done < budget)
     {
-        cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index * MQNIC_CPL_SIZE);
+        cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index*cq_ring->stride);
         ring_index = cpl->index & ring->size_mask;
         tx_info = &ring->tx_info[ring_index];
 
@@ -357,7 +357,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
     index = ring->head_ptr & ring->size_mask;
 
-    tx_desc = (struct mqnic_desc *)(ring->buf + index * sizeof(*tx_desc));
+    tx_desc = (struct mqnic_desc *)(ring->buf + index*ring->stride);
 
     tx_info = &ring->tx_info[index];
 

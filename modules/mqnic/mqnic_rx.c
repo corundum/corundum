@@ -319,11 +319,8 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
         skb_record_rx_queue(skb, cq_ring->ring_index);
 
         // RX hardware checksum
-        if ((ndev->features & NETIF_F_RXCSUM) &&
-            (skb->protocol == htons(ETH_P_IP) || skb->protocol == htons(ETH_P_IPV6)) &&
-            (skb->len >= 64))
+        if (ndev->features & NETIF_F_RXCSUM)
         {
-
             skb->csum = be16_to_cpu(cpl->rx_csum);
             skb->ip_summed = CHECKSUM_COMPLETE;
         }

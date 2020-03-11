@@ -338,7 +338,7 @@ void mqnic_tx_read_tail_ptr(struct mqnic_ring *ring);
 void mqnic_tx_write_head_ptr(struct mqnic_ring *ring);
 void mqnic_free_tx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int index, int napi_budget);
 int mqnic_free_tx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring);
-bool mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, int napi_budget);
+int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, int napi_budget);
 void mqnic_tx_irq(struct mqnic_cq_ring *cq);
 int mqnic_poll_tx_cq(struct napi_struct *napi, int budget);
 netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *dev);
@@ -356,7 +356,7 @@ void mqnic_free_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int in
 int mqnic_free_rx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring);
 int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int index);
 void mqnic_refill_rx_buffers(struct mqnic_priv *priv, struct mqnic_ring *ring);
-bool mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, int napi_budget);
+int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, int napi_budget);
 void mqnic_rx_irq(struct mqnic_cq_ring *cq);
 int mqnic_poll_rx_cq(struct napi_struct *napi, int budget);
 

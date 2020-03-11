@@ -257,7 +257,7 @@ void mqnic_refill_rx_buffers(struct mqnic_priv *priv, struct mqnic_ring *ring)
     mqnic_rx_write_head_ptr(ring);
 }
 
-bool mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, int napi_budget)
+int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, int napi_budget)
 {
     struct mqnic_priv *priv = netdev_priv(ndev);
     struct mqnic_ring *ring = priv->rx_ring[cq_ring->ring_index];
@@ -273,7 +273,7 @@ bool mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 
     if (unlikely(!priv->port_up))
     {
-        return true;
+        return done;
     }
 
     // process completion queue
@@ -372,7 +372,7 @@ bool mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
     // replenish buffers
     mqnic_refill_rx_buffers(priv, ring);
 
-    return done < budget;
+    return done;
 }
 
 void mqnic_rx_irq(struct mqnic_cq_ring *cq)
@@ -393,16 +393,19 @@ int mqnic_poll_rx_cq(struct napi_struct *napi, int budget)
 {
     struct mqnic_cq_ring *cq_ring = container_of(napi, struct mqnic_cq_ring, napi);
     struct net_device *ndev = cq_ring->ndev;
+    int done;
 
-    if (!mqnic_process_rx_cq(ndev, cq_ring, budget))
+    done = mqnic_process_rx_cq(ndev, cq_ring, budget);
+
+    if (done == budget)
     {
-       return budget;
+        return done;
     }
 
     napi_complete(napi);
 
     mqnic_arm_cq(cq_ring);
 
-    return 0;
+    return done;
 }
 

@@ -194,7 +194,7 @@ int mqnic_free_tx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring)
     return cnt;
 }
 
-bool mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, int napi_budget)
+int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, int napi_budget)
 {
     struct mqnic_priv *priv = netdev_priv(ndev);
     struct mqnic_ring *ring = priv->tx_ring[cq_ring->ring_index];
@@ -211,7 +211,7 @@ bool mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 
     if (unlikely(!priv->port_up))
     {
-        return true;
+        return done;
     }
 
     // prefetch for BQL
@@ -285,7 +285,7 @@ bool mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
         netif_tx_wake_queue(ring->tx_queue);
     }
 
-    return done < budget;
+    return done;
 }
 
 void mqnic_tx_irq(struct mqnic_cq_ring *cq)
@@ -306,17 +306,20 @@ int mqnic_poll_tx_cq(struct napi_struct *napi, int budget)
 {
     struct mqnic_cq_ring *cq_ring = container_of(napi, struct mqnic_cq_ring, napi);
     struct net_device *ndev = cq_ring->ndev;
+    int done;
 
-    if (!mqnic_process_tx_cq(ndev, cq_ring, budget))
+    done = mqnic_process_tx_cq(ndev, cq_ring, budget);
+
+    if (done == budget)
     {
-       return budget;
+        return done;
     }
 
     napi_complete(napi);
 
     mqnic_arm_cq(cq_ring);
 
-    return 0;
+    return done;
 }
 
 netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)

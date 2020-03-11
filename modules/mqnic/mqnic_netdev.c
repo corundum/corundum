@@ -66,6 +66,10 @@ static int mqnic_start_port(struct net_device *ndev)
     for (k = 0; k < priv->rx_queue_count; k++)
     {
         priv->rx_ring[k]->mtu = ndev->mtu;
+        if (ndev->mtu+ETH_HLEN <= PAGE_SIZE)
+            priv->rx_ring[k]->page_order = 0;
+        else
+            priv->rx_ring[k]->page_order = ilog2((ndev->mtu+ETH_HLEN+PAGE_SIZE-1)/PAGE_SIZE-1)+1;
         mqnic_activate_rx_ring(priv, priv->rx_ring[k], k);
     }
 

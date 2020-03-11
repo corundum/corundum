@@ -121,9 +121,11 @@ struct mqnic_tx_info {
 };
 
 struct mqnic_rx_info {
-    struct sk_buff *skb;
-    DEFINE_DMA_UNMAP_ADDR(dma_addr);
-    DEFINE_DMA_UNMAP_LEN(len);
+    struct page *page;
+    u32 page_order;
+    u32 page_offset;
+    dma_addr_t dma_addr;
+    u32 len;
 };
 
 struct mqnic_ring {
@@ -149,6 +151,7 @@ struct mqnic_ring {
     u32 cpl_index;
 
     u32 mtu;
+    u32 page_order;
 
     size_t buf_size;
     u8 *buf;

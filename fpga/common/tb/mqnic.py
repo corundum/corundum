@@ -294,7 +294,7 @@ class EqRing(object):
         print("%d events in queue" % (self.head_ptr - eq_tail_ptr))
 
         while (self.head_ptr != eq_tail_ptr):
-            event_data = struct.unpack_from("<HH", self.buf, eq_index*MQNIC_EVENT_SIZE)
+            event_data = struct.unpack_from("<HH", self.buf, eq_index*self.stride)
 
             print("Event data: "+repr(event_data))
 
@@ -543,7 +543,7 @@ class RxRing(object):
         self.rx_info[index] = pkt
 
         # write descriptor
-        struct.pack_into("<LLQ", self.buf, index*16, 0, len(pkt[1])-10, pkt[0]+10)
+        struct.pack_into("<LLQ", self.buf, index*self.stride, 0, len(pkt[1])-10, pkt[0]+10)
 
     def refill_buffers(self):
         missing = self.size - (self.head_ptr - self.clean_tail_ptr)
@@ -799,7 +799,7 @@ class Interface(object):
         cq_index = cq_tail_ptr & cq_ring.size_mask
 
         while (cq_ring.head_ptr != cq_tail_ptr):
-            cpl_data = struct.unpack_from("<HHHxxQ", cq_ring.buf, cq_index*MQNIC_CPL_SIZE)
+            cpl_data = struct.unpack_from("<HHHxxQ", cq_ring.buf, cq_index*cq_ring.stride)
             ring_index = cpl_data[1]
 
             print(cpl_data)
@@ -842,7 +842,7 @@ class Interface(object):
         cq_index = cq_tail_ptr & cq_ring.size_mask
 
         while (cq_ring.head_ptr != cq_tail_ptr):
-            cpl_data = struct.unpack_from("<HHHxxLHH", cq_ring.buf, cq_index*MQNIC_CPL_SIZE)
+            cpl_data = struct.unpack_from("<HHHxxLHH", cq_ring.buf, cq_index*cq_ring.stride)
             ring_index = cpl_data[1]
 
             print(cpl_data)
@@ -923,7 +923,7 @@ class Interface(object):
             csum_cmd = 0x8000 | (csum_offset << 8) | csum_start
 
         # write descriptor
-        struct.pack_into("<HHLQ", ring.buf, index*16, 0, csum_cmd, len(data), pkt[0]+10)
+        struct.pack_into("<HHLQ", ring.buf, index*ring.stride, 0, csum_cmd, len(data), pkt[0]+10)
 
         ring.head_ptr += 1;
 

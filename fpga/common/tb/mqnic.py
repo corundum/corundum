@@ -996,6 +996,13 @@ class Driver(object):
         self.if_csr_offset = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_IF_CSR_OFFSET)
         print("IF CSR offset: {:#010x}".format(self.if_csr_offset))
 
+        # enable bus mastering
+        val = yield from self.rc.config_read_word(self.dev_id, 0x04)
+        yield from self.rc.config_write_word(self.dev_id, 0x04, val | 4)
+
+        # configure MSI
+        yield from self.rc.configure_msi(self.dev_id)
+
         self.interfaces = []
 
         for k in range(self.if_count):

@@ -688,27 +688,27 @@ class Interface(object):
         self.ports = []
 
         for k in range(self.event_queue_count):
-            q = EqRing(self, 1024, 16, self.index, self.hw_addr + self.event_queue_offset + k*MQNIC_EVENT_QUEUE_STRIDE)
+            q = EqRing(self, 1024, MQNIC_EVENT_SIZE, self.index, self.hw_addr + self.event_queue_offset + k*MQNIC_EVENT_QUEUE_STRIDE)
             yield from q.init()
             self.event_queues.append(q)
 
         for k in range(self.tx_queue_count):
-            q = TxRing(self, 1024, 16, k, self.hw_addr + self.tx_queue_offset + k*MQNIC_QUEUE_STRIDE)
+            q = TxRing(self, 1024, MQNIC_DESC_SIZE, k, self.hw_addr + self.tx_queue_offset + k*MQNIC_QUEUE_STRIDE)
             yield from q.init()
             self.tx_queues.append(q)
 
         for k in range(self.tx_cpl_queue_count):
-            q = CqRing(self, 1024, 32, k, self.hw_addr + self.tx_cpl_queue_offset + k*MQNIC_CPL_QUEUE_STRIDE)
+            q = CqRing(self, 1024, MQNIC_CPL_SIZE, k, self.hw_addr + self.tx_cpl_queue_offset + k*MQNIC_CPL_QUEUE_STRIDE)
             yield from q.init()
             self.tx_cpl_queues.append(q)
 
         for k in range(self.rx_queue_count):
-            q = RxRing(self, 1024, 16, k, self.hw_addr + self.rx_queue_offset + k*MQNIC_QUEUE_STRIDE)
+            q = RxRing(self, 1024, MQNIC_DESC_SIZE, k, self.hw_addr + self.rx_queue_offset + k*MQNIC_QUEUE_STRIDE)
             yield from q.init()
             self.rx_queues.append(q)
 
         for k in range(self.rx_cpl_queue_count):
-            q = CqRing(self, 1024, 32, k, self.hw_addr + self.rx_cpl_queue_offset + k*MQNIC_CPL_QUEUE_STRIDE)
+            q = CqRing(self, 1024, MQNIC_CPL_SIZE, k, self.hw_addr + self.rx_cpl_queue_offset + k*MQNIC_CPL_QUEUE_STRIDE)
             yield from q.init()
             self.rx_cpl_queues.append(q)
 

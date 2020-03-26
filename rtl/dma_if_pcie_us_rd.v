@@ -308,6 +308,8 @@ reg tag_table_we_req;
 
 reg tlp_cmd_ready;
 
+reg last_cycle;
+
 reg [3:0] first_be;
 reg [3:0] last_be;
 reg [10:0] dword_count;
@@ -740,6 +742,8 @@ end
 always @* begin
     tlp_state_next = TLP_STATE_IDLE;
 
+    last_cycle = 1'b0;
+
     tag_table_we_tlp_next = 1'b0;
 
     s_axis_rc_tready_next = 1'b0;
@@ -841,28 +845,6 @@ always @* begin
                     //s_axis_rc_tuser[42]; // discontinue
                     //s_axis_rc_tuser[74:43]; // parity
 
-                    if (byte_count_next > (op_dword_count_next << 2) - lower_addr_next[1:0]) begin
-                        // more completions to follow
-                        op_count_next = (op_dword_count_next << 2) - lower_addr_next[1:0];
-                        final_cpl_next = 1'b0;
-
-                        if (op_dword_count_next > (AXIS_PCIE_DATA_WIDTH/32-3)) begin
-                            cycle_byte_count_next = (AXIS_PCIE_DATA_WIDTH/8-12)-lower_addr_next[1:0];
-                        end else begin
-                            cycle_byte_count_next = op_count_next;
-                        end
-                    end else begin
-                        // last completion
-                        op_count_next = byte_count_next;
-                        final_cpl_next = 1'b1;
-
-                        if (op_count_next > (AXIS_PCIE_DATA_WIDTH/8-12)-lower_addr_next[1:0]) begin
-                            cycle_byte_count_next = (AXIS_PCIE_DATA_WIDTH/8-12)-lower_addr_next[1:0];
-                        end else begin
-                            cycle_byte_count_next = op_count_next;
-                        end
-                    end
-
                     ram_sel_next = tag_table_sel[pcie_tag_next];
                     if (!addr_valid_reg || pcie_tag_reg != pcie_tag_next) begin
                         // current AXI address not valid, so read it from table
@@ -871,8 +853,47 @@ always @* begin
 
                     offset_next = addr_next[OFFSET_WIDTH-1:0] - (12+lower_addr_next[1:0]);
 
-                    start_offset_next = addr_next;
-                    {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
+                    if (byte_count_next > (op_dword_count_next << 2) - lower_addr_next[1:0]) begin
+                        // more completions to follow
+                        op_count_next = (op_dword_count_next << 2) - lower_addr_next[1:0];
+                        final_cpl_next = 1'b0;
+
+                        if (op_dword_count_next > (AXIS_PCIE_DATA_WIDTH/32-3)) begin
+                            // more than one cycle
+                            cycle_byte_count_next = (AXIS_PCIE_DATA_WIDTH/8-12)-lower_addr_next[1:0];
+                            last_cycle = 1'b0;
+
+                            start_offset_next = addr_next;
+                            {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
+                        end else begin
+                            // one cycle
+                            cycle_byte_count_next = op_count_next;
+                            last_cycle = 1'b1;
+
+                            start_offset_next = addr_next;
+                            {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
+                        end
+                    end else begin
+                        // last completion
+                        op_count_next = byte_count_next;
+                        final_cpl_next = 1'b1;
+
+                        if (op_count_next > (AXIS_PCIE_DATA_WIDTH/8-12)-lower_addr_next[1:0]) begin
+                            // more than one cycle
+                            cycle_byte_count_next = (AXIS_PCIE_DATA_WIDTH/8-12)-lower_addr_next[1:0];
+                            last_cycle = 1'b0;
+
+                            start_offset_next = addr_next;
+                            {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
+                        end else begin
+                            // one cycle
+                            cycle_byte_count_next = op_count_next;
+                            last_cycle = 1'b1;
+
+                            start_offset_next = addr_next;
+                            {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
+                        end
+                    end
 
                     ram_mask_0_next = {SEG_COUNT{1'b1}} << (start_offset_next >> $clog2(SEG_BE_WIDTH));
                     ram_mask_1_next = {SEG_COUNT{1'b1}} >> (SEG_COUNT-1-(end_offset_next >> $clog2(SEG_BE_WIDTH)));
@@ -896,7 +917,7 @@ always @* begin
                         addr_valid_next = !final_cpl_next;
                         rc_tdata_int_next = s_axis_rc_tdata;
                         rc_tvalid_int_next = 1'b1;
-                        if (op_count_next == 0) begin
+                        if (last_cycle) begin
                             if (final_cpl_next) begin
                                 // last completion in current read request (PCIe tag)
 
@@ -1031,9 +1052,13 @@ always @* begin
                 offset_next = addr_next[OFFSET_WIDTH-1:0] - (4+lower_addr_reg[1:0]);
 
                 if (op_count_next > 4-lower_addr_reg[1:0]) begin
+                    // more than one cycle
                     cycle_byte_count_next = 4-lower_addr_reg[1:0];
+                    last_cycle = 1'b0;
                 end else begin
+                    // one cycle
                     cycle_byte_count_next = op_count_next;
+                    last_cycle = 1'b1;
                 end
                 start_offset_next = addr_next;
                 {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
@@ -1060,7 +1085,7 @@ always @* begin
                     addr_valid_next = !final_cpl_next;
                     rc_tdata_int_next = s_axis_rc_tdata;
                     rc_tvalid_int_next = 1'b1;
-                    if (op_count_next == 0) begin
+                    if (last_cycle) begin
                         if (final_cpl_next) begin
                             // last completion in current read request (PCIe tag)
 
@@ -1140,9 +1165,13 @@ always @* begin
                 rc_tvalid_int_next = 1'b1;
 
                 if (op_count_next > AXIS_PCIE_DATA_WIDTH/8) begin
+                    // more cycles after this one
                     cycle_byte_count_next = AXIS_PCIE_DATA_WIDTH/8;
+                    last_cycle = 1'b0;
                 end else begin
+                    // last cycle
                     cycle_byte_count_next = op_count_next;
+                    last_cycle = 1'b1;
                 end
                 start_offset_next = addr_next;
                 {ram_wrap_next, end_offset_next} = start_offset_next+cycle_byte_count_next-1;
@@ -1164,7 +1193,7 @@ always @* begin
 
                 s_axis_rc_tready_next = !(~ram_wr_cmd_ready_int_early & ram_mask_next);
 
-                if (op_count_next == 0) begin
+                if (last_cycle) begin
                     if (final_cpl_reg) begin
                         // last completion in current read request (PCIe tag)
 

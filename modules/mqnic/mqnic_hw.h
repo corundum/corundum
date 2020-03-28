@@ -46,6 +46,7 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_MAX_RX_RINGS      8192
 #define MQNIC_MAX_RX_CPL_RINGS  8192
 
+#define MQNIC_BOARD_ID_NETFPGA_SUME  0x10ee7028
 #define MQNIC_BOARD_ID_VCU108        0x10ee806c
 #define MQNIC_BOARD_ID_VCU118        0x10ee9076
 #define MQNIC_BOARD_ID_VCU1525       0x10ee95f5

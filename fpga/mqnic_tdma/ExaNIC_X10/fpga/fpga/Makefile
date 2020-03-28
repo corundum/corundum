@@ -8,7 +8,6 @@ FPGA_ARCH = kintexu
 SYN_FILES = rtl/fpga.v
 SYN_FILES += rtl/fpga_core.v
 SYN_FILES += rtl/debounce_switch.v
-SYN_FILES += rtl/sync_reset.v
 SYN_FILES += rtl/sync_signal.v
 SYN_FILES += rtl/common/interface.v
 SYN_FILES += rtl/common/port.v
@@ -54,6 +53,7 @@ SYN_FILES += lib/axis/rtl/axis_async_fifo_adapter.v
 SYN_FILES += lib/axis/rtl/axis_arb_mux.v
 SYN_FILES += lib/axis/rtl/axis_fifo.v
 SYN_FILES += lib/axis/rtl/axis_register.v
+SYN_FILES += lib/axis/rtl/sync_reset.v
 SYN_FILES += lib/pcie/rtl/pcie_us_axil_master.v
 SYN_FILES += lib/pcie/rtl/dma_if_pcie_us.v
 SYN_FILES += lib/pcie/rtl/dma_if_pcie_us_rd.v
@@ -72,6 +72,7 @@ SYN_FILES += lib/pcie/rtl/pulse_merge.v
 # XDC files
 XDC_FILES = fpga.xdc
 XDC_FILES += lib/axis/syn/axis_async_fifo.tcl
+XDC_FILES += lib/axis/syn/sync_reset.tcl
 XDC_FILES += lib/eth/syn/ptp_clock_cdc.tcl
 
 # IP

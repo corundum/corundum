@@ -231,7 +231,7 @@ sync_reset #(
 sync_reset_125mhz_inst (
     .clk(clk_125mhz_int),
     .rst(~mmcm_locked),
-    .sync_reset_out(rst_125mhz_int)
+    .out(rst_125mhz_int)
 );
 
 // GPIO
@@ -818,7 +818,7 @@ sync_reset #(
 sync_reset_156mhz_inst (
     .clk(clk_156mhz_int),
     .rst(~gt_reset_tx_done),
-    .sync_reset_out(rst_156mhz_int)
+    .out(rst_156mhz_int)
 );
 
 wire [5:0] qsfp_0_gt_txheader_0;
@@ -955,7 +955,7 @@ sync_reset #(
 qsfp_0_rx_rst_0_reset_sync_inst (
     .clk(qsfp_0_rx_clk_0_int),
     .rst(~gt_reset_rx_done),
-    .sync_reset_out(qsfp_0_rx_rst_0_int)
+    .out(qsfp_0_rx_rst_0_int)
 );
 
 eth_phy_10g #(
@@ -994,7 +994,7 @@ sync_reset #(
 qsfp_0_rx_rst_1_reset_sync_inst (
     .clk(qsfp_0_rx_clk_1_int),
     .rst(~gt_reset_rx_done),
-    .sync_reset_out(qsfp_0_rx_rst_1_int)
+    .out(qsfp_0_rx_rst_1_int)
 );
 
 eth_phy_10g #(
@@ -1033,7 +1033,7 @@ sync_reset #(
 qsfp_0_rx_rst_2_reset_sync_inst (
     .clk(qsfp_0_rx_clk_2_int),
     .rst(~gt_reset_rx_done),
-    .sync_reset_out(qsfp_0_rx_rst_2_int)
+    .out(qsfp_0_rx_rst_2_int)
 );
 
 eth_phy_10g #(
@@ -1072,7 +1072,7 @@ sync_reset #(
 qsfp_0_rx_rst_3_reset_sync_inst (
     .clk(qsfp_0_rx_clk_3_int),
     .rst(~gt_reset_rx_done),
-    .sync_reset_out(qsfp_0_rx_rst_3_int)
+    .out(qsfp_0_rx_rst_3_int)
 );
 
 eth_phy_10g #(
@@ -1111,7 +1111,7 @@ sync_reset #(
 qsfp_1_rx_rst_0_reset_sync_inst (
     .clk(qsfp_1_rx_clk_0_int),
     .rst(~gt_reset_rx_done),
-    .sync_reset_out(qsfp_1_rx_rst_0_int)
+    .out(qsfp_1_rx_rst_0_int)
 );
 
 eth_phy_10g #(
@@ -1150,7 +1150,7 @@ sync_reset #(
 qsfp_1_rx_rst_1_reset_sync_inst (
     .clk(qsfp_1_rx_clk_1_int),
     .rst(~gt_reset_rx_done),
-    .sync_reset_out(qsfp_1_rx_rst_1_int)
+    .out(qsfp_1_rx_rst_1_int)
 );
 
 eth_phy_10g #(
@@ -1189,7 +1189,7 @@ sync_reset #(
 qsfp_1_rx_rst_2_reset_sync_inst (
     .clk(qsfp_1_rx_clk_2_int),
     .rst(~gt_reset_rx_done),
-    .sync_reset_out(qsfp_1_rx_rst_2_int)
+    .out(qsfp_1_rx_rst_2_int)
 );
 
 eth_phy_10g #(
@@ -1228,7 +1228,7 @@ sync_reset #(
 qsfp_1_rx_rst_3_reset_sync_inst (
     .clk(qsfp_1_rx_clk_3_int),
     .rst(~gt_reset_rx_done),
-    .sync_reset_out(qsfp_1_rx_rst_3_int)
+    .out(qsfp_1_rx_rst_3_int)
 );
 
 eth_phy_10g #(

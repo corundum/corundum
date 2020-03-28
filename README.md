@@ -24,15 +24,16 @@ have multiple ports, each with its own independent scheduler.  This enables
 extremely fine-grained control over packet transmission.  Coupled with PTP time
 synchronization, this enables high precision TDMA.
 
-Corundum currently supports Xilinx Ultrascale and Ultrascale Plus series
+Corundum currently supports Xilinx Virtex 7, Ultrascale, and Ultrascale+ series
 devices.  Designs are included for the following FPGA boards:
 
-*  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex Ultrascale Plus XCVU3P)
+*  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex Ultrascale+ XCVU3P)
 *  Exablaze ExaNIC X10 (Xilinx Kintex Ultrascale XCKU035)
-*  Exablaze ExaNIC X25 (Xilinx Kintex Ultrascale Plus XCKU3P)
+*  Exablaze ExaNIC X25 (Xilinx Kintex Ultrascale+ XCKU3P)
+*  NetFPGA SUME (Xilinx Virtex 7 XC7V690T)
 *  Xilinx VCU108 (Xilinx Virtex Ultrascale XCVU095)
-*  Xilinx VCU118 (Xilinx Virtex Ultrascale Plus XCVU9P)
-*  Xilinx VCU1525 (Xilinx Virtex Ultrascale Plus XCVU9P)
+*  Xilinx VCU118 (Xilinx Virtex Ultrascale+ XCVU9P)
+*  Xilinx VCU1525 (Xilinx Virtex Ultrascale+ XCVU9P)
 
 For operation at 10G and 25G, Corundum uses the open source 10G/25G MAC and
 PHY modules from the verilog-ethernet repository, no extra licenses are
@@ -185,7 +186,7 @@ individual test scripts can be run with python directly.
     tb/mqnic.py          : MyHDL mqnic driver model
     tb/pcie.py           : MyHDL PCI Express BFM
     tb/pcie_us.py        : MyHDL Xilinx Ultrascale PCIe core model
-    tb/pcie_usp.py       : MyHDL Xilinx Ultrascale Plus PCIe core model
+    tb/pcie_usp.py       : MyHDL Xilinx Ultrascale+ PCIe core model
     tb/ptp.py            : MyHDL PTP clock model
     tb/udp_ep.py         : MyHDL UDP frame endpoints
     tb/xgmii_ep.py       : MyHDL XGMII endpoints

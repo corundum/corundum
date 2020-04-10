@@ -193,7 +193,7 @@ individual test scripts can be run with python directly.
 
 ## Publications
 
-- A. Forencich, A. C. Snoeren, G. Porter, G. Papen, *Corundum: An Open-Source 100-Gbps NIC,* in FCCM'20
+- A. Forencich, A. C. Snoeren, G. Porter, G. Papen, *Corundum: An Open-Source 100-Gbps NIC,* in FCCM'20, [Paper](https://www.cse.ucsd.edu/~snoeren/papers/corundum-fccm20.pdf)
 
 ## Citation
 If you use Corundum in your project please cite one of the following papers

@@ -416,7 +416,7 @@ always @(posedge b_clk) begin
     end
 
     if (b_rst) begin
-        ram_a_cmd_ready_reg <= 1'b1;
+        ram_b_cmd_ready_reg <= 1'b1;
         ram_b_rd_resp_valid_reg <= 1'b0;
     end
 end

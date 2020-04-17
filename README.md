@@ -43,6 +43,10 @@ enabled, which is covered by the free CMAC license on Xilinx Ultrascale+ parts.
 
 ## Documentation
 
+### Block Diagram
+
+![Corundum block diagram](block.svg)
+
 ### Modules
 
 #### cmac_pad module

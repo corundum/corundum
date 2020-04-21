@@ -546,8 +546,15 @@ class RxRing(object):
         pkt = self.driver.alloc_pkt()
         self.rx_info[index] = pkt
 
-        # write descriptor
-        struct.pack_into("<LLQ", self.buf, index*self.stride, 0, len(pkt[1])-10, pkt[0]+10)
+        length = len(pkt[1])
+        ptr = pkt[0]
+        offset = 0
+
+        # write descriptors
+        for k in range(0, self.desc_block_size):
+            l = min(length-offset, 4096) if k < self.desc_block_size-1 else length-offset
+            struct.pack_into("<LLQ", self.buf, index*self.stride+k*MQNIC_DESC_SIZE, 0, l, ptr+offset if l else 0)
+            offset += l
 
     def refill_buffers(self):
         missing = self.size - (self.head_ptr - self.clean_tail_ptr)
@@ -697,7 +704,7 @@ class Interface(object):
             self.event_queues.append(q)
 
         for k in range(self.tx_queue_count):
-            q = TxRing(self, 1024, MQNIC_DESC_SIZE, k, self.hw_addr + self.tx_queue_offset + k*MQNIC_QUEUE_STRIDE)
+            q = TxRing(self, 1024, MQNIC_DESC_SIZE*4, k, self.hw_addr + self.tx_queue_offset + k*MQNIC_QUEUE_STRIDE)
             yield from q.init()
             self.tx_queues.append(q)
 
@@ -707,7 +714,7 @@ class Interface(object):
             self.tx_cpl_queues.append(q)
 
         for k in range(self.rx_queue_count):
-            q = RxRing(self, 1024, MQNIC_DESC_SIZE, k, self.hw_addr + self.rx_queue_offset + k*MQNIC_QUEUE_STRIDE)
+            q = RxRing(self, 1024, MQNIC_DESC_SIZE*4, k, self.hw_addr + self.rx_queue_offset + k*MQNIC_QUEUE_STRIDE)
             yield from q.init()
             self.rx_queues.append(q)
 
@@ -857,7 +864,7 @@ class Interface(object):
             length = cpl_data[2]
 
             skb = Packet()
-            skb.data = pkt[1][10:length+10]
+            skb.data = pkt[1][:length]
             skb.timestamp_ns = cpl_data[3]
             skb.timestamp_s = cpl_data[4]
             skb.rx_checksum = cpl_data[5]
@@ -926,8 +933,18 @@ class Interface(object):
         if csum_start is not None and csum_offset is not None:
             csum_cmd = 0x8000 | (csum_offset << 8) | csum_start
 
-        # write descriptor
-        struct.pack_into("<HHLQ", ring.buf, index*ring.stride, 0, csum_cmd, len(data), pkt[0]+10)
+        length = len(data)
+        ptr = pkt[0]+10
+        offset = 0
+
+        # write descriptors
+        l = min(length-offset, 42) if ring.desc_block_size > 1 else length-offset
+        struct.pack_into("<HHLQ", ring.buf, index*ring.stride, 0, csum_cmd, l, ptr+offset if l else 0)
+        offset += l
+        for k in range(1, ring.desc_block_size):
+            l = min(length-offset, 4096) if k < ring.desc_block_size-1 else length-offset
+            struct.pack_into("<4xLQ", ring.buf, index*ring.stride+k*MQNIC_DESC_SIZE, l, ptr+offset if l else 0)
+            offset += l
 
         ring.head_ptr += 1;
 

@@ -50,6 +50,7 @@ parameter CPL_INDEX_WIDTH = 8;
 parameter QUEUE_PTR_WIDTH = 16;
 parameter LOG_QUEUE_SIZE_WIDTH = 4;
 parameter DESC_SIZE = 16;
+parameter LOG_BLOCK_SIZE_WIDTH = 2;
 parameter PIPELINE = 2;
 parameter AXIL_DATA_WIDTH = 32;
 parameter AXIL_ADDR_WIDTH = 16;
@@ -84,6 +85,7 @@ wire s_axis_dequeue_req_ready;
 wire [QUEUE_INDEX_WIDTH-1:0] m_axis_dequeue_resp_queue;
 wire [QUEUE_PTR_WIDTH-1:0] m_axis_dequeue_resp_ptr;
 wire [ADDR_WIDTH-1:0] m_axis_dequeue_resp_addr;
+wire [LOG_BLOCK_SIZE_WIDTH-1:0] m_axis_dequeue_resp_block_size;
 wire [CPL_INDEX_WIDTH-1:0] m_axis_dequeue_resp_cpl;
 wire [REQ_TAG_WIDTH-1:0] m_axis_dequeue_resp_tag;
 wire [OP_TAG_WIDTH-1:0] m_axis_dequeue_resp_op_tag;
@@ -132,6 +134,7 @@ initial begin
         m_axis_dequeue_resp_queue,
         m_axis_dequeue_resp_ptr,
         m_axis_dequeue_resp_addr,
+        m_axis_dequeue_resp_block_size,
         m_axis_dequeue_resp_cpl,
         m_axis_dequeue_resp_tag,
         m_axis_dequeue_resp_op_tag,
@@ -166,6 +169,7 @@ queue_manager #(
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .LOG_QUEUE_SIZE_WIDTH(LOG_QUEUE_SIZE_WIDTH),
     .DESC_SIZE(DESC_SIZE),
+    .LOG_BLOCK_SIZE_WIDTH(LOG_BLOCK_SIZE_WIDTH),
     .PIPELINE(PIPELINE),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
     .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
@@ -181,6 +185,7 @@ UUT (
     .m_axis_dequeue_resp_queue(m_axis_dequeue_resp_queue),
     .m_axis_dequeue_resp_ptr(m_axis_dequeue_resp_ptr),
     .m_axis_dequeue_resp_addr(m_axis_dequeue_resp_addr),
+    .m_axis_dequeue_resp_block_size(m_axis_dequeue_resp_block_size),
     .m_axis_dequeue_resp_cpl(m_axis_dequeue_resp_cpl),
     .m_axis_dequeue_resp_tag(m_axis_dequeue_resp_tag),
     .m_axis_dequeue_resp_op_tag(m_axis_dequeue_resp_op_tag),

@@ -65,6 +65,7 @@ def bench():
     QUEUE_PTR_WIDTH = 16
     LOG_QUEUE_SIZE_WIDTH = 4
     DESC_SIZE = 16
+    LOG_BLOCK_SIZE_WIDTH = 2
     PIPELINE = 2
     AXIL_DATA_WIDTH = 32
     AXIL_ADDR_WIDTH = 16
@@ -99,6 +100,7 @@ def bench():
     m_axis_dequeue_resp_queue = Signal(intbv(0)[QUEUE_INDEX_WIDTH:])
     m_axis_dequeue_resp_ptr = Signal(intbv(0)[QUEUE_PTR_WIDTH:])
     m_axis_dequeue_resp_addr = Signal(intbv(0)[ADDR_WIDTH:])
+    m_axis_dequeue_resp_block_size = Signal(intbv(0)[LOG_BLOCK_SIZE_WIDTH:])
     m_axis_dequeue_resp_cpl = Signal(intbv(0)[CPL_INDEX_WIDTH:])
     m_axis_dequeue_resp_tag = Signal(intbv(0)[REQ_TAG_WIDTH:])
     m_axis_dequeue_resp_op_tag = Signal(intbv(0)[OP_TAG_WIDTH:])
@@ -134,7 +136,7 @@ def bench():
     dequeue_resp_sink_logic = dequeue_resp_sink.create_logic(
         clk,
         rst,
-        tdata=(m_axis_dequeue_resp_queue, m_axis_dequeue_resp_ptr, m_axis_dequeue_resp_addr, m_axis_dequeue_resp_cpl, m_axis_dequeue_resp_tag, m_axis_dequeue_resp_op_tag, m_axis_dequeue_resp_empty, m_axis_dequeue_resp_error),
+        tdata=(m_axis_dequeue_resp_queue, m_axis_dequeue_resp_ptr, m_axis_dequeue_resp_addr, m_axis_dequeue_resp_block_size, m_axis_dequeue_resp_cpl, m_axis_dequeue_resp_tag, m_axis_dequeue_resp_op_tag, m_axis_dequeue_resp_empty, m_axis_dequeue_resp_error),
         tvalid=m_axis_dequeue_resp_valid,
         tready=m_axis_dequeue_resp_ready,
         name='dequeue_resp_sink'
@@ -207,6 +209,7 @@ def bench():
         m_axis_dequeue_resp_queue=m_axis_dequeue_resp_queue,
         m_axis_dequeue_resp_ptr=m_axis_dequeue_resp_ptr,
         m_axis_dequeue_resp_addr=m_axis_dequeue_resp_addr,
+        m_axis_dequeue_resp_block_size=m_axis_dequeue_resp_block_size,
         m_axis_dequeue_resp_cpl=m_axis_dequeue_resp_cpl,
         m_axis_dequeue_resp_tag=m_axis_dequeue_resp_tag,
         m_axis_dequeue_resp_op_tag=m_axis_dequeue_resp_op_tag,
@@ -327,7 +330,7 @@ def bench():
         print(resp)
 
         # dequeue commit
-        dequeue_commit_source.send([(resp.data[0][5],)])
+        dequeue_commit_source.send([(resp.data[0][6],)])
 
         yield delay(100)
 
@@ -448,18 +451,18 @@ def bench():
                     assert resp.data[0][1] == queue_tail_ptr[q]
                     assert (resp.data[0][2] >> 16) & 0xf == q
                     assert (resp.data[0][2] >> 4) & 0xf == queue_tail_ptr[q] & 0xf
-                    assert resp.data[0][3] == q
+                    assert resp.data[0][4] == q
 
-                    assert resp.data[0][4] == current_tag # tag
-                    assert not resp.data[0][7] # error
+                    assert resp.data[0][5] == current_tag # tag
+                    assert not resp.data[0][8] # error
 
                     if queue_uncommit_depth[q]:
-                        commit_list.append((q, resp.data[0][5]))
+                        commit_list.append((q, resp.data[0][6]))
                         queue_tail_ptr[q] = (queue_tail_ptr[q] + 1) & 0xffff
                         queue_uncommit_depth[q] -= 1
                     else:
                         print("Queue was empty")
-                        assert resp.data[0][6] # empty
+                        assert resp.data[0][7] # empty
 
                     current_tag = (current_tag + 1) % 256
 

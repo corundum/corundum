@@ -58,6 +58,8 @@ module queue_manager #
     parameter LOG_QUEUE_SIZE_WIDTH = $clog2(QUEUE_PTR_WIDTH),
     // Queue element size
     parameter DESC_SIZE = 16,
+    // Log desc block size field width
+    parameter LOG_BLOCK_SIZE_WIDTH = 2,
     // Pipeline stages
     parameter PIPELINE = 2,
     // Width of AXI lite data bus in bits
@@ -68,71 +70,72 @@ module queue_manager #
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8)
 )
 (
-    input  wire                         clk,
-    input  wire                         rst,
+    input  wire                            clk,
+    input  wire                            rst,
 
     /*
      * Dequeue request input
      */
-    input  wire [QUEUE_INDEX_WIDTH-1:0] s_axis_dequeue_req_queue,
-    input  wire [REQ_TAG_WIDTH-1:0]     s_axis_dequeue_req_tag,
-    input  wire                         s_axis_dequeue_req_valid,
-    output wire                         s_axis_dequeue_req_ready,
+    input  wire [QUEUE_INDEX_WIDTH-1:0]    s_axis_dequeue_req_queue,
+    input  wire [REQ_TAG_WIDTH-1:0]        s_axis_dequeue_req_tag,
+    input  wire                            s_axis_dequeue_req_valid,
+    output wire                            s_axis_dequeue_req_ready,
 
     /*
      * Dequeue response output
      */
-    output wire [QUEUE_INDEX_WIDTH-1:0] m_axis_dequeue_resp_queue,
-    output wire [QUEUE_PTR_WIDTH-1:0]   m_axis_dequeue_resp_ptr,
-    output wire [ADDR_WIDTH-1:0]        m_axis_dequeue_resp_addr,
-    output wire [CPL_INDEX_WIDTH-1:0]   m_axis_dequeue_resp_cpl,
-    output wire [REQ_TAG_WIDTH-1:0]     m_axis_dequeue_resp_tag,
-    output wire [OP_TAG_WIDTH-1:0]      m_axis_dequeue_resp_op_tag,
-    output wire                         m_axis_dequeue_resp_empty,
-    output wire                         m_axis_dequeue_resp_error,
-    output wire                         m_axis_dequeue_resp_valid,
-    input  wire                         m_axis_dequeue_resp_ready,
+    output wire [QUEUE_INDEX_WIDTH-1:0]    m_axis_dequeue_resp_queue,
+    output wire [QUEUE_PTR_WIDTH-1:0]      m_axis_dequeue_resp_ptr,
+    output wire [ADDR_WIDTH-1:0]           m_axis_dequeue_resp_addr,
+    output wire [LOG_BLOCK_SIZE_WIDTH-1:0] m_axis_dequeue_resp_block_size,
+    output wire [CPL_INDEX_WIDTH-1:0]      m_axis_dequeue_resp_cpl,
+    output wire [REQ_TAG_WIDTH-1:0]        m_axis_dequeue_resp_tag,
+    output wire [OP_TAG_WIDTH-1:0]         m_axis_dequeue_resp_op_tag,
+    output wire                            m_axis_dequeue_resp_empty,
+    output wire                            m_axis_dequeue_resp_error,
+    output wire                            m_axis_dequeue_resp_valid,
+    input  wire                            m_axis_dequeue_resp_ready,
 
     /*
      * Dequeue commit input
      */
-    input  wire [OP_TAG_WIDTH-1:0]      s_axis_dequeue_commit_op_tag,
-    input  wire                         s_axis_dequeue_commit_valid,
-    output wire                         s_axis_dequeue_commit_ready,
+    input  wire [OP_TAG_WIDTH-1:0]         s_axis_dequeue_commit_op_tag,
+    input  wire                            s_axis_dequeue_commit_valid,
+    output wire                            s_axis_dequeue_commit_ready,
 
     /*
      * Doorbell output
      */
-    output wire [QUEUE_INDEX_WIDTH-1:0] m_axis_doorbell_queue,
-    output wire                         m_axis_doorbell_valid,
+    output wire [QUEUE_INDEX_WIDTH-1:0]    m_axis_doorbell_queue,
+    output wire                            m_axis_doorbell_valid,
 
     /*
      * AXI-Lite slave interface
      */
-    input  wire [AXIL_ADDR_WIDTH-1:0]   s_axil_awaddr,
-    input  wire [2:0]                   s_axil_awprot,
-    input  wire                         s_axil_awvalid,
-    output wire                         s_axil_awready,
-    input  wire [AXIL_DATA_WIDTH-1:0]   s_axil_wdata,
-    input  wire [AXIL_STRB_WIDTH-1:0]   s_axil_wstrb,
-    input  wire                         s_axil_wvalid,
-    output wire                         s_axil_wready,
-    output wire [1:0]                   s_axil_bresp,
-    output wire                         s_axil_bvalid,
-    input  wire                         s_axil_bready,
-    input  wire [AXIL_ADDR_WIDTH-1:0]   s_axil_araddr,
-    input  wire [2:0]                   s_axil_arprot,
-    input  wire                         s_axil_arvalid,
-    output wire                         s_axil_arready,
-    output wire [AXIL_DATA_WIDTH-1:0]   s_axil_rdata,
-    output wire [1:0]                   s_axil_rresp,
-    output wire                         s_axil_rvalid,
-    input  wire                         s_axil_rready,
+    input  wire [AXIL_ADDR_WIDTH-1:0]      s_axil_awaddr,
+    input  wire [2:0]                      s_axil_awprot,
+    input  wire                            s_axil_awvalid,
+    output wire                            s_axil_awready,
+    input  wire [AXIL_DATA_WIDTH-1:0]      s_axil_wdata,
+    input  wire [AXIL_STRB_WIDTH-1:0]      s_axil_wstrb,
+    input  wire                            s_axil_wvalid,
+    output wire                            s_axil_wready,
+    output wire [1:0]                      s_axil_bresp,
+    output wire                            s_axil_bvalid,
+    input  wire                            s_axil_bready,
+    input  wire [AXIL_ADDR_WIDTH-1:0]      s_axil_araddr,
+    input  wire [2:0]                      s_axil_arprot,
+    input  wire                            s_axil_arvalid,
+    output wire                            s_axil_arready,
+    output wire [AXIL_DATA_WIDTH-1:0]      s_axil_rdata,
+    output wire [1:0]                      s_axil_rresp,
+    output wire                            s_axil_rvalid,
+    input  wire                            s_axil_rready,
 
     /*
      * Configuration
      */
-    input  wire                         enable
+    input  wire                            enable
 );
 
 parameter QUEUE_COUNT = 2**QUEUE_INDEX_WIDTH;
@@ -199,6 +202,7 @@ reg s_axis_dequeue_req_ready_reg = 1'b0, s_axis_dequeue_req_ready_next;
 reg [QUEUE_INDEX_WIDTH-1:0] m_axis_dequeue_resp_queue_reg = 0, m_axis_dequeue_resp_queue_next;
 reg [QUEUE_PTR_WIDTH-1:0] m_axis_dequeue_resp_ptr_reg = 0, m_axis_dequeue_resp_ptr_next;
 reg [ADDR_WIDTH-1:0] m_axis_dequeue_resp_addr_reg = 0, m_axis_dequeue_resp_addr_next;
+reg [LOG_BLOCK_SIZE_WIDTH-1:0] m_axis_dequeue_resp_block_size_reg = 0, m_axis_dequeue_resp_block_size_next;
 reg [CPL_INDEX_WIDTH-1:0] m_axis_dequeue_resp_cpl_reg = 0, m_axis_dequeue_resp_cpl_next;
 reg [REQ_TAG_WIDTH-1:0] m_axis_dequeue_resp_tag_reg = 0, m_axis_dequeue_resp_tag_next;
 reg [OP_TAG_WIDTH-1:0] m_axis_dequeue_resp_op_tag_reg = 0, m_axis_dequeue_resp_op_tag_next;
@@ -230,7 +234,8 @@ reg [QUEUE_RAM_WIDTH-1:0] queue_ram_read_data_pipeline_reg[PIPELINE-1:1];
 wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_head_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][15:0];
 wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_tail_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][31:16];
 wire [CPL_INDEX_WIDTH-1:0] queue_ram_read_data_cpl_queue = queue_ram_read_data_pipeline_reg[PIPELINE-1][47:32];
-wire [LOG_QUEUE_SIZE_WIDTH-1:0] queue_ram_read_data_log_size = queue_ram_read_data_pipeline_reg[PIPELINE-1][51:48];
+wire [LOG_QUEUE_SIZE_WIDTH-1:0] queue_ram_read_data_log_queue_size = queue_ram_read_data_pipeline_reg[PIPELINE-1][51:48];
+wire [LOG_BLOCK_SIZE_WIDTH-1:0] queue_ram_read_data_log_block_size = queue_ram_read_data_pipeline_reg[PIPELINE-1][53:52];
 wire queue_ram_read_data_active = queue_ram_read_data_pipeline_reg[PIPELINE-1][55];
 wire [CL_OP_TABLE_SIZE-1:0] queue_ram_read_data_op_index = queue_ram_read_data_pipeline_reg[PIPELINE-1][63:56];
 wire [ADDR_WIDTH-1:0] queue_ram_read_data_base_addr = queue_ram_read_data_pipeline_reg[PIPELINE-1][127:64];
@@ -253,6 +258,7 @@ assign s_axis_dequeue_req_ready = s_axis_dequeue_req_ready_reg;
 assign m_axis_dequeue_resp_queue = m_axis_dequeue_resp_queue_reg;
 assign m_axis_dequeue_resp_ptr = m_axis_dequeue_resp_ptr_reg;
 assign m_axis_dequeue_resp_addr = m_axis_dequeue_resp_addr_reg;
+assign m_axis_dequeue_resp_block_size = m_axis_dequeue_resp_block_size_reg;
 assign m_axis_dequeue_resp_cpl = m_axis_dequeue_resp_cpl_reg;
 assign m_axis_dequeue_resp_tag = m_axis_dequeue_resp_tag_reg;
 assign m_axis_dequeue_resp_op_tag = m_axis_dequeue_resp_op_tag_reg;
@@ -332,6 +338,7 @@ always @* begin
     m_axis_dequeue_resp_queue_next = m_axis_dequeue_resp_queue_reg;
     m_axis_dequeue_resp_ptr_next = m_axis_dequeue_resp_ptr_reg;
     m_axis_dequeue_resp_addr_next = m_axis_dequeue_resp_addr_reg;
+    m_axis_dequeue_resp_block_size_next = m_axis_dequeue_resp_block_size_reg;
     m_axis_dequeue_resp_cpl_next = m_axis_dequeue_resp_cpl_reg;
     m_axis_dequeue_resp_tag_next = m_axis_dequeue_resp_tag_reg;
     m_axis_dequeue_resp_op_tag_next = m_axis_dequeue_resp_op_tag_reg;
@@ -429,7 +436,8 @@ always @* begin
         // request
         m_axis_dequeue_resp_queue_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
         m_axis_dequeue_resp_ptr_next = queue_ram_read_active_tail_ptr;
-        m_axis_dequeue_resp_addr_next = queue_ram_read_data_base_addr + ((queue_ram_read_active_tail_ptr & ({QUEUE_PTR_WIDTH{1'b1}} >> (QUEUE_PTR_WIDTH - queue_ram_read_data_log_size))) * DESC_SIZE);
+        m_axis_dequeue_resp_addr_next = queue_ram_read_data_base_addr + ((queue_ram_read_active_tail_ptr & ({QUEUE_PTR_WIDTH{1'b1}} >> (QUEUE_PTR_WIDTH - queue_ram_read_data_log_queue_size))) << (CL_DESC_SIZE+queue_ram_read_data_log_block_size));
+        m_axis_dequeue_resp_block_size_next = queue_ram_read_data_log_block_size;
         m_axis_dequeue_resp_cpl_next = queue_ram_read_data_cpl_queue;
         m_axis_dequeue_resp_tag_next = req_tag_pipeline_reg[PIPELINE-1];
         m_axis_dequeue_resp_op_tag_next = op_table_start_ptr_reg;
@@ -498,7 +506,13 @@ always @* begin
                 // log size is read-only when queue is active
                 if (!queue_ram_read_data_active) begin
                     if (write_strobe_pipeline_reg[PIPELINE-1][0]) begin
-                        queue_ram_write_data[54:48] = write_data_pipeline_reg[PIPELINE-1][3:0];
+                        // log queue size
+                        queue_ram_write_data[51:48] = write_data_pipeline_reg[PIPELINE-1][3:0];
+                        queue_ram_be[6] = 1'b1;
+                    end
+                    if (write_strobe_pipeline_reg[PIPELINE-1][1]) begin
+                        // log desc block size
+                        queue_ram_write_data[53:52] = write_data_pipeline_reg[PIPELINE-1][9:8];
                         queue_ram_be[6] = 1'b1;
                     end
                 end
@@ -552,8 +566,10 @@ always @* begin
                 s_axil_rdata_next = queue_ram_read_data_base_addr[63:32];
             end
             3'd2: begin
-                // log size
-                s_axil_rdata_next[3:0] = queue_ram_read_data_log_size;
+                // log queue size
+                s_axil_rdata_next[7:0] = queue_ram_read_data_log_queue_size;
+                // log desc block size
+                s_axil_rdata_next[15:8] = queue_ram_read_data_log_block_size;
                 // active
                 s_axil_rdata_next[31] = queue_ram_read_data_active;
             end
@@ -640,6 +656,7 @@ always @(posedge clk) begin
     m_axis_dequeue_resp_queue_reg <= m_axis_dequeue_resp_queue_next;
     m_axis_dequeue_resp_ptr_reg <= m_axis_dequeue_resp_ptr_next;
     m_axis_dequeue_resp_addr_reg <= m_axis_dequeue_resp_addr_next;
+    m_axis_dequeue_resp_block_size_reg <= m_axis_dequeue_resp_block_size_next;
     m_axis_dequeue_resp_cpl_reg <= m_axis_dequeue_resp_cpl_next;
     m_axis_dequeue_resp_tag_reg <= m_axis_dequeue_resp_tag_next;
     m_axis_dequeue_resp_op_tag_reg <= m_axis_dequeue_resp_op_tag_next;

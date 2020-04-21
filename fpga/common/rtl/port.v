@@ -74,6 +74,8 @@ module port #
     parameter RX_DESC_TABLE_SIZE = 16,
     // Receive packet table size (number of in-progress packets)
     parameter RX_PKT_TABLE_SIZE = 8,
+    // Width of descriptor table field for tracking outstanding DMA operations
+    parameter DESC_TABLE_DMA_OP_COUNT_WIDTH = 4,
     // Transmit scheduler type
     parameter TX_SCHEDULER = "RR",
     // Scheduler operation table size
@@ -1131,6 +1133,7 @@ tx_engine #(
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .CPL_QUEUE_INDEX_WIDTH(TX_CPL_QUEUE_INDEX_WIDTH),
     .DESC_TABLE_SIZE(TX_DESC_TABLE_SIZE),
+    .DESC_TABLE_DMA_OP_COUNT_WIDTH(DESC_TABLE_DMA_OP_COUNT_WIDTH),
     .PKT_TABLE_SIZE(TX_PKT_TABLE_SIZE),
     .MAX_TX_SIZE(MAX_TX_SIZE),
     .DESC_SIZE(DESC_SIZE),
@@ -1316,6 +1319,7 @@ rx_engine #(
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .CPL_QUEUE_INDEX_WIDTH(RX_CPL_QUEUE_INDEX_WIDTH),
     .DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
+    .DESC_TABLE_DMA_OP_COUNT_WIDTH(DESC_TABLE_DMA_OP_COUNT_WIDTH),
     .MAX_RX_SIZE(MAX_RX_SIZE),
     .DESC_SIZE(DESC_SIZE),
     .CPL_SIZE(CPL_SIZE),

@@ -54,8 +54,8 @@ module queue_manager #
     parameter CPL_INDEX_WIDTH = 8,
     // Queue element pointer width (log2 of number of elements)
     parameter QUEUE_PTR_WIDTH = 16,
-    // Queue log size field width
-    parameter QUEUE_LOG_SIZE_WIDTH = $clog2(QUEUE_PTR_WIDTH),
+    // Log queue size field width
+    parameter LOG_QUEUE_SIZE_WIDTH = $clog2(QUEUE_PTR_WIDTH),
     // Queue element size
     parameter DESC_SIZE = 16,
     // Pipeline stages
@@ -230,7 +230,7 @@ reg [QUEUE_RAM_WIDTH-1:0] queue_ram_read_data_pipeline_reg[PIPELINE-1:1];
 wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_head_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][15:0];
 wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_tail_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][31:16];
 wire [CPL_INDEX_WIDTH-1:0] queue_ram_read_data_cpl_queue = queue_ram_read_data_pipeline_reg[PIPELINE-1][47:32];
-wire [QUEUE_LOG_SIZE_WIDTH-1:0] queue_ram_read_data_log_size = queue_ram_read_data_pipeline_reg[PIPELINE-1][51:48];
+wire [LOG_QUEUE_SIZE_WIDTH-1:0] queue_ram_read_data_log_size = queue_ram_read_data_pipeline_reg[PIPELINE-1][51:48];
 wire queue_ram_read_data_active = queue_ram_read_data_pipeline_reg[PIPELINE-1][55];
 wire [CL_OP_TABLE_SIZE-1:0] queue_ram_read_data_op_index = queue_ram_read_data_pipeline_reg[PIPELINE-1][63:56];
 wire [ADDR_WIDTH-1:0] queue_ram_read_data_base_addr = queue_ram_read_data_pipeline_reg[PIPELINE-1][127:64];

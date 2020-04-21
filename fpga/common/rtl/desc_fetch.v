@@ -76,6 +76,8 @@ module desc_fetch #
     parameter QUEUE_PTR_WIDTH = 16,
     // Descriptor size (in bytes)
     parameter DESC_SIZE = 16,
+    // Log desc block size field width
+    parameter LOG_BLOCK_SIZE_WIDTH = 2,
     // Descriptor table size (number of in-flight operations)
     parameter DESC_TABLE_SIZE = 8,
     // Width of AXI stream interface in bits
@@ -132,6 +134,7 @@ module desc_fetch #
     input  wire [PORTS*QUEUE_INDEX_WIDTH-1:0]     s_axis_desc_dequeue_resp_queue,
     input  wire [PORTS*QUEUE_PTR_WIDTH-1:0]       s_axis_desc_dequeue_resp_ptr,
     input  wire [PORTS*DMA_ADDR_WIDTH-1:0]        s_axis_desc_dequeue_resp_addr,
+    input  wire [PORTS*LOG_BLOCK_SIZE_WIDTH-1:0]  s_axis_desc_dequeue_resp_block_size,
     input  wire [PORTS*CPL_QUEUE_INDEX_WIDTH-1:0] s_axis_desc_dequeue_resp_cpl,
     input  wire [PORTS*QUEUE_REQ_TAG_WIDTH-1:0]   s_axis_desc_dequeue_resp_tag,
     input  wire [PORTS*QUEUE_OP_TAG_WIDTH-1:0]    s_axis_desc_dequeue_resp_op_tag,
@@ -183,6 +186,8 @@ parameter DESC_PTR_MASK = {CL_DESC_TABLE_SIZE{1'b1}};
 
 parameter CL_PORTS = $clog2(PORTS);
 
+parameter CL_DESC_SIZE = $clog2(DESC_SIZE);
+
 // bus width assertions
 initial begin
     if (DMA_TAG_WIDTH < CL_DESC_TABLE_SIZE) begin
@@ -202,6 +207,11 @@ initial begin
 
     if (AXIS_KEEP_WIDTH * 8 != AXIS_DATA_WIDTH) begin
         $error("Error: AXI stream interface requires byte (8-bit) granularity (instance %m)");
+        $finish;
+    end
+
+    if (2**CL_DESC_SIZE != DESC_SIZE) begin
+        $error("Error: Descriptor size must be even power of two (instance %m)");
         $finish;
     end
 end
@@ -240,11 +250,13 @@ reg [DESC_TABLE_SIZE-1:0] desc_table_active = 0;
 reg [DESC_TABLE_SIZE-1:0] desc_table_desc_fetched = 0;
 reg [DESC_TABLE_SIZE-1:0] desc_table_desc_read_done = 0;
 reg [CL_PORTS-1:0] desc_table_sel[DESC_TABLE_SIZE-1:0];
+reg [LOG_BLOCK_SIZE_WIDTH-1:0] desc_table_log_desc_block_size[DESC_TABLE_SIZE-1:0];
 reg [REQ_TAG_WIDTH-1:0] desc_table_tag[DESC_TABLE_SIZE-1:0];
 reg [QUEUE_OP_TAG_WIDTH-1:0] desc_table_queue_op_tag[DESC_TABLE_SIZE-1:0];
 
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_start_ptr_reg = 0;
 reg [CL_PORTS-1:0] desc_table_start_sel;
+reg [LOG_BLOCK_SIZE_WIDTH-1:0] desc_table_start_log_desc_block_size;
 reg [REQ_TAG_WIDTH-1:0] desc_table_start_tag;
 reg [QUEUE_OP_TAG_WIDTH-1:0] desc_table_start_queue_op_tag;
 reg desc_table_start_en;
@@ -315,7 +327,7 @@ wire [SEG_COUNT-1:0]                 dma_ram_rd_resp_valid_int;
 wire [SEG_COUNT-1:0]                 dma_ram_rd_resp_ready_int;
 
 dma_psdpram #(
-    .SIZE(DESC_TABLE_SIZE*SEG_COUNT*SEG_BE_WIDTH),
+    .SIZE(DESC_TABLE_SIZE*DESC_SIZE*(2**((2**LOG_BLOCK_SIZE_WIDTH)-1))),
     .SEG_COUNT(SEG_COUNT),
     .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
     .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
@@ -453,6 +465,7 @@ always @* begin
     dec_active_2 = 1'b0;
 
     desc_table_start_sel = dequeue_resp_enc;
+    desc_table_start_log_desc_block_size = s_axis_desc_dequeue_resp_block_size[dequeue_resp_enc*LOG_BLOCK_SIZE_WIDTH +: LOG_BLOCK_SIZE_WIDTH];
     desc_table_start_tag = s_axis_desc_dequeue_resp_tag[dequeue_resp_enc*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH];
     desc_table_start_queue_op_tag = s_axis_desc_dequeue_resp_op_tag[dequeue_resp_enc*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH];
     desc_table_start_en = 1'b0;
@@ -484,6 +497,7 @@ always @* begin
 
         // store in descriptor table
         desc_table_start_sel = dequeue_resp_enc;
+        desc_table_start_log_desc_block_size = s_axis_desc_dequeue_resp_block_size[dequeue_resp_enc*LOG_BLOCK_SIZE_WIDTH +: LOG_BLOCK_SIZE_WIDTH];
         desc_table_start_tag = s_axis_desc_dequeue_resp_tag[dequeue_resp_enc*QUEUE_REQ_TAG_WIDTH +: QUEUE_REQ_TAG_WIDTH];
         desc_table_start_queue_op_tag = s_axis_desc_dequeue_resp_op_tag[dequeue_resp_enc*QUEUE_OP_TAG_WIDTH +: QUEUE_OP_TAG_WIDTH];
 
@@ -498,8 +512,8 @@ always @* begin
 
         // initiate descriptor fetch
         m_axis_dma_read_desc_dma_addr_next = s_axis_desc_dequeue_resp_addr[dequeue_resp_enc*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH];
-        m_axis_dma_read_desc_ram_addr_next = (desc_table_start_ptr_reg & DESC_PTR_MASK) << 5;
-        m_axis_dma_read_desc_len_next = DESC_SIZE;
+        m_axis_dma_read_desc_ram_addr_next = (desc_table_start_ptr_reg & DESC_PTR_MASK) << (CL_DESC_SIZE+(2**LOG_BLOCK_SIZE_WIDTH)-1);
+        m_axis_dma_read_desc_len_next = DESC_SIZE << s_axis_desc_dequeue_resp_block_size[dequeue_resp_enc*LOG_BLOCK_SIZE_WIDTH +: LOG_BLOCK_SIZE_WIDTH];
         m_axis_dma_read_desc_tag_next = (desc_table_start_ptr_reg & DESC_PTR_MASK);
 
         if (s_axis_desc_dequeue_resp_error[dequeue_resp_enc*1 +: 1] || s_axis_desc_dequeue_resp_empty[dequeue_resp_enc*1 +: 1]) begin
@@ -538,8 +552,8 @@ always @* begin
             m_axis_desc_dequeue_commit_valid_next = 1 << desc_table_sel[desc_table_desc_read_ptr_reg & DESC_PTR_MASK];
 
             // initiate descriptor read from DMA RAM
-            dma_read_desc_ram_addr_next = (desc_table_desc_read_ptr_reg & DESC_PTR_MASK) << 5;
-            dma_read_desc_len_next = DESC_SIZE;
+            dma_read_desc_ram_addr_next = (desc_table_desc_read_ptr_reg & DESC_PTR_MASK) << (CL_DESC_SIZE+(2**LOG_BLOCK_SIZE_WIDTH)-1);
+            dma_read_desc_len_next = DESC_SIZE << desc_table_log_desc_block_size[desc_table_desc_read_ptr_reg & DESC_PTR_MASK];
             dma_read_desc_tag_next = (desc_table_desc_read_ptr_reg & DESC_PTR_MASK);
             dma_read_desc_id_next = desc_table_tag[desc_table_desc_read_ptr_reg & DESC_PTR_MASK];
             dma_read_desc_user_next = 1'b0;
@@ -607,6 +621,7 @@ always @(posedge clk) begin
         desc_table_desc_fetched[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
         desc_table_desc_read_done[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
         desc_table_sel[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_sel;
+        desc_table_log_desc_block_size[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_log_desc_block_size;
         desc_table_tag[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_tag;
         desc_table_queue_op_tag[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_queue_op_tag;
         desc_table_start_ptr_reg <= desc_table_start_ptr_reg + 1;

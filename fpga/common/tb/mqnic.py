@@ -386,8 +386,10 @@ class TxRing(object):
         self.interface = interface
         self.driver = interface.driver
         self.rc = interface.driver.rc
-        self.log_size = size.bit_length() - 1
-        self.size = 2**self.log_size
+        self.log_queue_size = size.bit_length() - 1
+        self.log_desc_block_size = int(stride/MQNIC_DESC_SIZE).bit_length() - 1
+        self.desc_block_size = 2**self.log_desc_block_size
+        self.size = 2**self.log_queue_size
         self.size_mask = self.size-1
         self.full_size = self.size >> 1
         self.stride = stride
@@ -418,7 +420,7 @@ class TxRing(object):
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, 0) # completion queue index
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size) # active, log size
+        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8)) # active, log desc block size, log queue size
 
     def activate(self, cpl_index):
         self.cpl_index = cpl_index
@@ -429,10 +431,10 @@ class TxRing(object):
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, cpl_index) # completion queue index
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size | MQNIC_QUEUE_ACTIVE_MASK) # active, log size
+        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK) # active, log desc block size, log queue size
 
     def deactivate(self):
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size) # active, log size
+        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8)) # active, log desc block size, log queue size
 
     def empty(self):
         return self.head_ptr == self.clean_tail_ptr
@@ -464,8 +466,10 @@ class RxRing(object):
         self.interface = interface
         self.driver = interface.driver
         self.rc = interface.driver.rc
-        self.log_size = size.bit_length() - 1
-        self.size = 2**self.log_size
+        self.log_queue_size = size.bit_length() - 1
+        self.log_desc_block_size = int(stride/MQNIC_DESC_SIZE).bit_length() - 1
+        self.desc_block_size = 2**self.log_desc_block_size
+        self.size = 2**self.log_queue_size
         self.size_mask = self.size-1
         self.full_size = self.size >> 1
         self.stride = stride
@@ -496,7 +500,7 @@ class RxRing(object):
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, 0) # completion queue index
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size) # active, log size
+        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8)) # active, log desc block size, log queue size
 
     def activate(self, cpl_index):
         self.cpl_index = cpl_index
@@ -507,12 +511,12 @@ class RxRing(object):
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, cpl_index) # completion queue index
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
         yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size | MQNIC_QUEUE_ACTIVE_MASK) # active, log size
+        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK) # active, log desc block size, log queue size
 
         yield from self.refill_buffers()
 
     def deactivate(self):
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size) # active, log size
+        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8)) # active, log desc block size, log queue size
 
     def empty(self):
         return self.head_ptr == self.clean_tail_ptr

@@ -52,6 +52,10 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr, 
     ring->size_mask = ring->size-1;
     ring->stride = roundup_pow_of_two(stride);
 
+    ring->desc_block_size = ring->stride/MQNIC_DESC_SIZE;
+    ring->log_desc_block_size = ring->desc_block_size < 2 ? 0 : ilog2(ring->desc_block_size-1)+1;
+    ring->desc_block_size = 1 << ring->log_desc_block_size;
+
     ring->tx_info = kvzalloc(sizeof(*ring->tx_info)*ring->size, GFP_KERNEL);
     if (!ring->tx_info)
     {
@@ -89,7 +93,7 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr, 
     iowrite32(ring->head_ptr & ring->hw_ptr_mask, ring->hw_addr+MQNIC_QUEUE_HEAD_PTR_REG);
     iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr+MQNIC_QUEUE_TAIL_PTR_REG);
     // set size
-    iowrite32(ilog2(ring->size), ring->hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+    iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8), ring->hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
     *ring_ptr = ring;
     return 0;
@@ -132,7 +136,7 @@ int mqnic_activate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring, int
     iowrite32(ring->head_ptr & ring->hw_ptr_mask, ring->hw_addr+MQNIC_QUEUE_HEAD_PTR_REG);
     iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr+MQNIC_QUEUE_TAIL_PTR_REG);
     // set size and activate queue
-    iowrite32(ilog2(ring->size) | MQNIC_QUEUE_ACTIVE_MASK, ring->hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+    iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK, ring->hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
     return 0;
 }
@@ -140,7 +144,7 @@ int mqnic_activate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring, int
 void mqnic_deactivate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring)
 {
     // deactivate queue
-    iowrite32(ilog2(ring->size), ring->hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+    iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8), ring->hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 }
 
 bool mqnic_is_tx_ring_empty(const struct mqnic_ring *ring)

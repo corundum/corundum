@@ -153,6 +153,9 @@ struct mqnic_ring {
     u32 mtu;
     u32 page_order;
 
+    u32 desc_block_size;
+    u32 log_desc_block_size;
+
     size_t buf_size;
     u8 *buf;
     dma_addr_t buf_dma_addr;

@@ -400,6 +400,7 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
     struct mqnic_priv *priv;
     int ret = 0;
     int k;
+    u32 desc_block_size;
 
     ndev = alloc_etherdev_mqs(sizeof(*priv), MQNIC_MAX_TX_RINGS, MQNIC_MAX_RX_RINGS);
     if (!ndev)
@@ -493,6 +494,17 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
     priv->hwts_config.tx_type = HWTSTAMP_TX_OFF;
     priv->hwts_config.rx_filter = HWTSTAMP_FILTER_NONE;
 
+    // determine desc block size
+    iowrite32(0xf << 8, hw_addr+priv->tx_queue_offset+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+    priv->max_desc_block_size = 1 << ((ioread32(hw_addr+priv->tx_queue_offset+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG) >> 8) & 0xf);
+    iowrite32(0, hw_addr+priv->tx_queue_offset+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+
+    dev_info(dev, "Max desc block size: %d", priv->max_desc_block_size);
+
+    priv->max_desc_block_size = priv->max_desc_block_size < MQNIC_MAX_FRAGS ? priv->max_desc_block_size : MQNIC_MAX_FRAGS;
+
+    desc_block_size = priv->max_desc_block_size < 4 ? priv->max_desc_block_size : 4;
+
     // allocate rings
     for (k = 0; k < priv->event_queue_count; k++)
     {
@@ -505,7 +517,7 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 
     for (k = 0; k < priv->tx_queue_count; k++)
     {
-        ret = mqnic_create_tx_ring(priv, &priv->tx_ring[k], 1024, MQNIC_DESC_SIZE, k, hw_addr+priv->tx_queue_offset+k*MQNIC_QUEUE_STRIDE); // TODO configure/constant
+        ret = mqnic_create_tx_ring(priv, &priv->tx_ring[k], 1024, MQNIC_DESC_SIZE*desc_block_size, k, hw_addr+priv->tx_queue_offset+k*MQNIC_QUEUE_STRIDE); // TODO configure/constant
         if (ret)
         {
             goto fail;

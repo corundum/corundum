@@ -276,6 +276,8 @@ struct mqnic_priv {
     u32 port_offset;
     u32 port_stride;
 
+    u32 max_desc_block_size;
+
     u8 __iomem *hw_addr;
     u8 __iomem *csr_hw_addr;
 

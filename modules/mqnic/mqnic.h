@@ -113,10 +113,17 @@ struct mqnic_dev {
     struct i2c_client *eeprom_i2c_client;
 };
 
+struct mqnic_frag {
+    dma_addr_t dma_addr;
+    u32 len;
+};
+
 struct mqnic_tx_info {
     struct sk_buff *skb;
     DEFINE_DMA_UNMAP_ADDR(dma_addr);
     DEFINE_DMA_UNMAP_LEN(len);
+    u32 frag_count;
+    struct mqnic_frag frags[MQNIC_MAX_FRAGS-1];
     int ts_requested;
 };
 

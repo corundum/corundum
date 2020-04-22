@@ -555,7 +555,7 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
     ndev->ethtool_ops = &mqnic_ethtool_ops;
 
     // set up features
-    ndev->hw_features = 0;
+    ndev->hw_features = NETIF_F_SG;
 
     if (priv->if_features & MQNIC_IF_FEATURE_RX_CSUM)
     {

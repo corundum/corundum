@@ -171,9 +171,19 @@ void mqnic_free_tx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int in
 {
     struct mqnic_tx_info *tx_info = &ring->tx_info[index];
     struct sk_buff *skb = tx_info->skb;
+    u32 i;
+
+    prefetchw(&skb->users);
 
     dma_unmap_single(priv->dev, dma_unmap_addr(tx_info, dma_addr), dma_unmap_len(tx_info, len), PCI_DMA_TODEVICE);
     dma_unmap_addr_set(tx_info, dma_addr, 0);
+
+    // unmap frags
+    for (i = 0; i < tx_info->frag_count; i++)
+    {
+        dma_unmap_page(priv->dev, tx_info->frags[i].dma_addr, tx_info->frags[i].len, PCI_DMA_TODEVICE);
+    }
+
     napi_consume_skb(skb, napi_budget);
     tx_info->skb = NULL;
 }
@@ -326,6 +336,80 @@ int mqnic_poll_tx_cq(struct napi_struct *napi, int budget)
     return done;
 }
 
+static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring, struct mqnic_tx_info *tx_info, struct mqnic_desc *tx_desc, struct sk_buff *skb)
+{
+    struct skb_shared_info *shinfo = skb_shinfo(skb);
+    u32 i;
+    u32 len;
+    dma_addr_t dma_addr;
+
+    // update tx_info
+    tx_info->skb = skb;
+    tx_info->frag_count = 0;
+
+    for (i = 0; i < shinfo->nr_frags; i++)
+    {
+        const skb_frag_t *frag = &shinfo->frags[i];
+        len = skb_frag_size(frag);
+        dma_addr = skb_frag_dma_map(priv->dev, frag, 0, len, DMA_TO_DEVICE);
+        if (unlikely(dma_mapping_error(priv->dev, dma_addr)))
+        {
+            // mapping failed
+            goto map_error;
+        }
+
+        // write descriptor
+        tx_desc[i+1].len = len;
+        tx_desc[i+1].addr = dma_addr;
+
+        // update tx_info
+        tx_info->frag_count = i+1;
+        tx_info->frags[i].len = len;
+        tx_info->frags[i].dma_addr = dma_addr;
+    }
+
+    for (i = tx_info->frag_count; i < ring->desc_block_size-1; i++)
+    {
+        tx_desc[i+1].len = 0;
+        tx_desc[i+1].addr = 0;
+    }
+
+    // map skb
+    len = skb_headlen(skb);
+    dma_addr = dma_map_single(priv->dev, skb->data, len, PCI_DMA_TODEVICE);
+
+    if (unlikely(dma_mapping_error(priv->dev, dma_addr)))
+    {
+        // mapping failed
+        goto map_error;
+    }
+
+    // write descriptor
+    tx_desc[0].len = len;
+    tx_desc[0].addr = dma_addr;
+
+    // update tx_info
+    dma_unmap_addr_set(tx_info, dma_addr, dma_addr);
+    dma_unmap_len_set(tx_info, len, len);
+
+    return true;
+
+map_error:
+    dev_err(&priv->mdev->pdev->dev, "mqnic_map_skb DMA mapping failed");
+
+    // unmap frags
+    for (i = 0; i < tx_info->frag_count; i++)
+    {
+        dma_unmap_page(priv->dev, tx_info->frags[i].dma_addr, tx_info->frags[i].len, PCI_DMA_TODEVICE);
+    }
+
+    // update tx_info
+    tx_info->skb = NULL;
+    tx_info->frag_count = 0;
+
+    return false;
+}
+
 netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 {
     struct skb_shared_info *shinfo = skb_shinfo(skb);
@@ -337,7 +421,6 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
     u32 index;
     bool stop_queue;
     u32 clean_tail_ptr;
-    dma_addr_t dma_addr;
 
     if (unlikely(!priv->port_up))
     {
@@ -400,23 +483,21 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
         tx_desc->tx_csum_cmd = 0;
     }
 
-    // map skb
-    dma_addr = dma_map_single(priv->dev, skb->data, skb->len, PCI_DMA_TODEVICE);
-
-    if (unlikely(dma_mapping_error(priv->dev, dma_addr)))
+    if (shinfo->nr_frags > ring->desc_block_size-1 || (skb->data_len && skb->data_len < 32))
     {
-        // mapping failed
-        goto tx_drop_count;
+        // too many frags or very short data portion; linearize
+        if (skb_linearize(skb))
+        {
+            goto tx_drop_count;
+        }
     }
 
-    // write descriptor
-    tx_desc->len = skb->len;
-    tx_desc->addr = dma_addr;
-
-    // update tx_info
-    tx_info->skb = skb;
-    dma_unmap_addr_set(tx_info, dma_addr, dma_addr);
-    dma_unmap_len_set(tx_info, len, skb->len);
+    // map skb
+    if (!mqnic_map_skb(priv, ring, tx_info, tx_desc, skb))
+    {
+        // map failed
+        goto tx_drop_count;
+    }
 
     // count packet
     ring->packets++;

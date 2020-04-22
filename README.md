@@ -7,14 +7,14 @@ GitHub repository: https://github.com/ucsdsysnet/corundum
 Corundum is an open-source, high-performance FPGA-based NIC.  Features include
 a high performance datapath, 10G/25G/100G Ethernet, PCI express gen 3, a
 custom, high performance, tightly-integrated PCIe DMA engine, many (1000+)
-transmit, receive, completion, and event queues, MSI interrupts, multiple
-interfaces, multiple ports per interface, per-port transmit scheduling
-including high precision TDMA, flow hashing, RSS, checksum offloading, and
-native IEEE 1588 PTP timestamping.  A Linux driver is included that integrates
-with the Linux networking stack.  Development and debugging is facilitated by
-an extensive simulation framework that covers the entire system from a
-simulation model of the driver and PCI express interface on one side to the
-Ethernet interfaces on the other side.
+transmit, receive, completion, and event queues, scatter/gather DMA, MSI
+interrupts, multiple interfaces, multiple ports per interface, per-port
+transmit scheduling including high precision TDMA, flow hashing, RSS, checksum
+offloading, and native IEEE 1588 PTP timestamping.  A Linux driver is included
+that integrates with the Linux networking stack.  Development and debugging is
+facilitated by an extensive simulation framework that covers the entire system
+from a simulation model of the driver and PCI express interface on one side to
+the Ethernet interfaces on the other side.
 
 Corundum has several unique architectural features.  First, transmit, receive,
 completion, and event queue states are stored efficiently in block RAM or
@@ -24,28 +24,30 @@ have multiple ports, each with its own independent scheduler.  This enables
 extremely fine-grained control over packet transmission.  Coupled with PTP time
 synchronization, this enables high precision TDMA.
 
-Corundum currently supports Xilinx Virtex 7, Ultrascale, and Ultrascale+ series
+Corundum currently supports Xilinx Virtex 7, UltraScale, and UltraScale+ series
 devices.  Designs are included for the following FPGA boards:
 
-*  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex Ultrascale+ XCVU3P)
-*  Exablaze ExaNIC X10 (Xilinx Kintex Ultrascale XCKU035)
-*  Exablaze ExaNIC X25 (Xilinx Kintex Ultrascale+ XCKU3P)
+*  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex UltraScale+ XCVU3P)
+*  Exablaze ExaNIC X10 (Xilinx Kintex UltraScale XCKU035)
+*  Exablaze ExaNIC X25 (Xilinx Kintex UltraScale+ XCKU3P)
 *  NetFPGA SUME (Xilinx Virtex 7 XC7V690T)
-*  Xilinx VCU108 (Xilinx Virtex Ultrascale XCVU095)
-*  Xilinx VCU118 (Xilinx Virtex Ultrascale+ XCVU9P)
-*  Xilinx VCU1525 (Xilinx Virtex Ultrascale+ XCVU9P)
+*  Xilinx VCU108 (Xilinx Virtex UltraScale XCVU095)
+*  Xilinx VCU118 (Xilinx Virtex UltraScale+ XCVU9P)
+*  Xilinx VCU1525 (Xilinx Virtex UltraScale+ XCVU9P)
 
 For operation at 10G and 25G, Corundum uses the open source 10G/25G MAC and
 PHY modules from the verilog-ethernet repository, no extra licenses are
 required.  However, it is possible to use other MAC and/or PHY modules.
 Operation at 100G currently requires using the Xilinx CMAC core with RS-FEC
-enabled, which is covered by the free CMAC license on Xilinx Ultrascale+ parts.
+enabled, which is covered by the free CMAC license on Xilinx UltraScale+ parts.
 
 ## Documentation
 
 ### Block Diagram
 
 ![Corundum block diagram](block.svg)
+
+Block diagram of the Corundum NIC. PCIe HIP: PCIe hard IP core; AXIL M: AXI lite master; DMA IF: DMA interface; PTP HC: PTP hardware clock; TXQ: transmit queue manager; TXCQ: transmit completion queue manager; RXQ: receive queue manager; RXCQ: receive completion queue manager; EQ: event queue manager; MAC + PHY: Ethernet media access controller (MAC) and physical interface layer (PHY).
 
 ### Modules
 
@@ -66,17 +68,19 @@ RAM or ultra RAM.
 
 #### cpl_write module
 
-Completion write module.  Responsible for writing completion and event entries
-into host memory.
+Completion write module.  Responsible for enqueuing completion and event
+records into the completion queue managers and writing records into host
+memory via DMA.
 
 #### desc_fetch module
 
-Descriptor fetch module.  Responsible for reading descriptors from host memory.
+Descriptor fetch module.  Responsible for dequeuing descriptors from the queue
+managers and reading descriptors from host memory via DMA.
 
 #### desc_op_mux module
 
 Descriptor operation multiplexer module.  Merges descriptor fetch operations
-from different sources to enable sharing a single cpl_write module instance.
+from different sources to enable sharing a single desc_fetch module instance.
 
 #### event_mux module
 
@@ -88,7 +92,8 @@ Interface module.  Contains the event queues, interface queues, and ports.
 
 #### port module
 
-Port module.  Contains the transmit and receive engines
+Port module.  Contains the transmit and receive datapath components, including
+transmit and receive engines and checksum and hash offloading.
 
 #### queue_manager module
 
@@ -102,9 +107,10 @@ frame payload to aid in IP checksum offloading.
 
 #### rx_engine module
 
-Receive engine.  Manages receive descriptor dequeue and fetch via DMA, packet
-reception, data writeback via DMA, and completion enqueue and writeback via
-DMA.  Handles PTP timestamps for inclusion in completion records.
+Receive engine.  Manages receive datapath operations including descriptor
+dequeue and fetch via DMA, packet reception, data writeback via DMA, and
+completion enqueue and writeback via DMA.  Handles PTP timestamps for
+inclusion in completion records.
 
 #### rx_hash module
 
@@ -113,14 +119,14 @@ headers and computes 32 bit Toeplitz flow hash.
 
 #### tdma_ber_ch module
 
-TDMA bit error ratio test channel module.  Controls PRBS logic in Ethernet PHY
-and accumulates bit errors.  Can be configured to bin error counts by TDMA
-timeslot.
+TDMA bit error ratio (BER) test channel module.  Controls PRBS logic in
+Ethernet PHY and accumulates bit errors.  Can be configured to bin error
+counts by TDMA timeslot.
 
 #### tdma_ber module
 
-TDMA bit error ratio test module.  Wrapper for a tdma_scheduler and multiple
-instances of tdma_ber_ch.
+TDMA bit error ratio (BER) test module.  Wrapper for a tdma_scheduler and
+multiple instances of tdma_ber_ch.
 
 #### tdma_scheduler module
 
@@ -135,9 +141,10 @@ the specified position.
 
 #### tx_engine module
 
-Transmit engine.  Manages receive descriptor dequeue and fetch via DMA, packet
-data fetch via DMA, packet transmission, and completion enqueue and writeback
-via DMA.  Handles PTP timestamps for inclusion in completion records.
+Transmit engine.  Manages transmit datapath operations including descriptor
+dequeue and fetch via DMA, packet data fetch via DMA, packet transmission, and
+completion enqueue and writeback via DMA.  Handles PTP timestamps for
+inclusion in completion records.
 
 #### tx_scheduler_ctrl_tdma module
 
@@ -189,15 +196,15 @@ individual test scripts can be run with python directly.
     tb/ip_ep.py          : MyHDL IP frame endpoints
     tb/mqnic.py          : MyHDL mqnic driver model
     tb/pcie.py           : MyHDL PCI Express BFM
-    tb/pcie_us.py        : MyHDL Xilinx Ultrascale PCIe core model
-    tb/pcie_usp.py       : MyHDL Xilinx Ultrascale+ PCIe core model
+    tb/pcie_us.py        : MyHDL Xilinx UltraScale PCIe core model
+    tb/pcie_usp.py       : MyHDL Xilinx UltraScale+ PCIe core model
     tb/ptp.py            : MyHDL PTP clock model
     tb/udp_ep.py         : MyHDL UDP frame endpoints
     tb/xgmii_ep.py       : MyHDL XGMII endpoints
 
 ## Publications
 
-- A. Forencich, A. C. Snoeren, G. Porter, G. Papen, *Corundum: An Open-Source 100-Gbps NIC,* in FCCM'20, [Paper](https://www.cse.ucsd.edu/~snoeren/papers/corundum-fccm20.pdf)
+- A. Forencich, A. C. Snoeren, G. Porter, G. Papen, *Corundum: An Open-Source 100-Gbps NIC,* in FCCM'20, [Paper](https://www.cse.ucsd.edu/~snoeren/papers/corundum-fccm20.pdf), [Slides](http://fccm.org/....pdf)
 
 ## Citation
 If you use Corundum in your project please cite one of the following papers
@@ -209,6 +216,14 @@ and/or link to the github project:
     title = {Corundum: An Open-Source {100-Gbps} {NIC}},
     booktitle = {28th IEEE International Symposium on Field-Programmable Custom Computing Machines},
     year = {2020},
+}
+
+@phdthesis{forencich2020thesis,
+    author = {John Alexander Forencich},
+    title = {System-Level Considerations for Optical Switching in Data Center Networks},
+    school = {UC San Diego},
+    year = {2020},
+    url = {https://escholarship.org/uc/item/???},
 }
 ```
 

@@ -262,7 +262,7 @@ void mqnic_register_phc(struct mqnic_dev *mdev)
     phc_features = ioread32(mdev->phc_hw_addr+MQNIC_PHC_REG_FEATURES);
 
     mdev->ptp_clock_info.owner      = THIS_MODULE;
-    mdev->ptp_clock_info.max_adj    = 10000000,
+    mdev->ptp_clock_info.max_adj    = 100000000,
     mdev->ptp_clock_info.n_alarm    = 0,
     mdev->ptp_clock_info.n_ext_ts   = 0,
     mdev->ptp_clock_info.n_per_out  = phc_features & 0xff,

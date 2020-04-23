@@ -95,7 +95,7 @@ generate
     end
 endgenerate
 
-assign m_axis_tkeep = frame_reg ? s_axis_tkeep : {60{1'b1}};
+assign m_axis_tkeep = (frame_reg ? {KEEP_WIDTH{1'b0}} : {60{1'b1}}) | s_axis_tkeep;
 assign m_axis_tvalid = s_axis_tvalid;
 assign s_axis_tready = m_axis_tready;
 assign m_axis_tlast = s_axis_tlast;

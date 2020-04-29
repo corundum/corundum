@@ -2,6 +2,8 @@
 
 GitHub repository: https://github.com/ucsdsysnet/corundum
 
+Google group: https://groups.google.com/d/forum/corundum-nic
+
 ## Introduction
 
 Corundum is an open-source, high-performance FPGA-based NIC.  Features include

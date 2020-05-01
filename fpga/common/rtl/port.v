@@ -615,36 +615,36 @@ always @(posedge clk) begin
                 end
             end
             16'h0080: rss_mask_reg <= axil_ctrl_wdata; // RSS mask
-            16'h0100: begin
+            16'h1000: begin
                 // TDMA control
                 if (axil_ctrl_wstrb[0]) begin
                     tdma_enable_reg <= axil_ctrl_wdata[0];
                 end
             end
-            16'h0114: set_tdma_schedule_start_reg[29:0] <= axil_ctrl_wdata; // TDMA schedule start ns
-            16'h0118: set_tdma_schedule_start_reg[63:32] <= axil_ctrl_wdata; // TDMA schedule start sec l
-            16'h011C: begin
+            16'h1014: set_tdma_schedule_start_reg[29:0] <= axil_ctrl_wdata; // TDMA schedule start ns
+            16'h1018: set_tdma_schedule_start_reg[63:32] <= axil_ctrl_wdata; // TDMA schedule start sec l
+            16'h101C: begin
                 // TDMA schedule start sec h
                 set_tdma_schedule_start_reg[79:64] <= axil_ctrl_wdata;
                 set_tdma_schedule_start_valid_reg <= 1'b1;
             end
-            16'h0124: set_tdma_schedule_period_reg[29:0] <= axil_ctrl_wdata; // TDMA schedule period ns
-            16'h0128: set_tdma_schedule_period_reg[63:32] <= axil_ctrl_wdata; // TDMA schedule period sec l
-            16'h012C: begin
+            16'h1024: set_tdma_schedule_period_reg[29:0] <= axil_ctrl_wdata; // TDMA schedule period ns
+            16'h1028: set_tdma_schedule_period_reg[63:32] <= axil_ctrl_wdata; // TDMA schedule period sec l
+            16'h102C: begin
                 // TDMA schedule period sec h
                 set_tdma_schedule_period_reg[79:64] <= axil_ctrl_wdata;
                 set_tdma_schedule_period_valid_reg <= 1'b1;
             end
-            16'h0134: set_tdma_timeslot_period_reg[29:0] <= axil_ctrl_wdata; // TDMA timeslot period ns
-            16'h0138: set_tdma_timeslot_period_reg[63:32] <= axil_ctrl_wdata; // TDMA timeslot period sec l
-            16'h013C: begin
+            16'h1034: set_tdma_timeslot_period_reg[29:0] <= axil_ctrl_wdata; // TDMA timeslot period ns
+            16'h1038: set_tdma_timeslot_period_reg[63:32] <= axil_ctrl_wdata; // TDMA timeslot period sec l
+            16'h103C: begin
                 // TDMA timeslot period sec h
                 set_tdma_timeslot_period_reg[79:64] <= axil_ctrl_wdata;
                 set_tdma_timeslot_period_valid_reg <= 1'b1;
             end
-            16'h0144: set_tdma_active_period_reg[29:0] <= axil_ctrl_wdata; // TDMA active period ns
-            16'h0148: set_tdma_active_period_reg[63:32] <= axil_ctrl_wdata; // TDMA active period sec l
-            16'h014C: begin
+            16'h1044: set_tdma_active_period_reg[29:0] <= axil_ctrl_wdata; // TDMA active period ns
+            16'h1048: set_tdma_active_period_reg[63:32] <= axil_ctrl_wdata; // TDMA active period sec l
+            16'h104C: begin
                 // TDMA active period sec h
                 set_tdma_active_period_reg[79:64] <= axil_ctrl_wdata;
                 set_tdma_active_period_valid_reg <= 1'b1;
@@ -678,28 +678,28 @@ always @(posedge clk) begin
                 axil_ctrl_rdata_reg[0] <= sched_enable_reg;
             end
             16'h0080: axil_ctrl_rdata_reg <= rss_mask_reg; // RSS mask
-            16'h0100: begin
+            16'h1000: begin
                 // TDMA control
                 axil_ctrl_rdata_reg[0] <= tdma_enable_reg;
             end
-            16'h0104: begin
+            16'h1004: begin
                 // TDMA status
                 axil_ctrl_rdata_reg[0] <= tdma_locked;
                 axil_ctrl_rdata_reg[1] <= tdma_error;
             end
-            16'h0108: axil_ctrl_rdata_reg <= 2**TDMA_INDEX_WIDTH; // TDMA timeslot count
-            16'h0114: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[29:0]; // TDMA schedule start ns
-            16'h0118: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[63:32]; // TDMA schedule start sec l
-            16'h011C: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[79:64]; // TDMA schedule start sec h
-            16'h0124: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[29:0]; // TDMA schedule period ns
-            16'h0128: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[63:32]; // TDMA schedule period sec l
-            16'h012C: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[79:64]; // TDMA schedule period sec h
-            16'h0134: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[29:0]; // TDMA timeslot period ns
-            16'h0138: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[63:32]; // TDMA timeslot period sec l
-            16'h013C: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[79:64]; // TDMA timeslot period sec h
-            16'h0144: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[29:0]; // TDMA active period ns
-            16'h0148: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[63:32]; // TDMA active period sec l
-            16'h014C: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[79:64]; // TDMA active period sec h
+            16'h1008: axil_ctrl_rdata_reg <= 2**TDMA_INDEX_WIDTH; // TDMA timeslot count
+            16'h1014: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[29:0]; // TDMA schedule start ns
+            16'h1018: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[63:32]; // TDMA schedule start sec l
+            16'h101C: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[79:64]; // TDMA schedule start sec h
+            16'h1024: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[29:0]; // TDMA schedule period ns
+            16'h1028: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[63:32]; // TDMA schedule period sec l
+            16'h102C: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[79:64]; // TDMA schedule period sec h
+            16'h1034: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[29:0]; // TDMA timeslot period ns
+            16'h1038: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[63:32]; // TDMA timeslot period sec l
+            16'h103C: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[79:64]; // TDMA timeslot period sec h
+            16'h1044: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[29:0]; // TDMA active period ns
+            16'h1048: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[63:32]; // TDMA active period sec l
+            16'h104C: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[79:64]; // TDMA active period sec h
         endcase
     end
 

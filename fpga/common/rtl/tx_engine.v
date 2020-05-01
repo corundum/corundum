@@ -78,6 +78,8 @@ module tx_engine #
     parameter DESC_SIZE = 16,
     // Descriptor size (in bytes)
     parameter CPL_SIZE = 32,
+    // Max number of in-flight descriptor requests
+    parameter MAX_DESC_REQ = 16,
     // Width of AXI stream descriptor interfaces in bits
     parameter AXIS_DESC_DATA_WIDTH = DESC_SIZE*8,
     // AXI stream descriptor tkeep signal width (words per cycle)
@@ -213,6 +215,8 @@ parameter CL_PKT_TABLE_SIZE = $clog2(PKT_TABLE_SIZE);
 
 parameter CL_MAX_TX_SIZE = $clog2(MAX_TX_SIZE);
 
+parameter CL_MAX_DESC_REQ = $clog2(MAX_DESC_REQ);
+
 // bus width assertions
 initial begin
     if (DMA_TAG_WIDTH < CL_DESC_TABLE_SIZE) begin
@@ -287,6 +291,11 @@ reg early_tx_req_status_valid_reg = 1'b0, early_tx_req_status_valid_next;
 reg [DMA_CLIENT_LEN_WIDTH-1:0] finish_tx_req_status_len_reg = {DMA_CLIENT_LEN_WIDTH{1'b0}}, finish_tx_req_status_len_next;
 reg [REQ_TAG_WIDTH-1:0] finish_tx_req_status_tag_reg = {REQ_TAG_WIDTH{1'b0}}, finish_tx_req_status_tag_next;
 reg finish_tx_req_status_valid_reg = 1'b0, finish_tx_req_status_valid_next;
+
+reg [CL_MAX_DESC_REQ+1-1:0] active_desc_req_count_reg = 0;
+reg inc_active_desc_req;
+reg dec_active_desc_req_1;
+reg dec_active_desc_req_2;
 
 reg [DESC_TABLE_SIZE-1:0] desc_table_active = 0;
 reg [DESC_TABLE_SIZE-1:0] desc_table_invalid = 0;
@@ -509,6 +518,10 @@ always @* begin
     finish_tx_req_status_tag_next = finish_tx_req_status_tag_reg;
     finish_tx_req_status_valid_next = finish_tx_req_status_valid_reg;
 
+    inc_active_desc_req = 1'b0;
+    dec_active_desc_req_1 = 1'b0;
+    dec_active_desc_req_2 = 1'b0;
+
     desc_table_start_tag = s_axis_tx_req_tag;
     desc_table_start_queue = s_axis_tx_req_queue;
     desc_table_start_pkt = pkt_table_free_ptr;
@@ -559,7 +572,7 @@ always @* begin
 
     // descriptor fetch
     // wait for transmit request
-    s_axis_tx_req_ready_next = enable && pkt_table_free_ptr_valid && !desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] && ($unsigned(desc_table_start_ptr_reg - desc_table_finish_ptr_reg) < DESC_TABLE_SIZE) && (!m_axis_desc_req_valid || m_axis_desc_req_ready);
+    s_axis_tx_req_ready_next = enable && pkt_table_free_ptr_valid && active_desc_req_count_reg < MAX_DESC_REQ && !desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] && ($unsigned(desc_table_start_ptr_reg - desc_table_finish_ptr_reg) < DESC_TABLE_SIZE) && (!m_axis_desc_req_valid || m_axis_desc_req_ready);
     if (s_axis_tx_req_ready && s_axis_tx_req_valid) begin
         s_axis_tx_req_ready_next = 1'b0;
  
@@ -577,6 +590,8 @@ always @* begin
         m_axis_desc_req_queue_next = s_axis_tx_req_queue;
         m_axis_desc_req_tag_next = desc_table_start_ptr_reg & DESC_PTR_MASK;
         m_axis_desc_req_valid_next = 1'b1;
+
+        inc_active_desc_req = 1'b1;
     end
 
     // descriptor fetch
@@ -604,6 +619,8 @@ always @* begin
             early_tx_req_status_len_next = 0;
             early_tx_req_status_tag_next = desc_table_tag[s_axis_desc_req_status_tag & DESC_PTR_MASK];
             early_tx_req_status_valid_next = 1'b1;
+
+            dec_active_desc_req_1 = 1'b1;
         end else begin
             // descriptor available to dequeue
 
@@ -648,16 +665,18 @@ always @* begin
             end
 
             if (s_axis_desc_tlast) begin
-                desc_start_next = 1'b1;
-                desc_len_next = 0;
-
                 // update entry in descriptor table
                 desc_table_desc_fetched_ptr = s_axis_desc_tid & DESC_PTR_MASK;
-                desc_table_desc_fetched_len = desc_len_reg + s_axis_desc_tdata[63:32];
+                desc_table_desc_fetched_len = desc_len_next;
                 desc_table_desc_fetched_en = 1'b1;
 
                 // read commit
                 desc_table_read_start_commit = 1'b1;
+
+                dec_active_desc_req_2 = 1'b1;
+
+                desc_start_next = 1'b1;
+                desc_len_next = 0;
             end
         end
     end
@@ -841,6 +860,8 @@ always @(posedge clk) begin
     finish_tx_req_status_tag_reg <= finish_tx_req_status_tag_next;
     finish_tx_req_status_valid_reg <= finish_tx_req_status_valid_next;
 
+    active_desc_req_count_reg <= active_desc_req_count_reg + inc_active_desc_req - dec_active_desc_req_1 - dec_active_desc_req_2;
+
     // descriptor table operations
     if (desc_table_start_en) begin
         desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b1;
@@ -952,6 +973,8 @@ always @(posedge clk) begin
 
         early_tx_req_status_valid_reg <= 1'b0;
         finish_tx_req_status_valid_reg <= 1'b0;
+
+        active_desc_req_count_reg <= 0;
 
         desc_table_active <= 0;
         desc_table_invalid <= 0;

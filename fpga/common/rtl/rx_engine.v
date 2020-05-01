@@ -78,6 +78,8 @@ module rx_engine #
     parameter DESC_SIZE = 16,
     // Descriptor size (in bytes)
     parameter CPL_SIZE = 32,
+    // Max number of in-flight descriptor requests
+    parameter MAX_DESC_REQ = 16,
     // Width of AXI stream descriptor interfaces in bits
     parameter AXIS_DESC_DATA_WIDTH = DESC_SIZE*8,
     // AXI stream descriptor tkeep signal width (words per cycle)
@@ -222,6 +224,8 @@ parameter CL_PKT_TABLE_SIZE = $clog2(PKT_TABLE_SIZE);
 
 parameter CL_MAX_RX_SIZE = $clog2(MAX_RX_SIZE);
 
+parameter CL_MAX_DESC_REQ = $clog2(MAX_DESC_REQ);
+
 // bus width assertions
 initial begin
     if (DMA_TAG_WIDTH < CL_DESC_TABLE_SIZE) begin
@@ -282,6 +286,11 @@ reg s_axis_rx_csum_ready_reg = 1'b0, s_axis_rx_csum_ready_next;
 reg desc_start_reg = 1'b1, desc_start_next;
 reg desc_done_reg = 1'b0, desc_done_next;
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_len_reg = {DMA_CLIENT_LEN_WIDTH{1'b0}}, desc_len_next;
+
+reg [CL_MAX_DESC_REQ+1-1:0] active_desc_req_count_reg = 0;
+reg inc_active_desc_req;
+reg dec_active_desc_req_1;
+reg dec_active_desc_req_2;
 
 reg [DESC_TABLE_SIZE-1:0] desc_table_active = 0;
 reg [DESC_TABLE_SIZE-1:0] desc_table_rx_done = 0;
@@ -496,6 +505,10 @@ always @* begin
     desc_done_next = desc_done_reg;
     desc_len_next = desc_len_reg;
 
+    inc_active_desc_req = 1'b0;
+    dec_active_desc_req_1 = 1'b0;
+    dec_active_desc_req_2 = 1'b0;
+
     desc_table_start_tag = s_axis_rx_req_tag;
     desc_table_start_queue = s_axis_rx_req_queue;
     desc_table_start_pkt = pkt_table_free_ptr;
@@ -571,7 +584,7 @@ always @* begin
 
     // descriptor fetch
     if (desc_table_active[desc_table_dequeue_start_ptr_reg & DESC_PTR_MASK] && desc_table_dequeue_start_ptr_reg != desc_table_start_ptr_reg) begin
-        if (desc_table_rx_done[desc_table_dequeue_start_ptr_reg & DESC_PTR_MASK] && !m_axis_desc_req_valid) begin
+        if (desc_table_rx_done[desc_table_dequeue_start_ptr_reg & DESC_PTR_MASK] && !m_axis_desc_req_valid && active_desc_req_count_reg < MAX_DESC_REQ) begin
             // update entry in descriptor table
             desc_table_dequeue_start_en = 1'b1;
 
@@ -579,6 +592,8 @@ always @* begin
             m_axis_desc_req_queue_next = desc_table_queue[desc_table_dequeue_start_ptr_reg & DESC_PTR_MASK];
             m_axis_desc_req_tag_next = desc_table_dequeue_start_ptr_reg & DESC_PTR_MASK;
             m_axis_desc_req_valid_next = 1'b1;
+
+            inc_active_desc_req = 1'b1;
         end
     end
 
@@ -599,6 +614,8 @@ always @* begin
 
             // invalidate entry
             desc_table_dequeue_invalid = 1'b1;
+
+            dec_active_desc_req_1 = 1'b1;
         end else begin
             // descriptor available to dequeue
 
@@ -641,17 +658,19 @@ always @* begin
             end
 
             if (s_axis_desc_tlast) begin
-                desc_start_next = 1'b1;
-                desc_done_next = 1'b0;
-                desc_len_next = 0;
-
                 // update entry in descriptor table
                 desc_table_desc_fetched_ptr = s_axis_desc_tid & DESC_PTR_MASK;
-                desc_table_desc_fetched_len = desc_len_reg + s_axis_desc_tdata[63:32];
+                desc_table_desc_fetched_len = desc_len_next;
                 desc_table_desc_fetched_en = 1'b1;
 
                 // write commit
                 desc_table_write_start_commit = 1'b1;
+
+                dec_active_desc_req_2 = 1'b1;
+
+                desc_start_next = 1'b1;
+                desc_done_next = 1'b0;
+                desc_len_next = 0;
             end
         end
     end
@@ -834,6 +853,8 @@ always @(posedge clk) begin
     desc_done_reg <= desc_done_next;
     desc_len_reg <= desc_len_next;
 
+    active_desc_req_count_reg <= active_desc_req_count_reg + inc_active_desc_req - dec_active_desc_req_1 - dec_active_desc_req_2;
+
     // descriptor table operations
     if (desc_table_start_en) begin
         desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b1;
@@ -945,6 +966,8 @@ always @(posedge clk) begin
         desc_start_reg <= 1'b1;
         desc_done_reg <= 1'b0;
         desc_len_reg <= 0;
+
+        active_desc_req_count_reg <= 0;
 
         desc_table_active <= 0;
         desc_table_invalid <= 0;

@@ -619,9 +619,15 @@ class Port(object):
 
         self.schedulers = []
 
+        yield from self.set_mtu(min(self.port_mtu, 9214))
+
         for k in range(self.sched_count):
             p = Scheduler(self, k, self.hw_addr + self.sched_offset + k*self.sched_stride)
             self.schedulers.append(p)
+
+    def set_mtu(self, mtu):
+        yield from self.driver.rc.mem_write_dword(self.hw_addr+MQNIC_PORT_REG_TX_MTU, mtu)
+        yield from self.driver.rc.mem_write_dword(self.hw_addr+MQNIC_PORT_REG_RX_MTU, mtu)
 
 
 class Interface(object):
@@ -953,6 +959,10 @@ class Interface(object):
         ring.head_ptr += 1;
 
         yield from ring.write_head_ptr()
+
+    def set_mtu(self, mtu):
+        for p in self.ports:
+            yield from p.set_mtu(mtu)
 
     def recv(self):
         if self.pkt_rx_queue:

@@ -93,6 +93,14 @@ static int mqnic_start_port(struct net_device *ndev)
         priv->tx_ring[k]->tx_queue = netdev_get_tx_queue(ndev, k);
     }
 
+    // configure ports
+    for (k = 0; k < priv->port_count; k++)
+    {
+        // set port MTU
+        mqnic_port_set_tx_mtu(priv->ports[k], ndev->mtu+ETH_HLEN);
+        mqnic_port_set_rx_mtu(priv->ports[k], ndev->mtu+ETH_HLEN);
+    }
+
     // enable first port
     mqnic_activate_port(priv->ports[0]);
 

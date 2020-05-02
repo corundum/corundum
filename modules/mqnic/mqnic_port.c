@@ -120,3 +120,22 @@ void mqnic_port_set_rss_mask(struct mqnic_port *port, u32 rss_mask)
     iowrite32(rss_mask, port->hw_addr+MQNIC_PORT_REG_RSS_MASK);
 }
 
+u32 mqnic_port_get_tx_mtu(struct mqnic_port *port)
+{
+    return ioread32(port->hw_addr+MQNIC_PORT_REG_TX_MTU);
+}
+
+void mqnic_port_set_tx_mtu(struct mqnic_port *port, u32 mtu)
+{
+    iowrite32(mtu, port->hw_addr+MQNIC_PORT_REG_TX_MTU);
+}
+
+u32 mqnic_port_get_rx_mtu(struct mqnic_port *port)
+{
+    return ioread32(port->hw_addr+MQNIC_PORT_REG_RX_MTU);
+}
+
+void mqnic_port_set_rx_mtu(struct mqnic_port *port, u32 mtu)
+{
+    iowrite32(mtu, port->hw_addr+MQNIC_PORT_REG_RX_MTU);
+}

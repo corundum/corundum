@@ -309,6 +309,10 @@ int mqnic_activate_port(struct mqnic_port *port);
 void mqnic_deactivate_port(struct mqnic_port *port);
 u32 mqnic_port_get_rss_mask(struct mqnic_port *port);
 void mqnic_port_set_rss_mask(struct mqnic_port *port, u32 rss_mask);
+u32 mqnic_port_get_tx_mtu(struct mqnic_port *port);
+void mqnic_port_set_tx_mtu(struct mqnic_port *port, u32 mtu);
+u32 mqnic_port_get_rx_mtu(struct mqnic_port *port);
+void mqnic_port_set_rx_mtu(struct mqnic_port *port, u32 mtu);
 
 // mqnic_ptp.c
 void mqnic_register_phc(struct mqnic_dev *mdev);

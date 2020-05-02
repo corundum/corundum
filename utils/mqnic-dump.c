@@ -142,6 +142,7 @@ int main(int argc, char *argv[])
     struct mqnic_if *dev_interface = &dev->interfaces[interface];
 
     printf("IF ID: 0x%08x\n", dev_interface->if_id);
+    printf("IF features: 0x%08x\n", dev_interface->if_features);
     
     printf("Event queue count: %d\n", dev_interface->event_queue_count);
     printf("Event queue offset: 0x%08x\n", dev_interface->event_queue_offset);
@@ -167,11 +168,16 @@ int main(int argc, char *argv[])
     struct mqnic_port *dev_port = &dev_interface->ports[port];
 
     printf("Port ID: 0x%08x\n", dev_port->port_id);
+    printf("Port features: 0x%08x\n", dev_port->port_features);
+    printf("Port MTU: %d\n", dev_port->port_mtu);
     
     printf("Sched count: %d\n", dev_port->sched_count);
     printf("Sched offset: 0x%08x\n", dev_port->sched_offset);
     printf("Sched stride: 0x%08x\n", dev_port->sched_stride);
     printf("Sched type: 0x%08x\n", dev_port->sched_type);
+
+    printf("TX MTU: %d\n", mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_TX_MTU));
+    printf("RX MTU: %d\n", mqnic_reg_read32(dev_port->regs, MQNIC_PORT_REG_RX_MTU));
 
     if (dev->phc_count > 0)
     {

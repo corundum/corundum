@@ -166,6 +166,7 @@ struct mqnic *mqnic_open(const char *dev_name)
 
             port->port_id = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_ID);
             port->port_features = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_FEATURES);
+            port->port_mtu = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_MTU);
 
             port->sched_count = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_COUNT);
             port->sched_offset = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_OFFSET);

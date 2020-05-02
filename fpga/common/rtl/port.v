@@ -569,6 +569,9 @@ reg sched_enable_reg = 1'b0;
 
 reg [RX_QUEUE_INDEX_WIDTH-1:0] rss_mask_reg = 0;
 
+reg [DMA_CLIENT_LEN_WIDTH-1:0] tx_mtu_reg = MAX_TX_SIZE;
+reg [DMA_CLIENT_LEN_WIDTH-1:0] rx_mtu_reg = MAX_RX_SIZE;
+
 reg tdma_enable_reg = 1'b0;
 wire tdma_locked;
 wire tdma_error;
@@ -623,6 +626,8 @@ always @(posedge clk) begin
                 end
             end
             16'h0080: rss_mask_reg <= axil_ctrl_wdata; // RSS mask
+            16'h0100: tx_mtu_reg <= axil_ctrl_wdata; // TX MTU
+            16'h0200: rx_mtu_reg <= axil_ctrl_wdata; // RX MTU
             16'h1000: begin
                 // TDMA control
                 if (axil_ctrl_wstrb[0]) begin
@@ -686,6 +691,8 @@ always @(posedge clk) begin
                 axil_ctrl_rdata_reg[0] <= sched_enable_reg;
             end
             16'h0080: axil_ctrl_rdata_reg <= rss_mask_reg; // RSS mask
+            16'h0100: axil_ctrl_rdata_reg <= tx_mtu_reg; // TX MTU
+            16'h0200: axil_ctrl_rdata_reg <= rx_mtu_reg; // RX MTU
             16'h1000: begin
                 // TDMA control
                 axil_ctrl_rdata_reg[0] <= tdma_enable_reg;
@@ -720,6 +727,8 @@ always @(posedge clk) begin
 
         sched_enable_reg <= 1'b0;
         rss_mask_reg <= 0;
+        tx_mtu_reg <= MAX_TX_SIZE;
+        rx_mtu_reg <= MAX_RX_SIZE;
         tdma_enable_reg <= 1'b0;
     end
 end

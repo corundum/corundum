@@ -152,6 +152,9 @@ either expressed or implied, of The Regents of the University of California.
 
 #define MQNIC_PORT_REG_RSS_MASK                   0x0080
 
+#define MQNIC_PORT_REG_TX_MTU                     0x0100
+#define MQNIC_PORT_REG_RX_MTU                     0x0200
+
 #define MQNIC_PORT_REG_TDMA_CTRL                  0x1000
 #define MQNIC_PORT_REG_TDMA_STATUS                0x1004
 #define MQNIC_PORT_REG_TDMA_TIMESLOT_COUNT        0x1008

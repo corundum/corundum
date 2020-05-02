@@ -70,10 +70,14 @@ module rx_engine #
     parameter DESC_TABLE_SIZE = 8,
     // Width of descriptor table field for tracking outstanding DMA operations
     parameter DESC_TABLE_DMA_OP_COUNT_WIDTH = 4,
-    // Packet table size (number of in-progress packets)
-    parameter PKT_TABLE_SIZE = 8,
     // Max receive packet size
     parameter MAX_RX_SIZE = 2048,
+    // Receive buffer offset
+    parameter RX_BUFFER_OFFSET = 0,
+    // Receive buffer size
+    parameter RX_BUFFER_SIZE = 16*MAX_RX_SIZE,
+    // Receive buffer step size
+    parameter RX_BUFFER_STEP_SIZE = 128,
     // Descriptor size (in bytes)
     parameter DESC_SIZE = 16,
     // Descriptor size (in bytes)
@@ -215,14 +219,18 @@ module rx_engine #
     /*
      * Configuration
      */
+    input  wire [DMA_CLIENT_LEN_WIDTH-1:0]  mtu,
     input  wire                             enable
 );
 
 parameter CL_DESC_TABLE_SIZE = $clog2(DESC_TABLE_SIZE);
 parameter DESC_PTR_MASK = {CL_DESC_TABLE_SIZE{1'b1}};
-parameter CL_PKT_TABLE_SIZE = $clog2(PKT_TABLE_SIZE);
 
 parameter CL_MAX_RX_SIZE = $clog2(MAX_RX_SIZE);
+parameter CL_RX_BUFFER_SIZE = $clog2(RX_BUFFER_SIZE);
+parameter RX_BUFFER_PTR_MASK = {CL_RX_BUFFER_SIZE{1'b1}};
+parameter RX_BUFFER_PTR_MASK_LOWER = {$clog2(RX_BUFFER_STEP_SIZE){1'b1}};
+parameter RX_BUFFER_PTR_MASK_UPPER = RX_BUFFER_PTR_MASK & ~RX_BUFFER_PTR_MASK_LOWER;
 
 parameter CL_MAX_DESC_REQ = $clog2(MAX_DESC_REQ);
 
@@ -283,6 +291,11 @@ reg s_axis_rx_hash_ready_reg = 1'b0, s_axis_rx_hash_ready_next;
 
 reg s_axis_rx_csum_ready_reg = 1'b0, s_axis_rx_csum_ready_next;
 
+reg [CL_MAX_RX_SIZE+1-1:0] mtu_reg = 0;
+
+reg [CL_RX_BUFFER_SIZE+1-1:0] buf_wr_ptr_reg = 0, buf_wr_ptr_next;
+reg [CL_RX_BUFFER_SIZE+1-1:0] buf_rd_ptr_reg = 0, buf_rd_ptr_next;
+
 reg desc_start_reg = 1'b1, desc_start_next;
 reg desc_done_reg = 1'b0, desc_done_next;
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_len_reg = {DMA_CLIENT_LEN_WIDTH{1'b0}}, desc_len_next;
@@ -304,7 +317,7 @@ reg [QUEUE_PTR_WIDTH-1:0] desc_table_queue_ptr[DESC_TABLE_SIZE-1:0];
 reg [CPL_QUEUE_INDEX_WIDTH-1:0] desc_table_cpl_queue[DESC_TABLE_SIZE-1:0];
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_dma_len[DESC_TABLE_SIZE-1:0];
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_desc_len[DESC_TABLE_SIZE-1:0];
-reg [CL_PKT_TABLE_SIZE-1:0] desc_table_pkt[DESC_TABLE_SIZE-1:0];
+reg [CL_RX_BUFFER_SIZE+1-1:0] desc_table_buf_ptr[DESC_TABLE_SIZE-1:0];
 reg [95:0] desc_table_ptp_ts[DESC_TABLE_SIZE-1:0];
 reg [31:0] desc_table_hash[DESC_TABLE_SIZE-1:0];
 reg [3:0] desc_table_hash_type[DESC_TABLE_SIZE-1:0];
@@ -316,7 +329,7 @@ reg [DESC_TABLE_DMA_OP_COUNT_WIDTH-1:0] desc_table_write_count_finish[DESC_TABLE
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_start_ptr_reg = 0;
 reg [QUEUE_INDEX_WIDTH-1:0] desc_table_start_queue;
 reg [REQ_TAG_WIDTH-1:0] desc_table_start_tag;
-reg [CL_PKT_TABLE_SIZE-1:0] desc_table_start_pkt;
+reg [CL_RX_BUFFER_SIZE+1-1:0] desc_table_start_buf_ptr;
 reg desc_table_start_en;
 reg [CL_DESC_TABLE_SIZE-1:0] desc_table_rx_finish_ptr;
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_rx_finish_len;
@@ -356,12 +369,6 @@ reg desc_table_write_start_en;
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_write_finish_ptr;
 reg desc_table_write_finish_en;
 
-reg [PKT_TABLE_SIZE-1:0] pkt_table_active = 0;
-reg [CL_PKT_TABLE_SIZE-1:0] pkt_table_start_ptr;
-reg pkt_table_start_en;
-reg [CL_PKT_TABLE_SIZE-1:0] pkt_table_finish_ptr;
-reg pkt_table_finish_en;
-
 assign s_axis_rx_req_ready = s_axis_rx_req_ready_reg;
 
 assign m_axis_rx_req_status_len = m_axis_rx_req_status_len_reg;
@@ -395,20 +402,6 @@ assign s_axis_rx_ptp_ts_ready = s_axis_rx_ptp_ts_ready_reg;
 assign s_axis_rx_hash_ready = s_axis_rx_hash_ready_reg;
 
 assign s_axis_rx_csum_ready = s_axis_rx_csum_ready_reg;
-
-wire pkt_table_free_ptr_valid;
-wire [CL_PKT_TABLE_SIZE-1:0] pkt_table_free_ptr;
-
-priority_encoder #(
-    .WIDTH(PKT_TABLE_SIZE),
-    .LSB_PRIORITY("HIGH")
-)
-pkt_table_free_enc_inst (
-    .input_unencoded(~pkt_table_active),
-    .output_valid(pkt_table_free_ptr_valid),
-    .output_encoded(pkt_table_free_ptr),
-    .output_unencoded()
-);
 
 // reg [15:0] stall_cnt = 0;
 // wire stalled = stall_cnt[12];
@@ -455,7 +448,7 @@ initial begin
         desc_table_cpl_queue[i] = 0;
         desc_table_dma_len[i] = 0;
         desc_table_desc_len[i] = 0;
-        desc_table_pkt[i] = 0;
+        desc_table_buf_ptr[i] = 0;
         desc_table_ptp_ts[i] = 0;
         desc_table_hash[i] = 0;
         desc_table_hash_type[i] = 0;
@@ -501,6 +494,9 @@ always @* begin
 
     s_axis_rx_csum_ready_next = 1'b0;
 
+    buf_wr_ptr_next = buf_wr_ptr_reg;
+    buf_rd_ptr_next = buf_rd_ptr_reg;
+
     desc_start_next = desc_start_reg;
     desc_done_next = desc_done_reg;
     desc_len_next = desc_len_reg;
@@ -511,7 +507,7 @@ always @* begin
 
     desc_table_start_tag = s_axis_rx_req_tag;
     desc_table_start_queue = s_axis_rx_req_queue;
-    desc_table_start_pkt = pkt_table_free_ptr;
+    desc_table_start_buf_ptr = buf_wr_ptr_reg;
     desc_table_start_en = 1'b0;
     desc_table_rx_finish_ptr = s_axis_rx_desc_status_tag;
     desc_table_rx_finish_len = s_axis_rx_desc_status_len;
@@ -545,32 +541,30 @@ always @* begin
     desc_table_write_finish_ptr = s_axis_dma_write_desc_status_tag;
     desc_table_write_finish_en = 1'b0;
 
-    pkt_table_start_ptr = pkt_table_free_ptr;
-    pkt_table_start_en = 1'b0;
-    pkt_table_finish_ptr = desc_table_pkt[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK];
-    pkt_table_finish_en = 1'b0;
-
     // receive packet
     // wait for receive request
-    s_axis_rx_req_ready_next = enable && pkt_table_free_ptr_valid && !desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] && ($unsigned(desc_table_start_ptr_reg - desc_table_finish_ptr_reg) < DESC_TABLE_SIZE) && (!m_axis_rx_desc_valid_reg || m_axis_rx_desc_ready);
+    s_axis_rx_req_ready_next = enable && ($unsigned(buf_wr_ptr_reg - buf_rd_ptr_reg) < RX_BUFFER_SIZE - MAX_RX_SIZE) && !desc_table_active[desc_table_start_ptr_reg & DESC_PTR_MASK] && ($unsigned(desc_table_start_ptr_reg - desc_table_finish_ptr_reg) < DESC_TABLE_SIZE) && (!m_axis_rx_desc_valid_reg || m_axis_rx_desc_ready);
     if (s_axis_rx_req_ready && s_axis_rx_req_valid) begin
         s_axis_rx_req_ready_next = 1'b0;
 
         // store in descriptor table
         desc_table_start_tag = s_axis_rx_req_tag;
         desc_table_start_queue = s_axis_rx_req_queue;
-        desc_table_start_pkt = pkt_table_free_ptr;
+        desc_table_start_buf_ptr = buf_wr_ptr_reg;
         desc_table_start_en = 1'b1;
 
-        // store in packet table
-        pkt_table_start_ptr = pkt_table_free_ptr;
-        pkt_table_start_en = 1'b1;
-
         // initiate receive operation
-        m_axis_rx_desc_addr_next = pkt_table_free_ptr << CL_MAX_RX_SIZE;
+        m_axis_rx_desc_addr_next = (buf_wr_ptr_reg & RX_BUFFER_PTR_MASK) + RX_BUFFER_OFFSET;
         m_axis_rx_desc_len_next = MAX_RX_SIZE;
         m_axis_rx_desc_tag_next = desc_table_start_ptr_reg & DESC_PTR_MASK;
         m_axis_rx_desc_valid_next = 1'b1;
+
+        // update write pointer
+        buf_wr_ptr_next = (buf_wr_ptr_reg + mtu_reg + RX_BUFFER_PTR_MASK_LOWER) & ~RX_BUFFER_PTR_MASK_LOWER;
+
+        if ((buf_wr_ptr_reg & RX_BUFFER_PTR_MASK) + mtu_reg > RX_BUFFER_SIZE - MAX_RX_SIZE) begin
+            buf_wr_ptr_next = ~buf_wr_ptr_reg & ~RX_BUFFER_PTR_MASK;
+        end
     end
 
     // receive done
@@ -635,7 +629,7 @@ always @* begin
 
             // initiate data write
             m_axis_dma_write_desc_dma_addr_next = s_axis_desc_tdata[127:64];
-            m_axis_dma_write_desc_ram_addr_next = (desc_table_pkt[s_axis_desc_tid & DESC_PTR_MASK] << CL_MAX_RX_SIZE) + desc_len_reg;
+            m_axis_dma_write_desc_ram_addr_next = (desc_table_buf_ptr[s_axis_desc_tid & DESC_PTR_MASK] & RX_BUFFER_PTR_MASK) + desc_len_reg + RX_BUFFER_OFFSET;
             if (s_axis_desc_tdata[63:32] < (desc_table_dma_len[s_axis_desc_tid & DESC_PTR_MASK] - desc_len_reg)) begin
                 // limit write to length provided in descriptor
                 m_axis_dma_write_desc_len_next = s_axis_desc_tdata[63:32];
@@ -750,17 +744,23 @@ always @* begin
             // invalid entry; skip
             desc_table_cpl_enqueue_start_en = 1'b1;
 
-            // invalidate entry in packet table
-            pkt_table_finish_ptr = desc_table_pkt[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK];
-            pkt_table_finish_en = 1'b1;
+            // update read pointer
+            buf_rd_ptr_next = (desc_table_buf_ptr[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] + mtu_reg + RX_BUFFER_PTR_MASK_LOWER) & ~RX_BUFFER_PTR_MASK_LOWER;
+
+            if ((desc_table_buf_ptr[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] & RX_BUFFER_PTR_MASK) + mtu_reg > RX_BUFFER_SIZE - MAX_RX_SIZE) begin
+                buf_rd_ptr_next = ~desc_table_buf_ptr[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] & ~RX_BUFFER_PTR_MASK;
+            end
 
         end else if (desc_table_data_written[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] && !m_axis_cpl_req_valid_next) begin
             // update entry in descriptor table
             desc_table_cpl_enqueue_start_en = 1'b1;
 
-            // invalidate entry in packet table
-            pkt_table_finish_ptr = desc_table_pkt[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK];
-            pkt_table_finish_en = 1'b1;
+            // update read pointer
+            buf_rd_ptr_next = (desc_table_buf_ptr[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] + mtu_reg + RX_BUFFER_PTR_MASK_LOWER) & ~RX_BUFFER_PTR_MASK_LOWER;
+
+            if ((desc_table_buf_ptr[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] & RX_BUFFER_PTR_MASK) + mtu_reg > RX_BUFFER_SIZE - MAX_RX_SIZE) begin
+                buf_rd_ptr_next = ~desc_table_buf_ptr[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK] & ~RX_BUFFER_PTR_MASK;
+            end
 
             // initiate completion write
             m_axis_cpl_req_queue_next = desc_table_cpl_queue[desc_table_cpl_enqueue_start_ptr_reg & DESC_PTR_MASK];
@@ -849,6 +849,11 @@ always @(posedge clk) begin
 
     s_axis_rx_csum_ready_reg <= s_axis_rx_csum_ready_next;
 
+    mtu_reg <= mtu > MAX_RX_SIZE ? MAX_RX_SIZE : mtu;
+
+    buf_wr_ptr_reg <= buf_wr_ptr_next;
+    buf_rd_ptr_reg <= buf_rd_ptr_next;
+
     desc_start_reg <= desc_start_next;
     desc_done_reg <= desc_done_next;
     desc_len_reg <= desc_len_next;
@@ -865,7 +870,7 @@ always @(posedge clk) begin
         desc_table_cpl_write_done[desc_table_start_ptr_reg & DESC_PTR_MASK] <= 1'b0;
         desc_table_queue[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_queue;
         desc_table_tag[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_tag;
-        desc_table_pkt[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_pkt;
+        desc_table_buf_ptr[desc_table_start_ptr_reg & DESC_PTR_MASK] <= desc_table_start_buf_ptr;
         desc_table_start_ptr_reg <= desc_table_start_ptr_reg + 1;
     end
 
@@ -942,15 +947,6 @@ always @(posedge clk) begin
         desc_table_write_count_finish[desc_table_write_finish_ptr] <= desc_table_write_count_finish[desc_table_write_finish_ptr] + 1;
     end
 
-    // packet table operations
-    if (pkt_table_start_en) begin
-        pkt_table_active[pkt_table_start_ptr] <= 1'b1;
-    end
-
-    if (pkt_table_finish_en) begin
-        pkt_table_active[pkt_table_finish_ptr] <= 1'b0;
-    end
-
     if (rst) begin
         s_axis_rx_req_ready_reg <= 1'b0;
         m_axis_rx_req_status_valid_reg <= 1'b0;
@@ -962,6 +958,9 @@ always @(posedge clk) begin
         s_axis_rx_ptp_ts_ready_reg <= 1'b0;
         s_axis_rx_hash_ready_reg <= 1'b0;
         s_axis_rx_csum_ready_reg <= 1'b0;
+
+        buf_wr_ptr_reg <= 0;
+        buf_rd_ptr_reg <= 0;
 
         desc_start_reg <= 1'b1;
         desc_done_reg <= 1'b0;
@@ -982,8 +981,6 @@ always @(posedge clk) begin
         desc_table_store_csum_ptr_reg <= 0;
         desc_table_cpl_enqueue_start_ptr_reg <= 0;
         desc_table_finish_ptr_reg <= 0;
-
-        pkt_table_active <= 0;
     end
 end
 

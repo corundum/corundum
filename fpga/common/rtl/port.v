@@ -76,6 +76,14 @@ module port #
     parameter RX_PKT_TABLE_SIZE = 8,
     // Width of descriptor table field for tracking outstanding DMA operations
     parameter DESC_TABLE_DMA_OP_COUNT_WIDTH = 4,
+    // Max number of in-flight descriptor requests (transmit)
+    parameter TX_MAX_DESC_REQ = 16,
+    // Transmit descriptor FIFO size
+    parameter TX_DESC_FIFO_SIZE = TX_MAX_DESC_REQ*8,
+    // Max number of in-flight descriptor requests (transmit)
+    parameter RX_MAX_DESC_REQ = 16,
+    // Receive descriptor FIFO size
+    parameter RX_DESC_FIFO_SIZE = RX_MAX_DESC_REQ*8,
     // Transmit scheduler type
     parameter TX_SCHEDULER = "RR",
     // Scheduler operation table size
@@ -1078,7 +1086,7 @@ end
 endgenerate
 
 axis_fifo #(
-    .DEPTH(32*AXIS_DESC_DATA_WIDTH/8),
+    .DEPTH(TX_DESC_FIFO_SIZE*DESC_SIZE),
     .DATA_WIDTH(AXIS_DESC_DATA_WIDTH),
     .KEEP_WIDTH(AXIS_DESC_KEEP_WIDTH),
     .LAST_ENABLE(1),
@@ -1140,6 +1148,7 @@ tx_engine #(
     .TX_BUFFER_STEP_SIZE(SEG_COUNT*SEG_BE_WIDTH),
     .DESC_SIZE(DESC_SIZE),
     .CPL_SIZE(CPL_SIZE),
+    .MAX_DESC_REQ(TX_MAX_DESC_REQ),
     .AXIS_DESC_DATA_WIDTH(AXIS_DESC_DATA_WIDTH),
     .AXIS_DESC_KEEP_WIDTH(AXIS_DESC_KEEP_WIDTH),
     .PTP_TS_ENABLE(PTP_TS_ENABLE),
@@ -1266,7 +1275,7 @@ tx_engine_inst (
 );
 
 axis_fifo #(
-    .DEPTH(32*AXIS_DESC_DATA_WIDTH/8),
+    .DEPTH(RX_DESC_FIFO_SIZE*DESC_SIZE),
     .DATA_WIDTH(AXIS_DESC_DATA_WIDTH),
     .KEEP_WIDTH(AXIS_DESC_KEEP_WIDTH),
     .LAST_ENABLE(1),
@@ -1325,6 +1334,7 @@ rx_engine #(
     .MAX_RX_SIZE(MAX_RX_SIZE),
     .DESC_SIZE(DESC_SIZE),
     .CPL_SIZE(CPL_SIZE),
+    .MAX_DESC_REQ(RX_MAX_DESC_REQ),
     .AXIS_DESC_DATA_WIDTH(AXIS_DESC_DATA_WIDTH),
     .AXIS_DESC_KEEP_WIDTH(AXIS_DESC_KEEP_WIDTH),
     .PKT_TABLE_SIZE(RX_PKT_TABLE_SIZE),

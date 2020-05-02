@@ -86,6 +86,10 @@ module interface #
     parameter RX_DESC_TABLE_SIZE = 16,
     // Receive packet table size (number of in-progress packets)
     parameter RX_PKT_TABLE_SIZE = 8,
+    // Max number of in-flight descriptor requests (transmit)
+    parameter TX_MAX_DESC_REQ = 16,
+    // Max number of in-flight descriptor requests (transmit)
+    parameter RX_MAX_DESC_REQ = 16,
     // Transmit scheduler type
     parameter TX_SCHEDULER = "RR",
     // Scheduler operation table size
@@ -2034,6 +2038,10 @@ generate
             .RX_DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
             .RX_PKT_TABLE_SIZE(RX_PKT_TABLE_SIZE),
             .DESC_TABLE_DMA_OP_COUNT_WIDTH(((2**LOG_BLOCK_SIZE_WIDTH)-1)+1),
+            .TX_MAX_DESC_REQ(TX_MAX_DESC_REQ),
+            .TX_DESC_FIFO_SIZE(TX_MAX_DESC_REQ*(2**((2**LOG_BLOCK_SIZE_WIDTH)-1))),
+            .RX_MAX_DESC_REQ(RX_MAX_DESC_REQ),
+            .RX_DESC_FIFO_SIZE(RX_MAX_DESC_REQ*(2**((2**LOG_BLOCK_SIZE_WIDTH)-1))),
             .TX_SCHEDULER(TX_SCHEDULER),
             .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
             .TX_SCHEDULER_PIPELINE(TX_SCHEDULER_PIPELINE),

@@ -72,9 +72,11 @@ dual port RAMs, enabling mixing different client interface types and widths
 and even supporting clients running in different clock domains without
 datapath FIFOs.
 
-The dma_if_pcie_us module connects the PCIe interface to the segmented memory
-interface.  Currently, it does not support TLP straddling, but it should be
-possible to support this with the segmented interface.
+![DMA system block diagram](dma_block.svg)
+
+The dma_if_pcie_us module connects the Xilinx Ultrascale PCIe interface to the
+segmented memory interface.  Currently, it does not support TLP straddling,
+but it should be possible to support this with the segmented interface.
 
 The dma_psdpram module is a dual clock, parallel simple dual port RAM module
 with a segmented interface.  The depth is independently adjustable from the

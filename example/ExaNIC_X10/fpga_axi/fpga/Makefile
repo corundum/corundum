@@ -32,7 +32,7 @@ SYN_FILES += lib/pcie/rtl/pulse_merge.v
 XDC_FILES = fpga.xdc
 
 # IP
-XCI_FILES = ip/pcie3_ultrascale_0.xci
+IP_TCL_FILES = ip/pcie3_ultrascale_0.tcl
 
 include ../common/vivado.mk
 

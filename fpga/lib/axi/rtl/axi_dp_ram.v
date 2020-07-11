@@ -152,7 +152,7 @@ wire [STRB_WIDTH-1:0]  ram_a_cmd_wr_strb;
 wire                   ram_a_cmd_wr_en;
 wire                   ram_a_cmd_rd_en;
 wire                   ram_a_cmd_last;
-reg                    ram_a_cmd_ready_reg = 1'b1;
+wire                   ram_a_cmd_ready;
 reg  [ID_WIDTH-1:0]    ram_a_rd_resp_id_reg = {ID_WIDTH{1'b0}};
 reg  [DATA_WIDTH-1:0]  ram_a_rd_resp_data_reg = {DATA_WIDTH{1'b0}};
 reg                    ram_a_rd_resp_last_reg = 1'b0;
@@ -166,7 +166,7 @@ wire [STRB_WIDTH-1:0]  ram_b_cmd_wr_strb;
 wire                   ram_b_cmd_wr_en;
 wire                   ram_b_cmd_rd_en;
 wire                   ram_b_cmd_last;
-reg                    ram_b_cmd_ready_reg = 1'b1;
+wire                   ram_b_cmd_ready;
 reg  [ID_WIDTH-1:0]    ram_b_rd_resp_id_reg = {ID_WIDTH{1'b0}};
 reg  [DATA_WIDTH-1:0]  ram_b_rd_resp_data_reg = {DATA_WIDTH{1'b0}};
 reg                    ram_b_rd_resp_last_reg = 1'b0;
@@ -255,7 +255,7 @@ a_if (
     .ram_cmd_wr_en(ram_a_cmd_wr_en),
     .ram_cmd_rd_en(ram_a_cmd_rd_en),
     .ram_cmd_last(ram_a_cmd_last),
-    .ram_cmd_ready(ram_a_cmd_ready_reg),
+    .ram_cmd_ready(ram_a_cmd_ready),
     .ram_rd_resp_id(ram_a_rd_resp_id_reg),
     .ram_rd_resp_data(ram_a_rd_resp_data_reg),
     .ram_rd_resp_last(ram_a_rd_resp_last_reg),
@@ -346,7 +346,7 @@ b_if (
     .ram_cmd_wr_en(ram_b_cmd_wr_en),
     .ram_cmd_rd_en(ram_b_cmd_rd_en),
     .ram_cmd_last(ram_b_cmd_last),
-    .ram_cmd_ready(ram_b_cmd_ready_reg),
+    .ram_cmd_ready(ram_b_cmd_ready),
     .ram_rd_resp_id(ram_b_rd_resp_id_reg),
     .ram_rd_resp_data(ram_b_rd_resp_data_reg),
     .ram_rd_resp_last(ram_b_rd_resp_last_reg),
@@ -366,24 +366,24 @@ integer i, j;
 initial begin
     // two nested loops for smaller number of iterations per loop
     // workaround for synthesizer complaints about large loop counts
-    for (i = 0; i < 2**ADDR_WIDTH; i = i + 2**(ADDR_WIDTH/2)) begin
-        for (j = i; j < i + 2**(ADDR_WIDTH/2); j = j + 1) begin
+    for (i = 0; i < 2**VALID_ADDR_WIDTH; i = i + 2**(VALID_ADDR_WIDTH/2)) begin
+        for (j = i; j < i + 2**(VALID_ADDR_WIDTH/2); j = j + 1) begin
             mem[j] = 0;
         end
     end
 end
 
+assign ram_a_cmd_ready = !ram_a_rd_resp_valid_reg || ram_a_rd_resp_ready;
+
 always @(posedge a_clk) begin
     ram_a_rd_resp_valid_reg <= ram_a_rd_resp_valid_reg && !ram_a_rd_resp_ready;
-    ram_a_cmd_ready_reg <= !ram_a_rd_resp_valid_reg || ram_a_rd_resp_ready;
 
-    if (ram_a_cmd_ready_reg && ram_a_cmd_rd_en) begin
+    if (ram_a_cmd_rd_en && ram_a_cmd_ready) begin
         ram_a_rd_resp_id_reg <= ram_a_cmd_id;
         ram_a_rd_resp_data_reg <= mem[addr_a_valid];
         ram_a_rd_resp_last_reg <= ram_a_cmd_last;
         ram_a_rd_resp_valid_reg <= 1'b1;
-        ram_a_cmd_ready_reg <= ram_a_rd_resp_ready;
-    end else if (ram_a_cmd_ready_reg && ram_a_cmd_wr_en) begin
+    end else if (ram_a_cmd_wr_en && ram_a_cmd_ready) begin
         for (i = 0; i < WORD_WIDTH; i = i + 1) begin
             if (ram_a_cmd_wr_strb[i]) begin
                 mem[addr_a_valid][WORD_SIZE*i +: WORD_SIZE] <= ram_a_cmd_wr_data[WORD_SIZE*i +: WORD_SIZE];
@@ -392,22 +392,21 @@ always @(posedge a_clk) begin
     end
 
     if (a_rst) begin
-        ram_a_cmd_ready_reg <= 1'b1;
         ram_a_rd_resp_valid_reg <= 1'b0;
     end
 end
 
+assign ram_b_cmd_ready = !ram_b_rd_resp_valid_reg || ram_b_rd_resp_ready;
+
 always @(posedge b_clk) begin
     ram_b_rd_resp_valid_reg <= ram_b_rd_resp_valid_reg && !ram_b_rd_resp_ready;
-    ram_b_cmd_ready_reg <= !ram_b_rd_resp_valid_reg || ram_b_rd_resp_ready;
 
-    if (ram_b_cmd_ready_reg && ram_b_cmd_rd_en) begin
+    if (ram_b_cmd_rd_en && ram_b_cmd_ready) begin
         ram_b_rd_resp_id_reg <= ram_b_cmd_id;
         ram_b_rd_resp_data_reg <= mem[addr_b_valid];
         ram_b_rd_resp_last_reg <= ram_b_cmd_last;
         ram_b_rd_resp_valid_reg <= 1'b1;
-        ram_b_cmd_ready_reg <= ram_b_rd_resp_ready;
-    end else if (ram_b_cmd_ready_reg && ram_b_cmd_wr_en) begin
+    end else if (ram_b_cmd_wr_en && ram_b_cmd_ready) begin
         for (i = 0; i < WORD_WIDTH; i = i + 1) begin
             if (ram_b_cmd_wr_strb[i]) begin
                 mem[addr_b_valid][WORD_SIZE*i +: WORD_SIZE] <= ram_b_cmd_wr_data[WORD_SIZE*i +: WORD_SIZE];
@@ -416,7 +415,6 @@ always @(posedge b_clk) begin
     end
 
     if (b_rst) begin
-        ram_a_cmd_ready_reg <= 1'b1;
         ram_b_rd_resp_valid_reg <= 1'b0;
     end
 end

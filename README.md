@@ -33,6 +33,7 @@ devices.  Designs are included for the following FPGA boards:
 *  Exablaze ExaNIC X10 (Xilinx Kintex UltraScale XCKU035)
 *  Exablaze ExaNIC X25 (Xilinx Kintex UltraScale+ XCKU3P)
 *  NetFPGA SUME (Xilinx Virtex 7 XC7V690T)
+*  Xilinx Alveo U280 (Xilinx Virtex UltraScale+ XCU280)
 *  Xilinx VCU108 (Xilinx Virtex UltraScale XCVU095)
 *  Xilinx VCU118 (Xilinx Virtex UltraScale+ XCVU9P)
 *  Xilinx VCU1525 (Xilinx Virtex UltraScale+ XCVU9P)

@@ -60,9 +60,9 @@ XDC_FILES += lib/eth/syn/ptp_clock_cdc.tcl
 XDC_FILES += ../../../common/syn/tdma_ber_ch.tcl
 
 # IP
-XCI_FILES = ip/pcie4_uscale_plus_0.xci
-XCI_FILES += ip/cmac_usplus_0.xci
-XCI_FILES += ip/cmac_usplus_1.xci
+IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl
+IP_TCL_FILES += ip/cmac_usplus_0.tcl
+IP_TCL_FILES += ip/cmac_usplus_1.tcl
 
 include ../common/vivado.mk
 

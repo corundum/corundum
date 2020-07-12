@@ -78,10 +78,9 @@ XDC_FILES += lib/axis/syn/sync_reset.tcl
 XDC_FILES += lib/eth/syn/ptp_clock_cdc.tcl
 
 # IP
-XCI_FILES = ip/pcie3_7x_0.xci
-#XCI_FILES += ip/gtwizard_0.xci
-XCI_FILES += ip/ten_gig_eth_pcs_pma_0.xci
-XCI_FILES += ip/ten_gig_eth_pcs_pma_1.xci
+IP_TCL_FILES = ip/pcie3_7x_0.tcl
+IP_TCL_FILES += ip/ten_gig_eth_pcs_pma_0.tcl
+IP_TCL_FILES += ip/ten_gig_eth_pcs_pma_1.tcl
 
 include ../common/vivado.mk
 

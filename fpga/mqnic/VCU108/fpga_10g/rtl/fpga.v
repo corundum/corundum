@@ -669,35 +669,35 @@ sync_reset_156mhz_inst (
 );
 
 wire [5:0] qsfp_gt_txheader_1;
-wire [127:0] qsfp_gt_txdata_1;
+wire [63:0] qsfp_gt_txdata_1;
 wire qsfp_gt_rxgearboxslip_1;
 wire [5:0] qsfp_gt_rxheader_1;
 wire [1:0] qsfp_gt_rxheadervalid_1;
-wire [127:0] qsfp_gt_rxdata_1;
+wire [63:0] qsfp_gt_rxdata_1;
 wire [1:0] qsfp_gt_rxdatavalid_1;
 
 wire [5:0] qsfp_gt_txheader_2;
-wire [127:0] qsfp_gt_txdata_2;
+wire [63:0] qsfp_gt_txdata_2;
 wire qsfp_gt_rxgearboxslip_2;
 wire [5:0] qsfp_gt_rxheader_2;
 wire [1:0] qsfp_gt_rxheadervalid_2;
-wire [127:0] qsfp_gt_rxdata_2;
+wire [63:0] qsfp_gt_rxdata_2;
 wire [1:0] qsfp_gt_rxdatavalid_2;
 
 wire [5:0] qsfp_gt_txheader_3;
-wire [127:0] qsfp_gt_txdata_3;
+wire [63:0] qsfp_gt_txdata_3;
 wire qsfp_gt_rxgearboxslip_3;
 wire [5:0] qsfp_gt_rxheader_3;
 wire [1:0] qsfp_gt_rxheadervalid_3;
-wire [127:0] qsfp_gt_rxdata_3;
+wire [63:0] qsfp_gt_rxdata_3;
 wire [1:0] qsfp_gt_rxdatavalid_3;
 
 wire [5:0] qsfp_gt_txheader_4;
-wire [127:0] qsfp_gt_txdata_4;
+wire [63:0] qsfp_gt_txdata_4;
 wire qsfp_gt_rxgearboxslip_4;
 wire [5:0] qsfp_gt_rxheader_4;
 wire [1:0] qsfp_gt_rxheadervalid_4;
-wire [127:0] qsfp_gt_rxdata_4;
+wire [63:0] qsfp_gt_rxdata_4;
 wire [1:0] qsfp_gt_rxdatavalid_4;
 
 gtwizard_ultrascale_0
@@ -730,7 +730,7 @@ qsfp_gty_inst (
     .rxusrclk_in(gt_rxusrclk),
     .rxusrclk2_in(gt_rxusrclk),
 
-    .txdata_in({qsfp_gt_txdata_4, qsfp_gt_txdata_3, qsfp_gt_txdata_2, qsfp_gt_txdata_1}),
+    .gtwiz_userdata_tx_in({qsfp_gt_txdata_4, qsfp_gt_txdata_3, qsfp_gt_txdata_2, qsfp_gt_txdata_1}),
     .txheader_in({qsfp_gt_txheader_4, qsfp_gt_txheader_3, qsfp_gt_txheader_2, qsfp_gt_txheader_1}),
     .txsequence_in({4{1'b0}}),
 
@@ -743,7 +743,7 @@ qsfp_gty_inst (
     .gtytxp_out({qsfp_tx4_p, qsfp_tx3_p, qsfp_tx2_p, qsfp_tx1_p}),
 
     .rxgearboxslip_in({qsfp_gt_rxgearboxslip_4, qsfp_gt_rxgearboxslip_3, qsfp_gt_rxgearboxslip_2, qsfp_gt_rxgearboxslip_1}),
-    .rxdata_out({qsfp_gt_rxdata_4, qsfp_gt_rxdata_3, qsfp_gt_rxdata_2, qsfp_gt_rxdata_1}),
+    .gtwiz_userdata_rx_out({qsfp_gt_rxdata_4, qsfp_gt_rxdata_3, qsfp_gt_rxdata_2, qsfp_gt_rxdata_1}),
     .rxdatavalid_out({qsfp_gt_rxdatavalid_4, qsfp_gt_rxdatavalid_3, qsfp_gt_rxdatavalid_2, qsfp_gt_rxdatavalid_1}),
     .rxheader_out({qsfp_gt_rxheader_4, qsfp_gt_rxheader_3, qsfp_gt_rxheader_2, qsfp_gt_rxheader_1}),
     .rxheadervalid_out({qsfp_gt_rxheadervalid_4, qsfp_gt_rxheadervalid_3, qsfp_gt_rxheadervalid_2, qsfp_gt_rxheadervalid_1}),

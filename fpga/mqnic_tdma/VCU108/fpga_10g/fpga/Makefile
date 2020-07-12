@@ -79,8 +79,8 @@ XDC_FILES += lib/eth/syn/ptp_clock_cdc.tcl
 XDC_FILES += ../../../common/syn/tdma_ber_ch.tcl
 
 # IP
-XCI_FILES = ip/pcie3_ultrascale_0.xci
-XCI_FILES += ip/gtwizard_ultrascale_0.xci
+IP_TCL_FILES = ip/pcie3_ultrascale_0.tcl
+IP_TCL_FILES += ip/gtwizard_ultrascale_0.tcl
 
 include ../common/vivado.mk
 

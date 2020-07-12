@@ -605,20 +605,11 @@ pcie4_uscale_plus_inst (
     .cfg_ds_port_number(8'd0),
     .cfg_ds_bus_number(8'd0),
     .cfg_ds_device_number(5'd0),
-    //.cfg_ds_function_number(3'd0),
-
-    //.cfg_subsys_vend_id(16'h1234),
 
     .sys_clk(pcie_sys_clk),
     .sys_clk_gt(pcie_sys_clk_gt),
     .sys_reset(perst_0),
 
-    .int_qpll0lock_out(),
-    .int_qpll0outrefclk_out(),
-    .int_qpll0outclk_out(),
-    .int_qpll1lock_out(),
-    .int_qpll1outrefclk_out(),
-    .int_qpll1outclk_out(),
     .phy_rdy_out()
 );
 
@@ -711,22 +702,10 @@ qsfp_0_cmac_pad_inst (
 
 cmac_usplus_0
 qsfp_0_cmac_inst (
-    .gt0_rxp_in(qsfp_0_rx_0_p), // input
-    .gt0_rxn_in(qsfp_0_rx_0_n), // input
-    .gt1_rxp_in(qsfp_0_rx_1_p), // input
-    .gt1_rxn_in(qsfp_0_rx_1_n), // input
-    .gt2_rxp_in(qsfp_0_rx_2_p), // input
-    .gt2_rxn_in(qsfp_0_rx_2_n), // input
-    .gt3_rxp_in(qsfp_0_rx_3_p), // input
-    .gt3_rxn_in(qsfp_0_rx_3_n), // input
-    .gt0_txn_out(qsfp_0_tx_0_n), // output
-    .gt0_txp_out(qsfp_0_tx_0_p), // output
-    .gt1_txn_out(qsfp_0_tx_1_n), // output
-    .gt1_txp_out(qsfp_0_tx_1_p), // output
-    .gt2_txn_out(qsfp_0_tx_2_n), // output
-    .gt2_txp_out(qsfp_0_tx_2_p), // output
-    .gt3_txn_out(qsfp_0_tx_3_n), // output
-    .gt3_txp_out(qsfp_0_tx_3_p), // output
+    .gt_rxp_in({qsfp_0_rx_3_p, qsfp_0_rx_2_p, qsfp_0_rx_1_p, qsfp_0_rx_0_p}), // input
+    .gt_rxn_in({qsfp_0_rx_3_n, qsfp_0_rx_2_n, qsfp_0_rx_1_n, qsfp_0_rx_0_n}), // input
+    .gt_txp_out({qsfp_0_tx_3_p, qsfp_0_tx_2_p, qsfp_0_tx_1_p, qsfp_0_tx_0_p}), // output
+    .gt_txn_out({qsfp_0_tx_3_n, qsfp_0_tx_2_n, qsfp_0_tx_1_n, qsfp_0_tx_0_n}), // output
     .gt_txusrclk2(qsfp_0_txuserclk2), // output
     .gt_loopback_in(12'd0), // input [11:0]
     .gt_rxrecclkout(), // output [3:0]
@@ -1007,22 +986,10 @@ qsfp_1_cmac_pad_inst (
 
 cmac_usplus_1
 qsfp_1_cmac_inst (
-    .gt0_rxp_in(qsfp_1_rx_0_p), // input
-    .gt0_rxn_in(qsfp_1_rx_0_n), // input
-    .gt1_rxp_in(qsfp_1_rx_1_p), // input
-    .gt1_rxn_in(qsfp_1_rx_1_n), // input
-    .gt2_rxp_in(qsfp_1_rx_2_p), // input
-    .gt2_rxn_in(qsfp_1_rx_2_n), // input
-    .gt3_rxp_in(qsfp_1_rx_3_p), // input
-    .gt3_rxn_in(qsfp_1_rx_3_n), // input
-    .gt0_txn_out(qsfp_1_tx_0_n), // output
-    .gt0_txp_out(qsfp_1_tx_0_p), // output
-    .gt1_txn_out(qsfp_1_tx_1_n), // output
-    .gt1_txp_out(qsfp_1_tx_1_p), // output
-    .gt2_txn_out(qsfp_1_tx_2_n), // output
-    .gt2_txp_out(qsfp_1_tx_2_p), // output
-    .gt3_txn_out(qsfp_1_tx_3_n), // output
-    .gt3_txp_out(qsfp_1_tx_3_p), // output
+    .gt_rxp_in({qsfp_1_rx_3_p, qsfp_1_rx_2_p, qsfp_1_rx_1_p, qsfp_1_rx_0_p}), // input
+    .gt_rxn_in({qsfp_1_rx_3_n, qsfp_1_rx_2_n, qsfp_1_rx_1_n, qsfp_1_rx_0_n}), // input
+    .gt_txp_out({qsfp_1_tx_3_p, qsfp_1_tx_2_p, qsfp_1_tx_1_p, qsfp_1_tx_0_p}), // output
+    .gt_txn_out({qsfp_1_tx_3_n, qsfp_1_tx_2_n, qsfp_1_tx_1_n, qsfp_1_tx_0_n}), // output
     .gt_txusrclk2(qsfp_1_txuserclk2), // output
     .gt_loopback_in(12'd0), // input [11:0]
     .gt_rxrecclkout(), // output [3:0]

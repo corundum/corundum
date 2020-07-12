@@ -465,7 +465,7 @@ pcie4_uscale_plus_inst (
     .s_axis_rq_tkeep(axis_rq_tkeep),
     .s_axis_rq_tlast(axis_rq_tlast),
     .s_axis_rq_tready(axis_rq_tready),
-    .s_axis_rq_tuser(axis_rq_tuser), // width change
+    .s_axis_rq_tuser(axis_rq_tuser),
     .s_axis_rq_tvalid(axis_rq_tvalid),
 
     .m_axis_rc_tdata(axis_rc_tdata),
@@ -479,7 +479,7 @@ pcie4_uscale_plus_inst (
     .m_axis_cq_tkeep(axis_cq_tkeep),
     .m_axis_cq_tlast(axis_cq_tlast),
     .m_axis_cq_tready(axis_cq_tready),
-    .m_axis_cq_tuser(axis_cq_tuser), // width change
+    .m_axis_cq_tuser(axis_cq_tuser),
     .m_axis_cq_tvalid(axis_cq_tvalid),
 
     .s_axis_cc_tdata(axis_cc_tdata),
@@ -606,20 +606,11 @@ pcie4_uscale_plus_inst (
     .cfg_ds_port_number(8'd0),
     .cfg_ds_bus_number(8'd0),
     .cfg_ds_device_number(5'd0),
-    //.cfg_ds_function_number(3'd0),
-
-    //.cfg_subsys_vend_id(16'h1234),
 
     .sys_clk(pcie_sys_clk),
     .sys_clk_gt(pcie_sys_clk_gt),
     .sys_reset(perst_0),
 
-    .int_qpll0lock_out(),
-    .int_qpll0outrefclk_out(),
-    .int_qpll0outclk_out(),
-    .int_qpll1lock_out(),
-    .int_qpll1outrefclk_out(),
-    .int_qpll1outclk_out(),
     .phy_rdy_out()
 );
 

@@ -207,7 +207,9 @@ individual test scripts can be run with python directly.
 
 ## Publications
 
-- A. Forencich, A. C. Snoeren, G. Porter, G. Papen, *Corundum: An Open-Source 100-Gbps NIC,* in FCCM'20, [Paper](https://www.cse.ucsd.edu/~snoeren/papers/corundum-fccm20.pdf), [Slides](http://fccm.org/....pdf)
+- A. Forencich, A. C. Snoeren, G. Porter, G. Papen, *Corundum: An Open-Source 100-Gbps NIC,* in FCCM'20, [Paper](https://www.cse.ucsd.edu/~snoeren/papers/corundum-fccm20.pdf), [Presentation](https://www.fccm.org/past/2020/forums/topic/corundum-an-open-source-100-gbps-nic/)
+
+- J. A. Forencich, *System-Level Considerations for Optical Switching in Data Center Networks*, [Paper](https://escholarship.org/uc/item/3mc9070t)
 
 ## Citation
 If you use Corundum in your project please cite one of the following papers
@@ -226,7 +228,7 @@ and/or link to the github project:
     title = {System-Level Considerations for Optical Switching in Data Center Networks},
     school = {UC San Diego},
     year = {2020},
-    url = {https://escholarship.org/uc/item/???},
+    url = {https://escholarship.org/uc/item/3mc9070t},
 }
 ```
 

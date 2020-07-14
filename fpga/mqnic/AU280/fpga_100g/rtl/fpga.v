@@ -121,8 +121,6 @@ parameter AXIS_ETH_KEEP_WIDTH = AXIS_ETH_DATA_WIDTH/8;
 wire pcie_user_clk;
 wire pcie_user_reset;
 
-wire cfgmclk_int;
-
 wire clk_161mhz_ref_int;
 
 wire clk_125mhz_mmcm_out;

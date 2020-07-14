@@ -118,8 +118,6 @@ parameter BAR0_APERTURE = 24;
 wire pcie_user_clk;
 wire pcie_user_reset;
 
-wire cfgmclk_int;
-
 wire clk_161mhz_ref_int;
 
 wire clk_125mhz_mmcm_out;

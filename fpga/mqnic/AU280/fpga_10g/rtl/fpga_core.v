@@ -457,18 +457,6 @@ reg axil_csr_arready_reg = 1'b0;
 reg [AXIL_DATA_WIDTH-1:0] axil_csr_rdata_reg = {AXIL_DATA_WIDTH{1'b0}};
 reg axil_csr_rvalid_reg = 1'b0;
 
-// reg qsfp0_modsell_reg = 1'b0;
-// reg qsfp1_modsell_reg = 1'b0;
-
-// reg qsfp0_lpmode_reg = 1'b0;
-// reg qsfp1_lpmode_reg = 1'b0;
-
-// reg qsfp0_resetl_reg = 1'b1;
-// reg qsfp1_resetl_reg = 1'b1;
-
-// reg i2c_scl_o_reg = 1'b1;
-// reg i2c_sda_o_reg = 1'b1;
-
 reg pcie_dma_enable_reg = 0;
 
 reg [95:0] get_ptp_ts_96_reg = 0;
@@ -517,20 +505,6 @@ always @(posedge clk_250mhz) begin
             // GPIO
             16'h0100: begin
                 // GPIO out
-                // if (axil_csr_wstrb[1]) begin
-                //     qsfp0_modsell_reg <= axil_csr_wdata[9];
-                //     qsfp1_modsell_reg <= axil_csr_wdata[11];
-                // end
-                // if (axil_csr_wstrb[0]) begin
-                //     qsfp0_resetl_reg <= axil_csr_wdata[0];
-                //     qsfp0_lpmode_reg <= axil_csr_wdata[2];
-                //     qsfp1_resetl_reg <= axil_csr_wdata[4];
-                //     qsfp1_lpmode_reg <= axil_csr_wdata[6];
-                // end
-                // if (axil_csr_wstrb[2]) begin
-                //     i2c_scl_o_reg <= axil_csr_wdata[16];
-                //     i2c_sda_o_reg <= axil_csr_wdata[17];
-                // end
             end
             // PHC
             16'h0230: set_ptp_ts_96_reg[15:0] <= axil_csr_wdata;  // PTP set fns
@@ -578,29 +552,9 @@ always @(posedge clk_250mhz) begin
             // GPIO
             16'h0100: begin
                 // GPIO out
-                // axil_csr_rdata_reg[9] <= qsfp0_modsell_reg;
-                // axil_csr_rdata_reg[11] <= qsfp1_modsell_reg;
-                // axil_csr_rdata_reg[0] <= qsfp0_resetl_reg;
-                // axil_csr_rdata_reg[2] <= qsfp0_lpmode_reg;
-                // axil_csr_rdata_reg[4] <= qsfp1_resetl_reg;
-                // axil_csr_rdata_reg[6] <= qsfp1_lpmode_reg;
-                // axil_csr_rdata_reg[16] <= i2c_scl_o_reg;
-                // axil_csr_rdata_reg[17] <= i2c_sda_o_reg;
             end
             16'h0104: begin
                 // GPIO in
-                // axil_csr_rdata_reg[8] <= qsfp0_modprsl;
-                // axil_csr_rdata_reg[9] <= qsfp0_modsell;
-                // axil_csr_rdata_reg[10] <= qsfp1_modprsl;
-                // axil_csr_rdata_reg[11] <= qsfp1_modsell;
-                // axil_csr_rdata_reg[0] <= qsfp0_resetl;
-                // axil_csr_rdata_reg[1] <= qsfp0_intl;
-                // axil_csr_rdata_reg[2] <= qsfp0_lpmode;
-                // axil_csr_rdata_reg[4] <= qsfp1_resetl;
-                // axil_csr_rdata_reg[5] <= qsfp1_intl;
-                // axil_csr_rdata_reg[6] <= qsfp1_lpmode;
-                // axil_csr_rdata_reg[16] <= i2c_scl_i;
-                // axil_csr_rdata_reg[17] <= i2c_sda_i;
             end
             // PHC
             16'h0200: axil_csr_rdata_reg <= {8'd0, 8'd0, 8'd0, 8'd0};  // PHC features
@@ -637,18 +591,6 @@ always @(posedge clk_250mhz) begin
         axil_csr_bvalid_reg <= 1'b0;
         axil_csr_arready_reg <= 1'b0;
         axil_csr_rvalid_reg <= 1'b0;
-
-        // qsfp0_modsell_reg <= 1'b1;
-        // qsfp1_modsell_reg <= 1'b1;
-
-        // qsfp0_lpmode_reg <= 1'b0;
-        // qsfp1_lpmode_reg <= 1'b0;
-
-        // qsfp0_resetl_reg <= 1'b1;
-        // qsfp1_resetl_reg <= 1'b1;
-
-        // i2c_scl_o_reg <= 1'b1;
-        // i2c_sda_o_reg <= 1'b1;
 
         pcie_dma_enable_reg <= 1'b0;
     end

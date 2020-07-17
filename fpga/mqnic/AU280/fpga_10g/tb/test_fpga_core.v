@@ -180,9 +180,6 @@ wire [63:0] qsfp0_txd_3;
 wire [7:0] qsfp0_txc_3;
 wire [63:0] qsfp0_txd_4;
 wire [7:0] qsfp0_txc_4;
-wire qsfp0_modsell;
-wire qsfp0_resetl;
-wire qsfp0_lpmode;
 wire [63:0] qsfp1_txd_1;
 wire [7:0] qsfp1_txc_1;
 wire [63:0] qsfp1_txd_2;
@@ -191,9 +188,6 @@ wire [63:0] qsfp1_txd_3;
 wire [7:0] qsfp1_txc_3;
 wire [63:0] qsfp1_txd_4;
 wire [7:0] qsfp1_txc_4;
-wire qsfp1_modsell;
-wire qsfp1_resetl;
-wire qsfp1_lpmode;
 
 initial begin
     // myhdl integration

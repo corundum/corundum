@@ -18,6 +18,8 @@ set_property -dict [list \
     CONFIG.pf0_class_code_sub {00} \
     CONFIG.pf0_base_class_menu {Network_controller} \
     CONFIG.pf0_sub_class_interface_menu {Ethernet_controller} \
+    CONFIG.pf0_bar0_64bit {true} \
+    CONFIG.pf0_bar0_prefetchable {true} \
     CONFIG.pf0_bar0_scale {Megabytes} \
     CONFIG.pf0_bar0_size {16} \
     CONFIG.vendor_id {1234} \

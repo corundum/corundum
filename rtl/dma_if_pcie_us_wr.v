@@ -294,6 +294,7 @@ reg [RAM_ADDR_WIDTH-1:0] ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, ram_addr_next;
 reg [LEN_WIDTH-1:0] op_count_reg = {LEN_WIDTH{1'b0}}, op_count_next;
 reg [LEN_WIDTH-1:0] tr_count_reg = {LEN_WIDTH{1'b0}}, tr_count_next;
 reg [12:0] tlp_count_reg = 13'd0, tlp_count_next;
+reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
 
 reg [PCIE_ADDR_WIDTH-1:0] read_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, read_pcie_addr_next;
 reg [RAM_SEL_WIDTH-1:0] read_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, read_ram_sel_next;
@@ -317,8 +318,6 @@ reg [SEG_COUNT-1:0] ram_mask_reg = {SEG_COUNT{1'b0}}, ram_mask_next;
 reg ram_mask_valid_reg = 1'b0, ram_mask_valid_next;
 reg [CYCLE_COUNT_WIDTH-1:0] cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, cycle_count_next;
 reg last_cycle_reg = 1'b0, last_cycle_next;
-
-reg [TAG_WIDTH-1:0] tlp_cmd_tag_reg = {TAG_WIDTH{1'b0}}, tlp_cmd_tag_next;
 
 reg [PCIE_ADDR_WIDTH-1:0] read_cmd_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, read_cmd_pcie_addr_next;
 reg [RAM_SEL_WIDTH-1:0] read_cmd_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, read_cmd_ram_sel_next;
@@ -440,8 +439,7 @@ always @* begin
     op_count_next = op_count_reg;
     tr_count_next = tr_count_reg;
     tlp_count_next = tlp_count_reg;
-
-    tlp_cmd_tag_next = tlp_cmd_tag_reg;
+    tag_next = tag_reg;
 
     read_cmd_pcie_addr_next = read_cmd_pcie_addr_reg;
     read_cmd_ram_sel_next = read_cmd_ram_sel_reg;
@@ -460,7 +458,7 @@ always @* begin
     end else begin
         op_table_start_offset = pcie_addr_reg[1:0]-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
     end
-    op_table_start_tag = tlp_cmd_tag_reg;
+    op_table_start_tag = tag_reg;
     op_table_start_last = 0;
     op_table_start_en = 1'b0;
 
@@ -474,6 +472,7 @@ always @* begin
             ram_sel_next = s_axis_write_desc_ram_sel;
             ram_addr_next = s_axis_write_desc_ram_addr;
             op_count_next = s_axis_write_desc_len;
+            tag_next = s_axis_write_desc_tag;
 
             if (op_count_next <= {max_payload_size_dw_reg, 2'b00}-pcie_addr_next[1:0]) begin
                 // packet smaller than max payload size
@@ -497,7 +496,6 @@ always @* begin
 
             if (s_axis_write_desc_ready & s_axis_write_desc_valid) begin
                 s_axis_write_desc_ready_next = 1'b0;
-                tlp_cmd_tag_next = s_axis_write_desc_tag;
                 req_state_next = REQ_STATE_START;
             end else begin
                 req_state_next = REQ_STATE_IDLE;
@@ -533,7 +531,7 @@ always @* begin
                 end
                 op_table_start_last = op_count_reg == tlp_count_next;
 
-                op_table_start_tag = tlp_cmd_tag_reg;
+                op_table_start_tag = tag_reg;
                 op_table_start_en = 1'b1;
 
                 if (op_count_next <= {max_payload_size_dw_reg, 2'b00}-pcie_addr_next[1:0]) begin
@@ -820,7 +818,7 @@ always @* begin
         end
     end
 
-    // AXI read response processing and TLP generation
+    // read response processing and TLP generation
     case (tlp_state_reg)
         TLP_STATE_IDLE: begin
             // idle state, wait for command
@@ -1063,6 +1061,7 @@ always @(posedge clk) begin
     op_count_reg <= op_count_next;
     tr_count_reg <= tr_count_next;
     tlp_count_reg <= tlp_count_next;
+    tag_reg <= tag_next;
 
     read_pcie_addr_reg <= read_pcie_addr_next;
     read_ram_sel_reg <= read_ram_sel_next;
@@ -1086,8 +1085,6 @@ always @(posedge clk) begin
     ram_mask_valid_reg <= ram_mask_valid_next;
     cycle_count_reg <= cycle_count_next;
     last_cycle_reg <= last_cycle_next;
-
-    tlp_cmd_tag_reg <= tlp_cmd_tag_next;
 
     read_cmd_pcie_addr_reg <= read_cmd_pcie_addr_next;
     read_cmd_ram_sel_reg <= read_cmd_ram_sel_next;

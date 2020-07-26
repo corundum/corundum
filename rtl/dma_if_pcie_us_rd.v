@@ -296,14 +296,14 @@ localparam [1:0]
 reg [1:0] req_state_reg = REQ_STATE_IDLE, req_state_next;
 
 localparam [1:0]
-    TLP_STATE_IDLE = 3'd0,
-    TLP_STATE_HEADER = 3'd1,
-    TLP_STATE_WRITE = 3'd2,
-    TLP_STATE_WAIT_END = 3'd3;
+    TLP_STATE_IDLE = 2'd0,
+    TLP_STATE_HEADER = 2'd1,
+    TLP_STATE_WRITE = 2'd2,
+    TLP_STATE_WAIT_END = 2'd3;
 
 reg [1:0] tlp_state_reg = TLP_STATE_IDLE, tlp_state_next;
 
-// // datapath control signals
+// datapath control signals
 reg tag_table_we_req;
 
 reg tlp_cmd_ready;

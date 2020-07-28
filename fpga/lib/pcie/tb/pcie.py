@@ -4327,6 +4327,10 @@ class RootComplex(Switch):
 
                         if val & 4:
                             # 64 bit BAR
+                            if bar >= bar_cnt-1:
+                                raise Exception("Invalid BAR configuration")
+
+                            # read adjacent BAR
                             yield from self.config_write_dword(PcieId(bus, d, f), 0x010+(bar+1)*4, 0xffffffff)
                             val2 = yield from self.config_read_dword(PcieId(bus, d, f), 0x010+(bar+1)*4)
                             val |= val2 << 32
@@ -4335,22 +4339,27 @@ class RootComplex(Switch):
                             # logging
                             print("[%s] %02x:%02x.%x (64-bit) Mem BAR%d raw: %016x, mask: %016x, size: %d" % (highlight(self.get_desc()), bus, d, f, bar, val, mask, size))
 
-                            if not val & 8:
+                            if val & 8:
+                                # prefetchable
+                                # align and allocate
+                                self.prefetchable_mem_limit = align(self.prefetchable_mem_limit, mask)
+                                val = val & 15 | self.prefetchable_mem_limit
+                                self.prefetchable_mem_limit += size
+
+                            else:
                                 # not-prefetchable
-                                raise Exception("64-bit BARs must be prefetchable")
-
-                            # align
-                            self.prefetchable_mem_limit = align(self.prefetchable_mem_limit, mask)
-
-                            val = val & 15 | self.prefetchable_mem_limit
+                                # logging
+                                print("[%s] %02x:%02x.%x (64-bit) Mem BAR%d marked non-prefetchable, allocating from 32-bit non-prefetchable address space" % (highlight(self.get_desc()), bus, d, f, bar))
+                                # align and allocate
+                                self.mem_limit = align(self.mem_limit, mask)
+                                val = val & 15 | self.mem_limit
+                                self.mem_limit += size
 
                             ti.bar[bar] = val
                             ti.bar_size[bar] = size
 
                             # logging
                             print("[%s] %02x:%02x.%x (64-bit) Mem BAR%d Allocation: %016x, size: %d" % (highlight(self.get_desc()), bus, d, f, bar, val, size))
-
-                            self.prefetchable_mem_limit += size
 
                             # write BAR
                             yield from self.config_write_dword(PcieId(bus, d, f), 0x010+bar*4, val & 0xffffffff)
@@ -4369,18 +4378,16 @@ class RootComplex(Switch):
                                 # logging
                                 print("[%s] %02x:%02x.%x (32-bit) Mem BAR%d marked prefetchable, but allocating as non-prefetchable" % (highlight(self.get_desc()), bus, d, f, bar))
 
-                            # align
+                            # align and allocate
                             self.mem_limit = align(self.mem_limit, mask)
-
                             val = val & 15 | self.mem_limit
+                            self.mem_limit += size
 
                             ti.bar[bar] = val
                             ti.bar_size[bar] = size
 
                             # logging
                             print("[%s] %02x:%02x.%x (32-bit) Mem BAR%d Allocation: %08x, size: %d" % (highlight(self.get_desc()), bus, d, f, bar, val, size))
-
-                            self.mem_limit += size
 
                             # write BAR
                             yield from self.config_write_dword(PcieId(bus, d, f), 0x010+bar*4, val)

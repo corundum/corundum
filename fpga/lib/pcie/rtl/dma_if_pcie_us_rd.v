@@ -296,14 +296,14 @@ localparam [1:0]
 reg [1:0] req_state_reg = REQ_STATE_IDLE, req_state_next;
 
 localparam [1:0]
-    TLP_STATE_IDLE = 3'd0,
-    TLP_STATE_HEADER = 3'd1,
-    TLP_STATE_WRITE = 3'd2,
-    TLP_STATE_WAIT_END = 3'd3;
+    TLP_STATE_IDLE = 2'd0,
+    TLP_STATE_HEADER = 2'd1,
+    TLP_STATE_WRITE = 2'd2,
+    TLP_STATE_WAIT_END = 2'd3;
 
 reg [1:0] tlp_state_reg = TLP_STATE_IDLE, tlp_state_next;
 
-// // datapath control signals
+// datapath control signals
 reg tag_table_we_req;
 
 reg tlp_cmd_ready;
@@ -350,7 +350,6 @@ reg rc_tvalid_int_reg = 1'b0, rc_tvalid_int_next;
 reg [RAM_SEL_WIDTH-1:0] tlp_cmd_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, tlp_cmd_ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] tlp_cmd_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, tlp_cmd_addr_next;
 reg [OP_TAG_WIDTH-1:0] tlp_cmd_op_tag_reg = {OP_TAG_WIDTH{1'b0}}, tlp_cmd_op_tag_next;
-reg [TAG_WIDTH-1:0] tlp_cmd_tag_reg = {TAG_WIDTH{1'b0}}, tlp_cmd_tag_next;
 reg [PCIE_TAG_WIDTH-1:0] tlp_cmd_pcie_tag_reg = {PCIE_TAG_WIDTH{1'b0}}, tlp_cmd_pcie_tag_next;
 reg tlp_cmd_last_reg = 1'b0, tlp_cmd_last_next;
 reg tlp_cmd_valid_reg = 1'b0, tlp_cmd_valid_next;
@@ -497,7 +496,6 @@ always @* begin
     tlp_cmd_ram_sel_next = tlp_cmd_ram_sel_reg;
     tlp_cmd_addr_next = tlp_cmd_addr_reg;
     tlp_cmd_op_tag_next = tlp_cmd_op_tag_reg;
-    tlp_cmd_tag_next = tlp_cmd_tag_reg;
     tlp_cmd_pcie_tag_next = tlp_cmd_pcie_tag_reg;
     tlp_cmd_last_next = tlp_cmd_last_reg;
     tlp_cmd_valid_next = tlp_cmd_valid_reg && !tlp_cmd_ready;
@@ -652,7 +650,6 @@ always @* begin
                 req_pcie_addr_next = s_axis_read_desc_pcie_addr;
                 req_addr_next = s_axis_read_desc_ram_addr;
                 req_op_count_next = s_axis_read_desc_len;
-                tlp_cmd_tag_next = s_axis_read_desc_tag;
                 tlp_cmd_op_tag_next = op_table_start_ptr;
                 op_table_start_tag = s_axis_read_desc_tag;
                 op_table_start_en = 1'b1;
@@ -1191,8 +1188,6 @@ always @* begin
                 addr_next = addr_reg + cycle_byte_count_next;
                 op_count_next = op_count_reg - cycle_byte_count_next;
 
-                s_axis_rc_tready_next = !(~ram_wr_cmd_ready_int_early & ram_mask_next);
-
                 if (last_cycle) begin
                     if (final_cpl_reg) begin
                         // last completion in current read request (PCIe tag)
@@ -1312,7 +1307,6 @@ always @(posedge clk) begin
     tlp_cmd_ram_sel_reg <= tlp_cmd_ram_sel_next;
     tlp_cmd_addr_reg <= tlp_cmd_addr_next;
     tlp_cmd_op_tag_reg <= tlp_cmd_op_tag_next;
-    tlp_cmd_tag_reg <= tlp_cmd_tag_next;
     tlp_cmd_pcie_tag_reg <= tlp_cmd_pcie_tag_next;
     tlp_cmd_last_reg <= tlp_cmd_last_next;
     tlp_cmd_valid_reg <= tlp_cmd_valid_next;

@@ -1188,8 +1188,6 @@ always @* begin
                 addr_next = addr_reg + cycle_byte_count_next;
                 op_count_next = op_count_reg - cycle_byte_count_next;
 
-                s_axis_rc_tready_next = !(~ram_wr_cmd_ready_int_early & ram_mask_next);
-
                 if (last_cycle) begin
                     if (final_cpl_reg) begin
                         // last completion in current read request (PCIe tag)

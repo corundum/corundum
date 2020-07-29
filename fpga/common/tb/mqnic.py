@@ -1007,7 +1007,7 @@ class Driver(object):
 
         self.dev_id = dev_id
         self.rc_tree_ent = self.rc.tree.find_dev(dev_id)
-        self.hw_addr = self.rc_tree_ent.bar[0] & 0xfffffff0
+        self.hw_addr = self.rc_tree_ent.bar[0] & ~0xf
 
         # Read ID registers
         self.fw_id = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_FW_ID)

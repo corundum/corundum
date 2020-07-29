@@ -365,7 +365,7 @@ def bench():
 
     dev.functions[0].msi_multiple_message_capable = 5
 
-    dev.functions[0].configure_bar(0, 2**BAR0_APERTURE)
+    dev.functions[0].configure_bar(0, 2**BAR0_APERTURE, ext=True, prefetch=True)
 
     rc.make_port().connect(dev)
 

@@ -650,9 +650,6 @@ def bench():
 
         yield rc.enumerate(enable_bus_mastering=True, configure_msi=True)
 
-        dev_pf0_bar0 = dev.functions[0].bar[0] & 0xfffffffc
-        dev_pf0_bar1 = dev.functions[0].bar[1] & 0xfffffffc
-
         yield delay(100)
 
         yield clk.posedge

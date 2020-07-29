@@ -649,24 +649,6 @@ def bench():
 
         yield rc.enumerate(enable_bus_mastering=True, configure_msi=True)
 
-        dev_pf0_bar0 = dev.functions[0].bar[0] & 0xfffffffc
-        dev_pf0_bar1 = dev.functions[0].bar[1] & 0xfffffffc
-
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x270, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x274, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x278, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x27C, 0);
-
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x290, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x294, 1000);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x298, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x29C, 0);
-
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x280, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x284, 2000);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x288, 0);
-        yield from rc.mem_write_dword(dev_pf0_bar0+0x28C, 0);
-
         yield delay(100)
 
         yield clk.posedge
@@ -682,6 +664,24 @@ def bench():
             yield from rc.mem_write_dword(driver.interfaces[0].ports[0].schedulers[0].hw_addr+4*k, 0x00000003)
 
         yield from rc.mem_read(driver.hw_addr, 4) # wait for all writes to complete
+
+        # configure PTP period out
+        yield from rc.mem_write_dword(driver.hw_addr+0x270, 0) # start fns
+        yield from rc.mem_write_dword(driver.hw_addr+0x274, 0) # start ns
+        yield from rc.mem_write_dword(driver.hw_addr+0x278, 0) # start sec (low)
+        yield from rc.mem_write_dword(driver.hw_addr+0x27C, 0) # start sec (high)
+
+        yield from rc.mem_write_dword(driver.hw_addr+0x290, 0) # width fns
+        yield from rc.mem_write_dword(driver.hw_addr+0x294, 1000) # width ns
+        yield from rc.mem_write_dword(driver.hw_addr+0x298, 0) # width sec (low)
+        yield from rc.mem_write_dword(driver.hw_addr+0x29C, 0) # width sec (high)
+
+        yield from rc.mem_write_dword(driver.hw_addr+0x280, 0) # period fns
+        yield from rc.mem_write_dword(driver.hw_addr+0x284, 2000) # period ns
+        yield from rc.mem_write_dword(driver.hw_addr+0x288, 0) # period sec (low)
+        yield from rc.mem_write_dword(driver.hw_addr+0x28C, 0) # period sec (high)
+
+        yield from rc.mem_write_dword(driver.hw_addr+0x260, 1) # enable output
 
         yield delay(100)
 

@@ -34,24 +34,18 @@ either expressed or implied, of The Regents of the University of California.
 #include "mqnic.h"
 #include "mqnic_ioctl.h"
 
-static int mqnic_open(struct inode *inode, struct file *filp)
+static int mqnic_open(struct inode *inode, struct file *file)
 {
-    struct mqnic_dev *mqnic;
+    // struct miscdevice *miscdev = file->private_data;
+    // struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 
-    mqnic = mqnic_find_by_minor(iminor(inode));
-    if (mqnic == NULL)
-    {
-        pr_err("Failed to locate mqnic for minor = %u.\n", iminor(inode));
-        return -ENODEV;
-    }
-
-    filp->private_data = mqnic;
     return 0;
 }
 
-static int mqnic_release(struct inode *inode, struct file *filp)
+static int mqnic_release(struct inode *inode, struct file *file)
 {
-    //struct mqnic_dev *mqnic = filp->private_data;
+    // struct miscdevice *miscdev = file->private_data;
+    // struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 
     return 0;
 }
@@ -81,9 +75,10 @@ static int mqnic_map_registers(struct mqnic_dev *mqnic, struct vm_area_struct *v
     return ret;    
 }
 
-static int mqnic_mmap(struct file *filp, struct vm_area_struct *vma)
+static int mqnic_mmap(struct file *file, struct vm_area_struct *vma)
 {
-    struct mqnic_dev *mqnic = filp->private_data;
+    struct miscdevice *miscdev = file->private_data;
+    struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
     int ret;
 
     if (vma->vm_pgoff == 0)
@@ -102,9 +97,10 @@ fail_invalid_offset:
     return -EINVAL;
 }
 
-static long mqnic_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
+static long mqnic_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-    struct mqnic_dev *mqnic = filp->private_data;
+    struct miscdevice *miscdev = file->private_data;
+    struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 
     if (_IOC_TYPE(cmd) != MQNIC_IOCTL_TYPE)
         return -ENOTTY;

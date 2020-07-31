@@ -80,24 +80,6 @@ static unsigned int mqnic_get_free_id(void)
     return id;
 }
 
-struct mqnic_dev *mqnic_find_by_minor(unsigned minor)
-{
-    struct mqnic_dev *mqnic;
-
-    spin_lock(&mqnic_devices_lock);
-
-    list_for_each_entry(mqnic, &mqnic_devices, dev_list_node)
-        if (mqnic->misc_dev.minor == minor)
-            goto done;
-
-    mqnic = NULL;
-
-done:
-    spin_unlock(&mqnic_devices_lock);
-
-    return mqnic;
-}
-
 static irqreturn_t mqnic_interrupt(int irq, void *data)
 {
     struct mqnic_dev *mqnic = data;
@@ -149,8 +131,6 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     mqnic->dev = dev;
     mqnic->pdev = pdev;
     pci_set_drvdata(pdev, mqnic);
-
-    mqnic->misc_dev.minor = MISC_DYNAMIC_MINOR;
 
     // assign ID and add to list
     spin_lock(&mqnic_devices_lock);
@@ -314,6 +294,7 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
         }
     }
 
+    mqnic->misc_dev.minor = MISC_DYNAMIC_MINOR;
     mqnic->misc_dev.name = mqnic->name;
     mqnic->misc_dev.fops = &mqnic_fops;
     mqnic->misc_dev.parent = dev;

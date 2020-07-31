@@ -293,7 +293,6 @@ struct mqnic_priv {
 };
 
 // mqnic_main.c
-extern struct mqnic_dev *mqnic_find_by_minor(unsigned minor);
 
 // mqnic_dev.c
 extern const struct file_operations mqnic_fops;

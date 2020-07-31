@@ -393,8 +393,6 @@ static void mqnic_remove(struct pci_dev *pdev)
 
 static void mqnic_shutdown(struct pci_dev *pdev)
 {
-    struct mqnic_dev *mqnic = pci_get_drvdata(pdev);
-
     dev_info(&pdev->dev, "mqnic shutdown");
 
     mqnic_remove(pdev);

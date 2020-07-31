@@ -244,6 +244,7 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     mqnic->msi_nvecs = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI);
     if (mqnic->msi_nvecs < 0)
     {
+        ret = -ENOMEM;
         dev_err(dev, "Failed to allocate IRQs");
         goto fail_map_bars;
     }

@@ -240,6 +240,14 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     mqnic->if_csr_offset = ioread32(mqnic->hw_addr+MQNIC_REG_IF_CSR_OFFSET);
     dev_info(dev, "IF CSR offset: 0x%08x", mqnic->if_csr_offset);
 
+    // check BAR size
+    if (mqnic->if_count*mqnic->if_stride > mqnic->hw_regs_size)
+    {
+        ret = -EIO;
+        dev_err(dev, "Invalid BAR configuration (%d IF * 0x%x > 0x%lx)", mqnic->if_count, mqnic->if_stride, mqnic->hw_regs_size);
+        goto fail_map_bars;
+    }
+
     // Allocate MSI IRQs
     mqnic->msi_nvecs = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI);
     if (mqnic->msi_nvecs < 0)

@@ -406,8 +406,7 @@ static void mqnic_shutdown(struct pci_dev *pdev)
         return;
     }
 
-    // ensure DMA is disabled on shutdown
-    pci_clear_master(pdev);
+    mqnic_remove(pdev);
 }
 
 static struct pci_driver pci_driver = {

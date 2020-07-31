@@ -66,6 +66,7 @@ struct mqnic_i2c_priv
 };
 
 struct mqnic_dev {
+    struct device *dev;
     struct pci_dev *pdev;
 
     size_t hw_regs_size;

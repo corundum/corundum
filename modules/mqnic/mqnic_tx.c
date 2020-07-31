@@ -248,7 +248,7 @@ int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
         if (unlikely(tx_info->ts_requested))
         {
             struct skb_shared_hwtstamps hwts;
-            dev_info(&priv->mdev->pdev->dev, "mqnic_process_tx_cq TX TS requested");
+            dev_info(priv->dev, "mqnic_process_tx_cq TX TS requested");
             hwts.hwtstamp = mqnic_read_cpl_ts(priv->mdev, ring, cpl);
             skb_tstamp_tx(tx_info->skb, &hwts);
         }
@@ -395,7 +395,7 @@ static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring, stru
     return true;
 
 map_error:
-    dev_err(&priv->mdev->pdev->dev, "mqnic_map_skb DMA mapping failed");
+    dev_err(priv->dev, "mqnic_map_skb DMA mapping failed");
 
     // unmap frags
     for (i = 0; i < tx_info->frag_count; i++)
@@ -451,7 +451,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
     // TX hardware timestamp
     tx_info->ts_requested = 0;
     if (unlikely(priv->if_features & MQNIC_IF_FEATURE_PTP_TS && shinfo->tx_flags & SKBTX_HW_TSTAMP)) {
-        dev_info(&priv->mdev->pdev->dev, "mqnic_start_xmit TX TS requested");
+        dev_info(priv->dev, "mqnic_start_xmit TX TS requested");
         shinfo->tx_flags |= SKBTX_IN_PROGRESS;
         tx_info->ts_requested = 1;
     }
@@ -463,7 +463,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
         if (csum_start > 255 || csum_offset > 127)
         {
-            dev_info(&priv->mdev->pdev->dev, "mqnic_start_xmit Hardware checksum fallback start %d offset %d", csum_start, csum_offset);
+            dev_info(priv->dev, "mqnic_start_xmit Hardware checksum fallback start %d offset %d", csum_start, csum_offset);
 
             // offset out of range, fall back on software checksum
             if (skb_checksum_help(skb))
@@ -511,7 +511,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
     stop_queue = mqnic_is_tx_ring_full(ring);
     if (unlikely(stop_queue))
     {
-        dev_info(&priv->mdev->pdev->dev, "mqnic_start_xmit TX ring %d full on port %d", ring_index, priv->port);
+        dev_info(priv->dev, "mqnic_start_xmit TX ring %d full on port %d", ring_index, priv->port);
         netif_tx_stop_queue(ring->tx_queue);
     }
 

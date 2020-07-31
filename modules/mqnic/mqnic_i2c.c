@@ -112,7 +112,7 @@ int mqnic_init_i2c(struct mqnic_dev *mqnic)
         mqnic->eeprom_i2c_algo = mqnic_i2c_algo;
         mqnic->eeprom_i2c_algo.data = &mqnic->eeprom_i2c_priv;
         mqnic->eeprom_i2c_adap.algo_data = &mqnic->eeprom_i2c_algo;
-        mqnic->eeprom_i2c_adap.dev.parent = &mqnic->pdev->dev;
+        mqnic->eeprom_i2c_adap.dev.parent = mqnic->dev;
         iowrite32(ioread32(mqnic->hw_addr+MQNIC_REG_GPIO_OUT) & ~(1 << 26), mqnic->hw_addr+MQNIC_REG_GPIO_OUT); // WP disable
         strlcpy(mqnic->eeprom_i2c_adap.name, "mqnic EEPROM", sizeof(mqnic->eeprom_i2c_adap.name));
         ret = i2c_bit_add_bus(&mqnic->eeprom_i2c_adap);

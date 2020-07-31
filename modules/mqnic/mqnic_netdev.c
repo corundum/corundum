@@ -39,7 +39,7 @@ static int mqnic_start_port(struct net_device *ndev)
     struct mqnic_dev *mdev = priv->mdev;
     int k;
 
-    dev_info(&mdev->pdev->dev, "mqnic_open on port %d", priv->port);
+    dev_info(mdev->dev, "mqnic_start_port on port %d", priv->port);
 
     // set up event queues
     for (k = 0; k < priv->event_queue_count; k++)
@@ -121,7 +121,7 @@ static int mqnic_stop_port(struct net_device *ndev)
     struct mqnic_dev *mdev = priv->mdev;
     int k;
 
-    dev_info(&mdev->pdev->dev, "mqnic_close on port %d", priv->port);
+    dev_info(mdev->dev, "mqnic_stop_port on port %d", priv->port);
 
     netif_tx_lock_bh(ndev);
 //    if (detach)
@@ -208,7 +208,7 @@ static int mqnic_open(struct net_device *ndev)
 
     if (ret)
     {
-        dev_err(&mdev->pdev->dev, "Failed to start port: %d", priv->port);
+        dev_err(mdev->dev, "Failed to start port: %d", priv->port);
     }
 
     mutex_unlock(&mdev->state_lock);
@@ -227,7 +227,7 @@ static int mqnic_close(struct net_device *ndev)
 
     if (ret)
     {
-        dev_err(&mdev->pdev->dev, "Failed to stop port: %d", priv->port);
+        dev_err(mdev->dev, "Failed to stop port: %d", priv->port);
     }
 
     mutex_unlock(&mdev->state_lock);
@@ -358,11 +358,11 @@ static int mqnic_change_mtu(struct net_device *ndev, int new_mtu)
 
     if (new_mtu < ndev->min_mtu || new_mtu > ndev->max_mtu)
     {
-        dev_err(&mdev->pdev->dev, "Bad MTU: %d", new_mtu);
+        dev_err(mdev->dev, "Bad MTU: %d", new_mtu);
         return -EPERM;
     }
 
-    dev_info(&mdev->pdev->dev, "New MTU: %d", new_mtu);
+    dev_info(mdev->dev, "New MTU: %d", new_mtu);
 
     ndev->mtu = new_mtu;
 
@@ -403,7 +403,7 @@ static const struct net_device_ops mqnic_netdev_ops = {
 
 int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 {
-    struct device *dev = &mdev->pdev->dev;
+    struct device *dev = mdev->dev;
     struct net_device *ndev;
     struct mqnic_priv *priv;
     int ret = 0;
@@ -416,7 +416,7 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
         return -ENOMEM;
     }
 
-    SET_NETDEV_DEV(ndev, &mdev->pdev->dev);
+    SET_NETDEV_DEV(ndev, dev);
     ndev->dev_port = port;
 
     // init private data

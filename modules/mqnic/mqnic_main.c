@@ -146,6 +146,7 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
         return -ENOMEM;
     }
 
+    mqnic->dev = dev;
     mqnic->pdev = pdev;
     pci_set_drvdata(pdev, mqnic);
 
@@ -356,16 +357,11 @@ fail_enable_device:
 
 static void mqnic_remove(struct pci_dev *pdev)
 {
-    struct mqnic_dev *mqnic;
-    struct device *dev = &pdev->dev;
+    struct mqnic_dev *mqnic = pci_get_drvdata(pdev);
 
     int k = 0;
 
-    dev_info(dev, "mqnic remove");
-
-    if (!(mqnic = pci_get_drvdata(pdev))) {
-        return;
-    }
+    dev_info(&pdev->dev, "mqnic remove");
 
     misc_deregister(&mqnic->misc_dev);
 
@@ -398,13 +394,8 @@ static void mqnic_remove(struct pci_dev *pdev)
 static void mqnic_shutdown(struct pci_dev *pdev)
 {
     struct mqnic_dev *mqnic = pci_get_drvdata(pdev);
-    struct device *dev = &pdev->dev;
 
-    dev_info(dev, "mqnic shutdown");
-
-    if (!mqnic) {
-        return;
-    }
+    dev_info(&pdev->dev, "mqnic shutdown");
 
     mqnic_remove(pdev);
 }

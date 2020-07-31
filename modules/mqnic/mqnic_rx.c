@@ -209,14 +209,14 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int 
 
     if (unlikely(page))
     {
-        dev_err(&priv->mdev->pdev->dev, "mqnic_prepare_rx_desc skb not yet processed on port %d", priv->port);
+        dev_err(priv->dev, "mqnic_prepare_rx_desc skb not yet processed on port %d", priv->port);
         return -1;
     }
 
     page = dev_alloc_pages(page_order);
     if (unlikely(!page))
     {
-        dev_err(&priv->mdev->pdev->dev, "mqnic_prepare_rx_desc failed to allocate memory on port %d", priv->port);
+        dev_err(priv->dev, "mqnic_prepare_rx_desc failed to allocate memory on port %d", priv->port);
         return -1;
     }
 
@@ -225,7 +225,7 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int 
 
     if (unlikely(dma_mapping_error(priv->dev, dma_addr)))
     {
-        dev_err(&priv->mdev->pdev->dev, "mqnic_prepare_rx_desc DMA mapping failed on port %d", priv->port);
+        dev_err(priv->dev, "mqnic_prepare_rx_desc DMA mapping failed on port %d", priv->port);
         __free_pages(page, page_order);
         return -1;
     }
@@ -302,7 +302,7 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
 
         if (unlikely(!page))
         {
-            dev_err(&priv->mdev->pdev->dev, "mqnic_process_rx_cq ring %d null page at index %d", cq_ring->ring_index, ring_index);
+            dev_err(priv->dev, "mqnic_process_rx_cq ring %d null page at index %d", cq_ring->ring_index, ring_index);
             print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1, cpl, MQNIC_CPL_SIZE, true);
             break;
         }
@@ -310,7 +310,7 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
         skb = napi_get_frags(&cq_ring->napi);
         if (unlikely(!skb))
         {
-            dev_err(&priv->mdev->pdev->dev, "mqnic_process_rx_cq ring %d failed to allocate skb", cq_ring->ring_index);
+            dev_err(priv->dev, "mqnic_process_rx_cq ring %d failed to allocate skb", cq_ring->ring_index);
             break;
         }
 

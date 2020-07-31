@@ -42,7 +42,7 @@ static void mqnic_get_drvinfo(struct net_device *ndev, struct ethtool_drvinfo *d
     strlcpy(drvinfo->version, DRIVER_VERSION, sizeof(drvinfo->version));
 
     snprintf(drvinfo->fw_version, sizeof(drvinfo->fw_version), "%d.%d", mdev->fw_ver >> 16, mdev->fw_ver & 0xffff);
-    strlcpy(drvinfo->bus_info, pci_name(mdev->pdev), sizeof(drvinfo->bus_info));
+    strlcpy(drvinfo->bus_info, dev_name(mdev->dev), sizeof(drvinfo->bus_info));
 }
 
 static int mqnic_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *info)

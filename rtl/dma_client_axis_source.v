@@ -166,7 +166,7 @@ initial begin
         $finish;
     end
 
-    if (AXIS_DATA_WIDTH*2**PART_COUNT_WIDTH != SEG_COUNT*SEG_DATA_WIDTH) begin
+    if (AXIS_DATA_WIDTH*2**$clog2(PART_COUNT) != SEG_COUNT*SEG_DATA_WIDTH) begin
         $error("Error: AXI stream interface width must be a power of two fraction of RAM interface width (instance %m)");
         $finish;
     end

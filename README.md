@@ -38,6 +38,7 @@ devices.  Designs are included for the following FPGA boards:
 *  Xilinx VCU108 (Xilinx Virtex UltraScale XCVU095)
 *  Xilinx VCU118 (Xilinx Virtex UltraScale+ XCVU9P)
 *  Xilinx VCU1525 (Xilinx Virtex UltraScale+ XCVU9P)
+*  Xilinx ZCU106 (Xilinx Zynq UltraScale+ XCZU7EV)
 
 For operation at 10G and 25G, Corundum uses the open source 10G/25G MAC and
 PHY modules from the verilog-ethernet repository, no extra licenses are

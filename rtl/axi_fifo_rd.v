@@ -214,7 +214,7 @@ if (FIFO_DELAY) begin
 
         case (state_reg)
             STATE_IDLE: begin
-                s_axi_arready_next = !m_axi_arvalid;
+                s_axi_arready_next = !m_axi_arvalid || m_axi_arready;
 
                 if (s_axi_arready && s_axi_arvalid) begin
                     s_axi_arready_next = 1'b0;

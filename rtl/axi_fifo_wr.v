@@ -229,7 +229,7 @@ if (FIFO_DELAY) begin
 
         case (state_reg)
             STATE_IDLE: begin
-                s_axi_awready_next = !m_axi_awvalid;
+                s_axi_awready_next = !m_axi_awvalid || m_axi_awready;
                 hold_next = 1'b1;
 
                 if (s_axi_awready && s_axi_awvalid) begin

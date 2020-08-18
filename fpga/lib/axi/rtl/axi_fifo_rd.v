@@ -214,9 +214,9 @@ if (FIFO_DELAY) begin
 
         case (state_reg)
             STATE_IDLE: begin
-                s_axi_arready_next = !m_axi_arvalid;
+                s_axi_arready_next = !m_axi_arvalid || m_axi_arready;
 
-                if (s_axi_arready & s_axi_arvalid) begin
+                if (s_axi_arready && s_axi_arvalid) begin
                     s_axi_arready_next = 1'b0;
 
                     m_axi_arid_next = s_axi_arid;
@@ -265,15 +265,15 @@ if (FIFO_DELAY) begin
     always @(posedge clk) begin
         if (rst) begin
             state_reg <= STATE_IDLE;
+            count_reg <= count_next;
             m_axi_arvalid_reg <= 1'b0;
             s_axi_arready_reg <= 1'b0;
         end else begin
             state_reg <= state_next;
+            count_reg <= {COUNT_WIDTH{1'b0}};
             m_axi_arvalid_reg <= m_axi_arvalid_next;
             s_axi_arready_reg <= s_axi_arready_next;
         end
-
-        count_reg <= count_next;
 
         m_axi_arid_reg <= m_axi_arid_next;
         m_axi_araddr_reg <= m_axi_araddr_next;

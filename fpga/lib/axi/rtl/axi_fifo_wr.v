@@ -229,10 +229,10 @@ if (FIFO_DELAY) begin
 
         case (state_reg)
             STATE_IDLE: begin
-                s_axi_awready_next = !m_axi_awvalid;
+                s_axi_awready_next = !m_axi_awvalid || m_axi_awready;
                 hold_next = 1'b1;
 
-                if (s_axi_awready & s_axi_awvalid) begin
+                if (s_axi_awready && s_axi_awvalid) begin
                     s_axi_awready_next = 1'b0;
 
                     m_axi_awid_next = s_axi_awid;
@@ -258,7 +258,7 @@ if (FIFO_DELAY) begin
                 s_axi_awready_next = 1'b0;
                 hold_next = 1'b0;
 
-                if (s_axi_wready & s_axi_wvalid) begin
+                if (s_axi_wready && s_axi_wvalid) begin
                     count_next = count_reg + 1;
                     if (count_next == 2**FIFO_ADDR_WIDTH) begin
                         m_axi_awvalid_next = 1'b1;
@@ -278,7 +278,7 @@ if (FIFO_DELAY) begin
                 s_axi_awready_next = 1'b0;
                 hold_next = 1'b0;
 
-                if (s_axi_wready & s_axi_wvalid) begin
+                if (s_axi_wready && s_axi_wvalid) begin
                     count_next = count_reg + 1;
                     if (count_reg == m_axi_awlen) begin
                         hold_next = 1'b1;

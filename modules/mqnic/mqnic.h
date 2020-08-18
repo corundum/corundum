@@ -80,7 +80,8 @@ struct mqnic_dev {
 
     char name[16];
 
-    int msi_nvecs;
+    int irq_count;
+    int irq_map[32];
 
     unsigned int id;
     struct list_head dev_list_node;

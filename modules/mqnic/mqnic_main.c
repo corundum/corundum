@@ -89,7 +89,7 @@ static irqreturn_t mqnic_interrupt(int irq, void *data)
 
     for (k = 0; k < MQNIC_MAX_IF; k++)
     {
-        if (!mqnic->ndev[k])
+        if (unlikely(!mqnic->ndev[k]))
             continue;
 
         priv = netdev_priv(mqnic->ndev[k]);
@@ -229,8 +229,8 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     }
 
     // Allocate MSI IRQs
-    mqnic->msi_nvecs = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI);
-    if (mqnic->msi_nvecs < 0)
+    mqnic->irq_count = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI);
+    if (mqnic->irq_count < 0)
     {
         ret = -ENOMEM;
         dev_err(dev, "Failed to allocate IRQs");
@@ -238,7 +238,7 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     }
 
     // Set up interrupts
-    for (k = 0; k < mqnic->msi_nvecs; k++)
+    for (k = 0; k < mqnic->irq_count; k++)
     {
         ret = pci_request_irq(pdev, k, mqnic_interrupt, 0, mqnic, "mqnic%d-%d", mqnic->id, k);
         if (ret < 0)
@@ -246,6 +246,8 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
             dev_err(dev, "Failed to request IRQ");
             goto fail_irq;
         }
+
+        mqnic->irq_map[k] = pci_irq_vector(pdev, k);
     }
 
     // Set up I2C interfaces
@@ -327,7 +329,7 @@ fail_init_netdev:
     pci_clear_master(pdev);
 fail_i2c:
     mqnic_remove_i2c(mqnic);
-    for (k = 0; k < mqnic->msi_nvecs; k++)
+    for (k = 0; k < mqnic->irq_count; k++)
     {
         pci_free_irq(pdev, k, mqnic);
     }
@@ -371,7 +373,7 @@ static void mqnic_remove(struct pci_dev *pdev)
 
     pci_clear_master(pdev);
     mqnic_remove_i2c(mqnic);
-    for (k = 0; k < mqnic->msi_nvecs; k++)
+    for (k = 0; k < mqnic->irq_count; k++)
     {
         pci_free_irq(pdev, k, mqnic);
     }

@@ -44,8 +44,8 @@ static int mqnic_start_port(struct net_device *ndev)
     // set up event queues
     for (k = 0; k < priv->event_queue_count; k++)
     {
-        priv->event_ring[k]->irq = pci_irq_vector(mdev->pdev, k % mdev->msi_nvecs);
-        mqnic_activate_eq_ring(priv, priv->event_ring[k], k % mdev->msi_nvecs);
+        priv->event_ring[k]->irq = mdev->irq_map[k % mdev->irq_count];
+        mqnic_activate_eq_ring(priv, priv->event_ring[k], k % mdev->irq_count);
         mqnic_arm_eq(priv->event_ring[k]);
     }
 

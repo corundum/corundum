@@ -46,13 +46,13 @@ MODULE_LICENSE("Dual MIT/GPL");
 MODULE_VERSION(DRIVER_VERSION);
 MODULE_SUPPORTED_DEVICE(DRIVER_NAME);
 
-static const struct pci_device_id pci_ids[] = {
+static const struct pci_device_id mqnic_pci_id_table[] = {
     { PCI_DEVICE(0x1234, 0x1001) },
     { PCI_DEVICE(0x5543, 0x1001) },
     { 0 /* end */ }
 };
 
-MODULE_DEVICE_TABLE(pci, pci_ids);
+MODULE_DEVICE_TABLE(pci, mqnic_pci_id_table);
 
 static LIST_HEAD(mqnic_devices);
 static DEFINE_SPINLOCK(mqnic_devices_lock);
@@ -113,7 +113,7 @@ static irqreturn_t mqnic_interrupt(int irq, void *data)
     return IRQ_HANDLED;
 }
 
-static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
+static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
     int ret = 0;
     struct mqnic_dev *mqnic;
@@ -121,7 +121,7 @@ static int mqnic_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
     int k = 0;
 
-    dev_info(dev, "mqnic probe");
+    dev_info(dev, "mqnic PCI probe");
 
     if (!(mqnic = devm_kzalloc(dev, sizeof(*mqnic), GFP_KERNEL)))
     {
@@ -347,13 +347,13 @@ fail_enable_device:
     return ret;
 }
 
-static void mqnic_remove(struct pci_dev *pdev)
+static void mqnic_pci_remove(struct pci_dev *pdev)
 {
     struct mqnic_dev *mqnic = pci_get_drvdata(pdev);
 
     int k = 0;
 
-    dev_info(&pdev->dev, "mqnic remove");
+    dev_info(&pdev->dev, "mqnic PCI remove");
 
     misc_deregister(&mqnic->misc_dev);
 
@@ -383,19 +383,19 @@ static void mqnic_remove(struct pci_dev *pdev)
     pci_disable_device(pdev);
 }
 
-static void mqnic_shutdown(struct pci_dev *pdev)
+static void mqnic_pci_shutdown(struct pci_dev *pdev)
 {
-    dev_info(&pdev->dev, "mqnic shutdown");
+    dev_info(&pdev->dev, "mqnic PCI shutdown");
 
-    mqnic_remove(pdev);
+    mqnic_pci_remove(pdev);
 }
 
 static struct pci_driver pci_driver = {
     .name = DRIVER_NAME,
-    .id_table = pci_ids,
-    .probe = mqnic_probe,
-    .remove = mqnic_remove,
-    .shutdown = mqnic_shutdown
+    .id_table = mqnic_pci_id_table,
+    .probe = mqnic_pci_probe,
+    .remove = mqnic_pci_remove,
+    .shutdown = mqnic_pci_shutdown
 };
 
 static int __init mqnic_init(void)

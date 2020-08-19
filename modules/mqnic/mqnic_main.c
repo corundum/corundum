@@ -390,7 +390,7 @@ static void mqnic_pci_shutdown(struct pci_dev *pdev)
     mqnic_pci_remove(pdev);
 }
 
-static struct pci_driver pci_driver = {
+static struct pci_driver mqnic_pci_driver = {
     .name = DRIVER_NAME,
     .id_table = mqnic_pci_id_table,
     .probe = mqnic_pci_probe,
@@ -400,12 +400,12 @@ static struct pci_driver pci_driver = {
 
 static int __init mqnic_init(void)
 {
-    return pci_register_driver(&pci_driver);
+    return pci_register_driver(&mqnic_pci_driver);
 }
 
 static void __exit mqnic_exit(void)
 {
-    pci_unregister_driver(&pci_driver);
+    pci_unregister_driver(&mqnic_pci_driver);
 }
 
 module_init(mqnic_init);

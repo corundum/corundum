@@ -175,7 +175,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
         goto fail_regions;
     }
 
-    mqnic->hw_regs_size = pci_resource_end(pdev, 0) - pci_resource_start(pdev, 0) + 1;
+    mqnic->hw_regs_size = pci_resource_len(pdev, 0);
     mqnic->hw_regs_phys = pci_resource_start(pdev, 0);
 
     // Map BAR

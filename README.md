@@ -1,6 +1,6 @@
 # Corundum Readme
 
-GitHub repository: https://github.com/ucsdsysnet/corundum
+GitHub repository: https://github.com/corundum/corundum
 
 Google group: https://groups.google.com/d/forum/corundum-nic
 

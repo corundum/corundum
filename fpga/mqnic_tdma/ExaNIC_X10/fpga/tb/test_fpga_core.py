@@ -142,8 +142,6 @@ def bench():
     rst = Signal(bool(0))
     current_test = Signal(intbv(0)[8:])
 
-    clk_156mhz = Signal(bool(0))
-    rst_156mhz = Signal(bool(0))
     clk_250mhz = Signal(bool(0))
     rst_250mhz = Signal(bool(0))
     m_axis_rq_tready = Signal(bool(0))
@@ -482,8 +480,6 @@ def bench():
         clk=clk,
         rst=rst,
         current_test=current_test,
-        clk_156mhz=clk_156mhz,
-        rst_156mhz=rst_156mhz,
         clk_250mhz=user_clk,
         rst_250mhz=user_reset,
         sfp_1_led=sfp_1_led,

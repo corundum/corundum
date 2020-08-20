@@ -925,11 +925,9 @@ fpga_core #(
 )
 core_inst (
     /*
-     * Clock: 156.25 MHz, 250 MHz
+     * Clock: 250 MHz
      * Synchronous reset
      */
-    .clk_156mhz(clk_156mhz_int),
-    .rst_156mhz(rst_156mhz_int),
     .clk_250mhz(pcie_user_clk),
     .rst_250mhz(pcie_user_reset),
 

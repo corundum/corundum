@@ -55,8 +55,6 @@ reg clk = 0;
 reg rst = 0;
 reg [7:0] current_test = 0;
 
-reg clk_156mhz = 0;
-reg rst_156mhz = 0;
 reg clk_250mhz = 0;
 reg rst_250mhz = 0;
 reg m_axis_rq_tready = 0;
@@ -172,8 +170,6 @@ wire flash_adv_n;
 initial begin
     // myhdl integration
     $from_myhdl(
-        clk_156mhz,
-        rst_156mhz,
         clk_250mhz,
         rst_250mhz,
         current_test,
@@ -304,8 +300,6 @@ fpga_core #(
     .BAR0_APERTURE(BAR0_APERTURE)
 )
 UUT (
-    .clk_156mhz(clk_156mhz),
-    .rst_156mhz(rst_156mhz),
     .clk_250mhz(clk_250mhz),
     .rst_250mhz(rst_250mhz),
     .sfp_1_led(sfp_1_led),

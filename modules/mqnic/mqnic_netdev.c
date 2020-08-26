@@ -632,7 +632,7 @@ void mqnic_destroy_netdev(struct net_device *ndev)
     mdev->ndev[priv->port] = NULL;
 
     // free rings
-    for (k = 0; k < MQNIC_MAX_EVENT_RINGS; k++)
+    for (k = 0; k < ARRAY_SIZE(priv->event_ring); k++)
     {
         if (priv->event_ring[k])
         {
@@ -640,7 +640,7 @@ void mqnic_destroy_netdev(struct net_device *ndev)
         }
     }
 
-    for (k = 0; k < MQNIC_MAX_TX_RINGS; k++)
+    for (k = 0; k < ARRAY_SIZE(priv->tx_ring); k++)
     {
         if (priv->tx_ring[k])
         {
@@ -648,7 +648,7 @@ void mqnic_destroy_netdev(struct net_device *ndev)
         }
     }
 
-    for (k = 0; k < MQNIC_MAX_TX_CPL_RINGS; k++)
+    for (k = 0; k < ARRAY_SIZE(priv->tx_cpl_ring); k++)
     {
         if (priv->tx_cpl_ring[k])
         {
@@ -656,7 +656,7 @@ void mqnic_destroy_netdev(struct net_device *ndev)
         }
     }
 
-    for (k = 0; k < MQNIC_MAX_RX_RINGS; k++)
+    for (k = 0; k < ARRAY_SIZE(priv->rx_ring); k++)
     {
         if (priv->rx_ring[k])
         {
@@ -664,7 +664,7 @@ void mqnic_destroy_netdev(struct net_device *ndev)
         }
     }
 
-    for (k = 0; k < MQNIC_MAX_RX_CPL_RINGS; k++)
+    for (k = 0; k < ARRAY_SIZE(priv->rx_cpl_ring); k++)
     {
         if (priv->rx_cpl_ring[k])
         {
@@ -672,7 +672,7 @@ void mqnic_destroy_netdev(struct net_device *ndev)
         }
     }
 
-    for (k = 0; k < MQNIC_MAX_PORTS; k++)
+    for (k = 0; k < ARRAY_SIZE(priv->ports); k++)
     {
         if (priv->ports[k])
         {

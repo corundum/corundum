@@ -87,7 +87,7 @@ static irqreturn_t mqnic_interrupt(int irq, void *data)
 
     int k, l;
 
-    for (k = 0; k < MQNIC_MAX_IF; k++)
+    for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
     {
         if (unlikely(!mqnic->ndev[k]))
             continue;
@@ -318,7 +318,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
     // error handling
 fail_miscdev:
 fail_init_netdev:
-    for (k = 0; k < MQNIC_MAX_IF; k++)
+    for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
     {
         if (mqnic->ndev[k])
         {
@@ -361,7 +361,7 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
     list_del(&mqnic->dev_list_node);
     spin_unlock(&mqnic_devices_lock);
 
-    for (k = 0; k < MQNIC_MAX_IF; k++)
+    for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
     {
         if (mqnic->ndev[k])
         {

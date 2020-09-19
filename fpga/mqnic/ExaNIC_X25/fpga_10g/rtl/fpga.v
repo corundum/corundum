@@ -206,6 +206,10 @@ sync_reset_125mhz_inst (
 );
 
 // GPIO
+wire sfp_1_npres_int;
+wire sfp_2_npres_int;
+wire sfp_1_los_int;
+wire sfp_2_los_int;
 wire sfp_i2c_scl_i;
 wire sfp_i2c_scl_o;
 wire sfp_i2c_scl_t;
@@ -223,14 +227,16 @@ wire eeprom_i2c_sda_o;
 wire eeprom_i2c_sda_t;
 
 sync_signal #(
-    .WIDTH(5),
+    .WIDTH(9),
     .N(2)
 )
 sync_signal_inst (
     .clk(pcie_user_clk),
-    .in({sfp_i2c_scl, sfp_1_i2c_sda, sfp_2_i2c_sda,
+    .in({sfp_1_npres, sfp_2_npres, sfp_1_los, sfp_2_los,
+        sfp_i2c_scl, sfp_1_i2c_sda, sfp_2_i2c_sda,
         eeprom_i2c_scl, eeprom_i2c_sda}),
-    .out({sfp_i2c_scl_i, sfp_1_i2c_sda_i, sfp_2_i2c_sda_i,
+    .out({sfp_1_npres_int, sfp_2_npres_int, sfp_1_los_int, sfp_2_los_int,
+        sfp_i2c_scl_i, sfp_1_i2c_sda_i, sfp_2_i2c_sda_i,
         eeprom_i2c_scl_i, eeprom_i2c_sda_i})
 );
 
@@ -562,11 +568,6 @@ pcie4_uscale_plus_inst (
 );
 
 // XGMII 10G PHY
-
-assign sfp_1_tx_disable = 1'b1;
-assign sfp_2_tx_disable = 1'b1;
-assign sfp_1_rs = 1'b0;
-assign sfp_2_rs = 1'b0;
 
 wire        sfp_1_tx_clk_int;
 wire        sfp_1_tx_rst_int;
@@ -972,6 +973,15 @@ core_inst (
     .sfp_2_rx_rst(sfp_2_rx_rst_int),
     .sfp_2_rxd(sfp_2_rxd_int),
     .sfp_2_rxc(sfp_2_rxc_int),
+
+    .sfp_1_tx_disable(sfp_1_tx_disable),
+    .sfp_2_tx_disable(sfp_2_tx_disable),
+    .sfp_1_npres(sfp_1_npres_int),
+    .sfp_2_npres(sfp_2_npres_int),
+    .sfp_1_los(sfp_1_los_int),
+    .sfp_2_los(sfp_2_los_int),
+    .sfp_1_rs(sfp_1_rs),
+    .sfp_2_rs(sfp_2_rs),
 
     .sfp_i2c_scl_i(sfp_i2c_scl_i),
     .sfp_i2c_scl_o(sfp_i2c_scl_o),

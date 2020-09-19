@@ -415,14 +415,11 @@ reg axil_csr_arready_reg = 1'b0;
 reg [AXIL_DATA_WIDTH-1:0] axil_csr_rdata_reg = {AXIL_DATA_WIDTH{1'b0}};
 reg axil_csr_rvalid_reg = 1'b0;
 
-reg qsfp0_modsell_reg = 1'b0;
-reg qsfp1_modsell_reg = 1'b0;
+reg qsfp0_reset_reg = 1'b0;
+reg qsfp1_reset_reg = 1'b0;
 
 reg qsfp0_lpmode_reg = 1'b0;
 reg qsfp1_lpmode_reg = 1'b0;
-
-reg qsfp0_resetl_reg = 1'b1;
-reg qsfp1_resetl_reg = 1'b1;
 
 reg i2c_scl_o_reg = 1'b1;
 reg i2c_sda_o_reg = 1'b1;
@@ -450,14 +447,14 @@ assign axil_csr_rdata = axil_csr_rdata_reg;
 assign axil_csr_rresp = 2'b00;
 assign axil_csr_rvalid = axil_csr_rvalid_reg;
 
-assign qsfp0_modsell = qsfp0_modsell_reg;
-assign qsfp1_modsell = qsfp1_modsell_reg;
+assign qsfp0_modsell = 1'b0;
+assign qsfp1_modsell = 1'b0;
+
+assign qsfp0_resetl = !qsfp0_reset_reg;
+assign qsfp1_resetl = !qsfp1_reset_reg;
 
 assign qsfp0_lpmode = qsfp0_lpmode_reg;
 assign qsfp1_lpmode = qsfp1_lpmode_reg;
-
-assign qsfp0_resetl = qsfp0_resetl_reg;
-assign qsfp1_resetl = qsfp1_resetl_reg;
 
 assign i2c_scl_o = i2c_scl_o_reg;
 assign i2c_scl_t = i2c_scl_o_reg;
@@ -487,21 +484,24 @@ always @(posedge clk_250mhz) begin
 
         case ({axil_csr_awaddr[15:2], 2'b00})
             // GPIO
-            16'h0100: begin
-                // GPIO out
-                if (axil_csr_wstrb[1]) begin
-                    qsfp0_modsell_reg <= axil_csr_wdata[9];
-                    qsfp1_modsell_reg <= axil_csr_wdata[11];
-                end
+            16'h0110: begin
+                // GPIO I2C 0
                 if (axil_csr_wstrb[0]) begin
-                    qsfp0_resetl_reg <= axil_csr_wdata[0];
-                    qsfp0_lpmode_reg <= axil_csr_wdata[2];
-                    qsfp1_resetl_reg <= axil_csr_wdata[4];
-                    qsfp1_lpmode_reg <= axil_csr_wdata[6];
+                    i2c_scl_o_reg <= axil_csr_wdata[1];
                 end
-                if (axil_csr_wstrb[2]) begin
-                    i2c_scl_o_reg <= axil_csr_wdata[16];
-                    i2c_sda_o_reg <= axil_csr_wdata[17];
+                if (axil_csr_wstrb[1]) begin
+                    i2c_sda_o_reg <= axil_csr_wdata[9];
+                end
+            end
+            16'h0120: begin
+                // GPIO XCVR 0123
+                if (axil_csr_wstrb[0]) begin
+                    qsfp0_reset_reg <= axil_csr_wdata[4];
+                    qsfp0_lpmode_reg <= axil_csr_wdata[5];
+                end
+                if (axil_csr_wstrb[1]) begin
+                    qsfp1_reset_reg <= axil_csr_wdata[12];
+                    qsfp1_lpmode_reg <= axil_csr_wdata[13];
                 end
             end
             // PHC
@@ -548,31 +548,23 @@ always @(posedge clk_250mhz) begin
             16'h002C: axil_csr_rdata_reg <= 2**AXIL_CSR_ADDR_WIDTH; // if_csr_offset
             16'h0040: axil_csr_rdata_reg <= FPGA_ID;    // fpga_id
             // GPIO
-            16'h0100: begin
-                // GPIO out
-                axil_csr_rdata_reg[9] <= qsfp0_modsell_reg;
-                axil_csr_rdata_reg[11] <= qsfp1_modsell_reg;
-                axil_csr_rdata_reg[0] <= qsfp0_resetl_reg;
-                axil_csr_rdata_reg[2] <= qsfp0_lpmode_reg;
-                axil_csr_rdata_reg[4] <= qsfp1_resetl_reg;
-                axil_csr_rdata_reg[6] <= qsfp1_lpmode_reg;
-                axil_csr_rdata_reg[16] <= i2c_scl_o_reg;
-                axil_csr_rdata_reg[17] <= i2c_sda_o_reg;
+            16'h0110: begin
+                // GPIO I2C 0
+                axil_csr_rdata_reg[0] <= i2c_scl_i;
+                axil_csr_rdata_reg[1] <= i2c_scl_o_reg;
+                axil_csr_rdata_reg[8] <= i2c_sda_i;
+                axil_csr_rdata_reg[9] <= i2c_sda_o_reg;
             end
-            16'h0104: begin
-                // GPIO in
-                axil_csr_rdata_reg[8] <= qsfp0_modprsl;
-                axil_csr_rdata_reg[9] <= qsfp0_modsell;
-                axil_csr_rdata_reg[10] <= qsfp1_modprsl;
-                axil_csr_rdata_reg[11] <= qsfp1_modsell;
-                axil_csr_rdata_reg[0] <= qsfp0_resetl;
-                axil_csr_rdata_reg[1] <= qsfp0_intl;
-                axil_csr_rdata_reg[2] <= qsfp0_lpmode;
-                axil_csr_rdata_reg[4] <= qsfp1_resetl;
-                axil_csr_rdata_reg[5] <= qsfp1_intl;
-                axil_csr_rdata_reg[6] <= qsfp1_lpmode;
-                axil_csr_rdata_reg[16] <= i2c_scl_i;
-                axil_csr_rdata_reg[17] <= i2c_sda_i;
+            16'h0120: begin
+                // GPIO XCVR 0123
+                axil_csr_rdata_reg[0] <= !qsfp0_modprsl;
+                axil_csr_rdata_reg[1] <= !qsfp0_intl;
+                axil_csr_rdata_reg[4] <= qsfp0_reset_reg;
+                axil_csr_rdata_reg[5] <= qsfp0_lpmode_reg;
+                axil_csr_rdata_reg[8] <= !qsfp1_modprsl;
+                axil_csr_rdata_reg[9] <= !qsfp1_intl;
+                axil_csr_rdata_reg[12] <= qsfp1_reset_reg;
+                axil_csr_rdata_reg[13] <= qsfp1_lpmode_reg;
             end
             // PHC
             16'h0200: axil_csr_rdata_reg <= {8'd0, 8'd0, 8'd0, 8'd0};  // PHC features
@@ -610,14 +602,11 @@ always @(posedge clk_250mhz) begin
         axil_csr_arready_reg <= 1'b0;
         axil_csr_rvalid_reg <= 1'b0;
 
-        qsfp0_modsell_reg <= 1'b1;
-        qsfp1_modsell_reg <= 1'b1;
+        qsfp0_reset_reg <= 1'b0;
+        qsfp1_reset_reg <= 1'b0;
 
         qsfp0_lpmode_reg <= 1'b0;
         qsfp1_lpmode_reg <= 1'b0;
-
-        qsfp0_resetl_reg <= 1'b1;
-        qsfp1_resetl_reg <= 1'b1;
 
         i2c_scl_o_reg <= 1'b1;
         i2c_sda_o_reg <= 1'b1;

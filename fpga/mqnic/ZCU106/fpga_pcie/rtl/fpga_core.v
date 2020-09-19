@@ -453,15 +453,22 @@ always @(posedge clk_250mhz) begin
 
         case ({axil_csr_awaddr[15:2], 2'b00})
             // GPIO
-            16'h0100: begin
-                // GPIO out
+            16'h0110: begin
+                // GPIO I2C 0
                 if (axil_csr_wstrb[0]) begin
-                    sfp0_tx_disable_reg <= axil_csr_wdata[2];
-                    sfp1_tx_disable_reg <= axil_csr_wdata[6];
+                    i2c_scl_o_reg <= axil_csr_wdata[1];
                 end
-                if (axil_csr_wstrb[2]) begin
-                    i2c_scl_o_reg <= axil_csr_wdata[16];
-                    i2c_sda_o_reg <= axil_csr_wdata[17];
+                if (axil_csr_wstrb[1]) begin
+                    i2c_sda_o_reg <= axil_csr_wdata[9];
+                end
+            end
+            16'h0120: begin
+                // GPIO XCVR 0123
+                if (axil_csr_wstrb[0]) begin
+                    sfp0_tx_disable_reg <= axil_csr_wdata[5];
+                end
+                if (axil_csr_wstrb[1]) begin
+                    sfp1_tx_disable_reg <= axil_csr_wdata[13];
                 end
             end
             // PHC
@@ -508,19 +515,17 @@ always @(posedge clk_250mhz) begin
             16'h002C: axil_csr_rdata_reg <= 2**AXIL_CSR_ADDR_WIDTH; // if_csr_offset
             16'h0040: axil_csr_rdata_reg <= FPGA_ID;    // fpga_id
             // GPIO
-            16'h0100: begin
-                // GPIO out
-                axil_csr_rdata_reg[2] <= sfp0_tx_disable_reg;
-                axil_csr_rdata_reg[6] <= sfp1_tx_disable_reg;
-                axil_csr_rdata_reg[16] <= i2c_scl_o_reg;
-                axil_csr_rdata_reg[17] <= i2c_sda_o_reg;
+            16'h0110: begin
+                // GPIO I2C 0
+                axil_csr_rdata_reg[0] <= i2c_scl_i;
+                axil_csr_rdata_reg[1] <= i2c_scl_o_reg;
+                axil_csr_rdata_reg[8] <= i2c_sda_i;
+                axil_csr_rdata_reg[9] <= i2c_sda_o_reg;
             end
-            16'h0104: begin
-                // GPIO in
-                axil_csr_rdata_reg[2] <= sfp0_tx_disable_reg;
-                axil_csr_rdata_reg[6] <= sfp1_tx_disable_reg;
-                axil_csr_rdata_reg[16] <= i2c_scl_i;
-                axil_csr_rdata_reg[17] <= i2c_sda_i;
+            16'h0120: begin
+                // GPIO XCVR 0123
+                axil_csr_rdata_reg[5] <= sfp0_tx_disable_reg;
+                axil_csr_rdata_reg[13] <= sfp1_tx_disable_reg;
             end
             // PHC
             16'h0200: axil_csr_rdata_reg <= {8'd0, 8'd0, 8'd0, 8'd0};  // PHC features

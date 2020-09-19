@@ -103,6 +103,10 @@ reg sfp_2_rx_clk = 0;
 reg sfp_2_rx_rst = 0;
 reg [63:0] sfp_2_rxd = 0;
 reg [7:0]  sfp_2_rxc = 0;
+reg sfp_1_npres = 0;
+reg sfp_2_npres = 0;
+reg sfp_1_los = 0;
+reg sfp_2_los = 0;
 reg sfp_i2c_scl_i = 1;
 reg sfp_1_i2c_sda_i = 1;
 reg sfp_2_i2c_sda_i = 1;
@@ -149,6 +153,10 @@ wire [63:0] sfp_1_txd;
 wire [7:0] sfp_1_txc;
 wire [63:0] sfp_2_txd;
 wire [7:0] sfp_2_txc;
+wire sfp_1_tx_disable;
+wire sfp_2_tx_disable;
+wire sfp_1_rs;
+wire sfp_2_rs;
 wire sfp_i2c_scl_o;
 wire sfp_i2c_scl_t;
 wire sfp_1_i2c_sda_o;
@@ -221,6 +229,10 @@ initial begin
         sfp_2_rx_rst,
         sfp_2_rxd,
         sfp_2_rxc,
+        sfp_1_npres,
+        sfp_2_npres,
+        sfp_1_los,
+        sfp_2_los,
         sfp_i2c_scl_i,
         sfp_1_i2c_sda_i,
         sfp_2_i2c_sda_i,
@@ -266,6 +278,10 @@ initial begin
         sfp_1_txc,
         sfp_2_txd,
         sfp_2_txc,
+        sfp_1_tx_disable,
+        sfp_2_tx_disable,
+        sfp_1_rs,
+        sfp_2_rs,
         sfp_i2c_scl_o,
         sfp_i2c_scl_t,
         sfp_1_i2c_sda_o,
@@ -389,6 +405,14 @@ UUT (
     .sfp_2_rx_rst(sfp_2_rx_rst),
     .sfp_2_rxd(sfp_2_rxd),
     .sfp_2_rxc(sfp_2_rxc),
+    .sfp_1_tx_disable(sfp_1_tx_disable),
+    .sfp_2_tx_disable(sfp_2_tx_disable),
+    .sfp_1_npres(sfp_1_npres),
+    .sfp_2_npres(sfp_2_npres),
+    .sfp_1_los(sfp_1_los),
+    .sfp_2_los(sfp_2_los),
+    .sfp_1_rs(sfp_1_rs),
+    .sfp_2_rs(sfp_2_rs),
     .sfp_i2c_scl_i(sfp_i2c_scl_i),
     .sfp_i2c_scl_o(sfp_i2c_scl_o),
     .sfp_i2c_scl_t(sfp_i2c_scl_t),

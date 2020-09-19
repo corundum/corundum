@@ -167,6 +167,15 @@ module fpga_core #
     input  wire [63:0]                        sfp_2_rxd,
     input  wire [7:0]                         sfp_2_rxc,
 
+    output wire                               sfp_1_tx_disable,
+    output wire                               sfp_2_tx_disable,
+    input  wire                               sfp_1_npres,
+    input  wire                               sfp_2_npres,
+    input  wire                               sfp_1_los,
+    input  wire                               sfp_2_los,
+    output wire                               sfp_1_rs,
+    output wire                               sfp_2_rs,
+
     input  wire                               sfp_i2c_scl_i,
     output wire                               sfp_i2c_scl_o,
     output wire                               sfp_i2c_scl_t,
@@ -410,14 +419,16 @@ reg axil_csr_arready_reg = 1'b0;
 reg [AXIL_DATA_WIDTH-1:0] axil_csr_rdata_reg = {AXIL_DATA_WIDTH{1'b0}};
 reg axil_csr_rvalid_reg = 1'b0;
 
-// reg sfp_0_sel_l_reg = 1'b1;
-// reg sfp_1_sel_l_reg = 1'b1;
+reg sfp_1_sel_reg = 1'b0;
+reg sfp_2_sel_reg = 1'b0;
 
-// reg sfp_reset_l_reg = 1'b1;
+reg sfp_1_tx_disable_reg = 1'b0;
+reg sfp_1_rs_reg = 1'b0;
+reg sfp_2_tx_disable_reg = 1'b0;
+reg sfp_2_rs_reg = 1'b0;
 
 reg sfp_i2c_scl_o_reg = 1'b1;
-reg sfp_1_i2c_sda_o_reg = 1'b1;
-reg sfp_2_i2c_sda_o_reg = 1'b1;
+reg sfp_i2c_sda_o_reg = 1'b1;
 
 reg eeprom_i2c_scl_o_reg = 1'b1;
 reg eeprom_i2c_sda_o_reg = 1'b1;
@@ -462,17 +473,18 @@ assign axil_csr_rdata = axil_csr_rdata_reg;
 assign axil_csr_rresp = 2'b00;
 assign axil_csr_rvalid = axil_csr_rvalid_reg;
 
-// assign sfp_0_sel_l = sfp_0_sel_l_reg;
-// assign sfp_1_sel_l = sfp_1_sel_l_reg;
+assign sfp_1_tx_disable = !sfp_1_tx_disable_reg;
+assign sfp_2_tx_disable = !sfp_2_tx_disable_reg;
 
-// assign sfp_reset_l = sfp_reset_l_reg;
+assign sfp_1_rs = sfp_1_rs_reg;
+assign sfp_2_rs = sfp_2_rs_reg;
 
 assign sfp_i2c_scl_o = sfp_i2c_scl_o_reg;
 assign sfp_i2c_scl_t = sfp_i2c_scl_o_reg;
-assign sfp_1_i2c_sda_o = sfp_1_i2c_sda_o_reg;
-assign sfp_1_i2c_sda_t = sfp_1_i2c_sda_o_reg;
-assign sfp_2_i2c_sda_o = sfp_2_i2c_sda_o_reg;
-assign sfp_2_i2c_sda_t = sfp_2_i2c_sda_o_reg;
+assign sfp_1_i2c_sda_o = sfp_1_sel_reg ? sfp_i2c_sda_o_reg : 1'b1;
+assign sfp_1_i2c_sda_t = sfp_1_sel_reg ? sfp_i2c_sda_o_reg : 1'b1;
+assign sfp_2_i2c_sda_o = sfp_2_sel_reg ? sfp_i2c_sda_o_reg : 1'b1;
+assign sfp_2_i2c_sda_t = sfp_2_sel_reg ? sfp_i2c_sda_o_reg : 1'b1;
 
 assign eeprom_i2c_scl_o = eeprom_i2c_scl_o_reg;
 assign eeprom_i2c_scl_t = eeprom_i2c_scl_o_reg;
@@ -516,23 +528,37 @@ always @(posedge clk_250mhz) begin
 
         case ({axil_csr_awaddr[15:2], 2'b00})
             // GPIO
-            16'h0100: begin
-                // GPIO out
-                // if (axil_csr_wstrb[1]) begin
-                //     sfp_0_sel_l_reg <= axil_csr_wdata[9];
-                //     sfp_1_sel_l_reg <= axil_csr_wdata[11];
-                // end
-                // if (axil_csr_wstrb[0]) begin
-                //     sfp_reset_l_reg <= axil_csr_wdata[0];
-                // end
-                if (axil_csr_wstrb[2]) begin
-                    sfp_i2c_scl_o_reg <= axil_csr_wdata[16];
-                    sfp_1_i2c_sda_o_reg <= axil_csr_wdata[17];
-                    sfp_2_i2c_sda_o_reg <= axil_csr_wdata[18];
+            16'h0110: begin
+                // GPIO I2C 0
+                if (axil_csr_wstrb[0]) begin
+                    sfp_i2c_scl_o_reg <= axil_csr_wdata[1];
                 end
-                if (axil_csr_wstrb[3]) begin
-                    eeprom_i2c_scl_o_reg <= axil_csr_wdata[24];
-                    eeprom_i2c_sda_o_reg <= axil_csr_wdata[25];
+                if (axil_csr_wstrb[1]) begin
+                    sfp_i2c_sda_o_reg <= axil_csr_wdata[9];
+                end
+                if (axil_csr_wstrb[2]) begin
+                    sfp_1_sel_reg <= axil_csr_wdata[16];
+                    sfp_2_sel_reg <= axil_csr_wdata[17];
+                end
+            end
+            16'h0114: begin
+                // GPIO I2C 1
+                if (axil_csr_wstrb[0]) begin
+                    eeprom_i2c_scl_o_reg <= axil_csr_wdata[1];
+                end
+                if (axil_csr_wstrb[1]) begin
+                    eeprom_i2c_sda_o_reg <= axil_csr_wdata[9];
+                end
+            end
+            16'h0120: begin
+                // GPIO XCVR 0123
+                if (axil_csr_wstrb[0]) begin
+                    sfp_1_tx_disable_reg <= axil_csr_wdata[5];
+                    sfp_1_rs_reg <= axil_csr_wdata[6];
+                end
+                if (axil_csr_wstrb[1]) begin
+                    sfp_2_tx_disable_reg <= axil_csr_wdata[13];
+                    sfp_2_rs_reg <= axil_csr_wdata[14];
                 end
             end
             // Flash
@@ -629,30 +655,32 @@ always @(posedge clk_250mhz) begin
             16'h002C: axil_csr_rdata_reg <= 2**AXIL_CSR_ADDR_WIDTH; // if_csr_offset
             16'h0040: axil_csr_rdata_reg <= FPGA_ID;    // fpga_id
             // GPIO
-            16'h0100: begin
-                // GPIO out
-                // axil_csr_rdata_reg[9] <= sfp_0_sel_l_reg;
-                // axil_csr_rdata_reg[11] <= sfp_1_sel_l_reg;
-                // axil_csr_rdata_reg[0] <= sfp_reset_l_reg;
-                axil_csr_rdata_reg[16] <= sfp_i2c_scl_o_reg;
-                axil_csr_rdata_reg[17] <= sfp_1_i2c_sda_o_reg;
-                axil_csr_rdata_reg[18] <= sfp_2_i2c_sda_o_reg;
-                axil_csr_rdata_reg[24] <= eeprom_i2c_scl_o_reg;
-                axil_csr_rdata_reg[25] <= eeprom_i2c_sda_o_reg;
+            16'h0110: begin
+                // GPIO I2C 0
+                axil_csr_rdata_reg[0] <= sfp_i2c_scl_i;
+                axil_csr_rdata_reg[1] <= sfp_i2c_scl_o_reg;
+                axil_csr_rdata_reg[8] <= (sfp_1_i2c_sda_i || !sfp_1_sel_reg) && (sfp_2_i2c_sda_i || !sfp_2_sel_reg);
+                axil_csr_rdata_reg[9] <= sfp_i2c_sda_o_reg;
+                axil_csr_rdata_reg[16] <= sfp_1_sel_reg;
+                axil_csr_rdata_reg[17] <= sfp_2_sel_reg;
             end
-            16'h0104: begin
-                // GPIO in
-                // axil_csr_rdata_reg[8] <= sfp_0_modprs_l;
-                // axil_csr_rdata_reg[9] <= sfp_0_sel_l;
-                // axil_csr_rdata_reg[10] <= sfp_1_modprs_l;
-                // axil_csr_rdata_reg[11] <= sfp_1_sel_l;
-                // axil_csr_rdata_reg[0] <= sfp_reset_l;
-                // axil_csr_rdata_reg[1] <= sfp_int_l;
-                axil_csr_rdata_reg[16] <= sfp_i2c_scl_i;
-                axil_csr_rdata_reg[17] <= sfp_1_i2c_sda_i;
-                axil_csr_rdata_reg[18] <= sfp_2_i2c_sda_i;
-                axil_csr_rdata_reg[24] <= eeprom_i2c_scl_i;
-                axil_csr_rdata_reg[25] <= eeprom_i2c_sda_i;
+            16'h0114: begin
+                // GPIO I2C 1
+                axil_csr_rdata_reg[0] <= eeprom_i2c_scl_i;
+                axil_csr_rdata_reg[1] <= eeprom_i2c_scl_o_reg;
+                axil_csr_rdata_reg[8] <= eeprom_i2c_sda_i;
+                axil_csr_rdata_reg[9] <= eeprom_i2c_sda_o_reg;
+            end
+            16'h0120: begin
+                // GPIO XCVR 0123
+                axil_csr_rdata_reg[0] <= !sfp_1_npres;
+                axil_csr_rdata_reg[2] <= sfp_1_los;
+                axil_csr_rdata_reg[5] <= sfp_1_tx_disable_reg;
+                axil_csr_rdata_reg[6] <= sfp_1_rs_reg;
+                axil_csr_rdata_reg[8] <= !sfp_2_npres;
+                axil_csr_rdata_reg[10] <= sfp_2_los;
+                axil_csr_rdata_reg[13] <= sfp_2_tx_disable_reg;
+                axil_csr_rdata_reg[14] <= sfp_2_rs_reg;
             end
             // Flash
             16'h0140: axil_csr_rdata_reg <= {8'd24, 8'd16, 8'd2, 8'd1}; // Flash ID
@@ -728,14 +756,16 @@ always @(posedge clk_250mhz) begin
         axil_csr_arready_reg <= 1'b0;
         axil_csr_rvalid_reg <= 1'b0;
 
-        // sfp_0_sel_l_reg <= 1'b1;
-        // sfp_1_sel_l_reg <= 1'b1;
+        sfp_1_sel_reg <= 1'b0;
+        sfp_2_sel_reg <= 1'b0;
 
-        // sfp_reset_l_reg <= 1'b1;
+        sfp_1_tx_disable_reg <= 1'b0;
+        sfp_1_rs_reg <= 1'b0;
+        sfp_2_tx_disable_reg <= 1'b0;
+        sfp_2_rs_reg <= 1'b0;
 
         sfp_i2c_scl_o_reg <= 1'b1;
-        sfp_1_i2c_sda_o_reg <= 1'b1;
-        sfp_2_i2c_sda_o_reg <= 1'b1;
+        sfp_i2c_sda_o_reg <= 1'b1;
 
         eeprom_i2c_scl_o_reg <= 1'b1;
         eeprom_i2c_sda_o_reg <= 1'b1;

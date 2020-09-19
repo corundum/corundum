@@ -181,6 +181,27 @@ module fpga_core #
     input  wire [63:0]                        sfp_4_rxd,
     input  wire [7:0]                         sfp_4_rxc,
 
+    input  wire                               sfp_1_mod_detect,
+    input  wire                               sfp_2_mod_detect,
+    input  wire                               sfp_3_mod_detect,
+    input  wire                               sfp_4_mod_detect,
+    output wire [1:0]                         sfp_1_rs,
+    output wire [1:0]                         sfp_2_rs,
+    output wire [1:0]                         sfp_3_rs,
+    output wire [1:0]                         sfp_4_rs,
+    input  wire                               sfp_1_los,
+    input  wire                               sfp_2_los,
+    input  wire                               sfp_3_los,
+    input  wire                               sfp_4_los,
+    output wire                               sfp_1_tx_disable,
+    output wire                               sfp_2_tx_disable,
+    output wire                               sfp_3_tx_disable,
+    output wire                               sfp_4_tx_disable,
+    input  wire                               sfp_1_tx_fault,
+    input  wire                               sfp_2_tx_fault,
+    input  wire                               sfp_3_tx_fault,
+    input  wire                               sfp_4_tx_fault,
+
     input  wire                               i2c_scl_i,
     output wire                               i2c_scl_o,
     output wire                               i2c_scl_t,
@@ -400,10 +421,15 @@ reg axil_csr_arready_reg = 1'b0;
 reg [AXIL_DATA_WIDTH-1:0] axil_csr_rdata_reg = {AXIL_DATA_WIDTH{1'b0}};
 reg axil_csr_rvalid_reg = 1'b0;
 
-// reg sfp_0_sel_l_reg = 1'b1;
-// reg sfp_1_sel_l_reg = 1'b1;
+reg [1:0] sfp_1_rs_reg = 2'b11;
+reg [1:0] sfp_2_rs_reg = 2'b11;
+reg [1:0] sfp_3_rs_reg = 2'b11;
+reg [1:0] sfp_4_rs_reg = 2'b11;
 
-// reg sfp_reset_l_reg = 1'b1;
+reg sfp_1_tx_disable_reg = 1'b0;
+reg sfp_2_tx_disable_reg = 1'b0;
+reg sfp_3_tx_disable_reg = 1'b0;
+reg sfp_4_tx_disable_reg = 1'b0;
 
 reg i2c_scl_o_reg = 1'b1;
 reg i2c_sda_o_reg = 1'b1;
@@ -441,10 +467,15 @@ assign axil_csr_rdata = axil_csr_rdata_reg;
 assign axil_csr_rresp = 2'b00;
 assign axil_csr_rvalid = axil_csr_rvalid_reg;
 
-// assign sfp_0_sel_l = sfp_0_sel_l_reg;
-// assign sfp_1_sel_l = sfp_1_sel_l_reg;
+assign sfp_1_rs = sfp_1_rs_reg;
+assign sfp_2_rs = sfp_2_rs_reg;
+assign sfp_3_rs = sfp_3_rs_reg;
+assign sfp_4_rs = sfp_4_rs_reg;
 
-// assign sfp_reset_l = sfp_reset_l_reg;
+assign sfp_1_tx_disable = sfp_1_tx_disable_reg;
+assign sfp_2_tx_disable = sfp_2_tx_disable_reg;
+assign sfp_3_tx_disable = sfp_3_tx_disable_reg;
+assign sfp_4_tx_disable = sfp_4_tx_disable_reg;
 
 assign i2c_scl_o = i2c_scl_o_reg;
 assign i2c_scl_t = i2c_scl_o_reg;
@@ -474,20 +505,32 @@ always @(posedge clk_250mhz) begin
 
         case ({axil_csr_awaddr[15:2], 2'b00})
             // GPIO
-            16'h0100: begin
-                // GPIO out
-                // if (axil_csr_wstrb[0]) begin
-                //     sfp_reset_l_reg <= axil_csr_wdata[0];
-                // end
-                // if (axil_csr_wstrb[1]) begin
-                //     sfp_0_sel_l_reg <= axil_csr_wdata[9];
-                //     sfp_1_sel_l_reg <= axil_csr_wdata[11];
-                // end
-                // if (axil_csr_wstrb[2]) begin
-                // end
+            16'h0110: begin
+                // GPIO I2C 0
+                if (axil_csr_wstrb[0]) begin
+                    i2c_scl_o_reg <= axil_csr_wdata[1];
+                end
+                if (axil_csr_wstrb[1]) begin
+                    i2c_sda_o_reg <= axil_csr_wdata[9];
+                end
+            end
+            16'h0120: begin
+                // GPIO XCVR 0123
+                if (axil_csr_wstrb[0]) begin
+                    sfp_1_tx_disable_reg <= axil_csr_wdata[5];
+                    sfp_1_rs_reg <= axil_csr_wdata[7:6];
+                end
+                if (axil_csr_wstrb[1]) begin
+                    sfp_2_tx_disable_reg <= axil_csr_wdata[13];
+                    sfp_2_rs_reg <= axil_csr_wdata[15:14];
+                end
+                if (axil_csr_wstrb[2]) begin
+                    sfp_3_tx_disable_reg <= axil_csr_wdata[21];
+                    sfp_3_rs_reg <= axil_csr_wdata[23:22];
+                end
                 if (axil_csr_wstrb[3]) begin
-                    i2c_scl_o_reg <= axil_csr_wdata[24];
-                    i2c_sda_o_reg <= axil_csr_wdata[25];
+                    sfp_4_tx_disable_reg <= axil_csr_wdata[29];
+                    sfp_4_rs_reg <= axil_csr_wdata[31:30];
                 end
             end
             // Flash
@@ -556,15 +599,38 @@ always @(posedge clk_250mhz) begin
             16'h002C: axil_csr_rdata_reg <= 2**AXIL_CSR_ADDR_WIDTH; // if_csr_offset
             16'h0040: axil_csr_rdata_reg <= FPGA_ID;    // fpga_id
             // GPIO
-            16'h0100: begin
-                // GPIO out
-                axil_csr_rdata_reg[24] <= i2c_scl_o_reg;
-                axil_csr_rdata_reg[25] <= i2c_sda_o_reg;
+            16'h0110: begin
+                // GPIO I2C 0
+                axil_csr_rdata_reg[0] <= i2c_scl_i;
+                axil_csr_rdata_reg[1] <= i2c_scl_o_reg;
+                axil_csr_rdata_reg[8] <= i2c_sda_i;
+                axil_csr_rdata_reg[9] <= i2c_sda_o_reg;
             end
-            16'h0104: begin
-                // GPIO in
-                axil_csr_rdata_reg[24] <= i2c_scl_i;
-                axil_csr_rdata_reg[25] <= i2c_sda_i;
+            16'h0120: begin
+                // GPIO XCVR 0123
+                axil_csr_rdata_reg[0] <= sfp_1_mod_detect;
+                axil_csr_rdata_reg[1] <= sfp_1_tx_fault;
+                axil_csr_rdata_reg[2] <= sfp_1_los;
+                axil_csr_rdata_reg[5] <= sfp_1_tx_disable_reg;
+                axil_csr_rdata_reg[7:6] <= sfp_1_rs_reg;
+
+                axil_csr_rdata_reg[8] <= sfp_2_mod_detect;
+                axil_csr_rdata_reg[9] <= sfp_2_tx_fault;
+                axil_csr_rdata_reg[10] <= sfp_2_los;
+                axil_csr_rdata_reg[13] <= sfp_2_tx_disable_reg;
+                axil_csr_rdata_reg[15:14] <= sfp_2_rs_reg;
+
+                axil_csr_rdata_reg[16] <= sfp_3_mod_detect;
+                axil_csr_rdata_reg[17] <= sfp_3_tx_fault;
+                axil_csr_rdata_reg[18] <= sfp_3_los;
+                axil_csr_rdata_reg[21] <= sfp_3_tx_disable_reg;
+                axil_csr_rdata_reg[23:22] <= sfp_3_rs_reg;
+
+                axil_csr_rdata_reg[24] <= sfp_4_mod_detect;
+                axil_csr_rdata_reg[25] <= sfp_4_tx_fault;
+                axil_csr_rdata_reg[26] <= sfp_4_los;
+                axil_csr_rdata_reg[29] <= sfp_4_tx_disable_reg;
+                axil_csr_rdata_reg[31:30] <= sfp_4_rs_reg;
             end
             // PHC
             16'h0200: axil_csr_rdata_reg <= {8'd0, 8'd0, 8'd0, 8'd0};  // PHC features
@@ -602,10 +668,15 @@ always @(posedge clk_250mhz) begin
         axil_csr_arready_reg <= 1'b0;
         axil_csr_rvalid_reg <= 1'b0;
 
-        // sfp_0_sel_l_reg <= 1'b1;
-        // sfp_1_sel_l_reg <= 1'b1;
+        sfp_1_rs_reg <= 2'b11;
+        sfp_2_rs_reg <= 2'b11;
+        sfp_3_rs_reg <= 2'b11;
+        sfp_4_rs_reg <= 2'b11;
 
-        // sfp_reset_l_reg <= 1'b1;
+        sfp_1_tx_disable_reg <= 1'b0;
+        sfp_2_tx_disable_reg <= 1'b0;
+        sfp_3_tx_disable_reg <= 1'b0;
+        sfp_4_tx_disable_reg <= 1'b0;
 
         i2c_scl_o_reg <= 1'b1;
         i2c_sda_o_reg <= 1'b1;

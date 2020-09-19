@@ -189,6 +189,10 @@ def bench():
     sfp_2_rx_rst = Signal(bool(0))
     sfp_2_rxd = Signal(intbv(0)[64:])
     sfp_2_rxc = Signal(intbv(0)[8:])
+    sfp_1_npres = Signal(bool(0))
+    sfp_2_npres = Signal(bool(0))
+    sfp_1_los = Signal(bool(0))
+    sfp_2_los = Signal(bool(0))
     sfp_i2c_scl_i = Signal(bool(1))
     sfp_1_i2c_sda_i = Signal(bool(1))
     sfp_2_i2c_sda_i = Signal(bool(1))
@@ -234,6 +238,10 @@ def bench():
     sfp_1_txc = Signal(intbv(0)[8:])
     sfp_2_txd = Signal(intbv(0)[64:])
     sfp_2_txc = Signal(intbv(0)[8:])
+    sfp_1_tx_disable = Signal(bool(0))
+    sfp_2_tx_disable = Signal(bool(0))
+    sfp_1_rs = Signal(bool(0))
+    sfp_2_rs = Signal(bool(0))
     sfp_i2c_scl_o = Signal(bool(1))
     sfp_i2c_scl_t = Signal(bool(1))
     sfp_1_i2c_sda_o = Signal(bool(1))
@@ -564,6 +572,14 @@ def bench():
         sfp_2_rx_rst=sfp_2_rx_rst,
         sfp_2_rxd=sfp_2_rxd,
         sfp_2_rxc=sfp_2_rxc,
+        sfp_1_tx_disable=sfp_1_tx_disable,
+        sfp_2_tx_disable=sfp_2_tx_disable,
+        sfp_1_npres=sfp_1_npres,
+        sfp_2_npres=sfp_2_npres,
+        sfp_1_los=sfp_1_los,
+        sfp_2_los=sfp_2_los,
+        sfp_1_rs=sfp_1_rs,
+        sfp_2_rs=sfp_2_rs,
         sfp_i2c_scl_i=sfp_i2c_scl_i,
         sfp_i2c_scl_o=sfp_i2c_scl_o,
         sfp_i2c_scl_t=sfp_i2c_scl_t,

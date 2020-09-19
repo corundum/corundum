@@ -269,13 +269,19 @@ wire i2c_sda_o_int;
 wire i2c_sda_t_int;
 
 sync_signal #(
-    .WIDTH(2),
+    .WIDTH(14),
     .N(2)
 )
 sync_signal_inst (
     .clk(pcie_user_clk),
-    .in({i2c_scl_i, i2c_sda_i}),
-    .out({i2c_scl_i_int, i2c_sda_i_int})
+    .in({sfp_1_mod_detect, sfp_2_mod_detect, sfp_3_mod_detect, sfp_4_mod_detect,
+        sfp_1_los, sfp_2_los, sfp_3_los, sfp_4_los,
+        sfp_1_tx_fault, sfp_2_tx_fault, sfp_3_tx_fault, sfp_4_tx_fault,
+        i2c_scl_i, i2c_sda_i}),
+    .out({sfp_1_mod_detect_int, sfp_2_mod_detect_int, sfp_3_mod_detect_int, sfp_4_mod_detect_int,
+        sfp_1_los_int, sfp_2_los_int, sfp_3_los_int, sfp_4_los_int,
+        sfp_1_tx_fault_int, sfp_2_tx_fault_int, sfp_3_tx_fault_int, sfp_4_tx_fault_int,
+        i2c_scl_i_int, i2c_sda_i_int})
 );
 
 assign i2c_scl_i = i2c_scl;
@@ -774,15 +780,6 @@ pcie3_7x_inst (
 
 // XGMII 10G PHY
 
-assign sfp_1_tx_disable = 1'b0;
-assign sfp_2_tx_disable = 1'b0;
-assign sfp_3_tx_disable = 1'b0;
-assign sfp_4_tx_disable = 1'b0;
-assign sfp_1_rs = 1'b1;
-assign sfp_2_rs = 1'b1;
-assign sfp_3_rs = 1'b1;
-assign sfp_4_rs = 1'b1;
-
 wire        sfp_1_tx_clk_int = clk_156mhz_int;
 wire        sfp_1_tx_rst_int = rst_156mhz_int;
 wire [63:0] sfp_1_txd_int;
@@ -1249,6 +1246,27 @@ core_inst (
     .sfp_4_rx_rst(sfp_4_rx_rst_int),
     .sfp_4_rxd(sfp_4_rxd_int),
     .sfp_4_rxc(sfp_4_rxc_int),
+
+    .sfp_1_mod_detect(sfp_1_mod_detect_int),
+    .sfp_2_mod_detect(sfp_2_mod_detect_int),
+    .sfp_3_mod_detect(sfp_3_mod_detect_int),
+    .sfp_4_mod_detect(sfp_4_mod_detect_int),
+    .sfp_1_rs(sfp_1_rs),
+    .sfp_2_rs(sfp_2_rs),
+    .sfp_3_rs(sfp_3_rs),
+    .sfp_4_rs(sfp_4_rs),
+    .sfp_1_los(sfp_1_los_int),
+    .sfp_2_los(sfp_2_los_int),
+    .sfp_3_los(sfp_3_los_int),
+    .sfp_4_los(sfp_4_los_int),
+    .sfp_1_tx_disable(sfp_1_tx_disable),
+    .sfp_2_tx_disable(sfp_2_tx_disable),
+    .sfp_3_tx_disable(sfp_3_tx_disable),
+    .sfp_4_tx_disable(sfp_4_tx_disable),
+    .sfp_1_tx_fault(sfp_1_tx_fault_int),
+    .sfp_2_tx_fault(sfp_2_tx_fault_int),
+    .sfp_3_tx_fault(sfp_3_tx_fault_int),
+    .sfp_4_tx_fault(sfp_4_tx_fault_int),
 
     .i2c_scl_i(i2c_scl_i_int),
     .i2c_scl_o(i2c_scl_o_int),

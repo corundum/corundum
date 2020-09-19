@@ -80,6 +80,16 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_REG_GPIO_OUT                0x0100
 #define MQNIC_REG_GPIO_IN                 0x0104
 
+#define MQNIC_REG_GPIO_I2C_0              0x0110
+#define MQNIC_REG_GPIO_I2C_1              0x0114
+#define MQNIC_REG_GPIO_I2C_2              0x0118
+#define MQNIC_REG_GPIO_I2C_3              0x011C
+
+#define MQNIC_REG_GPIO_I2C_SCL_IN         0x00000001
+#define MQNIC_REG_GPIO_I2C_SCL_OUT        0x00000002
+#define MQNIC_REG_GPIO_I2C_SDA_IN         0x00000100
+#define MQNIC_REG_GPIO_I2C_SDA_OUT        0x00000200
+
 #define MQNIC_PHC_REG_FEATURES            0x0000
 #define MQNIC_PHC_REG_PTP_CUR_FNS         0x0010
 #define MQNIC_PHC_REG_PTP_CUR_NS          0x0014

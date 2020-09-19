@@ -32,6 +32,7 @@ either expressed or implied, of The Regents of the University of California.
 */
 
 #include "mqnic.h"
+#include <linux/version.h>
 
 void mqnic_i2c_set_scl(void *data, int state)
 {
@@ -84,9 +85,30 @@ static const struct i2c_algo_bit_data mqnic_i2c_algo = {
     .timeout    = 20
 };
 
-static struct i2c_board_info mqnic_eeprom_info = {
-    I2C_BOARD_INFO("24c02", 0x50),
-};
+static struct i2c_client *create_i2c_client(struct i2c_adapter *adapter, const char *type, int addr, const struct property_entry *props)
+{
+    struct i2c_client *client;
+    struct i2c_board_info board_info;
+
+    if (!adapter)
+        return NULL;
+
+    memset(&board_info, 0, sizeof(board_info));
+    strscpy(board_info.type, type, I2C_NAME_SIZE);
+    board_info.addr = addr;
+    board_info.properties = props;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,2,0)
+    client = i2c_new_client_device(adapter, &board_info);
+#else
+    client = i2c_new_device(adapter, &board_info);
+#endif
+
+    if (!client)
+        return NULL;
+
+    return client;
+}
 
 int mqnic_init_i2c(struct mqnic_dev *mqnic)
 {
@@ -121,11 +143,9 @@ int mqnic_init_i2c(struct mqnic_dev *mqnic)
             return ret;
         }
 
-        mqnic->eeprom_i2c_client = i2c_new_device(&mqnic->eeprom_i2c_adap, &mqnic_eeprom_info);
-        if (mqnic->eeprom_i2c_client == NULL)
-        {
-            ret = -ENODEV;
-        }
+        // I2C EEPROM
+        mqnic->eeprom_i2c_client = create_i2c_client(&mqnic->eeprom_i2c_adap, "24c02", 0x50, NULL);
+
         break;
     }
 

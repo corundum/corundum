@@ -90,6 +90,17 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_REG_GPIO_I2C_SDA_IN         0x00000100
 #define MQNIC_REG_GPIO_I2C_SDA_OUT        0x00000200
 
+#define MQNIC_REG_GPIO_XCVR_0123          0x0120
+#define MQNIC_REG_GPIO_XCVR_4567          0x0124
+
+#define MQNIC_REG_GPIO_XCVR_PRSNT_IN           0x01
+#define MQNIC_REG_GPIO_XCVR_TX_FAULT_INT_IN    0x02
+#define MQNIC_REG_GPIO_XCVR_RX_LOS_IN          0x03
+#define MQNIC_REG_GPIO_XCVR_RST_OUT            0x10
+#define MQNIC_REG_GPIO_XCVR_TX_DIS_LPMODE_OUT  0x20
+#define MQNIC_REG_GPIO_XCVR_RS0_OUT            0x40
+#define MQNIC_REG_GPIO_XCVR_RS1_OUT            0x80
+
 #define MQNIC_PHC_REG_FEATURES            0x0000
 #define MQNIC_PHC_REG_PTP_CUR_FNS         0x0010
 #define MQNIC_PHC_REG_PTP_CUR_NS          0x0014

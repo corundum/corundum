@@ -105,13 +105,11 @@ struct mqnic_dev {
     struct ptp_clock *ptp_clock;
     struct ptp_clock_info ptp_clock_info;
 
-    struct i2c_algo_bit_data if_i2c_algo[MQNIC_MAX_IF];
-    struct i2c_adapter if_i2c_adap[MQNIC_MAX_IF];
-    struct mqnic_i2c_priv if_i2c_priv[MQNIC_MAX_IF];
+    int i2c_adapter_count;
+    struct i2c_algo_bit_data i2c_algo[MQNIC_MAX_I2C_ADAPTERS];
+    struct i2c_adapter i2c_adapter[MQNIC_MAX_I2C_ADAPTERS];
+    struct mqnic_i2c_priv i2c_priv[MQNIC_MAX_I2C_ADAPTERS];
 
-    struct i2c_algo_bit_data eeprom_i2c_algo;
-    struct i2c_adapter eeprom_i2c_adap;
-    struct mqnic_i2c_priv eeprom_i2c_priv;
     struct i2c_client *eeprom_i2c_client;
 };
 

@@ -110,8 +110,52 @@ static struct i2c_client *create_i2c_client(struct i2c_adapter *adapter, const c
     return client;
 }
 
+static struct i2c_adapter *mqnic_create_i2c_adapter(struct mqnic_dev *mqnic, u8 __iomem *reg)
+{
+    struct i2c_algo_bit_data *algo;
+    struct i2c_adapter *adapter;
+    struct mqnic_i2c_priv *priv;
+
+    if (mqnic->i2c_adapter_count >= MQNIC_MAX_I2C_ADAPTERS || !reg)
+        return NULL;
+
+    algo = &mqnic->i2c_algo[mqnic->i2c_adapter_count];
+    adapter = &mqnic->i2c_adapter[mqnic->i2c_adapter_count];
+    priv = &mqnic->i2c_priv[mqnic->i2c_adapter_count];
+
+    priv->mqnic = mqnic;
+    priv->scl_in_reg = reg;
+    priv->scl_out_reg = reg;
+    priv->sda_in_reg = reg;
+    priv->sda_out_reg = reg;
+    priv->scl_in_mask = MQNIC_REG_GPIO_I2C_SCL_IN;
+    priv->scl_out_mask = MQNIC_REG_GPIO_I2C_SCL_OUT;
+    priv->sda_in_mask = MQNIC_REG_GPIO_I2C_SDA_IN;
+    priv->sda_out_mask = MQNIC_REG_GPIO_I2C_SDA_OUT;
+
+    *algo = mqnic_i2c_algo;
+    algo->data = priv;
+
+    adapter->owner = THIS_MODULE;
+    adapter->algo_data = algo;
+    adapter->dev.parent = mqnic->dev;
+    snprintf(adapter->name, sizeof(adapter->name), "%s I2C%d", mqnic->name, mqnic->i2c_adapter_count);
+
+    if (i2c_bit_add_bus(adapter))
+    {
+        dev_err(mqnic->dev, "Failed to register I2C adapter");
+        memset(adapter, 0, sizeof(*adapter));
+        return NULL;
+    }
+
+    mqnic->i2c_adapter_count++;
+
+    return adapter;
+}
+
 int mqnic_init_i2c(struct mqnic_dev *mqnic)
 {
+    struct i2c_adapter *adapter;
     int ret = 0;
     // interface i2c interfaces
     // TODO
@@ -121,30 +165,12 @@ int mqnic_init_i2c(struct mqnic_dev *mqnic)
     case MQNIC_BOARD_ID_EXANIC_X10:
     case MQNIC_BOARD_ID_EXANIC_X25:
     case MQNIC_BOARD_ID_ADM_PCIE_9V3:
-        mqnic->eeprom_i2c_adap.owner = THIS_MODULE;
-        mqnic->eeprom_i2c_priv.mqnic = mqnic;
-        mqnic->eeprom_i2c_priv.scl_in_reg = mqnic->hw_addr+MQNIC_REG_GPIO_IN;
-        mqnic->eeprom_i2c_priv.scl_out_reg = mqnic->hw_addr+MQNIC_REG_GPIO_OUT;
-        mqnic->eeprom_i2c_priv.sda_in_reg = mqnic->hw_addr+MQNIC_REG_GPIO_IN;
-        mqnic->eeprom_i2c_priv.sda_out_reg = mqnic->hw_addr+MQNIC_REG_GPIO_OUT;
-        mqnic->eeprom_i2c_priv.scl_in_mask = 1 << 24;
-        mqnic->eeprom_i2c_priv.scl_out_mask = 1 << 24;
-        mqnic->eeprom_i2c_priv.sda_in_mask = 1 << 25;
-        mqnic->eeprom_i2c_priv.sda_out_mask = 1 << 25;
-        mqnic->eeprom_i2c_algo = mqnic_i2c_algo;
-        mqnic->eeprom_i2c_algo.data = &mqnic->eeprom_i2c_priv;
-        mqnic->eeprom_i2c_adap.algo_data = &mqnic->eeprom_i2c_algo;
-        mqnic->eeprom_i2c_adap.dev.parent = mqnic->dev;
-        iowrite32(ioread32(mqnic->hw_addr+MQNIC_REG_GPIO_OUT) & ~(1 << 26), mqnic->hw_addr+MQNIC_REG_GPIO_OUT); // WP disable
-        strlcpy(mqnic->eeprom_i2c_adap.name, "mqnic EEPROM", sizeof(mqnic->eeprom_i2c_adap.name));
-        ret = i2c_bit_add_bus(&mqnic->eeprom_i2c_adap);
-        if (ret)
-        {
-            return ret;
-        }
+
+        // create I2C adapter
+        adapter = mqnic_create_i2c_adapter(mqnic, mqnic->hw_addr+MQNIC_REG_GPIO_I2C_1);
 
         // I2C EEPROM
-        mqnic->eeprom_i2c_client = create_i2c_client(&mqnic->eeprom_i2c_adap, "24c02", 0x50, NULL);
+        mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c02", 0x50, NULL);
 
         break;
     }
@@ -154,6 +180,8 @@ int mqnic_init_i2c(struct mqnic_dev *mqnic)
 
 void mqnic_remove_i2c(struct mqnic_dev *mqnic)
 {
+    int k;
+
     // eeprom i2c interface
     if (mqnic->eeprom_i2c_client)
     {
@@ -161,12 +189,16 @@ void mqnic_remove_i2c(struct mqnic_dev *mqnic)
         mqnic->eeprom_i2c_client = NULL;
     }
 
-    if (mqnic->eeprom_i2c_adap.owner)
+    // delete adapters
+    for (k = 0; k < ARRAY_SIZE(mqnic->i2c_adapter); k++)
     {
-        i2c_del_adapter(&mqnic->eeprom_i2c_adap);
-    }
+        if (mqnic->i2c_adapter[k].owner)
+        {
+            i2c_del_adapter(&mqnic->i2c_adapter[k]);
+        }
 
-    memset(&mqnic->eeprom_i2c_adap, 0, sizeof(mqnic->eeprom_i2c_adap));
+        memset(&mqnic->i2c_adapter[k], 0, sizeof(mqnic->i2c_adapter[k]));
+    }
 }
 
 

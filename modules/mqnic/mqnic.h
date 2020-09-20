@@ -110,6 +110,8 @@ struct mqnic_dev {
     struct i2c_adapter i2c_adapter[MQNIC_MAX_I2C_ADAPTERS];
     struct mqnic_i2c_priv i2c_priv[MQNIC_MAX_I2C_ADAPTERS];
 
+    int mod_i2c_client_count;
+    struct i2c_client *mod_i2c_client[MQNIC_MAX_IF];
     struct i2c_client *eeprom_i2c_client;
 };
 

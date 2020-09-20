@@ -296,6 +296,13 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
         }
     }
 
+    // pass module I2C clients to net_device instances
+    for (k = 0; k < mqnic->if_count; k++)
+    {
+        struct mqnic_priv *priv = netdev_priv(mqnic->ndev[k]);
+        priv->mod_i2c_client = mqnic->mod_i2c_client[k];
+    }
+
     mqnic->misc_dev.minor = MISC_DYNAMIC_MINOR;
     mqnic->misc_dev.name = mqnic->name;
     mqnic->misc_dev.fops = &mqnic_fops;

@@ -33,6 +33,11 @@ either expressed or implied, of The Regents of the University of California.
 
 #include "mqnic.h"
 
+#define SFF_MODULE_ID_SFP        0x03
+#define SFF_MODULE_ID_QSFP       0x0c
+#define SFF_MODULE_ID_QSFP_PLUS  0x0d
+#define SFF_MODULE_ID_QSFP28     0x11
+
 static void mqnic_get_drvinfo(struct net_device *ndev, struct ethtool_drvinfo *drvinfo)
 {
     struct mqnic_priv *priv = netdev_priv(ndev);
@@ -74,8 +79,102 @@ static int mqnic_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *in
     return ret;
 }
 
+static int mqnic_read_module_eeprom(struct net_device *ndev, u16 offset, u16 len, u8 *data)
+{
+    struct mqnic_priv *priv = netdev_priv(ndev);
+
+    if (!priv->mod_i2c_client)
+    {
+        return -1;
+    }
+
+    if (len > I2C_SMBUS_BLOCK_MAX)
+        len = I2C_SMBUS_BLOCK_MAX;
+
+    return i2c_smbus_read_i2c_block_data(priv->mod_i2c_client, offset, len, data);
+}
+
+static int mqnic_get_module_info(struct net_device *ndev, struct ethtool_modinfo *modinfo)
+{
+    struct mqnic_priv *priv = netdev_priv(ndev);
+    int read_len = 0;
+    u8 data[16];
+
+    // read module ID and revision
+    read_len = mqnic_read_module_eeprom(ndev, 0, 2, data);
+
+    if (read_len < 2)
+        return -EIO;
+
+    // check identifier byte at address 0
+    switch (data[0]) {
+    case SFF_MODULE_ID_SFP:
+        modinfo->type       = ETH_MODULE_SFF_8472;
+        modinfo->eeprom_len = ETH_MODULE_SFF_8472_LEN;
+        break;
+    case SFF_MODULE_ID_QSFP:
+        modinfo->type       = ETH_MODULE_SFF_8436;
+        modinfo->eeprom_len = ETH_MODULE_SFF_8436_LEN;
+        break;
+    case SFF_MODULE_ID_QSFP_PLUS:
+        // check revision at address 1
+        if (data[1] >= 0x03)
+        {
+            modinfo->type       = ETH_MODULE_SFF_8636;
+            modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
+        }
+        else
+        {
+            modinfo->type       = ETH_MODULE_SFF_8436;
+            modinfo->eeprom_len = ETH_MODULE_SFF_8436_LEN;
+        }
+        break;
+    case SFF_MODULE_ID_QSFP28:
+        modinfo->type       = ETH_MODULE_SFF_8636;
+        modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
+        break;
+    default:
+        dev_err(priv->dev, "Unknown module ID");
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+static int mqnic_get_module_eeprom(struct net_device *ndev, struct ethtool_eeprom *eeprom, u8 *data)
+{
+    struct mqnic_priv *priv = netdev_priv(ndev);
+    int i = 0;
+    int read_len;
+
+    if (eeprom->len == 0)
+        return -EINVAL;
+
+    memset(data, 0, eeprom->len);
+
+    while (i < eeprom->len)
+    {
+        read_len = mqnic_read_module_eeprom(ndev, eeprom->offset+i, eeprom->len-i, data+i);
+
+        if (read_len == 0)
+            return -EIO;
+
+        if (read_len < 0)
+        {
+            dev_err(priv->dev, "Failed to read module EEPROM");
+            return 0;
+        }
+
+        i += read_len;
+    }
+
+    return 0;
+}
+
 const struct ethtool_ops mqnic_ethtool_ops = {
-    .get_drvinfo = mqnic_get_drvinfo,
-    .get_ts_info = mqnic_get_ts_info
+    .get_drvinfo       = mqnic_get_drvinfo,
+    .get_ts_info       = mqnic_get_ts_info,
+    .get_module_info   = mqnic_get_module_info,
+    .get_module_eeprom = mqnic_get_module_eeprom,
 };
 

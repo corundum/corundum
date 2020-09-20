@@ -291,6 +291,8 @@ struct mqnic_priv {
     struct mqnic_port *ports[MQNIC_MAX_PORTS];
 
     struct hwtstamp_config hwts_config;
+
+    struct i2c_client *mod_i2c_client;
 };
 
 // mqnic_main.c

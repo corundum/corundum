@@ -310,6 +310,8 @@ int mqnic_init_i2c(struct mqnic_dev *mqnic)
 
         break;
     case MQNIC_BOARD_ID_VCU1525:
+    case MQNIC_BOARD_ID_AU200:
+    case MQNIC_BOARD_ID_AU250:
         // FPGA U13
         //   PCA9546 U28 0x74
         //     CH0: QSFP0 J7 0x50

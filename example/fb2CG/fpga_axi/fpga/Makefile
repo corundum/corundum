@@ -30,6 +30,7 @@ SYN_FILES += lib/pcie/rtl/pulse_merge.v
 
 # XDC files
 XDC_FILES = fpga.xdc
+XDC_FILES += led.tcl
 
 # IP
 IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl

@@ -450,12 +450,16 @@ assign axil_csr_rvalid = axil_csr_rvalid_reg;
 assign qsfp_0_reset_n = !qsfp_0_reset_reg;
 assign qsfp_0_lp_mode = qsfp_0_lp_mode_reg;
 assign qsfp_0_i2c_scl_o = qsfp_0_i2c_scl_o_reg;
+assign qsfp_0_i2c_scl_t = qsfp_0_i2c_scl_o_reg;
 assign qsfp_0_i2c_sda_o = qsfp_0_i2c_sda_o_reg;
+assign qsfp_0_i2c_sda_t = qsfp_0_i2c_sda_o_reg;
 
 assign qsfp_1_reset_n = !qsfp_1_reset_reg;
 assign qsfp_1_lp_mode = qsfp_1_lp_mode_reg;
 assign qsfp_1_i2c_scl_o = qsfp_1_i2c_scl_o_reg;
+assign qsfp_1_i2c_scl_t = qsfp_1_i2c_scl_o_reg;
 assign qsfp_1_i2c_sda_o = qsfp_1_i2c_sda_o_reg;
+assign qsfp_1_i2c_sda_t = qsfp_1_i2c_sda_o_reg;
 
 //assign pcie_dma_enable = pcie_dma_enable_reg;
 

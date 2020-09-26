@@ -27,9 +27,9 @@ THE SOFTWARE.
 `timescale 1ns / 1ps
 
 /*
- * DMA parallel simple dual port RAM
+ * DMA parallel simple dual port RAM (asynchronous)
  */
-module dma_psdpram #
+module dma_psdpram_async #
 (
     // RAM size
     parameter SIZE = 4096,
@@ -45,12 +45,11 @@ module dma_psdpram #
     parameter PIPELINE = 2
 )
 (
-    input  wire                                clk,
-    input  wire                                rst,
-
     /*
      * Write port
      */
+    input  wire                                clk_wr,
+    input  wire                                rst_wr,
     input  wire [SEG_COUNT*SEG_BE_WIDTH-1:0]   wr_cmd_be,
     input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0] wr_cmd_addr,
     input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0] wr_cmd_data,
@@ -60,6 +59,8 @@ module dma_psdpram #
     /*
      * Read port
      */
+    input  wire                                clk_rd,
+    input  wire                                rst_rd,
     input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0] rd_cmd_addr,
     input  wire [SEG_COUNT-1:0]                rd_cmd_valid,
     output wire [SEG_COUNT-1:0]                rd_cmd_ready,
@@ -105,7 +106,7 @@ generate
             end
         end
 
-        always @(posedge clk) begin
+        always @(posedge clk_wr) begin
             for (i = 0; i < SEG_BE_WIDTH; i = i + 1) begin
                 if (wr_cmd_valid[n] && wr_cmd_be[n*SEG_BE_WIDTH+i]) begin
                     mem_reg[wr_cmd_addr[SEG_ADDR_WIDTH*n +: INT_ADDR_WIDTH]][i*8 +: 8] <= wr_cmd_data[SEG_DATA_WIDTH*n+i*8 +: 8];
@@ -115,7 +116,7 @@ generate
 
         assign wr_cmd_ready[n] = 1'b1;
 
-        always @(posedge clk) begin
+        always @(posedge clk_rd) begin
             if (rd_resp_ready[n]) begin
                 rd_resp_valid_pipe_reg[PIPELINE-1] <= 1'b0;
             end
@@ -133,7 +134,7 @@ generate
                 rd_resp_data_pipe_reg[0] <= mem_reg[rd_cmd_addr[SEG_ADDR_WIDTH*n +: INT_ADDR_WIDTH]];
             end
 
-            if (rst) begin
+            if (rst_rd) begin
                 rd_resp_valid_pipe_reg <= 0;
             end
         end

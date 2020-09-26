@@ -1857,11 +1857,12 @@ dma_psdpram #(
     .PIPELINE(RAM_PIPELINE)
 )
 dma_psdpram_tx_inst (
+    .clk(clk),
+    .rst(rst),
+
     /*
      * Write port
      */
-    .clk_wr(clk),
-    .rst_wr(rst),
     .wr_cmd_be(dma_ram_wr_cmd_be),
     .wr_cmd_addr(dma_ram_wr_cmd_addr),
     .wr_cmd_data(dma_ram_wr_cmd_data),
@@ -1871,8 +1872,6 @@ dma_psdpram_tx_inst (
     /*
      * Read port
      */
-    .clk_rd(clk),
-    .rst_rd(rst),
     .rd_cmd_addr(dma_ram_rd_cmd_addr_int),
     .rd_cmd_valid(dma_ram_rd_cmd_valid_int),
     .rd_cmd_ready(dma_ram_rd_cmd_ready_int),
@@ -1963,11 +1962,12 @@ dma_psdpram #(
     .PIPELINE(RAM_PIPELINE)
 )
 dma_psdpram_rx_inst (
+    .clk(clk),
+    .rst(rst),
+
     /*
      * Write port
      */
-    .clk_wr(clk),
-    .rst_wr(rst),
     .wr_cmd_be(dma_ram_wr_cmd_be_int),
     .wr_cmd_addr(dma_ram_wr_cmd_addr_int),
     .wr_cmd_data(dma_ram_wr_cmd_data_int),
@@ -1977,8 +1977,6 @@ dma_psdpram_rx_inst (
     /*
      * Read port
      */
-    .clk_rd(clk),
-    .rst_rd(rst),
     .rd_cmd_addr(dma_ram_rd_cmd_addr),
     .rd_cmd_valid(dma_ram_rd_cmd_valid),
     .rd_cmd_ready(dma_ram_rd_cmd_ready),

@@ -1,14 +1,14 @@
-# Verilog Ethernet VCU1525 Example Design
+# Verilog Ethernet fb2CG@KU15P Example Design
 
 ## Introduction
 
-This example design targets the Xilinx VCU1525 FPGA board.
+This example design targets the Silicom fb2CG@KU15P FPGA board.
 
 The design by default listens to UDP port 1234 at IP address 192.168.1.128 and
 will echo back any packets received.  The design will also respond correctly
 to ARP requests.  
 
-FPGA: xcvu9p-fsgd2104-2L-e
+FPGA: xcku15p-ffve1760-2-e
 PHY: 10G BASE-R PHY IP core and internal GTY transceiver
 
 ## How to build
@@ -18,8 +18,7 @@ in PATH.
 
 ## How to test
 
-Run make program to program the VCU1525 board with Vivado.  Then run
+Run make program to program the fb2CG@KU15P board with Vivado.  Then run
 netcat -u 192.168.1.128 1234 to open a UDP connection to port 1234.  Any text
 entered into netcat will be echoed back after pressing enter.  
-
 

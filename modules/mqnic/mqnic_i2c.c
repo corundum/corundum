@@ -394,21 +394,6 @@ int mqnic_init_i2c(struct mqnic_dev *mqnic)
         mqnic->mod_i2c_client_count = 2;
 
         break;
-    }
-
-    // EEPROM I2C bus
-    switch (mqnic->board_id) {
-    case MQNIC_BOARD_ID_EXANIC_X10:
-    case MQNIC_BOARD_ID_EXANIC_X25:
-    case MQNIC_BOARD_ID_ADM_PCIE_9V3:
-
-        // create I2C adapter
-        adapter = mqnic_create_i2c_adapter(mqnic, mqnic->hw_addr+MQNIC_REG_GPIO_I2C_1);
-
-        // I2C EEPROM
-        mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c02", 0x50, NULL);
-
-        break;
     case MQNIC_BOARD_ID_FB2CG_KU15P:
         // FPGA U1 I2C0
         //     QSFP0 J3 0x50
@@ -430,6 +415,21 @@ int mqnic_init_i2c(struct mqnic_dev *mqnic)
         mqnic->mod_i2c_client[1] = create_i2c_client(adapter, "24c02", 0x50, NULL);
 
         mqnic->mod_i2c_client_count = 2;
+
+        break;
+    }
+
+    // EEPROM I2C bus
+    switch (mqnic->board_id) {
+    case MQNIC_BOARD_ID_EXANIC_X10:
+    case MQNIC_BOARD_ID_EXANIC_X25:
+    case MQNIC_BOARD_ID_ADM_PCIE_9V3:
+
+        // create I2C adapter
+        adapter = mqnic_create_i2c_adapter(mqnic, mqnic->hw_addr+MQNIC_REG_GPIO_I2C_1);
+
+        // I2C EEPROM
+        mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c02", 0x50, NULL);
 
         break;
     }

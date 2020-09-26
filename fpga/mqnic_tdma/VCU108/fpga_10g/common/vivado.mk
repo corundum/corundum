@@ -102,6 +102,7 @@ distclean: clean
 # implementation run
 %.runs/impl_1/%_routed.dcp: %.runs/synth_1/%.dcp
 	echo "open_project $*.xpr" > run_impl.tcl
+	echo "set_property strategy Performance_ExtraTimingOpt [get_runs impl_1]" >> run_impl.tcl
 	echo "reset_run impl_1" >> run_impl.tcl
 	echo "launch_runs impl_1" >> run_impl.tcl
 	echo "wait_on_run impl_1" >> run_impl.tcl

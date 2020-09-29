@@ -2013,8 +2013,8 @@ wire [PORT_COUNT*8-1:0] port_xgmii_txc;
 wire [PORT_COUNT*64-1:0] port_xgmii_rxd;
 wire [PORT_COUNT*8-1:0] port_xgmii_rxc;
 
-assign led[0] = pps_led_reg;
-assign led[7:1] = 0;
+assign led[6:0] = 0;
+assign led[7] = pps_led_reg;
 
 wire [IF_COUNT*32-1:0] if_msi_irq;
 

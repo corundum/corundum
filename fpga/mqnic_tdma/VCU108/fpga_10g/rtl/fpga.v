@@ -913,6 +913,14 @@ qsfp_phy_4_inst (
     .tx_prbs31_enable(qsfp_tx_prbs31_enable_4_int)
 );
 
+wire [7:0] led_int;
+
+assign led[0] = qsfp_rx_block_lock_1;
+assign led[1] = qsfp_rx_block_lock_2;
+assign led[2] = qsfp_rx_block_lock_3;
+assign led[3] = qsfp_rx_block_lock_4;
+assign led[7:4] = led_int[7:4];
+
 fpga_core #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
@@ -940,7 +948,7 @@ core_inst (
     .btnr(btnr_int),
     .btnc(btnc_int),
     .sw(sw_int),
-    .led(led),
+    .led(led_int),
     .pmod0(pmod0),
     .pmod1(pmod1),
 

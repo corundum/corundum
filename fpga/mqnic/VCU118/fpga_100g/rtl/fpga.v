@@ -613,6 +613,9 @@ wire                           qsfp2_rx_axis_tvalid_int;
 wire                           qsfp2_rx_axis_tlast_int;
 wire                           qsfp2_rx_axis_tuser_int;
 
+wire qsfp1_rx_status;
+wire qsfp2_rx_status;
+
 wire qsfp1_txuserclk2;
 
 assign qsfp1_tx_clk_int = qsfp1_txuserclk2;
@@ -797,7 +800,7 @@ qsfp1_cmac_inst (
 
     .stat_rx_received_local_fault(), // output
     .stat_rx_remote_fault(), // output
-    .stat_rx_status(), // output
+    .stat_rx_status(qsfp1_rx_status), // output
     .stat_rx_stomped_fcs(), // output [2:0]
     .stat_rx_synced(), // output [19:0]
     .stat_rx_synced_err(), // output [19:0]
@@ -1081,7 +1084,7 @@ qsfp2_cmac_inst (
 
     .stat_rx_received_local_fault(), // output
     .stat_rx_remote_fault(), // output
-    .stat_rx_status(), // output
+    .stat_rx_status(qsfp2_rx_status), // output
     .stat_rx_stomped_fcs(), // output [2:0]
     .stat_rx_synced(), // output [19:0]
     .stat_rx_synced_err(), // output [19:0]
@@ -1191,6 +1194,12 @@ qsfp2_cmac_inst (
     .drp_we(1'b0) // input
 );
 
+wire [7:0] led_int;
+
+assign led[0] = qsfp1_rx_status;
+assign led[1] = qsfp2_rx_status;
+assign led[7:2] = led_int[7:2];
+
 fpga_core #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
@@ -1218,7 +1227,7 @@ core_inst (
     .btnr(btnr_int),
     .btnc(btnc_int),
     .sw(sw_int),
-    .led(led),
+    .led(led_int),
     .pmod0(pmod0),
     .pmod1(pmod1),
 

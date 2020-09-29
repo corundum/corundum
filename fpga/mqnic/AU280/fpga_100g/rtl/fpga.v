@@ -539,6 +539,9 @@ wire                           qsfp1_rx_axis_tvalid_int;
 wire                           qsfp1_rx_axis_tlast_int;
 wire                           qsfp1_rx_axis_tuser_int;
 
+wire qsfp0_rx_status;
+wire qsfp1_rx_status;
+
 wire qsfp0_txuserclk2;
 
 assign qsfp0_tx_clk_int = qsfp0_txuserclk2;
@@ -723,7 +726,7 @@ qsfp0_cmac_inst (
 
     .stat_rx_received_local_fault(), // output
     .stat_rx_remote_fault(), // output
-    .stat_rx_status(), // output
+    .stat_rx_status(qsfp0_rx_status), // output
     .stat_rx_stomped_fcs(), // output [2:0]
     .stat_rx_synced(), // output [19:0]
     .stat_rx_synced_err(), // output [19:0]
@@ -1007,7 +1010,7 @@ qsfp1_cmac_inst (
 
     .stat_rx_received_local_fault(), // output
     .stat_rx_remote_fault(), // output
-    .stat_rx_status(), // output
+    .stat_rx_status(qsfp1_rx_status), // output
     .stat_rx_stomped_fcs(), // output [2:0]
     .stat_rx_synced(), // output [19:0]
     .stat_rx_synced_err(), // output [19:0]

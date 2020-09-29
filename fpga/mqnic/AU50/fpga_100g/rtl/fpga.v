@@ -485,6 +485,8 @@ wire                           qsfp_rx_axis_tvalid_int;
 wire                           qsfp_rx_axis_tlast_int;
 wire                           qsfp_rx_axis_tuser_int;
 
+wire qsfp_rx_status;
+
 wire qsfp_txuserclk2;
 
 assign qsfp_tx_clk_int = qsfp_txuserclk2;
@@ -664,7 +666,7 @@ qsfp_cmac_inst (
 
     .stat_rx_received_local_fault(), // output
     .stat_rx_remote_fault(), // output
-    .stat_rx_status(), // output
+    .stat_rx_status(qsfp_rx_status), // output
     .stat_rx_stomped_fcs(), // output [2:0]
     .stat_rx_synced(), // output [19:0]
     .stat_rx_synced_err(), // output [19:0]
@@ -774,6 +776,8 @@ qsfp_cmac_inst (
     .drp_we(1'b0) // input
 );
 
+assign qsfp_led_stat_g = qsfp_rx_status;
+
 fpga_core #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
@@ -796,7 +800,7 @@ core_inst (
      * GPIO
      */
     .qsfp_led_act(qsfp_led_act),
-    .qsfp_led_stat_g(qsfp_led_stat_g),
+    //.qsfp_led_stat_g(qsfp_led_stat_g),
     .qsfp_led_stat_y(qsfp_led_stat_y),
 
     /*

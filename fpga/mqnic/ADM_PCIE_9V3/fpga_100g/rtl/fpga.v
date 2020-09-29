@@ -666,6 +666,9 @@ wire                           qsfp_1_rx_axis_tvalid_int;
 wire                           qsfp_1_rx_axis_tlast_int;
 wire                           qsfp_1_rx_axis_tuser_int;
 
+wire qsfp_0_rx_status;
+wire qsfp_1_rx_status;
+
 wire qsfp_0_txuserclk2;
 
 assign qsfp_0_tx_clk_int = qsfp_0_txuserclk2;
@@ -850,7 +853,7 @@ qsfp_0_cmac_inst (
 
     .stat_rx_received_local_fault(), // output
     .stat_rx_remote_fault(), // output
-    .stat_rx_status(), // output
+    .stat_rx_status(qsfp_0_rx_status), // output
     .stat_rx_stomped_fcs(), // output [2:0]
     .stat_rx_synced(), // output [19:0]
     .stat_rx_synced_err(), // output [19:0]
@@ -1134,7 +1137,7 @@ qsfp_1_cmac_inst (
 
     .stat_rx_received_local_fault(), // output
     .stat_rx_remote_fault(), // output
-    .stat_rx_status(), // output
+    .stat_rx_status(qsfp_1_rx_status), // output
     .stat_rx_stomped_fcs(), // output [2:0]
     .stat_rx_synced(), // output [19:0]
     .stat_rx_synced_err(), // output [19:0]
@@ -1244,6 +1247,9 @@ qsfp_1_cmac_inst (
     .drp_we(1'b0) // input
 );
 
+assign front_led[0] = qsfp_0_rx_status;
+assign front_led[1] = qsfp_1_rx_status;
+
 fpga_core #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
@@ -1269,7 +1275,7 @@ core_inst (
      */
     .user_led_g(user_led_g),
     .user_led_r(user_led_r),
-    .front_led(front_led),
+    //.front_led(front_led),
     .user_sw(user_sw_int),
 
     /*

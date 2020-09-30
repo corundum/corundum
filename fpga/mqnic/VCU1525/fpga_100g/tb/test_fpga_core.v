@@ -120,6 +120,7 @@ reg qsfp1_rx_axis_tlast = 0;
 reg qsfp1_rx_axis_tuser = 0;
 reg qsfp1_modprsl = 1;
 reg qsfp1_intl = 1;
+reg [3:0] qspi_dq_i = 0;
 
 // Outputs
 wire [2:0] led;
@@ -174,6 +175,11 @@ wire qsfp1_tx_axis_tuser;
 wire qsfp1_modsell;
 wire qsfp1_resetl;
 wire qsfp1_lpmode;
+wire fpga_boot;
+wire qspi_clk;
+wire [3:0] qspi_dq_o;
+wire [3:0] qspi_dq_oe;
+wire qspi_cs;
 
 initial begin
     // myhdl integration
@@ -241,7 +247,8 @@ initial begin
         qsfp1_rx_axis_tlast,
         qsfp1_rx_axis_tuser,
         qsfp1_modprsl,
-        qsfp1_intl
+        qsfp1_intl,
+        qspi_dq_i
     );
     $to_myhdl(
         led,
@@ -295,7 +302,12 @@ initial begin
         qsfp1_tx_axis_tuser,
         qsfp1_modsell,
         qsfp1_resetl,
-        qsfp1_lpmode
+        qsfp1_lpmode,
+        fpga_boot,
+        qspi_clk,
+        qspi_dq_o,
+        qspi_dq_oe,
+        qspi_cs
     );
 
     // dump file
@@ -430,7 +442,13 @@ UUT (
     .qsfp1_modsell(qsfp1_modsell),
     .qsfp1_resetl(qsfp1_resetl),
     .qsfp1_intl(qsfp1_intl_int),
-    .qsfp1_lpmode(qsfp1_lpmode_int)
+    .qsfp1_lpmode(qsfp1_lpmode_int),
+    .fpga_boot(fpga_boot),
+    .qspi_clk(qspi_clk),
+    .qspi_dq_i(qspi_dq_i),
+    .qspi_dq_o(qspi_dq_o),
+    .qspi_dq_oe(qspi_dq_oe),
+    .qspi_cs(qspi_cs)
 );
 
 endmodule

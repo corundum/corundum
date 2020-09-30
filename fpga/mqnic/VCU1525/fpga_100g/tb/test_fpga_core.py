@@ -197,6 +197,7 @@ def bench():
     qsfp1_rx_axis_tuser = Signal(bool(0))
     qsfp1_modprsl = Signal(bool(1))
     qsfp1_intl = Signal(bool(1))
+    qspi_dq_i = Signal(intbv(0)[4:])
 
     # Outputs
     led = Signal(intbv(0)[3:])
@@ -251,6 +252,11 @@ def bench():
     qsfp1_modsell = Signal(bool(0))
     qsfp1_resetl = Signal(bool(0))
     qsfp1_lpmode = Signal(bool(0))
+    fpga_boot = Signal(bool(0))
+    qspi_clk = Signal(bool(0))
+    qspi_dq_o = Signal(intbv(0)[4:])
+    qspi_dq_oe = Signal(intbv(0)[4:])
+    qspi_cs = Signal(bool(0))
 
     # sources and sinks
     qsfp0_source = axis_ep.AXIStreamSource()
@@ -651,7 +657,13 @@ def bench():
         qsfp1_modsell=qsfp1_modsell,
         qsfp1_resetl=qsfp1_resetl,
         qsfp1_intl=qsfp1_intl,
-        qsfp1_lpmode=qsfp1_lpmode
+        qsfp1_lpmode=qsfp1_lpmode,
+        fpga_boot=fpga_boot,
+        qspi_clk=qspi_clk,
+        qspi_dq_i=qspi_dq_i,
+        qspi_dq_o=qspi_dq_o,
+        qspi_dq_oe=qspi_dq_oe,
+        qspi_cs=qspi_cs
     )
 
     @always(delay(5))

@@ -199,6 +199,7 @@ def bench():
     qsfp_1_intr_n = Signal(bool(0))
     qsfp_1_i2c_scl_i = Signal(bool(0))
     qsfp_1_i2c_sda_i = Signal(bool(0))
+    qspi_dq_i = Signal(intbv(0)[4:])
 
     # Outputs
     led_red = Signal(intbv(0)[7:])
@@ -258,6 +259,11 @@ def bench():
     qsfp_1_i2c_scl_t = Signal(bool(1))
     qsfp_1_i2c_sda_o = Signal(bool(1))
     qsfp_1_i2c_sda_t = Signal(bool(1))
+    fpga_boot = Signal(bool(0))
+    qspi_clk = Signal(bool(0))
+    qspi_dq_o = Signal(intbv(0)[4:])
+    qspi_dq_oe = Signal(intbv(0)[4:])
+    qspi_cs = Signal(bool(0))
 
     # sources and sinks
     qsfp_0_source = axis_ep.AXIStreamSource()
@@ -664,7 +670,13 @@ def bench():
         qsfp_1_i2c_scl_t=qsfp_1_i2c_scl_t,
         qsfp_1_i2c_sda_i=qsfp_1_i2c_sda_i,
         qsfp_1_i2c_sda_o=qsfp_1_i2c_sda_o,
-        qsfp_1_i2c_sda_t=qsfp_1_i2c_sda_t
+        qsfp_1_i2c_sda_t=qsfp_1_i2c_sda_t,
+        fpga_boot=fpga_boot,
+        qspi_clk=qspi_clk,
+        qspi_dq_i=qspi_dq_i,
+        qspi_dq_o=qspi_dq_o,
+        qspi_dq_oe=qspi_dq_oe,
+        qspi_cs=qspi_cs
     )
 
     @always(delay(5))

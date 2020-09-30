@@ -121,6 +121,7 @@ reg qsfp_1_mod_prsnt_n = 0;
 reg qsfp_1_intr_n = 0;
 reg qsfp_1_i2c_scl_i = 1;
 reg qsfp_1_i2c_sda_i = 1;
+reg [3:0] qspi_dq_i = 0;
 
 // Outputs
 wire [7:0] led_red;
@@ -180,6 +181,11 @@ wire qsfp_1_i2c_scl_o;
 wire qsfp_1_i2c_scl_t;
 wire qsfp_1_i2c_sda_o;
 wire qsfp_1_i2c_sda_t;
+wire fpga_boot;
+wire qspi_clk;
+wire [3:0] qspi_dq_o;
+wire [3:0] qspi_dq_oe;
+wire qspi_cs;
 
 initial begin
     // myhdl integration
@@ -248,7 +254,8 @@ initial begin
         qsfp_1_mod_prsnt_n,
         qsfp_1_intr_n,
         qsfp_1_i2c_scl_i,
-        qsfp_1_i2c_sda_i
+        qsfp_1_i2c_sda_i,
+        qspi_dq_i
     );
     $to_myhdl(
         led_red,
@@ -307,7 +314,12 @@ initial begin
         qsfp_1_i2c_scl_o,
         qsfp_1_i2c_scl_t,
         qsfp_1_i2c_sda_o,
-        qsfp_1_i2c_sda_t
+        qsfp_1_i2c_sda_t,
+        fpga_boot,
+        qspi_clk,
+        qspi_dq_o,
+        qspi_dq_oe,
+        qspi_cs
     );
 
     // dump file
@@ -448,7 +460,13 @@ UUT (
     .qsfp_1_i2c_scl_t(qsfp_1_i2c_scl_t),
     .qsfp_1_i2c_sda_i(qsfp_1_i2c_sda_i),
     .qsfp_1_i2c_sda_o(qsfp_1_i2c_sda_o),
-    .qsfp_1_i2c_sda_t(qsfp_1_i2c_sda_t)
+    .qsfp_1_i2c_sda_t(qsfp_1_i2c_sda_t),
+    .fpga_boot(fpga_boot),
+    .qspi_clk(qspi_clk),
+    .qspi_dq_i(qspi_dq_i),
+    .qspi_dq_o(qspi_dq_o),
+    .qspi_dq_oe(qspi_dq_oe),
+    .qspi_cs(qspi_cs)
 );
 
 endmodule

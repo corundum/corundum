@@ -208,7 +208,17 @@ module fpga_core #
     output wire                               qsfp_1_i2c_scl_t,
     input  wire                               qsfp_1_i2c_sda_i,
     output wire                               qsfp_1_i2c_sda_o,
-    output wire                               qsfp_1_i2c_sda_t
+    output wire                               qsfp_1_i2c_sda_t,
+
+    /*
+     * QSPI flash
+     */
+    output wire                               fpga_boot,
+    output wire                               qspi_clk,
+    input  wire [3:0]                         qspi_dq_i,
+    output wire [3:0]                         qspi_dq_o,
+    output wire [3:0]                         qspi_dq_oe,
+    output wire                               qspi_cs
 );
 
 // PHC parameters
@@ -424,6 +434,13 @@ reg qsfp_1_lp_mode_reg = 1'b0;
 reg qsfp_1_i2c_scl_o_reg = 1'b1;
 reg qsfp_1_i2c_sda_o_reg = 1'b1;
 
+reg fpga_boot_reg = 1'b0;
+
+reg qspi_clk_reg = 1'b0;
+reg qspi_cs_reg = 1'b1;
+reg [3:0] qspi_dq_o_reg = 4'd0;
+reg [3:0] qspi_dq_oe_reg = 4'd0;
+
 reg pcie_dma_enable_reg = 0;
 
 reg [95:0] get_ptp_ts_96_reg = 0;
@@ -461,6 +478,13 @@ assign qsfp_1_i2c_scl_t = qsfp_1_i2c_scl_o_reg;
 assign qsfp_1_i2c_sda_o = qsfp_1_i2c_sda_o_reg;
 assign qsfp_1_i2c_sda_t = qsfp_1_i2c_sda_o_reg;
 
+assign fpga_boot = fpga_boot_reg;
+
+assign qspi_clk = qspi_clk_reg;
+assign qspi_cs = qspi_cs_reg;
+assign qspi_dq_o = qspi_dq_o_reg;
+assign qspi_dq_oe = qspi_dq_oe_reg;
+
 //assign pcie_dma_enable = pcie_dma_enable_reg;
 
 always @(posedge clk_250mhz) begin
@@ -483,6 +507,10 @@ always @(posedge clk_250mhz) begin
         axil_csr_bvalid_reg <= 1'b1;
 
         case ({axil_csr_awaddr[15:2], 2'b00})
+            16'h0040: begin
+                // FPGA ID
+                fpga_boot_reg <= axil_csr_wdata == 32'hFEE1DEAD;
+            end
             // GPIO
             16'h0110: begin
                 // GPIO I2C 0
@@ -511,6 +539,20 @@ always @(posedge clk_250mhz) begin
                 if (axil_csr_wstrb[1]) begin
                     qsfp_1_reset_reg <= axil_csr_wdata[12];
                     qsfp_1_lp_mode_reg <= axil_csr_wdata[13];
+                end
+            end
+            // Flash
+            16'h0144: begin
+                // QSPI control
+                if (axil_csr_wstrb[0]) begin
+                    qspi_dq_o_reg <= axil_csr_wdata[3:0];
+                end
+                if (axil_csr_wstrb[1]) begin
+                    qspi_dq_oe_reg <= axil_csr_wdata[11:8];
+                end
+                if (axil_csr_wstrb[2]) begin
+                    qspi_clk_reg <= axil_csr_wdata[16];
+                    qspi_cs_reg <= axil_csr_wdata[17];
                 end
             end
             // PHC
@@ -582,6 +624,15 @@ always @(posedge clk_250mhz) begin
                 axil_csr_rdata_reg[12] <= qsfp_1_reset_reg;
                 axil_csr_rdata_reg[13] <= qsfp_1_lp_mode_reg;
             end
+            // Flash
+            16'h0140: axil_csr_rdata_reg <= {8'd0, 8'd4, 8'd1, 8'd0}; // Flash ID
+            16'h0144: begin
+                // QSPI control
+                axil_csr_rdata_reg[3:0] <= qspi_dq_i;
+                axil_csr_rdata_reg[11:8] <= qspi_dq_oe;
+                axil_csr_rdata_reg[16] <= qspi_clk;
+                axil_csr_rdata_reg[17] <= qspi_cs;
+            end
             // PHC
             16'h0200: axil_csr_rdata_reg <= {8'd0, 8'd0, 8'd0, 8'd0};  // PHC features
             16'h0210: axil_csr_rdata_reg <= ptp_ts_96[15:0];  // PTP cur fns
@@ -627,6 +678,13 @@ always @(posedge clk_250mhz) begin
         qsfp_1_lp_mode_reg <= 1'b0;
         qsfp_1_i2c_scl_o_reg <= 1'b1;
         qsfp_1_i2c_sda_o_reg <= 1'b1;
+
+        fpga_boot_reg <= 1'b0;
+
+        qspi_clk_reg <= 1'b0;
+        qspi_cs_reg <= 1'b1;
+        qspi_dq_o_reg <= 4'd0;
+        qspi_dq_oe_reg <= 4'd0;
 
         pcie_dma_enable_reg <= 1'b0;
     end

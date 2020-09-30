@@ -191,6 +191,7 @@ def bench():
     qsfp1_rx_axis_tvalid = Signal(bool(0))
     qsfp1_rx_axis_tlast = Signal(bool(0))
     qsfp1_rx_axis_tuser = Signal(bool(0))
+    qspi_dq_i = Signal(intbv(0)[4:])
 
     # Outputs
     m_axis_rq_tdata = Signal(intbv(0)[AXIS_PCIE_DATA_WIDTH:])
@@ -234,6 +235,11 @@ def bench():
     qsfp1_tx_axis_tvalid = Signal(bool(0))
     qsfp1_tx_axis_tlast = Signal(bool(0))
     qsfp1_tx_axis_tuser = Signal(bool(0))
+    fpga_boot = Signal(bool(0))
+    qspi_clk = Signal(bool(0))
+    qspi_dq_o = Signal(intbv(0)[4:])
+    qspi_dq_oe = Signal(intbv(0)[4:])
+    qspi_cs = Signal(bool(0))
 
     # sources and sinks
     qsfp0_source = axis_ep.AXIStreamSource()
@@ -616,7 +622,13 @@ def bench():
         qsfp1_rx_axis_tkeep=qsfp1_rx_axis_tkeep,
         qsfp1_rx_axis_tvalid=qsfp1_rx_axis_tvalid,
         qsfp1_rx_axis_tlast=qsfp1_rx_axis_tlast,
-        qsfp1_rx_axis_tuser=qsfp1_rx_axis_tuser
+        qsfp1_rx_axis_tuser=qsfp1_rx_axis_tuser,
+        fpga_boot=fpga_boot,
+        qspi_clk=qspi_clk,
+        qspi_dq_i=qspi_dq_i,
+        qspi_dq_o=qspi_dq_o,
+        qspi_dq_oe=qspi_dq_oe,
+        qspi_cs=qspi_cs
     )
 
     @always(delay(5))

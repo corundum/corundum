@@ -115,6 +115,7 @@ reg qsfp_rx_clk_4 = 0;
 reg qsfp_rx_rst_4 = 0;
 reg [63:0] qsfp_rxd_4 = 0;
 reg [7:0] qsfp_rxc_4 = 0;
+reg [3:0] qspi_dq_i = 0;
 
 // Outputs
 wire qsfp_led_act;
@@ -159,6 +160,11 @@ wire [63:0] qsfp_txd_3;
 wire [7:0] qsfp_txc_3;
 wire [63:0] qsfp_txd_4;
 wire [7:0] qsfp_txc_4;
+wire fpga_boot;
+wire qspi_clk;
+wire [3:0] qspi_dq_o;
+wire [3:0] qspi_dq_oe;
+wire qspi_cs;
 
 initial begin
     // myhdl integration
@@ -223,7 +229,8 @@ initial begin
         qsfp_rx_clk_4,
         qsfp_rx_rst_4,
         qsfp_rxd_4,
-        qsfp_rxc_4
+        qsfp_rxc_4,
+        qspi_dq_i
     );
     $to_myhdl(
         qsfp_led_act,
@@ -267,7 +274,12 @@ initial begin
         qsfp_txd_3,
         qsfp_txc_3,
         qsfp_txd_4,
-        qsfp_txc_4
+        qsfp_txc_4,
+        fpga_boot,
+        qspi_clk,
+        qspi_dq_o,
+        qspi_dq_oe,
+        qspi_cs
     );
 
     // dump file
@@ -387,7 +399,13 @@ UUT (
     .qsfp_rx_clk_4(qsfp_rx_clk_4),
     .qsfp_rx_rst_4(qsfp_rx_rst_4),
     .qsfp_rxd_4(qsfp_rxd_4),
-    .qsfp_rxc_4(qsfp_rxc_4)
+    .qsfp_rxc_4(qsfp_rxc_4),
+    .fpga_boot(fpga_boot),
+    .qspi_clk(qspi_clk),
+    .qspi_dq_i(qspi_dq_i),
+    .qspi_dq_o(qspi_dq_o),
+    .qspi_dq_oe(qspi_dq_oe),
+    .qspi_cs(qspi_cs)
 );
 
 endmodule

@@ -103,6 +103,7 @@ reg [AXIS_ETH_KEEP_WIDTH-1:0] qsfp_rx_axis_tkeep = 0;
 reg qsfp_rx_axis_tvalid = 0;
 reg qsfp_rx_axis_tlast = 0;
 reg qsfp_rx_axis_tuser = 0;
+reg [3:0] qspi_dq_i = 0;
 
 // Outputs
 wire qsfp_led_act;
@@ -144,6 +145,11 @@ wire [AXIS_ETH_KEEP_WIDTH-1:0] qsfp_tx_axis_tkeep;
 wire qsfp_tx_axis_tvalid;
 wire qsfp_tx_axis_tlast;
 wire qsfp_tx_axis_tuser;
+wire fpga_boot;
+wire qspi_clk;
+wire [3:0] qspi_dq_o;
+wire [3:0] qspi_dq_oe;
+wire qspi_cs;
 
 initial begin
     // myhdl integration
@@ -194,7 +200,8 @@ initial begin
         qsfp_rx_axis_tkeep,
         qsfp_rx_axis_tvalid,
         qsfp_rx_axis_tlast,
-        qsfp_rx_axis_tuser
+        qsfp_rx_axis_tuser,
+        qspi_dq_i
     );
     $to_myhdl(
         qsfp_led_act,
@@ -235,7 +242,12 @@ initial begin
         qsfp_tx_axis_tkeep,
         qsfp_tx_axis_tvalid,
         qsfp_tx_axis_tlast,
-        qsfp_tx_axis_tuser
+        qsfp_tx_axis_tuser,
+        fpga_boot,
+        qspi_clk,
+        qspi_dq_o,
+        qspi_dq_oe,
+        qspi_cs
     );
 
     // dump file
@@ -340,7 +352,13 @@ UUT (
     .qsfp_rx_axis_tkeep(qsfp_rx_axis_tkeep),
     .qsfp_rx_axis_tvalid(qsfp_rx_axis_tvalid),
     .qsfp_rx_axis_tlast(qsfp_rx_axis_tlast),
-    .qsfp_rx_axis_tuser(qsfp_rx_axis_tuser)
+    .qsfp_rx_axis_tuser(qsfp_rx_axis_tuser),
+    .fpga_boot(fpga_boot),
+    .qspi_clk(qspi_clk),
+    .qspi_dq_i(qspi_dq_i),
+    .qspi_dq_o(qspi_dq_o),
+    .qspi_dq_oe(qspi_dq_oe),
+    .qspi_cs(qspi_cs)
 );
 
 endmodule

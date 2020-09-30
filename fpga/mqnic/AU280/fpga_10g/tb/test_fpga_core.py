@@ -226,6 +226,7 @@ def bench():
     qsfp1_rx_rst_4 = Signal(bool(0))
     qsfp1_rxd_4 = Signal(intbv(0)[64:])
     qsfp1_rxc_4 = Signal(intbv(0)[8:])
+    qspi_dq_i = Signal(intbv(0)[4:])
 
     # Outputs
     m_axis_rq_tdata = Signal(intbv(0)[AXIS_PCIE_DATA_WIDTH:])
@@ -275,6 +276,11 @@ def bench():
     qsfp1_txc_3 = Signal(intbv(0)[8:])
     qsfp1_txd_4 = Signal(intbv(0)[64:])
     qsfp1_txc_4 = Signal(intbv(0)[8:])
+    fpga_boot = Signal(bool(0))
+    qspi_clk = Signal(bool(0))
+    qspi_dq_o = Signal(intbv(0)[4:])
+    qspi_dq_oe = Signal(intbv(0)[4:])
+    qspi_cs = Signal(bool(0))
 
     # sources and sinks
     qsfp0_1_source = xgmii_ep.XGMIISource()
@@ -677,7 +683,13 @@ def bench():
         qsfp1_rx_clk_4=qsfp1_rx_clk_4,
         qsfp1_rx_rst_4=qsfp1_rx_rst_4,
         qsfp1_rxd_4=qsfp1_rxd_4,
-        qsfp1_rxc_4=qsfp1_rxc_4
+        qsfp1_rxc_4=qsfp1_rxc_4,
+        fpga_boot=fpga_boot,
+        qspi_clk=qspi_clk,
+        qspi_dq_i=qspi_dq_i,
+        qspi_dq_o=qspi_dq_o,
+        qspi_dq_oe=qspi_dq_oe,
+        qspi_cs=qspi_cs
     )
 
     @always(delay(5))

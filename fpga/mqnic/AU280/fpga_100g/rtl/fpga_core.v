@@ -529,7 +529,7 @@ always @(posedge clk_250mhz) begin
                 // GPIO in
             end
             // Flash
-            16'h0140: axil_csr_rdata_reg <= {8'd0, 8'd4, 8'd1, 8'd0}; // Flash ID
+            16'h0140: axil_csr_rdata_reg <= {8'd0, 8'd4, 8'h81, 8'd0}; // Flash ID
             16'h0144: begin
                 // QSPI control
                 axil_csr_rdata_reg[3:0] <= qspi_dq_i;

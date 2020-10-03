@@ -167,6 +167,7 @@ wire eeprom_i2c_scl_o;
 wire eeprom_i2c_scl_t;
 wire eeprom_i2c_sda_o;
 wire eeprom_i2c_sda_t;
+wire fpga_boot;
 wire [15:0] flash_dq_o;
 wire flash_dq_oe;
 wire [22:0] flash_addr;
@@ -292,6 +293,7 @@ initial begin
         eeprom_i2c_scl_t,
         eeprom_i2c_sda_o,
         eeprom_i2c_sda_t,
+        fpga_boot,
         flash_dq_o,
         flash_dq_oe,
         flash_addr,
@@ -428,6 +430,7 @@ UUT (
     .eeprom_i2c_sda_i(eeprom_i2c_sda_i),
     .eeprom_i2c_sda_o(eeprom_i2c_sda_o),
     .eeprom_i2c_sda_t(eeprom_i2c_sda_t),
+    .fpga_boot(fpga_boot),
     .flash_dq_i(flash_dq_i),
     .flash_dq_o(flash_dq_o),
     .flash_dq_oe(flash_dq_oe),

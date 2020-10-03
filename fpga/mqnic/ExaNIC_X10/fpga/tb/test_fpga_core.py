@@ -251,6 +251,7 @@ def bench():
     eeprom_i2c_scl_t = Signal(bool(1))
     eeprom_i2c_sda_o = Signal(bool(1))
     eeprom_i2c_sda_t = Signal(bool(1))
+    fpga_boot = Signal(bool(0))
     flash_dq_o = Signal(intbv(0)[16:])
     flash_dq_oe = Signal(bool(0))
     flash_addr = Signal(intbv(0)[23:])
@@ -594,6 +595,7 @@ def bench():
         eeprom_i2c_sda_i=eeprom_i2c_sda_i,
         eeprom_i2c_sda_o=eeprom_i2c_sda_o,
         eeprom_i2c_sda_t=eeprom_i2c_sda_t,
+        fpga_boot=fpga_boot,
         flash_dq_i=flash_dq_i,
         flash_dq_o=flash_dq_o,
         flash_dq_oe=flash_dq_oe,

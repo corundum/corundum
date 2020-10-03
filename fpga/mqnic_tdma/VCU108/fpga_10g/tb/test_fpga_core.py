@@ -262,10 +262,11 @@ def bench():
     qsfp_modsell = Signal(bool(0))
     qsfp_resetl = Signal(bool(1))
     qsfp_lpmode = Signal(bool(0))
+    fpga_boot = Signal(bool(0))
     flash_dq_o = Signal(intbv(0)[16:])
     flash_dq_oe = Signal(bool(0))
-    flash_addr = Signal(intbv(0)[23:])
-    flash_region = Signal(bool(0))
+    flash_addr = Signal(intbv(0)[24:])
+    flash_region = Signal(intbv(0)[2:])
     flash_region_oe = Signal(bool(0))
     flash_ce_n = Signal(bool(1))
     flash_oe_n = Signal(bool(1))
@@ -625,6 +626,7 @@ def bench():
         qsfp_modprsl=qsfp_modprsl,
         qsfp_intl=qsfp_intl,
         qsfp_lpmode=qsfp_lpmode,
+        fpga_boot=fpga_boot,
         flash_dq_i=flash_dq_i,
         flash_dq_o=flash_dq_o,
         flash_dq_oe=flash_dq_oe,

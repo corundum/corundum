@@ -122,8 +122,8 @@ reg qsfp_rx_clk_4 = 0;
 reg qsfp_rx_rst_4 = 0;
 reg [63:0] qsfp_rxd_4 = 0;
 reg [7:0] qsfp_rxc_4 = 0;
-reg qsfp_modprsl = 1'b1;
-reg qsfp_intl = 1'b1;
+reg qsfp_modprsl = 1;
+reg qsfp_intl = 1;
 reg [15:0] flash_dq_i = 0;
 
 // Outputs
@@ -173,10 +173,11 @@ wire [7:0] qsfp_txc_4;
 wire qsfp_modsell;
 wire qsfp_resetl;
 wire qsfp_lpmode;
+wire fpga_boot;
 wire [15:0] flash_dq_o;
 wire flash_dq_oe;
-wire [22:0] flash_addr;
-wire flash_region;
+wire [23:0] flash_addr;
+wire [1:0] flash_region;
 wire flash_region_oe;
 wire flash_ce_n;
 wire flash_oe_n;
@@ -305,6 +306,7 @@ initial begin
         qsfp_modsell,
         qsfp_resetl,
         qsfp_lpmode,
+        fpga_boot,
         flash_dq_o,
         flash_dq_oe,
         flash_addr,
@@ -447,6 +449,7 @@ UUT (
     .qsfp_resetl(qsfp_resetl),
     .qsfp_intl(qsfp_intl),
     .qsfp_lpmode(qsfp_lpmode),
+    .fpga_boot(fpga_boot),
     .flash_dq_i(flash_dq_i),
     .flash_dq_o(flash_dq_o),
     .flash_dq_oe(flash_dq_oe),

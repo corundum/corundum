@@ -215,11 +215,12 @@ module fpga_core #
     /*
      * BPI Flash
      */
+    output wire                               fpga_boot,
     input  wire [15:0]                        flash_dq_i,
     output wire [15:0]                        flash_dq_o,
     output wire                               flash_dq_oe,
-    output wire [22:0]                        flash_addr,
-    output wire                               flash_region,
+    output wire [23:0]                        flash_addr,
+    output wire [1:0]                         flash_region,
     output wire                               flash_region_oe,
     output wire                               flash_ce_n,
     output wire                               flash_oe_n,
@@ -464,10 +465,12 @@ reg qsfp_lpmode_reg = 1'b0;
 reg i2c_scl_o_reg = 1'b1;
 reg i2c_sda_o_reg = 1'b1;
 
+reg fpga_boot_reg = 1'b0;
+
 reg [15:0] flash_dq_o_reg = 16'd0;
 reg flash_dq_oe_reg = 1'b0;
-reg [22:0] flash_addr_reg = 23'd0;
-reg flash_region_reg = 1'b0;
+reg [23:0] flash_addr_reg = 24'd0;
+reg [1:0] flash_region_reg = 2'd0;
 reg flash_region_oe_reg = 1'b0;
 reg flash_ce_n_reg = 1'b1;
 reg flash_oe_n_reg = 1'b1;
@@ -513,6 +516,8 @@ assign i2c_scl_t = i2c_scl_o_reg;
 assign i2c_sda_o = i2c_sda_o_reg;
 assign i2c_sda_t = i2c_sda_o_reg;
 
+assign fpga_boot = fpga_boot_reg;
+
 assign flash_dq_o = flash_dq_o_reg;
 assign flash_dq_oe = flash_dq_oe_reg;
 assign flash_addr = flash_addr_reg;
@@ -549,6 +554,10 @@ always @(posedge clk_250mhz) begin
         axil_csr_bvalid_reg <= 1'b1;
 
         case ({axil_csr_awaddr[15:2], 2'b00})
+            16'h0040: begin
+                // FPGA ID
+                fpga_boot_reg <= axil_csr_wdata == 32'hFEE1DEAD;
+            end
             // GPIO
             16'h0110: begin
                 // GPIO I2C 0
@@ -569,8 +578,8 @@ always @(posedge clk_250mhz) begin
             // Flash
             16'h0144: begin
                 // Flash address
-                flash_addr_reg <= axil_csr_wdata[22:0];
-                flash_region_reg <= axil_csr_wdata[23];
+                flash_addr_reg <= axil_csr_wdata[23:0];
+                flash_region_reg <= axil_csr_wdata[25:24];
             end
             16'h0148: flash_dq_o_reg <= axil_csr_wdata; // Flash data
             16'h014C: begin
@@ -678,8 +687,8 @@ always @(posedge clk_250mhz) begin
             16'h0140: axil_csr_rdata_reg <= {8'd26, 8'd16, 8'd4, 8'd1}; // Flash ID
             16'h0144: begin
                 // Flash address
-                axil_csr_rdata_reg[22:0] <= flash_addr_reg;
-                axil_csr_rdata_reg[23] <= flash_region_reg;
+                axil_csr_rdata_reg[23:0] <= flash_addr_reg;
+                axil_csr_rdata_reg[25:24] <= flash_region_reg;
             end
             16'h0148: axil_csr_rdata_reg <= flash_dq_i; // Flash data
             16'h014C: begin
@@ -689,7 +698,7 @@ always @(posedge clk_250mhz) begin
                 axil_csr_rdata_reg[2] <= flash_we_n_reg; // write enable (inverted)
                 axil_csr_rdata_reg[3] <= flash_adv_n_reg; // address valid (inverted)
                 axil_csr_rdata_reg[8] <= flash_dq_oe_reg; // data output enable
-                axil_csr_rdata_reg[16] <= flash_region_oe_reg; // region output enable (addr bit 23)
+                axil_csr_rdata_reg[16] <= flash_region_oe_reg; // region output enable (addr bit 25)
             end
             // PHC
             16'h0200: axil_csr_rdata_reg <= {8'd0, 8'd0, 8'd0, 8'd1};  // PHC features
@@ -754,10 +763,12 @@ always @(posedge clk_250mhz) begin
         i2c_scl_o_reg <= 1'b1;
         i2c_sda_o_reg <= 1'b1;
 
+        fpga_boot_reg <= 1'b0;
+
         flash_dq_o_reg <= 16'd0;
         flash_dq_oe_reg <= 1'b0;
-        flash_addr_reg <= 23'd0;
-        flash_region_reg <= 1'b0;
+        flash_addr_reg <= 24'd0;
+        flash_region_reg <= 2'b0;
         flash_region_oe_reg <= 1'b0;
         flash_ce_n_reg <= 1'b1;
         flash_oe_n_reg <= 1'b1;

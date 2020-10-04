@@ -265,6 +265,7 @@ module fpga_core #
     /*
      * QSPI flash
      */
+    output wire                               fpga_boot,
     output wire                               qspi_clk,
     input  wire [3:0]                         qspi_0_dq_i,
     output wire [3:0]                         qspi_0_dq_o,
@@ -513,6 +514,8 @@ reg qsfp_i2c_sda_o_reg = 1'b1;
 reg eeprom_i2c_scl_o_reg = 1'b1;
 reg eeprom_i2c_sda_o_reg = 1'b1;
 
+reg fpga_boot_reg = 1'b0;
+
 reg qspi_clk_reg = 1'b0;
 reg qspi_0_cs_reg = 1'b1;
 reg [3:0] qspi_0_dq_o_reg = 4'd0;
@@ -560,6 +563,8 @@ assign eeprom_i2c_sda_o = eeprom_i2c_sda_o_reg;
 assign eeprom_i2c_sda_t = eeprom_i2c_sda_o_reg;
 assign eeprom_wp = 1'b0;
 
+assign fpga_boot = fpga_boot_reg;
+
 assign qspi_clk = qspi_clk_reg;
 assign qspi_0_cs = qspi_0_cs_reg;
 assign qspi_0_dq_o = qspi_0_dq_o_reg;
@@ -590,6 +595,10 @@ always @(posedge clk_250mhz) begin
         axil_csr_bvalid_reg <= 1'b1;
 
         case ({axil_csr_awaddr[15:2], 2'b00})
+            16'h0040: begin
+                // FPGA ID
+                fpga_boot_reg <= axil_csr_wdata == 32'hFEE1DEAD;
+            end
             // GPIO
             16'h0110: begin
                 // GPIO I2C 0
@@ -780,6 +789,8 @@ always @(posedge clk_250mhz) begin
 
         eeprom_i2c_scl_o_reg <= 1'b1;
         eeprom_i2c_sda_o_reg <= 1'b1;
+
+        fpga_boot_reg <= 1'b0;
 
         qspi_clk_reg <= 1'b0;
         qspi_0_cs_reg <= 1'b1;

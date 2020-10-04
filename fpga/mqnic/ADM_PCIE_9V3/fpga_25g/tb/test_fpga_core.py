@@ -301,6 +301,7 @@ def bench():
     eeprom_i2c_sda_o = Signal(bool(1))
     eeprom_i2c_sda_t = Signal(bool(1))
     eeprom_wp = Signal(bool(1))
+    fpga_boot = Signal(bool(0))
     qspi_clk = Signal(bool(0))
     qspi_0_dq_o = Signal(intbv(0)[4:])
     qspi_0_dq_oe = Signal(intbv(0)[4:])
@@ -734,6 +735,7 @@ def bench():
         eeprom_i2c_sda_o=eeprom_i2c_sda_o,
         eeprom_i2c_sda_t=eeprom_i2c_sda_t,
         eeprom_wp=eeprom_wp,
+        fpga_boot=fpga_boot,
         qspi_clk=qspi_clk,
         qspi_0_dq_i=qspi_0_dq_i,
         qspi_0_dq_o=qspi_0_dq_o,

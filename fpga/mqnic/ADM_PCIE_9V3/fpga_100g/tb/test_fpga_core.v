@@ -181,6 +181,7 @@ wire eeprom_i2c_scl_t;
 wire eeprom_i2c_sda_o;
 wire eeprom_i2c_sda_t;
 wire eeprom_wp;
+wire fpga_boot;
 wire qspi_clk;
 wire [3:0] qspi_0_dq_o;
 wire [3:0] qspi_0_dq_oe;
@@ -317,6 +318,7 @@ initial begin
         eeprom_i2c_sda_o,
         eeprom_i2c_sda_t,
         eeprom_wp,
+        fpga_boot,
         qspi_clk,
         qspi_0_dq_o,
         qspi_0_dq_oe,
@@ -464,6 +466,7 @@ UUT (
     .eeprom_i2c_sda_o(eeprom_i2c_sda_o),
     .eeprom_i2c_sda_t(eeprom_i2c_sda_t),
     .eeprom_wp(eeprom_wp),
+    .fpga_boot(fpga_boot),
     .qspi_clk(qspi_clk),
     .qspi_0_dq_i(qspi_0_dq_i),
     .qspi_0_dq_o(qspi_0_dq_o),

@@ -15,7 +15,7 @@ mqnic-config: mqnic-config.c mqnic.c timespec.c
 mqnic-dump: mqnic-dump.c mqnic.c
 	$(CC) $(CFLAGS) $^ -o $@
 
-mqnic-fw: mqnic-fw.c mqnic.c
+mqnic-fw: mqnic-fw.c mqnic.c flash.c flash_spi.c flash_bpi.c fpga_id.c bitfile.c
 	$(CC) $(CFLAGS) $^ -o $@
 
 perout: perout.c timespec.c

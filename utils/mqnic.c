@@ -34,8 +34,10 @@ either expressed or implied, of The Regents of the University of California.
 #include "mqnic.h"
 
 #include <fcntl.h>
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -84,6 +86,31 @@ struct mqnic *mqnic_open(const char *dev_name)
     {
         perror("mmap regs failed");
         goto fail_mmap_regs;
+    }
+
+    if (mqnic_reg_read32(dev->regs, MQNIC_REG_FW_ID) == 0xffffffff)
+    {
+        // if we were given a PCIe resource, then we may need to enable the device
+        char path[PATH_MAX+32];
+        char *ptr;
+
+        strcpy(path, dev_name);
+        ptr = strrchr(path, '/');
+        if (ptr)
+        {
+            strcpy(++ptr, "enable");
+        }
+
+        if (access(path, F_OK) != -1)
+        {
+            FILE *fp = fopen(path, "w");
+
+            if (fp)
+            {
+                fputc('1', fp);
+                fclose(fp);
+            }
+        }
     }
 
     if (mqnic_reg_read32(dev->regs, MQNIC_REG_FW_ID) == 0xffffffff)

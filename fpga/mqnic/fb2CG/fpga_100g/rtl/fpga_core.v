@@ -68,6 +68,10 @@ module fpga_core #
     output wire [1:0]                         led_bmc,
     output wire [1:0]                         led_exp,
 
+    input  wire                               pps_in,
+    output wire                               pps_out,
+    output wire                               pps_out_en,
+
     /*
      * PCIe
      */
@@ -416,6 +420,11 @@ wire [95:0] ptp_ts_96;
 wire ptp_ts_step;
 wire ptp_pps;
 
+reg ptp_perout_enable_reg = 1'b0;
+wire ptp_perout_locked;
+wire ptp_perout_error;
+wire ptp_perout_pulse;
+
 // control registers
 reg axil_csr_awready_reg = 1'b0;
 reg axil_csr_wready_reg = 1'b0;
@@ -454,6 +463,13 @@ reg [PTP_FNS_WIDTH-1:0] set_ptp_offset_fns_reg = 0;
 reg [15:0] set_ptp_offset_count_reg = 0;
 reg set_ptp_offset_valid_reg = 0;
 wire set_ptp_offset_active;
+
+reg [95:0] set_ptp_perout_start_ts_96_reg = 0;
+reg set_ptp_perout_start_ts_96_valid_reg = 0;
+reg [95:0] set_ptp_perout_period_ts_96_reg = 0;
+reg set_ptp_perout_period_ts_96_valid_reg = 0;
+reg [95:0] set_ptp_perout_width_ts_96_reg = 0;
+reg set_ptp_perout_width_ts_96_valid_reg = 0;
 
 assign axil_csr_awready = axil_csr_awready_reg;
 assign axil_csr_wready = axil_csr_wready_reg;
@@ -499,6 +515,10 @@ always @(posedge clk_250mhz) begin
     set_ptp_ts_96_valid_reg <= 1'b0;
     set_ptp_period_valid_reg <= 1'b0;
     set_ptp_offset_valid_reg <= 1'b0;
+
+    set_ptp_perout_start_ts_96_valid_reg <= 1'b0;
+    set_ptp_perout_period_ts_96_valid_reg <= 1'b0;
+    set_ptp_perout_width_ts_96_valid_reg <= 1'b0;
 
     if (axil_csr_awvalid && axil_csr_wvalid && !axil_csr_bvalid) begin
         // write operation
@@ -577,6 +597,34 @@ always @(posedge clk_250mhz) begin
                 set_ptp_offset_count_reg <= axil_csr_wdata;
                 set_ptp_offset_valid_reg <= 1'b1;
             end
+            16'h0260: begin
+                // PTP perout control
+                ptp_perout_enable_reg <= axil_csr_wdata[0];
+            end
+            16'h0270: set_ptp_perout_start_ts_96_reg[15:0] <= axil_csr_wdata;  // PTP perout start fns
+            16'h0274: set_ptp_perout_start_ts_96_reg[45:16] <= axil_csr_wdata; // PTP perout start ns
+            16'h0278: set_ptp_perout_start_ts_96_reg[79:48] <= axil_csr_wdata; // PTP perout start sec l
+            16'h027C: begin
+                // PTP perout start sec h
+                set_ptp_perout_start_ts_96_reg[95:80] <= axil_csr_wdata;
+                set_ptp_perout_start_ts_96_valid_reg <= 1'b1;
+            end
+            16'h0280: set_ptp_perout_period_ts_96_reg[15:0] <= axil_csr_wdata;  // PTP perout period fns
+            16'h0284: set_ptp_perout_period_ts_96_reg[45:16] <= axil_csr_wdata; // PTP perout period ns
+            16'h0288: set_ptp_perout_period_ts_96_reg[79:48] <= axil_csr_wdata; // PTP perout period sec l
+            16'h028C: begin
+                // PTP perout period sec h
+                set_ptp_perout_period_ts_96_reg[95:80] <= axil_csr_wdata;
+                set_ptp_perout_period_ts_96_valid_reg <= 1'b1;
+            end
+            16'h0290: set_ptp_perout_width_ts_96_reg[15:0] <= axil_csr_wdata;  // PTP perout width fns
+            16'h0294: set_ptp_perout_width_ts_96_reg[45:16] <= axil_csr_wdata; // PTP perout width ns
+            16'h0298: set_ptp_perout_width_ts_96_reg[79:48] <= axil_csr_wdata; // PTP perout width sec l
+            16'h029C: begin
+                // PTP perout width sec h
+                set_ptp_perout_width_ts_96_reg[95:80] <= axil_csr_wdata;
+                set_ptp_perout_width_ts_96_valid_reg <= 1'b1;
+            end
         endcase
     end
 
@@ -634,7 +682,7 @@ always @(posedge clk_250mhz) begin
                 axil_csr_rdata_reg[17] <= qspi_cs;
             end
             // PHC
-            16'h0200: axil_csr_rdata_reg <= {8'd0, 8'd0, 8'd0, 8'd0};  // PHC features
+            16'h0200: axil_csr_rdata_reg <= {8'd0, 8'd0, 8'd0, 8'd1};  // PHC features
             16'h0210: axil_csr_rdata_reg <= ptp_ts_96[15:0];  // PTP cur fns
             16'h0214: axil_csr_rdata_reg <= ptp_ts_96[45:16]; // PTP cur ns
             16'h0218: axil_csr_rdata_reg <= ptp_ts_96[79:48]; // PTP cur sec l
@@ -659,6 +707,27 @@ always @(posedge clk_250mhz) begin
             16'h0254: axil_csr_rdata_reg <= set_ptp_offset_ns_reg;    // PTP offset ns
             16'h0258: axil_csr_rdata_reg <= set_ptp_offset_count_reg; // PTP offset count
             16'h025C: axil_csr_rdata_reg <= set_ptp_offset_active;    // PTP offset status
+            16'h0260: begin
+                // PTP perout control
+                axil_csr_rdata_reg[0] <= ptp_perout_enable_reg;
+            end
+            16'h0264: begin
+                // PTP perout status
+                axil_csr_rdata_reg[0] <= ptp_perout_locked;
+                axil_csr_rdata_reg[1] <= ptp_perout_error;
+            end
+            16'h0270: axil_csr_rdata_reg <= set_ptp_perout_start_ts_96_reg[15:0];  // PTP perout start fns
+            16'h0274: axil_csr_rdata_reg <= set_ptp_perout_start_ts_96_reg[45:16]; // PTP perout start ns
+            16'h0278: axil_csr_rdata_reg <= set_ptp_perout_start_ts_96_reg[79:48]; // PTP perout start sec l
+            16'h027C: axil_csr_rdata_reg <= set_ptp_perout_start_ts_96_reg[95:80]; // PTP perout start sec h
+            16'h0280: axil_csr_rdata_reg <= set_ptp_perout_period_ts_96_reg[15:0];  // PTP perout period fns
+            16'h0284: axil_csr_rdata_reg <= set_ptp_perout_period_ts_96_reg[45:16]; // PTP perout period ns
+            16'h0288: axil_csr_rdata_reg <= set_ptp_perout_period_ts_96_reg[79:48]; // PTP perout period sec l
+            16'h028C: axil_csr_rdata_reg <= set_ptp_perout_period_ts_96_reg[95:80]; // PTP perout period sec h
+            16'h0290: axil_csr_rdata_reg <= set_ptp_perout_width_ts_96_reg[15:0];  // PTP perout width fns
+            16'h0294: axil_csr_rdata_reg <= set_ptp_perout_width_ts_96_reg[45:16]; // PTP perout width ns
+            16'h0298: axil_csr_rdata_reg <= set_ptp_perout_width_ts_96_reg[79:48]; // PTP perout width sec l
+            16'h029C: axil_csr_rdata_reg <= set_ptp_perout_width_ts_96_reg[95:80]; // PTP perout width sec h
         endcase
     end
 
@@ -687,6 +756,8 @@ always @(posedge clk_250mhz) begin
         qspi_dq_oe_reg <= 4'd0;
 
         pcie_dma_enable_reg <= 1'b0;
+
+        ptp_perout_enable_reg <= 1'b0;
     end
 end
 
@@ -1895,6 +1966,38 @@ ptp_clock_inst (
      * PPS output
      */
     .output_pps(ptp_pps)
+);
+
+assign pps_out = ptp_perout_pulse;
+assign pps_out_en = 1'b1;
+
+ptp_perout #(
+    .FNS_ENABLE(0),
+    .OUT_START_S(0),
+    .OUT_START_NS(0),
+    .OUT_START_FNS(0),
+    .OUT_PERIOD_S(1),
+    .OUT_PERIOD_NS(0),
+    .OUT_PERIOD_FNS(0),
+    .OUT_WIDTH_S(0),
+    .OUT_WIDTH_NS(500000000),
+    .OUT_WIDTH_FNS(0)
+)
+ptp_perout_inst (
+    .clk(clk_250mhz),
+    .rst(rst_250mhz),
+    .input_ts_96(ptp_ts_96),
+    .input_ts_step(ptp_ts_step),
+    .enable(ptp_perout_enable_reg),
+    .input_start(set_ptp_perout_start_ts_96_reg),
+    .input_start_valid(set_ptp_perout_start_ts_96_valid_reg),
+    .input_period(set_ptp_perout_period_ts_96_reg),
+    .input_period_valid(set_ptp_perout_period_ts_96_valid_reg),
+    .input_width(set_ptp_perout_width_ts_96_reg),
+    .input_width_valid(set_ptp_perout_width_ts_96_valid_reg),
+    .locked(ptp_perout_locked),
+    .error(ptp_perout_error),
+    .output_pulse(ptp_perout_pulse)
 );
 
 reg [26:0] pps_led_counter_reg = 0;

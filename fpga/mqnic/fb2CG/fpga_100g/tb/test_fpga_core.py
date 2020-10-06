@@ -137,6 +137,7 @@ def bench():
 
     clk_250mhz = Signal(bool(0))
     rst_250mhz = Signal(bool(0))
+    pps_in = Signal(bool(0))
     m_axis_rq_tready = Signal(bool(0))
     s_axis_rc_tdata = Signal(intbv(0)[AXIS_PCIE_DATA_WIDTH:])
     s_axis_rc_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
@@ -206,6 +207,8 @@ def bench():
     led_green = Signal(intbv(0)[7:])
     led_bmc = Signal(intbv(0)[2:])
     led_exp = Signal(intbv(0)[2:])
+    pps_out = Signal(bool(0))
+    pps_out_en = Signal(bool(0))
     m_axis_rq_tdata = Signal(intbv(0)[AXIS_PCIE_DATA_WIDTH:])
     m_axis_rq_tkeep = Signal(intbv(0)[AXIS_PCIE_KEEP_WIDTH:])
     m_axis_rq_tlast = Signal(bool(0))
@@ -556,6 +559,9 @@ def bench():
         led_green=led_green,
         led_bmc=led_bmc,
         led_exp=led_exp,
+        pps_in=pps_in,
+        pps_out=pps_out,
+        pps_out_en=pps_out_en,
         m_axis_rq_tdata=m_axis_rq_tdata,
         m_axis_rq_tkeep=m_axis_rq_tkeep,
         m_axis_rq_tlast=m_axis_rq_tlast,

@@ -59,6 +59,7 @@ reg [7:0] current_test = 0;
 
 reg clk_250mhz = 0;
 reg rst_250mhz = 0;
+reg pps_in = 0;
 reg m_axis_rq_tready = 0;
 reg [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_rc_tdata = 0;
 reg [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_rc_tkeep = 0;
@@ -128,6 +129,8 @@ wire [7:0] led_red;
 wire [7:0] led_green;
 wire [1:0] led_bmc;
 wire [1:0] led_exp;
+wire pps_out;
+wire pps_out_en;
 wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata;
 wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rq_tkeep;
 wire m_axis_rq_tlast;
@@ -193,6 +196,7 @@ initial begin
         clk_250mhz,
         rst_250mhz,
         current_test,
+        pps_in,
         m_axis_rq_tready,
         s_axis_rc_tdata,
         s_axis_rc_tkeep,
@@ -262,6 +266,8 @@ initial begin
         led_green,
         led_bmc,
         led_exp,
+        pps_out,
+        pps_out_en,
         m_axis_rq_tdata,
         m_axis_rq_tkeep,
         m_axis_rq_tlast,
@@ -346,6 +352,9 @@ UUT (
     .led_green(led_green),
     .led_bmc(led_bmc),
     .led_exp(led_exp),
+    .pps_in(pps_in),
+    .pps_out(pps_out),
+    .pps_out_en(pps_out_en),
     .m_axis_rq_tdata(m_axis_rq_tdata),
     .m_axis_rq_tkeep(m_axis_rq_tkeep),
     .m_axis_rq_tlast(m_axis_rq_tlast),

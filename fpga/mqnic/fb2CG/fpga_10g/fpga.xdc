@@ -42,9 +42,9 @@ set_property -dict {LOC D3   IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 4} [get_ports {
 set_property -dict {LOC D4   IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 4} [get_ports {led_exp[1]}]
 
 # GPIO
-#set_property -dict {LOC B4   IOSTANDARD LVCMOS33} [get_ports pps_in] ;# from SMA J6 via Q1 (inverted)
-#set_property -dict {LOC A4   IOSTANDARD LVCMOS33 SLEW FAST DRIVE 4} [get_ports pps_out] ;# to SMA J6 via U4 and U5, and u.FL J7 (PPS OUT) via U3
-#set_property -dict {LOC A3   IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 4} [get_ports pps_out_en] ; # to U5 IN (connects pps_out to SMA J6 when high)
+set_property -dict {LOC B4   IOSTANDARD LVCMOS33} [get_ports pps_in] ;# from SMA J6 via Q1 (inverted)
+set_property -dict {LOC A4   IOSTANDARD LVCMOS33 SLEW FAST DRIVE 4} [get_ports pps_out] ;# to SMA J6 via U4 and U5, and u.FL J7 (PPS OUT) via U3
+set_property -dict {LOC A3   IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 4} [get_ports pps_out_en] ; # to U5 IN (connects pps_out to SMA J6 when high)
 #set_property -dict {LOC H2   IOSTANDARD LVCMOS33} [get_ports misc_ucoax] ; from u.FL J5 (PPS IN)
 
 # BMC interface

@@ -53,6 +53,10 @@ module fpga (
     output wire [1:0]   led_bmc,
     output wire [1:0]   led_exp,
 
+    input  wire         pps_in,
+    output wire         pps_out,
+    output wire         pps_out_en,
+
     /*
      * Board status
      */
@@ -1405,6 +1409,10 @@ core_inst (
     //.led_green(led_green),
     .led_bmc(led_bmc),
     .led_exp(led_exp),
+
+    .pps_in(pps_in),
+    .pps_out(pps_out),
+    .pps_out_en(pps_out_en),
 
     /*
      * PCIe

@@ -239,6 +239,8 @@ def bench():
     qsfp2_rxc_4 = Signal(intbv(0)[8:])
     qsfp2_modprsl = Signal(bool(1))
     qsfp2_intl = Signal(bool(1))
+    qspi_0_dq_i = Signal(intbv(0)[4:])
+    qspi_1_dq_i = Signal(intbv(0)[4:])
 
     # Outputs
     led = Signal(intbv(0)[8:])
@@ -299,6 +301,14 @@ def bench():
     qsfp2_modsell = Signal(bool(0))
     qsfp2_resetl = Signal(bool(0))
     qsfp2_lpmode = Signal(bool(0))
+    fpga_boot = Signal(bool(0))
+    qspi_clk = Signal(bool(0))
+    qspi_0_dq_o = Signal(intbv(0)[4:])
+    qspi_0_dq_oe = Signal(intbv(0)[4:])
+    qspi_0_cs = Signal(bool(1))
+    qspi_1_dq_o = Signal(intbv(0)[4:])
+    qspi_1_dq_oe = Signal(intbv(0)[4:])
+    qspi_1_cs = Signal(bool(1))
 
     # sources and sinks
     qsfp1_1_source = xgmii_ep.XGMIISource()
@@ -724,7 +734,17 @@ def bench():
         qsfp2_modsell=qsfp2_modsell,
         qsfp2_resetl=qsfp2_resetl,
         qsfp2_intl=qsfp2_intl,
-        qsfp2_lpmode=qsfp2_lpmode
+        qsfp2_lpmode=qsfp2_lpmode,
+        fpga_boot=fpga_boot,
+        qspi_clk=qspi_clk,
+        qspi_0_dq_i=qspi_0_dq_i,
+        qspi_0_dq_o=qspi_0_dq_o,
+        qspi_0_dq_oe=qspi_0_dq_oe,
+        qspi_0_cs=qspi_0_cs,
+        qspi_1_dq_i=qspi_1_dq_i,
+        qspi_1_dq_o=qspi_1_dq_o,
+        qspi_1_dq_oe=qspi_1_dq_oe,
+        qspi_1_cs=qspi_1_cs
     )
 
     @always(delay(5))

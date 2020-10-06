@@ -125,6 +125,8 @@ reg qsfp2_rx_axis_tlast = 0;
 reg qsfp2_rx_axis_tuser = 0;
 reg qsfp2_modprsl = 1;
 reg qsfp2_intl = 1;
+reg [3:0] qspi_0_dq_i = 0;
+reg [3:0] qspi_1_dq_i = 0;
 
 // Outputs
 wire [7:0] led;
@@ -179,6 +181,14 @@ wire qsfp2_tx_axis_tuser;
 wire qsfp2_modsell;
 wire qsfp2_resetl;
 wire qsfp2_lpmode;
+wire fpga_boot;
+wire qspi_clk;
+wire [3:0] qspi_0_dq_o;
+wire [3:0] qspi_0_dq_oe;
+wire qspi_0_cs;
+wire [3:0] qspi_1_dq_o;
+wire [3:0] qspi_1_dq_oe;
+wire qspi_1_cs;
 
 initial begin
     // myhdl integration
@@ -251,7 +261,9 @@ initial begin
         qsfp2_rx_axis_tlast,
         qsfp2_rx_axis_tuser,
         qsfp2_modprsl,
-        qsfp2_intl
+        qsfp2_intl,
+        qspi_0_dq_i,
+        qspi_1_dq_i
     );
     $to_myhdl(
         led,
@@ -305,7 +317,15 @@ initial begin
         qsfp2_tx_axis_tuser,
         qsfp2_modsell,
         qsfp2_resetl,
-        qsfp2_lpmode
+        qsfp2_lpmode,
+        fpga_boot,
+        qspi_clk,
+        qspi_0_dq_o,
+        qspi_0_dq_oe,
+        qspi_0_cs,
+        qspi_1_dq_o,
+        qspi_1_dq_oe,
+        qspi_1_cs
     );
 
     // dump file
@@ -445,7 +465,17 @@ UUT (
     .qsfp2_modsell(qsfp2_modsell),
     .qsfp2_resetl(qsfp2_resetl),
     .qsfp2_intl(qsfp2_intl_int),
-    .qsfp2_lpmode(qsfp2_lpmode_int)
+    .qsfp2_lpmode(qsfp2_lpmode_int),
+    .fpga_boot(fpga_boot),
+    .qspi_clk(qspi_clk),
+    .qspi_0_dq_i(qspi_0_dq_i),
+    .qspi_0_dq_o(qspi_0_dq_o),
+    .qspi_0_dq_oe(qspi_0_dq_oe),
+    .qspi_0_cs(qspi_0_cs),
+    .qspi_1_dq_i(qspi_1_dq_i),
+    .qspi_1_dq_o(qspi_1_dq_o),
+    .qspi_1_dq_oe(qspi_1_dq_oe),
+    .qspi_1_cs(qspi_1_cs)
 );
 
 endmodule

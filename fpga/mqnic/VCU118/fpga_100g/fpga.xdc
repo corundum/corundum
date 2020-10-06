@@ -244,10 +244,10 @@ set_property -dict {LOC AM17 IOSTANDARD LVCMOS18 PULLUP true} [get_ports pcie_re
 create_clock -period 10 -name pcie_mgt_refclk_2 [get_ports pcie_refclk_2_p]
 
 # Flash
-set_property -dict {LOC AM19 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {qspi_1_dq[0]}]
-set_property -dict {LOC AM18 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {qspi_1_dq[1]}]
-set_property -dict {LOC AN20 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {qspi_1_dq[2]}]
-set_property -dict {LOC AP20 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {qspi_1_dq[3]}]
-set_property -dict {LOC BF16 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {qspi_1_cs}]
+set_property -dict {LOC AM19 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {qspi_1_dq[0]}]
+set_property -dict {LOC AM18 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {qspi_1_dq[1]}]
+set_property -dict {LOC AN20 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {qspi_1_dq[2]}]
+set_property -dict {LOC AP20 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {qspi_1_dq[3]}]
+set_property -dict {LOC BF16 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {qspi_1_cs}]
 
 

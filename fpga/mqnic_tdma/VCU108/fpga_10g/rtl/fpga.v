@@ -295,12 +295,34 @@ wire flash_oe_n_int;
 wire flash_we_n_int;
 wire flash_adv_n_int;
 
-assign flash_dq[15:4] = flash_dq_oe_int ? flash_dq_o_int[15:4] : 12'hzzz;
-assign flash_addr = flash_addr_int;
-assign flash_region = flash_region_oe_int ? flash_region_int : 2'bz;
-assign flash_oe_n = flash_oe_n_int;
-assign flash_we_n = flash_we_n_int;
-assign flash_adv_n = flash_adv_n_int;
+reg [15:0] flash_dq_o_reg;
+reg flash_dq_oe_reg;
+reg [23:0] flash_addr_reg;
+reg [1:0] flash_region_reg;
+reg flash_region_oe_reg;
+reg flash_ce_n_reg;
+reg flash_oe_n_reg;
+reg flash_we_n_reg;
+reg flash_adv_n_reg;
+
+always @(posedge pcie_user_clk) begin
+    flash_dq_o_reg <= flash_dq_o_int;
+    flash_dq_oe_reg <= flash_dq_oe_int;
+    flash_addr_reg <= flash_addr_int;
+    flash_region_reg <= flash_region_int;
+    flash_region_oe_reg <= flash_region_oe_int;
+    flash_ce_n_reg <= flash_ce_n_int;
+    flash_oe_n_reg <= flash_oe_n_int;
+    flash_we_n_reg <= flash_we_n_int;
+    flash_adv_n_reg <= flash_adv_n_int;
+end
+
+assign flash_dq[15:4] = flash_dq_oe_reg ? flash_dq_o_reg[15:4] : 12'hzzz;
+assign flash_addr = flash_addr_reg;
+assign flash_region = flash_region_oe_reg ? flash_region_reg : 2'bz;
+assign flash_oe_n = flash_oe_n_reg;
+assign flash_we_n = flash_we_n_reg;
+assign flash_adv_n = flash_adv_n_reg;
 
 sync_signal #(
     .WIDTH(16),
@@ -317,10 +339,10 @@ startupe3_inst (
     .CFGCLK(),
     .CFGMCLK(),
     .DI(flash_dq_int),
-    .DO(flash_dq_o_int[3:0]),
-    .DTS({4{~flash_dq_oe_int}}),
+    .DO(flash_dq_o_reg[3:0]),
+    .DTS({4{~flash_dq_oe_reg}}),
     .EOS(),
-    .FCSBO(flash_ce_n_int),
+    .FCSBO(flash_ce_n_reg),
     .FCSBTS(1'b0),
     .GSR(1'b0),
     .GTS(1'b0),

@@ -295,11 +295,29 @@ wire [3:0] qspi_1_dq_o_int;
 wire [3:0] qspi_1_dq_oe_int;
 wire qspi_1_cs_int;
 
-assign qspi_1_dq[0] = qspi_1_dq_oe_int[0] ? qspi_1_dq_o_int[0] : 1'bz;
-assign qspi_1_dq[1] = qspi_1_dq_oe_int[1] ? qspi_1_dq_o_int[1] : 1'bz;
-assign qspi_1_dq[2] = qspi_1_dq_oe_int[2] ? qspi_1_dq_o_int[2] : 1'bz;
-assign qspi_1_dq[3] = qspi_1_dq_oe_int[3] ? qspi_1_dq_o_int[3] : 1'bz;
-assign qspi_1_cs = qspi_1_cs_int;
+reg qspi_clk_reg;
+reg [3:0] qspi_0_dq_o_reg;
+reg [3:0] qspi_0_dq_oe_reg;
+reg qspi_0_cs_reg;
+reg [3:0] qspi_1_dq_o_reg;
+reg [3:0] qspi_1_dq_oe_reg;
+reg qspi_1_cs_reg;
+
+always @(posedge pcie_user_clk) begin
+    qspi_clk_reg <= qspi_clk_int;
+    qspi_0_dq_o_reg <= qspi_0_dq_o_int;
+    qspi_0_dq_oe_reg <= qspi_0_dq_oe_int;
+    qspi_0_cs_reg <= qspi_0_cs_int;
+    qspi_1_dq_o_reg <= qspi_1_dq_o_int;
+    qspi_1_dq_oe_reg <= qspi_1_dq_oe_int;
+    qspi_1_cs_reg <= qspi_1_cs_int;
+end
+
+assign qspi_1_dq[0] = qspi_1_dq_oe_reg[0] ? qspi_1_dq_o_reg[0] : 1'bz;
+assign qspi_1_dq[1] = qspi_1_dq_oe_reg[1] ? qspi_1_dq_o_reg[1] : 1'bz;
+assign qspi_1_dq[2] = qspi_1_dq_oe_reg[2] ? qspi_1_dq_o_reg[2] : 1'bz;
+assign qspi_1_dq[3] = qspi_1_dq_oe_reg[3] ? qspi_1_dq_o_reg[3] : 1'bz;
+assign qspi_1_cs = qspi_1_cs_reg;
 
 sync_signal #(
     .WIDTH(8),
@@ -316,17 +334,17 @@ startupe3_inst (
     .CFGCLK(),
     .CFGMCLK(),
     .DI(qspi_0_dq_int),
-    .DO(qspi_0_dq_o_int),
-    .DTS(~qspi_0_dq_oe_int),
+    .DO(qspi_0_dq_o_reg),
+    .DTS(~qspi_0_dq_oe_reg),
     .EOS(),
-    .FCSBO(qspi_0_cs_int),
+    .FCSBO(qspi_0_cs_reg),
     .FCSBTS(1'b0),
     .GSR(1'b0),
     .GTS(1'b0),
     .KEYCLEARB(1'b1),
     .PACK(1'b0),
     .PREQ(),
-    .USRCCLKO(qspi_clk_int),
+    .USRCCLKO(qspi_clk_reg),
     .USRCCLKTS(1'b0),
     .USRDONEO(1'b0),
     .USRDONETS(1'b1)

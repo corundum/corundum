@@ -339,7 +339,7 @@ def bench():
 
     dev.pcie_generation = 3
     dev.pcie_link_width = 16
-    dev.user_clock_frequency = 250e6
+    dev.user_clk_frequency = 250e6
 
     dev.functions[0].msi_multiple_message_capable = 5
 

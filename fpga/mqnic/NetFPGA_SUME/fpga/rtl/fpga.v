@@ -268,6 +268,18 @@ wire i2c_sda_i_int;
 wire i2c_sda_o_int;
 wire i2c_sda_t_int;
 
+reg i2c_scl_o_reg;
+reg i2c_scl_t_reg;
+reg i2c_sda_o_reg;
+reg i2c_sda_t_reg;
+
+always @(posedge pcie_user_clk) begin
+    i2c_scl_o_reg <= i2c_scl_o_int;
+    i2c_scl_t_reg <= i2c_scl_t_int;
+    i2c_sda_o_reg <= i2c_sda_o_int;
+    i2c_sda_t_reg <= i2c_sda_t_int;
+end
+
 sync_signal #(
     .WIDTH(14),
     .N(2)
@@ -289,10 +301,10 @@ assign i2c_scl = i2c_scl_t ? 1'bz : i2c_scl_o;
 assign i2c_sda_i = i2c_sda;
 assign i2c_sda = i2c_sda_t ? 1'bz : i2c_sda_o;
 
-assign i2c_scl_o = i2c_scl_o_init && i2c_scl_o_int;
-assign i2c_scl_t = i2c_scl_t_init && i2c_scl_t_int;
-assign i2c_sda_o = i2c_sda_o_init && i2c_sda_o_int;
-assign i2c_sda_t = i2c_sda_t_init && i2c_sda_t_int;
+assign i2c_scl_o = i2c_scl_o_init && i2c_scl_o_reg;
+assign i2c_scl_t = i2c_scl_t_init && i2c_scl_t_reg;
+assign i2c_sda_o = i2c_sda_o_init && i2c_sda_o_reg;
+assign i2c_sda_t = i2c_sda_t_init && i2c_sda_t_reg;
 
 assign i2c_scl_i_init = i2c_scl_i;
 assign i2c_sda_i_init = i2c_sda_i;

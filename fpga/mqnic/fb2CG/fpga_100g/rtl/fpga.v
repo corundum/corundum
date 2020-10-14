@@ -256,6 +256,26 @@ wire qsfp_1_i2c_sda_i;
 wire qsfp_1_i2c_sda_o;
 wire qsfp_1_i2c_sda_t;
 
+reg qsfp_0_i2c_scl_o_reg;
+reg qsfp_0_i2c_scl_t_reg;
+reg qsfp_0_i2c_sda_o_reg;
+reg qsfp_0_i2c_sda_t_reg;
+reg qsfp_1_i2c_scl_o_reg;
+reg qsfp_1_i2c_scl_t_reg;
+reg qsfp_1_i2c_sda_o_reg;
+reg qsfp_1_i2c_sda_t_reg;
+
+always @(posedge pcie_user_clk) begin
+    qsfp_0_i2c_scl_o_reg <= qsfp_0_i2c_scl_o;
+    qsfp_0_i2c_scl_t_reg <= qsfp_0_i2c_scl_t;
+    qsfp_0_i2c_sda_o_reg <= qsfp_0_i2c_sda_o;
+    qsfp_0_i2c_sda_t_reg <= qsfp_0_i2c_sda_t;
+    qsfp_1_i2c_scl_o_reg <= qsfp_1_i2c_scl_o;
+    qsfp_1_i2c_scl_t_reg <= qsfp_1_i2c_scl_t;
+    qsfp_1_i2c_sda_o_reg <= qsfp_1_i2c_sda_o;
+    qsfp_1_i2c_sda_t_reg <= qsfp_1_i2c_sda_t;
+end
+
 sync_signal #(
     .WIDTH(8),
     .N(2)
@@ -268,10 +288,10 @@ sync_signal_inst (
         qsfp_1_mod_prsnt_n_int, qsfp_1_intr_n_int, qsfp_1_i2c_scl_i, qsfp_1_i2c_sda_i})
 );
 
-assign qsfp_0_i2c_scl = qsfp_0_i2c_scl_t ? 1'bz : qsfp_0_i2c_scl_o;
-assign qsfp_0_i2c_sda = qsfp_0_i2c_sda_t ? 1'bz : qsfp_0_i2c_sda_o;
-assign qsfp_1_i2c_scl = qsfp_1_i2c_scl_t ? 1'bz : qsfp_1_i2c_scl_o;
-assign qsfp_1_i2c_sda = qsfp_1_i2c_sda_t ? 1'bz : qsfp_1_i2c_sda_o;
+assign qsfp_0_i2c_scl = qsfp_0_i2c_scl_t_reg ? 1'bz : qsfp_0_i2c_scl_o_reg;
+assign qsfp_0_i2c_sda = qsfp_0_i2c_sda_t_reg ? 1'bz : qsfp_0_i2c_sda_o_reg;
+assign qsfp_1_i2c_scl = qsfp_1_i2c_scl_t_reg ? 1'bz : qsfp_1_i2c_scl_o_reg;
+assign qsfp_1_i2c_sda = qsfp_1_i2c_sda_t_reg ? 1'bz : qsfp_1_i2c_sda_o_reg;
 
 wire [7:0] led_red;
 wire [7:0] led_green;

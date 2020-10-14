@@ -272,6 +272,18 @@ wire i2c_sda_i;
 wire i2c_sda_o;
 wire i2c_sda_t;
 
+reg i2c_scl_o_reg;
+reg i2c_scl_t_reg;
+reg i2c_sda_o_reg;
+reg i2c_sda_t_reg;
+
+always @(posedge pcie_user_clk) begin
+    i2c_scl_o_reg <= i2c_scl_o;
+    i2c_scl_t_reg <= i2c_scl_t;
+    i2c_sda_o_reg <= i2c_sda_o;
+    i2c_sda_t_reg <= i2c_sda_t;
+end
+
 debounce_switch #(
     .WIDTH(9),
     .N(4),
@@ -306,8 +318,8 @@ sync_signal_inst (
         i2c_scl_i, i2c_sda_i})
 );
 
-assign i2c_scl = i2c_scl_t ? 1'bz : i2c_scl_o;
-assign i2c_sda = i2c_sda_t ? 1'bz : i2c_sda_o;
+assign i2c_scl = i2c_scl_t_reg ? 1'bz : i2c_scl_o_reg;
+assign i2c_sda = i2c_sda_t_reg ? 1'bz : i2c_sda_o_reg;
 
 // Flash
 wire qspi_clk_int;

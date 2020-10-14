@@ -219,6 +219,18 @@ wire i2c1_sda_i;
 wire i2c1_sda_o;
 wire i2c1_sda_t;
 
+reg i2c1_scl_o_reg;
+reg i2c1_scl_t_reg;
+reg i2c1_sda_o_reg;
+reg i2c1_sda_t_reg;
+
+always @(posedge pcie_user_clk) begin
+    i2c1_scl_o_reg <= i2c1_scl_o;
+    i2c1_scl_t_reg <= i2c1_scl_t;
+    i2c1_sda_o_reg <= i2c1_sda_o;
+    i2c1_sda_t_reg <= i2c1_sda_t;
+end
+
 debounce_switch #(
     .WIDTH(13),
     .N(4),
@@ -251,8 +263,8 @@ sync_signal_inst (
     .out({i2c1_scl_i, i2c1_sda_i})
 );
 
-assign i2c1_scl = i2c1_scl_t ? 1'bz : i2c1_scl_o;
-assign i2c1_sda = i2c1_sda_t ? 1'bz : i2c1_sda_o;
+assign i2c1_scl = i2c1_scl_t_reg ? 1'bz : i2c1_scl_o_reg;
+assign i2c1_sda = i2c1_sda_t_reg ? 1'bz : i2c1_sda_o_reg;
 
 // PCIe
 wire pcie_sys_clk;

@@ -251,6 +251,26 @@ wire eeprom_i2c_sda_i;
 wire eeprom_i2c_sda_o;
 wire eeprom_i2c_sda_t;
 
+reg qsfp_i2c_scl_o_reg;
+reg qsfp_i2c_scl_t_reg;
+reg qsfp_i2c_sda_o_reg;
+reg qsfp_i2c_sda_t_reg;
+reg eeprom_i2c_scl_o_reg;
+reg eeprom_i2c_scl_t_reg;
+reg eeprom_i2c_sda_o_reg;
+reg eeprom_i2c_sda_t_reg;
+
+always @(posedge pcie_user_clk) begin
+    qsfp_i2c_scl_o_reg <= qsfp_i2c_scl_o;
+    qsfp_i2c_scl_t_reg <= qsfp_i2c_scl_t;
+    qsfp_i2c_sda_o_reg <= qsfp_i2c_sda_o;
+    qsfp_i2c_sda_t_reg <= qsfp_i2c_sda_t;
+    eeprom_i2c_scl_o_reg <= eeprom_i2c_scl_o;
+    eeprom_i2c_scl_t_reg <= eeprom_i2c_scl_t;
+    eeprom_i2c_sda_o_reg <= eeprom_i2c_sda_o;
+    eeprom_i2c_sda_t_reg <= eeprom_i2c_sda_t;
+end
+
 debounce_switch #(
     .WIDTH(2),
     .N(4),
@@ -277,10 +297,10 @@ sync_signal_inst (
         eeprom_i2c_scl_i, eeprom_i2c_sda_i})
 );
 
-assign qsfp_i2c_scl = qsfp_i2c_scl_t ? 1'bz : qsfp_i2c_scl_o;
-assign qsfp_i2c_sda = qsfp_i2c_sda_t ? 1'bz : qsfp_i2c_sda_o;
-assign eeprom_i2c_scl = eeprom_i2c_scl_t ? 1'bz : eeprom_i2c_scl_o;
-assign eeprom_i2c_sda = eeprom_i2c_sda_t ? 1'bz : eeprom_i2c_sda_o;
+assign qsfp_i2c_scl = qsfp_i2c_scl_t_reg ? 1'bz : qsfp_i2c_scl_o_reg;
+assign qsfp_i2c_sda = qsfp_i2c_sda_t_reg ? 1'bz : qsfp_i2c_sda_o_reg;
+assign eeprom_i2c_scl = eeprom_i2c_scl_t_reg ? 1'bz : eeprom_i2c_scl_o_reg;
+assign eeprom_i2c_sda = eeprom_i2c_sda_t_reg ? 1'bz : eeprom_i2c_sda_o_reg;
 
 // Flash
 wire qspi_clk_int;

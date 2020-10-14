@@ -242,6 +242,30 @@ wire eeprom_i2c_sda_i;
 wire eeprom_i2c_sda_o;
 wire eeprom_i2c_sda_t;
 
+reg sfp_i2c_scl_o_reg;
+reg sfp_i2c_scl_t_reg;
+reg sfp_1_i2c_sda_o_reg;
+reg sfp_1_i2c_sda_t_reg;
+reg sfp_2_i2c_sda_o_reg;
+reg sfp_2_i2c_sda_t_reg;
+reg eeprom_i2c_scl_o_reg;
+reg eeprom_i2c_scl_t_reg;
+reg eeprom_i2c_sda_o_reg;
+reg eeprom_i2c_sda_t_reg;
+
+always @(posedge pcie_user_clk) begin
+    sfp_i2c_scl_o_reg <= sfp_i2c_scl_o;
+    sfp_i2c_scl_t_reg <= sfp_i2c_scl_t;
+    sfp_1_i2c_sda_o_reg <= sfp_1_i2c_sda_o;
+    sfp_1_i2c_sda_t_reg <= sfp_1_i2c_sda_t;
+    sfp_2_i2c_sda_o_reg <= sfp_2_i2c_sda_o;
+    sfp_2_i2c_sda_t_reg <= sfp_2_i2c_sda_t;
+    eeprom_i2c_scl_o_reg <= eeprom_i2c_scl_o;
+    eeprom_i2c_scl_t_reg <= eeprom_i2c_scl_t;
+    eeprom_i2c_sda_o_reg <= eeprom_i2c_sda_o;
+    eeprom_i2c_sda_t_reg <= eeprom_i2c_sda_t;
+end
+
 sync_signal #(
     .WIDTH(9),
     .N(2)
@@ -256,11 +280,11 @@ sync_signal_inst (
         eeprom_i2c_scl_i, eeprom_i2c_sda_i})
 );
 
-assign sfp_i2c_scl = sfp_i2c_scl_t ? 1'bz : sfp_i2c_scl_o;
-assign sfp_1_i2c_sda = sfp_1_i2c_sda_t ? 1'bz : sfp_1_i2c_sda_o;
-assign sfp_2_i2c_sda = sfp_2_i2c_sda_t ? 1'bz : sfp_2_i2c_sda_o;
-assign eeprom_i2c_scl = eeprom_i2c_scl_t ? 1'bz : eeprom_i2c_scl_o;
-assign eeprom_i2c_sda = eeprom_i2c_sda_t ? 1'bz : eeprom_i2c_sda_o;
+assign sfp_i2c_scl = sfp_i2c_scl_t_reg ? 1'bz : sfp_i2c_scl_o_reg;
+assign sfp_1_i2c_sda = sfp_1_i2c_sda_t_reg ? 1'bz : sfp_1_i2c_sda_o_reg;
+assign sfp_2_i2c_sda = sfp_2_i2c_sda_t_reg ? 1'bz : sfp_2_i2c_sda_o_reg;
+assign eeprom_i2c_scl = eeprom_i2c_scl_t_reg ? 1'bz : eeprom_i2c_scl_o_reg;
+assign eeprom_i2c_sda = eeprom_i2c_sda_t_reg ? 1'bz : eeprom_i2c_sda_o_reg;
 
 // Flash
 wire [15:0] flash_dq_i_int;

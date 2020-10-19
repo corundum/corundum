@@ -646,7 +646,7 @@ always @* begin
 
             axi_addr_valid_next = 1'b0;
 
-            if (current_s_axi_wready && current_s_axi_wvalid) begin
+            if (current_s_axi_wready && current_s_axi_wvalid && current_s_axi_wlast) begin
                 s_axi_wready_next[s_select] = 1'b0;
                 s_axi_bvalid_next[s_select] = 1'b1;
                 state_next = STATE_WAIT_IDLE;

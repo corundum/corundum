@@ -263,17 +263,8 @@ if (FIFO_DELAY) begin
     end
 
     always @(posedge clk) begin
-        if (rst) begin
-            state_reg <= STATE_IDLE;
-            count_reg <= count_next;
-            m_axi_arvalid_reg <= 1'b0;
-            s_axi_arready_reg <= 1'b0;
-        end else begin
-            state_reg <= state_next;
-            count_reg <= {COUNT_WIDTH{1'b0}};
-            m_axi_arvalid_reg <= m_axi_arvalid_next;
-            s_axi_arready_reg <= s_axi_arready_next;
-        end
+        state_reg <= state_next;
+        count_reg <= count_next;
 
         m_axi_arid_reg <= m_axi_arid_next;
         m_axi_araddr_reg <= m_axi_araddr_next;
@@ -286,6 +277,15 @@ if (FIFO_DELAY) begin
         m_axi_arqos_reg <= m_axi_arqos_next;
         m_axi_arregion_reg <= m_axi_arregion_next;
         m_axi_aruser_reg <= m_axi_aruser_next;
+        m_axi_arvalid_reg <= m_axi_arvalid_next;
+        s_axi_arready_reg <= s_axi_arready_next;
+
+        if (rst) begin
+            state_reg <= STATE_IDLE;
+            count_reg <= {COUNT_WIDTH{1'b0}};
+            m_axi_arvalid_reg <= 1'b0;
+            s_axi_arready_reg <= 1'b0;
+        end
     end
 end else begin
     // bypass AR channel
@@ -331,16 +331,15 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        wr_ptr_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
-    end else begin
-        wr_ptr_reg <= wr_ptr_next;
-    end
-
+    wr_ptr_reg <= wr_ptr_next;
     wr_addr_reg <= wr_ptr_next;
 
     if (write) begin
         mem[wr_addr_reg[FIFO_ADDR_WIDTH-1:0]] <= m_axi_r;
+    end
+
+    if (rst) begin
+        wr_ptr_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
     end
 end
 
@@ -367,18 +366,18 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        rd_ptr_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
-        mem_read_data_valid_reg <= 1'b0;
-    end else begin
-        rd_ptr_reg <= rd_ptr_next;
-        mem_read_data_valid_reg <= mem_read_data_valid_next;
-    end
-
+    rd_ptr_reg <= rd_ptr_next;
     rd_addr_reg <= rd_ptr_next;
+
+    mem_read_data_valid_reg <= mem_read_data_valid_next;
 
     if (read) begin
         mem_read_data_reg <= mem[rd_addr_reg[FIFO_ADDR_WIDTH-1:0]];
+    end
+
+    if (rst) begin
+        rd_ptr_reg <= {FIFO_ADDR_WIDTH+1{1'b0}};
+        mem_read_data_valid_reg <= 1'b0;
     end
 end
 
@@ -395,14 +394,14 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        s_axi_rvalid_reg <= 1'b0;
-    end else begin
-        s_axi_rvalid_reg <= s_axi_rvalid_next;
-    end
+    s_axi_rvalid_reg <= s_axi_rvalid_next;
 
     if (store_output) begin
         s_axi_r_reg <= mem_read_data_reg;
+    end
+
+    if (rst) begin
+        s_axi_rvalid_reg <= 1'b0;
     end
 end
 

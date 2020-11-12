@@ -258,14 +258,6 @@ assign m_axi_awprot = 3'b010;
 assign m_axi_awvalid = m_axi_awvalid_reg;
 assign m_axi_bready = m_axi_bready_reg;
 
-wire [AXI_ADDR_WIDTH-1:0] read_addr_plus_max_burst = read_addr_reg + AXI_MAX_BURST_SIZE;
-wire [AXI_ADDR_WIDTH-1:0] read_addr_plus_op_count = read_addr_reg + op_word_count_reg;
-wire [AXI_ADDR_WIDTH-1:0] read_addr_plus_axi_count = read_addr_reg + axi_word_count_reg;
-
-wire [AXI_ADDR_WIDTH-1:0] write_addr_plus_max_burst = write_addr_reg + AXI_MAX_BURST_SIZE;
-wire [AXI_ADDR_WIDTH-1:0] write_addr_plus_op_count = write_addr_reg + op_word_count_reg;
-wire [AXI_ADDR_WIDTH-1:0] write_addr_plus_axi_count = write_addr_reg + axi_word_count_reg;
-
 always @* begin
     read_state_next = READ_STATE_IDLE;
 
@@ -319,18 +311,18 @@ always @* begin
             if (!axi_cmd_valid_reg) begin
                 if (op_word_count_reg <= AXI_MAX_BURST_SIZE - (write_addr_reg & OFFSET_MASK)) begin
                     // packet smaller than max burst size
-                    if (write_addr_reg[12] != write_addr_plus_op_count[12]) begin
+                    if (((write_addr_reg & 12'hfff) + (op_word_count_reg & 12'hfff)) >> 12 != 0 || op_word_count_reg >> 12 != 0) begin
                         // crosses 4k boundary
-                        axi_word_count_next = 13'h1000 - write_addr_reg[11:0];
+                        axi_word_count_next = 13'h1000 - (write_addr_reg & 12'hfff);
                     end else begin
                         // does not cross 4k boundary
                         axi_word_count_next = op_word_count_reg;
                     end
                 end else begin
                     // packet larger than max burst size
-                    if (write_addr_reg[12] != write_addr_plus_max_burst[12]) begin
+                    if (((write_addr_reg & 12'hfff) + AXI_MAX_BURST_SIZE) >> 12 != 0) begin
                         // crosses 4k boundary
-                        axi_word_count_next = 13'h1000 - write_addr_reg[11:0];
+                        axi_word_count_next = 13'h1000 - (write_addr_reg & 12'hfff);
                     end else begin
                         // does not cross 4k boundary
                         axi_word_count_next = AXI_MAX_BURST_SIZE - (write_addr_reg & OFFSET_MASK);
@@ -369,18 +361,18 @@ always @* begin
             if (!m_axi_arvalid) begin
                 if (axi_word_count_reg <= AXI_MAX_BURST_SIZE - (read_addr_reg & OFFSET_MASK)) begin
                     // packet smaller than max burst size
-                    if (read_addr_reg[12] != read_addr_plus_axi_count[12]) begin
+                    if (((read_addr_reg & 12'hfff) + (axi_word_count_reg & 12'hfff)) >> 12 != 0 || axi_word_count_reg >> 12 != 0) begin
                         // crosses 4k boundary
-                        tr_word_count_next = 13'h1000 - read_addr_reg[11:0];
+                        tr_word_count_next = 13'h1000 - (read_addr_reg & 12'hfff);
                     end else begin
                         // does not cross 4k boundary
                         tr_word_count_next = axi_word_count_reg;
                     end
                 end else begin
                     // packet larger than max burst size
-                    if (read_addr_reg[12] != read_addr_plus_max_burst[12]) begin
+                    if (((read_addr_reg & 12'hfff) + AXI_MAX_BURST_SIZE) >> 12 != 0) begin
                         // crosses 4k boundary
-                        tr_word_count_next = 13'h1000 - read_addr_reg[11:0];
+                        tr_word_count_next = 13'h1000 - (read_addr_reg & 12'hfff);
                     end else begin
                         // does not cross 4k boundary
                         tr_word_count_next = AXI_MAX_BURST_SIZE - (read_addr_reg & OFFSET_MASK);

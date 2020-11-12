@@ -402,9 +402,6 @@ assign m_axis_read_desc_status_valid = m_axis_read_desc_status_valid_reg;
 assign status_error_cor = status_error_cor_reg;
 assign status_error_uncor = status_error_uncor_reg;
 
-wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_max_read_request = req_pcie_addr_reg + {max_read_request_size_dw_reg, 2'b00};
-wire [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_plus_op_count = req_pcie_addr_reg + req_op_count_reg;
-
 // PCIe tag management
 wire [PCIE_TAG_WIDTH-1:0] new_tag;
 wire new_tag_valid;
@@ -584,11 +581,11 @@ always @* begin
     // TLP size computation
     if (req_op_count_reg + req_pcie_addr_reg[1:0] <= {max_read_request_size_dw_reg, 2'b00}) begin
         // packet smaller than max read request size
-        if (req_pcie_addr_reg[12] != req_pcie_addr_plus_op_count[12]) begin
+        if (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) >> 12 != 0 || req_op_count_reg >> 12 != 0) begin
             // crosses 4k boundary
             req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
             dword_count = 11'h400 - req_pcie_addr_reg[11:2];
-            req_last_tlp = req_pcie_addr_plus_op_count[11:0] == 0;
+            req_last_tlp = (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) & 12'hfff) == 0;
             // optimized req_pcie_addr = req_addr_reg + req_tlp_count_next
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12]+1;
             req_pcie_addr[11:0] = 12'd0;
@@ -603,7 +600,7 @@ always @* begin
         end
     end else begin
         // packet larger than max read request size
-        if (req_pcie_addr_reg[12] != req_pcie_addr_plus_max_read_request[12]) begin
+        if (((req_pcie_addr_reg & 12'hfff) + {max_read_request_size_dw_reg, 2'b00}) >> 12 != 0) begin
             // crosses 4k boundary
             req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
             dword_count = 11'h400 - req_pcie_addr_reg[11:2];

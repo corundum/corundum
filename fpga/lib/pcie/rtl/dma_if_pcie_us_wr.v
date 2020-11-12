@@ -384,9 +384,6 @@ assign ram_rd_cmd_addr = ram_rd_cmd_addr_reg;
 assign ram_rd_cmd_valid = ram_rd_cmd_valid_reg;
 assign ram_rd_resp_ready = ram_rd_resp_ready_cmb;
 
-wire [PCIE_ADDR_WIDTH-1:0] pcie_addr_plus_max_payload = pcie_addr_reg + {max_payload_size_dw_reg, 2'b00};
-wire [PCIE_ADDR_WIDTH-1:0] pcie_addr_plus_op_count = pcie_addr_reg + op_count_reg;
-
 // operation tag management
 reg [OP_TAG_WIDTH+1-1:0] op_table_start_ptr_reg = 0;
 reg [PCIE_ADDR_WIDTH-1:0] op_table_start_pcie_addr;
@@ -476,7 +473,7 @@ always @* begin
 
             if (op_count_next <= {max_payload_size_dw_reg, 2'b00}-pcie_addr_next[1:0]) begin
                 // packet smaller than max payload size
-                if ((pcie_addr_next ^ (pcie_addr_next + op_count_next)) & (1 << 12)) begin
+                if (((pcie_addr_next & 12'hfff) + (op_count_next & 12'hfff)) >> 12 != 0 || op_count_next >> 12 != 0) begin
                     // crosses 4k boundary
                     tlp_count_next = 13'h1000 - pcie_addr_next[11:0];
                 end else begin
@@ -485,7 +482,7 @@ always @* begin
                 end
             end else begin
                 // packet larger than max payload size
-                if ((pcie_addr_next ^ (pcie_addr_next + {max_payload_size_dw_reg, 2'b00})) & (1 << 12)) begin
+                if (((pcie_addr_next & 12'hfff) + {max_payload_size_dw_reg, 2'b00}) >> 12 != 0) begin
                     // crosses 4k boundary
                     tlp_count_next = 13'h1000 - pcie_addr_next[11:0];
                 end else begin
@@ -536,7 +533,7 @@ always @* begin
 
                 if (op_count_next <= {max_payload_size_dw_reg, 2'b00}-pcie_addr_next[1:0]) begin
                     // packet smaller than max payload size
-                    if ((pcie_addr_next ^ (pcie_addr_next + op_count_next)) & (1 << 12)) begin
+                    if (((pcie_addr_next & 12'hfff) + (op_count_next & 12'hfff)) >> 12 != 0 || op_count_next >> 12 != 0) begin
                         // crosses 4k boundary
                         tlp_count_next = 13'h1000 - pcie_addr_next[11:0];
                     end else begin
@@ -545,7 +542,7 @@ always @* begin
                     end
                 end else begin
                     // packet larger than max payload size
-                    if ((pcie_addr_next ^ (pcie_addr_next + {max_payload_size_dw_reg, 2'b00})) & (1 << 12)) begin
+                    if (((pcie_addr_next & 12'hfff) + {max_payload_size_dw_reg, 2'b00}) >> 12 != 0) begin
                         // crosses 4k boundary
                         tlp_count_next = 13'h1000 - pcie_addr_next[11:0];
                     end else begin

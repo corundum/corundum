@@ -363,14 +363,6 @@ assign m_axi_arprot = 3'b010;
 assign m_axi_arvalid = m_axi_arvalid_reg;
 assign m_axi_rready = m_axi_rready_reg;
 
-wire [PCIE_ADDR_WIDTH-1:0] pcie_addr_plus_max_payload = pcie_addr_reg + {max_payload_size_dw_reg, 2'b00};
-wire [PCIE_ADDR_WIDTH-1:0] pcie_addr_plus_op_count = pcie_addr_reg + op_count_reg;
-wire [PCIE_ADDR_WIDTH-1:0] pcie_addr_plus_tlp_count = pcie_addr_reg + tlp_count_reg;
-
-wire [AXI_ADDR_WIDTH-1:0] axi_addr_plus_max_burst = axi_addr_reg + AXI_MAX_BURST_SIZE;
-wire [AXI_ADDR_WIDTH-1:0] axi_addr_plus_op_count = axi_addr_reg + op_count_reg;
-wire [AXI_ADDR_WIDTH-1:0] axi_addr_plus_tlp_count = axi_addr_reg + tlp_count_reg;
-
 // operation tag management
 reg [OP_TAG_WIDTH+1-1:0] op_table_start_ptr_reg = 0;
 reg [PCIE_ADDR_WIDTH-1:0] op_table_start_pcie_addr;
@@ -439,11 +431,11 @@ always @* begin
     // TLP size computation
     if (op_count_reg <= {max_payload_size_dw_reg, 2'b00}-pcie_addr_reg[1:0]) begin
         // packet smaller than max read request size
-        if (pcie_addr_reg[12] != pcie_addr_plus_op_count[12]) begin
+        if (((pcie_addr_reg & 12'hfff) + (op_count_reg & 12'hfff)) >> 12 != 0 || op_count_reg >> 12 != 0) begin
             // crosses 4k boundary
             tlp_count = 13'h1000 - pcie_addr_reg[11:0];
             dword_count = 11'h400 - pcie_addr_reg[11:2];
-            last_tlp = pcie_addr_plus_op_count[11:0] == 0;
+            last_tlp = (((pcie_addr_reg & 12'hfff) + (op_count_reg & 12'hfff)) & 12'hfff) == 0;
             // optimized pcie_addr = pcie_addr_reg + tlp_count
             pcie_addr[PCIE_ADDR_WIDTH-1:12] = pcie_addr_reg[PCIE_ADDR_WIDTH-1:12]+1;
             pcie_addr[11:0] = 12'd0;
@@ -458,7 +450,7 @@ always @* begin
         end
     end else begin
         // packet larger than max read request size
-        if (pcie_addr_reg[12] != pcie_addr_plus_max_payload[12]) begin
+        if (((pcie_addr_reg & 12'hfff) + {max_payload_size_dw_reg, 2'b00}) >> 12 != 0) begin
             // crosses 4k boundary
             tlp_count = 13'h1000 - pcie_addr_reg[11:0];
             dword_count = 11'h400 - pcie_addr_reg[11:2];
@@ -480,10 +472,10 @@ always @* begin
     // AXI transfer size computation
     if (tlp_count_reg <= AXI_MAX_BURST_SIZE-axi_addr_reg[OFFSET_WIDTH-1:0] || AXI_MAX_BURST_SIZE >= 4096) begin
         // packet smaller than max read request size
-        if (axi_addr_reg[12] != axi_addr_plus_tlp_count[12]) begin
+        if (((axi_addr_reg & 12'hfff) + (tlp_count_reg & 12'hfff)) >> 12 != 0 || tlp_count_reg >> 12 != 0) begin
             // crosses 4k boundary
             tr_count = 13'h1000 - axi_addr_reg[11:0];
-            last_tr = axi_addr_plus_tlp_count[11:0] == 0;
+            last_tr = (((axi_addr_reg & 12'hfff) + (tlp_count_reg & 12'hfff)) & 12'hfff) == 0;
             // optimized axi_addr = axi_addr_reg + tr_count
             axi_addr[AXI_ADDR_WIDTH-1:12] = axi_addr_reg[AXI_ADDR_WIDTH-1:12]+1;
             axi_addr[11:0] = 12'd0;
@@ -497,7 +489,7 @@ always @* begin
         end
     end else begin
         // packet larger than max read request size
-        if (axi_addr_reg[12] != axi_addr_plus_max_burst[12]) begin
+        if (((axi_addr_reg & 12'hfff) + AXI_MAX_BURST_SIZE) >> 12 != 0) begin
             // crosses 4k boundary
             tr_count = 13'h1000 - axi_addr_reg[11:0];
             last_tr = 1'b0;

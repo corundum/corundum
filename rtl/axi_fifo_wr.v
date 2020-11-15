@@ -260,13 +260,13 @@ if (FIFO_DELAY) begin
 
                 if (s_axi_wready && s_axi_wvalid) begin
                     count_next = count_reg + 1;
-                    if (count_next == 2**FIFO_ADDR_WIDTH) begin
-                        m_axi_awvalid_next = 1'b1;
-                        state_next = STATE_TRANSFER_OUT;
-                    end else if (count_reg == m_axi_awlen) begin
+                    if (s_axi_wlast) begin
                         m_axi_awvalid_next = 1'b1;
                         hold_next = 1'b1;
                         state_next = STATE_IDLE;
+                    end else if (FIFO_ADDR_WIDTH < 8 && count_next == 2**FIFO_ADDR_WIDTH) begin
+                        m_axi_awvalid_next = 1'b1;
+                        state_next = STATE_TRANSFER_OUT;
                     end else begin
                         state_next = STATE_TRANSFER_IN;
                     end
@@ -279,8 +279,7 @@ if (FIFO_DELAY) begin
                 hold_next = 1'b0;
 
                 if (s_axi_wready && s_axi_wvalid) begin
-                    count_next = count_reg + 1;
-                    if (count_reg == m_axi_awlen) begin
+                    if (s_axi_wlast) begin
                         hold_next = 1'b1;
                         state_next = STATE_IDLE;
                     end else begin

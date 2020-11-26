@@ -38,7 +38,7 @@ either expressed or implied, of The Regents of the University of California.
 /*
  * NIC Interface
  */
-module interface #
+module mqnic_interface #
 (
     // Number of ports
     parameter PORTS = 1,
@@ -2019,7 +2019,7 @@ generate
 
         assign port_cpl_req_sel[n*2+1 +: 1] = 1'b0;
 
-        port #(
+        mqnic_port #(
             .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
             .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
             .DMA_TAG_WIDTH(DMA_TAG_WIDTH_INT),

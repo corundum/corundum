@@ -52,8 +52,8 @@ testbench = 'test_%s' % module
 srcs = []
 
 srcs.append("../rtl/%s.v" % module)
-srcs.append("../rtl/common/interface.v")
-srcs.append("../rtl/common/port.v")
+srcs.append("../rtl/common/mqnic_interface.v")
+srcs.append("../rtl/common/mqnic_port.v")
 srcs.append("../rtl/common/cpl_write.v")
 srcs.append("../rtl/common/cpl_op_mux.v")
 srcs.append("../rtl/common/desc_fetch.v")

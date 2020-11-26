@@ -38,7 +38,7 @@ either expressed or implied, of The Regents of the University of California.
 /*
  * NIC Port
  */
-module port #
+module mqnic_port #
 (
     // DMA address width
     parameter DMA_ADDR_WIDTH = 64,

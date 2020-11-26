@@ -94,11 +94,11 @@ from different sources to enable sharing a single desc_fetch module instance.
 
 Event mux module.  Enables multiple event sources to feed the same event queue.
 
-#### interface module
+#### mqnic_interface module
 
 Interface module.  Contains the event queues, interface queues, and ports.
 
-#### port module
+#### mqnic_port module
 
 Port module.  Contains the transmit and receive datapath components, including
 transmit and receive engines and checksum and hash offloading.
@@ -174,8 +174,8 @@ packets.
     desc_op_mux.v            : Descriptor operation mux
     event_mux.v              : Event mux
     event_queue.v            : Event queue
-    interface.v              : Interface
-    port.v                   : Port
+    mqnic_interface.v        : Interface
+    mqnic_port.v             : Port
     queue_manager.v          : Queue manager
     rx_checksum.v            : Receive checksum offload
     rx_engine.v              : Receive engine

@@ -2067,7 +2067,7 @@ generate
         wire [PORTS_PER_IF-1:0] rx_ptp_ts_valid;
         wire [PORTS_PER_IF-1:0] rx_ptp_ts_ready;
 
-        interface #(
+        mqnic_interface #(
             .PORTS(PORTS_PER_IF),
             .DMA_ADDR_WIDTH(PCIE_ADDR_WIDTH),
             .DMA_LEN_WIDTH(PCIE_DMA_LEN_WIDTH),

@@ -35,6 +35,7 @@ SYN_FILES += lib/axi/rtl/priority_encoder.v
 SYN_FILES += lib/axis/rtl/axis_adapter.v
 SYN_FILES += lib/axis/rtl/axis_async_fifo.v
 SYN_FILES += lib/axis/rtl/axis_fifo.v
+SYN_FILES += lib/axis/rtl/axis_pipeline_register.v
 SYN_FILES += lib/axis/rtl/axis_register.v
 SYN_FILES += lib/axis/rtl/sync_reset.v
 SYN_FILES += lib/pcie/rtl/pcie_us_axil_master.v

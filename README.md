@@ -1,5 +1,7 @@
 # Verilog AXI Components Readme
 
+[![Build Status](https://github.com/alexforencich/verilog-axi/workflows/Regression%20Tests/badge.svg?branch=master)](https://github.com/alexforencich/verilog-axi/actions/)
+
 For more information and updates: http://alexforencich.com/wiki/en/verilog/axi/start
 
 GitHub repository: https://github.com/alexforencich/verilog-axi
@@ -7,8 +9,8 @@ GitHub repository: https://github.com/alexforencich/verilog-axi
 ## Introduction
 
 Collection of AXI4 and AXI4 lite bus components.  Most components are fully
-parametrizable in interface widths.  Includes full MyHDL testbench with
-intelligent bus cosimulation endpoints.
+parametrizable in interface widths.  Includes full cocotb testbench that
+utilizes [cocotbext-axi](https://github.com/alexforencich/cocotbext-axi).
 
 ## Documentation
 
@@ -402,12 +404,4 @@ Read
 
 ## Testing
 
-Running the included testbenches requires MyHDL and Icarus Verilog.  Make sure
-that myhdl.vpi is installed properly for cosimulation to work correctly.  The
-testbenches can be run with a Python test runner like nose or py.test, or the
-individual test scripts can be run with python directly.
-
-### Testbench Files
-
-    tb/axi.py            : MyHDL AXI4 master and memory BFM
-    tb/axil.py           : MyHDL AXI4 lite master and memory BFM
+Running the included testbenches requires [cocotb](https://github.com/cocotb/cocotb), [cocotbext-axi](https://github.com/alexforencich/cocotbext-axi), and [Icarus Verilog](http://iverilog.icarus.com/).  The testbenches can be run with pytest directly (requires [cocotb-test](https://github.com/themperek/cocotb-test)), pytest via tox, or via cocotb makefiles.

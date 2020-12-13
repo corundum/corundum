@@ -185,7 +185,7 @@ wire [USER_WIDTH-1:0] data_out_axis_tuser;
 
 assign s_axis_tready = data_in_axis_tready && csum_in_ready && transfer_in_reg;
 
-assign s_axis_cmd_ready = !transfer_in_reg;
+assign s_axis_cmd_ready = csum_in_ready && !transfer_in_reg;
 
 // data FIFO
 assign data_in_axis_tdata = s_axis_tdata;

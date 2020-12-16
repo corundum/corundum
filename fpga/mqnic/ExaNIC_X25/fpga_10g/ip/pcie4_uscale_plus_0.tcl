@@ -26,5 +26,5 @@ set_property -dict [list \
     CONFIG.en_msi_per_vec_masking {true} \
     CONFIG.mode_selection {Advanced} \
     CONFIG.en_gt_selection {true} \
-    CONFIG.MASTER_GT {GTYE4_CHANNEL_X0Y7} \
+    CONFIG.select_quad {GTY_Quad_225} \
 ] [get_ips pcie4_uscale_plus_0]

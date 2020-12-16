@@ -190,25 +190,7 @@ packets.
 
 ## Testing
 
-Running the included testbenches requires MyHDL and Icarus Verilog.  Make sure
-that myhdl.vpi is installed properly for cosimulation to work correctly.  The
-testbenches can be run with a Python test runner like nose or py.test, or the
-individual test scripts can be run with python directly.
-
-### Testbench Files
-
-    tb/axi.py            : MyHDL AXI4 master and memory BFM
-    tb/axil.py           : MyHDL AXI4 lite master and memory BFM
-    tb/axis_ep.py        : MyHDL AXI Stream endpoints
-    tb/eth_ep.py         : MyHDL Ethernet frame endpoints
-    tb/ip_ep.py          : MyHDL IP frame endpoints
-    tb/mqnic.py          : MyHDL mqnic driver model
-    tb/pcie.py           : MyHDL PCI Express BFM
-    tb/pcie_us.py        : MyHDL Xilinx UltraScale PCIe core model
-    tb/pcie_usp.py       : MyHDL Xilinx UltraScale+ PCIe core model
-    tb/ptp.py            : MyHDL PTP clock model
-    tb/udp_ep.py         : MyHDL UDP frame endpoints
-    tb/xgmii_ep.py       : MyHDL XGMII endpoints
+Running the included testbenches requires [cocotb](https://github.com/cocotb/cocotb), [cocotbext-axi](https://github.com/alexforencich/cocotbext-axi), [cocotbext-eth](https://github.com/alexforencich/cocotbext-eth), [cocotbext-pcie](https://github.com/alexforencich/cocotbext-pcie), and [Icarus Verilog](http://iverilog.icarus.com/).  The testbenches can be run with pytest directly (requires [cocotb-test](https://github.com/themperek/cocotb-test)), pytest via tox, or via cocotb makefiles.
 
 ## Publications
 

@@ -31,9 +31,10 @@ either expressed or implied, of The Regents of the University of California.
 
 """
 
-from myhdl import *
+from collections import deque
 
-import pcie
+from cocotb.log import SimLog
+from cocotb.triggers import Event
 
 import struct
 
@@ -232,19 +233,26 @@ class Packet(object):
 
     def __repr__(self):
         return (
-                ('Packet(data=%s, ' % repr(self.data)) +
-                ('timestamp_s=%d, ' % self.timestamp_s) +
-                ('timestamp_ns=%d, ' % self.timestamp_ns) +
-                ('rx_checksum=0x%x)' % self.rx_checksum)
-            )
+            f'{type(self).__name__}(data={self.data}, '
+            f'timestamp_s={self.timestamp_s}, '
+            f'timestamp_ns={self.timestamp_ns}, '
+            f'rx_checksum={self.rx_checksum:#06x})'
+        )
 
     def __iter__(self):
         return self.data.__iter__()
+
+    def __len__(self):
+        return len(self.data)
+
+    def __bytes__(self):
+        return bytes(self.data)
 
 
 class EqRing(object):
     def __init__(self, interface, size, stride, index, hw_addr):
         self.interface = interface
+        self.log = interface.log
         self.driver = interface.driver
         self.rc = interface.driver.rc
         self.log_size = size.bit_length() - 1
@@ -262,32 +270,34 @@ class EqRing(object):
         self.hw_head_ptr = hw_addr+MQNIC_EVENT_QUEUE_HEAD_PTR_REG
         self.hw_tail_ptr = hw_addr+MQNIC_EVENT_QUEUE_TAIL_PTR_REG
 
-    def init(self):
+    async def init(self):
+        self.log.info("Init EqRing %d (interface %d)", self.index, self.interface.index)
+
         self.buf_size = self.size*self.stride
         self.buf_dma, self.buf = self.rc.alloc_region(self.buf_size)
 
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, 0) # active, log size
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG, 0) # interrupt index
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size) # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG, 0)  # interrupt index
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size)  # active, log size
 
-    def activate(self, int_index):
+    async def activate(self, int_index):
+        self.log.info("Activate EqRing %d (interface %d)", self.index, self.interface.index)
+
         self.interrupt_index = int_index
 
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, 0) # active, log size
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG, int_index) # interrupt index
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size | MQNIC_EVENT_QUEUE_ACTIVE_MASK) # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG, int_index)  # interrupt index
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size | MQNIC_EVENT_QUEUE_ACTIVE_MASK)  # active, log size
 
-    def deactivate(self):
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size) # active, log size
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG, self.interrupt_index) # interrupt index
+    async def deactivate(self):
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size)  # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG, self.interrupt_index)  # interrupt index
 
     def empty(self):
         return self.head_ptr == self.tail_ptr
@@ -295,55 +305,56 @@ class EqRing(object):
     def full(self):
         return self.head_ptr - self.tail_ptr >= self.size
 
-    def read_head_ptr(self):
-        val = yield from self.rc.mem_read_dword(self.hw_head_ptr)
+    async def read_head_ptr(self):
+        val = await self.rc.mem_read_dword(self.hw_head_ptr)
         self.head_ptr += (val - self.head_ptr) & self.hw_ptr_mask
 
-    def write_tail_ptr(self):
-        yield from self.rc.mem_write_dword(self.hw_tail_ptr, self.tail_ptr & self.hw_ptr_mask)
+    async def write_tail_ptr(self):
+        await self.rc.mem_write_dword(self.hw_tail_ptr, self.tail_ptr & self.hw_ptr_mask)
 
-    def arm(self):
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG, self.interrupt_index | MQNIC_EVENT_QUEUE_ARM_MASK) # interrupt index
+    async def arm(self):
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG, self.interrupt_index | MQNIC_EVENT_QUEUE_ARM_MASK)  # interrupt index
 
-    def process(self):
+    async def process(self):
         if not self.interface.port_up:
             return
 
-        print("Process event queue")
+        self.log.info("Process event queue")
 
-        yield from self.read_head_ptr()
+        await self.read_head_ptr()
 
         eq_tail_ptr = self.tail_ptr
         eq_index = eq_tail_ptr & self.size_mask
 
-        print("%d events in queue" % (self.head_ptr - eq_tail_ptr))
+        self.log.info("%d events in queue", self.head_ptr - eq_tail_ptr)
 
         while (self.head_ptr != eq_tail_ptr):
             event_data = struct.unpack_from("<HH", self.buf, eq_index*self.stride)
 
-            print("Event data: "+repr(event_data))
+            self.log.info("Event data: %s", repr(event_data))
 
             if event_data[0] == 0:
                 # transmit completion
                 cq = self.interface.tx_cpl_queues[event_data[1]]
-                yield from self.interface.process_tx_cq(cq)
-                yield from cq.arm()
+                await self.interface.process_tx_cq(cq)
+                await cq.arm()
             elif event_data[0] == 1:
                 # receive completion
                 cq = self.interface.rx_cpl_queues[event_data[1]]
-                yield from self.interface.process_rx_cq(cq)
-                yield from cq.arm()
+                await self.interface.process_rx_cq(cq)
+                await cq.arm()
 
             eq_tail_ptr += 1
             eq_index = eq_tail_ptr & self.size_mask
 
         self.tail_ptr = eq_tail_ptr
-        yield from self.write_tail_ptr()
+        await self.write_tail_ptr()
 
 
 class CqRing(object):
     def __init__(self, interface, size, stride, index, hw_addr):
         self.interface = interface
+        self.log = interface.log
         self.driver = interface.driver
         self.rc = interface.driver.rc
         self.log_size = size.bit_length() - 1
@@ -362,32 +373,34 @@ class CqRing(object):
         self.hw_head_ptr = hw_addr+MQNIC_CPL_QUEUE_HEAD_PTR_REG
         self.hw_tail_ptr = hw_addr+MQNIC_CPL_QUEUE_TAIL_PTR_REG
 
-    def init(self):
+    async def init(self):
+        self.log.info("Init CqRing %d (interface %d)", self.index, self.interface.index)
+
         self.buf_size = self.size*self.stride
         self.buf_dma, self.buf = self.rc.alloc_region(self.buf_size)
 
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, 0) # active, log size
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG, 0) # event index
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size) # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG, 0)  # event index
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size)  # active, log size
 
-    def activate(self, int_index):
+    async def activate(self, int_index):
+        self.log.info("Activate CqRing %d (interface %d)", self.index, self.interface.index)
+
         self.interrupt_index = int_index
 
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, 0) # active, log size
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG, int_index) # event index
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size | MQNIC_CPL_QUEUE_ACTIVE_MASK) # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG, int_index)  # event index
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size | MQNIC_CPL_QUEUE_ACTIVE_MASK)  # active, log size
 
-    def deactivate(self):
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size) # active, log size
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_CPL_QUEUE_INDEX_REG, int_index) # event index
+    async def deactivate(self):
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_size)  # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG, self.interrupt_index)  # event index
 
     def empty(self):
         return self.head_ptr == self.tail_ptr
@@ -395,20 +408,21 @@ class CqRing(object):
     def full(self):
         return self.head_ptr - self.tail_ptr >= self.size
 
-    def read_head_ptr(self):
-        val = yield from self.rc.mem_read_dword(self.hw_head_ptr)
+    async def read_head_ptr(self):
+        val = await self.rc.mem_read_dword(self.hw_head_ptr)
         self.head_ptr += (val - self.head_ptr) & self.hw_ptr_mask
 
-    def write_tail_ptr(self):
-        yield from self.rc.mem_write_dword(self.hw_tail_ptr, self.tail_ptr & self.hw_ptr_mask)
+    async def write_tail_ptr(self):
+        await self.rc.mem_write_dword(self.hw_tail_ptr, self.tail_ptr & self.hw_ptr_mask)
 
-    def arm(self):
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG, self.interrupt_index | MQNIC_CPL_QUEUE_ARM_MASK) # event index
+    async def arm(self):
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG, self.interrupt_index | MQNIC_CPL_QUEUE_ARM_MASK)  # event index
 
 
 class TxRing(object):
     def __init__(self, interface, size, stride, index, hw_addr):
         self.interface = interface
+        self.log = interface.log
         self.driver = interface.driver
         self.rc = interface.driver.rc
         self.log_queue_size = size.bit_length() - 1
@@ -427,39 +441,41 @@ class TxRing(object):
 
         self.packets = 0
         self.bytes = 0
-        
+
         self.hw_ptr_mask = 0xffff
         self.hw_addr = hw_addr
         self.hw_head_ptr = hw_addr+MQNIC_QUEUE_HEAD_PTR_REG
         self.hw_tail_ptr = hw_addr+MQNIC_QUEUE_TAIL_PTR_REG
 
-    def init(self):
+    async def init(self):
+        self.log.info("Init TxRing %d (interface %d)", self.index, self.interface.index)
+
         self.tx_info = [None]*self.size
 
         self.buf_size = self.size*self.stride
         self.buf_dma, self.buf = self.rc.alloc_region(self.buf_size)
 
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0) # active, log size
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, 0) # completion queue index
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8)) # active, log desc block size, log queue size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, 0)  # completion queue index
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
 
-    def activate(self, cpl_index):
+    async def activate(self, cpl_index):
+        self.log.info("Activate TxRing %d (interface %d)", self.index, self.interface.index)
+
         self.cpl_index = cpl_index
 
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0) # active, log size
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, cpl_index) # completion queue index
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK) # active, log desc block size, log queue size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, cpl_index)  # completion queue index
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK)  # active, log desc block size, log queue size
 
-    def deactivate(self):
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8)) # active, log desc block size, log queue size
+    async def deactivate(self):
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
 
     def empty(self):
         return self.head_ptr == self.clean_tail_ptr
@@ -467,12 +483,12 @@ class TxRing(object):
     def full(self):
         return self.head_ptr - self.clean_tail_ptr >= self.full_size
 
-    def read_tail_ptr(self):
-        val = yield from self.rc.mem_read_dword(self.hw_tail_ptr)
+    async def read_tail_ptr(self):
+        val = await self.rc.mem_read_dword(self.hw_tail_ptr)
         self.tail_ptr += (val - self.tail_ptr) & self.hw_ptr_mask
 
-    def write_head_ptr(self):
-        yield from self.rc.mem_write_dword(self.hw_head_ptr, self.head_ptr & self.hw_ptr_mask)
+    async def write_head_ptr(self):
+        await self.rc.mem_write_dword(self.hw_head_ptr, self.head_ptr & self.hw_ptr_mask)
 
     def free_desc(self, index):
         pkt = self.tx_info[index]
@@ -489,6 +505,7 @@ class TxRing(object):
 class RxRing(object):
     def __init__(self, interface, size, stride, index, hw_addr):
         self.interface = interface
+        self.log = interface.log
         self.driver = interface.driver
         self.rc = interface.driver.rc
         self.log_queue_size = size.bit_length() - 1
@@ -507,41 +524,43 @@ class RxRing(object):
 
         self.packets = 0
         self.bytes = 0
-        
+
         self.hw_ptr_mask = 0xffff
         self.hw_addr = hw_addr
         self.hw_head_ptr = hw_addr+MQNIC_QUEUE_HEAD_PTR_REG
         self.hw_tail_ptr = hw_addr+MQNIC_QUEUE_TAIL_PTR_REG
 
-    def init(self):
+    async def init(self):
+        self.log.info("Init RxRing %d (interface %d)", self.index, self.interface.index)
+
         self.rx_info = [None]*self.size
 
         self.buf_size = self.size*self.stride
         self.buf_dma, self.buf = self.rc.alloc_region(self.buf_size)
 
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0) # active, log size
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, 0) # completion queue index
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8)) # active, log desc block size, log queue size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, 0)  # completion queue index
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
 
-    def activate(self, cpl_index):
+    async def activate(self, cpl_index):
+        self.log.info("Activate RxRing %d (interface %d)", self.index, self.interface.index)
+
         self.cpl_index = cpl_index
 
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0) # active, log size
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32) # base address
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, cpl_index) # completion queue index
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask) # head pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask) # tail pointer
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK) # active, log desc block size, log queue size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, cpl_index)  # completion queue index
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK)  # active, log desc block size, log queue size
 
-        yield from self.refill_buffers()
+        await self.refill_buffers()
 
-    def deactivate(self):
-        yield from self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8)) # active, log desc block size, log queue size
+    async def deactivate(self):
+        await self.rc.mem_write_dword(self.hw_addr+MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
 
     def empty(self):
         return self.head_ptr == self.clean_tail_ptr
@@ -549,12 +568,12 @@ class RxRing(object):
     def full(self):
         return self.head_ptr - self.clean_tail_ptr >= self.full_size
 
-    def read_tail_ptr(self):
-        val = yield from self.rc.mem_read_dword(self.hw_tail_ptr)
+    async def read_tail_ptr(self):
+        val = await self.rc.mem_read_dword(self.hw_tail_ptr)
         self.tail_ptr += (val - self.tail_ptr) & self.hw_ptr_mask
 
-    def write_head_ptr(self):
-        yield from self.rc.mem_write_dword(self.hw_head_ptr, self.head_ptr & self.hw_ptr_mask)
+    async def write_head_ptr(self):
+        await self.rc.mem_write_dword(self.hw_head_ptr, self.head_ptr & self.hw_ptr_mask)
 
     def free_desc(self, index):
         pkt = self.rx_info[index]
@@ -577,11 +596,11 @@ class RxRing(object):
 
         # write descriptors
         for k in range(0, self.desc_block_size):
-            l = min(length-offset, 4096) if k < self.desc_block_size-1 else length-offset
-            struct.pack_into("<LLQ", self.buf, index*self.stride+k*MQNIC_DESC_SIZE, 0, l, ptr+offset if l else 0)
-            offset += l
+            seg = min(length-offset, 4096) if k < self.desc_block_size-1 else length-offset
+            struct.pack_into("<LLQ", self.buf, index*self.stride+k*MQNIC_DESC_SIZE, 0, seg, ptr+offset if seg else 0)
+            offset += seg
 
-    def refill_buffers(self):
+    async def refill_buffers(self):
         missing = self.size - (self.head_ptr - self.clean_tail_ptr)
 
         if missing < 8:
@@ -591,12 +610,13 @@ class RxRing(object):
             self.prepare_desc(self.head_ptr & self.size_mask)
             self.head_ptr += 1
 
-        yield from self.write_head_ptr()
+        await self.write_head_ptr()
 
 
 class Scheduler(object):
     def __init__(self, port, index, hw_addr):
         self.port = port
+        self.log = port.log
         self.interface = port.interface
         self.driver = port.interface.driver
         self.rc = port.interface.driver.rc
@@ -607,6 +627,7 @@ class Scheduler(object):
 class Port(object):
     def __init__(self, interface, index, hw_addr):
         self.interface = interface
+        self.log = interface.log
         self.driver = interface.driver
         self.rc = interface.driver.rc
         self.index = index
@@ -620,40 +641,41 @@ class Port(object):
         self.sched_stride = None
         self.sched_type = None
 
-    def init(self):
+    async def init(self):
         # Read ID registers
-        self.port_id = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_ID)
-        print("Port ID: {:#010x}".format(self.port_id))
-        self.port_features = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_FEATURES)
-        print("Port features: {:#010x}".format(self.port_features))
-        self.port_mtu = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_MTU)
-        print("Port MTU: {}".format(self.port_mtu))
+        self.port_id = await self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_ID)
+        self.log.info("Port ID: 0x%08x", self.port_id)
+        self.port_features = await self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_FEATURES)
+        self.log.info("Port features: 0x%08x", self.port_features)
+        self.port_mtu = await self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_PORT_MTU)
+        self.log.info("Port MTU: %d", self.port_mtu)
 
-        self.sched_count = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_COUNT)
-        print("Scheduler count: {}".format(self.sched_count))
-        self.sched_offset = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_OFFSET)
-        print("Scheduler offset: {:#010x}".format(self.sched_offset))
-        self.sched_stride = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_STRIDE)
-        print("Scheduler stride: {:#010x}".format(self.sched_stride))
-        self.sched_type = yield from self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_TYPE)
-        print("Scheduler type: {:#010x}".format(self.sched_type))
+        self.sched_count = await self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_COUNT)
+        self.log.info("Scheduler count: %d", self.sched_count)
+        self.sched_offset = await self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_OFFSET)
+        self.log.info("Scheduler offset: 0x%08x", self.sched_offset)
+        self.sched_stride = await self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_STRIDE)
+        self.log.info("Scheduler stride: 0x%08x", self.sched_stride)
+        self.sched_type = await self.driver.rc.mem_read_dword(self.hw_addr+MQNIC_PORT_REG_SCHED_TYPE)
+        self.log.info("Scheduler type: 0x%08x", self.sched_type)
 
         self.schedulers = []
 
-        yield from self.set_mtu(min(self.port_mtu, 9214))
+        await self.set_mtu(min(self.port_mtu, 9214))
 
         for k in range(self.sched_count):
             p = Scheduler(self, k, self.hw_addr + self.sched_offset + k*self.sched_stride)
             self.schedulers.append(p)
 
-    def set_mtu(self, mtu):
-        yield from self.driver.rc.mem_write_dword(self.hw_addr+MQNIC_PORT_REG_TX_MTU, mtu)
-        yield from self.driver.rc.mem_write_dword(self.hw_addr+MQNIC_PORT_REG_RX_MTU, mtu)
+    async def set_mtu(self, mtu):
+        await self.driver.rc.mem_write_dword(self.hw_addr+MQNIC_PORT_REG_TX_MTU, mtu)
+        await self.driver.rc.mem_write_dword(self.hw_addr+MQNIC_PORT_REG_RX_MTU, mtu)
 
 
 class Interface(object):
     def __init__(self, driver, index, hw_addr):
         self.driver = driver
+        self.log = driver.log
         self.index = index
         self.hw_addr = hw_addr
         self.csr_hw_addr = hw_addr+driver.if_csr_offset
@@ -677,44 +699,44 @@ class Interface(object):
         self.interrupt_running = False
         self.interrupt_pending = 0
 
-        self.pkt_rx_queue = []
-        self.pkt_rx_sync = Signal(bool(0))
+        self.pkt_rx_queue = deque()
+        self.pkt_rx_sync = Event()
 
-    def init(self):
+    async def init(self):
         self.driver.rc.msi_register_callback(self.driver.dev_id, self.interrupt, self.index)
 
         # Read ID registers
-        self.if_id = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_IF_ID)
-        print("IF ID: {:#010x}".format(self.if_id))
-        self.if_features = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_IF_FEATURES)
-        print("IF features: {:#010x}".format(self.if_features))
+        self.if_id = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_IF_ID)
+        self.log.info("IF ID: 0x%08x", self.if_id)
+        self.if_features = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_IF_FEATURES)
+        self.log.info("IF features: 0x%08x", self.if_features)
 
-        self.event_queue_count = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_EVENT_QUEUE_COUNT)
-        print("Event queue count: {}".format(self.event_queue_count))
-        self.event_queue_offset = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_EVENT_QUEUE_OFFSET)
-        print("Event queue offset: {:#010x}".format(self.event_queue_offset))
-        self.tx_queue_count = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_TX_QUEUE_COUNT)
-        print("TX queue count: {}".format(self.tx_queue_count))
-        self.tx_queue_offset = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_TX_QUEUE_OFFSET)
-        print("TX queue offset: {:#010x}".format(self.tx_queue_offset))
-        self.tx_cpl_queue_count = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_TX_CPL_QUEUE_COUNT)
-        print("TX completion queue count: {}".format(self.tx_cpl_queue_count))
-        self.tx_cpl_queue_offset = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_TX_CPL_QUEUE_OFFSET)
-        print("TX completion queue offset: {:#010x}".format(self.tx_cpl_queue_offset))
-        self.rx_queue_count = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_RX_QUEUE_COUNT)
-        print("RX queue count: {}".format(self.rx_queue_count))
-        self.rx_queue_offset = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_RX_QUEUE_OFFSET)
-        print("RX queue offset: {:#010x}".format(self.rx_queue_offset))
-        self.rx_cpl_queue_count = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_RX_CPL_QUEUE_COUNT)
-        print("RX completion queue count: {}".format(self.rx_cpl_queue_count))
-        self.rx_cpl_queue_offset = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_RX_CPL_QUEUE_OFFSET)
-        print("RX completion queue offset: {:#010x}".format(self.rx_cpl_queue_offset))
-        self.port_count = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_PORT_COUNT)
-        print("Port count: {}".format(self.port_count))
-        self.port_offset = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_PORT_OFFSET)
-        print("Port offset: {:#010x}".format(self.port_offset))
-        self.port_stride = yield from self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_PORT_STRIDE)
-        print("Port stride: {:#010x}".format(self.port_stride))
+        self.event_queue_count = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_EVENT_QUEUE_COUNT)
+        self.log.info("Event queue count: %d", self.event_queue_count)
+        self.event_queue_offset = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_EVENT_QUEUE_OFFSET)
+        self.log.info("Event queue offset: 0x%08x", self.event_queue_offset)
+        self.tx_queue_count = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_TX_QUEUE_COUNT)
+        self.log.info("TX queue count: %d", self.tx_queue_count)
+        self.tx_queue_offset = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_TX_QUEUE_OFFSET)
+        self.log.info("TX queue offset: 0x%08x", self.tx_queue_offset)
+        self.tx_cpl_queue_count = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_TX_CPL_QUEUE_COUNT)
+        self.log.info("TX completion queue count: %d", self.tx_cpl_queue_count)
+        self.tx_cpl_queue_offset = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_TX_CPL_QUEUE_OFFSET)
+        self.log.info("TX completion queue offset: 0x%08x", self.tx_cpl_queue_offset)
+        self.rx_queue_count = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_RX_QUEUE_COUNT)
+        self.log.info("RX queue count: %d", self.rx_queue_count)
+        self.rx_queue_offset = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_RX_QUEUE_OFFSET)
+        self.log.info("RX queue offset: 0x%08x", self.rx_queue_offset)
+        self.rx_cpl_queue_count = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_RX_CPL_QUEUE_COUNT)
+        self.log.info("RX completion queue count: %d", self.rx_cpl_queue_count)
+        self.rx_cpl_queue_offset = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_RX_CPL_QUEUE_OFFSET)
+        self.log.info("RX completion queue offset: 0x%08x", self.rx_cpl_queue_offset)
+        self.port_count = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_PORT_COUNT)
+        self.log.info("Port count: %d", self.port_count)
+        self.port_offset = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_PORT_OFFSET)
+        self.log.info("Port offset: 0x%08x", self.port_offset)
+        self.port_stride = await self.driver.rc.mem_read_dword(self.csr_hw_addr+MQNIC_IF_REG_PORT_STRIDE)
+        self.log.info("Port stride: 0x%08x", self.port_stride)
 
         self.event_queue_count = min(self.event_queue_count, MQNIC_MAX_EVENT_RINGS)
         self.tx_queue_count = min(self.tx_queue_count, MQNIC_MAX_TX_RINGS)
@@ -731,111 +753,120 @@ class Interface(object):
 
         for k in range(self.event_queue_count):
             q = EqRing(self, 1024, MQNIC_EVENT_SIZE, self.index, self.hw_addr + self.event_queue_offset + k*MQNIC_EVENT_QUEUE_STRIDE)
-            yield from q.init()
+            await q.init()
             self.event_queues.append(q)
 
         for k in range(self.tx_queue_count):
             q = TxRing(self, 1024, MQNIC_DESC_SIZE*4, k, self.hw_addr + self.tx_queue_offset + k*MQNIC_QUEUE_STRIDE)
-            yield from q.init()
+            await q.init()
             self.tx_queues.append(q)
 
         for k in range(self.tx_cpl_queue_count):
             q = CqRing(self, 1024, MQNIC_CPL_SIZE, k, self.hw_addr + self.tx_cpl_queue_offset + k*MQNIC_CPL_QUEUE_STRIDE)
-            yield from q.init()
+            await q.init()
             self.tx_cpl_queues.append(q)
 
         for k in range(self.rx_queue_count):
             q = RxRing(self, 1024, MQNIC_DESC_SIZE*4, k, self.hw_addr + self.rx_queue_offset + k*MQNIC_QUEUE_STRIDE)
-            yield from q.init()
+            await q.init()
             self.rx_queues.append(q)
 
         for k in range(self.rx_cpl_queue_count):
             q = CqRing(self, 1024, MQNIC_CPL_SIZE, k, self.hw_addr + self.rx_cpl_queue_offset + k*MQNIC_CPL_QUEUE_STRIDE)
-            yield from q.init()
+            await q.init()
             self.rx_cpl_queues.append(q)
 
         for k in range(self.port_count):
             p = Port(self, k, self.hw_addr + self.port_offset + k*self.port_stride)
-            yield from p.init()
+            await p.init()
             self.ports.append(p)
 
-    def open(self):
+        # wait for all writes to complete
+        await self.driver.rc.mem_read(self.hw_addr, 4)
+
+    async def open(self):
         for q in self.event_queues:
-            yield from q.activate(self.index) # TODO?
-            q.handler = None # TODO
-            yield from q.arm()
+            await q.activate(self.index)  # TODO?
+            q.handler = None  # TODO
+            await q.arm()
 
         for q in self.rx_cpl_queues:
-            yield from q.activate(q.index % self.event_queue_count)
+            await q.activate(q.index % self.event_queue_count)
             q.ring_index = q.index
-            q.handler = None # TODO
-            yield from q.arm()
+            q.handler = None  # TODO
+            await q.arm()
 
         for q in self.rx_queues:
-            yield from q.activate(q.index)
+            await q.activate(q.index)
 
         for q in self.tx_cpl_queues:
-            yield from q.activate(q.index % self.event_queue_count)
+            await q.activate(q.index % self.event_queue_count)
             q.ring_index = q.index
-            q.handler = None # TODO
-            yield from q.arm()
+            q.handler = None  # TODO
+            await q.arm()
 
         for q in self.tx_queues:
-            yield from q.activate(q.index)
+            await q.activate(q.index)
+
+        # wait for all writes to complete
+        await self.driver.rc.mem_read(self.hw_addr, 4)
 
         self.port_up = True
 
-    def close(self):
+    async def close(self):
         self.port_up = False
 
         for q in self.tx_queues:
-            yield from q.deactivate()
+            await q.deactivate()
 
         for q in self.tx_cpl_queues:
-            yield from q.deactivate()
+            await q.deactivate()
 
         for q in self.rx_queues:
-            yield from q.deactivate()
+            await q.deactivate()
 
         for q in self.rx_cpl_queues:
-            yield from q.deactivate()
+            await q.deactivate()
 
         for q in self.event_queues:
-            yield from q.deactivate()
+            await q.deactivate()
 
-        yield delay(10000)
+        # wait for all writes to complete
+        await self.driver.rc.mem_read(self.hw_addr, 4)
 
         for q in self.tx_queues:
-            yield from q.free_buf()
+            await q.free_buf()
 
         for q in self.rx_queues:
-            yield from q.free_buf()
+            await q.free_buf()
 
-    def interrupt(self):
-        print("Interface interrupt")
+    async def interrupt(self):
+        self.log.info("Interface interrupt (interface %d)", self.index)
         if self.interrupt_running:
             self.interrupt_pending += 1
-            print("************************ interrupt was running")
+            self.log.info("************************ interrupt was running")
             return
         self.interrupt_running = True
         for eq in self.event_queues:
-            yield from eq.process()
-            yield from eq.arm()
+            await eq.process()
+            await eq.arm()
         self.interrupt_running = False
-        print("Device interrupt done")
+        self.log.info("Interface interrupt done (interface %d)", self.index)
 
         while self.interrupt_pending:
             self.interrupt_pending -= 1
-            yield from self.interrupt()
+            await self.interrupt()
 
-    def process_tx_cq(self, cq_ring):
+    async def process_tx_cq(self, cq_ring):
+        self.log.info("Process TX CQ %d (interface %d)", cq_ring.ring_index, self.index)
+
         ring = self.tx_queues[cq_ring.ring_index]
 
         if not self.port_up:
             return
 
         # process completion queue
-        yield from cq_ring.read_head_ptr()
+        await cq_ring.read_head_ptr()
 
         cq_tail_ptr = cq_ring.tail_ptr
         cq_index = cq_tail_ptr & cq_ring.size_mask
@@ -844,9 +875,9 @@ class Interface(object):
             cpl_data = struct.unpack_from("<HHHxxQ", cq_ring.buf, cq_index*cq_ring.stride)
             ring_index = cpl_data[1]
 
-            print(cpl_data)
+            self.log.info("CPL data: %s", cpl_data)
 
-            print("Ring index %d" % ring_index)
+            self.log.info("Ring index: %d", ring_index)
 
             ring.free_desc(ring_index)
 
@@ -854,10 +885,10 @@ class Interface(object):
             cq_index = cq_tail_ptr & cq_ring.size_mask
 
         cq_ring.tail_ptr = cq_tail_ptr
-        yield from cq_ring.write_tail_ptr()
+        await cq_ring.write_tail_ptr()
 
         # process ring
-        yield from ring.read_tail_ptr()
+        await ring.read_tail_ptr()
 
         ring_clean_tail_ptr = ring.clean_tail_ptr
         ring_index = ring_clean_tail_ptr & ring.size_mask
@@ -871,14 +902,16 @@ class Interface(object):
 
         ring.clean_tail_ptr = ring_clean_tail_ptr
 
-    def process_rx_cq(self, cq_ring):
+    async def process_rx_cq(self, cq_ring):
+        self.log.info("Process RX CQ %d (interface %d)", cq_ring.ring_index, self.index)
+
         ring = self.rx_queues[cq_ring.ring_index]
 
         if not self.port_up:
             return
 
         # process completion queue
-        yield from cq_ring.read_head_ptr()
+        await cq_ring.read_head_ptr()
 
         cq_tail_ptr = cq_ring.tail_ptr
         cq_index = cq_tail_ptr & cq_ring.size_mask
@@ -887,9 +920,9 @@ class Interface(object):
             cpl_data = struct.unpack_from("<HHHxxLHH", cq_ring.buf, cq_index*cq_ring.stride)
             ring_index = cpl_data[1]
 
-            print(cpl_data)
+            self.log.info("CPL data: %s", cpl_data)
 
-            print("Ring index %d" % ring_index)
+            self.log.info("Ring index: %d", ring_index)
             pkt = ring.rx_info[ring_index]
 
             length = cpl_data[2]
@@ -900,10 +933,10 @@ class Interface(object):
             skb.timestamp_s = cpl_data[4]
             skb.rx_checksum = cpl_data[5]
 
-            print(skb)
+            self.log.info("Packet: %s", skb)
 
             self.pkt_rx_queue.append(skb)
-            self.pkt_rx_sync.next = not self.pkt_rx_sync
+            self.pkt_rx_sync.set()
 
             ring.free_desc(ring_index)
 
@@ -911,10 +944,10 @@ class Interface(object):
             cq_index = cq_tail_ptr & cq_ring.size_mask
 
         cq_ring.tail_ptr = cq_tail_ptr
-        yield from cq_ring.write_tail_ptr()
+        await cq_ring.write_tail_ptr()
 
         # process ring
-        yield from ring.read_tail_ptr()
+        await ring.read_tail_ptr()
 
         ring_clean_tail_ptr = ring.clean_tail_ptr
         ring_index = ring_clean_tail_ptr & ring.size_mask
@@ -929,9 +962,9 @@ class Interface(object):
         ring.clean_tail_ptr = ring_clean_tail_ptr
 
         # replenish buffers
-        yield from ring.refill_buffers()
+        await ring.refill_buffers()
 
-    def start_xmit(self, skb, tx_ring=None, csum_start=None, csum_offset=None):
+    async def start_xmit(self, skb, tx_ring=None, csum_start=None, csum_offset=None):
         if not self.port_up:
             return
 
@@ -940,10 +973,10 @@ class Interface(object):
         else:
             data = skb
 
-        data = data[:16384] # TODO
-        ring_index = tx_ring # TODO!
+        data = data[:16384]  # TODO
+        ring_index = tx_ring  # TODO!
 
-        ring = self.tx_queues[ring_index];
+        ring = self.tx_queues[ring_index]
 
         tail_ptr = ring.tail_ptr
 
@@ -969,34 +1002,39 @@ class Interface(object):
         offset = 0
 
         # write descriptors
-        l = min(length-offset, 42) if ring.desc_block_size > 1 else length-offset
-        struct.pack_into("<HHLQ", ring.buf, index*ring.stride, 0, csum_cmd, l, ptr+offset if l else 0)
-        offset += l
+        seg = min(length-offset, 42) if ring.desc_block_size > 1 else length-offset
+        struct.pack_into("<HHLQ", ring.buf, index*ring.stride, 0, csum_cmd, seg, ptr+offset if seg else 0)
+        offset += seg
         for k in range(1, ring.desc_block_size):
-            l = min(length-offset, 4096) if k < ring.desc_block_size-1 else length-offset
-            struct.pack_into("<4xLQ", ring.buf, index*ring.stride+k*MQNIC_DESC_SIZE, l, ptr+offset if l else 0)
-            offset += l
+            seg = min(length-offset, 4096) if k < ring.desc_block_size-1 else length-offset
+            struct.pack_into("<4xLQ", ring.buf, index*ring.stride+k*MQNIC_DESC_SIZE, seg, ptr+offset if seg else 0)
+            offset += seg
 
-        ring.head_ptr += 1;
+        ring.head_ptr += 1
 
-        yield from ring.write_head_ptr()
+        await ring.write_head_ptr()
 
-    def set_mtu(self, mtu):
+    async def set_mtu(self, mtu):
         for p in self.ports:
-            yield from p.set_mtu(mtu)
+            await p.set_mtu(mtu)
 
     def recv(self):
         if self.pkt_rx_queue:
-            return self.pkt_rx_queue.pop(0)
+            return self.pkt_rx_queue.popleft()
         return None
 
-    def wait(self):
-        yield self.pkt_rx_sync
+    async def wait(self):
+        if not self.pkt_rx_queue:
+            self.pkt_rx_sync.clear()
+            await self.pkt_rx_sync.wait()
 
 
 class Driver(object):
     def __init__(self, rc):
         self.rc = rc
+
+        self.log = SimLog("cocotb.mqnic")
+
         self.dev_id = None
         self.rc_tree_ent = None
         self.hw_addr = None
@@ -1020,55 +1058,48 @@ class Driver(object):
 
         self.pkt_buf_size = 16384
         self.allocated_packets = []
-        self.free_packets = []
+        self.free_packets = deque()
 
-    def init_dev(self, dev_id):
+    async def init_dev(self, dev_id):
         assert not self.initialized
         self.initialized = True
 
         self.dev_id = dev_id
-        self.rc_tree_ent = self.rc.tree.find_dev(dev_id)
-        self.hw_addr = self.rc_tree_ent.bar[0] & ~0xf
+        self.rc_tree_ent = self.rc.tree.find_child_dev(dev_id)
+        self.hw_addr = self.rc_tree_ent.bar_addr[0]
 
         # Read ID registers
-        self.fw_id = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_FW_ID)
-        print("FW ID: {:#010x}".format(self.fw_id))
-        self.fw_ver = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_FW_VER)
-        print("FW version: {}.{}".format(self.fw_ver >> 16, self.fw_ver & 0xffff))
-        self.board_id = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_BOARD_ID)
-        print("Board ID: {:#010x}".format(self.board_id))
-        self.board_ver = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_BOARD_VER)
-        print("Board version: {}.{}".format(self.board_ver >> 16, self.board_ver & 0xffff))
+        self.fw_id = await self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_FW_ID)
+        self.log.info("FW ID: 0x%08x", self.fw_id)
+        self.fw_ver = await self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_FW_VER)
+        self.log.info("FW version: %d.%d", self.fw_ver >> 16, self.fw_ver & 0xffff)
+        self.board_id = await self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_BOARD_ID)
+        self.log.info("Board ID: 0x%08x", self.board_id)
+        self.board_ver = await self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_BOARD_VER)
+        self.log.info("Board version: %d.%d", self.board_ver >> 16, self.board_ver & 0xffff)
 
-        self.phc_count = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_PHC_COUNT)
-        print("PHC count: {}".format(self.phc_count))
-        self.phc_offset = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_PHC_OFFSET)
-        print("PHC offset: {:#010x}".format(self.phc_offset))
+        self.phc_count = await self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_PHC_COUNT)
+        self.log.info("PHC count: %d", self.phc_count)
+        self.phc_offset = await self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_PHC_OFFSET)
+        self.log.info("PHC offset: 0x%08x", self.phc_offset)
 
-        self.if_count = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_IF_COUNT)
-        print("IF count: {}".format(self.if_count))
-        self.if_stride = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_IF_STRIDE)
-        print("IF stride: {:#010x}".format(self.if_stride))
-        self.if_csr_offset = yield from self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_IF_CSR_OFFSET)
-        print("IF CSR offset: {:#010x}".format(self.if_csr_offset))
-
-        # enable bus mastering
-        val = yield from self.rc.config_read_word(self.dev_id, 0x04)
-        yield from self.rc.config_write_word(self.dev_id, 0x04, val | 4)
-
-        # configure MSI
-        yield from self.rc.configure_msi(self.dev_id)
+        self.if_count = await self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_IF_COUNT)
+        self.log.info("IF count: %d", self.if_count)
+        self.if_stride = await self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_IF_STRIDE)
+        self.log.info("IF stride: 0x%08x", self.if_stride)
+        self.if_csr_offset = await self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_IF_CSR_OFFSET)
+        self.log.info("IF CSR offset: 0x%08x", self.if_csr_offset)
 
         self.interfaces = []
 
         for k in range(self.if_count):
             i = Interface(self, k, self.hw_addr+k*self.if_stride)
-            yield from i.init()
+            await i.init()
             self.interfaces.append(i)
 
     def alloc_pkt(self):
         if self.free_packets:
-            return self.free_packets.pop()
+            return self.free_packets.popleft()
 
         pkt = self.rc.alloc_region(self.pkt_buf_size)
         self.allocated_packets.append(pkt)
@@ -1078,5 +1109,3 @@ class Driver(object):
         assert pkt is not None
         assert pkt in self.allocated_packets
         self.free_packets.append(pkt)
-
-

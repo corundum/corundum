@@ -1,1 +1,0 @@
-../lib/pcie/tb/pcie_usp.py

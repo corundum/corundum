@@ -122,12 +122,11 @@ async def run_test_write(dut, data_in=None, idle_inserter=None, backpressure_ins
                 tb.axi_ram.write(addr-128, b'\xaa'*(len(test_data)+256))
 
                 desc = DescTransaction(addr=addr, len=len(test_data), tag=cur_tag)
-                tb.write_desc_source.send(desc)
+                await tb.write_desc_source.send(desc)
 
-                tb.write_data_source.send(AxiStreamFrame(test_data2, tid=cur_tag))
+                await tb.write_data_source.send(AxiStreamFrame(test_data2, tid=cur_tag))
 
-                await tb.write_desc_status_sink.wait()
-                status = tb.write_desc_status_sink.recv()
+                status = await tb.write_desc_status_sink.recv()
 
                 tb.log.info("status: %s", status)
                 assert int(status.len) == min(len(test_data), len(test_data2))

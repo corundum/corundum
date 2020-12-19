@@ -117,10 +117,9 @@ async def run_test(dut, data_in=None, idle_inserter=None, backpressure_inserter=
                 tb.axi_ram.write(write_addr & 0xffff80, b'\xaa'*(len(test_data)+256))
 
                 desc = DescTransaction(read_addr=read_addr, write_addr=write_addr, len=len(test_data), tag=cur_tag)
-                tb.desc_source.send(desc)
+                await tb.desc_source.send(desc)
 
-                await tb.desc_status_sink.wait()
-                status = tb.desc_status_sink.recv()
+                status = await tb.desc_status_sink.recv()
 
                 tb.log.info("status: %s", status)
                 assert int(status.tag) == cur_tag

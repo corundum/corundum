@@ -119,13 +119,11 @@ async def run_test_read(dut, data_in=None, idle_inserter=None, backpressure_inse
             tb.log.debug("%s", tb.axi_ram.hexdump_str((addr & ~0xf)-16, (((addr & 0xf)+length-1) & ~0xf)+48))
 
             desc = DescTransaction(addr=addr, len=len(test_data), tag=cur_tag, id=cur_tag)
-            tb.read_desc_source.send(desc)
+            await tb.read_desc_source.send(desc)
 
-            await tb.read_desc_status_sink.wait()
-            status = tb.read_desc_status_sink.recv()
+            status = await tb.read_desc_status_sink.recv()
 
-            await tb.read_data_sink.wait()
-            read_data = tb.read_data_sink.recv()
+            read_data = await tb.read_data_sink.recv()
 
             tb.log.info("status: %s", status)
             tb.log.info("read_data: %s", read_data)

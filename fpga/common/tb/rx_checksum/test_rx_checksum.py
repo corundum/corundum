@@ -117,13 +117,12 @@ async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=N
 
         test_frame = AxiStreamFrame(test_pkt.build())
         test_frames.append(test_frame)
-        tb.source.send(test_frame)
+        await tb.source.send(test_frame)
 
         ip_id = (ip_id + 1) & 0xffff
 
     for test_pkt, test_frame in zip(test_pkts, test_frames):
-        await tb.sink.wait()
-        rx_csum = tb.sink.recv()
+        rx_csum = await tb.sink.recv()
 
         csum = ~scapy.utils.checksum(bytes(test_pkt.payload)) & 0xffff
 

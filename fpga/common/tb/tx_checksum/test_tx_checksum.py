@@ -120,8 +120,8 @@ async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=N
         test_frame = AxiStreamFrame(test_pkt.build())
         test_frames.append(test_frame)
 
-        tb.source.send(test_frame)
-        tb.cmd_source.send(CsumCmdTransaction(csum_enable=0, csum_start=34, csum_offset=40, csum_init=0))
+        await tb.source.send(test_frame)
+        await tb.cmd_source.send(CsumCmdTransaction(csum_enable=0, csum_start=34, csum_offset=40, csum_init=0))
 
         # inline partial checksum
         test_pkts.append(test_pkt.copy())
@@ -133,8 +133,8 @@ async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=N
         test_frame = AxiStreamFrame(pkt.build())
         test_frames.append(test_frame)
 
-        tb.source.send(test_frame)
-        tb.cmd_source.send(CsumCmdTransaction(csum_enable=1, csum_start=34, csum_offset=40, csum_init=0))
+        await tb.source.send(test_frame)
+        await tb.cmd_source.send(CsumCmdTransaction(csum_enable=1, csum_start=34, csum_offset=40, csum_init=0))
 
         # partial checksum in command
         test_pkts.append(test_pkt.copy())
@@ -146,12 +146,11 @@ async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=N
         test_frame = AxiStreamFrame(pkt.build())
         test_frames.append(test_frame)
 
-        tb.source.send(test_frame)
-        tb.cmd_source.send(CsumCmdTransaction(csum_enable=1, csum_start=34, csum_offset=40, csum_init=partial_csum))
+        await tb.source.send(test_frame)
+        await tb.cmd_source.send(CsumCmdTransaction(csum_enable=1, csum_start=34, csum_offset=40, csum_init=partial_csum))
 
     for test_pkt, test_frame in zip(test_pkts, test_frames):
-        await tb.sink.wait()
-        rx_frame = tb.sink.recv()
+        rx_frame = await tb.sink.recv()
 
         rx_pkt = Ether(bytes(rx_frame))
 
@@ -196,8 +195,8 @@ async def run_test_offsets(dut, payload_lengths=None, payload_data=None, idle_in
             test_frame = AxiStreamFrame(test_pkt.build())
             test_frames.append(test_frame)
 
-            tb.source.send(test_frame)
-            tb.cmd_source.send(CsumCmdTransaction(csum_enable=1, csum_start=start, csum_offset=offset, csum_init=0))
+            await tb.source.send(test_frame)
+            await tb.cmd_source.send(CsumCmdTransaction(csum_enable=1, csum_start=start, csum_offset=offset, csum_init=0))
 
             csum = scapy.utils.checksum(bytes(test_pkt)[start:])
 
@@ -212,8 +211,8 @@ async def run_test_offsets(dut, payload_lengths=None, payload_data=None, idle_in
             test_frame = AxiStreamFrame(test_pkt.build())
             test_frames.append(test_frame)
 
-            tb.source.send(test_frame)
-            tb.cmd_source.send(CsumCmdTransaction(csum_enable=1, csum_start=start, csum_offset=offset, csum_init=0))
+            await tb.source.send(test_frame)
+            await tb.cmd_source.send(CsumCmdTransaction(csum_enable=1, csum_start=start, csum_offset=offset, csum_init=0))
 
             csum = scapy.utils.checksum(bytes(test_pkt)[start:])
 
@@ -223,8 +222,7 @@ async def run_test_offsets(dut, payload_lengths=None, payload_data=None, idle_in
             check_frames.append(check_frame)
 
     for test_pkt, test_frame, check_frame in zip(test_pkts, test_frames, check_frames):
-        await tb.sink.wait()
-        rx_frame = tb.sink.recv()
+        rx_frame = await tb.sink.recv()
 
         rx_pkt = Ether(bytes(rx_frame))
 

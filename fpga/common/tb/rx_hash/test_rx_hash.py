@@ -179,15 +179,14 @@ async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=N
 
         test_frame = AxiStreamFrame(test_pkt.build())
         test_frames.append(test_frame)
-        tb.source.send(test_frame)
+        await tb.source.send(test_frame)
 
         ip_id = (ip_id + 1) & 0xffff
 
     for test_pkt, info, test_frame in zip(test_pkts, hash_info, test_frames):
         hash_type, hash_val = info
 
-        await tb.sink.wait()
-        rx_hash = tb.sink.recv()
+        rx_hash = await tb.sink.recv()
 
         tb.log.info("RX hash: 0x%08x (expected: 0x%08x) type: %s (expected: %s)",
             rx_hash.hash, hash_val, HashType(rx_hash.hash_type.integer), hash_type)

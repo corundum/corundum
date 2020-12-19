@@ -138,8 +138,7 @@ async def run_test(dut):
     await tb.axil_master.write_dword(0*32+16, head_ptr)  # head pointer
 
     # check for doorbell
-    await tb.doorbell_sink.wait()
-    db = tb.doorbell_sink.recv()
+    db = await tb.doorbell_sink.recv()
     tb.log.info("Doorbell: %s", db)
 
     assert db.queue == 0
@@ -149,10 +148,9 @@ async def run_test(dut):
     tb.log.info("Tail pointer: %d", tail_ptr)
 
     # dequeue request
-    tb.dequeue_req_source.send(DequeueReqTransaction(queue=0, tag=1))
+    await tb.dequeue_req_source.send(DequeueReqTransaction(queue=0, tag=1))
 
-    await tb.dequeue_resp_sink.wait()
-    resp = tb.dequeue_resp_sink.recv()
+    resp = await tb.dequeue_resp_sink.recv()
 
     tb.log.info("Dequeue response: %s", resp)
 
@@ -166,7 +164,7 @@ async def run_test(dut):
     assert not resp.error
 
     # dequeue commit
-    tb.dequeue_commit_source.send(DequeueCommitTransaction(op_tag=resp.op_tag))
+    await tb.dequeue_commit_source.send(DequeueCommitTransaction(op_tag=resp.op_tag))
 
     await Timer(100, 'ns')
 
@@ -221,8 +219,7 @@ async def run_test(dut):
                 await tb.axil_master.write_dword(q*32+16, head_ptr)  # head pointer
 
                 # check doorbell event
-                await tb.doorbell_sink.wait()
-                db = tb.doorbell_sink.recv()
+                db = await tb.doorbell_sink.recv()
                 tb.log.info("Doorbell: %s", db)
 
                 assert db.queue == q
@@ -235,10 +232,9 @@ async def run_test(dut):
                 tb.log.info("Try dequeue from queue %d", q)
 
                 # dequeue request
-                tb.dequeue_req_source.send(DequeueReqTransaction(queue=q, tag=current_tag))
+                await tb.dequeue_req_source.send(DequeueReqTransaction(queue=q, tag=current_tag))
 
-                await tb.dequeue_resp_sink.wait()
-                resp = tb.dequeue_resp_sink.recv()
+                resp = await tb.dequeue_resp_sink.recv()
 
                 tb.log.info("Dequeue response: %s", resp)
 
@@ -271,7 +267,7 @@ async def run_test(dut):
                 tb.log.info("Commit dequeue from queue %d", q)
 
                 # dequeue commit
-                tb.dequeue_commit_source.send(DequeueCommitTransaction(op_tag=t))
+                await tb.dequeue_commit_source.send(DequeueCommitTransaction(op_tag=t))
 
                 queue_depth[q] -= 1
 

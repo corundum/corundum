@@ -1018,7 +1018,13 @@ class Interface(object):
         for p in self.ports:
             await p.set_mtu(mtu)
 
-    def recv(self):
+    async def recv(self):
+        if not self.pkt_rx_queue:
+            self.pkt_rx_sync.clear()
+            await self.pkt_rx_sync.wait()
+        return self.recv_nowait()
+
+    def recv_nowait(self):
         if self.pkt_rx_queue:
             return self.pkt_rx_queue.popleft()
         return None

@@ -136,10 +136,9 @@ async def run_test(dut):
     tb.log.info("Head pointer: %d", head_ptr)
 
     # enqueue request
-    tb.enqueue_req_source.send(EnqueueReqTransaction(queue=0, tag=1))
+    await tb.enqueue_req_source.send(EnqueueReqTransaction(queue=0, tag=1))
 
-    await tb.enqueue_resp_sink.wait()
-    resp = tb.enqueue_resp_sink.recv()
+    resp = await tb.enqueue_resp_sink.recv()
 
     tb.log.info("Enqueue response: %s", resp)
 
@@ -152,13 +151,12 @@ async def run_test(dut):
     assert not resp.error
 
     # enqueue commit
-    tb.enqueue_commit_source.send(EnqueueCommitTransaction(op_tag=resp.op_tag))
+    await tb.enqueue_commit_source.send(EnqueueCommitTransaction(op_tag=resp.op_tag))
 
     await Timer(100, 'ns')
 
     # check for event
-    await tb.event_sink.wait()
-    event = tb.event_sink.recv()
+    event = await tb.event_sink.recv()
     tb.log.info("Event: %s", event)
 
     assert event.event == 1
@@ -207,10 +205,9 @@ async def run_test(dut):
                 tb.log.info("Try enqueue into queue %d", q)
 
                 # enqueue request
-                tb.enqueue_req_source.send(EnqueueReqTransaction(queue=q, tag=current_tag))
+                await tb.enqueue_req_source.send(EnqueueReqTransaction(queue=q, tag=current_tag))
 
-                await tb.enqueue_resp_sink.wait()
-                resp = tb.enqueue_resp_sink.recv()
+                resp = await tb.enqueue_resp_sink.recv()
 
                 tb.log.info("Enqueue response: %s", resp)
 
@@ -242,13 +239,12 @@ async def run_test(dut):
                 tb.log.info("Commit enqueue into queue %d", q)
 
                 # enqueue commit
-                tb.enqueue_commit_source.send(EnqueueCommitTransaction(op_tag=t))
+                await tb.enqueue_commit_source.send(EnqueueCommitTransaction(op_tag=t))
 
                 queue_depth[q] += 1
 
                 # check event
-                await tb.event_sink.wait()
-                event = tb.event_sink.recv()
+                event = await tb.event_sink.recv()
                 tb.log.info("Event: %s", event)
 
                 assert event.event == q

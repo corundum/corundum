@@ -398,21 +398,21 @@ class TB(object):
 
             if self.loopback_enable:
                 if not self.qsfp0_1_sink.empty():
-                    self.qsfp0_1_source.send(self.qsfp0_1_sink.recv())
+                    await self.qsfp0_1_source.send(await self.qsfp0_1_sink.recv())
                 if not self.qsfp0_2_sink.empty():
-                    self.qsfp0_2_source.send(self.qsfp0_2_sink.recv())
+                    await self.qsfp0_2_source.send(await self.qsfp0_2_sink.recv())
                 if not self.qsfp0_3_sink.empty():
-                    self.qsfp0_3_source.send(self.qsfp0_3_sink.recv())
+                    await self.qsfp0_3_source.send(await self.qsfp0_3_sink.recv())
                 if not self.qsfp0_4_sink.empty():
-                    self.qsfp0_4_source.send(self.qsfp0_4_sink.recv())
+                    await self.qsfp0_4_source.send(await self.qsfp0_4_sink.recv())
                 if not self.qsfp1_1_sink.empty():
-                    self.qsfp1_1_source.send(self.qsfp1_1_sink.recv())
+                    await self.qsfp1_1_source.send(await self.qsfp1_1_sink.recv())
                 if not self.qsfp1_2_sink.empty():
-                    self.qsfp1_2_source.send(self.qsfp1_2_sink.recv())
+                    await self.qsfp1_2_source.send(await self.qsfp1_2_sink.recv())
                 if not self.qsfp1_3_sink.empty():
-                    self.qsfp1_3_source.send(self.qsfp1_3_sink.recv())
+                    await self.qsfp1_3_source.send(await self.qsfp1_3_sink.recv())
                 if not self.qsfp1_4_sink.empty():
-                    self.qsfp1_4_source.send(self.qsfp1_4_sink.recv())
+                    await self.qsfp1_4_source.send(await self.qsfp1_4_sink.recv())
 
 
 @cocotb.test()
@@ -443,32 +443,24 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(data, 0)
 
-    await tb.qsfp0_1_sink.wait()
-
-    pkt = tb.qsfp0_1_sink.recv()
+    pkt = await tb.qsfp0_1_sink.recv()
     tb.log.info("Packet: %s", pkt)
 
-    tb.qsfp0_1_source.send(pkt)
+    await tb.qsfp0_1_source.send(pkt)
 
-    await tb.driver.interfaces[0].wait()
-
-    pkt = tb.driver.interfaces[0].recv()
+    pkt = await tb.driver.interfaces[0].recv()
 
     tb.log.info("Packet: %s", pkt)
     assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
 
     # await tb.driver.interfaces[1].start_xmit(data, 0)
 
-    # await tb.qsfp1_1_sink.wait()
-
-    # pkt = tb.qsfp1_1_sink.recv()
+    # pkt = await tb.qsfp1_1_sink.recv()
     # tb.log.info("Packet: %s", pkt)
 
-    # tb.qsfp1_1_source.send(pkt)
+    # await tb.qsfp1_1_source.send(pkt)
 
-    # await tb.driver.interfaces[1].wait()
-
-    # pkt = tb.driver.interfaces[1].recv()
+    # pkt = await tb.driver.interfaces[1].recv()
 
     # tb.log.info("Packet: %s", pkt)
     # assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
@@ -486,16 +478,12 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(test_pkt2.build(), 0, 34, 6)
 
-    await tb.qsfp0_1_sink.wait()
-
-    pkt = tb.qsfp0_1_sink.recv()
+    pkt = await tb.qsfp0_1_sink.recv()
     tb.log.info("Packet: %s", pkt)
 
-    tb.qsfp0_1_source.send(pkt)
+    await tb.qsfp0_1_source.send(pkt)
 
-    await tb.driver.interfaces[0].wait()
-
-    pkt = tb.driver.interfaces[0].recv()
+    pkt = await tb.driver.interfaces[0].recv()
 
     tb.log.info("Packet: %s", pkt)
     assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
@@ -513,8 +501,7 @@ async def run_test_nic(dut):
         await tb.driver.interfaces[0].start_xmit(p, 0)
 
     for k in range(count):
-        await tb.driver.interfaces[0].wait()
-        pkt = tb.driver.interfaces[0].recv()
+        pkt = await tb.driver.interfaces[0].recv()
 
         tb.log.info("Packet: %s", pkt)
         assert pkt.data == pkts[k]
@@ -534,8 +521,7 @@ async def run_test_nic(dut):
         await tb.driver.interfaces[0].start_xmit(p, 0)
 
     for k in range(count):
-        await tb.driver.interfaces[0].wait()
-        pkt = tb.driver.interfaces[0].recv()
+        pkt = await tb.driver.interfaces[0].recv()
 
         tb.log.info("Packet: %s", pkt)
         assert pkt.data == pkts[k]

@@ -336,9 +336,9 @@ class TB(object):
 
             if self.loopback_enable:
                 if not self.sfp_1_sink.empty():
-                    self.sfp_1_source.send(self.sfp_1_sink.recv())
+                    await self.sfp_1_source.send(await self.sfp_1_sink.recv())
                 if not self.sfp_2_sink.empty():
-                    self.sfp_2_source.send(self.sfp_2_sink.recv())
+                    await self.sfp_2_source.send(await self.sfp_2_sink.recv())
 
 
 @cocotb.test()
@@ -369,32 +369,24 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(data, 0)
 
-    await tb.sfp_1_sink.wait()
-
-    pkt = tb.sfp_1_sink.recv()
+    pkt = await tb.sfp_1_sink.recv()
     tb.log.info("Packet: %s", pkt)
 
-    tb.sfp_1_source.send(pkt)
+    await tb.sfp_1_source.send(pkt)
 
-    await tb.driver.interfaces[0].wait()
-
-    pkt = tb.driver.interfaces[0].recv()
+    pkt = await tb.driver.interfaces[0].recv()
 
     tb.log.info("Packet: %s", pkt)
     assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
 
     # await tb.driver.interfaces[1].start_xmit(data, 0)
 
-    # await tb.sfp_2_sink.wait()
-
-    # pkt = tb.sfp_2_sink.recv()
+    # pkt = await tb.sfp_2_sink.recv()
     # tb.log.info("Packet: %s", pkt)
 
-    # tb.sfp_2_source.send(pkt)
+    # await tb.sfp_2_source.send(pkt)
 
-    # await tb.driver.interfaces[1].wait()
-
-    # pkt = tb.driver.interfaces[1].recv()
+    # pkt = await tb.driver.interfaces[1].recv()
 
     # tb.log.info("Packet: %s", pkt)
     # assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
@@ -412,16 +404,12 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(test_pkt2.build(), 0, 34, 6)
 
-    await tb.sfp_1_sink.wait()
-
-    pkt = tb.sfp_1_sink.recv()
+    pkt = await tb.sfp_1_sink.recv()
     tb.log.info("Packet: %s", pkt)
 
-    tb.sfp_1_source.send(pkt)
+    await tb.sfp_1_source.send(pkt)
 
-    await tb.driver.interfaces[0].wait()
-
-    pkt = tb.driver.interfaces[0].recv()
+    pkt = await tb.driver.interfaces[0].recv()
 
     tb.log.info("Packet: %s", pkt)
     assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
@@ -439,8 +427,7 @@ async def run_test_nic(dut):
         await tb.driver.interfaces[0].start_xmit(p, 0)
 
     for k in range(count):
-        await tb.driver.interfaces[0].wait()
-        pkt = tb.driver.interfaces[0].recv()
+        pkt = await tb.driver.interfaces[0].recv()
 
         tb.log.info("Packet: %s", pkt)
         assert pkt.data == pkts[k]
@@ -460,8 +447,7 @@ async def run_test_nic(dut):
         await tb.driver.interfaces[0].start_xmit(p, 0)
 
     for k in range(count):
-        await tb.driver.interfaces[0].wait()
-        pkt = tb.driver.interfaces[0].recv()
+        pkt = await tb.driver.interfaces[0].recv()
 
         tb.log.info("Packet: %s", pkt)
         assert pkt.data == pkts[k]

@@ -102,11 +102,11 @@ reg frame_reg = 1'b0, frame_ctl, frame_next;
 
 reg s_axis_cq_tready_reg = 1'b0, s_axis_cq_tready_next;
 
-reg [AXIS_PCIE_DATA_WIDTH-1:0]    temp_s_axis_cq_tdata = {AXIS_PCIE_DATA_WIDTH{1'b0}};
-reg [AXIS_PCIE_KEEP_WIDTH-1:0]    temp_s_axis_cq_tkeep = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
-reg                               temp_s_axis_cq_tvalid = 1'b0;
-reg                               temp_s_axis_cq_tlast = 1'b0;
-reg [AXIS_PCIE_CQ_USER_WIDTH-1:0] temp_s_axis_cq_tuser = {AXIS_PCIE_CQ_USER_WIDTH{1'b0}};
+reg [AXIS_PCIE_DATA_WIDTH-1:0]    temp_s_axis_cq_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
+reg [AXIS_PCIE_KEEP_WIDTH-1:0]    temp_s_axis_cq_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
+reg                               temp_s_axis_cq_tvalid_reg = 1'b0;
+reg                               temp_s_axis_cq_tlast_reg = 1'b0;
+reg [AXIS_PCIE_CQ_USER_WIDTH-1:0] temp_s_axis_cq_tuser_reg = {AXIS_PCIE_CQ_USER_WIDTH{1'b0}};
 
 // internal datapath
 reg  [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_cq_tdata_int;
@@ -117,7 +117,7 @@ reg                                m_axis_cq_tlast_int;
 reg  [AXIS_PCIE_CQ_USER_WIDTH-1:0] m_axis_cq_tuser_int;
 wire                               m_axis_cq_tready_int_early;
 
-assign s_axis_cq_tready = (s_axis_cq_tready_reg || (AXIS_PCIE_DATA_WIDTH == 64 && !temp_s_axis_cq_tvalid)) && enable;
+assign s_axis_cq_tready = (s_axis_cq_tready_reg || (AXIS_PCIE_DATA_WIDTH == 64 && !temp_s_axis_cq_tvalid_reg)) && enable;
 
 assign req_type =        AXIS_PCIE_DATA_WIDTH > 64 ? s_axis_cq_tdata[78:75]   : s_axis_cq_tdata[14:11];
 assign target_function = AXIS_PCIE_DATA_WIDTH > 64 ? s_axis_cq_tdata[111:104] : s_axis_cq_tdata[47:40];
@@ -138,9 +138,9 @@ always @* begin
     s_axis_cq_tready_next = 1'b0;
 
     if (AXIS_PCIE_DATA_WIDTH == 64) begin
-        if (temp_s_axis_cq_tvalid && s_axis_cq_tready) begin
+        if (temp_s_axis_cq_tvalid_reg && s_axis_cq_tready) begin
             // end of frame detection
-            if (temp_s_axis_cq_tlast) begin
+            if (temp_s_axis_cq_tlast_reg) begin
                 frame_next = 1'b0;
                 drop_next = 1'b0;
             end
@@ -155,7 +155,7 @@ always @* begin
         end
     end
 
-    if (!frame_reg && (AXIS_PCIE_DATA_WIDTH == 64 ? temp_s_axis_cq_tvalid : s_axis_cq_tvalid) && s_axis_cq_tready) begin
+    if (!frame_reg && (AXIS_PCIE_DATA_WIDTH != 64 || temp_s_axis_cq_tvalid_reg) && s_axis_cq_tvalid && s_axis_cq_tready) begin
         // start of frame, grab select value
         select_ctl = 0;
         drop_ctl = 1'b1;
@@ -168,7 +168,7 @@ always @* begin
         end
         drop_ctl = drop_ctl || drop;
         if (AXIS_PCIE_DATA_WIDTH == 64) begin
-            if (!(s_axis_cq_tready && temp_s_axis_cq_tvalid && temp_s_axis_cq_tlast)) begin
+            if (!(s_axis_cq_tready && temp_s_axis_cq_tvalid_reg && temp_s_axis_cq_tlast_reg)) begin
                 select_next = select_ctl;
                 drop_next = drop_ctl;
                 frame_next = 1'b1;
@@ -185,15 +185,15 @@ always @* begin
     s_axis_cq_tready_next = m_axis_cq_tready_int_early || drop_ctl;
 
     if (AXIS_PCIE_DATA_WIDTH == 64) begin
-        m_axis_cq_tdata_int  = temp_s_axis_cq_tdata;
-        m_axis_cq_tkeep_int  = temp_s_axis_cq_tkeep;
-        m_axis_cq_tvalid_int = (temp_s_axis_cq_tvalid && s_axis_cq_tready && !drop_ctl) << select_ctl;
-        m_axis_cq_tlast_int  = temp_s_axis_cq_tlast;
-        m_axis_cq_tuser_int  = temp_s_axis_cq_tuser; 
+        m_axis_cq_tdata_int  = temp_s_axis_cq_tdata_reg;
+        m_axis_cq_tkeep_int  = temp_s_axis_cq_tkeep_reg;
+        m_axis_cq_tvalid_int = (temp_s_axis_cq_tvalid_reg && s_axis_cq_tready && !drop_ctl && frame_ctl) << select_ctl;
+        m_axis_cq_tlast_int  = temp_s_axis_cq_tlast_reg;
+        m_axis_cq_tuser_int  = temp_s_axis_cq_tuser_reg; 
     end else begin
         m_axis_cq_tdata_int  = s_axis_cq_tdata;
         m_axis_cq_tkeep_int  = s_axis_cq_tkeep;
-        m_axis_cq_tvalid_int = (s_axis_cq_tvalid && s_axis_cq_tready && !drop_ctl) << select_ctl;
+        m_axis_cq_tvalid_int = (s_axis_cq_tvalid && s_axis_cq_tready && !drop_ctl && frame_ctl) << select_ctl;
         m_axis_cq_tlast_int  = s_axis_cq_tlast;
         m_axis_cq_tuser_int  = s_axis_cq_tuser; 
     end
@@ -212,12 +212,16 @@ always @(posedge clk) begin
         s_axis_cq_tready_reg <= s_axis_cq_tready_next;
     end
 
-    if (s_axis_cq_tready && AXIS_PCIE_DATA_WIDTH == 64) begin
-        temp_s_axis_cq_tdata <= s_axis_cq_tdata;
-        temp_s_axis_cq_tkeep <= s_axis_cq_tkeep;
-        temp_s_axis_cq_tvalid <= s_axis_cq_tvalid;
-        temp_s_axis_cq_tlast <= s_axis_cq_tlast;
-        temp_s_axis_cq_tuser <= s_axis_cq_tuser;
+    if (AXIS_PCIE_DATA_WIDTH == 64) begin
+        temp_s_axis_cq_tvalid_reg <= temp_s_axis_cq_tvalid_reg && !(s_axis_cq_tready && !drop_ctl && frame_ctl);
+
+        if (s_axis_cq_tready && s_axis_cq_tvalid) begin
+            temp_s_axis_cq_tdata_reg <= s_axis_cq_tdata;
+            temp_s_axis_cq_tkeep_reg <= s_axis_cq_tkeep;
+            temp_s_axis_cq_tvalid_reg <= 1'b1;
+            temp_s_axis_cq_tlast_reg <= s_axis_cq_tlast;
+            temp_s_axis_cq_tuser_reg <= s_axis_cq_tuser;
+        end
     end
 end
 

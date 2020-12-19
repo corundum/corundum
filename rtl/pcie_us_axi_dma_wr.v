@@ -992,7 +992,7 @@ always @* begin
 
     op_table_finish_en = 1'b0;
 
-    if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_done[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_finish_ptr_reg != op_table_start_ptr_reg) begin
+    if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && (!RQ_SEQ_NUM_ENABLE || op_table_tx_done[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) && op_table_finish_ptr_reg != op_table_tx_finish_ptr_reg) begin
         op_table_finish_en = 1'b1;
 
         if (op_table_last[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin

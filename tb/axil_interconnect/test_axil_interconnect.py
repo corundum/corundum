@@ -208,7 +208,7 @@ if cocotb.SIM_NAME:
 
 # cocotb-test
 
-tests_dir = os.path.dirname(__file__)
+tests_dir = os.path.abspath(os.path.dirname(__file__))
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 

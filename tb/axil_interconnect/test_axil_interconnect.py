@@ -27,7 +27,6 @@ import logging
 import os
 import random
 import subprocess
-import time
 
 import cocotb_test.simulator
 import pytest

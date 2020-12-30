@@ -37,8 +37,6 @@ export PARAM_ADDR_WIDTH ?= 16
 export PARAM_STRB_WIDTH ?= $(shell expr $(PARAM_DATA_WIDTH) / 8 )
 export PARAM_PIPELINE_OUTPUT ?= 0
 
-SIM_BUILD ?= sim_build_$(MODULE)-$(PARAM_DATA_WIDTH)
-
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst
 
@@ -64,6 +62,8 @@ else ifeq ($(SIM), verilator)
 	endif
 endif
 
+include $(shell cocotb-config --makefiles)/Makefile.sim
+
 iverilog_dump.v:
 	echo 'module iverilog_dump();' > $@
 	echo 'initial begin' >> $@
@@ -73,9 +73,5 @@ iverilog_dump.v:
 	echo 'endmodule' >> $@
 
 clean::
-	@rm -rf sim_build_*
 	@rm -rf iverilog_dump.v
 	@rm -rf dump.fst $(TOPLEVEL).fst
-
-include $(shell cocotb-config --makefiles)/Makefile.sim
-

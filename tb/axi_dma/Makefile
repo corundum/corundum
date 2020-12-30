@@ -54,8 +54,6 @@ export PARAM_TAG_WIDTH = 8
 export PARAM_ENABLE_SG = 0
 export PARAM_ENABLE_UNALIGNED = 0
 
-SIM_BUILD ?= sim_build_$(MODULE)-$(PARAM_AXI_DATA_WIDTH)-$(PARAM_ENABLE_UNALIGNED)
-
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst
 
@@ -111,6 +109,8 @@ else ifeq ($(SIM), verilator)
 	endif
 endif
 
+include $(shell cocotb-config --makefiles)/Makefile.sim
+
 iverilog_dump.v:
 	echo 'module iverilog_dump();' > $@
 	echo 'initial begin' >> $@
@@ -120,9 +120,5 @@ iverilog_dump.v:
 	echo 'endmodule' >> $@
 
 clean::
-	@rm -rf sim_build_*
 	@rm -rf iverilog_dump.v
 	@rm -rf dump.fst $(TOPLEVEL).fst
-
-include $(shell cocotb-config --makefiles)/Makefile.sim
-

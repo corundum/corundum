@@ -38,15 +38,11 @@ VERILOG_SOURCES += ../../rtl/$(DUT).v
 VERILOG_SOURCES += ../../rtl/arbiter.v
 VERILOG_SOURCES += ../../rtl/priority_encoder.v
 
-REG_TYPE ?= 1
-
 # module parameters
 export PARAM_DATA_WIDTH ?= 32
 export PARAM_ADDR_WIDTH ?= 32
 export PARAM_STRB_WIDTH ?= $(shell expr $(PARAM_DATA_WIDTH) / 8 )
 export PARAM_M_REGIONS ?= 1
-
-SIM_BUILD ?= sim_build_$(MODULE)-$(PARAM_S_COUNT)-$(PARAM_M_COUNT)-$(PARAM_DATA_WIDTH)
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst
@@ -73,6 +69,8 @@ else ifeq ($(SIM), verilator)
 	endif
 endif
 
+include $(shell cocotb-config --makefiles)/Makefile.sim
+
 $(WRAPPER).v: ../../rtl/$(DUT)_wrap.py
 	$< -p $(PARAM_S_COUNT) $(PARAM_M_COUNT)
 
@@ -85,10 +83,6 @@ iverilog_dump.v:
 	echo 'endmodule' >> $@
 
 clean::
-	@rm -rf sim_build_*
 	@rm -rf iverilog_dump.v
 	@rm -rf dump.fst $(TOPLEVEL).fst
 	@rm -rf *_wrap_*.v
-
-include $(shell cocotb-config --makefiles)/Makefile.sim
-

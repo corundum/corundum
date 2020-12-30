@@ -98,8 +98,6 @@ export PARAM_BAR0_APERTURE ?= 24
 export PARAM_AXIS_ETH_DATA_WIDTH = 512
 export PARAM_AXIS_ETH_KEEP_WIDTH = $(shell expr $(PARAM_AXIS_ETH_DATA_WIDTH) / 8 )
 
-SIM_BUILD ?= sim_build_$(MODULE)
-
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst
 
@@ -137,6 +135,8 @@ else ifeq ($(SIM), verilator)
 	endif
 endif
 
+include $(shell cocotb-config --makefiles)/Makefile.sim
+
 iverilog_dump.v:
 	echo 'module iverilog_dump();' > $@
 	echo 'initial begin' >> $@
@@ -146,9 +146,5 @@ iverilog_dump.v:
 	echo 'endmodule' >> $@
 
 clean::
-	@rm -rf sim_build_*
 	@rm -rf iverilog_dump.v
 	@rm -rf dump.fst $(TOPLEVEL).fst
-
-include $(shell cocotb-config --makefiles)/Makefile.sim
-

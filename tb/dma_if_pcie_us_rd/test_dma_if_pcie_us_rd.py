@@ -282,8 +282,8 @@ def test_dma_if_pcie_us_rd(request, axis_pcie_data_width, pcie_offset):
 
     extra_env['PCIE_OFFSET'] = str(pcie_offset)
 
-    sim_build = os.path.join(tests_dir,
-        "sim_build_"+request.node.name.replace('[', '-').replace(']', ''))
+    sim_build = os.path.join(tests_dir, "sim_build",
+        request.node.name.replace('[', '-').replace(']', ''))
 
     cocotb_test.simulator.run(
         python_search=[tests_dir],

@@ -208,8 +208,8 @@ def test_dma_client_axis_source(request, ram_data_width, axis_data_width):
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 
-    sim_build = os.path.join(tests_dir,
-        "sim_build_"+request.node.name.replace('[', '-').replace(']', ''))
+    sim_build = os.path.join(tests_dir, "sim_build",
+        request.node.name.replace('[', '-').replace(']', ''))
 
     cocotb_test.simulator.run(
         python_search=[tests_dir],

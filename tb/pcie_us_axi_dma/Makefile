@@ -60,8 +60,6 @@ export PARAM_WRITE_OP_TABLE_SIZE ?= $(shell echo "$$(( 1 << ($(PARAM_RQ_SEQ_NUM_
 export PARAM_WRITE_TX_LIMIT ?= $(shell echo "$$(( 1 << ($(PARAM_RQ_SEQ_NUM_WIDTH)-1) ))" )
 export PARAM_WRITE_TX_FC_ENABLE ?= 1
 
-SIM_BUILD ?= sim_build_$(MODULE)-$(PARAM_AXIS_PCIE_DATA_WIDTH)
-
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst
 
@@ -125,6 +123,8 @@ else ifeq ($(SIM), verilator)
 	endif
 endif
 
+include $(shell cocotb-config --makefiles)/Makefile.sim
+
 iverilog_dump.v:
 	echo 'module iverilog_dump();' > $@
 	echo 'initial begin' >> $@
@@ -134,9 +134,5 @@ iverilog_dump.v:
 	echo 'endmodule' >> $@
 
 clean::
-	@rm -rf sim_build_*
 	@rm -rf iverilog_dump.v
 	@rm -rf dump.fst $(TOPLEVEL).fst
-
-include $(shell cocotb-config --makefiles)/Makefile.sim
-

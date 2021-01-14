@@ -525,6 +525,7 @@ def test_fpga_core(request):
         os.path.join(axis_rtl_dir, "axis_async_fifo_adapter.v"),
         os.path.join(axis_rtl_dir, "axis_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_register.v"),
+        os.path.join(axis_rtl_dir, "axis_pipeline_register.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_axil_master.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_us.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_us_rd.v"),

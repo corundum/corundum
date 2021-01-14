@@ -37,6 +37,7 @@ SYN_FILES += lib/axis/rtl/axis_adapter.v
 SYN_FILES += lib/axis/rtl/axis_async_fifo.v
 SYN_FILES += lib/axis/rtl/axis_fifo.v
 SYN_FILES += lib/axis/rtl/axis_register.v
+SYN_FILES += lib/axis/rtl/axis_pipeline_register.v
 SYN_FILES += lib/axis/rtl/sync_reset.v
 SYN_FILES += lib/pcie/rtl/pcie_us_axil_master.v
 SYN_FILES += lib/pcie/rtl/dma_if_pcie_us.v

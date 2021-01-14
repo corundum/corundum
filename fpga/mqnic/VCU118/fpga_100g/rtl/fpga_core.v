@@ -2330,6 +2330,98 @@ generate
 
         for (m = 0; m < PORTS_PER_IF; m = m + 1) begin : mac
 
+            wire [AXIS_DATA_WIDTH-1:0] tx_axis_tdata_pipe;
+            wire [AXIS_KEEP_WIDTH-1:0] tx_axis_tkeep_pipe;
+            wire tx_axis_tvalid_pipe;
+            wire tx_axis_tready_pipe;
+            wire tx_axis_tlast_pipe;
+            wire tx_axis_tuser_pipe;
+
+            // wire [PTP_TS_WIDTH-1:0] tx_ptp_ts_96_pipe;
+            // wire tx_ptp_ts_valid_pipe;
+            // wire tx_ptp_ts_ready_pipe;
+
+            wire [AXIS_DATA_WIDTH-1:0] rx_axis_tdata_pipe;
+            wire [AXIS_KEEP_WIDTH-1:0] rx_axis_tkeep_pipe;
+            wire rx_axis_tvalid_pipe;
+            wire rx_axis_tready_pipe;
+            wire rx_axis_tlast_pipe;
+            wire rx_axis_tuser_pipe;
+
+            // wire [PTP_TS_WIDTH-1:0] rx_ptp_ts_96_pipe;
+            // wire rx_ptp_ts_valid_pipe;
+            // wire rx_ptp_ts_ready_pipe;
+
+            axis_pipeline_register #(
+                .DATA_WIDTH(AXIS_DATA_WIDTH),
+                .KEEP_ENABLE(AXIS_KEEP_WIDTH > 1),
+                .KEEP_WIDTH(AXIS_KEEP_WIDTH),
+                .LAST_ENABLE(1),
+                .ID_ENABLE(0),
+                .DEST_ENABLE(0),
+                .USER_ENABLE(1),
+                .USER_WIDTH(1),
+                .REG_TYPE(2),
+                .LENGTH(2)
+            )
+            tx_reg (
+                .clk(clk_250mhz),
+                .rst(rst_250mhz),
+                // AXI input
+                .s_axis_tdata(tx_axis_tdata[m*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
+                .s_axis_tkeep(tx_axis_tkeep[m*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
+                .s_axis_tvalid(tx_axis_tvalid[m +: 1]),
+                .s_axis_tready(tx_axis_tready[m +: 1]),
+                .s_axis_tlast(tx_axis_tlast[m +: 1]),
+                .s_axis_tid(0),
+                .s_axis_tdest(0),
+                .s_axis_tuser(tx_axis_tuser[m +: 1]),
+                // AXI output
+                .m_axis_tdata(tx_axis_tdata_pipe),
+                .m_axis_tkeep(tx_axis_tkeep_pipe),
+                .m_axis_tvalid(tx_axis_tvalid_pipe),
+                .m_axis_tready(tx_axis_tready_pipe),
+                .m_axis_tlast(tx_axis_tlast_pipe),
+                .m_axis_tid(),
+                .m_axis_tdest(),
+                .m_axis_tuser(tx_axis_tuser_pipe)
+            );
+
+            axis_pipeline_register #(
+                .DATA_WIDTH(AXIS_DATA_WIDTH),
+                .KEEP_ENABLE(AXIS_KEEP_WIDTH > 1),
+                .KEEP_WIDTH(AXIS_KEEP_WIDTH),
+                .LAST_ENABLE(1),
+                .ID_ENABLE(0),
+                .DEST_ENABLE(0),
+                .USER_ENABLE(1),
+                .USER_WIDTH(1),
+                .REG_TYPE(2),
+                .LENGTH(2)
+            )
+            rx_reg (
+                .clk(clk_250mhz),
+                .rst(rst_250mhz),
+                // AXI input
+                .s_axis_tdata(rx_axis_tdata_pipe),
+                .s_axis_tkeep(rx_axis_tkeep_pipe),
+                .s_axis_tvalid(rx_axis_tvalid_pipe),
+                .s_axis_tready(rx_axis_tready_pipe),
+                .s_axis_tlast(rx_axis_tlast_pipe),
+                .s_axis_tid(0),
+                .s_axis_tdest(0),
+                .s_axis_tuser(rx_axis_tuser_pipe),
+                // AXI output
+                .m_axis_tdata(rx_axis_tdata[m*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
+                .m_axis_tkeep(rx_axis_tkeep[m*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
+                .m_axis_tvalid(rx_axis_tvalid[m +: 1]),
+                .m_axis_tready(rx_axis_tready[m +: 1]),
+                .m_axis_tlast(rx_axis_tlast[m +: 1]),
+                .m_axis_tid(),
+                .m_axis_tdest(),
+                .m_axis_tuser(rx_axis_tuser[m +: 1])
+            );
+
             axis_async_fifo #(
                 .DEPTH(TX_FIFO_DEPTH),
                 .DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
@@ -2351,14 +2443,14 @@ generate
                 .async_rst(rst_250mhz | port_tx_rst[n*PORTS_PER_IF+m]),
                 // AXI input
                 .s_clk(clk_250mhz),
-                .s_axis_tdata(tx_axis_tdata[m*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
-                .s_axis_tkeep(tx_axis_tkeep[m*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
-                .s_axis_tvalid(tx_axis_tvalid[m +: 1]),
-                .s_axis_tready(tx_axis_tready[m +: 1]),
-                .s_axis_tlast(tx_axis_tlast[m +: 1]),
+                .s_axis_tdata(tx_axis_tdata_pipe),
+                .s_axis_tkeep(tx_axis_tkeep_pipe),
+                .s_axis_tvalid(tx_axis_tvalid_pipe),
+                .s_axis_tready(tx_axis_tready_pipe),
+                .s_axis_tlast(tx_axis_tlast_pipe),
                 .s_axis_tid(0),
                 .s_axis_tdest(0),
-                .s_axis_tuser(tx_axis_tuser[m +: 1]),
+                .s_axis_tuser(tx_axis_tuser_pipe),
                 // AXI output
                 .m_clk(port_tx_clk[n*PORTS_PER_IF+m]),
                 .m_axis_tdata(port_tx_axis_tdata[(n*PORTS_PER_IF+m)*AXIS_ETH_DATA_WIDTH +: AXIS_ETH_DATA_WIDTH]),
@@ -2409,14 +2501,14 @@ generate
                 .s_axis_tuser(port_rx_axis_tuser[n*PORTS_PER_IF+m]),
                 // AXI output
                 .m_clk(clk_250mhz),
-                .m_axis_tdata(rx_axis_tdata[m*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
-                .m_axis_tkeep(rx_axis_tkeep[m*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
-                .m_axis_tvalid(rx_axis_tvalid[m +: 1]),
-                .m_axis_tready(rx_axis_tready[m +: 1]),
-                .m_axis_tlast(rx_axis_tlast[m +: 1]),
+                .m_axis_tdata(rx_axis_tdata_pipe),
+                .m_axis_tkeep(rx_axis_tkeep_pipe),
+                .m_axis_tvalid(rx_axis_tvalid_pipe),
+                .m_axis_tready(rx_axis_tready_pipe),
+                .m_axis_tlast(rx_axis_tlast_pipe),
                 .m_axis_tid(),
                 .m_axis_tdest(),
-                .m_axis_tuser(rx_axis_tuser[m +: 1]),
+                .m_axis_tuser(rx_axis_tuser_pipe),
                 // Status
                 .s_status_overflow(),
                 .s_status_bad_frame(),

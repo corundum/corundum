@@ -259,32 +259,32 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_EVENT_SIZE 32
 
 struct mqnic_desc {
-    __u16 rsvd0;
-    __u16 tx_csum_cmd;
-    __u32 len;
-    __u64 addr;
+    __le16 rsvd0;
+    __le16 tx_csum_cmd;
+    __le32 len;
+    __le64 addr;
 };
 
 struct mqnic_cpl {
-    __u16 queue;
-    __u16 index;
-    __u16 len;
-    __u16 rsvd0;
-    __u32 ts_ns;
-    __u16 ts_s;
-    __u16 rx_csum;
-    __u32 rx_hash;
+    __le16 queue;
+    __le16 index;
+    __le16 len;
+    __le16 rsvd0;
+    __le32 ts_ns;
+    __le16 ts_s;
+    __le16 rx_csum;
+    __le32 rx_hash;
     __u8 rx_hash_type;
     __u8 rsvd1;
     __u8 rsvd2;
     __u8 rsvd3;
-    __u32 rsvd4;
-    __u32 rsvd5;
+    __le32 rsvd4;
+    __le32 rsvd5;
 };
 
 struct mqnic_event {
-    __u16 type;
-    __u16 source;
+    __le16 type;
+    __le16 source;
 };
 
 #endif /* MQNIC_HW_H */

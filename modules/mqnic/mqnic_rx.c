@@ -231,8 +231,8 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring, int 
     }
 
     // write descriptor
-    rx_desc->len = len;
-    rx_desc->addr = dma_addr;
+    rx_desc->len = cpu_to_le32(len);
+    rx_desc->addr = cpu_to_le64(dma_addr);
 
     // update rx_info
     rx_info->page = page;
@@ -296,7 +296,7 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
     while (cq_ring->head_ptr != cq_tail_ptr && done < budget)
     {
         cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index*cq_ring->stride);
-        ring_index = cpl->index & ring->size_mask;
+        ring_index = le16_to_cpu(cpl->index) & ring->size_mask;
         rx_info = &ring->rx_info[ring_index];
         page = rx_info->page;
 
@@ -325,7 +325,7 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
         // RX hardware checksum
         if (ndev->features & NETIF_F_RXCSUM)
         {
-            skb->csum = be16_to_cpu(cpl->rx_csum);
+            skb->csum = csum_unfold((__sum16)cpu_to_be16(le16_to_cpu(cpl->rx_csum)));
             skb->ip_summed = CHECKSUM_COMPLETE;
         }
 
@@ -333,7 +333,7 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
         dma_unmap_page(priv->dev, dma_unmap_addr(rx_info, dma_addr), dma_unmap_len(rx_info, len), PCI_DMA_FROMDEVICE);
         rx_info->dma_addr = 0;
 
-        len = min_t(u32, cpl->len, rx_info->len);
+        len = min_t(u32, le16_to_cpu(cpl->len), rx_info->len);
 
         dma_sync_single_range_for_cpu(priv->dev, rx_info->dma_addr, rx_info->page_offset, rx_info->len, PCI_DMA_FROMDEVICE);
 
@@ -349,7 +349,7 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
         napi_gro_frags(&cq_ring->napi);
 
         ring->packets++;
-        ring->bytes += cpl->len;
+        ring->bytes += le16_to_cpu(cpl->len);
 
         done++;
 

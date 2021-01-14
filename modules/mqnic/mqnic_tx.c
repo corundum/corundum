@@ -241,7 +241,7 @@ int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
     while (cq_ring->head_ptr != cq_tail_ptr && done < budget)
     {
         cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index*cq_ring->stride);
-        ring_index = cpl->index & ring->size_mask;
+        ring_index = le16_to_cpu(cpl->index) & ring->size_mask;
         tx_info = &ring->tx_info[ring_index];
 
         // TX hardware timestamp
@@ -257,7 +257,7 @@ int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring, 
         mqnic_free_tx_desc(priv, ring, ring_index, napi_budget);
 
         packets++;
-        bytes += cpl->len;
+        bytes += le16_to_cpu(cpl->len);
 
         done++;
 
@@ -359,8 +359,8 @@ static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring, stru
         }
 
         // write descriptor
-        tx_desc[i+1].len = len;
-        tx_desc[i+1].addr = dma_addr;
+        tx_desc[i+1].len = cpu_to_le32(len);
+        tx_desc[i+1].addr = cpu_to_le64(dma_addr);
 
         // update tx_info
         tx_info->frag_count = i+1;
@@ -385,8 +385,8 @@ static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring, stru
     }
 
     // write descriptor
-    tx_desc[0].len = len;
-    tx_desc[0].addr = dma_addr;
+    tx_desc[0].len = cpu_to_le32(len);
+    tx_desc[0].addr = cpu_to_le64(dma_addr);
 
     // update tx_info
     dma_unmap_addr_set(tx_info, dma_addr, dma_addr);
@@ -475,7 +475,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
         }
         else
         {
-            tx_desc->tx_csum_cmd = 0x8000 | (csum_offset << 8) | (csum_start);
+            tx_desc->tx_csum_cmd = cpu_to_le16(0x8000 | (csum_offset << 8) | (csum_start));
         }
     }
     else

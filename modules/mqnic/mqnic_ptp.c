@@ -36,8 +36,8 @@ either expressed or implied, of The Regents of the University of California.
 
 ktime_t mqnic_read_cpl_ts(struct mqnic_dev *mdev, struct mqnic_ring *ring, const struct mqnic_cpl *cpl)
 {
-    u64 ts_s = cpl->ts_s;
-    u32 ts_ns = cpl->ts_ns;
+    u64 ts_s = le16_to_cpu(cpl->ts_s);
+    u32 ts_ns = le32_to_cpu(cpl->ts_ns);
 
     if (unlikely(!ring->ts_valid || (ring->ts_s ^ ts_s) & 0xff00))
     {

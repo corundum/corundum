@@ -116,7 +116,7 @@ static long mqnic_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
             ctl.board_ver = mqnic->board_ver;
             ctl.regs_size = mqnic->hw_regs_size;
 
-            if (copy_to_user((void *)arg, &ctl, sizeof(ctl)) != 0)
+            if (copy_to_user((void __user *)arg, &ctl, sizeof(ctl)) != 0)
                 return -EFAULT;
 
             return 0;

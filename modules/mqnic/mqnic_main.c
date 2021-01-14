@@ -240,7 +240,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
     // Set up interrupts
     for (k = 0; k < mqnic->irq_count; k++)
     {
-        ret = pci_request_irq(pdev, k, mqnic_interrupt, 0, mqnic, "mqnic%d-%d", mqnic->id, k);
+        ret = pci_request_irq(pdev, k, mqnic_interrupt, NULL, mqnic, "mqnic%d-%d", mqnic->id, k);
         if (ret < 0)
         {
             dev_err(dev, "Failed to request IRQ");

@@ -237,7 +237,7 @@ static int mqnic_phc_enable(struct ptp_clock_info *ptp, struct ptp_clock_request
     }
 }
 
-void mqnic_phc_set_from_system_clock(struct ptp_clock_info *ptp)
+static void mqnic_phc_set_from_system_clock(struct ptp_clock_info *ptp)
 {
     struct timespec64 ts;
 

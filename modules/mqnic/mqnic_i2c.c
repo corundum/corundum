@@ -36,7 +36,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <linux/i2c-mux.h>
 #include <linux/version.h>
 
-void mqnic_i2c_set_scl(void *data, int state)
+static void mqnic_i2c_set_scl(void *data, int state)
 {
     struct mqnic_i2c_priv *priv = data;
 
@@ -50,7 +50,7 @@ void mqnic_i2c_set_scl(void *data, int state)
     }
 }
 
-void mqnic_i2c_set_sda(void *data, int state)
+static void mqnic_i2c_set_sda(void *data, int state)
 {
     struct mqnic_i2c_priv *priv = data;
 
@@ -64,14 +64,14 @@ void mqnic_i2c_set_sda(void *data, int state)
     }
 }
 
-int mqnic_i2c_get_scl(void *data)
+static int mqnic_i2c_get_scl(void *data)
 {
     struct mqnic_i2c_priv *priv = data;
 
     return !!(ioread32(priv->scl_in_reg) & priv->scl_in_mask);
 }
 
-int mqnic_i2c_get_sda(void *data)
+static int mqnic_i2c_get_sda(void *data)
 {
     struct mqnic_i2c_priv *priv = data;
 

@@ -25,4 +25,4 @@ resize_pblock [get_pblocks pblock_slr2] -add {SLR2}
 create_pblock pblock_pcie
 add_cells_to_pblock [get_pblocks pblock_pcie] [get_cells -quiet [list pcie4_uscale_plus_inst]]
 add_cells_to_pblock [get_pblocks pblock_pcie] [get_cells -quiet [list core_inst/dma_if_pcie_us_inst]]
-resize_pblock [get_pblocks pblock_pcie] -add {SLICE_X176Y240:SLICE_X232Y479 DSP48E2_X25Y96:DSP48E2_X31Y191 RAMB18_X11Y96:RAMB18_X13Y191 RAMB36_X11Y48:RAMB36_X13Y95 URAM288_X4Y64:URAM288_X4Y127}
+resize_pblock [get_pblocks pblock_pcie] -add {CLOCKREGION_X6Y4:CLOCKREGION_X7Y7}

@@ -1,5 +1,7 @@
 # Corundum Readme
 
+[![Build Status](https://github.com/corundum/corundum/workflows/Regression%20Tests/badge.svg?branch=master)](https://github.com/corundum/corundum/actions/)
+
 GitHub repository: https://github.com/corundum/corundum
 
 Google group: https://groups.google.com/d/forum/corundum-nic

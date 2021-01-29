@@ -13,6 +13,8 @@ set_property BITSTREAM.CONFIG.SPI_BUSWIDTH 4           [current_design]
 set_property BITSTREAM.CONFIG.SPI_FALL_EDGE YES        [current_design]
 set_property BITSTREAM.CONFIG.UNUSEDPIN PULLUP         [current_design]
 
+set_operating_conditions -design_power_budget 160
+
 # System clocks
 # 300 MHz (DDR 0)
 #set_property -dict {LOC AY37 IOSTANDARD LVDS} [get_ports clk_300mhz_0_p]

@@ -14,6 +14,8 @@ set_property BITSTREAM.CONFIG.SPI_FALL_EDGE YES        [current_design]
 set_property BITSTREAM.CONFIG.UNUSEDPIN PULLUP         [current_design]
 set_property BITSTREAM.CONFIG.SPI_32BIT_ADDR YES       [current_design]
 
+set_operating_conditions -design_power_budget 160
+
 # System clocks
 # 100 MHz (DDR4)
 #set_property -dict {LOC BJ43 IOSTANDARD LVDS} [get_ports clk_100mhz_0_p]

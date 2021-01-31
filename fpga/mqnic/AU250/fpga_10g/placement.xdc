@@ -5,6 +5,8 @@
 
 create_pblock pblock_slr1
 add_cells_to_pblock [get_pblocks pblock_slr1] [get_cells -quiet [list core_inst/dma_if_mux_inst]]
+add_cells_to_pblock [get_pblocks pblock_slr1] [get_cells -quiet [list core_inst/iface[0].interface_inst]]
+add_cells_to_pblock [get_pblocks pblock_slr1] [get_cells -quiet [list core_inst/iface[1].interface_inst]]
 resize_pblock [get_pblocks pblock_slr1] -add {SLR1}
 
 #create_pblock pblock_slr2

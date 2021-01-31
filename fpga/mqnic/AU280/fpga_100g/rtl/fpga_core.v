@@ -2178,7 +2178,7 @@ generate
                 .USER_ENABLE(1),
                 .USER_WIDTH(1),
                 .REG_TYPE(2),
-                .LENGTH(2)
+                .LENGTH(4)
             )
             tx_reg (
                 .clk(clk_250mhz),
@@ -2213,7 +2213,7 @@ generate
                 .USER_ENABLE(1),
                 .USER_WIDTH(1),
                 .REG_TYPE(2),
-                .LENGTH(2)
+                .LENGTH(4)
             )
             rx_reg (
                 .clk(clk_250mhz),

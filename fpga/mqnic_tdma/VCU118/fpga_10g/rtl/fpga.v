@@ -591,6 +591,20 @@ wire [3:0]  cfg_interrupt_msi_function_number;
 wire status_error_cor;
 wire status_error_uncor;
 
+// extra register for pcie_user_reset signal
+wire pcie_user_reset_int;
+(* shreg_extract = "no" *)
+reg pcie_user_reset_reg_1 = 1'b1;
+(* shreg_extract = "no" *)
+reg pcie_user_reset_reg_2 = 1'b1;
+
+always @(posedge pcie_user_clk) begin
+    pcie_user_reset_reg_1 <= pcie_user_reset_int;
+    pcie_user_reset_reg_2 <= pcie_user_reset_reg_1;
+end
+
+assign pcie_user_reset = pcie_user_reset_reg_2;
+
 pcie4_uscale_plus_0
 pcie4_uscale_plus_inst (
     .pci_exp_txn(pcie_tx_n),
@@ -598,7 +612,7 @@ pcie4_uscale_plus_inst (
     .pci_exp_rxn(pcie_rx_n),
     .pci_exp_rxp(pcie_rx_p),
     .user_clk(pcie_user_clk),
-    .user_reset(pcie_user_reset),
+    .user_reset(pcie_user_reset_int),
     .user_lnk_up(),
 
     .s_axis_rq_tdata(axis_rq_tdata),

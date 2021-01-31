@@ -617,6 +617,20 @@ BUFG pcie_usrclk2_bufg_inst (
     .O(pcie_pipe_userclk2)
 );
 
+// extra register for pcie_user_reset signal
+wire pcie_user_reset_int;
+(* shreg_extract = "no" *)
+reg pcie_user_reset_reg_1 = 1'b1;
+(* shreg_extract = "no" *)
+reg pcie_user_reset_reg_2 = 1'b1;
+
+always @(posedge pcie_user_clk) begin
+    pcie_user_reset_reg_1 <= pcie_user_reset_int;
+    pcie_user_reset_reg_2 <= pcie_user_reset_reg_1;
+end
+
+assign pcie_user_reset = pcie_user_reset_reg_2;
+
 pcie3_7x_0
 pcie3_7x_inst (
     .pci_exp_txn(pcie_tx_n),
@@ -640,7 +654,7 @@ pcie3_7x_inst (
 
     .mmcm_lock(),
     .user_clk(pcie_user_clk),
-    .user_reset(pcie_user_reset),
+    .user_reset(pcie_user_reset_int),
     .user_lnk_up(),
     .user_app_rdy(),
 

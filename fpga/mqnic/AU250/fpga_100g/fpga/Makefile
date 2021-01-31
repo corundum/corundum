@@ -29,6 +29,9 @@ SYN_FILES += rtl/common/cmac_pad.v
 SYN_FILES += lib/eth/rtl/ptp_clock.v
 SYN_FILES += lib/eth/rtl/ptp_clock_cdc.v
 SYN_FILES += lib/eth/rtl/ptp_ts_extract.v
+SYN_FILES += lib/axi/rtl/axil_cdc.v
+SYN_FILES += lib/axi/rtl/axil_cdc_rd.v
+SYN_FILES += lib/axi/rtl/axil_cdc_wr.v
 SYN_FILES += lib/axi/rtl/axil_interconnect.v
 SYN_FILES += lib/axi/rtl/arbiter.v
 SYN_FILES += lib/axi/rtl/priority_encoder.v
@@ -57,6 +60,7 @@ SYN_FILES += lib/pcie/rtl/pulse_merge.v
 XDC_FILES = fpga.xdc
 XDC_FILES += placement.xdc
 XDC_FILES += boot.xdc
+XDC_FILES += lib/axi/syn/axil_cdc.tcl
 XDC_FILES += lib/axis/syn/axis_async_fifo.tcl
 XDC_FILES += lib/axis/syn/sync_reset.tcl
 XDC_FILES += lib/eth/syn/ptp_clock_cdc.tcl
@@ -66,6 +70,7 @@ XDC_FILES += ../../../common/syn/tdma_ber_ch.tcl
 IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl
 IP_TCL_FILES += ip/cmac_usplus_0.tcl
 IP_TCL_FILES += ip/cmac_usplus_1.tcl
+IP_TCL_FILES += ip/cms.tcl
 
 include ../common/vivado.mk
 

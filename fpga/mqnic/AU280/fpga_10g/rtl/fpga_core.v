@@ -238,7 +238,32 @@ module fpga_core #
     input  wire [3:0]                         qspi_dq_i,
     output wire [3:0]                         qspi_dq_o,
     output wire [3:0]                         qspi_dq_oe,
-    output wire                               qspi_cs
+    output wire                               qspi_cs,
+
+    /*
+     * AXI-Lite interface to CMS
+     */
+    output wire                               m_axil_cms_clk,
+    output wire                               m_axil_cms_rst,
+    output wire [17:0]                        m_axil_cms_awaddr,
+    output wire [2:0]                         m_axil_cms_awprot,
+    output wire                               m_axil_cms_awvalid,
+    input  wire                               m_axil_cms_awready,
+    output wire [31:0]                        m_axil_cms_wdata,
+    output wire [3:0]                         m_axil_cms_wstrb,
+    output wire                               m_axil_cms_wvalid,
+    input  wire                               m_axil_cms_wready,
+    input  wire [1:0]                         m_axil_cms_bresp,
+    input  wire                               m_axil_cms_bvalid,
+    output wire                               m_axil_cms_bready,
+    output wire [17:0]                        m_axil_cms_araddr,
+    output wire [2:0]                         m_axil_cms_arprot,
+    output wire                               m_axil_cms_arvalid,
+    input  wire                               m_axil_cms_arready,
+    input  wire [31:0]                        m_axil_cms_rdata,
+    input  wire [1:0]                         m_axil_cms_rresp,
+    input  wire                               m_axil_cms_rvalid,
+    output wire                               m_axil_cms_rready
 );
 
 // PHC parameters
@@ -474,6 +499,13 @@ reg qspi_cs_reg = 1'b1;
 reg [3:0] qspi_dq_o_reg = 4'd0;
 reg [3:0] qspi_dq_oe_reg = 4'd0;
 
+reg [17:0] m_axil_cms_addr_reg = 18'd0;
+reg m_axil_cms_awvalid_reg = 1'b0;
+reg [31:0] m_axil_cms_wdata_reg = 32'd0;
+reg [3:0] m_axil_cms_wstrb_reg = 4'b0000;
+reg m_axil_cms_wvalid_reg = 1'b0;
+reg m_axil_cms_arvalid_reg = 1'b0;
+
 reg pcie_dma_enable_reg = 0;
 
 reg [95:0] get_ptp_ts_96_reg = 0;
@@ -504,6 +536,20 @@ assign qspi_cs = qspi_cs_reg;
 assign qspi_dq_o = qspi_dq_o_reg;
 assign qspi_dq_oe = qspi_dq_oe_reg;
 
+assign m_axil_cms_clk = clk_250mhz;
+assign m_axil_cms_rst = rst_250mhz;
+assign m_axil_cms_awaddr = m_axil_cms_addr_reg;
+assign m_axil_cms_awprot = 3'b000;
+assign m_axil_cms_awvalid = m_axil_cms_awvalid_reg;
+assign m_axil_cms_wdata = m_axil_cms_wdata_reg;
+assign m_axil_cms_wstrb = m_axil_cms_wstrb_reg;
+assign m_axil_cms_wvalid = m_axil_cms_wvalid_reg;
+assign m_axil_cms_bready = 1'b1;
+assign m_axil_cms_araddr = m_axil_cms_addr_reg;
+assign m_axil_cms_arprot = 3'b000;
+assign m_axil_cms_arvalid = m_axil_cms_arvalid_reg;
+assign m_axil_cms_rready = 1'b1;
+
 //assign pcie_dma_enable = pcie_dma_enable_reg;
 
 always @(posedge clk_250mhz) begin
@@ -512,6 +558,10 @@ always @(posedge clk_250mhz) begin
     axil_csr_bvalid_reg <= axil_csr_bvalid_reg && !axil_csr_bready;
     axil_csr_arready_reg <= 1'b0;
     axil_csr_rvalid_reg <= axil_csr_rvalid_reg && !axil_csr_rready;
+
+    m_axil_cms_awvalid_reg <= m_axil_cms_awvalid_reg && !m_axil_cms_awready;
+    m_axil_cms_wvalid_reg <= m_axil_cms_wvalid_reg && !m_axil_cms_wready;
+    m_axil_cms_arvalid_reg <= m_axil_cms_arvalid_reg && !m_axil_cms_arready;
 
     pcie_dma_enable_reg <= pcie_dma_enable_reg;
 
@@ -546,6 +596,21 @@ always @(posedge clk_250mhz) begin
                 if (axil_csr_wstrb[2]) begin
                     qspi_clk_reg <= axil_csr_wdata[16];
                     qspi_cs_reg <= axil_csr_wdata[17];
+                end
+            end
+            // BMC
+            16'h0180: begin
+                if (!m_axil_cms_arvalid && !m_axil_cms_awvalid) begin
+                    m_axil_cms_addr_reg <= axil_csr_wdata;
+                    m_axil_cms_arvalid_reg <= 1'b1;
+                end
+            end
+            16'h0184: begin
+                if (!m_axil_cms_wvalid) begin
+                    m_axil_cms_awvalid_reg <= 1'b1;
+                    m_axil_cms_wdata_reg <= axil_csr_wdata;
+                    m_axil_cms_wstrb_reg <= axil_csr_wstrb;
+                    m_axil_cms_wvalid_reg <= 1'b1;
                 end
             end
             // PHC
@@ -607,6 +672,9 @@ always @(posedge clk_250mhz) begin
                 axil_csr_rdata_reg[16] <= qspi_clk;
                 axil_csr_rdata_reg[17] <= qspi_cs;
             end
+            // BMC
+            16'h0180: axil_csr_rdata_reg <= m_axil_cms_addr_reg;
+            16'h0184: axil_csr_rdata_reg <= m_axil_cms_rdata;
             // PHC
             16'h0200: axil_csr_rdata_reg <= {8'd0, 8'd0, 8'd0, 8'd0};  // PHC features
             16'h0210: axil_csr_rdata_reg <= ptp_ts_96[15:0];  // PTP cur fns
@@ -649,6 +717,10 @@ always @(posedge clk_250mhz) begin
         qspi_cs_reg <= 1'b1;
         qspi_dq_o_reg <= 4'd0;
         qspi_dq_oe_reg <= 4'd0;
+
+        m_axil_cms_awvalid_reg <= 1'b0;
+        m_axil_cms_wvalid_reg <= 1'b0;
+        m_axil_cms_arvalid_reg <= 1'b0;
 
         pcie_dma_enable_reg <= 1'b0;
     end

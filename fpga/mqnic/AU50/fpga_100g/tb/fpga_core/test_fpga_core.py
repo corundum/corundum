@@ -49,7 +49,7 @@ from cocotb.triggers import RisingEdge, FallingEdge, Timer
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
 
-from cocotbext.axi import AxiStreamSource, AxiStreamSink
+from cocotbext.axi import AxiStreamSource, AxiStreamSink, AxiLiteRam
 
 try:
     import mqnic
@@ -279,6 +279,8 @@ class TB(object):
         self.qsfp_sink = AxiStreamSink(dut, "qsfp_tx_axis", dut.qsfp_tx_clk, dut.qsfp_tx_rst)
 
         dut.qspi_dq_i.setimmediatevalue(0)
+
+        self.cms_ram = AxiLiteRam(dut, "m_axil_cms", dut.m_axil_cms_clk, dut.m_axil_cms_rst, size=256*1024)
 
         self.loopback_enable = False
         cocotb.fork(self._run_loopback())

@@ -40,6 +40,12 @@ set_property -dict {LOC F17 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qs
 #set_property -dict {LOC A19  IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports usb_uart2_txd]
 #set_property -dict {LOC A18  IOSTANDARD LVCMOS18} [get_ports usb_uart2_rxd]
 
+# BMC
+set_property -dict {LOC C16  IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 4} [get_ports {msp_gpio[0]}]
+set_property -dict {LOC C17  IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 4} [get_ports {msp_gpio[1]}]
+set_property -dict {LOC BB25 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 4} [get_ports {msp_uart_txd}]
+set_property -dict {LOC BB26 IOSTANDARD LVCMOS18} [get_ports {msp_uart_rxd}]
+
 # HBM overtemp
 set_property -dict {LOC J18 IOSTANDARD LVCMOS18} [get_ports hbm_cattrip]
 

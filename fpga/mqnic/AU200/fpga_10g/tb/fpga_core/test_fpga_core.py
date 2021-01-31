@@ -50,6 +50,7 @@ from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
 
 from cocotbext.eth import XgmiiSource, XgmiiSink
+from cocotbext.axi import AxiLiteRam
 
 try:
     import mqnic
@@ -335,6 +336,8 @@ class TB(object):
         dut.qsfp1_intl.setimmediatevalue(1)
 
         dut.qspi_dq_i.setimmediatevalue(0)
+
+        self.cms_ram = AxiLiteRam(dut, "m_axil_cms", dut.m_axil_cms_clk, dut.m_axil_cms_rst, size=256*1024)
 
         self.loopback_enable = False
         cocotb.fork(self._run_loopback())

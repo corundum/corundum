@@ -44,6 +44,14 @@ set_operating_conditions -design_power_budget 160
 #set_property -dict {LOC A28 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports usb_uart_txd]
 #set_property -dict {LOC B33 IOSTANDARD LVCMOS18} [get_ports usb_uart_rxd]
 
+# BMC
+set_property -dict {LOC K28 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 4} [get_ports {msp_gpio[0]}]
+set_property -dict {LOC J29 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 4} [get_ports {msp_gpio[1]}]
+set_property -dict {LOC K29 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 4} [get_ports {msp_gpio[2]}]
+set_property -dict {LOC J31 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 4} [get_ports {msp_gpio[3]}]
+set_property -dict {LOC D29 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 4} [get_ports {msp_uart_txd}]
+set_property -dict {LOC E28 IOSTANDARD LVCMOS18} [get_ports {msp_uart_rxd}]
+
 # HBM overtemp
 set_property -dict {LOC D32 IOSTANDARD LVCMOS18} [get_ports hbm_cattrip]
 

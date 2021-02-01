@@ -258,20 +258,6 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
         goto fail_i2c;
     }
 
-    // Read MAC from EEPROM
-    if (mqnic->eeprom_i2c_client)
-    {
-        ret = i2c_smbus_read_i2c_block_data(mqnic->eeprom_i2c_client, 0x00, 6, mqnic->base_mac);
-        if (ret < 0)
-        {
-            dev_warn(dev, "Failed to read MAC from EEPROM");
-        }
-    }
-    else
-    {
-        dev_warn(dev, "Failed to read MAC from EEPROM; no EEPROM I2C client registered");
-    }
-
     // Enable bus mastering for DMA
     pci_set_master(pdev);
 

@@ -486,16 +486,21 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 
     // set MAC
     ndev->addr_len = ETH_ALEN;
-    memcpy(ndev->dev_addr, mdev->base_mac, ETH_ALEN);
 
-    if (!is_valid_ether_addr(ndev->dev_addr))
+    if (port >= mdev->mac_count)
     {
-        dev_warn(dev, "Bad MAC in EEPROM; using random MAC");
+        dev_warn(dev, "Exhausted permanent MAC addresses; using random MAC");
         eth_hw_addr_random(ndev);
     }
     else
     {
-        ndev->dev_addr[ETH_ALEN-1] += port;
+        memcpy(ndev->dev_addr, mdev->mac_list[port], ETH_ALEN);
+
+        if (!is_valid_ether_addr(ndev->dev_addr))
+        {
+            dev_warn(dev, "Invalid MAC address in list; using random MAC");
+            eth_hw_addr_random(ndev);
+        }
     }
 
     priv->hwts_config.flags = 0;

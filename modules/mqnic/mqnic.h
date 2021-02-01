@@ -76,7 +76,8 @@ struct mqnic_dev {
 
     struct mutex state_lock;
 
-    u8 base_mac[ETH_ALEN];
+    int mac_count;
+    u8 mac_list[MQNIC_MAX_IF][ETH_ALEN];
 
     char name[16];
 

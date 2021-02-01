@@ -441,6 +441,27 @@ int mqnic_init_i2c(struct mqnic_dev *mqnic)
         break;
     }
 
+    // Read MAC from EEPROM
+    if (mqnic->eeprom_i2c_client)
+    {
+        int r, k;
+
+        r = i2c_smbus_read_i2c_block_data(mqnic->eeprom_i2c_client, 0x00, 6, mqnic->mac_list[0]);
+        if (r < 0)
+        {
+            dev_warn(mqnic->dev, "Failed to read MAC from EEPROM");
+        }
+        else
+        {
+            mqnic->mac_count = MQNIC_MAX_IF;
+            for (k = 1; k < mqnic->mac_count; k++)
+            {
+                memcpy(mqnic->mac_list[k], mqnic->mac_list[0], ETH_ALEN);
+                mqnic->mac_list[k][ETH_ALEN-1] += k;
+            }
+        }
+    }
+
     return ret;
 }
 

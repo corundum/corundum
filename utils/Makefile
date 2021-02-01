@@ -1,28 +1,35 @@
 
-PREFIX=/usr/local
-BINDIR=$(DESTDIR)$(PREFIX)/bin
+PREFIX = /usr/local
+BINDIR = $(DESTDIR)$(PREFIX)/bin
 
-CC=gcc
-CFLAGS=-O3 -Wall -I../modules/mqnic
+CC = gcc
+CFLAGS = -O3 -Wall -I../modules/mqnic
 
-BIN=mqnic-config mqnic-dump mqnic-fw mqnic-bmc perout
+BIN = mqnic-config mqnic-dump mqnic-fw mqnic-bmc perout
+
+GENDEPFLAGS = -MD -MP -MF .$(@F).d
+
+ALL_CFLAGS = $(CFLAGS) $(GENDEPFLAGS)
 
 all: $(BIN)
 
-mqnic-config: mqnic-config.c mqnic.c timespec.c
-	$(CC) $(CFLAGS) $^ -o $@
+%.o: %.c
+	$(CC) $(ALL_CFLAGS) -c -o $@ $<
 
-mqnic-dump: mqnic-dump.c mqnic.c
-	$(CC) $(CFLAGS) $^ -o $@
+mqnic-config: mqnic-config.o mqnic.o timespec.o
+	$(CC) $(ALL_CFLAGS) $^ -o $@
 
-mqnic-fw: mqnic-fw.c mqnic.c flash.c flash_spi.c flash_bpi.c fpga_id.c bitfile.c
-	$(CC) $(CFLAGS) $^ -o $@
+mqnic-dump: mqnic-dump.o mqnic.o
+	$(CC) $(ALL_CFLAGS) $^ -o $@
 
-mqnic-bmc: mqnic-bmc.c mqnic.c
-	$(CC) $(CFLAGS) $^ -o $@
+mqnic-fw: mqnic-fw.o mqnic.o flash.o flash_spi.o flash_bpi.o fpga_id.o bitfile.o
+	$(CC) $(ALL_CFLAGS) $^ -o $@
 
-perout: perout.c timespec.c
-	$(CC) $(CFLAGS) $^ -o $@
+mqnic-bmc: mqnic-bmc.o mqnic.o
+	$(CC) $(ALL_CFLAGS) $^ -o $@
+
+perout: perout.o timespec.o
+	$(CC) $(ALL_CFLAGS) $^ -o $@
 
 install:
 	install -d $(BINDIR)
@@ -30,4 +37,9 @@ install:
 
 clean:
 	rm -f $(BIN)
+	rm -f *.o
+	rm -f .*.d
 
+-include $(wildcard .*.d)
+
+.PHONY: all install clean

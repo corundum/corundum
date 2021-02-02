@@ -102,7 +102,7 @@ static int read_mac_from_eeprom(struct mqnic_dev *mqnic, struct i2c_client *eepr
         return -1;
     }
 
-    ret = i2c_smbus_read_i2c_block_data(eeprom, offset, 6, mac);
+    ret = i2c_smbus_read_i2c_block_data(eeprom, offset, ETH_ALEN, mac);
     if (ret < 0)
     {
         dev_warn(mqnic->dev, "Failed to read MAC from EEPROM");
@@ -114,10 +114,8 @@ static int read_mac_from_eeprom(struct mqnic_dev *mqnic, struct i2c_client *eepr
 
 static int init_mac_list_from_eeprom_base(struct mqnic_dev *mqnic, struct i2c_client *eeprom, int offset, int count)
 {
-    int ret, k;
-    char mac[6];
-
-    count = min(count, MQNIC_MAX_IF);
+    int ret;
+    char mac[ETH_ALEN];
 
     ret = read_mac_from_eeprom(mqnic, eeprom, offset, mac);
     if (ret < 0)

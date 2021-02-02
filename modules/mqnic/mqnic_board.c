@@ -297,8 +297,6 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 
         break;
     case MQNIC_BOARD_ID_VCU1525:
-    case MQNIC_BOARD_ID_AU200:
-    case MQNIC_BOARD_ID_AU250:
         // FPGA U13
         //   PCA9546 U28 0x74
         //     CH0: QSFP0 J7 0x50
@@ -459,9 +457,160 @@ static struct mqnic_board_ops generic_board_ops = {
     .deinit = mqnic_generic_board_deinit
 };
 
+static u32 mqnic_read_alveo_bmc_reg(struct mqnic_dev *mqnic, u32 reg)
+{
+    iowrite32(reg, mqnic->hw_addr+0x180);
+    ioread32(mqnic->hw_addr+0x184); // dummy read
+    return ioread32(mqnic->hw_addr+0x184);
+}
+
+static void mqnic_write_alveo_bmc_reg(struct mqnic_dev *mqnic, u32 reg, u32 val)
+{
+    iowrite32(reg, mqnic->hw_addr+0x180);
+    iowrite32(val, mqnic->hw_addr+0x184);
+    ioread32(mqnic->hw_addr+0x184); // dummy read
+}
+
+static int mqnic_read_mac_from_alveo_bmc(struct mqnic_dev *mqnic, int offset, char *mac)
+{
+    uint32_t reg = 0x0281a0 + offset;
+    uint32_t val = mqnic_read_alveo_bmc_reg(mqnic, reg);
+    mac[0] = (val >> 8) & 0xff;
+    mac[1] = val & 0xff;
+    val = mqnic_read_alveo_bmc_reg(mqnic, reg+4);
+    mac[2] = (val >> 24) & 0xff;
+    mac[3] = (val >> 16) & 0xff;
+    mac[4] = (val >> 8) & 0xff;
+    mac[5] = val & 0xff;
+
+    return 0;
+}
+
+static int mqnic_init_mac_list_from_alveo_bmc(struct mqnic_dev *mqnic, int offset, int count)
+{
+    int ret, k;
+    char mac[ETH_ALEN];
+
+    count = min(count, MQNIC_MAX_IF);
+
+    mqnic->mac_count = 0;
+    for (k = 0; k < count; k++)
+    {
+        ret = mqnic_read_mac_from_alveo_bmc(mqnic, k*8, mac);
+        if (ret)
+        {
+            dev_warn(mqnic->dev, "Failed to read MAC from Alveo BMC");
+            return -1;
+        }
+
+        if (is_valid_ether_addr(mac))
+        {
+            memcpy(mqnic->mac_list[mqnic->mac_count], mac, ETH_ALEN);
+            mqnic->mac_count++;
+        }
+    }
+
+    dev_info(mqnic->dev, "Read %d MACs from Alveo BMC", mqnic->mac_count);
+
+    if (mqnic->mac_count == 0)
+    {
+        dev_warn(mqnic->dev, "Failed to read any valid MACs from Alveo BMC");
+    }
+
+    return mqnic->mac_count;
+}
+
+static int mqnic_alveo_board_init(struct mqnic_dev *mqnic)
+{
+    struct i2c_adapter *adapter;
+    struct i2c_client *mux;
+    int ret = 0;
+
+    mqnic->mod_i2c_client_count = 0;
+
+    if (mqnic_i2c_init(mqnic))
+    {
+        dev_err(mqnic->dev, "Failed to initialize I2C subsystem");
+        return -1;
+    }
+
+    switch (mqnic->board_id) {
+    case MQNIC_BOARD_ID_AU200:
+    case MQNIC_BOARD_ID_AU250:
+        // FPGA U13
+        //   PCA9546 U28 0x74
+        //     CH0: QSFP0 J7 0x50
+        //     CH1: QSFP1 J9 0x50
+        //     CH2: M24C08 EEPROM U62 0x54
+        //          SI570 Osc U14 0x5D
+        //     CH3: SYSMON U13 0x32
+
+        request_module("i2c_mux_pca954x");
+        request_module("at24");
+
+        // I2C adapter
+        adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr+MQNIC_REG_GPIO_I2C_0);
+
+        // U28 TCA9546 I2C MUX
+        mux = create_i2c_client(adapter, "pca9546", 0x74, i2c_mux_props);
+
+        // J7 QSFP0
+        mqnic->mod_i2c_client[0] = create_i2c_client(get_i2c_mux_channel(mux, 0), "24c02", 0x50, NULL);
+
+        // J9 QSFP1
+        mqnic->mod_i2c_client[1] = create_i2c_client(get_i2c_mux_channel(mux, 1), "24c02", 0x50, NULL);
+
+        // U12 I2C EEPROM
+        mqnic->eeprom_i2c_client = create_i2c_client(get_i2c_mux_channel(mux, 2), "24c08", 0x54, NULL);
+
+        mqnic->mod_i2c_client_count = 2;
+
+        // falls through
+    case MQNIC_BOARD_ID_AU50:
+    case MQNIC_BOARD_ID_AU280:
+        // init BMC
+
+        if (mqnic_read_alveo_bmc_reg(mqnic, 0x020000) == 0 ||
+            mqnic_read_alveo_bmc_reg(mqnic, 0x028000) != 0x74736574)
+        {
+            dev_info(mqnic->dev, "Resetting Alveo CMS");
+
+            mqnic_write_alveo_bmc_reg(mqnic, 0x020000, 0);
+            mqnic_write_alveo_bmc_reg(mqnic, 0x020000, 1);
+            msleep(100);
+        }
+
+        if (mqnic_read_alveo_bmc_reg(mqnic, 0x028000) != 0x74736574)
+        {
+            dev_warn(mqnic->dev, "Alveo CMS not responding");
+        }
+        else
+        {
+            mqnic_init_mac_list_from_alveo_bmc(mqnic, 0, 8);
+        }
+
+        break;
+    default:
+        dev_warn(mqnic->dev, "Unknown Alveo board ID");
+    }
+
+    return ret;
+}
+
+static struct mqnic_board_ops alveo_board_ops = {
+    .init = mqnic_alveo_board_init,
+    .deinit = mqnic_generic_board_deinit
+};
+
 int mqnic_board_init(struct mqnic_dev *mqnic)
 {
     switch (mqnic->board_id) {
+    case MQNIC_BOARD_ID_AU50:
+    case MQNIC_BOARD_ID_AU200:
+    case MQNIC_BOARD_ID_AU250:
+    case MQNIC_BOARD_ID_AU280:
+        mqnic->board_ops = &alveo_board_ops;
+        break;
     default:
         mqnic->board_ops = &generic_board_ops;
     }

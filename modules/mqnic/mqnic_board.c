@@ -92,6 +92,28 @@ static struct i2c_adapter *get_i2c_mux_channel(struct i2c_client *mux, u32 chan_
     return muxc->adapter[chan_id];
 }
 
+static int init_mac_list_from_base_mac(struct mqnic_dev *mqnic, int count, char *mac)
+{
+    int k;
+
+    count = min(count, MQNIC_MAX_IF);
+
+    if (!is_valid_ether_addr(mac))
+    {
+        dev_warn(mqnic->dev, "Base MAC is not valid");
+        return -1;
+    }
+
+    mqnic->mac_count = count;
+    for (k = 0; k < mqnic->mac_count; k++)
+    {
+        memcpy(mqnic->mac_list[k], mac, ETH_ALEN);
+        mqnic->mac_list[k][ETH_ALEN-1] += k;
+    }
+
+    return count;
+}
+
 static int read_mac_from_eeprom(struct mqnic_dev *mqnic, struct i2c_client *eeprom, int offset, char *mac)
 {
     int ret;
@@ -129,14 +151,7 @@ static int init_mac_list_from_eeprom_base(struct mqnic_dev *mqnic, struct i2c_cl
         return -1;
     }
 
-    mqnic->mac_count = count;
-    for (k = 0; k < mqnic->mac_count; k++)
-    {
-        memcpy(mqnic->mac_list[k], mac, ETH_ALEN);
-        mqnic->mac_list[k][ETH_ALEN-1] += k;
-    }
-
-    return count;
+    return init_mac_list_from_base_mac(mqnic, count, mac);
 }
 
 static int mqnic_generic_board_init(struct mqnic_dev *mqnic)

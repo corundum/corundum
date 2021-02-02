@@ -250,12 +250,12 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
         mqnic->irq_map[k] = pci_irq_vector(pdev, k);
     }
 
-    // Set up I2C interfaces
-    ret = mqnic_init_i2c(mqnic);
+    // Board-specific init
+    ret = mqnic_board_init(mqnic);
     if (ret)
     {
-        dev_err(dev, "Failed to register I2C interfaces");
-        goto fail_i2c;
+        dev_err(dev, "Failed to initialize board");
+        goto fail_board;
     }
 
     // Enable bus mastering for DMA
@@ -320,8 +320,8 @@ fail_init_netdev:
     }
     mqnic_unregister_phc(mqnic);
     pci_clear_master(pdev);
-fail_i2c:
-    mqnic_remove_i2c(mqnic);
+fail_board:
+    mqnic_board_deinit(mqnic);
     for (k = 0; k < mqnic->irq_count; k++)
     {
         pci_free_irq(pdev, k, mqnic);
@@ -365,7 +365,7 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
     mqnic_unregister_phc(mqnic);
 
     pci_clear_master(pdev);
-    mqnic_remove_i2c(mqnic);
+    mqnic_board_deinit(mqnic);
     for (k = 0; k < mqnic->irq_count; k++)
     {
         pci_free_irq(pdev, k, mqnic);

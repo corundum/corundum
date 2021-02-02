@@ -50,7 +50,14 @@ either expressed or implied, of The Regents of the University of California.
 
 #include "mqnic_hw.h"
 
-struct mqnic_i2c_priv
+struct mqnic_dev;
+
+struct mqnic_board_ops {
+    int (*init)(struct mqnic_dev *mqnic);
+    void (*deinit)(struct mqnic_dev *mqnic);
+};
+
+struct mqnic_i2c_bus
 {
     struct mqnic_dev *mqnic;
 
@@ -63,6 +70,11 @@ struct mqnic_i2c_priv
     uint32_t scl_out_mask;
     uint32_t sda_in_mask;
     uint32_t sda_out_mask;
+
+    struct list_head head;
+
+    struct i2c_algo_bit_data algo;
+    struct i2c_adapter adapter;
 };
 
 struct mqnic_dev {
@@ -106,10 +118,10 @@ struct mqnic_dev {
     struct ptp_clock *ptp_clock;
     struct ptp_clock_info ptp_clock_info;
 
+    struct mqnic_board_ops *board_ops;
+
+    struct list_head i2c_bus;
     int i2c_adapter_count;
-    struct i2c_algo_bit_data i2c_algo[MQNIC_MAX_I2C_ADAPTERS];
-    struct i2c_adapter i2c_adapter[MQNIC_MAX_I2C_ADAPTERS];
-    struct mqnic_i2c_priv i2c_priv[MQNIC_MAX_I2C_ADAPTERS];
 
     int mod_i2c_client_count;
     struct i2c_client *mod_i2c_client[MQNIC_MAX_IF];
@@ -324,8 +336,16 @@ void mqnic_unregister_phc(struct mqnic_dev *mdev);
 ktime_t mqnic_read_cpl_ts(struct mqnic_dev *mdev, struct mqnic_ring *ring, const struct mqnic_cpl *cpl);
 
 // mqnic_i2c.c
-int mqnic_init_i2c(struct mqnic_dev *mqnic);
-void mqnic_remove_i2c(struct mqnic_dev *mqnic);
+struct mqnic_i2c_bus *mqnic_i2c_bus_create(struct mqnic_dev *mqnic, u8 __iomem *reg);
+struct i2c_adapter *mqnic_i2c_adapter_create(struct mqnic_dev *mqnic, u8 __iomem *reg);
+void mqnic_i2c_bus_release(struct mqnic_i2c_bus *bus);
+void mqnic_i2c_adapter_release(struct i2c_adapter *adapter);
+int mqnic_i2c_init(struct mqnic_dev *mqnic);
+void mqnic_i2c_deinit(struct mqnic_dev *mqnic);
+
+// mqnic_board.c
+int mqnic_board_init(struct mqnic_dev *mqnic);
+void mqnic_board_deinit(struct mqnic_dev *mqnic);
 
 // mqnic_eq.c
 int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_ptr, int size, int stride, int index, u8 __iomem *hw_addr);

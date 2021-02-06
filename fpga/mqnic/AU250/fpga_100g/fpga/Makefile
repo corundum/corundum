@@ -59,6 +59,7 @@ SYN_FILES += lib/pcie/rtl/pulse_merge.v
 # XDC files
 XDC_FILES = fpga.xdc
 XDC_FILES += placement.xdc
+XDC_FILES += cfgmclk.xdc
 XDC_FILES += boot.xdc
 XDC_FILES += lib/axi/syn/axil_cdc.tcl
 XDC_FILES += lib/axis/syn/axis_async_fifo.tcl

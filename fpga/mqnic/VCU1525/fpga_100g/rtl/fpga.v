@@ -467,7 +467,7 @@ reg sys_reset_reg = 1'b1;
 
 reg [9:0] reset_timer_reg = 0;
 
-assign mmcm_rst = sys_reset_reg;
+assign mmcm_rst = sys_reset_reg | pcie_user_reset;
 
 always @(posedge cfgmclk_int) begin
     if (&reset_timer_reg) begin
@@ -480,12 +480,6 @@ always @(posedge cfgmclk_int) begin
         end
     end else begin
         reset_timer_reg <= reset_timer_reg + 1;
-    end
-
-    if (pcie_user_reset) begin
-        qsfp_refclk_reset_reg <= 1'b1;
-        sys_reset_reg <= 1'b1;
-        reset_timer_reg <= 0;
     end
 end
 

@@ -13,8 +13,8 @@ set_property BITSTREAM.CONFIG.UNUSEDPIN {Pullnone}     [current_design]
 set_property BITSTREAM.CONFIG.OVERTEMPSHUTDOWN Enable  [current_design]
 
 # 300 MHz system clock
-set_property -dict {LOC AP26 IOSTANDARD LVDS} [get_ports clk_300mhz_p]
-set_property -dict {LOC AP27 IOSTANDARD LVDS} [get_ports clk_300mhz_n]
+set_property -dict {LOC AP26 IOSTANDARD LVDS DIFF_TERM_ADV TERM_100} [get_ports clk_300mhz_p]
+set_property -dict {LOC AP27 IOSTANDARD LVDS DIFF_TERM_ADV TERM_100} [get_ports clk_300mhz_n]
 create_clock -period 3.333 -name clk_300mhz [get_ports clk_300mhz_p]
 
 # LEDs

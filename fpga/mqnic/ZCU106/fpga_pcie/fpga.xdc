@@ -36,6 +36,9 @@ set_property -dict {LOC AP20 IOSTANDARD LVCMOS12} [get_ports btnd]
 set_property -dict {LOC AC14 IOSTANDARD LVCMOS12} [get_ports btnr]
 set_property -dict {LOC AL10 IOSTANDARD LVCMOS12} [get_ports btnc]
 
+set_false_path -from [get_ports {btnu btnl btnd btnr btnc}]
+set_input_delay 0 [get_ports {btnu btnl btnd btnr btnc}]
+
 # DIP switches
 set_property -dict {LOC A17  IOSTANDARD LVCMOS18} [get_ports {sw[0]}]
 set_property -dict {LOC A16  IOSTANDARD LVCMOS18} [get_ports {sw[1]}]

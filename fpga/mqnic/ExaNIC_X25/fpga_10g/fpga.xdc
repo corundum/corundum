@@ -135,7 +135,7 @@ set_input_delay 0 [get_ports {pcie_reset_n}]
 # 100 MHz MGT reference clock
 create_clock -period 10 -name pcie_mgt_refclk [get_ports pcie_refclk_p]
 
-# Flash
+# BPI flash
 set_property -dict {LOC AF20 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {flash_dq[0]}]
 set_property -dict {LOC AE18 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {flash_dq[1]}]
 set_property -dict {LOC AF19 IOSTANDARD LVCMOS18 DRIVE 12} [get_ports {flash_dq[2]}]

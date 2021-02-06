@@ -131,7 +131,7 @@ create_clock -period 10 -name pcie_mgt_refclk [get_ports pcie_mgt_refclk_p]
 set_false_path -from [get_ports {pcie_reset_n}]
 set_input_delay 0 [get_ports {pcie_reset_n}]
 
-# Flash
+# BPI flash
 set_property -dict {LOC AE10 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {flash_dq[0]}]
 set_property -dict {LOC AC8  IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {flash_dq[1]}]
 set_property -dict {LOC AD10 IOSTANDARD LVCMOS18 DRIVE 16} [get_ports {flash_dq[2]}]

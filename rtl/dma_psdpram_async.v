@@ -55,6 +55,7 @@ module dma_psdpram_async #
     input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0] wr_cmd_data,
     input  wire [SEG_COUNT-1:0]                wr_cmd_valid,
     output wire [SEG_COUNT-1:0]                wr_cmd_ready,
+    output wire [SEG_COUNT-1:0]                wr_done,
 
     /*
      * Read port
@@ -87,6 +88,8 @@ generate
 
         reg [SEG_DATA_WIDTH-1:0] mem_reg[2**INT_ADDR_WIDTH-1:0];
 
+        reg wr_done_reg = 1'b0;
+
         reg [PIPELINE-1:0] rd_resp_valid_pipe_reg = 0;
         reg [SEG_DATA_WIDTH-1:0] rd_resp_data_pipe_reg[PIPELINE-1:0];
 
@@ -107,14 +110,22 @@ generate
         end
 
         always @(posedge clk_wr) begin
+            wr_done_reg <= 1'b0;
+
             for (i = 0; i < SEG_BE_WIDTH; i = i + 1) begin
                 if (wr_cmd_valid[n] && wr_cmd_be[n*SEG_BE_WIDTH+i]) begin
                     mem_reg[wr_cmd_addr[SEG_ADDR_WIDTH*n +: INT_ADDR_WIDTH]][i*8 +: 8] <= wr_cmd_data[SEG_DATA_WIDTH*n+i*8 +: 8];
+                    wr_done_reg <= 1'b1;
                 end
+            end
+
+            if (rst_wr) begin
+                wr_done_reg <= 1'b0;
             end
         end
 
         assign wr_cmd_ready[n] = 1'b1;
+        assign wr_done[n] = wr_done_reg;
 
         always @(posedge clk_rd) begin
             if (rd_resp_ready[n]) begin

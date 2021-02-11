@@ -25,7 +25,7 @@ THE SOFTWARE.
 import logging
 
 import cocotb
-from cocotb.triggers import RisingEdge, ReadOnly
+from cocotb.triggers import RisingEdge
 from cocotb.bus import Bus
 
 from cocotbext.axi.memory import Memory
@@ -92,7 +92,7 @@ class PsdpRamWrite(Memory):
 
     async def _run(self):
         while True:
-            await ReadOnly()
+            await RisingEdge(self.clock)
 
             cmd_be_sample = self.cmd_bus.wr_cmd_be.value
             cmd_addr_sample = self.cmd_bus.wr_cmd_addr.value
@@ -101,11 +101,8 @@ class PsdpRamWrite(Memory):
             cmd_valid_sample = self.cmd_bus.wr_cmd_valid.value
 
             if self.reset is not None and self.reset.value:
-                await RisingEdge(self.clock)
                 self.cmd_bus.wr_cmd_ready.setimmediatevalue(0)
                 continue
-
-            await RisingEdge(self.clock)
 
             # process segments
             for seg in range(self.seg_count):
@@ -206,7 +203,7 @@ class PsdpRamRead(Memory):
         resp_data = 0
 
         while True:
-            await ReadOnly()
+            await RisingEdge(self.clock)
 
             cmd_addr_sample = self.cmd_bus.rd_cmd_addr.value
             cmd_ready_sample = self.cmd_bus.rd_cmd_ready.value
@@ -216,14 +213,11 @@ class PsdpRamRead(Memory):
             resp_valid_sample = self.resp_bus.rd_resp_valid.value
 
             if self.reset is not None and self.reset.value:
-                await RisingEdge(self.clock)
                 self.cmd_bus.rd_cmd_ready.setimmediatevalue(0)
                 self.resp_bus.rd_resp_valid.setimmediatevalue(0)
                 cmd_ready = 0
                 resp_valid = 0
                 continue
-
-            await RisingEdge(self.clock)
 
             # process segments
             for seg in range(self.seg_count):

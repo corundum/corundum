@@ -167,6 +167,8 @@ parameter MASK_FIFO_ADDR_WIDTH = $clog2(OP_TABLE_SIZE)+1;
 
 parameter OP_TAG_WIDTH = $clog2(OP_TABLE_SIZE);
 
+parameter OUTPUT_FIFO_ADDR_WIDTH = 5;
+
 // bus width assertions
 initial begin
     if (AXIS_PCIE_DATA_WIDTH != 64 && AXIS_PCIE_DATA_WIDTH != 128 && AXIS_PCIE_DATA_WIDTH != 256 && AXIS_PCIE_DATA_WIDTH != 512) begin
@@ -359,10 +361,9 @@ reg [SEG_COUNT-1:0] ram_rd_resp_ready_cmb;
 reg  [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_rq_tdata_int;
 reg  [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_rq_tkeep_int;
 reg                                m_axis_rq_tvalid_int;
-reg                                m_axis_rq_tready_int_reg = 1'b0;
+wire                               m_axis_rq_tready_int;
 reg                                m_axis_rq_tlast_int;
 reg  [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser_int;
-wire                               m_axis_rq_tready_int_early;
 
 assign s_axis_rq_tready = s_axis_rq_tready_reg;
 
@@ -819,7 +820,7 @@ always @* begin
     case (tlp_state_reg)
         TLP_STATE_IDLE: begin
             // idle state, wait for command
-            s_axis_rq_tready_next = m_axis_rq_tready_int_early;
+            s_axis_rq_tready_next = m_axis_rq_tready_int;
 
             // pass through read request TLP
             m_axis_rq_tdata_int = s_axis_rq_tdata;
@@ -867,7 +868,7 @@ always @* begin
 
                 ram_rd_resp_ready_cmb = {SEG_COUNT{1'b0}};
 
-                if (!(ram_mask_reg & ~ram_rd_resp_valid) && ram_mask_valid_reg && m_axis_rq_tready_int_reg) begin
+                if (!(ram_mask_reg & ~ram_rd_resp_valid) && ram_mask_valid_reg && m_axis_rq_tready_int) begin
                     // transfer in read data
                     ram_rd_resp_ready_cmb = ram_mask_reg;
                     ram_mask_valid_next = 1'b0;
@@ -904,7 +905,7 @@ always @* begin
                             op_table_tx_start_en = 1'b1;
                             tlp_state_next = TLP_STATE_HEADER_1;
                         end else begin
-                            s_axis_rq_tready_next = m_axis_rq_tready_int_early;
+                            s_axis_rq_tready_next = m_axis_rq_tready_int;
                             tlp_state_next = TLP_STATE_IDLE;
                         end
                     end else begin
@@ -914,7 +915,7 @@ always @* begin
                     tlp_state_next = TLP_STATE_HEADER_1;
                 end
             end else begin
-                if (m_axis_rq_tready_int_reg) begin
+                if (m_axis_rq_tready_int) begin
                     m_axis_rq_tvalid_int = 1'b1;
 
                     inc_active_tx = 1'b1;
@@ -931,7 +932,7 @@ always @* begin
         end
         TLP_STATE_HEADER_2: begin
             // header 2 state, send rest of TLP header (64 bit interface only)
-            if (m_axis_rq_tready_int_reg) begin
+            if (m_axis_rq_tready_int) begin
                 m_axis_rq_tdata_int[10:0] = dword_count_reg; // DWORD count
                 m_axis_rq_tdata_int[14:11] = 4'b0001; // request type - memory write
                 m_axis_rq_tdata_int[15] = 1'b0; // poisoned request
@@ -955,7 +956,7 @@ always @* begin
 
             ram_rd_resp_ready_cmb = {SEG_COUNT{1'b0}};
 
-            if (!(ram_mask_reg & ~ram_rd_resp_valid) && ram_mask_valid_reg && m_axis_rq_tready_int_reg) begin
+            if (!(ram_mask_reg & ~ram_rd_resp_valid) && ram_mask_valid_reg && m_axis_rq_tready_int) begin
                 // transfer in read data
                 ram_rd_resp_ready_cmb = ram_mask_reg;
                 ram_mask_valid_next = 1'b0;
@@ -991,7 +992,7 @@ always @* begin
                         op_table_tx_start_en = 1'b1;
                         tlp_state_next = TLP_STATE_HEADER_1;
                     end else begin
-                        s_axis_rq_tready_next = m_axis_rq_tready_int_early;
+                        s_axis_rq_tready_next = m_axis_rq_tready_int;
                         tlp_state_next = TLP_STATE_IDLE;
                     end
                 end else begin
@@ -1003,7 +1004,7 @@ always @* begin
         end
         TLP_STATE_PASSTHROUGH: begin
             // passthrough state, pass through read request TLP
-            s_axis_rq_tready_next = m_axis_rq_tready_int_early;
+            s_axis_rq_tready_next = m_axis_rq_tready_int;
 
             // pass through read request TLP
             m_axis_rq_tdata_int = s_axis_rq_tdata;
@@ -1197,16 +1198,19 @@ reg                               m_axis_rq_tvalid_reg = 1'b0, m_axis_rq_tvalid_
 reg                               m_axis_rq_tlast_reg = 1'b0;
 reg [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser_reg = {AXIS_PCIE_RQ_USER_WIDTH{1'b0}};
 
-reg [AXIS_PCIE_DATA_WIDTH-1:0]    temp_m_axis_rq_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
-reg [AXIS_PCIE_KEEP_WIDTH-1:0]    temp_m_axis_rq_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
-reg                               temp_m_axis_rq_tvalid_reg = 1'b0, temp_m_axis_rq_tvalid_next;
-reg                               temp_m_axis_rq_tlast_reg = 1'b0;
-reg [AXIS_PCIE_RQ_USER_WIDTH-1:0] temp_m_axis_rq_tuser_reg = {AXIS_PCIE_RQ_USER_WIDTH{1'b0}};
+reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_fifo_wr_ptr_reg = 0;
+reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_fifo_rd_ptr_reg = 0;
+reg out_fifo_half_full_reg = 1'b0;
 
-// datapath control
-reg store_axis_rq_int_to_output;
-reg store_axis_rq_int_to_temp;
-reg store_axis_rq_temp_to_output;
+wire out_fifo_full = out_fifo_wr_ptr_reg == (out_fifo_rd_ptr_reg ^ {1'b1, {OUTPUT_FIFO_ADDR_WIDTH{1'b0}}});
+wire out_fifo_empty = out_fifo_wr_ptr_reg == out_fifo_rd_ptr_reg;
+
+reg [AXIS_PCIE_DATA_WIDTH-1:0]    out_fifo_tdata[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg [AXIS_PCIE_KEEP_WIDTH-1:0]    out_fifo_tkeep[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg                               out_fifo_tlast[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg [AXIS_PCIE_RQ_USER_WIDTH-1:0] out_fifo_tuser[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+
+assign m_axis_rq_tready_int = !out_fifo_half_full_reg;
 
 assign m_axis_rq_tdata = m_axis_rq_tdata_reg;
 assign m_axis_rq_tkeep = m_axis_rq_tkeep_reg;
@@ -1214,66 +1218,32 @@ assign m_axis_rq_tvalid = m_axis_rq_tvalid_reg;
 assign m_axis_rq_tlast = m_axis_rq_tlast_reg;
 assign m_axis_rq_tuser = m_axis_rq_tuser_reg;
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign m_axis_rq_tready_int_early = m_axis_rq_tready || (!temp_m_axis_rq_tvalid_reg && (!m_axis_rq_tvalid_reg || !m_axis_rq_tvalid_int));
-
-always @* begin
-    // transfer sink ready state to source
-    m_axis_rq_tvalid_next = m_axis_rq_tvalid_reg;
-    temp_m_axis_rq_tvalid_next = temp_m_axis_rq_tvalid_reg;
-
-    store_axis_rq_int_to_output = 1'b0;
-    store_axis_rq_int_to_temp = 1'b0;
-    store_axis_rq_temp_to_output = 1'b0;
-
-    if (m_axis_rq_tready_int_reg) begin
-        // input is ready
-        if (m_axis_rq_tready || !m_axis_rq_tvalid_reg) begin
-            // output is ready or currently not valid, transfer data to output
-            m_axis_rq_tvalid_next = m_axis_rq_tvalid_int;
-            store_axis_rq_int_to_output = 1'b1;
-        end else begin
-            // output is not ready, store input in temp
-            temp_m_axis_rq_tvalid_next = m_axis_rq_tvalid_int;
-            store_axis_rq_int_to_temp = 1'b1;
-        end
-    end else if (m_axis_rq_tready) begin
-        // input is not ready, but output is ready
-        m_axis_rq_tvalid_next = temp_m_axis_rq_tvalid_reg;
-        temp_m_axis_rq_tvalid_next = 1'b0;
-        store_axis_rq_temp_to_output = 1'b1;
-    end
-end
-
 always @(posedge clk) begin
+    m_axis_rq_tvalid_reg <= m_axis_rq_tvalid_reg && !m_axis_rq_tready;
+
+    out_fifo_half_full_reg <= $unsigned(out_fifo_wr_ptr_reg - out_fifo_rd_ptr_reg) >= 2**(OUTPUT_FIFO_ADDR_WIDTH-1);
+
+    if (!out_fifo_full && m_axis_rq_tvalid_int) begin
+        out_fifo_tdata[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axis_rq_tdata_int;
+        out_fifo_tkeep[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axis_rq_tkeep_int;
+        out_fifo_tlast[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axis_rq_tlast_int;
+        out_fifo_tuser[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axis_rq_tuser_int;
+        out_fifo_wr_ptr_reg <= out_fifo_wr_ptr_reg + 1;
+    end
+
+    if (!out_fifo_empty && (!m_axis_rq_tvalid_reg || m_axis_rq_tready)) begin
+        m_axis_rq_tdata_reg <= out_fifo_tdata[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+        m_axis_rq_tkeep_reg <= out_fifo_tkeep[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+        m_axis_rq_tvalid_reg <= 1'b1;
+        m_axis_rq_tlast_reg <= out_fifo_tlast[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+        m_axis_rq_tuser_reg <= out_fifo_tuser[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+        out_fifo_rd_ptr_reg <= out_fifo_rd_ptr_reg + 1;
+    end
+
     if (rst) begin
+        out_fifo_wr_ptr_reg <= 0;
+        out_fifo_rd_ptr_reg <= 0;
         m_axis_rq_tvalid_reg <= 1'b0;
-        m_axis_rq_tready_int_reg <= 1'b0;
-        temp_m_axis_rq_tvalid_reg <= 1'b0;
-    end else begin
-        m_axis_rq_tvalid_reg <= m_axis_rq_tvalid_next;
-        m_axis_rq_tready_int_reg <= m_axis_rq_tready_int_early;
-        temp_m_axis_rq_tvalid_reg <= temp_m_axis_rq_tvalid_next;
-    end
-
-    // datapath
-    if (store_axis_rq_int_to_output) begin
-        m_axis_rq_tdata_reg <= m_axis_rq_tdata_int;
-        m_axis_rq_tkeep_reg <= m_axis_rq_tkeep_int;
-        m_axis_rq_tlast_reg <= m_axis_rq_tlast_int;
-        m_axis_rq_tuser_reg <= m_axis_rq_tuser_int;
-    end else if (store_axis_rq_temp_to_output) begin
-        m_axis_rq_tdata_reg <= temp_m_axis_rq_tdata_reg;
-        m_axis_rq_tkeep_reg <= temp_m_axis_rq_tkeep_reg;
-        m_axis_rq_tlast_reg <= temp_m_axis_rq_tlast_reg;
-        m_axis_rq_tuser_reg <= temp_m_axis_rq_tuser_reg;
-    end
-
-    if (store_axis_rq_int_to_temp) begin
-        temp_m_axis_rq_tdata_reg <= m_axis_rq_tdata_int;
-        temp_m_axis_rq_tkeep_reg <= m_axis_rq_tkeep_int;
-        temp_m_axis_rq_tlast_reg <= m_axis_rq_tlast_int;
-        temp_m_axis_rq_tuser_reg <= m_axis_rq_tuser_int;
     end
 end
 

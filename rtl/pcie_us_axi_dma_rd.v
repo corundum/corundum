@@ -720,36 +720,38 @@ always @* begin
             end
         end
         REQ_STATE_HEADER: begin
-            m_axis_rq_tdata_int = tlp_header_data[127:64];
-            m_axis_rq_tkeep_int = 2'b11;
-            m_axis_rq_tlast_int = 1'b1;
+            if (AXIS_PCIE_DATA_WIDTH == 64) begin
+                m_axis_rq_tdata_int = tlp_header_data[127:64];
+                m_axis_rq_tkeep_int = 2'b11;
+                m_axis_rq_tlast_int = 1'b1;
 
-            if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid) begin
-                req_pcie_addr_next = req_pcie_addr;
-                req_axi_addr_next = req_axi_addr_reg + req_tlp_count_next;
-                req_op_count_next = req_op_count_reg - req_tlp_count_next;
+                if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid) begin
+                    req_pcie_addr_next = req_pcie_addr;
+                    req_axi_addr_next = req_axi_addr_reg + req_tlp_count_next;
+                    req_op_count_next = req_op_count_reg - req_tlp_count_next;
 
-                new_tag_ready = 1'b1;
+                    new_tag_ready = 1'b1;
 
-                m_axis_rq_tvalid_int = 1'b1;
+                    m_axis_rq_tvalid_int = 1'b1;
 
-                tlp_cmd_addr_next = req_axi_addr_reg;
-                tlp_cmd_pcie_tag_next = new_tag;
-                tlp_cmd_last_next = req_last_tlp;
-                tlp_cmd_valid_next = 1'b1;
+                    tlp_cmd_addr_next = req_axi_addr_reg;
+                    tlp_cmd_pcie_tag_next = new_tag;
+                    tlp_cmd_last_next = req_last_tlp;
+                    tlp_cmd_valid_next = 1'b1;
 
-                op_table_read_start_ptr = tlp_cmd_op_tag_reg;
-                op_table_read_start_commit = req_last_tlp;
-                op_table_read_start_en = 1'b1;
+                    op_table_read_start_ptr = tlp_cmd_op_tag_reg;
+                    op_table_read_start_commit = req_last_tlp;
+                    op_table_read_start_en = 1'b1;
 
-                if (!req_last_tlp) begin
-                    req_state_next = REQ_STATE_START;
+                    if (!req_last_tlp) begin
+                        req_state_next = REQ_STATE_START;
+                    end else begin
+                        s_axis_read_desc_ready_next = 1'b0;
+                        req_state_next = REQ_STATE_IDLE;
+                    end
                 end else begin
-                    s_axis_read_desc_ready_next = 1'b0;
-                    req_state_next = REQ_STATE_IDLE;
+                    req_state_next = REQ_STATE_HEADER;
                 end
-            end else begin
-                req_state_next = REQ_STATE_HEADER;
             end
         end
     endcase

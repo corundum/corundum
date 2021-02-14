@@ -866,25 +866,27 @@ always @* begin
         end
         TLP_STATE_HEADER_2: begin
             // header 2 state, send rest of TLP header (64 bit interface only)
-            m_axis_rq_tdata_int = tlp_header_data[127:64];
-            m_axis_rq_tkeep_int = 2'b11;
+            if (AXIS_PCIE_DATA_WIDTH == 64) begin
+                m_axis_rq_tdata_int = tlp_header_data[127:64];
+                m_axis_rq_tkeep_int = 2'b11;
 
-            if (m_axis_rq_tready_int_reg) begin
-                m_axis_rq_tvalid_int = 1'b1;
+                if (m_axis_rq_tready_int_reg) begin
+                    m_axis_rq_tvalid_int = 1'b1;
 
-                m_axi_rready_next = m_axis_rq_tready_int_early;
-                if ((m_axi_rready && m_axi_rvalid) && bubble_cycle_reg) begin
-                    transfer_in_save = 1'b1;
-                    if (input_active_reg) begin
-                        input_cycle_count_next = input_cycle_count_reg - 1;
-                        input_active_next = input_cycle_count_reg != 0;
+                    m_axi_rready_next = m_axis_rq_tready_int_early;
+                    if ((m_axi_rready && m_axi_rvalid) && bubble_cycle_reg) begin
+                        transfer_in_save = 1'b1;
+                        if (input_active_reg) begin
+                            input_cycle_count_next = input_cycle_count_reg - 1;
+                            input_active_next = input_cycle_count_reg != 0;
+                        end
+                        bubble_cycle_next = 1'b0;
+                        m_axi_rready_next = m_axis_rq_tready_int_early && input_active_next;
                     end
-                    bubble_cycle_next = 1'b0;
-                    m_axi_rready_next = m_axis_rq_tready_int_early && input_active_next;
+                    tlp_state_next = TLP_STATE_TRANSFER;
+                end else begin
+                    tlp_state_next = TLP_STATE_HEADER_2;
                 end
-                tlp_state_next = TLP_STATE_TRANSFER;
-            end else begin
-                tlp_state_next = TLP_STATE_HEADER_2;
             end
         end
         TLP_STATE_TRANSFER: begin

@@ -466,8 +466,8 @@ always @* begin
     read_cmd_valid_next = read_cmd_valid_reg && !read_cmd_ready;
 
     op_table_start_pcie_addr = pcie_addr_reg;
-    op_table_start_len = 0;
-    op_table_start_dword_len = 0;
+    op_table_start_len = tlp_count_reg;
+    op_table_start_dword_len = (tlp_count_reg + pcie_addr_reg[1:0] + 3) >> 2;
     op_table_start_cycle_count = 0;
     if (AXIS_PCIE_DATA_WIDTH >= 256) begin
         op_table_start_offset = 16+pcie_addr_reg[1:0]-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
@@ -475,7 +475,7 @@ always @* begin
         op_table_start_offset = pcie_addr_reg[1:0]-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
     end
     op_table_start_tag = tag_reg;
-    op_table_start_last = 0;
+    op_table_start_last = op_count_reg == tlp_count_reg;
     op_table_start_en = 1'b0;
 
     // TLP segmentation
@@ -523,29 +523,29 @@ always @* begin
                 read_cmd_pcie_addr_next = pcie_addr_reg;
                 read_cmd_ram_sel_next = ram_sel_reg;
                 read_cmd_ram_addr_next = ram_addr_reg;
-                read_cmd_len_next = tlp_count_next;
+                read_cmd_len_next = tlp_count_reg;
                 if (AXIS_PCIE_DATA_WIDTH >= 256) begin
-                    read_cmd_cycle_count_next = (tlp_count_next + 16+pcie_addr_reg[1:0] - 1) >> $clog2(AXIS_PCIE_DATA_WIDTH/8);
+                    read_cmd_cycle_count_next = (tlp_count_reg + 16+pcie_addr_reg[1:0] - 1) >> $clog2(AXIS_PCIE_DATA_WIDTH/8);
                     end else begin
-                    read_cmd_cycle_count_next = (tlp_count_next + pcie_addr_reg[1:0] - 1) >> $clog2(AXIS_PCIE_DATA_WIDTH/8);
+                    read_cmd_cycle_count_next = (tlp_count_reg + pcie_addr_reg[1:0] - 1) >> $clog2(AXIS_PCIE_DATA_WIDTH/8);
                 end
                 op_table_start_cycle_count = read_cmd_cycle_count_next;
                 read_cmd_last_cycle_next = read_cmd_cycle_count_next == 0;
                 read_cmd_valid_next = 1'b1;
 
-                pcie_addr_next = pcie_addr_reg + tlp_count_next;
-                ram_addr_next = ram_addr_reg + tlp_count_next;
-                op_count_next = op_count_reg - tlp_count_next;
+                pcie_addr_next = pcie_addr_reg + tlp_count_reg;
+                ram_addr_next = ram_addr_reg + tlp_count_reg;
+                op_count_next = op_count_reg - tlp_count_reg;
 
                 op_table_start_pcie_addr = pcie_addr_reg;
-                op_table_start_len = tlp_count_next;
-                op_table_start_dword_len = (tlp_count_next + pcie_addr_reg[1:0] + 3) >> 2;
+                op_table_start_len = tlp_count_reg;
+                op_table_start_dword_len = (tlp_count_reg + pcie_addr_reg[1:0] + 3) >> 2;
                 if (AXIS_PCIE_DATA_WIDTH >= 256) begin
                     op_table_start_offset = 16+pcie_addr_reg[1:0]-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
                 end else begin
                     op_table_start_offset = pcie_addr_reg[1:0]-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
                 end
-                op_table_start_last = op_count_reg == tlp_count_next;
+                op_table_start_last = op_count_reg == tlp_count_reg;
 
                 op_table_start_tag = tag_reg;
                 op_table_start_en = 1'b1;

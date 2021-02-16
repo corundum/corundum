@@ -339,7 +339,11 @@ always @* begin
     m_axis_read_desc_status_tag_next = m_axis_read_desc_status_tag_reg;
     m_axis_read_desc_status_valid_next = 1'b0;
 
-    m_axis_read_data_tdata_int = ram_rd_resp_data >> (((addr_reg >> PART_OFFSET_WIDTH) & {PART_COUNT_WIDTH{1'b1}}) * AXIS_DATA_WIDTH);
+    if (PART_COUNT > 1) begin
+        m_axis_read_data_tdata_int = ram_rd_resp_data >> (((addr_reg >> PART_OFFSET_WIDTH) & {PART_COUNT_WIDTH{1'b1}}) * AXIS_DATA_WIDTH);
+    end else begin
+        m_axis_read_data_tdata_int = ram_rd_resp_data;
+    end
     m_axis_read_data_tkeep_int = {AXIS_KEEP_WIDTH{1'b1}};
     m_axis_read_data_tlast_int = 1'b0;
     m_axis_read_data_tvalid_int = 1'b0;

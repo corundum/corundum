@@ -235,7 +235,11 @@ always @* begin
 
     s_axis_write_data_tready_next = 1'b0;
 
-    ram_wr_cmd_be_int = (s_axis_write_data_tkeep & keep_mask_reg) << (addr_reg & ({PART_COUNT_WIDTH{1'b1}} << PART_OFFSET_WIDTH));
+    if (PART_COUNT > 1) begin
+        ram_wr_cmd_be_int = (s_axis_write_data_tkeep & keep_mask_reg) << (addr_reg & ({PART_COUNT_WIDTH{1'b1}} << PART_OFFSET_WIDTH));
+    end else begin
+        ram_wr_cmd_be_int = s_axis_write_data_tkeep & keep_mask_reg;
+    end
     ram_wr_cmd_addr_int = {PART_COUNT{addr_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH]}};
     ram_wr_cmd_data_int = {PART_COUNT{s_axis_write_data_tdata}};
     ram_wr_cmd_valid_int = {SEG_COUNT{1'b0}};

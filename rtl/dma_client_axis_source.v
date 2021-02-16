@@ -406,7 +406,11 @@ always @* begin
                     ram_mask_next = {SEG_COUNT{1'b1}};
                 end
 
-                m_axis_read_data_tdata_int = ram_rd_resp_data >> (((addr_reg >> PART_OFFSET_WIDTH) & {PART_COUNT_WIDTH{1'b1}}) * AXIS_DATA_WIDTH);
+                if (PART_COUNT > 1) begin
+                    m_axis_read_data_tdata_int = ram_rd_resp_data >> (((addr_reg >> PART_OFFSET_WIDTH) & {PART_COUNT_WIDTH{1'b1}}) * AXIS_DATA_WIDTH);
+                end else begin
+                    m_axis_read_data_tdata_int = ram_rd_resp_data;
+                end
                 m_axis_read_data_tkeep_int = {AXIS_KEEP_WIDTH_INT{1'b1}};
                 m_axis_read_data_tvalid_int = 1'b1;
 

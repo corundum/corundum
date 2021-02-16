@@ -167,7 +167,7 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
 @pytest.mark.parametrize(("ram_data_width", "axis_data_width"), [
-    (128, 64),
+    (128, 64), (128, 128),
     (256, 64), (256, 128),
 ])
 def test_dma_client_axis_source(request, ram_data_width, axis_data_width):

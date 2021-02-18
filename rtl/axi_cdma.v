@@ -641,7 +641,7 @@ always @(posedge clk) begin
     if (active_count_reg < 2**STATUS_FIFO_ADDR_WIDTH && inc_active && !dec_active) begin
         active_count_reg <= active_count_reg + 1;
         active_count_av_reg <= active_count_reg < (2**STATUS_FIFO_ADDR_WIDTH-1);
-    end else if (active_count_reg > 0 && dec_active) begin
+    end else if (active_count_reg > 0 && !inc_active && dec_active) begin
         active_count_reg <= active_count_reg - 1;
         active_count_av_reg <= 1'b1;
     end else begin

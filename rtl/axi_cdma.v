@@ -204,6 +204,11 @@ reg status_fifo_last[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 reg [TAG_WIDTH-1:0] status_fifo_wr_tag;
 reg status_fifo_wr_last;
 
+reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] active_count_reg = 0;
+reg active_count_av_reg = 1'b1;
+reg inc_active;
+reg dec_active;
+
 reg s_axis_desc_ready_reg = 1'b0, s_axis_desc_ready_next;
 
 reg [TAG_WIDTH-1:0] m_axis_desc_status_tag_reg = {TAG_WIDTH{1'b0}}, m_axis_desc_status_tag_next;
@@ -284,10 +289,12 @@ always @* begin
     axi_cmd_tag_next = axi_cmd_tag_reg;
     axi_cmd_valid_next = axi_cmd_valid_reg && !axi_cmd_ready;
 
+    inc_active = 1'b0;
+
     case (read_state_reg)
         READ_STATE_IDLE: begin
             // idle state - load new descriptor to start operation
-            s_axis_desc_ready_next = !axi_cmd_valid_reg && enable;
+            s_axis_desc_ready_next = !axi_cmd_valid_reg && enable && active_count_av_reg;
 
             if (s_axis_desc_ready && s_axis_desc_valid) begin
                 if (ENABLE_UNALIGNED) begin
@@ -308,7 +315,7 @@ always @* begin
         end
         READ_STATE_START: begin
             // start state - compute write length
-            if (!axi_cmd_valid_reg) begin
+            if (!axi_cmd_valid_reg && active_count_av_reg) begin
                 if (op_word_count_reg <= AXI_MAX_BURST_SIZE - (write_addr_reg & OFFSET_MASK)) begin
                     // packet smaller than max burst size
                     if (((write_addr_reg & 12'hfff) + (op_word_count_reg & 12'hfff)) >> 12 != 0 || op_word_count_reg >> 12 != 0) begin
@@ -350,6 +357,8 @@ always @* begin
                 end
                 axi_cmd_last_transfer_next = op_word_count_next == 0;
                 axi_cmd_valid_next = 1'b1;
+
+                inc_active = 1'b1;
 
                 read_state_next = READ_STATE_REQ;
             end else begin
@@ -395,7 +404,7 @@ always @* begin
                 end else if (op_word_count_next > 0) begin
                     read_state_next = READ_STATE_START;
                 end else begin
-                    s_axis_desc_ready_next = !axi_cmd_valid_reg && enable;
+                    s_axis_desc_ready_next = !axi_cmd_valid_reg && enable && active_count_av_reg;
                     read_state_next = READ_STATE_IDLE;
                 end
             end else begin
@@ -442,6 +451,8 @@ always @* begin
     tag_next = tag_reg;
 
     status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg;
+
+    dec_active = 1'b0;
 
     status_fifo_wr_tag = tag_reg;
     status_fifo_wr_last = 1'b0;
@@ -557,6 +568,8 @@ always @* begin
             m_axis_desc_status_valid_next = status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
             status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
             m_axi_bready_next = 1'b0;
+
+            dec_active = 1'b1;
         end else begin
             // wait for write completion
             m_axi_bready_next = 1'b1;
@@ -625,12 +638,25 @@ always @(posedge clk) begin
     end
     status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
 
+    if (active_count_reg < 2**STATUS_FIFO_ADDR_WIDTH && inc_active && !dec_active) begin
+        active_count_reg <= active_count_reg + 1;
+        active_count_av_reg <= active_count_reg < (2**STATUS_FIFO_ADDR_WIDTH-1);
+    end else if (active_count_reg > 0 && dec_active) begin
+        active_count_reg <= active_count_reg - 1;
+        active_count_av_reg <= 1'b1;
+    end else begin
+        active_count_av_reg <= active_count_reg < 2**STATUS_FIFO_ADDR_WIDTH;
+    end
+
     if (rst) begin
         read_state_reg <= READ_STATE_IDLE;
         axi_state_reg <= AXI_STATE_IDLE;
+
         axi_cmd_valid_reg <= 1'b0;
+
         s_axis_desc_ready_reg <= 1'b0;
         m_axis_desc_status_valid_reg <= 1'b0;
+
         m_axi_awvalid_reg <= 1'b0;
         m_axi_bready_reg <= 1'b0;
         m_axi_arvalid_reg <= 1'b0;
@@ -638,6 +664,9 @@ always @(posedge clk) begin
 
         status_fifo_wr_ptr_reg <= 0;
         status_fifo_rd_ptr_reg <= 0;
+
+        active_count_reg <= 0;
+        active_count_av_reg <= 1'b1;
     end
 end
 

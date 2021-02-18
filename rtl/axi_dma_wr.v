@@ -729,49 +729,23 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        state_reg <= STATE_IDLE;
-        s_axis_write_desc_ready_reg <= 1'b0;
-        m_axis_write_desc_status_valid_reg <= 1'b0;
-        s_axis_write_data_tready_reg <= 1'b0;
-        m_axi_awvalid_reg <= 1'b0;
-        m_axi_bready_reg <= 1'b0;
-        save_axis_tlast_reg <= 1'b0;
-        shift_axis_extra_cycle_reg <= 1'b0;
+    state_reg <= state_next;
 
-        status_fifo_wr_ptr_reg <= 0;
-        status_fifo_rd_ptr_reg <= 0;
-    end else begin
-        state_reg <= state_next;
-        s_axis_write_desc_ready_reg <= s_axis_write_desc_ready_next;
-        m_axis_write_desc_status_valid_reg <= m_axis_write_desc_status_valid_next;
-        s_axis_write_data_tready_reg <= s_axis_write_data_tready_next;
-        m_axi_awvalid_reg <= m_axi_awvalid_next;
-        m_axi_bready_reg <= m_axi_bready_next;
-
-        // datapath
-        if (flush_save) begin
-            save_axis_tlast_reg <= 1'b0;
-            shift_axis_extra_cycle_reg <= 1'b0;
-        end else if (transfer_in_save) begin
-            save_axis_tlast_reg <= s_axis_write_data_tlast;
-            shift_axis_extra_cycle_reg <= s_axis_write_data_tlast & ((s_axis_write_data_tkeep >> (AXIS_KEEP_WIDTH_INT-offset_reg)) != 0);
-        end
-
-        if (status_fifo_we) begin
-            status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
-        end
-        status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
-    end
+    s_axis_write_desc_ready_reg <= s_axis_write_desc_ready_next;
 
     m_axis_write_desc_status_len_reg <= m_axis_write_desc_status_len_next;
     m_axis_write_desc_status_tag_reg <= m_axis_write_desc_status_tag_next;
     m_axis_write_desc_status_id_reg <= m_axis_write_desc_status_id_next;
     m_axis_write_desc_status_dest_reg <= m_axis_write_desc_status_dest_next;
     m_axis_write_desc_status_user_reg <= m_axis_write_desc_status_user_next;
+    m_axis_write_desc_status_valid_reg <= m_axis_write_desc_status_valid_next;
+
+    s_axis_write_data_tready_reg <= s_axis_write_data_tready_next;
 
     m_axi_awaddr_reg <= m_axi_awaddr_next;
     m_axi_awlen_reg <= m_axi_awlen_next;
+    m_axi_awvalid_reg <= m_axi_awvalid_next;
+    m_axi_bready_reg <= m_axi_bready_next;
 
     addr_reg <= addr_next;
     offset_reg <= offset_next;
@@ -794,11 +768,16 @@ always @(posedge clk) begin
     axis_dest_reg <= axis_dest_next;
     axis_user_reg <= axis_user_next;
 
+    // datapath
     if (flush_save) begin
         save_axis_tkeep_reg <= {AXIS_KEEP_WIDTH_INT{1'b0}};
+        save_axis_tlast_reg <= 1'b0;
+        shift_axis_extra_cycle_reg <= 1'b0;
     end else if (transfer_in_save) begin
         save_axis_tdata_reg <= s_axis_write_data_tdata;
         save_axis_tkeep_reg <= AXIS_KEEP_ENABLE ? s_axis_write_data_tkeep : {AXIS_KEEP_WIDTH_INT{1'b1}};
+        save_axis_tlast_reg <= s_axis_write_data_tlast;
+        shift_axis_extra_cycle_reg <= s_axis_write_data_tlast & ((s_axis_write_data_tkeep >> (AXIS_KEEP_WIDTH_INT-offset_reg)) != 0);
     end
 
     if (status_fifo_we) begin
@@ -809,6 +788,25 @@ always @(posedge clk) begin
         status_fifo_user[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_user;
         status_fifo_last[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_last;
         status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
+    end
+    status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
+
+    if (rst) begin
+        state_reg <= STATE_IDLE;
+
+        s_axis_write_desc_ready_reg <= 1'b0;
+        m_axis_write_desc_status_valid_reg <= 1'b0;
+
+        s_axis_write_data_tready_reg <= 1'b0;
+
+        m_axi_awvalid_reg <= 1'b0;
+        m_axi_bready_reg <= 1'b0;
+
+        save_axis_tlast_reg <= 1'b0;
+        shift_axis_extra_cycle_reg <= 1'b0;
+
+        status_fifo_wr_ptr_reg <= 0;
+        status_fifo_rd_ptr_reg <= 0;
     end
 end
 

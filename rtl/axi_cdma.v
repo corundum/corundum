@@ -565,42 +565,22 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        read_state_reg <= READ_STATE_IDLE;
-        axi_state_reg <= AXI_STATE_IDLE;
-        axi_cmd_valid_reg <= 1'b0;
-        s_axis_desc_ready_reg <= 1'b0;
-        m_axis_desc_status_valid_reg <= 1'b0;
-        m_axi_awvalid_reg <= 1'b0;
-        m_axi_bready_reg <= 1'b0;
-        m_axi_arvalid_reg <= 1'b0;
-        m_axi_rready_reg <= 1'b0;
+    read_state_reg <= read_state_next;
+    axi_state_reg <= axi_state_next;
 
-        status_fifo_wr_ptr_reg <= 0;
-        status_fifo_rd_ptr_reg <= 0;
-    end else begin
-        read_state_reg <= read_state_next;
-        axi_state_reg <= axi_state_next;
-        axi_cmd_valid_reg <= axi_cmd_valid_next;
-        s_axis_desc_ready_reg <= s_axis_desc_ready_next;
-        m_axis_desc_status_valid_reg <= m_axis_desc_status_valid_next;
-        m_axi_awvalid_reg <= m_axi_awvalid_next;
-        m_axi_bready_reg <= m_axi_bready_next;
-        m_axi_arvalid_reg <= m_axi_arvalid_next;
-        m_axi_rready_reg <= m_axi_rready_next;
-
-        if (status_fifo_we) begin
-            status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
-        end
-        status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
-    end
+    s_axis_desc_ready_reg <= s_axis_desc_ready_next;
 
     m_axis_desc_status_tag_reg <= m_axis_desc_status_tag_next;
+    m_axis_desc_status_valid_reg <= m_axis_desc_status_valid_next;
 
     m_axi_awaddr_reg <= m_axi_awaddr_next;
     m_axi_awlen_reg <= m_axi_awlen_next;
+    m_axi_awvalid_reg <= m_axi_awvalid_next;
+    m_axi_bready_reg <= m_axi_bready_next;
     m_axi_araddr_reg <= m_axi_araddr_next;
     m_axi_arlen_reg <= m_axi_arlen_next;
+    m_axi_arvalid_reg <= m_axi_arvalid_next;
+    m_axi_rready_reg <= m_axi_rready_next;
 
     read_addr_reg <= read_addr_next;
     write_addr_reg <= write_addr_next;
@@ -642,6 +622,22 @@ always @(posedge clk) begin
         status_fifo_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_tag;
         status_fifo_last[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_last;
         status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
+    end
+    status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
+
+    if (rst) begin
+        read_state_reg <= READ_STATE_IDLE;
+        axi_state_reg <= AXI_STATE_IDLE;
+        axi_cmd_valid_reg <= 1'b0;
+        s_axis_desc_ready_reg <= 1'b0;
+        m_axis_desc_status_valid_reg <= 1'b0;
+        m_axi_awvalid_reg <= 1'b0;
+        m_axi_bready_reg <= 1'b0;
+        m_axi_arvalid_reg <= 1'b0;
+        m_axi_rready_reg <= 1'b0;
+
+        status_fifo_wr_ptr_reg <= 0;
+        status_fifo_rd_ptr_reg <= 0;
     end
 end
 

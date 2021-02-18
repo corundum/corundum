@@ -558,17 +558,7 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        state_reg <= STATE_IDLE;
-        s_axi_arready_reg <= 1'b0;
-        m_axi_arvalid_reg <= 1'b0;
-        m_axi_rready_reg <= 1'b0;
-    end else begin
-        state_reg <= state_next;
-        s_axi_arready_reg <= s_axi_arready_next;
-        m_axi_arvalid_reg <= m_axi_arvalid_next;
-        m_axi_rready_reg <= m_axi_rready_next;
-    end
+    state_reg <= state_next;
 
     id_reg <= id_next;
     addr_reg <= addr_next;
@@ -579,6 +569,8 @@ always @(posedge clk) begin
     burst_size_reg <= burst_size_next;
     master_burst_reg <= master_burst_next;
     master_burst_size_reg <= master_burst_size_next;
+
+    s_axi_arready_reg <= s_axi_arready_next;
 
     m_axi_arid_reg <= m_axi_arid_next;
     m_axi_araddr_reg <= m_axi_araddr_next;
@@ -591,6 +583,17 @@ always @(posedge clk) begin
     m_axi_arqos_reg <= m_axi_arqos_next;
     m_axi_arregion_reg <= m_axi_arregion_next;
     m_axi_aruser_reg <= m_axi_aruser_next;
+    m_axi_arvalid_reg <= m_axi_arvalid_next;
+    m_axi_rready_reg <= m_axi_rready_next;
+
+    if (rst) begin
+        state_reg <= STATE_IDLE;
+
+        s_axi_arready_reg <= 1'b0;
+
+        m_axi_arvalid_reg <= 1'b0;
+        m_axi_rready_reg <= 1'b0;
+    end
 end
 
 // output datapath logic

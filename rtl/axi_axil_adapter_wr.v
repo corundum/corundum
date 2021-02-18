@@ -516,23 +516,7 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        state_reg <= STATE_IDLE;
-        s_axi_awready_reg <= 1'b0;
-        s_axi_wready_reg <= 1'b0;
-        s_axi_bvalid_reg <= 1'b0;
-        m_axil_awvalid_reg <= 1'b0;
-        m_axil_wvalid_reg <= 1'b0;
-        m_axil_bready_reg <= 1'b0;
-    end else begin
-        state_reg <= state_next;
-        s_axi_awready_reg <= s_axi_awready_next;
-        s_axi_wready_reg <= s_axi_wready_next;
-        s_axi_bvalid_reg <= s_axi_bvalid_next;
-        m_axil_awvalid_reg <= m_axil_awvalid_next;
-        m_axil_wvalid_reg <= m_axil_wvalid_next;
-        m_axil_bready_reg <= m_axil_bready_next;
-    end
+    state_reg <= state_next;
 
     id_reg <= id_next;
     addr_reg <= addr_next;
@@ -546,12 +530,31 @@ always @(posedge clk) begin
     first_transfer_reg <= first_transfer_next;
     last_segment_reg <= last_segment_next;
 
+    s_axi_awready_reg <= s_axi_awready_next;
+    s_axi_wready_reg <= s_axi_wready_next;
     s_axi_bid_reg <= s_axi_bid_next;
     s_axi_bresp_reg <= s_axi_bresp_next;
+    s_axi_bvalid_reg <= s_axi_bvalid_next;
+
     m_axil_awaddr_reg <= m_axil_awaddr_next;
     m_axil_awprot_reg <= m_axil_awprot_next;
+    m_axil_awvalid_reg <= m_axil_awvalid_next;
     m_axil_wdata_reg <= m_axil_wdata_next;
     m_axil_wstrb_reg <= m_axil_wstrb_next;
+    m_axil_wvalid_reg <= m_axil_wvalid_next;
+    m_axil_bready_reg <= m_axil_bready_next;
+
+    if (rst) begin
+        state_reg <= STATE_IDLE;
+
+        s_axi_awready_reg <= 1'b0;
+        s_axi_wready_reg <= 1'b0;
+        s_axi_bvalid_reg <= 1'b0;
+
+        m_axil_awvalid_reg <= 1'b0;
+        m_axil_wvalid_reg <= 1'b0;
+        m_axil_bready_reg <= 1'b0;
+    end
 end
 
 endmodule

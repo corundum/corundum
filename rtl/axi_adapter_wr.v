@@ -646,21 +646,7 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        state_reg <= STATE_IDLE;
-        s_axi_awready_reg <= 1'b0;
-        s_axi_wready_reg <= 1'b0;
-        s_axi_bvalid_reg <= 1'b0;
-        m_axi_awvalid_reg <= 1'b0;
-        m_axi_bready_reg <= 1'b0;
-    end else begin
-        state_reg <= state_next;
-        s_axi_awready_reg <= s_axi_awready_next;
-        s_axi_wready_reg <= s_axi_wready_next;
-        s_axi_bvalid_reg <= s_axi_bvalid_next;
-        m_axi_awvalid_reg <= m_axi_awvalid_next;
-        m_axi_bready_reg <= m_axi_bready_next;
-    end
+    state_reg <= state_next;
 
     id_reg <= id_next;
     addr_reg <= addr_next;
@@ -674,9 +660,13 @@ always @(posedge clk) begin
     burst_active_reg <= burst_active_next;
     first_transfer_reg <= first_transfer_next;
 
+    s_axi_awready_reg <= s_axi_awready_next;
+    s_axi_wready_reg <= s_axi_wready_next;
     s_axi_bid_reg <= s_axi_bid_next;
     s_axi_bresp_reg <= s_axi_bresp_next;
     s_axi_buser_reg <= s_axi_buser_next;
+    s_axi_bvalid_reg <= s_axi_bvalid_next;
+
     m_axi_awid_reg <= m_axi_awid_next;
     m_axi_awaddr_reg <= m_axi_awaddr_next;
     m_axi_awlen_reg <= m_axi_awlen_next;
@@ -688,6 +678,19 @@ always @(posedge clk) begin
     m_axi_awqos_reg <= m_axi_awqos_next;
     m_axi_awregion_reg <= m_axi_awregion_next;
     m_axi_awuser_reg <= m_axi_awuser_next;
+    m_axi_awvalid_reg <= m_axi_awvalid_next;
+    m_axi_bready_reg <= m_axi_bready_next;
+
+    if (rst) begin
+        state_reg <= STATE_IDLE;
+
+        s_axi_awready_reg <= 1'b0;
+        s_axi_wready_reg <= 1'b0;
+        s_axi_bvalid_reg <= 1'b0;
+
+        m_axi_awvalid_reg <= 1'b0;
+        m_axi_bready_reg <= 1'b0;
+    end
 end
 
 // output datapath logic

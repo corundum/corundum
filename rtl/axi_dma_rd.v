@@ -508,28 +508,18 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        axi_state_reg <= AXI_STATE_IDLE;
-        axis_state_reg <= AXIS_STATE_IDLE;
-        axis_cmd_valid_reg <= 1'b0;
-        s_axis_read_desc_ready_reg <= 1'b0;
-        m_axis_read_desc_status_valid_reg <= 1'b0;
-        m_axi_arvalid_reg <= 1'b0;
-        m_axi_rready_reg <= 1'b0;
-    end else begin
-        axi_state_reg <= axi_state_next;
-        axis_state_reg <= axis_state_next;
-        axis_cmd_valid_reg <= axis_cmd_valid_next;
-        s_axis_read_desc_ready_reg <= s_axis_read_desc_ready_next;
-        m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
-        m_axi_arvalid_reg <= m_axi_arvalid_next;
-        m_axi_rready_reg <= m_axi_rready_next;
-    end
+    axi_state_reg <= axi_state_next;
+    axis_state_reg <= axis_state_next;
 
+    s_axis_read_desc_ready_reg <= s_axis_read_desc_ready_next;
+
+    m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
     m_axis_read_desc_status_tag_reg <= m_axis_read_desc_status_tag_next;
 
     m_axi_araddr_reg <= m_axi_araddr_next;
     m_axi_arlen_reg <= m_axi_arlen_next;
+    m_axi_arvalid_reg <= m_axi_arvalid_next;
+    m_axi_rready_reg <= m_axi_rready_next;
 
     addr_reg <= addr_next;
     op_word_count_reg <= op_word_count_next;
@@ -563,6 +553,19 @@ always @(posedge clk) begin
 
     if (transfer_in_save) begin
         save_axi_rdata_reg <= m_axi_rdata;
+    end
+
+    if (rst) begin
+        axi_state_reg <= AXI_STATE_IDLE;
+        axis_state_reg <= AXIS_STATE_IDLE;
+
+        axis_cmd_valid_reg <= 1'b0;
+
+        s_axis_read_desc_ready_reg <= 1'b0;
+
+        m_axis_read_desc_status_valid_reg <= 1'b0;
+        m_axi_arvalid_reg <= 1'b0;
+        m_axi_rready_reg <= 1'b0;
     end
 end
 

@@ -125,20 +125,20 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        s_axil_awready_reg <= 1'b0;
-        s_axil_wready_reg <= 1'b0;
-        s_axil_bvalid_reg <= 1'b0;
-    end else begin
-        s_axil_awready_reg <= s_axil_awready_next;
-        s_axil_wready_reg <= s_axil_wready_next;
-        s_axil_bvalid_reg <= s_axil_bvalid_next;
-    end
+    s_axil_awready_reg <= s_axil_awready_next;
+    s_axil_wready_reg <= s_axil_wready_next;
+    s_axil_bvalid_reg <= s_axil_bvalid_next;
 
     for (i = 0; i < WORD_WIDTH; i = i + 1) begin
         if (mem_wr_en && s_axil_wstrb[i]) begin
             mem[s_axil_awaddr_valid][WORD_SIZE*i +: WORD_SIZE] <= s_axil_wdata[WORD_SIZE*i +: WORD_SIZE];
         end
+    end
+
+    if (rst) begin
+        s_axil_awready_reg <= 1'b0;
+        s_axil_wready_reg <= 1'b0;
+        s_axil_bvalid_reg <= 1'b0;
     end
 end
 
@@ -157,18 +157,8 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        s_axil_arready_reg <= 1'b0;
-        s_axil_rvalid_reg <= 1'b0;
-        s_axil_rvalid_pipe_reg <= 1'b0;
-    end else begin
-        s_axil_arready_reg <= s_axil_arready_next;
-        s_axil_rvalid_reg <= s_axil_rvalid_next;
-
-        if (!s_axil_rvalid_pipe_reg || s_axil_rready) begin
-            s_axil_rvalid_pipe_reg <= s_axil_rvalid_reg;
-        end
-    end
+    s_axil_arready_reg <= s_axil_arready_next;
+    s_axil_rvalid_reg <= s_axil_rvalid_next;
 
     if (mem_rd_en) begin
         s_axil_rdata_reg <= mem[s_axil_araddr_valid];
@@ -176,6 +166,13 @@ always @(posedge clk) begin
 
     if (!s_axil_rvalid_pipe_reg || s_axil_rready) begin
         s_axil_rdata_pipe_reg <= s_axil_rdata_reg;
+        s_axil_rvalid_pipe_reg <= s_axil_rvalid_reg;
+    end
+
+    if (rst) begin
+        s_axil_arready_reg <= 1'b0;
+        s_axil_rvalid_reg <= 1'b0;
+        s_axil_rvalid_pipe_reg <= 1'b0;
     end
 end
 

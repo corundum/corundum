@@ -255,17 +255,7 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        state_reg <= STATE_IDLE;
-        write_addr_valid_reg <= 1'b0;
-        s_axi_awready_reg <= 1'b0;
-        s_axi_bvalid_reg <= 1'b0;
-    end else begin
-        state_reg <= state_next;
-        write_addr_valid_reg <= write_addr_valid_next;
-        s_axi_awready_reg <= s_axi_awready_next;
-        s_axi_bvalid_reg <= s_axi_bvalid_next;
-    end
+    state_reg <= state_next;
 
     write_id_reg <= write_id_next;
     write_addr_reg <= write_addr_next;
@@ -275,12 +265,24 @@ always @(posedge clk) begin
     write_qos_reg <= write_qos_next;
     write_region_reg <= write_region_next;
     write_awuser_reg <= write_awuser_next;
+    write_addr_valid_reg <= write_addr_valid_next;
     write_last_reg <= write_last_next;
     write_count_reg <= write_count_next;
     write_size_reg <= write_size_next;
     write_burst_reg <= write_burst_next;
 
+    s_axi_awready_reg <= s_axi_awready_next;
     s_axi_bid_reg <= s_axi_bid_next;
+    s_axi_bvalid_reg <= s_axi_bvalid_next;
+
+    if (rst) begin
+        state_reg <= STATE_IDLE;
+
+        write_addr_valid_reg <= 1'b0;
+
+        s_axi_awready_reg <= 1'b0;
+        s_axi_bvalid_reg <= 1'b0;
+    end
 end
 
 endmodule

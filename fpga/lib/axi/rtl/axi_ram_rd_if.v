@@ -231,20 +231,7 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        state_reg <= STATE_IDLE;
-        read_addr_valid_reg <= 1'b0;
-        s_axi_arready_reg <= 1'b0;
-        s_axi_rvalid_pipe_reg <= 1'b0;
-    end else begin
-        state_reg <= state_next;
-        read_addr_valid_reg <= read_addr_valid_next;
-        s_axi_arready_reg <= s_axi_arready_next;
-
-        if (!s_axi_rvalid_pipe_reg || s_axi_rready) begin
-            s_axi_rvalid_pipe_reg <= ram_rd_resp_valid;
-        end
-    end
+    state_reg <= state_next;
 
     read_id_reg <= read_id_next;
     read_addr_reg <= read_addr_next;
@@ -254,16 +241,29 @@ always @(posedge clk) begin
     read_qos_reg <= read_qos_next;
     read_region_reg <= read_region_next;
     read_aruser_reg <= read_aruser_next;
+    read_addr_valid_reg <= read_addr_valid_next;
     read_last_reg <= read_last_next;
     read_count_reg <= read_count_next;
     read_size_reg <= read_size_next;
     read_burst_reg <= read_burst_next;
+
+    s_axi_arready_reg <= s_axi_arready_next;
 
     if (!s_axi_rvalid_pipe_reg || s_axi_rready) begin
         s_axi_rid_pipe_reg <= ram_rd_resp_id;
         s_axi_rdata_pipe_reg <= ram_rd_resp_data;
         s_axi_rlast_pipe_reg <= ram_rd_resp_last;
         s_axi_ruser_pipe_reg <= ram_rd_resp_user;
+        s_axi_rvalid_pipe_reg <= ram_rd_resp_valid;
+    end
+
+    if (rst) begin
+        state_reg <= STATE_IDLE;
+
+        read_addr_valid_reg <= 1'b0;
+
+        s_axi_arready_reg <= 1'b0;
+        s_axi_rvalid_pipe_reg <= 1'b0;
     end
 end
 

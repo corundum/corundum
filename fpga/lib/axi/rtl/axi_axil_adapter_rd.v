@@ -469,19 +469,7 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        state_reg <= STATE_IDLE;
-        s_axi_arready_reg <= 1'b0;
-        s_axi_rvalid_reg <= 1'b0;
-        m_axil_arvalid_reg <= 1'b0;
-        m_axil_rready_reg <= 1'b0;
-    end else begin
-        state_reg <= state_next;
-        s_axi_arready_reg <= s_axi_arready_next;
-        s_axi_rvalid_reg <= s_axi_rvalid_next;
-        m_axil_arvalid_reg <= m_axil_arvalid_next;
-        m_axil_rready_reg <= m_axil_rready_next;
-    end
+    state_reg <= state_next;
 
     id_reg <= id_next;
     addr_reg <= addr_next;
@@ -492,12 +480,27 @@ always @(posedge clk) begin
     master_burst_reg <= master_burst_next;
     master_burst_size_reg <= master_burst_size_next;
 
+    s_axi_arready_reg <= s_axi_arready_next;
     s_axi_rid_reg <= s_axi_rid_next;
     s_axi_rdata_reg <= s_axi_rdata_next;
     s_axi_rresp_reg <= s_axi_rresp_next;
     s_axi_rlast_reg <= s_axi_rlast_next;
+    s_axi_rvalid_reg <= s_axi_rvalid_next;
+
     m_axil_araddr_reg <= m_axil_araddr_next;
     m_axil_arprot_reg <= m_axil_arprot_next;
+    m_axil_arvalid_reg <= m_axil_arvalid_next;
+    m_axil_rready_reg <= m_axil_rready_next;
+
+    if (rst) begin
+        state_reg <= STATE_IDLE;
+
+        s_axi_arready_reg <= 1'b0;
+        s_axi_rvalid_reg <= 1'b0;
+
+        m_axil_arvalid_reg <= 1'b0;
+        m_axil_rready_reg <= 1'b0;
+    end
 end
 
 endmodule

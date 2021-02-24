@@ -128,6 +128,7 @@ parameter CL_PORTS = $clog2(PORTS);
 parameter S_RAM_SEL_WIDTH_INT = S_RAM_SEL_WIDTH > 0 ? S_RAM_SEL_WIDTH : 1;
 
 parameter FIFO_ADDR_WIDTH = 5;
+parameter OUTPUT_FIFO_ADDR_WIDTH = 5;
 
 // check configuration
 initial begin
@@ -487,12 +488,11 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     // internal datapath
     reg  [SEG_DATA_WIDTH-1:0] seg_if_ram_rd_resp_data_int;
     reg                       seg_if_ram_rd_resp_valid_int;
-    reg                       seg_if_ram_rd_resp_ready_int_reg = 1'b0;
-    wire                      seg_if_ram_rd_resp_ready_int_early;
+    wire                      seg_if_ram_rd_resp_ready_int;
 
     wire [CL_PORTS-1:0] select_resp = fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
 
-    assign seg_ram_rd_resp_ready = (seg_if_ram_rd_resp_ready_int_reg && !fifo_empty) << select_resp;
+    assign seg_ram_rd_resp_ready = (seg_if_ram_rd_resp_ready_int && !fifo_empty) << select_resp;
 
     // mux for incoming packet
     wire [SEG_DATA_WIDTH-1:0] current_resp_data  = seg_ram_rd_resp_data[select_resp*SEG_DATA_WIDTH +: SEG_DATA_WIDTH];
@@ -502,11 +502,11 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     always @* begin
         // pass through selected packet data
         seg_if_ram_rd_resp_data_int  = current_resp_data;
-        seg_if_ram_rd_resp_valid_int = current_resp_valid && seg_if_ram_rd_resp_ready_int_reg && !fifo_empty;
+        seg_if_ram_rd_resp_valid_int = current_resp_valid && seg_if_ram_rd_resp_ready_int && !fifo_empty;
     end
 
     always @(posedge clk) begin
-        if (current_resp_valid && seg_if_ram_rd_resp_ready_int_reg && !fifo_empty) begin
+        if (current_resp_valid && seg_if_ram_rd_resp_ready_int && !fifo_empty) begin
             fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
         end
 
@@ -517,70 +517,43 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
 
     // output datapath logic
     reg [SEG_DATA_WIDTH-1:0] seg_if_ram_rd_resp_data_reg  = {SEG_DATA_WIDTH{1'b0}};
-    reg                      seg_if_ram_rd_resp_valid_reg = 1'b0, seg_if_ram_rd_resp_valid_next;
+    reg                      seg_if_ram_rd_resp_valid_reg = 1'b0;
 
-    reg [SEG_DATA_WIDTH-1:0] temp_seg_if_ram_rd_resp_data_reg  = {SEG_DATA_WIDTH{1'b0}};
-    reg                      temp_seg_if_ram_rd_resp_valid_reg = 1'b0, temp_seg_if_ram_rd_resp_valid_next;
+    reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_fifo_wr_ptr_reg = 0;
+    reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_fifo_rd_ptr_reg = 0;
+    reg out_fifo_half_full_reg = 1'b0;
 
-    // datapath control
-    reg store_axis_int_to_output;
-    reg store_axis_int_to_temp;
-    reg store_axis_temp_to_output;
+    wire out_fifo_full = out_fifo_wr_ptr_reg == (out_fifo_rd_ptr_reg ^ {1'b1, {OUTPUT_FIFO_ADDR_WIDTH{1'b0}}});
+    wire out_fifo_empty = out_fifo_wr_ptr_reg == out_fifo_rd_ptr_reg;
+
+    (* ram_style = "distributed" *)
+    reg [SEG_DATA_WIDTH-1:0] out_fifo_rd_resp_data[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+
+    assign seg_if_ram_rd_resp_ready_int = !out_fifo_half_full_reg;
 
     assign seg_if_ram_rd_resp_data = seg_if_ram_rd_resp_data_reg;
     assign seg_if_ram_rd_resp_valid = seg_if_ram_rd_resp_valid_reg;
 
-    // enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-    assign seg_if_ram_rd_resp_ready_int_early = seg_if_ram_rd_resp_ready || (!temp_seg_if_ram_rd_resp_valid_reg && (!seg_if_ram_rd_resp_valid_reg || !seg_if_ram_rd_resp_valid_int));
-
-    always @* begin
-        // transfer sink ready state to source
-        seg_if_ram_rd_resp_valid_next = seg_if_ram_rd_resp_valid_reg;
-        temp_seg_if_ram_rd_resp_valid_next = temp_seg_if_ram_rd_resp_valid_reg;
-
-        store_axis_int_to_output = 1'b0;
-        store_axis_int_to_temp = 1'b0;
-        store_axis_temp_to_output = 1'b0;
-
-        if (seg_if_ram_rd_resp_ready_int_reg) begin
-            // input is ready
-            if (seg_if_ram_rd_resp_ready || !seg_if_ram_rd_resp_valid_reg) begin
-                // output is ready or currently not valid, transfer data to output
-                seg_if_ram_rd_resp_valid_next = seg_if_ram_rd_resp_valid_int;
-                store_axis_int_to_output = 1'b1;
-            end else begin
-                // output is not ready, store input in temp
-                temp_seg_if_ram_rd_resp_valid_next = seg_if_ram_rd_resp_valid_int;
-                store_axis_int_to_temp = 1'b1;
-            end
-        end else if (seg_if_ram_rd_resp_ready) begin
-            // input is not ready, but output is ready
-            seg_if_ram_rd_resp_valid_next = temp_seg_if_ram_rd_resp_valid_reg;
-            temp_seg_if_ram_rd_resp_valid_next = 1'b0;
-            store_axis_temp_to_output = 1'b1;
-        end
-    end
-
     always @(posedge clk) begin
+        seg_if_ram_rd_resp_valid_reg <= seg_if_ram_rd_resp_valid_reg && !seg_if_ram_rd_resp_ready;
+
+        out_fifo_half_full_reg <= $unsigned(out_fifo_wr_ptr_reg - out_fifo_rd_ptr_reg) >= 2**(OUTPUT_FIFO_ADDR_WIDTH-1);
+
+        if (!out_fifo_full && seg_if_ram_rd_resp_valid_int) begin
+            out_fifo_rd_resp_data[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= seg_if_ram_rd_resp_data_int;
+            out_fifo_wr_ptr_reg <= out_fifo_wr_ptr_reg + 1;
+        end
+
+        if (!out_fifo_empty && (!seg_if_ram_rd_resp_valid_reg || seg_if_ram_rd_resp_ready)) begin
+            seg_if_ram_rd_resp_data_reg <= out_fifo_rd_resp_data[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+            seg_if_ram_rd_resp_valid_reg <= 1'b1;
+            out_fifo_rd_ptr_reg <= out_fifo_rd_ptr_reg + 1;
+        end
+
         if (rst) begin
+            out_fifo_wr_ptr_reg <= 0;
+            out_fifo_rd_ptr_reg <= 0;
             seg_if_ram_rd_resp_valid_reg <= 1'b0;
-            seg_if_ram_rd_resp_ready_int_reg <= 1'b0;
-            temp_seg_if_ram_rd_resp_valid_reg <= 1'b0;
-        end else begin
-            seg_if_ram_rd_resp_valid_reg <= seg_if_ram_rd_resp_valid_next;
-            seg_if_ram_rd_resp_ready_int_reg <= seg_if_ram_rd_resp_ready_int_early;
-            temp_seg_if_ram_rd_resp_valid_reg <= temp_seg_if_ram_rd_resp_valid_next;
-        end
-
-        // datapath
-        if (store_axis_int_to_output) begin
-            seg_if_ram_rd_resp_data_reg <= seg_if_ram_rd_resp_data_int;
-        end else if (store_axis_temp_to_output) begin
-            seg_if_ram_rd_resp_data_reg <= temp_seg_if_ram_rd_resp_data_reg;
-        end
-
-        if (store_axis_int_to_temp) begin
-            temp_seg_if_ram_rd_resp_data_reg <= seg_if_ram_rd_resp_data_int;
         end
     end
 

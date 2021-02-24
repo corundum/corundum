@@ -162,6 +162,7 @@ module dma_if_pcie_us #
     output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]  ram_wr_cmd_data,
     output wire [SEG_COUNT-1:0]                 ram_wr_cmd_valid,
     input  wire [SEG_COUNT-1:0]                 ram_wr_cmd_ready,
+    input  wire [SEG_COUNT-1:0]                 ram_wr_done,
     output wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]   ram_rd_cmd_sel,
     output wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]  ram_rd_cmd_addr,
     output wire [SEG_COUNT-1:0]                 ram_rd_cmd_valid,
@@ -286,6 +287,7 @@ dma_if_pcie_us_rd_inst (
     .ram_wr_cmd_data(ram_wr_cmd_data),
     .ram_wr_cmd_valid(ram_wr_cmd_valid),
     .ram_wr_cmd_ready(ram_wr_cmd_ready),
+    .ram_wr_done(ram_wr_done),
 
     /*
      * Configuration

@@ -143,6 +143,7 @@ module dma_if_mux #
     input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]        if_ram_wr_cmd_data,
     input  wire [SEG_COUNT-1:0]                       if_ram_wr_cmd_valid,
     output wire [SEG_COUNT-1:0]                       if_ram_wr_cmd_ready,
+    output wire [SEG_COUNT-1:0]                       if_ram_wr_done,
     input  wire [SEG_COUNT*M_RAM_SEL_WIDTH-1:0]       if_ram_rd_cmd_sel,
     input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]        if_ram_rd_cmd_addr,
     input  wire [SEG_COUNT-1:0]                       if_ram_rd_cmd_valid,
@@ -160,6 +161,7 @@ module dma_if_mux #
     output wire [PORTS*SEG_COUNT*SEG_DATA_WIDTH-1:0]  ram_wr_cmd_data,
     output wire [PORTS*SEG_COUNT-1:0]                 ram_wr_cmd_valid,
     input  wire [PORTS*SEG_COUNT-1:0]                 ram_wr_cmd_ready,
+    input  wire [PORTS*SEG_COUNT-1:0]                 ram_wr_done,
     output wire [PORTS*SEG_COUNT*S_RAM_SEL_WIDTH-1:0] ram_rd_cmd_sel,
     output wire [PORTS*SEG_COUNT*SEG_ADDR_WIDTH-1:0]  ram_rd_cmd_addr,
     output wire [PORTS*SEG_COUNT-1:0]                 ram_rd_cmd_valid,
@@ -232,6 +234,7 @@ dma_if_mux_rd_inst (
     .if_ram_wr_cmd_data(if_ram_wr_cmd_data),
     .if_ram_wr_cmd_valid(if_ram_wr_cmd_valid),
     .if_ram_wr_cmd_ready(if_ram_wr_cmd_ready),
+    .if_ram_wr_done(if_ram_wr_done),
 
     /*
      * RAM interface
@@ -241,7 +244,8 @@ dma_if_mux_rd_inst (
     .ram_wr_cmd_addr(ram_wr_cmd_addr),
     .ram_wr_cmd_data(ram_wr_cmd_data),
     .ram_wr_cmd_valid(ram_wr_cmd_valid),
-    .ram_wr_cmd_ready(ram_wr_cmd_ready)
+    .ram_wr_cmd_ready(ram_wr_cmd_ready),
+    .ram_wr_done(ram_wr_done)
 );
 
 dma_if_mux_wr #(

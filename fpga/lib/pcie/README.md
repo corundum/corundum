@@ -1,5 +1,7 @@
 # Verilog PCI Express Components Readme
 
+[![Build Status](https://github.com/alexforencich/verilog-pcie/workflows/Regression%20Tests/badge.svg?branch=master)](https://github.com/alexforencich/verilog-pcie/actions/)
+
 For more information and updates: http://alexforencich.com/wiki/en/verilog/pcie/start
 
 GitHub repository: https://github.com/alexforencich/verilog-pcie
@@ -10,30 +12,10 @@ Collection of PCI express related components.  Includes PCIe to AXI and AXI
 lite bridges, a simple PCIe AXI DMA engine, and a flexible, high-performance
 DMA subsystem.  Currently supports operation with the Xilinx Ultrascale and
 Ultrascale Plus PCIe hard IP cores with interfaces between 64 and 512 bits.
-Includes full MyHDL testbench with intelligent bus cosimulation endpoints.
+Includes full cocotb testbenches that utilize
+[cocotbext-axi](https://github.com/alexforencich/cocotbext-axi).
 
 ## Documentation
-
-### PCIe BFM
-
-A MyHDL transaction layer PCI Express bus functional model (BFM) is included
-in pcie.py.  This BFM implements an extensive event driven simulation of a
-complete PCI express system, including root complex, switches, devices, and
-functions, including support for configuration spaces, capabilities and
-extended capabilities, and memory and IO operations between devices.  The BFM
-includes code to enumerate the bus, initialize configuration space registers
-and allocate BARs, route messages between devices, perform memory read and
-write operations, allocate DMA accessible memory regions in the root complex,
-and handle message signaled interrupts.  Any module can be connected to a
-cosimulated design, enabling testing of not only isolated components and
-host-device communication but also communication between multiple components
-such as device-to-device DMA and message passing.
-
-MyHDL models of the Xilinx Ultrascale and Ultrascale Plus PCIe hard cores are
-included in pcie_us.py and pcie_usp.py.  These modules can be used in
-combination with the PCIe BFM to test a MyHDL or Verilog design that targets a
-Xilinx Ultrascale or Ultrascale Plus FPGA.  The models currently only support
-operation as a device, not as a root port.
 
 ### PCIe AXI and AXI lite master
 
@@ -265,14 +247,4 @@ signals together.
 
 ## Testing
 
-Running the included testbenches requires MyHDL and Icarus Verilog.  Make sure
-that myhdl.vpi is installed properly for cosimulation to work correctly.  The
-testbenches can be run with a Python test runner like nose or py.test, or the
-individual test scripts can be run with python directly.
-
-### Testbench Files
-
-    tb/axis_ep.py        : MyHDL AXI Stream endpoints
-    tb/pcie.py           : MyHDL PCI Express BFM
-    tb/pcie_us.py        : MyHDL Xilinx Ultrascale PCIe core model
-    tb/pcie_usp.py       : MyHDL Xilinx Ultrascale Plus PCIe core model
+Running the included testbenches requires [cocotb](https://github.com/cocotb/cocotb), [cocotbext-axi](https://github.com/alexforencich/cocotbext-axi), [cocotbext-pcie](https://github.com/alexforencich/cocotbext-pcie), and [Icarus Verilog](http://iverilog.icarus.com/).  The testbenches can be run with pytest directly (requires [cocotb-test](https://github.com/themperek/cocotb-test)), pytest via tox, or via cocotb makefiles.

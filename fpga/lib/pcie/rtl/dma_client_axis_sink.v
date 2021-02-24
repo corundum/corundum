@@ -109,6 +109,7 @@ module dma_client_axis_sink #
     output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]  ram_wr_cmd_data,
     output wire [SEG_COUNT-1:0]                 ram_wr_cmd_valid,
     input  wire [SEG_COUNT-1:0]                 ram_wr_cmd_ready,
+    input  wire [SEG_COUNT-1:0]                 ram_wr_done,
 
     /*
      * Configuration
@@ -134,6 +135,9 @@ parameter OFFSET_WIDTH = AXIS_KEEP_WIDTH_INT > 1 ? $clog2(AXIS_KEEP_WIDTH_INT) :
 parameter OFFSET_MASK = AXIS_KEEP_WIDTH_INT > 1 ? {OFFSET_WIDTH{1'b1}} : 0;
 parameter ADDR_MASK = {RAM_ADDR_WIDTH{1'b1}} << $clog2(AXIS_KEEP_WIDTH_INT);
 parameter CYCLE_COUNT_WIDTH = LEN_WIDTH - $clog2(AXIS_KEEP_WIDTH_INT) + 1;
+
+parameter STATUS_FIFO_ADDR_WIDTH = 5;
+parameter OUTPUT_FIFO_ADDR_WIDTH = 5;
 
 // bus width assertions
 initial begin
@@ -184,12 +188,37 @@ integer i;
 reg [OFFSET_WIDTH:0] cycle_size;
 
 reg [RAM_ADDR_WIDTH-1:0] addr_reg = {RAM_ADDR_WIDTH{1'b0}}, addr_next;
-reg [SEG_COUNT-1:0] ram_mask_reg = 0, ram_mask_next;
 reg [AXIS_KEEP_WIDTH_INT-1:0] keep_mask_reg = {AXIS_KEEP_WIDTH_INT{1'b0}}, keep_mask_next;
 reg [OFFSET_WIDTH-1:0] last_cycle_offset_reg = {OFFSET_WIDTH{1'b0}}, last_cycle_offset_next;
 reg [LEN_WIDTH-1:0] length_reg = {LEN_WIDTH{1'b0}}, length_next;
 reg [CYCLE_COUNT_WIDTH-1:0] cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, cycle_count_next;
 reg last_cycle_reg = 1'b0, last_cycle_next;
+
+reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
+
+reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_wr_ptr_reg = 0;
+reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0, status_fifo_rd_ptr_next;
+reg [LEN_WIDTH-1:0] status_fifo_len[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg [TAG_WIDTH-1:0] status_fifo_tag[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg [AXIS_ID_WIDTH-1:0] status_fifo_id[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg [AXIS_DEST_WIDTH-1:0] status_fifo_dest[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg [AXIS_USER_WIDTH-1:0] status_fifo_user[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg [SEG_COUNT-1:0] status_fifo_mask[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg status_fifo_last[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg [LEN_WIDTH-1:0] status_fifo_wr_len;
+reg [TAG_WIDTH-1:0] status_fifo_wr_tag;
+reg [AXIS_ID_WIDTH-1:0] status_fifo_wr_id;
+reg [AXIS_DEST_WIDTH-1:0] status_fifo_wr_dest;
+reg [AXIS_USER_WIDTH-1:0] status_fifo_wr_user;
+reg [SEG_COUNT-1:0] status_fifo_wr_mask;
+reg status_fifo_wr_last;
+reg status_fifo_we = 1'b0;
+reg status_fifo_half_full_reg = 1'b0;
+
+reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] active_count_reg = 0;
+reg active_count_av_reg = 1'b1;
+reg inc_active;
+reg dec_active;
 
 reg s_axis_write_desc_ready_reg = 1'b0, s_axis_write_desc_ready_next;
 
@@ -207,8 +236,12 @@ reg  [SEG_COUNT*SEG_BE_WIDTH-1:0]   ram_wr_cmd_be_int;
 reg  [SEG_COUNT*SEG_ADDR_WIDTH-1:0] ram_wr_cmd_addr_int;
 reg  [SEG_COUNT*SEG_DATA_WIDTH-1:0] ram_wr_cmd_data_int;
 reg  [SEG_COUNT-1:0]                ram_wr_cmd_valid_int;
-reg  [SEG_COUNT-1:0]                ram_wr_cmd_ready_int_reg = 1'b0;
-wire [SEG_COUNT-1:0]                ram_wr_cmd_ready_int_early;
+wire [SEG_COUNT-1:0]                ram_wr_cmd_ready_int;
+
+reg [SEG_COUNT-1:0] ram_wr_cmd_mask;
+
+wire [SEG_COUNT-1:0] out_done;
+reg [SEG_COUNT-1:0] out_done_ack;
 
 assign s_axis_write_desc_ready = s_axis_write_desc_ready_reg;
 
@@ -235,36 +268,54 @@ always @* begin
 
     s_axis_write_data_tready_next = 1'b0;
 
-    ram_wr_cmd_be_int = (s_axis_write_data_tkeep & keep_mask_reg) << (addr_reg & ({PART_COUNT_WIDTH{1'b1}} << PART_OFFSET_WIDTH));
+    if (PART_COUNT > 1) begin
+        ram_wr_cmd_be_int = (s_axis_write_data_tkeep & keep_mask_reg) << (addr_reg & ({PART_COUNT_WIDTH{1'b1}} << PART_OFFSET_WIDTH));
+    end else begin
+        ram_wr_cmd_be_int = s_axis_write_data_tkeep & keep_mask_reg;
+    end
     ram_wr_cmd_addr_int = {PART_COUNT{addr_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH]}};
     ram_wr_cmd_data_int = {PART_COUNT{s_axis_write_data_tdata}};
     ram_wr_cmd_valid_int = {SEG_COUNT{1'b0}};
+    for (i = 0; i < SEG_COUNT; i = i + 1) begin
+        ram_wr_cmd_mask[i] = ram_wr_cmd_be_int[i*SEG_BE_WIDTH +: SEG_BE_WIDTH] != 0;
+    end
 
     cycle_size = AXIS_KEEP_WIDTH_INT;
 
     addr_next = addr_reg;
-    ram_mask_next = ram_mask_reg;
     keep_mask_next = keep_mask_reg;
     last_cycle_offset_next = last_cycle_offset_reg;
     length_next = length_reg;
     cycle_count_next = cycle_count_reg;
     last_cycle_next = last_cycle_reg;
 
+    tag_next = tag_reg;
+
+    status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg;
+
+    status_fifo_wr_len = 0;
+    status_fifo_wr_tag = tag_reg;
+    status_fifo_wr_id = s_axis_write_data_tid;
+    status_fifo_wr_dest = s_axis_write_data_tdest;
+    status_fifo_wr_user = s_axis_write_data_tuser;
+    status_fifo_wr_mask = ram_wr_cmd_mask;
+    status_fifo_wr_last = 1'b0;
+    status_fifo_we = 1'b0;
+
+    inc_active = 1'b0;
+    dec_active = 1'b0;
+
+    out_done_ack = {SEG_COUNT{1'b0}};
+
     case (state_reg)
         STATE_IDLE: begin
             // idle state - load new descriptor to start operation
-            s_axis_write_desc_ready_next = enable;
+            s_axis_write_desc_ready_next = enable && active_count_av_reg;
 
             addr_next = s_axis_write_desc_ram_addr & ADDR_MASK;
             last_cycle_offset_next = s_axis_write_desc_len & OFFSET_MASK;
 
-            if (PART_COUNT > 1) begin
-                ram_mask_next = {SEGS_PER_PART{1'b1}} << ((((addr_next >> PART_OFFSET_WIDTH) & ({PART_COUNT_WIDTH{1'b1}})) / PARTS_PER_SEG) * SEGS_PER_PART);
-            end else begin
-                ram_mask_next = {SEG_COUNT{1'b1}};
-            end
-
-            m_axis_write_desc_status_tag_next = s_axis_write_desc_tag;
+            tag_next = s_axis_write_desc_tag;
 
             length_next = 0;
 
@@ -278,7 +329,10 @@ always @* begin
 
             if (s_axis_write_desc_ready && s_axis_write_desc_valid) begin
                 s_axis_write_desc_ready_next = 1'b0;
-                s_axis_write_data_tready_next = !(~ram_wr_cmd_ready_int_early & ram_mask_next);
+                s_axis_write_data_tready_next = &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
+
+                inc_active = 1'b1;
+
                 state_next = STATE_WRITE;
             end else begin
                 state_next = STATE_IDLE;
@@ -286,12 +340,9 @@ always @* begin
         end
         STATE_WRITE: begin
             // write state - generate write operations
-            s_axis_write_data_tready_next = !(~ram_wr_cmd_ready_int_early & ram_mask_reg);
+            s_axis_write_data_tready_next = &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
 
             if (s_axis_write_data_tready && s_axis_write_data_tvalid) begin
-                m_axis_write_desc_status_id_next = s_axis_write_data_tid;
-                m_axis_write_desc_status_dest_next = s_axis_write_data_tdest;
-                m_axis_write_desc_status_user_next = s_axis_write_data_tuser;
 
                 // update counters
                 addr_next = addr_reg + AXIS_KEEP_WIDTH_INT;
@@ -305,21 +356,23 @@ always @* begin
                 end
 
                 if (PART_COUNT > 1) begin
-                    ram_mask_next = {SEGS_PER_PART{1'b1}} << ((((addr_next >> PART_OFFSET_WIDTH) & ({PART_COUNT_WIDTH{1'b1}})) / PARTS_PER_SEG) * SEGS_PER_PART);
-                end else begin
-                    ram_mask_next = {SEG_COUNT{1'b1}};
-                end
-
-                if (PART_COUNT > 1) begin
                     ram_wr_cmd_be_int = (s_axis_write_data_tkeep & keep_mask_reg) << (addr_reg & ({PART_COUNT_WIDTH{1'b1}} << PART_OFFSET_WIDTH));
                 end else begin
                     ram_wr_cmd_be_int = s_axis_write_data_tkeep & keep_mask_reg;
                 end
                 ram_wr_cmd_addr_int = {SEG_COUNT{addr_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-SEG_ADDR_WIDTH]}};
                 ram_wr_cmd_data_int = {PART_COUNT{s_axis_write_data_tdata}};
-                for (i = 0; i < SEG_COUNT; i = i + 1) begin
-                    ram_wr_cmd_valid_int[i] = ram_wr_cmd_be_int[i*SEG_BE_WIDTH +: SEG_BE_WIDTH] != 0;
-                end
+                ram_wr_cmd_valid_int = ram_wr_cmd_mask;
+
+                // enqueue status FIFO entry for write completion
+                status_fifo_wr_len = length_next;
+                status_fifo_wr_tag = tag_reg;
+                status_fifo_wr_id = s_axis_write_data_tid;
+                status_fifo_wr_dest = s_axis_write_data_tdest;
+                status_fifo_wr_user = s_axis_write_data_tuser;
+                status_fifo_wr_mask = ram_wr_cmd_mask;
+                status_fifo_wr_last = 1'b0;
+                status_fifo_we = 1'b1;
 
                 if (AXIS_LAST_ENABLE && s_axis_write_data_tlast) begin
                     if (AXIS_KEEP_ENABLE) begin
@@ -346,26 +399,40 @@ always @* begin
                         end
                     end
 
-                    m_axis_write_desc_status_len_next = length_next;
-                    m_axis_write_desc_status_valid_next = 1'b1;
+                    // enqueue status FIFO entry for write completion
+                    status_fifo_wr_len = length_next;
+                    status_fifo_wr_tag = tag_reg;
+                    status_fifo_wr_id = s_axis_write_data_tid;
+                    status_fifo_wr_dest = s_axis_write_data_tdest;
+                    status_fifo_wr_user = s_axis_write_data_tuser;
+                    status_fifo_wr_mask = ram_wr_cmd_mask;
+                    status_fifo_wr_last = 1'b1;
+                    status_fifo_we = 1'b1;
 
                     s_axis_write_data_tready_next = 1'b0;
-                    s_axis_write_desc_ready_next = enable;
+                    s_axis_write_desc_ready_next = enable && active_count_av_reg;
                     state_next = STATE_IDLE;
                 end else if (last_cycle_reg) begin
                     if (last_cycle_offset_reg > 0) begin
                         length_next = length_reg + last_cycle_offset_reg;
                     end
 
-                    m_axis_write_desc_status_len_next = length_next;
-                    m_axis_write_desc_status_valid_next = 1'b1;
+                    // enqueue status FIFO entry for write completion
+                    status_fifo_wr_len = length_next;
+                    status_fifo_wr_tag = tag_reg;
+                    status_fifo_wr_id = s_axis_write_data_tid;
+                    status_fifo_wr_dest = s_axis_write_data_tdest;
+                    status_fifo_wr_user = s_axis_write_data_tuser;
+                    status_fifo_wr_mask = ram_wr_cmd_mask;
+                    status_fifo_wr_last = 1'b1;
+                    status_fifo_we = 1'b1;
 
                     if (AXIS_LAST_ENABLE) begin
                         s_axis_write_data_tready_next = 1'b1;
                         state_next = STATE_DROP_DATA;
                     end else begin
                         s_axis_write_data_tready_next = 1'b0;
-                        s_axis_write_desc_ready_next = enable;
+                        s_axis_write_desc_ready_next = enable && active_count_av_reg;
                         state_next = STATE_IDLE;
                     end
                 end else begin
@@ -382,7 +449,7 @@ always @* begin
             if (s_axis_write_data_tready && s_axis_write_data_tvalid) begin
                 if (s_axis_write_data_tlast) begin
                     s_axis_write_data_tready_next = 1'b0;
-                    s_axis_write_desc_ready_next = enable;
+                    s_axis_write_desc_ready_next = enable && active_count_av_reg;
                     state_next = STATE_IDLE;
                 end else begin
                     state_next = STATE_DROP_DATA;
@@ -392,6 +459,29 @@ always @* begin
             end
         end
     endcase
+
+    m_axis_write_desc_status_len_next = status_fifo_len[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+    m_axis_write_desc_status_tag_next = status_fifo_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+    m_axis_write_desc_status_id_next = status_fifo_id[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+    m_axis_write_desc_status_dest_next = status_fifo_dest[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+    m_axis_write_desc_status_user_next = status_fifo_user[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+    m_axis_write_desc_status_valid_next = 1'b0;
+
+    if (status_fifo_rd_ptr_reg != status_fifo_wr_ptr_reg) begin
+        // status FIFO not empty
+        if ((status_fifo_mask[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] & ~out_done) == 0) begin
+            // got write completion, pop and return status
+            status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
+
+            out_done_ack = status_fifo_mask[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+
+            if (status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]]) begin
+                m_axis_write_desc_status_valid_next = 1'b1;
+                
+                dec_active = 1'b1;
+            end
+        end
+    end
 end
 
 always @(posedge clk) begin
@@ -409,18 +499,51 @@ always @(posedge clk) begin
     s_axis_write_data_tready_reg <= s_axis_write_data_tready_next;
 
     addr_reg <= addr_next;
-    ram_mask_reg <= ram_mask_next;
     keep_mask_reg <= keep_mask_next;
     last_cycle_offset_reg <= last_cycle_offset_next;
     length_reg <= length_next;
     cycle_count_reg <= cycle_count_next;
     last_cycle_reg <= last_cycle_next;
 
+    tag_reg <= tag_next;
+
+    if (status_fifo_we) begin
+        status_fifo_len[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_len;
+        status_fifo_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_tag;
+        status_fifo_id[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_id;
+        status_fifo_dest[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_dest;
+        status_fifo_user[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_user;
+        status_fifo_mask[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_mask;
+        status_fifo_last[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_last;
+        status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
+    end
+    status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
+
+    status_fifo_half_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**(STATUS_FIFO_ADDR_WIDTH-1);
+
+    if (active_count_reg < 2**STATUS_FIFO_ADDR_WIDTH && inc_active && !dec_active) begin
+        active_count_reg <= active_count_reg + 1;
+        active_count_av_reg <= active_count_reg < (2**STATUS_FIFO_ADDR_WIDTH-1);
+    end else if (active_count_reg > 0 && !inc_active && dec_active) begin
+        active_count_reg <= active_count_reg - 1;
+        active_count_av_reg <= 1'b1;
+    end else begin
+        active_count_av_reg <= active_count_reg < 2**STATUS_FIFO_ADDR_WIDTH;
+    end
+
     if (rst) begin
         state_reg <= STATE_IDLE;
+
         s_axis_write_desc_ready_reg <= 1'b0;
         m_axis_write_desc_status_valid_reg <= 1'b0;
+
         s_axis_write_data_tready_reg <= 1'b0;
+
+        status_fifo_wr_ptr_reg <= 0;
+        status_fifo_rd_ptr_reg <= 0;
+
+        active_count_reg <= 0;
+        active_count_av_reg <= 1'b1;
     end
 end
 
@@ -434,80 +557,68 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     reg [SEG_BE_WIDTH-1:0]   ram_wr_cmd_be_reg = {SEG_BE_WIDTH{1'b0}};
     reg [SEG_ADDR_WIDTH-1:0] ram_wr_cmd_addr_reg = {SEG_ADDR_WIDTH{1'b0}};
     reg [SEG_DATA_WIDTH-1:0] ram_wr_cmd_data_reg = {SEG_DATA_WIDTH{1'b0}};
-    reg                      ram_wr_cmd_valid_reg = 1'b0, ram_wr_cmd_valid_next;
+    reg                      ram_wr_cmd_valid_reg = 1'b0;
 
-    reg [SEG_BE_WIDTH-1:0]   temp_ram_wr_cmd_be_reg = {SEG_BE_WIDTH{1'b0}};
-    reg [SEG_ADDR_WIDTH-1:0] temp_ram_wr_cmd_addr_reg = {SEG_ADDR_WIDTH{1'b0}};
-    reg [SEG_DATA_WIDTH-1:0] temp_ram_wr_cmd_data_reg = {SEG_DATA_WIDTH{1'b0}};
-    reg                      temp_ram_wr_cmd_valid_reg = 1'b0, temp_ram_wr_cmd_valid_next;
+    reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_fifo_wr_ptr_reg = 0;
+    reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_fifo_rd_ptr_reg = 0;
+    reg out_fifo_half_full_reg = 1'b0;
 
-    // datapath control
-    reg store_axi_w_int_to_output;
-    reg store_axi_w_int_to_temp;
-    reg store_axi_w_temp_to_output;
+    wire out_fifo_full = out_fifo_wr_ptr_reg == (out_fifo_rd_ptr_reg ^ {1'b1, {OUTPUT_FIFO_ADDR_WIDTH{1'b0}}});
+    wire out_fifo_empty = out_fifo_wr_ptr_reg == out_fifo_rd_ptr_reg;
+
+    (* ram_style = "distributed" *)
+    reg [SEG_BE_WIDTH-1:0]   out_fifo_wr_cmd_be[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+    (* ram_style = "distributed" *)
+    reg [SEG_ADDR_WIDTH-1:0] out_fifo_wr_cmd_addr[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+    (* ram_style = "distributed" *)
+    reg [SEG_DATA_WIDTH-1:0] out_fifo_wr_cmd_data[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+
+    reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] done_count_reg = 0;
+    reg done_reg = 1'b0;
+
+    assign ram_wr_cmd_ready_int[n +: 1] = !out_fifo_half_full_reg;
 
     assign ram_wr_cmd_be[n*SEG_BE_WIDTH +: SEG_BE_WIDTH] = ram_wr_cmd_be_reg;
     assign ram_wr_cmd_addr[n*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = ram_wr_cmd_addr_reg;
     assign ram_wr_cmd_data[n*SEG_DATA_WIDTH +: SEG_DATA_WIDTH] = ram_wr_cmd_data_reg;
     assign ram_wr_cmd_valid[n +: 1] = ram_wr_cmd_valid_reg;
 
-    // enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-    assign ram_wr_cmd_ready_int_early[n +: 1] = ram_wr_cmd_ready[n +: 1] || (!temp_ram_wr_cmd_valid_reg && (!ram_wr_cmd_valid_reg || !ram_wr_cmd_valid_int[n +: 1]));
-
-    always @* begin
-        // transfer sink ready state to source
-        ram_wr_cmd_valid_next = ram_wr_cmd_valid_reg;
-        temp_ram_wr_cmd_valid_next = temp_ram_wr_cmd_valid_reg;
-
-        store_axi_w_int_to_output = 1'b0;
-        store_axi_w_int_to_temp = 1'b0;
-        store_axi_w_temp_to_output = 1'b0;
-        
-        if (ram_wr_cmd_ready_int_reg[n +: 1]) begin
-            // input is ready
-            if (ram_wr_cmd_ready[n +: 1] || !ram_wr_cmd_valid_reg) begin
-                // output is ready or currently not valid, transfer data to output
-                ram_wr_cmd_valid_next = ram_wr_cmd_valid_int[n +: 1];
-                store_axi_w_int_to_output = 1'b1;
-            end else begin
-                // output is not ready, store input in temp
-                temp_ram_wr_cmd_valid_next = ram_wr_cmd_valid_int[n +: 1];
-                store_axi_w_int_to_temp = 1'b1;
-            end
-        end else if (ram_wr_cmd_ready[n +: 1]) begin
-            // input is not ready, but output is ready
-            ram_wr_cmd_valid_next = temp_ram_wr_cmd_valid_reg;
-            temp_ram_wr_cmd_valid_next = 1'b0;
-            store_axi_w_temp_to_output = 1'b1;
-        end
-    end
+    assign out_done[n] = done_reg;
 
     always @(posedge clk) begin
+        ram_wr_cmd_valid_reg <= ram_wr_cmd_valid_reg && !ram_wr_cmd_ready[n +: 1];
+
+        out_fifo_half_full_reg <= $unsigned(out_fifo_wr_ptr_reg - out_fifo_rd_ptr_reg) >= 2**(OUTPUT_FIFO_ADDR_WIDTH-1);
+
+        if (!out_fifo_full && ram_wr_cmd_valid_int[n +: 1]) begin
+            out_fifo_wr_cmd_be[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= ram_wr_cmd_be_int[n*SEG_BE_WIDTH +: SEG_BE_WIDTH];
+            out_fifo_wr_cmd_addr[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= ram_wr_cmd_addr_int[n*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH];
+            out_fifo_wr_cmd_data[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= ram_wr_cmd_data_int[n*SEG_DATA_WIDTH +: SEG_DATA_WIDTH];
+            out_fifo_wr_ptr_reg <= out_fifo_wr_ptr_reg + 1;
+        end
+
+        if (!out_fifo_empty && (!ram_wr_cmd_valid_reg || ram_wr_cmd_ready[n +: 1])) begin
+            ram_wr_cmd_be_reg <= out_fifo_wr_cmd_be[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+            ram_wr_cmd_addr_reg <= out_fifo_wr_cmd_addr[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+            ram_wr_cmd_data_reg <= out_fifo_wr_cmd_data[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+            ram_wr_cmd_valid_reg <= 1'b1;
+            out_fifo_rd_ptr_reg <= out_fifo_rd_ptr_reg + 1;
+        end
+
+        if (done_count_reg < 2**OUTPUT_FIFO_ADDR_WIDTH && ram_wr_done[n] && !out_done_ack[n]) begin
+            done_count_reg <= done_count_reg + 1;
+            done_reg <= 1;
+        end else if (done_count_reg > 0 && !ram_wr_done[n] && out_done_ack[n]) begin
+            done_count_reg <= done_count_reg - 1;
+            done_reg <= done_count_reg > 1;
+        end
+
         if (rst) begin
+            out_fifo_wr_ptr_reg <= 0;
+            out_fifo_rd_ptr_reg <= 0;
             ram_wr_cmd_valid_reg <= 1'b0;
-            ram_wr_cmd_ready_int_reg[n +: 1] <= 1'b0;
-            temp_ram_wr_cmd_valid_reg <= 1'b0;
-        end else begin
-            ram_wr_cmd_valid_reg <= ram_wr_cmd_valid_next;
-            ram_wr_cmd_ready_int_reg[n +: 1] <= ram_wr_cmd_ready_int_early[n +: 1];
-            temp_ram_wr_cmd_valid_reg <= temp_ram_wr_cmd_valid_next;
-        end
-
-        // datapath
-        if (store_axi_w_int_to_output) begin
-            ram_wr_cmd_be_reg <= ram_wr_cmd_be_int[n*SEG_BE_WIDTH +: SEG_BE_WIDTH];
-            ram_wr_cmd_addr_reg <= ram_wr_cmd_addr_int[n*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH];
-            ram_wr_cmd_data_reg <= ram_wr_cmd_data_int[n*SEG_DATA_WIDTH +: SEG_DATA_WIDTH];
-        end else if (store_axi_w_temp_to_output) begin
-            ram_wr_cmd_be_reg <= temp_ram_wr_cmd_be_reg;
-            ram_wr_cmd_addr_reg <= temp_ram_wr_cmd_addr_reg;
-            ram_wr_cmd_data_reg <= temp_ram_wr_cmd_data_reg;
-        end
-
-        if (store_axi_w_int_to_temp) begin
-            temp_ram_wr_cmd_be_reg <= ram_wr_cmd_be_int[n*SEG_BE_WIDTH +: SEG_BE_WIDTH];
-            temp_ram_wr_cmd_addr_reg <= ram_wr_cmd_addr_int[n*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH];
-            temp_ram_wr_cmd_data_reg <= ram_wr_cmd_data_int[n*SEG_DATA_WIDTH +: SEG_DATA_WIDTH];
+            done_count_reg <= 0;
+            done_reg <= 1'b0;
         end
     end
 

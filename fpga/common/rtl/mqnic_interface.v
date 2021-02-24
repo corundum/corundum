@@ -278,6 +278,7 @@ module mqnic_interface #
     input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0] ctrl_dma_ram_wr_cmd_data,
     input  wire [SEG_COUNT-1:0]                ctrl_dma_ram_wr_cmd_valid,
     output wire [SEG_COUNT-1:0]                ctrl_dma_ram_wr_cmd_ready,
+    output wire [SEG_COUNT-1:0]                ctrl_dma_ram_wr_done,
     input  wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]  ctrl_dma_ram_rd_cmd_sel,
     input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0] ctrl_dma_ram_rd_cmd_addr,
     input  wire [SEG_COUNT-1:0]                ctrl_dma_ram_rd_cmd_valid,
@@ -295,6 +296,7 @@ module mqnic_interface #
     input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0] data_dma_ram_wr_cmd_data,
     input  wire [SEG_COUNT-1:0]                data_dma_ram_wr_cmd_valid,
     output wire [SEG_COUNT-1:0]                data_dma_ram_wr_cmd_ready,
+    output wire [SEG_COUNT-1:0]                data_dma_ram_wr_done,
     input  wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]  data_dma_ram_rd_cmd_sel,
     input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0] data_dma_ram_rd_cmd_addr,
     input  wire [SEG_COUNT-1:0]                data_dma_ram_rd_cmd_valid,
@@ -564,6 +566,7 @@ wire [PORTS*SEG_COUNT*SEG_ADDR_WIDTH-1:0]  port_dma_ram_wr_cmd_addr;
 wire [PORTS*SEG_COUNT*SEG_DATA_WIDTH-1:0]  port_dma_ram_wr_cmd_data;
 wire [PORTS*SEG_COUNT-1:0]                 port_dma_ram_wr_cmd_valid;
 wire [PORTS*SEG_COUNT-1:0]                 port_dma_ram_wr_cmd_ready;
+wire [PORTS*SEG_COUNT-1:0]                 port_dma_ram_wr_done;
 wire [PORTS*SEG_COUNT*SEG_ADDR_WIDTH-1:0]  port_dma_ram_rd_cmd_addr;
 wire [PORTS*SEG_COUNT-1:0]                 port_dma_ram_rd_cmd_valid;
 wire [PORTS*SEG_COUNT-1:0]                 port_dma_ram_rd_cmd_ready;
@@ -1568,6 +1571,7 @@ desc_fetch_inst (
     .dma_ram_wr_cmd_data(ctrl_dma_ram_wr_cmd_data),
     .dma_ram_wr_cmd_valid(ctrl_dma_ram_wr_cmd_valid),
     .dma_ram_wr_cmd_ready(ctrl_dma_ram_wr_cmd_ready),
+    .dma_ram_wr_done(ctrl_dma_ram_wr_done),
 
     /*
      * Configuration
@@ -1829,6 +1833,7 @@ if (PORTS > 1) begin
         .if_ram_wr_cmd_data(data_dma_ram_wr_cmd_data),
         .if_ram_wr_cmd_valid(data_dma_ram_wr_cmd_valid),
         .if_ram_wr_cmd_ready(data_dma_ram_wr_cmd_ready),
+        .if_ram_wr_done(data_dma_ram_wr_done),
         .if_ram_rd_cmd_sel(data_dma_ram_rd_cmd_sel),
         .if_ram_rd_cmd_addr(data_dma_ram_rd_cmd_addr),
         .if_ram_rd_cmd_valid(data_dma_ram_rd_cmd_valid),
@@ -1846,6 +1851,7 @@ if (PORTS > 1) begin
         .ram_wr_cmd_data(port_dma_ram_wr_cmd_data),
         .ram_wr_cmd_valid(port_dma_ram_wr_cmd_valid),
         .ram_wr_cmd_ready(port_dma_ram_wr_cmd_ready),
+        .ram_wr_done(port_dma_ram_wr_done),
         .ram_rd_cmd_sel(),
         .ram_rd_cmd_addr(port_dma_ram_rd_cmd_addr),
         .ram_rd_cmd_valid(port_dma_ram_rd_cmd_valid),
@@ -1884,6 +1890,7 @@ end else begin
     assign port_dma_ram_wr_cmd_data = data_dma_ram_wr_cmd_data;
     assign port_dma_ram_wr_cmd_valid = data_dma_ram_wr_cmd_valid;
     assign data_dma_ram_wr_cmd_ready = port_dma_ram_wr_cmd_ready;
+    assign data_dma_ram_wr_done = port_dma_ram_wr_done;
     assign port_dma_ram_rd_cmd_addr = data_dma_ram_rd_cmd_addr;
     assign port_dma_ram_rd_cmd_valid = data_dma_ram_rd_cmd_valid;
     assign data_dma_ram_rd_cmd_ready = port_dma_ram_rd_cmd_ready;
@@ -2195,6 +2202,7 @@ generate
             .dma_ram_wr_cmd_data(port_dma_ram_wr_cmd_data[SEG_COUNT*SEG_DATA_WIDTH*n +: SEG_COUNT*SEG_DATA_WIDTH]),
             .dma_ram_wr_cmd_valid(port_dma_ram_wr_cmd_valid[SEG_COUNT*n +: SEG_COUNT]),
             .dma_ram_wr_cmd_ready(port_dma_ram_wr_cmd_ready[SEG_COUNT*n +: SEG_COUNT]),
+            .dma_ram_wr_done(port_dma_ram_wr_done[SEG_COUNT*n +: SEG_COUNT]),
             .dma_ram_rd_cmd_addr(port_dma_ram_rd_cmd_addr[SEG_COUNT*SEG_ADDR_WIDTH*n +: SEG_COUNT*SEG_ADDR_WIDTH]),
             .dma_ram_rd_cmd_valid(port_dma_ram_rd_cmd_valid[SEG_COUNT*n +: SEG_COUNT]),
             .dma_ram_rd_cmd_ready(port_dma_ram_rd_cmd_ready[SEG_COUNT*n +: SEG_COUNT]),

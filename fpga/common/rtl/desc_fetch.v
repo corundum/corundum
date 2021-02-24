@@ -174,6 +174,7 @@ module desc_fetch #
     input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]    dma_ram_wr_cmd_data,
     input  wire [SEG_COUNT-1:0]                   dma_ram_wr_cmd_valid,
     output wire [SEG_COUNT-1:0]                   dma_ram_wr_cmd_ready,
+    output wire [SEG_COUNT-1:0]                   dma_ram_wr_done,
 
     /*
      * Configuration
@@ -346,6 +347,7 @@ dma_psdpram_inst (
     .wr_cmd_data(dma_ram_wr_cmd_data),
     .wr_cmd_valid(dma_ram_wr_cmd_valid),
     .wr_cmd_ready(dma_ram_wr_cmd_ready),
+    .wr_done(dma_ram_wr_done),
 
     /*
      * Read port

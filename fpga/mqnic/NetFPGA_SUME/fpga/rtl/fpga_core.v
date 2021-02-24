@@ -363,6 +363,7 @@ wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]  dma_ram_wr_cmd_addr;
 wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]  dma_ram_wr_cmd_data;
 wire [SEG_COUNT-1:0]                 dma_ram_wr_cmd_valid;
 wire [SEG_COUNT-1:0]                 dma_ram_wr_cmd_ready;
+wire [SEG_COUNT-1:0]                 dma_ram_wr_done;
 wire [SEG_COUNT*RAM_SEL_WIDTH-1:0]   dma_ram_rd_cmd_sel;
 wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]  dma_ram_rd_cmd_addr;
 wire [SEG_COUNT-1:0]                 dma_ram_rd_cmd_valid;
@@ -946,6 +947,7 @@ dma_if_pcie_us_inst (
     .ram_wr_cmd_data(dma_ram_wr_cmd_data),
     .ram_wr_cmd_valid(dma_ram_wr_cmd_valid),
     .ram_wr_cmd_ready(dma_ram_wr_cmd_ready),
+    .ram_wr_done(dma_ram_wr_done),
     .ram_rd_cmd_sel(dma_ram_rd_cmd_sel),
     .ram_rd_cmd_addr(dma_ram_rd_cmd_addr),
     .ram_rd_cmd_valid(dma_ram_rd_cmd_valid),
@@ -1222,6 +1224,7 @@ wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]     ctrl_dma_ram_wr_cmd_addr;
 wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]     ctrl_dma_ram_wr_cmd_data;
 wire [SEG_COUNT-1:0]                    ctrl_dma_ram_wr_cmd_valid;
 wire [SEG_COUNT-1:0]                    ctrl_dma_ram_wr_cmd_ready;
+wire [SEG_COUNT-1:0]                    ctrl_dma_ram_wr_done;
 wire [SEG_COUNT*(RAM_SEL_WIDTH-1)-1:0]  ctrl_dma_ram_rd_cmd_sel;
 wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]     ctrl_dma_ram_rd_cmd_addr;
 wire [SEG_COUNT-1:0]                    ctrl_dma_ram_rd_cmd_valid;
@@ -1236,6 +1239,7 @@ wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]     data_dma_ram_wr_cmd_addr;
 wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]     data_dma_ram_wr_cmd_data;
 wire [SEG_COUNT-1:0]                    data_dma_ram_wr_cmd_valid;
 wire [SEG_COUNT-1:0]                    data_dma_ram_wr_cmd_ready;
+wire [SEG_COUNT-1:0]                    data_dma_ram_wr_done;
 wire [SEG_COUNT*(RAM_SEL_WIDTH-1)-1:0]  data_dma_ram_rd_cmd_sel;
 wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]     data_dma_ram_rd_cmd_addr;
 wire [SEG_COUNT-1:0]                    data_dma_ram_rd_cmd_valid;
@@ -1342,6 +1346,7 @@ dma_if_mux_inst (
     .if_ram_wr_cmd_data(dma_ram_wr_cmd_data),
     .if_ram_wr_cmd_valid(dma_ram_wr_cmd_valid),
     .if_ram_wr_cmd_ready(dma_ram_wr_cmd_ready),
+    .if_ram_wr_done(dma_ram_wr_done),
     .if_ram_rd_cmd_sel(dma_ram_rd_cmd_sel),
     .if_ram_rd_cmd_addr(dma_ram_rd_cmd_addr),
     .if_ram_rd_cmd_valid(dma_ram_rd_cmd_valid),
@@ -1359,6 +1364,7 @@ dma_if_mux_inst (
     .ram_wr_cmd_data({data_dma_ram_wr_cmd_data, ctrl_dma_ram_wr_cmd_data}),
     .ram_wr_cmd_valid({data_dma_ram_wr_cmd_valid, ctrl_dma_ram_wr_cmd_valid}),
     .ram_wr_cmd_ready({data_dma_ram_wr_cmd_ready, ctrl_dma_ram_wr_cmd_ready}),
+    .ram_wr_done({data_dma_ram_wr_done, ctrl_dma_ram_wr_done}),
     .ram_rd_cmd_sel({data_dma_ram_rd_cmd_sel, ctrl_dma_ram_rd_cmd_sel}),
     .ram_rd_cmd_addr({data_dma_ram_rd_cmd_addr, ctrl_dma_ram_rd_cmd_addr}),
     .ram_rd_cmd_valid({data_dma_ram_rd_cmd_valid, ctrl_dma_ram_rd_cmd_valid}),
@@ -1418,6 +1424,7 @@ wire [IF_COUNT*SEG_COUNT*SEG_ADDR_WIDTH-1:0]   if_ctrl_dma_ram_wr_cmd_addr;
 wire [IF_COUNT*SEG_COUNT*SEG_DATA_WIDTH-1:0]   if_ctrl_dma_ram_wr_cmd_data;
 wire [IF_COUNT*SEG_COUNT-1:0]                  if_ctrl_dma_ram_wr_cmd_valid;
 wire [IF_COUNT*SEG_COUNT-1:0]                  if_ctrl_dma_ram_wr_cmd_ready;
+wire [IF_COUNT*SEG_COUNT-1:0]                  if_ctrl_dma_ram_wr_done;
 wire [IF_COUNT*SEG_COUNT*IF_RAM_SEL_WIDTH-1:0] if_ctrl_dma_ram_rd_cmd_sel;
 wire [IF_COUNT*SEG_COUNT*SEG_ADDR_WIDTH-1:0]   if_ctrl_dma_ram_rd_cmd_addr;
 wire [IF_COUNT*SEG_COUNT-1:0]                  if_ctrl_dma_ram_rd_cmd_valid;
@@ -1432,6 +1439,7 @@ wire [IF_COUNT*SEG_COUNT*SEG_ADDR_WIDTH-1:0]   if_data_dma_ram_wr_cmd_addr;
 wire [IF_COUNT*SEG_COUNT*SEG_DATA_WIDTH-1:0]   if_data_dma_ram_wr_cmd_data;
 wire [IF_COUNT*SEG_COUNT-1:0]                  if_data_dma_ram_wr_cmd_valid;
 wire [IF_COUNT*SEG_COUNT-1:0]                  if_data_dma_ram_wr_cmd_ready;
+wire [IF_COUNT*SEG_COUNT-1:0]                  if_data_dma_ram_wr_done;
 wire [IF_COUNT*SEG_COUNT*IF_RAM_SEL_WIDTH-1:0] if_data_dma_ram_rd_cmd_sel;
 wire [IF_COUNT*SEG_COUNT*SEG_ADDR_WIDTH-1:0]   if_data_dma_ram_rd_cmd_addr;
 wire [IF_COUNT*SEG_COUNT-1:0]                  if_data_dma_ram_rd_cmd_valid;
@@ -1540,6 +1548,7 @@ if (IF_COUNT > 1) begin
         .if_ram_wr_cmd_data(ctrl_dma_ram_wr_cmd_data),
         .if_ram_wr_cmd_valid(ctrl_dma_ram_wr_cmd_valid),
         .if_ram_wr_cmd_ready(ctrl_dma_ram_wr_cmd_ready),
+        .if_ram_wr_done(ctrl_dma_ram_wr_done),
         .if_ram_rd_cmd_sel(ctrl_dma_ram_rd_cmd_sel),
         .if_ram_rd_cmd_addr(ctrl_dma_ram_rd_cmd_addr),
         .if_ram_rd_cmd_valid(ctrl_dma_ram_rd_cmd_valid),
@@ -1557,6 +1566,7 @@ if (IF_COUNT > 1) begin
         .ram_wr_cmd_data(if_ctrl_dma_ram_wr_cmd_data),
         .ram_wr_cmd_valid(if_ctrl_dma_ram_wr_cmd_valid),
         .ram_wr_cmd_ready(if_ctrl_dma_ram_wr_cmd_ready),
+        .ram_wr_done(if_ctrl_dma_ram_wr_done),
         .ram_rd_cmd_sel(if_ctrl_dma_ram_rd_cmd_sel),
         .ram_rd_cmd_addr(if_ctrl_dma_ram_rd_cmd_addr),
         .ram_rd_cmd_valid(if_ctrl_dma_ram_rd_cmd_valid),
@@ -1664,6 +1674,7 @@ if (IF_COUNT > 1) begin
         .if_ram_wr_cmd_data(data_dma_ram_wr_cmd_data),
         .if_ram_wr_cmd_valid(data_dma_ram_wr_cmd_valid),
         .if_ram_wr_cmd_ready(data_dma_ram_wr_cmd_ready),
+        .if_ram_wr_done(data_dma_ram_wr_done),
         .if_ram_rd_cmd_sel(data_dma_ram_rd_cmd_sel),
         .if_ram_rd_cmd_addr(data_dma_ram_rd_cmd_addr),
         .if_ram_rd_cmd_valid(data_dma_ram_rd_cmd_valid),
@@ -1681,6 +1692,7 @@ if (IF_COUNT > 1) begin
         .ram_wr_cmd_data(if_data_dma_ram_wr_cmd_data),
         .ram_wr_cmd_valid(if_data_dma_ram_wr_cmd_valid),
         .ram_wr_cmd_ready(if_data_dma_ram_wr_cmd_ready),
+        .ram_wr_done(if_data_dma_ram_wr_done),
         .ram_rd_cmd_sel(if_data_dma_ram_rd_cmd_sel),
         .ram_rd_cmd_addr(if_data_dma_ram_rd_cmd_addr),
         .ram_rd_cmd_valid(if_data_dma_ram_rd_cmd_valid),
@@ -1720,6 +1732,7 @@ end else begin
     assign if_ctrl_dma_ram_wr_cmd_data = ctrl_dma_ram_wr_cmd_data;
     assign if_ctrl_dma_ram_wr_cmd_valid = ctrl_dma_ram_wr_cmd_valid;
     assign ctrl_dma_ram_wr_cmd_ready = if_ctrl_dma_ram_wr_cmd_ready;
+    assign ctrl_dma_ram_wr_done = if_ctrl_dma_ram_wr_done;
     assign if_ctrl_dma_ram_rd_cmd_sel = ctrl_dma_ram_rd_cmd_sel;
     assign if_ctrl_dma_ram_rd_cmd_addr = ctrl_dma_ram_rd_cmd_addr;
     assign if_ctrl_dma_ram_rd_cmd_valid = ctrl_dma_ram_rd_cmd_valid;
@@ -1756,6 +1769,7 @@ end else begin
     assign if_data_dma_ram_wr_cmd_data = data_dma_ram_wr_cmd_data;
     assign if_data_dma_ram_wr_cmd_valid = data_dma_ram_wr_cmd_valid;
     assign data_dma_ram_wr_cmd_ready = if_data_dma_ram_wr_cmd_ready;
+    assign data_dma_ram_wr_done = if_data_dma_ram_wr_done;
     assign if_data_dma_ram_rd_cmd_sel = data_dma_ram_rd_cmd_sel;
     assign if_data_dma_ram_rd_cmd_addr = data_dma_ram_rd_cmd_addr;
     assign if_data_dma_ram_rd_cmd_valid = data_dma_ram_rd_cmd_valid;
@@ -2138,6 +2152,7 @@ generate
             .ctrl_dma_ram_wr_cmd_data(if_ctrl_dma_ram_wr_cmd_data[SEG_COUNT*SEG_DATA_WIDTH*n +: SEG_COUNT*SEG_DATA_WIDTH]),
             .ctrl_dma_ram_wr_cmd_valid(if_ctrl_dma_ram_wr_cmd_valid[SEG_COUNT*n +: SEG_COUNT]),
             .ctrl_dma_ram_wr_cmd_ready(if_ctrl_dma_ram_wr_cmd_ready[SEG_COUNT*n +: SEG_COUNT]),
+            .ctrl_dma_ram_wr_done(if_ctrl_dma_ram_wr_done[SEG_COUNT*n +: SEG_COUNT]),
             .ctrl_dma_ram_rd_cmd_sel(if_ctrl_dma_ram_rd_cmd_sel[SEG_COUNT*IF_RAM_SEL_WIDTH*n +: SEG_COUNT*IF_RAM_SEL_WIDTH]),
             .ctrl_dma_ram_rd_cmd_addr(if_ctrl_dma_ram_rd_cmd_addr[SEG_COUNT*SEG_ADDR_WIDTH*n +: SEG_COUNT*SEG_ADDR_WIDTH]),
             .ctrl_dma_ram_rd_cmd_valid(if_ctrl_dma_ram_rd_cmd_valid[SEG_COUNT*n +: SEG_COUNT]),
@@ -2155,6 +2170,7 @@ generate
             .data_dma_ram_wr_cmd_data(if_data_dma_ram_wr_cmd_data[SEG_COUNT*SEG_DATA_WIDTH*n +: SEG_COUNT*SEG_DATA_WIDTH]),
             .data_dma_ram_wr_cmd_valid(if_data_dma_ram_wr_cmd_valid[SEG_COUNT*n +: SEG_COUNT]),
             .data_dma_ram_wr_cmd_ready(if_data_dma_ram_wr_cmd_ready[SEG_COUNT*n +: SEG_COUNT]),
+            .data_dma_ram_wr_done(if_data_dma_ram_wr_done[SEG_COUNT*n +: SEG_COUNT]),
             .data_dma_ram_rd_cmd_sel(if_data_dma_ram_rd_cmd_sel[SEG_COUNT*IF_RAM_SEL_WIDTH*n +: SEG_COUNT*IF_RAM_SEL_WIDTH]),
             .data_dma_ram_rd_cmd_addr(if_data_dma_ram_rd_cmd_addr[SEG_COUNT*SEG_ADDR_WIDTH*n +: SEG_COUNT*SEG_ADDR_WIDTH]),
             .data_dma_ram_rd_cmd_valid(if_data_dma_ram_rd_cmd_valid[SEG_COUNT*n +: SEG_COUNT]),

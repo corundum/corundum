@@ -34,6 +34,7 @@ from cocotbext.axi.memory import Memory
 class PsdpRamWrite(Memory):
 
     _cmd_signals = ["wr_cmd_be", "wr_cmd_addr", "wr_cmd_data", "wr_cmd_valid", "wr_cmd_ready"]
+    _resp_signals = ["wr_done"]
 
     def __init__(self, entity, name, clock, reset=None, size=1024, mem=None, *args, **kwargs):
         self.log = logging.getLogger(f"cocotb.{entity._name}.{name}")
@@ -41,6 +42,7 @@ class PsdpRamWrite(Memory):
         self.clock = clock
         self.reset = reset
         self.cmd_bus = Bus(self.entity, name, self._cmd_signals, **kwargs)
+        self.resp_bus = Bus(self.entity, name, self._resp_signals, **kwargs)
 
         self.log.info("Parallel Simple Dual Port RAM model (write)")
         self.log.info("Copyright (c) 2020 Alex Forencich")
@@ -74,6 +76,7 @@ class PsdpRamWrite(Memory):
         assert self.seg_be_width*self.seg_count == len(self.cmd_bus.wr_cmd_be)
 
         self.cmd_bus.wr_cmd_ready.setimmediatevalue(0)
+        self.resp_bus.wr_done.setimmediatevalue(0)
 
         cocotb.fork(self._run())
 
@@ -94,6 +97,8 @@ class PsdpRamWrite(Memory):
         while True:
             await RisingEdge(self.clock)
 
+            wr_done = 0
+
             cmd_be_sample = self.cmd_bus.wr_cmd_be.value
             cmd_addr_sample = self.cmd_bus.wr_cmd_addr.value
             cmd_data_sample = self.cmd_bus.wr_cmd_data.value
@@ -102,6 +107,7 @@ class PsdpRamWrite(Memory):
 
             if self.reset is not None and self.reset.value:
                 self.cmd_bus.wr_cmd_ready.setimmediatevalue(0)
+                self.resp_bus.wr_done.setimmediatevalue(0)
                 continue
 
             # process segments
@@ -123,6 +129,8 @@ class PsdpRamWrite(Memory):
                         else:
                             self.mem.seek(1, 1)
 
+                    wr_done |= 1 << seg
+
                     self.log.info("Write word seg: %d addr: 0x%08x be 0x%02x data %s",
                         seg, addr, seg_be, ' '.join((f'{c:02x}' for c in data)))
 
@@ -130,6 +138,8 @@ class PsdpRamWrite(Memory):
                 self.cmd_bus.wr_cmd_ready <= 0
             else:
                 self.cmd_bus.wr_cmd_ready <= 2**self.seg_count-1
+
+            self.resp_bus.wr_done <= wr_done
 
     async def _run_pause(self):
         for val in self._pause_generator:

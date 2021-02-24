@@ -137,6 +137,7 @@ module dma_if_pcie_us_rd #
     output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]  ram_wr_cmd_data,
     output wire [SEG_COUNT-1:0]                 ram_wr_cmd_valid,
     input  wire [SEG_COUNT-1:0]                 ram_wr_cmd_ready,
+    input  wire [SEG_COUNT-1:0]                 ram_wr_done,
 
     /*
      * Configuration

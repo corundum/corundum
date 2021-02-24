@@ -263,9 +263,6 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
                 assert int(status.tag) == cur_tag
 
-                for k in range(10):
-                    await RisingEdge(dut.clk)
-
                 tb.log.debug("%s", tb.dma_ram.hexdump_str((ram_addr & ~0xf)-16, (((ram_addr & 0xf)+length-1) & ~0xf)+48, prefix="RAM "))
 
                 assert tb.dma_ram.read(ram_addr-8, len(test_data)+16) == b'\xaa'*8+test_data+b'\xaa'*8

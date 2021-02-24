@@ -144,9 +144,6 @@ async def run_test_write(dut, data_in=None, idle_inserter=None, backpressure_ins
                 assert int(status.tag) == cur_tag
                 assert int(status.id) == cur_tag
 
-                for k in range(10):
-                    await RisingEdge(dut.clk)
-
                 tb.log.debug("%s", tb.dma_ram.hexdump_str((ram_addr & ~0xf)-16, (((ram_addr & 0xf)+length-1) & ~0xf)+48))
 
                 if len(test_data) <= len(test_data2):

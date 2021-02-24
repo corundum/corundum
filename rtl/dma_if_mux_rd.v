@@ -109,6 +109,7 @@ module dma_if_mux_rd #
     input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]        if_ram_wr_cmd_data,
     input  wire [SEG_COUNT-1:0]                       if_ram_wr_cmd_valid,
     output wire [SEG_COUNT-1:0]                       if_ram_wr_cmd_ready,
+    output wire [SEG_COUNT-1:0]                       if_ram_wr_done,
 
     /*
      * RAM interface
@@ -118,12 +119,15 @@ module dma_if_mux_rd #
     output wire [PORTS*SEG_COUNT*SEG_ADDR_WIDTH-1:0]  ram_wr_cmd_addr,
     output wire [PORTS*SEG_COUNT*SEG_DATA_WIDTH-1:0]  ram_wr_cmd_data,
     output wire [PORTS*SEG_COUNT-1:0]                 ram_wr_cmd_valid,
-    input  wire [PORTS*SEG_COUNT-1:0]                 ram_wr_cmd_ready
+    input  wire [PORTS*SEG_COUNT-1:0]                 ram_wr_cmd_ready,
+    input  wire [PORTS*SEG_COUNT-1:0]                 ram_wr_done
 );
 
 parameter CL_PORTS = $clog2(PORTS);
 
 parameter S_RAM_SEL_WIDTH_INT = S_RAM_SEL_WIDTH > 0 ? S_RAM_SEL_WIDTH : 1;
+
+parameter FIFO_ADDR_WIDTH = 5;
 
 // check configuration
 initial begin
@@ -321,6 +325,22 @@ genvar n, p;
 
 for (n = 0; n < SEG_COUNT; n = n + 1) begin
 
+    // FIFO to maintain response ordering
+    reg [FIFO_ADDR_WIDTH+1-1:0] fifo_wr_ptr_reg = 0;
+    reg [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_reg = 0;
+    reg [CL_PORTS-1:0] fifo_sel[(2**FIFO_ADDR_WIDTH)-1:0];
+
+    wire fifo_empty = fifo_wr_ptr_reg == fifo_rd_ptr_reg;
+    wire fifo_full = fifo_wr_ptr_reg == (fifo_rd_ptr_reg ^ (1 << FIFO_ADDR_WIDTH));
+
+    integer i;
+
+    initial begin
+        for (i = 0; i < 2**FIFO_ADDR_WIDTH; i = i + 1) begin
+            fifo_sel[i] = 0;
+        end
+    end
+
     // RAM write command demux
 
     wire [M_RAM_SEL_WIDTH-1:0] seg_if_ram_wr_cmd_sel   = if_ram_wr_cmd_sel[M_RAM_SEL_WIDTH*n +: M_RAM_SEL_WIDTH];
@@ -357,16 +377,27 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     reg                        seg_ram_wr_cmd_ready_int_reg = 1'b0;
     wire                       seg_ram_wr_cmd_ready_int_early;
 
-    assign seg_if_ram_wr_cmd_ready = seg_ram_wr_cmd_ready_int_reg;
+    assign seg_if_ram_wr_cmd_ready = seg_ram_wr_cmd_ready_int_reg && !fifo_full;
 
-    wire [CL_PORTS-1:0] select = PORTS > 1 ? (seg_if_ram_wr_cmd_sel >> (M_RAM_SEL_WIDTH - CL_PORTS)) : 0;
+    wire [CL_PORTS-1:0] select_cmd = PORTS > 1 ? (seg_if_ram_wr_cmd_sel >> (M_RAM_SEL_WIDTH - CL_PORTS)) : 0;
 
     always @* begin
         seg_ram_wr_cmd_sel_int   = seg_if_ram_wr_cmd_sel;
         seg_ram_wr_cmd_be_int    = seg_if_ram_wr_cmd_be;
         seg_ram_wr_cmd_addr_int  = seg_if_ram_wr_cmd_addr;
         seg_ram_wr_cmd_data_int  = seg_if_ram_wr_cmd_data;
-        seg_ram_wr_cmd_valid_int = (seg_if_ram_wr_cmd_valid && seg_if_ram_wr_cmd_ready) << select;
+        seg_ram_wr_cmd_valid_int = (seg_if_ram_wr_cmd_valid && seg_if_ram_wr_cmd_ready) << select_cmd;
+    end
+
+    always @(posedge clk) begin
+        if (seg_if_ram_wr_cmd_valid && seg_if_ram_wr_cmd_ready) begin
+            fifo_sel[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= select_cmd;
+            fifo_wr_ptr_reg <= fifo_wr_ptr_reg + 1;
+        end
+
+        if (rst) begin
+            fifo_wr_ptr_reg <= 0;
+        end
     end
 
     // output datapath logic
@@ -453,6 +484,58 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
             temp_seg_ram_wr_cmd_be_reg <= seg_ram_wr_cmd_be_int;
             temp_seg_ram_wr_cmd_addr_reg <= seg_ram_wr_cmd_addr_int;
             temp_seg_ram_wr_cmd_data_reg <= seg_ram_wr_cmd_data_int;
+        end
+    end
+
+    // RAM write done mux
+
+    wire [PORTS-1:0] seg_ram_wr_done;
+    wire [PORTS-1:0] seg_ram_wr_done_sel;
+    wire seg_if_ram_wr_done;
+
+    for (p = 0; p < PORTS; p = p + 1) begin
+        assign seg_ram_wr_done[p] = ram_wr_done[p*SEG_COUNT+n];
+    end
+
+    assign if_ram_wr_done[n] = seg_if_ram_wr_done;
+
+    wire [CL_PORTS-1:0] select_resp = fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
+
+    for (p = 0; p < PORTS; p = p + 1) begin
+        reg [FIFO_ADDR_WIDTH+1-1:0] done_count_reg = 0;
+        reg done_reg = 1'b0;
+
+        assign seg_ram_wr_done_sel[p] = done_reg;
+
+        always @(posedge clk) begin
+            if (select_resp == p && (done_count_reg != 0 || seg_ram_wr_done[p])) begin
+                done_reg <= 1'b1;
+                if (!seg_ram_wr_done[p]) begin
+                    done_count_reg <= done_count_reg - 1;
+                end
+            end else begin
+                done_reg <= 1'b0;
+                if (seg_ram_wr_done[p]) begin
+                    done_count_reg <= done_count_reg + 1;
+                end
+            end
+
+            if (rst) begin
+                done_count_reg <= 0;
+                done_reg <= 1'b0;
+            end
+        end
+    end
+
+    assign seg_if_ram_wr_done = seg_ram_wr_done_sel != 0;
+
+    always @(posedge clk) begin
+        if (seg_if_ram_wr_done && !fifo_empty) begin
+            fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
+        end
+
+        if (rst) begin
+            fifo_rd_ptr_reg <= 0;
         end
     end
 

@@ -59,8 +59,6 @@ module dma_if_pcie_us_rd #
     parameter PCIE_ADDR_WIDTH = 64,
     // PCIe tag count
     parameter PCIE_TAG_COUNT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 256,
-    // PCIe tag field width
-    parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT),
     // Support PCIe extended tags
     parameter PCIE_EXT_TAG_ENABLE = (PCIE_TAG_COUNT>32),
     // Length field width
@@ -164,6 +162,7 @@ parameter AXIS_PCIE_WORD_SIZE = AXIS_PCIE_DATA_WIDTH/AXIS_PCIE_WORD_WIDTH;
 parameter OFFSET_WIDTH = $clog2(AXIS_PCIE_DATA_WIDTH/8);
 parameter RAM_OFFSET_WIDTH = $clog2(SEG_COUNT*SEG_DATA_WIDTH/8);
 
+parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT);
 parameter OP_TAG_WIDTH = $clog2(OP_TABLE_SIZE);
 parameter OP_TABLE_READ_COUNT_WIDTH = PCIE_TAG_WIDTH+1;
 

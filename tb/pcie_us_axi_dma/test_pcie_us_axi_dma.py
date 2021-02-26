@@ -312,11 +312,10 @@ def test_pcie_us_axi_dma(request, axis_pcie_data_width):
     parameters['AXI_MAX_BURST_LEN'] = 256
     parameters['PCIE_ADDR_WIDTH'] = 64
     parameters['PCIE_TAG_COUNT'] = 64 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 256
-    parameters['PCIE_TAG_WIDTH'] = (parameters['PCIE_TAG_COUNT']-1).bit_length()
     parameters['PCIE_EXT_TAG_ENABLE'] = int(parameters['PCIE_TAG_COUNT'] > 32)
     parameters['LEN_WIDTH'] = 20
     parameters['TAG_WIDTH'] = 8
-    parameters['READ_OP_TABLE_SIZE'] = 2**min(parameters['AXI_ID_WIDTH'], parameters['PCIE_TAG_WIDTH'])
+    parameters['READ_OP_TABLE_SIZE'] = min(2**parameters['AXI_ID_WIDTH'], parameters['PCIE_TAG_COUNT'])
     parameters['READ_TX_LIMIT'] = 2**(parameters['RQ_SEQ_NUM_WIDTH']-1)
     parameters['READ_TX_FC_ENABLE'] = 1
     parameters['WRITE_OP_TABLE_SIZE'] = 2**(parameters['RQ_SEQ_NUM_WIDTH']-1)

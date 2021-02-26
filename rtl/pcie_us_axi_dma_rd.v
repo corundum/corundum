@@ -57,8 +57,6 @@ module pcie_us_axi_dma_rd #
     parameter PCIE_ADDR_WIDTH = 64,
     // PCIe tag count
     parameter PCIE_TAG_COUNT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 256,
-    // PCIe tag field width
-    parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT),
     // Support PCIe extended tags
     parameter PCIE_EXT_TAG_ENABLE = (PCIE_TAG_COUNT>32),
     // Length field width
@@ -66,7 +64,7 @@ module pcie_us_axi_dma_rd #
     // Tag field width
     parameter TAG_WIDTH = 8,
     // Operation table size
-    parameter OP_TABLE_SIZE = 2**(AXI_ID_WIDTH < PCIE_TAG_WIDTH ? AXI_ID_WIDTH : PCIE_TAG_WIDTH),
+    parameter OP_TABLE_SIZE = (2**AXI_ID_WIDTH < PCIE_TAG_COUNT) ? 2**AXI_ID_WIDTH : PCIE_TAG_COUNT,
     // In-flight transmit limit
     parameter TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
     // Transmit flow control
@@ -175,6 +173,7 @@ parameter AXIS_PCIE_WORD_SIZE = AXIS_PCIE_DATA_WIDTH/AXIS_PCIE_WORD_WIDTH;
 parameter OFFSET_WIDTH = $clog2(AXIS_PCIE_DATA_WIDTH/8);
 parameter CYCLE_COUNT_WIDTH = 13-AXI_BURST_SIZE;
 
+parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT);
 parameter OP_TAG_WIDTH = $clog2(OP_TABLE_SIZE);
 parameter OP_TABLE_READ_COUNT_WIDTH = PCIE_TAG_WIDTH+1;
 parameter OP_TABLE_WRITE_COUNT_WIDTH = LEN_WIDTH;

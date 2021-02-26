@@ -460,12 +460,9 @@ pcie_tag_manager_inst (
 );
 
 // operation tag management
-wire [OP_TAG_WIDTH-1:0] op_table_start_ptr;
-wire op_table_start_ptr_valid;
+reg [OP_TAG_WIDTH-1:0] op_table_start_ptr;
 reg [TAG_WIDTH-1:0] op_table_start_tag;
 reg op_table_start_en;
-reg [OP_TAG_WIDTH-1:0] op_table_finish_ptr;
-reg op_table_finish_en;
 reg [OP_TAG_WIDTH-1:0] op_table_read_start_ptr;
 reg op_table_read_start_commit;
 reg op_table_read_start_en;
@@ -477,7 +474,6 @@ reg op_table_write_start_en;
 reg [OP_TAG_WIDTH-1:0] op_table_write_finish_ptr;
 reg op_table_write_finish_en;
 
-reg [2**OP_TAG_WIDTH-1:0] op_table_active = 0;
 reg [TAG_WIDTH-1:0] op_table_tag [2**OP_TAG_WIDTH-1:0];
 reg op_table_init [2**OP_TAG_WIDTH-1:0];
 reg op_table_read_init [2**OP_TAG_WIDTH-1:0];
@@ -490,16 +486,12 @@ reg op_table_write_commit [2**OP_TAG_WIDTH-1:0];
 reg [OP_TABLE_WRITE_COUNT_WIDTH-1:0] op_table_write_count_start [2**OP_TAG_WIDTH-1:0];
 reg [OP_TABLE_WRITE_COUNT_WIDTH-1:0] op_table_write_count_finish [2**OP_TAG_WIDTH-1:0];
 
-priority_encoder #(
-    .WIDTH(2**OP_TAG_WIDTH),
-    .LSB_PRIORITY("HIGH")
-)
-op_table_start_ptr_enc_inst (
-    .input_unencoded(~op_table_active),
-    .output_valid(op_table_start_ptr_valid),
-    .output_encoded(op_table_start_ptr),
-    .output_unencoded()
-);
+reg [OP_TAG_WIDTH+1-1:0] op_tag_fifo_init_reg = 0, op_tag_fifo_init_next;
+reg [OP_TAG_WIDTH+1-1:0] op_tag_fifo_wr_ptr_reg = 0;
+reg [OP_TAG_WIDTH+1-1:0] op_tag_fifo_rd_ptr_reg = 0, op_tag_fifo_rd_ptr_next;
+reg [OP_TAG_WIDTH-1:0] op_tag_fifo_mem [2**OP_TAG_WIDTH-1:0];
+reg [OP_TAG_WIDTH-1:0] op_tag_fifo_wr_tag;
+reg op_tag_fifo_we;
 
 integer i;
 
@@ -543,12 +535,15 @@ always @* begin
     inc_active_tx = 1'b0;
 
     new_tag_ready = 1'b0;
+    op_table_start_ptr = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
     op_table_start_tag = s_axis_read_desc_tag;
     op_table_start_en = 1'b0;
 
     op_table_read_start_ptr = tlp_cmd_op_tag_reg;
     op_table_read_start_commit = 1'b0;
     op_table_read_start_en = 1'b0;
+
+    op_tag_fifo_rd_ptr_next = op_tag_fifo_rd_ptr_reg;
 
     // TLP size computation
     if (req_op_count_reg + req_pcie_addr_reg[1:0] <= {max_read_request_size_dw_reg, 2'b00}) begin
@@ -667,7 +662,7 @@ always @* begin
     // TLP segmentation and request generation
     case (req_state_reg)
         REQ_STATE_IDLE: begin
-            s_axis_read_desc_ready_next = enable && !tlp_cmd_valid_reg && op_table_start_ptr_valid;
+            s_axis_read_desc_ready_next = enable && !tlp_cmd_valid_reg && (op_tag_fifo_rd_ptr_reg != op_tag_fifo_wr_ptr_reg);
 
             if (s_axis_read_desc_ready && s_axis_read_desc_valid) begin
                 s_axis_read_desc_ready_next = 1'b0;
@@ -676,8 +671,10 @@ always @* begin
                 req_op_count_next = s_axis_read_desc_len;
                 tlp_cmd_tag_next = s_axis_read_desc_tag;
                 tlp_cmd_op_tag_next = op_table_start_ptr;
+                op_table_start_ptr = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
                 op_table_start_tag = s_axis_read_desc_tag;
                 op_table_start_en = 1'b1;
+                op_tag_fifo_rd_ptr_next = op_tag_fifo_rd_ptr_reg+1;
                 req_state_next = REQ_STATE_START;
             end else begin
                 req_state_next = REQ_STATE_IDLE;
@@ -768,9 +765,6 @@ always @* begin
 
     s_axis_rc_tready_next = 1'b0;
 
-    m_axis_read_desc_status_tag_next = m_axis_read_desc_status_tag_reg;
-    m_axis_read_desc_status_valid_next = 1'b0;
-
     lower_addr_next = lower_addr_reg;
     byte_count_next = byte_count_reg;
     error_code_next = error_code_reg;
@@ -806,15 +800,11 @@ always @* begin
     status_error_cor_next = 1'b0;
     status_error_uncor_next = 1'b0;
 
-    op_table_finish_ptr = m_axi_bid;
-    op_table_finish_en = 1'b0;
     op_table_read_finish_ptr = op_tag_reg;
     op_table_read_finish_en = 1'b0;
     op_table_write_start_ptr = op_tag_reg;
     op_table_write_start_commit = 1'b0;
     op_table_write_start_en = 1'b0;
-    op_table_write_finish_ptr = m_axi_bid;
-    op_table_write_finish_en = 1'b0;
 
     // TLP response handling and AXI operation generation
     case (tlp_state_reg)
@@ -1285,20 +1275,35 @@ always @* begin
         end
     endcase
 
-    m_axi_bready_next = op_table_active != 0;
+    m_axis_read_desc_status_tag_next = op_table_tag[op_table_write_finish_ptr];
+    m_axis_read_desc_status_valid_next = 1'b0;
+
+    m_axi_bready_next = 1'b1;
+
+    op_table_write_finish_ptr = m_axi_bid;
+    op_table_write_finish_en = 1'b0;
+
+    op_tag_fifo_init_next = op_tag_fifo_init_reg;
+    op_tag_fifo_wr_tag = m_axi_bid;
+    op_tag_fifo_we = 1'b0;
 
     if (m_axi_bready && m_axi_bvalid) begin
-        op_table_finish_ptr = m_axi_bid;
-
         op_table_write_finish_ptr = m_axi_bid;
         op_table_write_finish_en = 1'b1;
+
+        op_tag_fifo_wr_tag = m_axi_bid;
 
         m_axis_read_desc_status_tag_next = op_table_tag[op_table_write_finish_ptr];
 
         if (op_table_write_commit[op_table_write_finish_ptr] && (op_table_write_count_start[op_table_write_finish_ptr] == op_table_write_count_finish[op_table_write_finish_ptr])) begin
-            op_table_finish_en = 1'b1;
+            op_tag_fifo_we = 1'b1;
             m_axis_read_desc_status_valid_next = 1'b1;
         end
+    end else if (op_tag_fifo_init_reg < 2**OP_TAG_WIDTH) begin
+        // initialize FIFO
+        op_tag_fifo_init_next = op_tag_fifo_init_reg+1;
+        op_tag_fifo_wr_tag = op_tag_fifo_init_reg;
+        op_tag_fifo_we = 1'b1;
     end
 end
 
@@ -1403,13 +1408,8 @@ always @(posedge clk) begin
     end
 
     if (op_table_start_en) begin
-        op_table_active[op_table_start_ptr] <= 1'b1;
         op_table_tag[op_table_start_ptr] <= op_table_start_tag;
         op_table_init[op_table_start_ptr] <= !op_table_init[op_table_start_ptr];
-    end
-
-    if (op_table_finish_en) begin
-        op_table_active[op_table_finish_ptr] <= 1'b0;
     end
 
     if (op_table_read_start_en) begin
@@ -1442,6 +1442,13 @@ always @(posedge clk) begin
         op_table_write_count_finish[op_table_write_finish_ptr] <= op_table_write_count_finish[op_table_write_finish_ptr] + 1;
     end
 
+    op_tag_fifo_init_reg <= op_tag_fifo_init_next;
+    if (op_tag_fifo_we) begin
+        op_tag_fifo_mem[op_tag_fifo_wr_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_tag_fifo_wr_tag;
+        op_tag_fifo_wr_ptr_reg <= op_tag_fifo_wr_ptr_reg + 1;
+    end
+    op_tag_fifo_rd_ptr_reg <= op_tag_fifo_rd_ptr_next;
+
     if (rst) begin
         req_state_reg <= REQ_STATE_IDLE;
         tlp_state_reg <= TLP_STATE_IDLE;
@@ -1457,7 +1464,10 @@ always @(posedge clk) begin
         active_tx_count_av_reg = 1'b1;
 
         tag_table_we_tlp_reg <= 1'b0;
-        op_table_active <= 0;
+
+        op_tag_fifo_init_reg <= 0;
+        op_tag_fifo_wr_ptr_reg <= 0;
+        op_tag_fifo_rd_ptr_reg <= 0;
 
         status_error_cor_reg <= 1'b0;
         status_error_uncor_reg <= 1'b0;

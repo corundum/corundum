@@ -267,7 +267,6 @@ def test_dma_if_pcie_us_rd(request, axis_pcie_data_width, pcie_offset):
     parameters['RAM_ADDR_WIDTH'] = ram_addr_width
     parameters['PCIE_ADDR_WIDTH'] = 64
     parameters['PCIE_TAG_COUNT'] = 64 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 256
-    parameters['PCIE_EXT_TAG_ENABLE'] = int(parameters['PCIE_TAG_COUNT'] > 32)
     parameters['LEN_WIDTH'] = 20
     parameters['TAG_WIDTH'] = 8
     parameters['OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']

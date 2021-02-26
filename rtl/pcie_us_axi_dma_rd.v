@@ -57,8 +57,6 @@ module pcie_us_axi_dma_rd #
     parameter PCIE_ADDR_WIDTH = 64,
     // PCIe tag count
     parameter PCIE_TAG_COUNT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 256,
-    // Support PCIe extended tags
-    parameter PCIE_EXT_TAG_ENABLE = (PCIE_TAG_COUNT>32),
     // Length field width
     parameter LEN_WIDTH = 20,
     // Tag field width
@@ -440,7 +438,7 @@ wire [PCIE_TAG_COUNT-1:0] active_tags;
 pcie_tag_manager #(
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .PCIE_TAG_WIDTH(PCIE_TAG_WIDTH),
-    .PCIE_EXT_TAG_ENABLE(PCIE_EXT_TAG_ENABLE)
+    .PCIE_EXT_TAG_ENABLE(PCIE_TAG_COUNT>32)
 )
 pcie_tag_manager_inst (
     .clk(clk),

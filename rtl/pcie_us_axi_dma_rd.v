@@ -472,13 +472,14 @@ reg [OP_TAG_WIDTH-1:0] op_table_write_finish_ptr;
 reg op_table_write_finish_en;
 
 reg [TAG_WIDTH-1:0] op_table_tag [2**OP_TAG_WIDTH-1:0];
-reg op_table_init [2**OP_TAG_WIDTH-1:0];
-reg op_table_read_init [2**OP_TAG_WIDTH-1:0];
+reg op_table_read_init_a [2**OP_TAG_WIDTH-1:0];
+reg op_table_read_init_b [2**OP_TAG_WIDTH-1:0];
 reg op_table_read_commit [2**OP_TAG_WIDTH-1:0];
 reg op_table_read_error [2**OP_TAG_WIDTH-1:0];
 reg [OP_TABLE_READ_COUNT_WIDTH-1:0] op_table_read_count_start [2**OP_TAG_WIDTH-1:0];
 reg [OP_TABLE_READ_COUNT_WIDTH-1:0] op_table_read_count_finish [2**OP_TAG_WIDTH-1:0];
-reg op_table_write_init [2**OP_TAG_WIDTH-1:0];
+reg op_table_write_init_a [2**OP_TAG_WIDTH-1:0];
+reg op_table_write_init_b [2**OP_TAG_WIDTH-1:0];
 reg op_table_write_commit [2**OP_TAG_WIDTH-1:0];
 reg [OP_TABLE_WRITE_COUNT_WIDTH-1:0] op_table_write_count_start [2**OP_TAG_WIDTH-1:0];
 reg [OP_TABLE_WRITE_COUNT_WIDTH-1:0] op_table_write_count_finish [2**OP_TAG_WIDTH-1:0];
@@ -495,12 +496,13 @@ integer i;
 initial begin
     for (i = 0; i < 2**OP_TAG_WIDTH; i = i + 1) begin
         op_table_tag[i] = 0;
-        op_table_init[i] = 0;
-        op_table_read_init[i] = 0;
+        op_table_read_init_a[i] = 0;
+        op_table_read_init_b[i] = 0;
         op_table_read_commit[i] = 0;
         op_table_read_count_start[i] = 0;
         op_table_read_count_finish[i] = 0;
-        op_table_write_init[i] = 0;
+        op_table_write_init_a[i] = 0;
+        op_table_write_init_b[i] = 0;
         op_table_write_commit[i] = 0;
         op_table_write_count_start[i] = 0;
         op_table_write_count_finish[i] = 0;
@@ -1406,13 +1408,14 @@ always @(posedge clk) begin
 
     if (op_table_start_en) begin
         op_table_tag[op_table_start_ptr] <= op_table_start_tag;
-        op_table_init[op_table_start_ptr] <= !op_table_init[op_table_start_ptr];
+        op_table_read_init_a[op_table_start_ptr] <= !op_table_read_init_b[op_table_start_ptr];
+        op_table_write_init_a[op_table_start_ptr] <= !op_table_write_init_b[op_table_start_ptr];
     end
 
     if (op_table_read_start_en) begin
-        op_table_read_init[op_table_read_start_ptr] <= op_table_init[op_table_read_start_ptr];
+        op_table_read_init_b[op_table_read_start_ptr] <= op_table_read_init_a[op_table_read_start_ptr];
         op_table_read_commit[op_table_read_start_ptr] <= op_table_read_start_commit;
-        if (op_table_read_init[op_table_read_start_ptr] != op_table_init[op_table_read_start_ptr]) begin
+        if (op_table_read_init_b[op_table_read_start_ptr] != op_table_read_init_a[op_table_read_start_ptr]) begin
             op_table_read_count_start[op_table_read_start_ptr] <= op_table_read_count_finish[op_table_read_start_ptr];
         end else begin
             op_table_read_count_start[op_table_read_start_ptr] <= op_table_read_count_start[op_table_read_start_ptr] + 1;
@@ -1424,9 +1427,9 @@ always @(posedge clk) begin
     end
 
     if (op_table_write_start_en) begin
-        op_table_write_init[op_table_write_start_ptr] <= op_table_init[op_table_write_start_ptr];
+        op_table_write_init_b[op_table_write_start_ptr] <= op_table_write_init_a[op_table_write_start_ptr];
         op_table_write_commit[op_table_write_start_ptr] <= op_table_write_start_commit;
-        if (op_table_write_init[op_table_write_start_ptr] != op_table_init[op_table_write_start_ptr]) begin
+        if (op_table_write_init_b[op_table_write_start_ptr] != op_table_write_init_a[op_table_write_start_ptr]) begin
             op_table_write_count_start[op_table_write_start_ptr] <= op_table_write_count_finish[op_table_write_start_ptr];
         end else begin
             op_table_write_count_start[op_table_write_start_ptr] <= op_table_write_count_start[op_table_write_start_ptr] + 1;

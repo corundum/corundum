@@ -304,8 +304,6 @@ localparam [1:0]
 reg [1:0] tlp_state_reg = TLP_STATE_IDLE, tlp_state_next;
 
 // datapath control signals
-reg tlp_cmd_ready;
-
 reg last_cycle;
 
 reg [3:0] first_be;
@@ -315,9 +313,11 @@ reg req_last_tlp;
 reg [PCIE_ADDR_WIDTH-1:0] req_pcie_addr;
 
 reg [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, req_pcie_addr_next;
-reg [RAM_ADDR_WIDTH-1:0] req_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, req_addr_next;
+reg [RAM_SEL_WIDTH-1:0] req_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, req_ram_sel_next;
+reg [RAM_ADDR_WIDTH-1:0] req_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, req_ram_addr_next;
 reg [LEN_WIDTH-1:0] req_op_count_reg = {LEN_WIDTH{1'b0}}, req_op_count_next;
 reg [12:0] req_tlp_count_reg = 13'd0, req_tlp_count_next;
+reg [OP_TAG_WIDTH-1:0] req_op_tag_reg = {OP_TAG_WIDTH{1'b0}}, req_op_tag_next;
 
 reg [11:0] lower_addr_reg = 12'd0, lower_addr_next;
 reg [12:0] byte_count_reg = 13'd0, byte_count_next;
@@ -325,7 +325,6 @@ reg [3:0] error_code_reg = 4'd0, error_code_next;
 reg [RAM_SEL_WIDTH-1:0] ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] addr_reg = {RAM_ADDR_WIDTH{1'b0}}, addr_next;
 reg [RAM_ADDR_WIDTH-1:0] addr_delay_reg = {RAM_ADDR_WIDTH{1'b0}}, addr_delay_next;
-reg addr_valid_reg = 1'b0, addr_valid_next;
 reg [9:0] op_dword_count_reg = 10'd0, op_dword_count_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
 reg [SEG_COUNT-1:0] ram_mask_reg = {SEG_COUNT{1'b0}}, ram_mask_next;
@@ -344,13 +343,6 @@ reg [OFFSET_WIDTH-1:0] offset_reg = {OFFSET_WIDTH{1'b0}}, offset_next;
 
 reg [AXIS_PCIE_DATA_WIDTH-1:0] rc_tdata_int_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}}, rc_tdata_int_next;
 reg rc_tvalid_int_reg = 1'b0, rc_tvalid_int_next;
-
-reg [RAM_SEL_WIDTH-1:0] tlp_cmd_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, tlp_cmd_ram_sel_next;
-reg [RAM_ADDR_WIDTH-1:0] tlp_cmd_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, tlp_cmd_addr_next;
-reg [OP_TAG_WIDTH-1:0] tlp_cmd_op_tag_reg = {OP_TAG_WIDTH{1'b0}}, tlp_cmd_op_tag_next;
-reg [PCIE_TAG_WIDTH-1:0] tlp_cmd_pcie_tag_reg = {PCIE_TAG_WIDTH{1'b0}}, tlp_cmd_pcie_tag_next;
-reg tlp_cmd_last_reg = 1'b0, tlp_cmd_last_next;
-reg tlp_cmd_valid_reg = 1'b0, tlp_cmd_valid_next;
 
 reg [127:0] tlp_header_data;
 reg [AXIS_PCIE_RQ_USER_WIDTH-1:0] tlp_tuser;
@@ -419,12 +411,16 @@ assign status_error_cor = status_error_cor_reg;
 assign status_error_uncor = status_error_uncor_reg;
 
 // PCIe tag management
-reg [RAM_SEL_WIDTH-1:0] pcie_tag_table_sel[(2**PCIE_TAG_WIDTH)-1:0];
-reg [RAM_ADDR_WIDTH-1:0] pcie_tag_table_addr[(2**PCIE_TAG_WIDTH)-1:0];
-reg [OP_TAG_WIDTH-1:0] pcie_tag_table_op_tag[(2**PCIE_TAG_WIDTH)-1:0];
-reg pcie_tag_table_we_tlp_reg = 1'b0, pcie_tag_table_we_tlp_next;
+reg [PCIE_TAG_WIDTH-1:0] pcie_tag_table_start_ptr;
+reg [RAM_SEL_WIDTH-1:0] pcie_tag_table_start_ram_sel;
+reg [RAM_ADDR_WIDTH-1:0] pcie_tag_table_start_ram_addr;
+reg [OP_TAG_WIDTH-1:0] pcie_tag_table_start_op_tag;
+reg pcie_tag_table_start_en;
 
-reg pcie_tag_table_we_req;
+reg [RAM_SEL_WIDTH-1:0] pcie_tag_table_ram_sel[(2**PCIE_TAG_WIDTH)-1:0];
+reg [RAM_ADDR_WIDTH-1:0] pcie_tag_table_ram_addr[(2**PCIE_TAG_WIDTH)-1:0];
+reg [OP_TAG_WIDTH-1:0] pcie_tag_table_op_tag[(2**PCIE_TAG_WIDTH)-1:0];
+
 
 wire [PCIE_TAG_WIDTH-1:0] new_tag;
 wire new_tag_valid;
@@ -490,7 +486,8 @@ initial begin
     end
 
     for (i = 0; i < 2**PCIE_TAG_WIDTH; i = i + 1) begin
-        pcie_tag_table_addr[i] = 0;
+        pcie_tag_table_ram_sel[i] = 0;
+        pcie_tag_table_ram_addr[i] = 0;
         pcie_tag_table_op_tag[i] = 0;
     end
 end
@@ -501,25 +498,21 @@ always @* begin
     s_axis_read_desc_ready_next = 1'b0;
 
     req_pcie_addr_next = req_pcie_addr_reg;
-    req_addr_next = req_addr_reg;
+    req_ram_sel_next = req_ram_sel_reg;
+    req_ram_addr_next = req_ram_addr_reg;
     req_op_count_next = req_op_count_reg;
     req_tlp_count_next = req_tlp_count_reg;
-
-    tlp_cmd_ram_sel_next = tlp_cmd_ram_sel_reg;
-    tlp_cmd_addr_next = tlp_cmd_addr_reg;
-    tlp_cmd_op_tag_next = tlp_cmd_op_tag_reg;
-    tlp_cmd_pcie_tag_next = tlp_cmd_pcie_tag_reg;
-    tlp_cmd_last_next = tlp_cmd_last_reg;
-    tlp_cmd_valid_next = tlp_cmd_valid_reg && !tlp_cmd_ready;
+    req_op_tag_next = req_op_tag_reg;
 
     inc_active_tx = 1'b0;
 
     new_tag_ready = 1'b0;
+
     op_table_start_ptr = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
     op_table_start_tag = s_axis_read_desc_tag;
     op_table_start_en = 1'b0;
 
-    op_table_read_start_ptr = tlp_cmd_op_tag_reg;
+    op_table_read_start_ptr = req_op_tag_reg;
     op_table_read_start_commit = 1'b0;
     op_table_read_start_en = 1'b0;
 
@@ -533,7 +526,7 @@ always @* begin
             req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
             dword_count = 11'h400 - req_pcie_addr_reg[11:2];
             req_last_tlp = (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) & 12'hfff) == 0;
-            // optimized req_pcie_addr = req_addr_reg + req_tlp_count_next
+            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12]+1;
             req_pcie_addr[11:0] = 12'd0;
         end else begin
@@ -541,7 +534,7 @@ always @* begin
             req_tlp_count_next = req_op_count_reg;
             dword_count = (req_op_count_reg + req_pcie_addr_reg[1:0] + 3) >> 2;
             req_last_tlp = 1'b1;
-            // optimized req_pcie_addr = req_addr_reg + req_tlp_count_next
+            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12];
             req_pcie_addr[11:0] = req_pcie_addr_reg[11:0] + req_op_count_reg;
         end
@@ -552,7 +545,7 @@ always @* begin
             req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
             dword_count = 11'h400 - req_pcie_addr_reg[11:2];
             req_last_tlp = 1'b0;
-            // optimized req_pcie_addr = req_addr_reg + req_tlp_count_next
+            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12]+1;
             req_pcie_addr[11:0] = 12'd0;
         end else begin
@@ -560,11 +553,17 @@ always @* begin
             req_tlp_count_next = {max_read_request_size_dw_reg, 2'b00} - req_pcie_addr_reg[1:0];
             dword_count = max_read_request_size_dw_reg;
             req_last_tlp = 1'b0;
-            // optimized req_pcie_addr = req_addr_reg + req_tlp_count_next
+            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12];
             req_pcie_addr[11:0] = {req_pcie_addr_reg[11:2] + max_read_request_size_dw_reg, 2'b00};
         end
     end
+
+    pcie_tag_table_start_ptr = new_tag;
+    pcie_tag_table_start_ram_sel = req_ram_sel_reg;
+    pcie_tag_table_start_ram_addr = req_ram_addr_reg + req_tlp_count_next;
+    pcie_tag_table_start_op_tag = req_op_tag_reg;
+    pcie_tag_table_start_en = 1'b0;
 
     first_be = 4'b1111 << req_pcie_addr_reg[1:0];
     last_be = 4'b1111 >> (3 - ((req_pcie_addr_reg[1:0] + req_tlp_count_next[1:0] - 1) & 3));
@@ -642,15 +641,15 @@ always @* begin
     // TLP segmentation and request generation
     case (req_state_reg)
         REQ_STATE_IDLE: begin
-            s_axis_read_desc_ready_next = enable && !tlp_cmd_valid_reg && (op_tag_fifo_rd_ptr_reg != op_tag_fifo_wr_ptr_reg);
+            s_axis_read_desc_ready_next = enable && (op_tag_fifo_rd_ptr_reg != op_tag_fifo_wr_ptr_reg);
 
             if (s_axis_read_desc_ready && s_axis_read_desc_valid) begin
                 s_axis_read_desc_ready_next = 1'b0;
-                tlp_cmd_ram_sel_next = s_axis_read_desc_ram_sel;
+                req_ram_sel_next = s_axis_read_desc_ram_sel;
                 req_pcie_addr_next = s_axis_read_desc_pcie_addr;
-                req_addr_next = s_axis_read_desc_ram_addr;
+                req_ram_addr_next = s_axis_read_desc_ram_addr;
                 req_op_count_next = s_axis_read_desc_len;
-                tlp_cmd_op_tag_next = op_table_start_ptr;
+                req_op_tag_next = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
                 op_table_start_ptr = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
                 op_table_start_tag = s_axis_read_desc_tag;
                 op_table_start_en = 1'b1;
@@ -661,31 +660,32 @@ always @* begin
             end
         end
         REQ_STATE_START: begin
-            if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+            if (m_axis_rq_tready_int_reg && new_tag_valid && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                 m_axis_rq_tvalid_int = 1'b1;
 
                 inc_active_tx = 1'b1;
 
                 if (AXIS_PCIE_DATA_WIDTH > 64) begin
                     req_pcie_addr_next = req_pcie_addr;
-                    req_addr_next = req_addr_reg + req_tlp_count_next;
+                    req_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
                     req_op_count_next = req_op_count_reg - req_tlp_count_next;
 
                     new_tag_ready = 1'b1;
 
-                    tlp_cmd_addr_next = req_addr_reg;
-                    tlp_cmd_pcie_tag_next = new_tag;
-                    tlp_cmd_last_next = req_last_tlp;
-                    tlp_cmd_valid_next = 1'b1;
+                    pcie_tag_table_start_ptr = new_tag;
+                    pcie_tag_table_start_ram_sel = req_ram_sel_reg;
+                    pcie_tag_table_start_ram_addr = req_ram_addr_reg + req_tlp_count_next;
+                    pcie_tag_table_start_op_tag = req_op_tag_reg;
+                    pcie_tag_table_start_en = 1'b1;
 
-                    op_table_read_start_ptr = tlp_cmd_op_tag_reg;
+                    op_table_read_start_ptr = req_op_tag_reg;
                     op_table_read_start_commit = req_last_tlp;
                     op_table_read_start_en = 1'b1;
 
                     if (!req_last_tlp) begin
                         req_state_next = REQ_STATE_START;
                     end else begin
-                        s_axis_read_desc_ready_next = 1'b0;
+                        s_axis_read_desc_ready_next = enable && (op_tag_fifo_rd_ptr_reg != op_tag_fifo_wr_ptr_reg);
                         req_state_next = REQ_STATE_IDLE;
                     end
                 end else begin
@@ -701,28 +701,29 @@ always @* begin
                 m_axis_rq_tkeep_int = 2'b11;
                 m_axis_rq_tlast_int = 1'b1;
 
-                if (m_axis_rq_tready_int_reg && !tlp_cmd_valid_reg && new_tag_valid) begin
+                if (m_axis_rq_tready_int_reg && new_tag_valid) begin
                     req_pcie_addr_next = req_pcie_addr;
-                    req_addr_next = req_addr_reg + req_tlp_count_next;
+                    req_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
                     req_op_count_next = req_op_count_reg - req_tlp_count_next;
 
                     new_tag_ready = 1'b1;
 
                     m_axis_rq_tvalid_int = 1'b1;
 
-                    tlp_cmd_addr_next = req_addr_reg;
-                    tlp_cmd_pcie_tag_next = new_tag;
-                    tlp_cmd_last_next = req_last_tlp;
-                    tlp_cmd_valid_next = 1'b1;
+                    pcie_tag_table_start_ptr = new_tag;
+                    pcie_tag_table_start_ram_sel = req_ram_sel_reg;
+                    pcie_tag_table_start_ram_addr = req_ram_addr_reg + req_tlp_count_next;
+                    pcie_tag_table_start_op_tag = req_op_tag_reg;
+                    pcie_tag_table_start_en = 1'b1;
 
-                    op_table_read_start_ptr = tlp_cmd_op_tag_reg;
+                    op_table_read_start_ptr = req_op_tag_reg;
                     op_table_read_start_commit = req_last_tlp;
                     op_table_read_start_en = 1'b1;
 
                     if (!req_last_tlp) begin
                         req_state_next = REQ_STATE_START;
                     end else begin
-                        s_axis_read_desc_ready_next = 1'b0;
+                        s_axis_read_desc_ready_next = enable && (op_tag_fifo_rd_ptr_reg != op_tag_fifo_wr_ptr_reg);
                         req_state_next = REQ_STATE_IDLE;
                     end
                 end else begin
@@ -738,8 +739,6 @@ always @* begin
 
     last_cycle = 1'b0;
 
-    pcie_tag_table_we_tlp_next = 1'b0;
-
     s_axis_rc_tready_next = 1'b0;
 
     lower_addr_next = lower_addr_reg;
@@ -748,7 +747,6 @@ always @* begin
     ram_sel_next = ram_sel_reg;
     addr_next = addr_reg;
     addr_delay_next = addr_delay_reg;
-    addr_valid_next = addr_valid_reg;
     op_count_next = op_count_reg;
     ram_mask_next = ram_mask_reg;
     ram_mask_0_next = ram_mask_0_reg;
@@ -816,8 +814,8 @@ always @* begin
                     //s_axis_rc_tdata[63:48]; // requester ID
                     pcie_tag_next = s_axis_rc_tdata[71:64]; // tag
                     //s_axis_rc_tdata[87:72]; // completer ID
-                    //s_axis_rc_tdata[91:89]; // attr
-                    //s_axis_rc_tdata[94:92]; // tc
+                    //s_axis_rc_tdata[91:89]; // tc
+                    //s_axis_rc_tdata[94:92]; // attr
 
                     // tuser fields
                     //s_axis_rc_tuser[31:0]; // byte enables
@@ -828,11 +826,8 @@ always @* begin
                     //s_axis_rc_tuser[42]; // discontinue
                     //s_axis_rc_tuser[74:43]; // parity
 
-                    ram_sel_next = pcie_tag_table_sel[pcie_tag_next];
-                    if (!addr_valid_reg || pcie_tag_reg != pcie_tag_next) begin
-                        // current RAM address not valid, so read it from table
-                        addr_next = pcie_tag_table_addr[pcie_tag_next];
-                    end
+                    ram_sel_next = pcie_tag_table_ram_sel[pcie_tag_next];
+                    addr_next = pcie_tag_table_ram_addr[pcie_tag_next] - byte_count_next;
 
                     offset_next = addr_next[OFFSET_WIDTH-1:0] - (12+lower_addr_next[1:0]);
 
@@ -897,7 +892,6 @@ always @* begin
 
                     if (active_tags[pcie_tag_next] && error_code_next == RC_ERROR_NORMAL_TERMINATION) begin
                         // no error
-                        addr_valid_next = !final_cpl_next;
                         rc_tdata_int_next = s_axis_rc_tdata;
                         rc_tvalid_int_next = 1'b1;
 
@@ -912,9 +906,6 @@ always @* begin
                                 // release tag
                                 finish_tag_next = 1'b1;
                                 status_fifo_finish_next = 1'b1;
-                            end else begin
-                                // more completions to come, store current address
-                                pcie_tag_table_we_tlp_next = 1'b1;
                             end
                             tlp_state_next = TLP_STATE_IDLE;
                         end else begin
@@ -925,7 +916,6 @@ always @* begin
                         // Handle as malformed TLP (2.3.2)
                         // drop TLP and report uncorrectable error
                         status_error_uncor_next = 1'b1;
-                        addr_valid_next = 1'b0;
                         if (s_axis_rc_tlast) begin
                             tlp_state_next = TLP_STATE_IDLE;
                         end else begin
@@ -937,7 +927,6 @@ always @* begin
                         // Handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
                         // drop TLP and report correctable error
                         status_error_cor_next = 1'b1;
-                        addr_valid_next = 1'b0;
                         if (s_axis_rc_tlast) begin
                             tlp_state_next = TLP_STATE_IDLE;
                         end else begin
@@ -959,7 +948,6 @@ always @* begin
                             default: status_error_uncor_next = 1'b1;
                         endcase
                         // last request in current transfer
-                        addr_valid_next = 1'b0;
 
                         // release tag
                         finish_tag_next = 1'b1;
@@ -1036,11 +1024,8 @@ always @* begin
                 //s_axis_rc_tdata[27:25]; // attr
                 //s_axis_rc_tdata[30:28]; // tc
 
-                ram_sel_next = pcie_tag_table_sel[pcie_tag_next];
-                if (!addr_valid_reg || pcie_tag_reg != pcie_tag_next) begin
-                    // current AXI address not valid, so read it from table
-                    addr_next = pcie_tag_table_addr[pcie_tag_next];
-                end
+                ram_sel_next = pcie_tag_table_ram_sel[pcie_tag_next];
+                addr_next = pcie_tag_table_ram_addr[pcie_tag_next] - byte_count_reg;
 
                 offset_next = addr_next[OFFSET_WIDTH-1:0] - (4+lower_addr_reg[1:0]);
 
@@ -1075,7 +1060,6 @@ always @* begin
 
                 if (active_tags[pcie_tag_next] && error_code_reg == RC_ERROR_NORMAL_TERMINATION) begin
                     // no error
-                    addr_valid_next = !final_cpl_next;
                     rc_tdata_int_next = s_axis_rc_tdata;
                     rc_tvalid_int_next = 1'b1;
 
@@ -1090,9 +1074,6 @@ always @* begin
                             // release tag
                             finish_tag_next = 1'b1;
                             status_fifo_finish_next = 1'b1;
-                        end else begin
-                            // more completions to come, store current address
-                            pcie_tag_table_we_tlp_next = 1'b1;
                         end
                         s_axis_rc_tready_next = 1'b1;
                         tlp_state_next = TLP_STATE_IDLE;
@@ -1104,7 +1085,6 @@ always @* begin
                     // Handle as malformed TLP (2.3.2)
                     // drop TLP and report uncorrectable error
                     status_error_uncor_next = 1'b1;
-                    addr_valid_next = 1'b0;
                     s_axis_rc_tready_next = 1'b1;
                     if (s_axis_rc_tlast) begin
                         tlp_state_next = TLP_STATE_IDLE;
@@ -1116,7 +1096,6 @@ always @* begin
                     // Handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
                     // drop TLP and report correctable error
                     status_error_cor_next = 1'b1;
-                    addr_valid_next = 1'b0;
                     s_axis_rc_tready_next = 1'b1;
                     if (s_axis_rc_tlast) begin
                         tlp_state_next = TLP_STATE_IDLE;
@@ -1138,7 +1117,6 @@ always @* begin
                         default: status_error_uncor_next = 1'b1;
                     endcase
                     // last request in current transfer
-                    addr_valid_next = 1'b0;
 
                     // release tag
                     finish_tag_next = 1'b1;
@@ -1205,9 +1183,6 @@ always @* begin
                         // release tag
                         finish_tag_next = 1'b1;
                         status_fifo_finish_next = 1'b1;
-                    end else begin
-                        // more completions to come, store current address
-                        pcie_tag_table_we_tlp_next = 1'b1;
                     end
 
                     if (AXIS_PCIE_DATA_WIDTH == 64) begin
@@ -1308,19 +1283,6 @@ always @* begin
     end
 end
 
-always @* begin
-    pcie_tag_table_we_req = 1'b0;
-    tlp_cmd_ready = 1'b0;
-
-    // tag table write management
-    if (pcie_tag_table_we_tlp_reg) begin
-        
-    end else if (tlp_cmd_valid_reg) begin
-        tlp_cmd_ready = 1'b1;
-        pcie_tag_table_we_req = 1'b1;
-    end
-end
-
 always @(posedge clk) begin
     req_state_reg <= req_state_next;
     tlp_state_reg <= tlp_state_next;
@@ -1329,9 +1291,11 @@ always @(posedge clk) begin
     status_error_uncor_reg <= status_error_uncor_next;
 
     req_pcie_addr_reg <= req_pcie_addr_next;
-    req_addr_reg <= req_addr_next;
+    req_ram_sel_reg <= req_ram_sel_next;
+    req_ram_addr_reg <= req_ram_addr_next;
     req_op_count_reg <= req_op_count_next;
     req_tlp_count_reg <= req_tlp_count_next;
+    req_op_tag_reg <= req_op_tag_next;
 
     lower_addr_reg <= lower_addr_next;
     byte_count_reg <= byte_count_next;
@@ -1339,7 +1303,6 @@ always @(posedge clk) begin
     ram_sel_reg <= ram_sel_next;
     addr_reg <= addr_next;
     addr_delay_reg <= addr_delay_next;
-    addr_valid_reg <= addr_valid_next;
     op_count_reg <= op_count_next;
     ram_mask_reg <= ram_mask_next;
     ram_mask_0_reg <= ram_mask_0_next;
@@ -1355,13 +1318,6 @@ always @(posedge clk) begin
     finish_tag_reg <= finish_tag_next;
 
     offset_reg <= offset_next;
-
-    tlp_cmd_ram_sel_reg <= tlp_cmd_ram_sel_next;
-    tlp_cmd_addr_reg <= tlp_cmd_addr_next;
-    tlp_cmd_op_tag_reg <= tlp_cmd_op_tag_next;
-    tlp_cmd_pcie_tag_reg <= tlp_cmd_pcie_tag_next;
-    tlp_cmd_last_reg <= tlp_cmd_last_next;
-    tlp_cmd_valid_reg <= tlp_cmd_valid_next;
 
     rc_tdata_int_reg <= rc_tdata_int_next;
     rc_tvalid_int_reg <= rc_tvalid_int_next;
@@ -1411,14 +1367,10 @@ always @(posedge clk) begin
         active_tx_count_av_reg <= active_tx_count_reg < TX_LIMIT;
     end
 
-    pcie_tag_table_we_tlp_reg <= pcie_tag_table_we_tlp_next;
-
-    if (pcie_tag_table_we_tlp_reg) begin
-        pcie_tag_table_addr[pcie_tag_reg] <= addr_reg;
-    end else if (tlp_cmd_valid_reg && pcie_tag_table_we_req) begin
-        pcie_tag_table_sel[tlp_cmd_pcie_tag_reg] <= tlp_cmd_ram_sel_reg;
-        pcie_tag_table_addr[tlp_cmd_pcie_tag_reg] <= tlp_cmd_addr_reg;
-        pcie_tag_table_op_tag[tlp_cmd_pcie_tag_reg] <= tlp_cmd_op_tag_reg;
+    if (pcie_tag_table_start_en) begin
+        pcie_tag_table_ram_sel[pcie_tag_table_start_ptr] <= pcie_tag_table_start_ram_sel;
+        pcie_tag_table_ram_addr[pcie_tag_table_start_ptr] <= pcie_tag_table_start_ram_addr;
+        pcie_tag_table_op_tag[pcie_tag_table_start_ptr] <= pcie_tag_table_start_op_tag;
     end
 
     if (op_table_start_en) begin
@@ -1451,8 +1403,6 @@ always @(posedge clk) begin
         req_state_reg <= REQ_STATE_IDLE;
         tlp_state_reg <= TLP_STATE_IDLE;
 
-        addr_valid_reg <= 1'b0;
-        tlp_cmd_valid_reg <= 1'b0;
         finish_tag_reg <= 1'b0;
 
         rc_tvalid_int_reg <= 1'b0;
@@ -1470,7 +1420,6 @@ always @(posedge clk) begin
         active_tx_count_reg <= {RQ_SEQ_NUM_WIDTH{1'b0}};
         active_tx_count_av_reg <= 1'b1;
 
-        pcie_tag_table_we_tlp_reg <= 1'b0;
 
         op_tag_fifo_init_reg <= 0;
         op_tag_fifo_wr_ptr_reg <= 0;

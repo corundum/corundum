@@ -17,7 +17,6 @@ SYN_FILES += lib/pcie/rtl/pcie_us_axil_master.v
 SYN_FILES += lib/pcie/rtl/pcie_us_axi_dma.v
 SYN_FILES += lib/pcie/rtl/pcie_us_axi_dma_rd.v
 SYN_FILES += lib/pcie/rtl/pcie_us_axi_dma_wr.v
-SYN_FILES += lib/pcie/rtl/pcie_tag_manager.v
 SYN_FILES += lib/pcie/rtl/pcie_us_axi_master.v
 SYN_FILES += lib/pcie/rtl/pcie_us_axi_master_rd.v
 SYN_FILES += lib/pcie/rtl/pcie_us_axi_master_wr.v

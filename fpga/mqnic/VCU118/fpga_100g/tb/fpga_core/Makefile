@@ -83,7 +83,6 @@ VERILOG_SOURCES += ../../lib/pcie/rtl/dma_client_axis_sink.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_client_axis_source.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_cfg.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_msi.v
-VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tag_manager.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pulse_merge.v
 
 # module parameters

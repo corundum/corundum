@@ -51,7 +51,6 @@ SYN_FILES += lib/pcie/rtl/dma_client_axis_sink.v
 SYN_FILES += lib/pcie/rtl/dma_client_axis_source.v
 SYN_FILES += lib/pcie/rtl/pcie_us_cfg.v
 SYN_FILES += lib/pcie/rtl/pcie_us_msi.v
-SYN_FILES += lib/pcie/rtl/pcie_tag_manager.v
 SYN_FILES += lib/pcie/rtl/pulse_merge.v
 
 # XDC files

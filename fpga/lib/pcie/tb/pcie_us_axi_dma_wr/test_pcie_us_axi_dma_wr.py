@@ -216,8 +216,6 @@ def test_pcie_us_axi_dma_wr(request, axis_pcie_data_width, pcie_offset):
 
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
-        os.path.join(rtl_dir, "pcie_tag_manager.v"),
-        os.path.join(rtl_dir, "priority_encoder.v"),
     ]
 
     parameters = {}

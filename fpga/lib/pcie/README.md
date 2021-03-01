@@ -142,10 +142,6 @@ Descriptor multiplexer/demultiplexer for PCIe AXI DMA module.  Enables sharing
 the PCIe AXI DMA module between multiple request sources, interleaving
 requests and distributing responses.
 
-### pcie_tag_manager module
-
-PCIe in-flight tag manager.
-
 ### pcie_us_axi_dma module
 
 PCIe AXI DMA module for Xilinx Ultrascale series FPGAs.  Supports 64, 128, 256,
@@ -230,7 +226,6 @@ signals together.
     dma_if_pcie_us_wr.v      ; DMA interface for Xilinx Ultrascale PCIe (write)
     dma_psdpram.v            : DMA RAM (segmented simple dual port RAM)
     pcie_axi_dma_desc_mux.v  : Descriptor mux for DMA engine
-    pcie_tag_manager.v       : PCIe in-flight tag manager
     pcie_us_axi_dma.v        : PCIe AXI DMA module (Xilinx Ultrascale)
     pcie_us_axi_dma_rd.v     : PCIe AXI DMA read module (Xilinx Ultrascale)
     pcie_us_axi_dma_wr.v     : PCIe AXI DMA write module (Xilinx Ultrascale)

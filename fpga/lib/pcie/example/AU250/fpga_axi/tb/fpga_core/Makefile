@@ -37,7 +37,6 @@ VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_axil_master.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_axi_dma.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_axi_dma_rd.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_axi_dma_wr.v
-VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tag_manager.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_axi_master.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_axi_master_rd.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_axi_master_wr.v

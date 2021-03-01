@@ -30,8 +30,6 @@ DUT      = pcie_us_axi_dma_rd
 TOPLEVEL = $(DUT)
 MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
-VERILOG_SOURCES += ../../rtl/pcie_tag_manager.v
-VERILOG_SOURCES += ../../rtl/priority_encoder.v
 
 # module parameters
 export PARAM_AXIS_PCIE_DATA_WIDTH ?= 64

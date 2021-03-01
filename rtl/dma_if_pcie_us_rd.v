@@ -161,6 +161,11 @@ parameter OFFSET_WIDTH = $clog2(AXIS_PCIE_DATA_WIDTH/8);
 parameter RAM_OFFSET_WIDTH = $clog2(SEG_COUNT*SEG_DATA_WIDTH/8);
 
 parameter PCIE_TAG_WIDTH = $clog2(PCIE_TAG_COUNT);
+parameter PCIE_TAG_COUNT_1 = PCIE_TAG_COUNT > 32 ? 32 : PCIE_TAG_COUNT;
+parameter PCIE_TAG_WIDTH_1 = $clog2(PCIE_TAG_COUNT_1);
+parameter PCIE_TAG_COUNT_2 = PCIE_TAG_COUNT > 32 ? PCIE_TAG_COUNT-32 : 0;
+parameter PCIE_TAG_WIDTH_2 = $clog2(PCIE_TAG_COUNT_2);
+
 parameter OP_TAG_WIDTH = $clog2(OP_TABLE_SIZE);
 parameter OP_TABLE_READ_COUNT_WIDTH = PCIE_TAG_WIDTH+1;
 
@@ -252,6 +257,11 @@ initial begin
         $error("Error: RAM_ADDR_WIDTH does not match RAM configuration (instance %m)");
         $finish;
     end
+
+    if (PCIE_TAG_COUNT < 1 || PCIE_TAG_COUNT > 256) begin
+        $error("Error: PCIe tag count must be between 1 and 256 (instance %m)");
+        $finish;
+    end
 end
 
 localparam [3:0]
@@ -318,6 +328,8 @@ reg [RAM_ADDR_WIDTH-1:0] req_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, req_ram_addr
 reg [LEN_WIDTH-1:0] req_op_count_reg = {LEN_WIDTH{1'b0}}, req_op_count_next;
 reg [12:0] req_tlp_count_reg = 13'd0, req_tlp_count_next;
 reg [OP_TAG_WIDTH-1:0] req_op_tag_reg = {OP_TAG_WIDTH{1'b0}}, req_op_tag_next;
+reg [PCIE_TAG_WIDTH-1:0] req_pcie_tag_reg = {PCIE_TAG_WIDTH{1'b0}}, req_pcie_tag_next;
+reg req_pcie_tag_valid_reg = 1'b0, req_pcie_tag_valid_next;
 
 reg [11:0] lower_addr_reg = 12'd0, lower_addr_next;
 reg [12:0] byte_count_reg = 13'd0, byte_count_next;
@@ -416,38 +428,27 @@ reg [RAM_SEL_WIDTH-1:0] pcie_tag_table_start_ram_sel_reg = 0, pcie_tag_table_sta
 reg [RAM_ADDR_WIDTH-1:0] pcie_tag_table_start_ram_addr_reg = 0, pcie_tag_table_start_ram_addr_next;
 reg [OP_TAG_WIDTH-1:0] pcie_tag_table_start_op_tag_reg = 0, pcie_tag_table_start_op_tag_next;
 reg pcie_tag_table_start_en_reg = 1'b0, pcie_tag_table_start_en_next;
+reg [PCIE_TAG_WIDTH-1:0] pcie_tag_table_finish_ptr;
+reg pcie_tag_table_finish_en;
 
 reg [RAM_SEL_WIDTH-1:0] pcie_tag_table_ram_sel[(2**PCIE_TAG_WIDTH)-1:0];
 reg [RAM_ADDR_WIDTH-1:0] pcie_tag_table_ram_addr[(2**PCIE_TAG_WIDTH)-1:0];
 reg [OP_TAG_WIDTH-1:0] pcie_tag_table_op_tag[(2**PCIE_TAG_WIDTH)-1:0];
+reg pcie_tag_table_active_a[(2**PCIE_TAG_WIDTH)-1:0];
+reg pcie_tag_table_active_b[(2**PCIE_TAG_WIDTH)-1:0];
 
+reg [PCIE_TAG_WIDTH+1-1:0] pcie_tag_fifo_init_reg = 0, pcie_tag_fifo_init_next;
+reg [PCIE_TAG_WIDTH-1:0] pcie_tag_fifo_wr_tag;
 
-wire [PCIE_TAG_WIDTH-1:0] new_tag;
-wire new_tag_valid;
-reg new_tag_ready;
+reg [PCIE_TAG_WIDTH_1+1-1:0] pcie_tag_fifo_1_wr_ptr_reg = 0;
+reg [PCIE_TAG_WIDTH_1+1-1:0] pcie_tag_fifo_1_rd_ptr_reg = 0, pcie_tag_fifo_1_rd_ptr_next;
+reg [PCIE_TAG_WIDTH_1-1:0] pcie_tag_fifo_1_mem [2**PCIE_TAG_WIDTH_1-1:0];
+reg pcie_tag_fifo_1_we;
 
-wire [PCIE_TAG_COUNT-1:0] active_tags;
-
-pcie_tag_manager #(
-    .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
-    .PCIE_TAG_WIDTH(PCIE_TAG_WIDTH),
-    .PCIE_EXT_TAG_ENABLE(PCIE_TAG_COUNT>32)
-)
-pcie_tag_manager_inst (
-    .clk(clk),
-    .rst(rst),
-
-    .m_axis_tag(new_tag),
-    .m_axis_tag_valid(new_tag_valid),
-    .m_axis_tag_ready(new_tag_ready),
-
-    .s_axis_tag(pcie_tag_reg),
-    .s_axis_tag_valid(finish_tag_reg),
-
-    .ext_tag_enable(ext_tag_enable),
-
-    .active_tags(active_tags)
-);
+reg [PCIE_TAG_WIDTH_2+1-1:0] pcie_tag_fifo_2_wr_ptr_reg = 0;
+reg [PCIE_TAG_WIDTH_2+1-1:0] pcie_tag_fifo_2_rd_ptr_reg = 0, pcie_tag_fifo_2_rd_ptr_next;
+reg [PCIE_TAG_WIDTH-1:0] pcie_tag_fifo_2_mem [2**PCIE_TAG_WIDTH_2-1:0];
+reg pcie_tag_fifo_2_we;
 
 // operation tag management
 reg [OP_TAG_WIDTH-1:0] op_table_start_ptr;
@@ -489,6 +490,8 @@ initial begin
         pcie_tag_table_ram_sel[i] = 0;
         pcie_tag_table_ram_addr[i] = 0;
         pcie_tag_table_op_tag[i] = 0;
+        pcie_tag_table_active_a[i] = 0;
+        pcie_tag_table_active_b[i] = 0;
     end
 end
 
@@ -503,10 +506,10 @@ always @* begin
     req_op_count_next = req_op_count_reg;
     req_tlp_count_next = req_tlp_count_reg;
     req_op_tag_next = req_op_tag_reg;
+    req_pcie_tag_next = req_pcie_tag_reg;
+    req_pcie_tag_valid_next = req_pcie_tag_valid_reg;
 
     inc_active_tx = 1'b0;
-
-    new_tag_ready = 1'b0;
 
     op_table_start_ptr = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
     op_table_start_tag = s_axis_read_desc_tag;
@@ -559,7 +562,7 @@ always @* begin
         end
     end
 
-    pcie_tag_table_start_ptr_next = new_tag;
+    pcie_tag_table_start_ptr_next = req_pcie_tag_reg;
     pcie_tag_table_start_ram_sel_next = req_ram_sel_reg;
     pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
     pcie_tag_table_start_op_tag_next = req_op_tag_reg;
@@ -575,7 +578,7 @@ always @* begin
     tlp_header_data[78:75] = REQ_MEM_READ; // request type - memory read
     tlp_header_data[79] = 1'b0; // poisoned request
     tlp_header_data[95:80] = requester_id;
-    tlp_header_data[103:96] = new_tag;
+    tlp_header_data[103:96] = req_pcie_tag_reg;
     tlp_header_data[119:104] = 16'd0; // completer ID
     tlp_header_data[120] = requester_id_enable;
     tlp_header_data[123:121] = 3'b000; // traffic class
@@ -660,7 +663,7 @@ always @* begin
             end
         end
         REQ_STATE_START: begin
-            if (m_axis_rq_tready_int_reg && new_tag_valid && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+            if (m_axis_rq_tready_int_reg && req_pcie_tag_valid_reg && (!TX_FC_ENABLE || have_credit_reg) && (!RQ_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                 m_axis_rq_tvalid_int = 1'b1;
 
                 inc_active_tx = 1'b1;
@@ -670,9 +673,7 @@ always @* begin
                     req_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
                     req_op_count_next = req_op_count_reg - req_tlp_count_next;
 
-                    new_tag_ready = 1'b1;
-
-                    pcie_tag_table_start_ptr_next = new_tag;
+                    pcie_tag_table_start_ptr_next = req_pcie_tag_reg;
                     pcie_tag_table_start_ram_sel_next = req_ram_sel_reg;
                     pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
                     pcie_tag_table_start_op_tag_next = req_op_tag_reg;
@@ -681,6 +682,8 @@ always @* begin
                     op_table_read_start_ptr = req_op_tag_reg;
                     op_table_read_start_commit = req_last_tlp;
                     op_table_read_start_en = 1'b1;
+
+                    req_pcie_tag_valid_next = 1'b0;
 
                     if (!req_last_tlp) begin
                         req_state_next = REQ_STATE_START;
@@ -701,16 +704,14 @@ always @* begin
                 m_axis_rq_tkeep_int = 2'b11;
                 m_axis_rq_tlast_int = 1'b1;
 
-                if (m_axis_rq_tready_int_reg && new_tag_valid) begin
+                if (m_axis_rq_tready_int_reg && req_pcie_tag_valid_reg) begin
                     req_pcie_addr_next = req_pcie_addr;
                     req_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
                     req_op_count_next = req_op_count_reg - req_tlp_count_next;
 
-                    new_tag_ready = 1'b1;
-
                     m_axis_rq_tvalid_int = 1'b1;
 
-                    pcie_tag_table_start_ptr_next = new_tag;
+                    pcie_tag_table_start_ptr_next = req_pcie_tag_reg;
                     pcie_tag_table_start_ram_sel_next = req_ram_sel_reg;
                     pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
                     pcie_tag_table_start_op_tag_next = req_op_tag_reg;
@@ -719,6 +720,8 @@ always @* begin
                     op_table_read_start_ptr = req_op_tag_reg;
                     op_table_read_start_commit = req_last_tlp;
                     op_table_read_start_en = 1'b1;
+
+                    req_pcie_tag_valid_next = 1'b0;
 
                     if (!req_last_tlp) begin
                         req_state_next = REQ_STATE_START;
@@ -732,6 +735,21 @@ always @* begin
             end
         end
     endcase
+
+    pcie_tag_fifo_1_rd_ptr_next = pcie_tag_fifo_1_rd_ptr_reg;
+    pcie_tag_fifo_2_rd_ptr_next = pcie_tag_fifo_2_rd_ptr_reg;
+
+    if (!req_pcie_tag_valid_next) begin
+        if (pcie_tag_fifo_1_rd_ptr_reg != pcie_tag_fifo_1_wr_ptr_reg) begin
+            req_pcie_tag_next = pcie_tag_fifo_1_mem[pcie_tag_fifo_1_rd_ptr_reg[PCIE_TAG_WIDTH_1-1:0]];
+            req_pcie_tag_valid_next = 1'b1;
+            pcie_tag_fifo_1_rd_ptr_next = pcie_tag_fifo_1_rd_ptr_reg + 1;
+        end else if (PCIE_TAG_COUNT > 32 && ext_tag_enable && pcie_tag_fifo_2_rd_ptr_reg != pcie_tag_fifo_2_wr_ptr_reg) begin
+            req_pcie_tag_next = pcie_tag_fifo_2_mem[pcie_tag_fifo_2_rd_ptr_reg[PCIE_TAG_WIDTH_2-1:0]];
+            req_pcie_tag_valid_next = 1'b1;
+            pcie_tag_fifo_2_rd_ptr_next = pcie_tag_fifo_2_rd_ptr_reg + 1;
+        end
+    end
 end
 
 always @* begin
@@ -890,7 +908,7 @@ always @* begin
 
                     op_tag_next = pcie_tag_table_op_tag[pcie_tag_next];
 
-                    if (active_tags[pcie_tag_next] && error_code_next == RC_ERROR_NORMAL_TERMINATION) begin
+                    if (pcie_tag_table_active_b[pcie_tag_next] != pcie_tag_table_active_a[pcie_tag_next] && error_code_next == RC_ERROR_NORMAL_TERMINATION) begin
                         // no error
                         rc_tdata_int_next = s_axis_rc_tdata;
                         rc_tvalid_int_next = 1'b1;
@@ -922,7 +940,7 @@ always @* begin
                             s_axis_rc_tready_next = 1'b1;
                             tlp_state_next = TLP_STATE_WAIT_END;
                         end
-                    end else if (!active_tags[pcie_tag_next] || error_code_next == RC_ERROR_INVALID_TAG) begin
+                    end else if (pcie_tag_table_active_b[pcie_tag_next] == pcie_tag_table_active_a[pcie_tag_next] || error_code_next == RC_ERROR_INVALID_TAG) begin
                         // invalid tag
                         // Handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
                         // drop TLP and report correctable error
@@ -1058,7 +1076,7 @@ always @* begin
 
                 op_tag_next = pcie_tag_table_op_tag[pcie_tag_next];
 
-                if (active_tags[pcie_tag_next] && error_code_reg == RC_ERROR_NORMAL_TERMINATION) begin
+                if (pcie_tag_table_active_b[pcie_tag_next] != pcie_tag_table_active_a[pcie_tag_next] && error_code_reg == RC_ERROR_NORMAL_TERMINATION) begin
                     // no error
                     rc_tdata_int_next = s_axis_rc_tdata;
                     rc_tvalid_int_next = 1'b1;
@@ -1091,7 +1109,7 @@ always @* begin
                     end else begin
                         tlp_state_next = TLP_STATE_WAIT_END;
                     end
-                end else if (!active_tags[pcie_tag_next] || error_code_next == RC_ERROR_INVALID_TAG) begin
+                end else if (pcie_tag_table_active_b[pcie_tag_next] == pcie_tag_table_active_a[pcie_tag_next] || error_code_next == RC_ERROR_INVALID_TAG) begin
                     // invalid tag or mismatched fields (tag invalid)
                     // Handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
                     // drop TLP and report correctable error
@@ -1217,6 +1235,34 @@ always @* begin
         end
     endcase
 
+    pcie_tag_table_finish_ptr = pcie_tag_reg;
+    pcie_tag_table_finish_en = 1'b0;
+
+    pcie_tag_fifo_init_next = pcie_tag_fifo_init_reg;
+    pcie_tag_fifo_wr_tag = pcie_tag_reg;
+    pcie_tag_fifo_1_we = 1'b0;
+    pcie_tag_fifo_2_we = 1'b0;
+
+    if (finish_tag_reg) begin
+        pcie_tag_table_finish_ptr = pcie_tag_reg;
+        pcie_tag_table_finish_en = 1'b1;
+
+        pcie_tag_fifo_wr_tag = pcie_tag_reg;
+        if (pcie_tag_fifo_wr_tag < PCIE_TAG_COUNT_1) begin
+            pcie_tag_fifo_1_we = 1'b1;
+        end else begin
+            pcie_tag_fifo_2_we = 1'b1;
+        end
+    end else if (pcie_tag_fifo_init_reg < 2**PCIE_TAG_WIDTH) begin
+        pcie_tag_fifo_init_next = pcie_tag_fifo_init_reg + 1;
+        pcie_tag_fifo_wr_tag = pcie_tag_fifo_init_reg;
+        if (pcie_tag_fifo_wr_tag < PCIE_TAG_COUNT_1) begin
+            pcie_tag_fifo_1_we = 1'b1;
+        end else begin
+            pcie_tag_fifo_2_we = 1'b1;
+        end
+    end
+
     status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg;
 
     status_fifo_wr_op_tag = op_tag_reg;
@@ -1296,6 +1342,8 @@ always @(posedge clk) begin
     req_op_count_reg <= req_op_count_next;
     req_tlp_count_reg <= req_tlp_count_next;
     req_op_tag_reg <= req_op_tag_next;
+    req_pcie_tag_reg <= req_pcie_tag_next;
+    req_pcie_tag_valid_reg <= req_pcie_tag_valid_next;
 
     lower_addr_reg <= lower_addr_next;
     byte_count_reg <= byte_count_next;
@@ -1377,7 +1425,24 @@ always @(posedge clk) begin
         pcie_tag_table_ram_sel[pcie_tag_table_start_ptr_reg] <= pcie_tag_table_start_ram_sel_reg;
         pcie_tag_table_ram_addr[pcie_tag_table_start_ptr_reg] <= pcie_tag_table_start_ram_addr_reg;
         pcie_tag_table_op_tag[pcie_tag_table_start_ptr_reg] <= pcie_tag_table_start_op_tag_reg;
+        pcie_tag_table_active_a[pcie_tag_table_start_ptr_reg] <= !pcie_tag_table_active_b[pcie_tag_table_start_ptr_reg];
     end
+
+    if (pcie_tag_table_finish_en) begin
+        pcie_tag_table_active_b[pcie_tag_table_finish_ptr] <= pcie_tag_table_active_a[pcie_tag_table_finish_ptr];
+    end
+
+    pcie_tag_fifo_init_reg <= pcie_tag_fifo_init_next;
+    if (pcie_tag_fifo_1_we) begin
+        pcie_tag_fifo_1_mem[pcie_tag_fifo_1_wr_ptr_reg[PCIE_TAG_WIDTH_1-1:0]] <= pcie_tag_fifo_wr_tag;
+        pcie_tag_fifo_1_wr_ptr_reg <= pcie_tag_fifo_1_wr_ptr_reg + 1;
+    end
+    pcie_tag_fifo_1_rd_ptr_reg <= pcie_tag_fifo_1_rd_ptr_next;
+    if (pcie_tag_fifo_2_we) begin
+        pcie_tag_fifo_2_mem[pcie_tag_fifo_2_wr_ptr_reg[PCIE_TAG_WIDTH_2-1:0]] <= pcie_tag_fifo_wr_tag;
+        pcie_tag_fifo_2_wr_ptr_reg <= pcie_tag_fifo_2_wr_ptr_reg + 1;
+    end
+    pcie_tag_fifo_2_rd_ptr_reg <= pcie_tag_fifo_2_rd_ptr_next;
 
     if (op_table_start_en) begin
         op_table_tag[op_table_start_ptr] <= op_table_start_tag;
@@ -1409,6 +1474,8 @@ always @(posedge clk) begin
         req_state_reg <= REQ_STATE_IDLE;
         tlp_state_reg <= TLP_STATE_IDLE;
 
+        req_pcie_tag_valid_reg <= 1'b0;
+
         finish_tag_reg <= 1'b0;
 
         rc_tvalid_int_reg <= 1'b0;
@@ -1427,6 +1494,12 @@ always @(posedge clk) begin
         active_tx_count_av_reg <= 1'b1;
 
         pcie_tag_table_start_en_reg <= 1'b0;
+
+        pcie_tag_fifo_init_reg <= 0;
+        pcie_tag_fifo_1_wr_ptr_reg <= 0;
+        pcie_tag_fifo_1_rd_ptr_reg <= 0;
+        pcie_tag_fifo_2_wr_ptr_reg <= 0;
+        pcie_tag_fifo_2_rd_ptr_reg <= 0;
 
         op_tag_fifo_init_reg <= 0;
         op_tag_fifo_wr_ptr_reg <= 0;

@@ -293,8 +293,6 @@ def test_pcie_us_axi_dma(request, axis_pcie_data_width):
         os.path.join(rtl_dir, f"{dut}.v"),
         os.path.join(rtl_dir, f"{dut}_rd.v"),
         os.path.join(rtl_dir, f"{dut}_wr.v"),
-        os.path.join(rtl_dir, "pcie_tag_manager.v"),
-        os.path.join(rtl_dir, "priority_encoder.v"),
     ]
 
     parameters = {}

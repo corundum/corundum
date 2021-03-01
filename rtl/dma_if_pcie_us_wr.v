@@ -490,6 +490,7 @@ always @* begin
             op_count_next = s_axis_write_desc_len;
             tag_next = s_axis_write_desc_tag;
 
+            // TLP size computation
             if (op_count_next <= {max_payload_size_dw_reg, 2'b00}-pcie_addr_next[1:0]) begin
                 // packet smaller than max payload size
                 if (((pcie_addr_next & 12'hfff) + (op_count_next & 12'hfff)) >> 12 != 0 || op_count_next >> 12 != 0) begin
@@ -550,6 +551,7 @@ always @* begin
                 op_table_start_tag = tag_reg;
                 op_table_start_en = 1'b1;
 
+                // TLP size computation
                 if (op_count_next <= {max_payload_size_dw_reg, 2'b00}-pcie_addr_next[1:0]) begin
                     // packet smaller than max payload size
                     if (((pcie_addr_next & 12'hfff) + (op_count_next & 12'hfff)) >> 12 != 0 || op_count_next >> 12 != 0) begin
@@ -695,7 +697,8 @@ always @* begin
 
                 if (!read_last_cycle_reg) begin
                     read_state_next = READ_STATE_READ;
-                end else if (read_cmd_valid_reg) begin
+                end else begin
+                    // skip idle state
 
                     read_pcie_addr_next = read_cmd_pcie_addr_reg;
                     read_ram_sel_next = read_cmd_ram_sel_reg;
@@ -725,11 +728,12 @@ always @* begin
                         read_ram_mask_next = read_ram_mask_0_next | read_ram_mask_1_next;
                     end
 
-                    read_cmd_ready = 1'b1;
-
-                    read_state_next = READ_STATE_READ;
-                end else begin
-                    read_state_next = READ_STATE_IDLE;
+                    if (read_cmd_valid_reg) begin
+                        read_cmd_ready = 1'b1;
+                        read_state_next = READ_STATE_READ;
+                    end else begin
+                        read_state_next = READ_STATE_IDLE;
+                    end
                 end
             end else begin
                 read_state_next = READ_STATE_READ;

@@ -47,18 +47,18 @@ static void usage(char *name)
         name);
 }
 
-uint32_t mqnic_read_bmc_reg(struct mqnic *dev, uint32_t reg)
+uint32_t mqnic_alveo_bmc_reg_read(struct mqnic *dev, uint32_t reg)
 {
     mqnic_reg_write32(dev->regs, 0x0180, reg);
-    mqnic_reg_read32(dev->regs, 0x0184);
+    mqnic_reg_read32(dev->regs, 0x0184); // dummy read
     return mqnic_reg_read32(dev->regs, 0x0184);
 }
 
-void mqnic_write_bmc_reg(struct mqnic *dev, uint32_t reg, uint32_t val)
+void mqnic_alveo_bmc_reg_write(struct mqnic *dev, uint32_t reg, uint32_t val)
 {
     mqnic_reg_write32(dev->regs, 0x0180, reg);
     mqnic_reg_write32(dev->regs, 0x0184, val);
-    usleep(10);
+    mqnic_reg_read32(dev->regs, 0x0184); // dummy read
 }
 
 struct sensor_channel {
@@ -181,17 +181,17 @@ int main(int argc, char *argv[])
 
         printf("Attempt to communicate with CMS microblaze...\n");
 
-        if (mqnic_read_bmc_reg(dev, 0x020000) == 0 || mqnic_read_bmc_reg(dev, 0x028000) == 0)
+        if (mqnic_alveo_bmc_reg_read(dev, 0x020000) == 0 || mqnic_alveo_bmc_reg_read(dev, 0x028000) == 0)
         {
             printf("Resetting CMS...\n");
 
             // reset CMS
-            mqnic_write_bmc_reg(dev, 0x020000, 0);
-            mqnic_write_bmc_reg(dev, 0x020000, 1);
+            mqnic_alveo_bmc_reg_write(dev, 0x020000, 0);
+            mqnic_alveo_bmc_reg_write(dev, 0x020000, 1);
             usleep(100000);
         }
 
-        if (mqnic_read_bmc_reg(dev, 0x028000) != 0x74736574)
+        if (mqnic_alveo_bmc_reg_read(dev, 0x028000) != 0x74736574)
         {
             fprintf(stderr, "CMS not responding\n");
             ret = -1;
@@ -203,9 +203,9 @@ int main(int argc, char *argv[])
         for (const struct sensor_channel *ptr = alveo_bmc_sensors; ptr->reg; ptr++)
         {
             uint32_t reg = 0x028000 + ptr->reg;
-            uint32_t val_max = mqnic_read_bmc_reg(dev, reg);
-            uint32_t val_avg = mqnic_read_bmc_reg(dev, reg+4);
-            uint32_t val_ins = mqnic_read_bmc_reg(dev, reg+8);
+            uint32_t val_max = mqnic_alveo_bmc_reg_read(dev, reg);
+            uint32_t val_avg = mqnic_alveo_bmc_reg_read(dev, reg+4);
+            uint32_t val_ins = mqnic_alveo_bmc_reg_read(dev, reg+8);
 
             printf("%s: %d %s (%d %s avg, %d %s max)\n", ptr->name,
                 val_ins, ptr->unit, val_avg, ptr->unit, val_max, ptr->unit);
@@ -217,10 +217,10 @@ int main(int argc, char *argv[])
         {
             uint8_t mac[6];
             uint32_t reg = 0x0281a0 + k*8;
-            uint32_t val = mqnic_read_bmc_reg(dev, reg);
+            uint32_t val = mqnic_alveo_bmc_reg_read(dev, reg);
             mac[0] = (val >> 8) & 0xff;
             mac[1] = val & 0xff;
-            val = mqnic_read_bmc_reg(dev, reg+4);
+            val = mqnic_alveo_bmc_reg_read(dev, reg+4);
             mac[2] = (val >> 24) & 0xff;
             mac[3] = (val >> 16) & 0xff;
             mac[4] = (val >> 8) & 0xff;

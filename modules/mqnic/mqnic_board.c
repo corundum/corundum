@@ -457,27 +457,27 @@ static struct mqnic_board_ops generic_board_ops = {
     .deinit = mqnic_generic_board_deinit
 };
 
-static u32 mqnic_read_alveo_bmc_reg(struct mqnic_dev *mqnic, u32 reg)
+static u32 mqnic_alveo_bmc_reg_read(struct mqnic_dev *mqnic, u32 reg)
 {
     iowrite32(reg, mqnic->hw_addr+0x180);
     ioread32(mqnic->hw_addr+0x184); // dummy read
     return ioread32(mqnic->hw_addr+0x184);
 }
 
-static void mqnic_write_alveo_bmc_reg(struct mqnic_dev *mqnic, u32 reg, u32 val)
+static void mqnic_alveo_bmc_reg_write(struct mqnic_dev *mqnic, u32 reg, u32 val)
 {
     iowrite32(reg, mqnic->hw_addr+0x180);
     iowrite32(val, mqnic->hw_addr+0x184);
     ioread32(mqnic->hw_addr+0x184); // dummy read
 }
 
-static int mqnic_read_mac_from_alveo_bmc(struct mqnic_dev *mqnic, int offset, char *mac)
+static int mqnic_alveo_bmc_read_mac(struct mqnic_dev *mqnic, int offset, char *mac)
 {
     uint32_t reg = 0x0281a0 + offset;
-    uint32_t val = mqnic_read_alveo_bmc_reg(mqnic, reg);
+    uint32_t val = mqnic_alveo_bmc_reg_read(mqnic, reg);
     mac[0] = (val >> 8) & 0xff;
     mac[1] = val & 0xff;
-    val = mqnic_read_alveo_bmc_reg(mqnic, reg+4);
+    val = mqnic_alveo_bmc_reg_read(mqnic, reg+4);
     mac[2] = (val >> 24) & 0xff;
     mac[3] = (val >> 16) & 0xff;
     mac[4] = (val >> 8) & 0xff;
@@ -486,7 +486,7 @@ static int mqnic_read_mac_from_alveo_bmc(struct mqnic_dev *mqnic, int offset, ch
     return 0;
 }
 
-static int mqnic_init_mac_list_from_alveo_bmc(struct mqnic_dev *mqnic, int offset, int count)
+static int mqnic_alveo_bmc_read_mac_list(struct mqnic_dev *mqnic, int count)
 {
     int ret, k;
     char mac[ETH_ALEN];
@@ -496,7 +496,7 @@ static int mqnic_init_mac_list_from_alveo_bmc(struct mqnic_dev *mqnic, int offse
     mqnic->mac_count = 0;
     for (k = 0; k < count; k++)
     {
-        ret = mqnic_read_mac_from_alveo_bmc(mqnic, k*8, mac);
+        ret = mqnic_alveo_bmc_read_mac(mqnic, k*8, mac);
         if (ret)
         {
             dev_warn(mqnic->dev, "Failed to read MAC from Alveo BMC");
@@ -570,23 +570,23 @@ static int mqnic_alveo_board_init(struct mqnic_dev *mqnic)
     case MQNIC_BOARD_ID_AU280:
         // init BMC
 
-        if (mqnic_read_alveo_bmc_reg(mqnic, 0x020000) == 0 ||
-            mqnic_read_alveo_bmc_reg(mqnic, 0x028000) != 0x74736574)
+        if (mqnic_alveo_bmc_reg_read(mqnic, 0x020000) == 0 ||
+            mqnic_alveo_bmc_reg_read(mqnic, 0x028000) != 0x74736574)
         {
             dev_info(mqnic->dev, "Resetting Alveo CMS");
 
-            mqnic_write_alveo_bmc_reg(mqnic, 0x020000, 0);
-            mqnic_write_alveo_bmc_reg(mqnic, 0x020000, 1);
+            mqnic_alveo_bmc_reg_write(mqnic, 0x020000, 0);
+            mqnic_alveo_bmc_reg_write(mqnic, 0x020000, 1);
             msleep(100);
         }
 
-        if (mqnic_read_alveo_bmc_reg(mqnic, 0x028000) != 0x74736574)
+        if (mqnic_alveo_bmc_reg_read(mqnic, 0x028000) != 0x74736574)
         {
             dev_warn(mqnic->dev, "Alveo CMS not responding");
         }
         else
         {
-            mqnic_init_mac_list_from_alveo_bmc(mqnic, 0, 8);
+            mqnic_alveo_bmc_read_mac_list(mqnic, 8);
         }
 
         break;

@@ -39,6 +39,7 @@ DUT      = fpga_core
 TOPLEVEL = $(DUT)
 MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
+VERILOG_SOURCES += ../../rtl/bmc_spi.v
 VERILOG_SOURCES += ../../rtl/common/mqnic_interface.v
 VERILOG_SOURCES += ../../rtl/common/mqnic_port.v
 VERILOG_SOURCES += ../../rtl/common/cpl_write.v

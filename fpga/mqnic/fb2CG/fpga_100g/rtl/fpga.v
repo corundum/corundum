@@ -58,6 +58,15 @@ module fpga (
     output wire         pps_out_en,
 
     /*
+     * BMC interface
+     */
+    output wire         bmc_clk,
+    output wire         bmc_nss,
+    output wire         bmc_mosi,
+    input  wire         bmc_miso,
+    input  wire         bmc_int,
+
+    /*
      * Board status
      */
     input  wire [1:0]   pg,
@@ -1462,6 +1471,15 @@ core_inst (
     .pps_in(pps_in),
     .pps_out(pps_out),
     .pps_out_en(pps_out_en),
+
+    /*
+     * BMC interface
+     */
+    .bmc_clk(bmc_clk),
+    .bmc_nss(bmc_nss),
+    .bmc_mosi(bmc_mosi),
+    .bmc_miso(bmc_miso),
+    .bmc_int(bmc_int),
 
     /*
      * PCIe

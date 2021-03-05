@@ -7,6 +7,7 @@ FPGA_ARCH = kintexuplus
 # Files for synthesis
 SYN_FILES = rtl/fpga.v
 SYN_FILES += rtl/fpga_core.v
+SYN_FILES += rtl/bmc_spi.v
 SYN_FILES += rtl/led_sreg_driver.v
 SYN_FILES += rtl/sync_signal.v
 SYN_FILES += rtl/common/mqnic_interface.v

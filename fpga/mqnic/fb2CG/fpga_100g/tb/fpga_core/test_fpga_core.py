@@ -297,6 +297,9 @@ class TB(object):
 
         dut.pps_in.setimmediatevalue(0)
 
+        dut.bmc_miso.setimmediatevalue(0)
+        dut.bmc_int.setimmediatevalue(0)
+
         self.loopback_enable = False
         cocotb.fork(self._run_loopback())
 
@@ -495,6 +498,7 @@ def test_fpga_core(request):
 
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
+        os.path.join(rtl_dir, "bmc_spi.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface.v"),
         os.path.join(rtl_dir, "common", "mqnic_port.v"),
         os.path.join(rtl_dir, "common", "cpl_write.v"),

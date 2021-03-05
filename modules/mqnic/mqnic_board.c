@@ -385,29 +385,6 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
         init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0, MQNIC_MAX_IF);
 
         break;
-    case MQNIC_BOARD_ID_FB2CG_KU15P:
-        // FPGA U1 I2C0
-        //     QSFP0 J3 0x50
-        // FPGA U1 I2C1
-        //     QSFP1 J4 0x50
-
-        request_module("at24");
-
-        // I2C adapter
-        adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr+MQNIC_REG_GPIO_I2C_0);
-
-        // QSFP0
-        mqnic->mod_i2c_client[0] = create_i2c_client(adapter, "24c02", 0x50, NULL);
-
-        // I2C adapter
-        adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr+MQNIC_REG_GPIO_I2C_1);
-
-        // QSFP1
-        mqnic->mod_i2c_client[1] = create_i2c_client(adapter, "24c02", 0x50, NULL);
-
-        mqnic->mod_i2c_client_count = 2;
-
-        break;
     case MQNIC_BOARD_ID_EXANIC_X10:
     case MQNIC_BOARD_ID_EXANIC_X25:
     case MQNIC_BOARD_ID_ADM_PCIE_9V3:
@@ -602,6 +579,181 @@ static struct mqnic_board_ops alveo_board_ops = {
     .deinit = mqnic_generic_board_deinit
 };
 
+static int mqnic_gecko_bmc_read(struct mqnic_dev *mqnic)
+{
+    u32 val;
+    int timeout = 200;
+
+    while (1)
+    {
+        val = ioread32(mqnic->hw_addr+0x188);
+        if (val & (1 << 19))
+        {
+            if (val & (1 << 18))
+            {
+                // timed out
+                dev_warn(mqnic->dev, "Timed out waiting for Gecko BMC response");
+                msleep(10);
+                return -2;
+            }
+            return val & 0xffff;
+        }
+        else
+        {
+            timeout--;
+            if (timeout == 0)
+            {
+                dev_warn(mqnic->dev, "Timed out waiting for Gecko BMC interface");
+                return -1;
+            }
+            msleep(1);
+        }
+    }
+
+    return -1;
+}
+
+static int mqnic_gecko_bmc_write(struct mqnic_dev *mqnic, u16 cmd, u32 data)
+{
+    int ret;
+    ret = mqnic_gecko_bmc_read(mqnic);
+
+    if (ret == -1)
+        return ret;
+
+    iowrite32(data, mqnic->hw_addr+0x180);
+    iowrite32(cmd << 16, mqnic->hw_addr+0x184);
+
+    return 0;
+}
+
+static int mqnic_gecko_bmc_query(struct mqnic_dev *mqnic, u16 cmd, u32 data)
+{
+    int ret;
+
+    ret = mqnic_gecko_bmc_write(mqnic, cmd, data);
+
+    if (ret)
+        return ret;
+
+    return mqnic_gecko_bmc_read(mqnic);
+}
+
+static int mqnic_gecko_bmc_read_mac(struct mqnic_dev *mqnic, int index, char *mac)
+{
+    int i;
+
+    for (i = 0; i < ETH_ALEN; i += 2)
+    {
+        u16 val = mqnic_gecko_bmc_query(mqnic, 0x2003, 0+index*ETH_ALEN+i);
+        if (val < 0)
+            return val;
+        mac[i] = val & 0xff;
+        mac[i+1] = (val >> 8) & 0xff;
+    }
+
+    return 0;
+}
+
+static int mqnic_gecko_bmc_read_mac_list(struct mqnic_dev *mqnic, int count)
+{
+    int ret, k;
+    char mac[ETH_ALEN];
+
+    count = min(count, MQNIC_MAX_IF);
+
+    mqnic->mac_count = 0;
+    for (k = 0; k < count; k++)
+    {
+        ret = mqnic_gecko_bmc_read_mac(mqnic, k, mac);
+        if (ret)
+        {
+            dev_warn(mqnic->dev, "Failed to read MAC from Gecko BMC");
+            return -1;
+        }
+
+        if (is_valid_ether_addr(mac))
+        {
+            memcpy(mqnic->mac_list[mqnic->mac_count], mac, ETH_ALEN);
+            mqnic->mac_count++;
+        }
+    }
+
+    dev_info(mqnic->dev, "Read %d MACs from Gecko BMC", mqnic->mac_count);
+
+    if (mqnic->mac_count == 0)
+    {
+        dev_warn(mqnic->dev, "Failed to read any valid MACs from Gecko BMC");
+    }
+
+    return mqnic->mac_count;
+}
+
+static int mqnic_gecko_board_init(struct mqnic_dev *mqnic)
+{
+    struct i2c_adapter *adapter;
+    int ret = 0;
+
+    mqnic->mod_i2c_client_count = 0;
+
+    if (mqnic_i2c_init(mqnic))
+    {
+        dev_err(mqnic->dev, "Failed to initialize I2C subsystem");
+        return -1;
+    }
+
+    switch (mqnic->board_id) {
+    case MQNIC_BOARD_ID_FB2CG_KU15P:
+        // FPGA U1 I2C0
+        //     QSFP0 J3 0x50
+        // FPGA U1 I2C1
+        //     QSFP1 J4 0x50
+
+        request_module("at24");
+
+        // I2C adapter
+        adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr+MQNIC_REG_GPIO_I2C_0);
+
+        // QSFP0
+        mqnic->mod_i2c_client[0] = create_i2c_client(adapter, "24c02", 0x50, NULL);
+
+        // I2C adapter
+        adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr+MQNIC_REG_GPIO_I2C_1);
+
+        // QSFP1
+        mqnic->mod_i2c_client[1] = create_i2c_client(adapter, "24c02", 0x50, NULL);
+
+        mqnic->mod_i2c_client_count = 2;
+
+        // init BMC
+        if (mqnic_gecko_bmc_query(mqnic, 0x7006, 0) <= 0)
+        {
+            dev_warn(mqnic->dev, "Gecko BMC not responding");
+        }
+        else
+        {
+            uint16_t v_l = mqnic_gecko_bmc_query(mqnic, 0x7005, 0);
+            uint16_t v_h = mqnic_gecko_bmc_query(mqnic, 0x7006, 0);
+
+            dev_info(mqnic->dev, "Gecko BMC version %d.%d.%d.%d",
+                (v_h >> 8) & 0xff, v_h & 0xff, (v_l >> 8) & 0xff, v_l & 0xff);
+
+            mqnic_gecko_bmc_read_mac_list(mqnic, 8);
+        }
+
+        break;
+    default:
+        dev_warn(mqnic->dev, "Unknown board ID (Silicom Gecko BMC)");
+    }
+
+    return ret;
+}
+
+static struct mqnic_board_ops gecko_board_ops = {
+    .init = mqnic_gecko_board_init,
+    .deinit = mqnic_generic_board_deinit
+};
+
 int mqnic_board_init(struct mqnic_dev *mqnic)
 {
     switch (mqnic->board_id) {
@@ -610,6 +762,9 @@ int mqnic_board_init(struct mqnic_dev *mqnic)
     case MQNIC_BOARD_ID_AU250:
     case MQNIC_BOARD_ID_AU280:
         mqnic->board_ops = &alveo_board_ops;
+        break;
+    case MQNIC_BOARD_ID_FB2CG_KU15P:
+        mqnic->board_ops = &gecko_board_ops;
         break;
     default:
         mqnic->board_ops = &generic_board_ops;

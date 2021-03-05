@@ -123,6 +123,66 @@ struct sensor_channel alveo_bmc_sensors[] = {
     {0, "", ""}
 };
 
+int mqnic_gecko_bmc_read(struct mqnic *dev)
+{
+    uint32_t val;
+    int timeout = 20000;
+
+    while (1)
+    {
+        val = mqnic_reg_read32(dev->regs, 0x0188);
+        if (val & (1 << 19))
+        {
+            if (val & (1 << 18))
+            {
+                // timed out
+                printf("Timed out waiting for BMC\n");
+                usleep(10000);
+                return -2;
+            }
+            return val & 0xffff;
+        }
+        else
+        {
+            timeout--;
+            if (timeout == 0)
+            {
+                printf("Timed out waiting for operation\n");
+                return -1;
+            }
+            usleep(10);
+        }
+    }
+
+    return -1;
+}
+
+int mqnic_gecko_bmc_write(struct mqnic *dev, uint16_t cmd, uint32_t data)
+{
+    int ret;
+    ret = mqnic_gecko_bmc_read(dev);
+
+    if (ret == -1)
+        return ret;
+
+    mqnic_reg_write32(dev->regs, 0x0180, data);
+    mqnic_reg_write32(dev->regs, 0x0184, cmd << 16);
+
+    return 0;
+}
+
+int mqnic_gecko_bmc_query(struct mqnic *dev, uint16_t cmd, uint32_t data)
+{
+    int ret;
+
+    ret = mqnic_gecko_bmc_write(dev, cmd, data);
+
+    if (ret)
+        return ret;
+
+    return mqnic_gecko_bmc_read(dev);
+}
+
 int main(int argc, char *argv[])
 {
     char *name;
@@ -225,6 +285,43 @@ int main(int argc, char *argv[])
             mac[3] = (val >> 16) & 0xff;
             mac[4] = (val >> 8) & 0xff;
             mac[5] = val & 0xff;
+            printf("MAC %d: ", k);
+            for (int i = 0; i < 6; i++)
+            {
+                if (i != 0)
+                    printf(":");
+                printf("%02x", mac[i]);
+            }
+            printf("\n");
+        }
+
+        break;
+    case MQNIC_BOARD_ID_FB2CG_KU15P:
+        printf("Detected Silicom board with Gecko BMC\n");
+
+        if (mqnic_gecko_bmc_query(dev, 0x7006, 0) <= 0)
+        {
+            fprintf(stderr, "Failed to communicate with BMC\n");
+            ret = -1;
+            goto err;
+        }
+
+        uint16_t v_l = mqnic_gecko_bmc_query(dev, 0x7005, 0);
+        uint16_t v_h = mqnic_gecko_bmc_query(dev, 0x7006, 0);
+
+        printf("Gecko BMC version %d.%d.%d.%d\n", (v_h >> 8) & 0xff, v_h & 0xff, (v_l >> 8) & 0xff, v_l & 0xff);
+
+        // read MAC addresses
+        printf("MAC addresses:\n");
+        for (int k = 0; k < 8; k++)
+        {
+            uint8_t mac[6];
+            for (int i = 0; i < 6; i += 2)
+            {
+                uint16_t val = mqnic_gecko_bmc_query(dev, 0x2003, 0+k*6+i);
+                mac[i] = val & 0xff;
+                mac[i+1] = (val >> 8) & 0xff;
+            }
             printf("MAC %d: ", k);
             for (int i = 0; i < 6; i++)
             {

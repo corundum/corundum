@@ -471,9 +471,9 @@ static void mqnic_alveo_bmc_reg_write(struct mqnic_dev *mqnic, u32 reg, u32 val)
     ioread32(mqnic->hw_addr+0x184); // dummy read
 }
 
-static int mqnic_alveo_bmc_read_mac(struct mqnic_dev *mqnic, int offset, char *mac)
+static int mqnic_alveo_bmc_read_mac(struct mqnic_dev *mqnic, int index, char *mac)
 {
-    uint32_t reg = 0x0281a0 + offset;
+    uint32_t reg = 0x0281a0 + index*8;
     uint32_t val = mqnic_alveo_bmc_reg_read(mqnic, reg);
     mac[0] = (val >> 8) & 0xff;
     mac[1] = val & 0xff;
@@ -496,7 +496,7 @@ static int mqnic_alveo_bmc_read_mac_list(struct mqnic_dev *mqnic, int count)
     mqnic->mac_count = 0;
     for (k = 0; k < count; k++)
     {
-        ret = mqnic_alveo_bmc_read_mac(mqnic, k*8, mac);
+        ret = mqnic_alveo_bmc_read_mac(mqnic, k, mac);
         if (ret)
         {
             dev_warn(mqnic->dev, "Failed to read MAC from Alveo BMC");

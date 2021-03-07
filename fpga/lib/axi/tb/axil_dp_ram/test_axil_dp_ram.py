@@ -35,7 +35,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 from cocotb.regression import TestFactory
 
-from cocotbext.axi import AxiLiteMaster
+from cocotbext.axi import AxiLiteBus, AxiLiteMaster
 
 
 class TB(object):
@@ -50,8 +50,8 @@ class TB(object):
 
         self.axil_master = []
 
-        self.axil_master.append(AxiLiteMaster(dut, "s_axil_a", dut.a_clk, dut.a_rst))
-        self.axil_master.append(AxiLiteMaster(dut, "s_axil_b", dut.b_clk, dut.b_rst))
+        self.axil_master.append(AxiLiteMaster(AxiLiteBus.from_prefix(dut, "s_axil_a"), dut.a_clk, dut.a_rst))
+        self.axil_master.append(AxiLiteMaster(AxiLiteBus.from_prefix(dut, "s_axil_b"), dut.b_clk, dut.b_rst))
 
     def set_idle_generator(self, generator=None):
         if generator:

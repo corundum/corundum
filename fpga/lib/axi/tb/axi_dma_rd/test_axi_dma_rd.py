@@ -34,16 +34,16 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 from cocotb.regression import TestFactory
 
-from cocotbext.axi import AxiRamRead
-from cocotbext.axi import AxiStreamSink
+from cocotbext.axi import AxiReadBus, AxiRamRead
+from cocotbext.axi import AxiStreamBus, AxiStreamSink
 from cocotbext.axi.stream import define_stream
 
-DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Desc",
+DescBus, DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Desc",
     signals=["addr", "len", "tag", "valid", "ready"],
     optional_signals=["id", "dest", "user"]
 )
 
-DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",
+DescStatusBus, DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",
     signals=["tag", "valid"],
     optional_signals=["len", "id", "dest", "user"]
 )
@@ -59,12 +59,12 @@ class TB(object):
         cocotb.fork(Clock(dut.clk, 10, units="ns").start())
 
         # read interface
-        self.read_desc_source = DescSource(dut, "s_axis_read_desc", dut.clk, dut.rst)
-        self.read_desc_status_sink = DescStatusSink(dut, "m_axis_read_desc_status", dut.clk, dut.rst)
-        self.read_data_sink = AxiStreamSink(dut, "m_axis_read_data", dut.clk, dut.rst)
+        self.read_desc_source = DescSource(DescBus.from_prefix(dut, "s_axis_read_desc"), dut.clk, dut.rst)
+        self.read_desc_status_sink = DescStatusSink(DescStatusBus.from_prefix(dut, "m_axis_read_desc_status"), dut.clk, dut.rst)
+        self.read_data_sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "m_axis_read_data"), dut.clk, dut.rst)
 
         # AXI interface
-        self.axi_ram = AxiRamRead(dut, "m_axi", dut.clk, dut.rst, size=2**16)
+        self.axi_ram = AxiRamRead(AxiReadBus.from_prefix(dut, "m_axi"), dut.clk, dut.rst, size=2**16)
 
         dut.enable.setimmediatevalue(0)
 

@@ -46,10 +46,10 @@ from cocotb.log import SimLog
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, FallingEdge, Timer
 
+from cocotbext.axi import AxiStreamBus
+from cocotbext.eth import XgmiiSource, XgmiiSink
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePcieDevice
-
-from cocotbext.eth import XgmiiSource, XgmiiSink
 
 try:
     import mqnic
@@ -106,29 +106,23 @@ class TB(object):
             # phy_rdy_out
 
             # Requester reQuest Interface
-            rq_entity=dut,
-            rq_name="m_axis_rq",
+            rq_bus=AxiStreamBus.from_prefix(dut, "m_axis_rq"),
             pcie_rq_seq_num=dut.s_axis_rq_seq_num,
             pcie_rq_seq_num_vld=dut.s_axis_rq_seq_num_valid,
-            # pcie_rq_tag0
-            # pcie_rq_tag1
+            # pcie_rq_tag
             # pcie_rq_tag_av
-            # pcie_rq_tag_vld0
-            # pcie_rq_tag_vld1
+            # pcie_rq_tag_vld
 
             # Requester Completion Interface
-            rc_entity=dut,
-            rc_name="s_axis_rc",
+            rc_bus=AxiStreamBus.from_prefix(dut, "s_axis_rc"),
 
             # Completer reQuest Interface
-            cq_entity=dut,
-            cq_name="s_axis_cq",
+            cq_bus=AxiStreamBus.from_prefix(dut, "s_axis_cq"),
             # pcie_cq_np_req
             # pcie_cq_np_req_count
 
             # Completer Completion Interface
-            cc_entity=dut,
-            cc_name="m_axis_cc",
+            cc_bus=AxiStreamBus.from_prefix(dut, "m_axis_cc"),
 
             # Transmit Flow Control Interface
             # pcie_tfc_nph_av=dut.pcie_tfc_nph_av,

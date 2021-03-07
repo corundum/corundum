@@ -49,11 +49,11 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 from cocotb.regression import TestFactory
 
-from cocotbext.axi import AxiStreamFrame, AxiStreamSource
+from cocotbext.axi import AxiStreamBus, AxiStreamFrame, AxiStreamSource
 from cocotbext.axi.stream import define_stream
 
 
-HashTransaction, HashSource, HashSink, HashMonitor = define_stream("Hash",
+HashBus, HashTransaction, HashSource, HashSink, HashMonitor = define_stream("Hash",
     signals=["hash", "hash_type", "hash_valid"]
 )
 
@@ -104,8 +104,8 @@ class TB(object):
 
         cocotb.fork(Clock(dut.clk, 4, units="ns").start())
 
-        self.source = AxiStreamSource(dut, "s_axis", dut.clk, dut.rst)
-        self.sink = HashSink(dut, "m_axis", dut.clk, dut.rst)
+        self.source = AxiStreamSource(AxiStreamBus.from_prefix(dut, "s_axis"), dut.clk, dut.rst)
+        self.sink = HashSink(HashBus.from_prefix(dut, "m_axis"), dut.clk, dut.rst)
 
         hash_key = [
             0x6d, 0x5a, 0x56, 0xda, 0x25, 0x5b, 0x0e, 0xc2,

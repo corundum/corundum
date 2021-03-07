@@ -42,7 +42,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 from cocotb.regression import TestFactory
 
-from cocotbext.axi import AxiLiteMaster
+from cocotbext.axi import AxiLiteBus, AxiLiteMaster
 from cocotbext.eth import PtpClock
 
 
@@ -57,7 +57,7 @@ class TB(object):
         cocotb.fork(Clock(dut.phy_tx_clk, 6.4, units="ns").start())
         cocotb.fork(Clock(dut.phy_rx_clk, 6.4, units="ns").start())
 
-        self.axil_master = AxiLiteMaster(dut, "s_axil", dut.clk, dut.rst)
+        self.axil_master = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "s_axil"), dut.clk, dut.rst)
 
         self.ptp_clock = PtpClock(
             ts_96=dut.ptp_ts_96,

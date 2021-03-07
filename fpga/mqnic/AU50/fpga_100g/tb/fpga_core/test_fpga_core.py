@@ -46,10 +46,9 @@ from cocotb.log import SimLog
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, FallingEdge, Timer
 
+from cocotbext.axi import AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiLiteBus, AxiLiteRam
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
-
-from cocotbext.axi import AxiStreamSource, AxiStreamSink, AxiLiteRam
 
 try:
     import mqnic
@@ -108,8 +107,7 @@ class TB(object):
             # phy_rdy_out
 
             # Requester reQuest Interface
-            rq_entity=dut,
-            rq_name="m_axis_rq",
+            rq_bus=AxiStreamBus.from_prefix(dut, "m_axis_rq"),
             pcie_rq_seq_num0=dut.s_axis_rq_seq_num_0,
             pcie_rq_seq_num_vld0=dut.s_axis_rq_seq_num_valid_0,
             pcie_rq_seq_num1=dut.s_axis_rq_seq_num_1,
@@ -121,18 +119,15 @@ class TB(object):
             # pcie_rq_tag_vld1
 
             # Requester Completion Interface
-            rc_entity=dut,
-            rc_name="s_axis_rc",
+            rc_bus=AxiStreamBus.from_prefix(dut, "s_axis_rc"),
 
             # Completer reQuest Interface
-            cq_entity=dut,
-            cq_name="s_axis_cq",
+            cq_bus=AxiStreamBus.from_prefix(dut, "s_axis_cq"),
             # pcie_cq_np_req
             # pcie_cq_np_req_count
 
             # Completer Completion Interface
-            cc_entity=dut,
-            cc_name="m_axis_cc",
+            cc_bus=AxiStreamBus.from_prefix(dut, "m_axis_cc"),
 
             # Transmit Flow Control Interface
             # pcie_tfc_nph_av=dut.pcie_tfc_nph_av,
@@ -274,13 +269,13 @@ class TB(object):
 
         # Ethernet
         cocotb.fork(Clock(dut.qsfp_rx_clk, 3.102, units="ns").start())
-        self.qsfp_source = AxiStreamSource(dut, "qsfp_rx_axis", dut.qsfp_rx_clk, dut.qsfp_rx_rst)
+        self.qsfp_source = AxiStreamSource(AxiStreamBus.from_prefix(dut, "qsfp_rx_axis"), dut.qsfp_rx_clk, dut.qsfp_rx_rst)
         cocotb.fork(Clock(dut.qsfp_tx_clk, 3.102, units="ns").start())
-        self.qsfp_sink = AxiStreamSink(dut, "qsfp_tx_axis", dut.qsfp_tx_clk, dut.qsfp_tx_rst)
+        self.qsfp_sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "qsfp_tx_axis"), dut.qsfp_tx_clk, dut.qsfp_tx_rst)
 
         dut.qspi_dq_i.setimmediatevalue(0)
 
-        self.cms_ram = AxiLiteRam(dut, "m_axil_cms", dut.m_axil_cms_clk, dut.m_axil_cms_rst, size=256*1024)
+        self.cms_ram = AxiLiteRam(AxiLiteBus.from_prefix(dut, "m_axil_cms"), dut.m_axil_cms_clk, dut.m_axil_cms_rst, size=256*1024)
 
         self.loopback_enable = False
         cocotb.fork(self._run_loopback())

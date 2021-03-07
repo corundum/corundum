@@ -43,26 +43,26 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 from cocotb.regression import TestFactory
 
-from cocotbext.axi import AxiLiteMaster
+from cocotbext.axi import AxiLiteBus, AxiLiteMaster
 from cocotbext.axi.stream import define_stream
 
 
-DequeueReqTransaction, DequeueReqSource, DequeueReqSink, DequeueReqMonitor = define_stream("DequeueReq",
+DequeueReqBus, DequeueReqTransaction, DequeueReqSource, DequeueReqSink, DequeueReqMonitor = define_stream("DequeueReq",
     signals=["queue", "tag", "valid"],
     optional_signals=["ready"]
 )
 
-DequeueRespTransaction, DequeueRespSource, DequeueRespSink, DequeueRespMonitor = define_stream("DequeueResp",
+DequeueRespBus, DequeueRespTransaction, DequeueRespSource, DequeueRespSink, DequeueRespMonitor = define_stream("DequeueResp",
     signals=["queue", "ptr", "addr", "block_size", "cpl", "tag", "op_tag", "empty", "error", "valid"],
     optional_signals=["ready"]
 )
 
-DequeueCommitTransaction, DequeueCommitSource, DequeueCommitSink, DequeueCommitMonitor = define_stream("DequeueCommit",
+DequeueCommitBus, DequeueCommitTransaction, DequeueCommitSource, DequeueCommitSink, DequeueCommitMonitor = define_stream("DequeueCommit",
     signals=["op_tag", "valid"],
     optional_signals=["ready"]
 )
 
-DoorbellTransaction, DoorbellSource, DoorbellSink, DoorbellMonitor = define_stream("Doorbell",
+DoorbellBus, DoorbellTransaction, DoorbellSource, DoorbellSink, DoorbellMonitor = define_stream("Doorbell",
     signals=["queue", "valid"],
     optional_signals=["ready"]
 )
@@ -77,12 +77,12 @@ class TB(object):
 
         cocotb.fork(Clock(dut.clk, 4, units="ns").start())
 
-        self.axil_master = AxiLiteMaster(dut, "s_axil", dut.clk, dut.rst)
+        self.axil_master = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "s_axil"), dut.clk, dut.rst)
 
-        self.dequeue_req_source = DequeueReqSource(dut, "s_axis_dequeue_req", dut.clk, dut.rst)
-        self.dequeue_resp_sink = DequeueRespSink(dut, "m_axis_dequeue_resp", dut.clk, dut.rst)
-        self.dequeue_commit_source = DequeueCommitSource(dut, "s_axis_dequeue_commit", dut.clk, dut.rst)
-        self.doorbell_sink = DoorbellSink(dut, "m_axis_doorbell", dut.clk, dut.rst)
+        self.dequeue_req_source = DequeueReqSource(DequeueReqBus.from_prefix(dut, "s_axis_dequeue_req"), dut.clk, dut.rst)
+        self.dequeue_resp_sink = DequeueRespSink(DequeueRespBus.from_prefix(dut, "m_axis_dequeue_resp"), dut.clk, dut.rst)
+        self.dequeue_commit_source = DequeueCommitSource(DequeueCommitBus.from_prefix(dut, "s_axis_dequeue_commit"), dut.clk, dut.rst)
+        self.doorbell_sink = DoorbellSink(DoorbellBus.from_prefix(dut, "m_axis_doorbell"), dut.clk, dut.rst)
 
         dut.enable.setimmediatevalue(0)
 

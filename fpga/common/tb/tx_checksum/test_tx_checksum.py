@@ -49,11 +49,11 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 from cocotb.regression import TestFactory
 
-from cocotbext.axi import AxiStreamFrame, AxiStreamSource, AxiStreamSink
+from cocotbext.axi import AxiStreamBus, AxiStreamFrame, AxiStreamSource, AxiStreamSink
 from cocotbext.axi.stream import define_stream
 
 
-CsumCmdTransaction, CsumCmdSource, CsumCmdSink, CsumCmdMonitor = define_stream("CsumCmd",
+CsumCmdBus, CsumCmdTransaction, CsumCmdSource, CsumCmdSink, CsumCmdMonitor = define_stream("CsumCmd",
     signals=["csum_enable", "csum_start", "csum_offset", "csum_init", "valid"],
     optional_signals=["ready"]
 )
@@ -68,10 +68,10 @@ class TB(object):
 
         cocotb.fork(Clock(dut.clk, 4, units="ns").start())
 
-        self.source = AxiStreamSource(dut, "s_axis", dut.clk, dut.rst)
-        self.sink = AxiStreamSink(dut, "m_axis", dut.clk, dut.rst)
+        self.source = AxiStreamSource(AxiStreamBus.from_prefix(dut, "s_axis"), dut.clk, dut.rst)
+        self.sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "m_axis"), dut.clk, dut.rst)
 
-        self.cmd_source = CsumCmdSource(dut, "s_axis_cmd", dut.clk, dut.rst)
+        self.cmd_source = CsumCmdSource(CsumCmdBus.from_prefix(dut, "s_axis_cmd"), dut.clk, dut.rst)
 
     def set_idle_generator(self, generator=None):
         if generator:

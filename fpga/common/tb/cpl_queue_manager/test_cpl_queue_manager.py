@@ -43,26 +43,26 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, Timer
 from cocotb.regression import TestFactory
 
-from cocotbext.axi import AxiLiteMaster
+from cocotbext.axi import AxiLiteBus, AxiLiteMaster
 from cocotbext.axi.stream import define_stream
 
 
-EnqueueReqTransaction, EnqueueReqSource, EnqueueReqSink, EnqueueReqMonitor = define_stream("EnqueueReq",
+EnqueueReqBus, EnqueueReqTransaction, EnqueueReqSource, EnqueueReqSink, EnqueueReqMonitor = define_stream("EnqueueReq",
     signals=["queue", "tag", "valid"],
     optional_signals=["ready"]
 )
 
-EnqueueRespTransaction, EnqueueRespSource, EnqueueRespSink, EnqueueRespMonitor = define_stream("EnqueueResp",
+EnqueueRespBus, EnqueueRespTransaction, EnqueueRespSource, EnqueueRespSink, EnqueueRespMonitor = define_stream("EnqueueResp",
     signals=["queue", "ptr", "addr", "event", "tag", "op_tag", "full", "error", "valid"],
     optional_signals=["ready"]
 )
 
-EnqueueCommitTransaction, EnqueueCommitSource, EnqueueCommitSink, EnqueueCommitMonitor = define_stream("EnqueueCommit",
+EnqueueCommitBus, EnqueueCommitTransaction, EnqueueCommitSource, EnqueueCommitSink, EnqueueCommitMonitor = define_stream("EnqueueCommit",
     signals=["op_tag", "valid"],
     optional_signals=["ready"]
 )
 
-EventTransaction, EventSource, EventSink, EventMonitor = define_stream("Event",
+EventBus, EventTransaction, EventSource, EventSink, EventMonitor = define_stream("Event",
     signals=["event", "event_source", "event_valid"],
     optional_signals=["event_ready"]
 )
@@ -77,12 +77,12 @@ class TB(object):
 
         cocotb.fork(Clock(dut.clk, 4, units="ns").start())
 
-        self.axil_master = AxiLiteMaster(dut, "s_axil", dut.clk, dut.rst)
+        self.axil_master = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "s_axil"), dut.clk, dut.rst)
 
-        self.enqueue_req_source = EnqueueReqSource(dut, "s_axis_enqueue_req", dut.clk, dut.rst)
-        self.enqueue_resp_sink = EnqueueRespSink(dut, "m_axis_enqueue_resp", dut.clk, dut.rst)
-        self.enqueue_commit_source = EnqueueCommitSource(dut, "s_axis_enqueue_commit", dut.clk, dut.rst)
-        self.event_sink = EventSink(dut, "m_axis", dut.clk, dut.rst)
+        self.enqueue_req_source = EnqueueReqSource(EnqueueReqBus.from_prefix(dut, "s_axis_enqueue_req"), dut.clk, dut.rst)
+        self.enqueue_resp_sink = EnqueueRespSink(EnqueueRespBus.from_prefix(dut, "m_axis_enqueue_resp"), dut.clk, dut.rst)
+        self.enqueue_commit_source = EnqueueCommitSource(EnqueueCommitBus.from_prefix(dut, "s_axis_enqueue_commit"), dut.clk, dut.rst)
+        self.event_sink = EventSink(EventBus.from_prefix(dut, "m_axis"), dut.clk, dut.rst)
 
         dut.enable.setimmediatevalue(0)
 

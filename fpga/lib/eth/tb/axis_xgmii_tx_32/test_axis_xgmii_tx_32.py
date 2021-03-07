@@ -36,7 +36,7 @@ from cocotb.triggers import RisingEdge
 from cocotb.regression import TestFactory
 
 from cocotbext.eth import XgmiiSink
-from cocotbext.axi import AxiStreamSource
+from cocotbext.axi import AxiStreamBus, AxiStreamSource
 
 
 class TB:
@@ -48,7 +48,7 @@ class TB:
 
         cocotb.fork(Clock(dut.clk, 3.2, units="ns").start())
 
-        self.source = AxiStreamSource(dut, "s_axis", dut.clk, dut.rst)
+        self.source = AxiStreamSource(AxiStreamBus.from_prefix(dut, "s_axis"), dut.clk, dut.rst)
         self.sink = XgmiiSink(dut.xgmii_txd, dut.xgmii_txc, dut.clk, dut.rst)
 
         dut.ifg_delay.setimmediatevalue(0)
@@ -118,7 +118,7 @@ async def run_test_alignment(dut, payload_data=None, ifg=12):
             assert rx_frame.check_fcs()
             assert rx_frame.ctrl is None
 
-            start_lane.append(rx_frame.rx_start_lane)
+            start_lane.append(rx_frame.start_lane)
 
         tb.log.info("length: %d", length)
         tb.log.info("start_lane: %s", start_lane)

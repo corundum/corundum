@@ -31,6 +31,7 @@ import cocotb
 from cocotb.log import SimLog
 from cocotb.triggers import RisingEdge, FallingEdge, Timer
 
+from cocotbext.axi import AxiStreamBus
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
 from cocotbext.axi.utils import hexdump_str
@@ -77,8 +78,7 @@ class TB(object):
             # phy_rdy_out
 
             # Requester reQuest Interface
-            rq_entity=dut,
-            rq_name="m_axis_rq",
+            rq_bus=AxiStreamBus.from_prefix(dut, "m_axis_rq"),
             # pcie_rq_seq_num0=dut.s_axis_rq_seq_num_0,
             # pcie_rq_seq_num_vld0=dut.s_axis_rq_seq_num_valid_0,
             # pcie_rq_seq_num1=dut.s_axis_rq_seq_num_1,
@@ -90,18 +90,15 @@ class TB(object):
             # pcie_rq_tag_vld1
 
             # Requester Completion Interface
-            rc_entity=dut,
-            rc_name="s_axis_rc",
+            rc_bus=AxiStreamBus.from_prefix(dut, "s_axis_rc"),
 
             # Completer reQuest Interface
-            cq_entity=dut,
-            cq_name="s_axis_cq",
+            cq_bus=AxiStreamBus.from_prefix(dut, "s_axis_cq"),
             # pcie_cq_np_req
             # pcie_cq_np_req_count
 
             # Completer Completion Interface
-            cc_entity=dut,
-            cc_name="m_axis_cc",
+            cc_bus=AxiStreamBus.from_prefix(dut, "m_axis_cc"),
 
             # Transmit Flow Control Interface
             # pcie_tfc_nph_av=dut.pcie_tfc_nph_av,

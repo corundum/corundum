@@ -36,9 +36,10 @@ import cocotb
 from cocotb.triggers import RisingEdge, FallingEdge, Timer
 from cocotb.regression import TestFactory
 
+from cocotbext.axi import AxiStreamBus
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
-from cocotbext.axi import AxiRamWrite
+from cocotbext.axi import AxiWriteBus, AxiRamWrite
 
 
 @contextmanager
@@ -88,8 +89,7 @@ class TB(object):
             user_clk=dut.clk,
             user_reset=dut.rst,
 
-            cq_entity=dut,
-            cq_name="s_axis_cq",
+            cq_bus=AxiStreamBus.from_prefix(dut, "s_axis_cq")
         )
 
         self.dev.log.setLevel(logging.DEBUG)
@@ -100,7 +100,7 @@ class TB(object):
         self.rc.make_port().connect(self.dev)
 
         # AXI
-        self.axi_ram = AxiRamWrite(dut, "m_axi", dut.clk, dut.rst, size=2**16)
+        self.axi_ram = AxiRamWrite(AxiWriteBus.from_prefix(dut, "m_axi"), dut.clk, dut.rst, size=2**16)
 
         # monitor error outputs
         self.status_error_uncor_asserted = False

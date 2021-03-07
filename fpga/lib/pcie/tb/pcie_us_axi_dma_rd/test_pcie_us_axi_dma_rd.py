@@ -34,17 +34,18 @@ import cocotb
 from cocotb.triggers import RisingEdge, FallingEdge, Timer
 from cocotb.regression import TestFactory
 
+from cocotbext.axi import AxiStreamBus
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
-from cocotbext.axi import AxiRamWrite
+from cocotbext.axi import AxiWriteBus, AxiRamWrite
 from cocotbext.axi.stream import define_stream
 from cocotbext.axi.utils import hexdump_str
 
-DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Desc",
+DescBus, DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Desc",
     signals=["pcie_addr", "axi_addr", "len", "tag", "valid", "ready"]
 )
 
-DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",
+DescStatusBus, DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",
     signals=["tag", "valid"]
 )
 
@@ -83,15 +84,13 @@ class TB(object):
             user_clk=dut.clk,
             user_reset=dut.rst,
 
-            rq_entity=dut,
-            rq_name="m_axis_rq",
+            rq_bus=AxiStreamBus.from_prefix(dut, "m_axis_rq"),
             pcie_rq_seq_num0=dut.s_axis_rq_seq_num_0,
             pcie_rq_seq_num_vld0=dut.s_axis_rq_seq_num_valid_0,
             pcie_rq_seq_num1=dut.s_axis_rq_seq_num_1,
             pcie_rq_seq_num_vld1=dut.s_axis_rq_seq_num_valid_1,
 
-            rc_entity=dut,
-            rc_name="s_axis_rc",
+            rc_bus=AxiStreamBus.from_prefix(dut, "s_axis_rc"),
 
             cfg_max_read_req=dut.max_read_request_size,
 
@@ -104,11 +103,11 @@ class TB(object):
         self.rc.make_port().connect(self.dev)
 
         # AXI
-        self.axi_ram = AxiRamWrite(dut, "m_axi", dut.clk, dut.rst, size=2**16)
+        self.axi_ram = AxiRamWrite(AxiWriteBus.from_prefix(dut, "m_axi"), dut.clk, dut.rst, size=2**16)
 
         # Control
-        self.read_desc_source = DescSource(dut, "s_axis_read_desc", dut.clk, dut.rst)
-        self.read_desc_status_sink = DescStatusSink(dut, "m_axis_read_desc_status", dut.clk, dut.rst)
+        self.read_desc_source = DescSource(DescBus.from_prefix(dut, "s_axis_read_desc"), dut.clk, dut.rst)
+        self.read_desc_status_sink = DescStatusSink(DescStatusBus.from_prefix(dut, "m_axis_read_desc_status"), dut.clk, dut.rst)
 
         dut.requester_id.setimmediatevalue(0)
         dut.requester_id_enable.setimmediatevalue(0)

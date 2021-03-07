@@ -36,9 +36,10 @@ import cocotb
 from cocotb.triggers import RisingEdge, FallingEdge, Timer
 from cocotb.regression import TestFactory
 
+from cocotbext.axi import AxiStreamBus
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
-from cocotbext.axi import AxiRam
+from cocotbext.axi import AxiBus, AxiRam
 
 
 @contextmanager
@@ -88,11 +89,9 @@ class TB(object):
             user_clk=dut.clk,
             user_reset=dut.rst,
 
-            cq_entity=dut,
-            cq_name="s_axis_cq",
+            cq_bus=AxiStreamBus.from_prefix(dut, "s_axis_cq"),
 
-            cc_entity=dut,
-            cc_name="m_axis_cc",
+            cc_bus=AxiStreamBus.from_prefix(dut, "m_axis_cc"),
 
             cfg_max_payload=dut.max_payload_size,
         )
@@ -105,7 +104,7 @@ class TB(object):
         self.rc.make_port().connect(self.dev)
 
         # AXI
-        self.axi_ram = AxiRam(dut, "m_axi", dut.clk, dut.rst, size=2**16)
+        self.axi_ram = AxiRam(AxiBus.from_prefix(dut, "m_axi"), dut.clk, dut.rst, size=2**16)
 
         dut.completer_id.setimmediatevalue(0)
         dut.completer_id_enable.setimmediatevalue(0)

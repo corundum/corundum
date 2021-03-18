@@ -42,12 +42,12 @@ from cocotbext.axi.stream import define_stream
 from cocotbext.axi.utils import hexdump_str
 
 try:
-    from dma_psdp_ram import PsdpRamWrite
+    from dma_psdp_ram import PsdpRamWrite, PsdpRamWriteBus
 except ImportError:
     # attempt import from current directory
     sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
     try:
-        from dma_psdp_ram import PsdpRamWrite
+        from dma_psdp_ram import PsdpRamWrite, PsdpRamWriteBus
     finally:
         del sys.path[0]
 
@@ -113,7 +113,7 @@ class TB(object):
         self.rc.make_port().connect(self.dev)
 
         # DMA RAM
-        self.dma_ram = PsdpRamWrite(dut, "ram", dut.clk, dut.rst, size=2**16)
+        self.dma_ram = PsdpRamWrite(PsdpRamWriteBus.from_prefix(dut, "ram"), dut.clk, dut.rst, size=2**16)
 
         # Control
         self.read_desc_source = DescSource(DescBus.from_prefix(dut, "s_axis_read_desc"), dut.clk, dut.rst)

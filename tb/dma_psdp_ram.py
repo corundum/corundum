@@ -26,23 +26,67 @@ import logging
 
 import cocotb
 from cocotb.triggers import RisingEdge
-from cocotb.bus import Bus
+from cocotb_bus.bus import Bus
 
 from cocotbext.axi.memory import Memory
 
 
+class BaseBus(Bus):
+
+    _signals = ["data"]
+    _optional_signals = []
+
+    def __init__(self, entity=None, prefix=None, **kwargs):
+        super().__init__(entity, prefix, self._signals, optional_signals=self._optional_signals, **kwargs)
+
+    @classmethod
+    def from_entity(cls, entity, **kwargs):
+        return cls(entity, **kwargs)
+
+    @classmethod
+    def from_prefix(cls, entity, prefix, **kwargs):
+        return cls(entity, prefix, **kwargs)
+
+
+class PsdpRamWriteBus(BaseBus):
+    _signals = ["wr_cmd_be", "wr_cmd_addr", "wr_cmd_data", "wr_cmd_valid", "wr_cmd_ready", "wr_done"]
+
+
+class PsdpRamReadBus(BaseBus):
+    _signals = ["rd_cmd_addr", "rd_cmd_valid", "rd_cmd_ready", "rd_resp_data", "rd_resp_valid", "rd_resp_ready"]
+
+
+class PsdpRamBus:
+    def __init__(self, write=None, read=None, **kwargs):
+        self.write = write
+        self.read = read
+
+    @classmethod
+    def from_entity(cls, entity, **kwargs):
+        write = PsdpRamWriteBus.from_entity(entity, **kwargs)
+        read = PsdpRamReadBus.from_entity(entity, **kwargs)
+        return cls(write, read)
+
+    @classmethod
+    def from_prefix(cls, entity, prefix, **kwargs):
+        write = PsdpRamWriteBus.from_prefix(entity, prefix, **kwargs)
+        read = PsdpRamReadBus.from_prefix(entity, prefix, **kwargs)
+        return cls(write, read)
+
+    @classmethod
+    def from_channels(cls, wr, rd):
+        write = PsdpRamWriteBus.from_channels(wr)
+        read = PsdpRamReadBus.from_channels(rd)
+        return cls(write, read)
+
+
 class PsdpRamWrite(Memory):
 
-    _cmd_signals = ["wr_cmd_be", "wr_cmd_addr", "wr_cmd_data", "wr_cmd_valid", "wr_cmd_ready"]
-    _resp_signals = ["wr_done"]
-
-    def __init__(self, entity, name, clock, reset=None, size=1024, mem=None, *args, **kwargs):
-        self.log = logging.getLogger(f"cocotb.{entity._name}.{name}")
-        self.entity = entity
+    def __init__(self, bus, clock, reset=None, size=1024, mem=None, *args, **kwargs):
+        self.bus = bus
         self.clock = clock
         self.reset = reset
-        self.cmd_bus = Bus(self.entity, name, self._cmd_signals, **kwargs)
-        self.resp_bus = Bus(self.entity, name, self._resp_signals, **kwargs)
+        self.log = logging.getLogger(f"cocotb.{bus._entity._name}.{bus._name}")
 
         self.log.info("Parallel Simple Dual Port RAM model (write)")
         self.log.info("Copyright (c) 2020 Alex Forencich")
@@ -53,13 +97,13 @@ class PsdpRamWrite(Memory):
         self._pause_generator = None
         self._pause_cr = None
 
-        self.width = len(self.cmd_bus.wr_cmd_data)
-        self.byte_width = len(self.cmd_bus.wr_cmd_be)
+        self.width = len(self.bus.wr_cmd_data)
+        self.byte_width = len(self.bus.wr_cmd_be)
 
-        self.seg_count = len(self.cmd_bus.wr_cmd_valid)
+        self.seg_count = len(self.bus.wr_cmd_valid)
         self.seg_data_width = self.width // self.seg_count
         self.seg_byte_width = self.seg_data_width // 8
-        self.seg_addr_width = len(self.cmd_bus.wr_cmd_addr) // self.seg_count
+        self.seg_addr_width = len(self.bus.wr_cmd_addr) // self.seg_count
         self.seg_be_width = self.seg_data_width // 8
 
         self.seg_data_mask = 2**self.seg_data_width-1
@@ -73,10 +117,10 @@ class PsdpRamWrite(Memory):
         self.log.info("  Segment data width: %d bits (%d bytes)", self.seg_data_width, self.seg_byte_width)
         self.log.info("  Total data width: %d bits (%d bytes)", self.width, self.width // 8)
 
-        assert self.seg_be_width*self.seg_count == len(self.cmd_bus.wr_cmd_be)
+        assert self.seg_be_width*self.seg_count == len(self.bus.wr_cmd_be)
 
-        self.cmd_bus.wr_cmd_ready.setimmediatevalue(0)
-        self.resp_bus.wr_done.setimmediatevalue(0)
+        self.bus.wr_cmd_ready.setimmediatevalue(0)
+        self.bus.wr_done.setimmediatevalue(0)
 
         cocotb.fork(self._run())
 
@@ -99,15 +143,15 @@ class PsdpRamWrite(Memory):
 
             wr_done = 0
 
-            cmd_be_sample = self.cmd_bus.wr_cmd_be.value
-            cmd_addr_sample = self.cmd_bus.wr_cmd_addr.value
-            cmd_data_sample = self.cmd_bus.wr_cmd_data.value
-            cmd_ready_sample = self.cmd_bus.wr_cmd_ready.value
-            cmd_valid_sample = self.cmd_bus.wr_cmd_valid.value
+            cmd_be_sample = self.bus.wr_cmd_be.value
+            cmd_addr_sample = self.bus.wr_cmd_addr.value
+            cmd_data_sample = self.bus.wr_cmd_data.value
+            cmd_ready_sample = self.bus.wr_cmd_ready.value
+            cmd_valid_sample = self.bus.wr_cmd_valid.value
 
             if self.reset is not None and self.reset.value:
-                self.cmd_bus.wr_cmd_ready.setimmediatevalue(0)
-                self.resp_bus.wr_done.setimmediatevalue(0)
+                self.bus.wr_cmd_ready.setimmediatevalue(0)
+                self.bus.wr_done.setimmediatevalue(0)
                 continue
 
             # process segments
@@ -135,11 +179,11 @@ class PsdpRamWrite(Memory):
                         seg, addr, seg_be, ' '.join((f'{c:02x}' for c in data)))
 
             if self.pause:
-                self.cmd_bus.wr_cmd_ready <= 0
+                self.bus.wr_cmd_ready <= 0
             else:
-                self.cmd_bus.wr_cmd_ready <= 2**self.seg_count-1
+                self.bus.wr_cmd_ready <= 2**self.seg_count-1
 
-            self.resp_bus.wr_done <= wr_done
+            self.bus.wr_done <= wr_done
 
     async def _run_pause(self):
         for val in self._pause_generator:
@@ -149,16 +193,11 @@ class PsdpRamWrite(Memory):
 
 class PsdpRamRead(Memory):
 
-    _cmd_signals = ["rd_cmd_addr", "rd_cmd_valid", "rd_cmd_ready"]
-    _resp_signals = ["rd_resp_data", "rd_resp_valid", "rd_resp_ready"]
-
-    def __init__(self, entity, name, clock, reset=None, size=1024, mem=None, *args, **kwargs):
-        self.log = logging.getLogger(f"cocotb.{entity._name}.{name}")
-        self.entity = entity
+    def __init__(self, bus, clock, reset=None, size=1024, mem=None, *args, **kwargs):
+        self.bus = bus
         self.clock = clock
         self.reset = reset
-        self.cmd_bus = Bus(self.entity, name, self._cmd_signals, **kwargs)
-        self.resp_bus = Bus(self.entity, name, self._resp_signals, **kwargs)
+        self.log = logging.getLogger(f"cocotb.{bus._entity._name}.{bus._name}")
 
         self.log.info("Parallel Simple Dual Port RAM model (read)")
         self.log.info("Copyright (c) 2020 Alex Forencich")
@@ -169,13 +208,13 @@ class PsdpRamRead(Memory):
         self._pause_generator = None
         self._pause_cr = None
 
-        self.width = len(self.resp_bus.rd_resp_data)
+        self.width = len(self.bus.rd_resp_data)
         self.byte_width = self.width // 8
 
-        self.seg_count = len(self.cmd_bus.rd_cmd_valid)
+        self.seg_count = len(self.bus.rd_cmd_valid)
         self.seg_data_width = self.width // self.seg_count
         self.seg_byte_width = self.seg_data_width // 8
-        self.seg_addr_width = len(self.cmd_bus.rd_cmd_addr) // self.seg_count
+        self.seg_addr_width = len(self.bus.rd_cmd_addr) // self.seg_count
 
         self.seg_data_mask = 2**self.seg_data_width-1
         self.seg_addr_mask = 2**self.seg_addr_width-1
@@ -187,8 +226,8 @@ class PsdpRamRead(Memory):
         self.log.info("  Segment data width: %d bits (%d bytes)", self.seg_data_width, self.seg_byte_width)
         self.log.info("  Total data width: %d bits (%d bytes)", self.width, self.width // 8)
 
-        self.cmd_bus.rd_cmd_ready.setimmediatevalue(0)
-        self.resp_bus.rd_resp_valid.setimmediatevalue(0)
+        self.bus.rd_cmd_ready.setimmediatevalue(0)
+        self.bus.rd_resp_valid.setimmediatevalue(0)
 
         cocotb.fork(self._run())
 
@@ -215,16 +254,16 @@ class PsdpRamRead(Memory):
         while True:
             await RisingEdge(self.clock)
 
-            cmd_addr_sample = self.cmd_bus.rd_cmd_addr.value
-            cmd_ready_sample = self.cmd_bus.rd_cmd_ready.value
-            cmd_valid_sample = self.cmd_bus.rd_cmd_valid.value
+            cmd_addr_sample = self.bus.rd_cmd_addr.value
+            cmd_ready_sample = self.bus.rd_cmd_ready.value
+            cmd_valid_sample = self.bus.rd_cmd_valid.value
 
-            resp_ready_sample = self.resp_bus.rd_resp_ready.value
-            resp_valid_sample = self.resp_bus.rd_resp_valid.value
+            resp_ready_sample = self.bus.rd_resp_ready.value
+            resp_valid_sample = self.bus.rd_resp_valid.value
 
             if self.reset is not None and self.reset.value:
-                self.cmd_bus.rd_cmd_ready.setimmediatevalue(0)
-                self.resp_bus.rd_resp_valid.setimmediatevalue(0)
+                self.bus.rd_cmd_ready.setimmediatevalue(0)
+                self.bus.rd_resp_valid.setimmediatevalue(0)
                 cmd_ready = 0
                 resp_valid = 0
                 continue
@@ -266,12 +305,12 @@ class PsdpRamRead(Memory):
                     cmd_ready &= ~seg_mask
 
             if self.pause:
-                self.cmd_bus.rd_cmd_ready <= 0
+                self.bus.rd_cmd_ready <= 0
             else:
-                self.cmd_bus.rd_cmd_ready <= cmd_ready
+                self.bus.rd_cmd_ready <= cmd_ready
 
-            self.resp_bus.rd_resp_data <= resp_data
-            self.resp_bus.rd_resp_valid <= resp_valid
+            self.bus.rd_resp_data <= resp_data
+            self.bus.rd_resp_valid <= resp_valid
 
     async def _run_pause(self):
         for val in self._pause_generator:
@@ -280,11 +319,11 @@ class PsdpRamRead(Memory):
 
 
 class PsdpRam(Memory):
-    def __init__(self, entity, name, clock, reset=None, size=1024, mem=None, *args, **kwargs):
+    def __init__(self, bus, clock, reset=None, size=1024, mem=None, *args, **kwargs):
         self.write_if = None
         self.read_if = None
 
         super().__init__(size, mem, *args, **kwargs)
 
-        self.write_if = PsdpRamWrite(entity, name, clock, reset, mem=self.mem)
-        self.read_if = PsdpRamRead(entity, name, clock, reset, mem=self.mem)
+        self.write_if = PsdpRamWrite(bus.write, clock, reset, mem=self.mem)
+        self.read_if = PsdpRamRead(bus.read, clock, reset, mem=self.mem)

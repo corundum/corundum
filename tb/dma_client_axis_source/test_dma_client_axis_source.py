@@ -39,12 +39,12 @@ from cocotbext.axi import AxiStreamBus, AxiStreamSink
 from cocotbext.axi.stream import define_stream
 
 try:
-    from dma_psdp_ram import PsdpRamRead
+    from dma_psdp_ram import PsdpRamRead, PsdpRamReadBus
 except ImportError:
     # attempt import from current directory
     sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
     try:
-        from dma_psdp_ram import PsdpRamRead
+        from dma_psdp_ram import PsdpRamRead, PsdpRamReadBus
     finally:
         del sys.path[0]
 
@@ -74,7 +74,7 @@ class TB(object):
         self.read_data_sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "m_axis_read_data"), dut.clk, dut.rst)
 
         # DMA RAM
-        self.dma_ram = PsdpRamRead(dut, "ram", dut.clk, dut.rst, size=2**16)
+        self.dma_ram = PsdpRamRead(PsdpRamReadBus.from_prefix(dut, "ram"), dut.clk, dut.rst, size=2**16)
 
         dut.enable.setimmediatevalue(0)
 

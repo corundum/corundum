@@ -187,7 +187,7 @@ def cycle_pause():
 
 if cocotb.SIM_NAME:
 
-    data_width = int(os.getenv("PARAM_DATA_WIDTH"))
+    data_width = len(cocotb.top.s_axi_wdata)
     byte_width = data_width // 8
     max_burst_size = (byte_width-1).bit_length()
 

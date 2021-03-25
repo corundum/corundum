@@ -149,18 +149,21 @@ async def run_test_arb(dut, data_in=None, idle_inserter=None, backpressure_inser
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
 
-    for k in range(10):
-        tb.axil_master[0].init_write(k*256, b'\x11\x22\x33\x44')
-        tb.axil_master[0].init_read(k*256, 4)
-        tb.axil_master[1].init_write(k*256, b'\x11\x22\x33\x44')
-        tb.axil_master[1].init_read(k*256, 4)
+    async def worker(master, offset):
+        wr_op = master.init_write(offset, b'\x11\x22\x33\x44')
+        rd_op = master.init_read(offset, 4)
 
-    await tb.axil_master[0].wait()
-    await tb.axil_master[1].wait()
+        await wr_op.wait()
+        await rd_op.wait()
+
+    workers = []
 
     for k in range(10):
-        tb.axil_master[0].get_read_data()
-        tb.axil_master[1].get_read_data()
+        workers.append(cocotb.fork(worker(tb.axil_master[0], k*256)))
+        workers.append(cocotb.fork(worker(tb.axil_master[1], k*256)))
+
+    while workers:
+        await workers.pop(0).join()
 
     await RisingEdge(dut.a_clk)
     await RisingEdge(dut.a_clk)

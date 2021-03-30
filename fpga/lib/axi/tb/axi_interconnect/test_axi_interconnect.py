@@ -200,7 +200,7 @@ if cocotb.SIM_NAME:
     s_count = int(os.getenv("PARAM_S_COUNT"))
     m_count = int(os.getenv("PARAM_M_COUNT"))
 
-    data_width = int(os.getenv("PARAM_DATA_WIDTH"))
+    data_width = len(cocotb.top.s00_axi_wdata)
     byte_width = data_width // 8
     max_burst_size = (byte_width-1).bit_length()
 

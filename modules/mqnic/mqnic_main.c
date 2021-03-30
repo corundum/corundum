@@ -301,6 +301,8 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
         goto fail_miscdev;
     }
 
+    dev_info(dev, "Registered device %s", mqnic->name);
+
     pci_save_state(pdev);
 
     mutex_init(&mqnic->state_lock);

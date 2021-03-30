@@ -333,8 +333,6 @@ parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE;
 parameter TDMA_INDEX_WIDTH = 6;
 
 // Timstamping parameters (port)
-parameter LOGIC_PTP_PERIOD_NS = 6'h4;
-parameter LOGIC_PTP_PERIOD_FNS = 16'h0000;
 parameter IF_PTP_PERIOD_NS = 6'h6;
 parameter IF_PTP_PERIOD_FNS = 16'h6666;
 parameter PTP_TS_ENABLE = 0;
@@ -2689,8 +2687,6 @@ generate
                 .TX_FRAME_FIFO(1),
                 .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
                 .RX_FRAME_FIFO(1),
-                .LOGIC_PTP_PERIOD_NS(LOGIC_PTP_PERIOD_NS),
-                .LOGIC_PTP_PERIOD_FNS(LOGIC_PTP_PERIOD_FNS),
                 .PTP_PERIOD_NS(IF_PTP_PERIOD_NS),
                 .PTP_PERIOD_FNS(IF_PTP_PERIOD_FNS),
                 .PTP_USE_SAMPLE_CLOCK(0),
@@ -2754,6 +2750,7 @@ generate
                 .rx_fifo_good_frame(),
 
                 .ptp_ts_96(ptp_ts_96),
+                .ptp_ts_step(ptp_ts_step),
 
                 .ifg_delay(8'd12)
             );

@@ -293,8 +293,6 @@ parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE;
 parameter TDMA_INDEX_WIDTH = 6;
 
 // Timstamping parameters (port)
-parameter LOGIC_PTP_PERIOD_NS = 6'h4;
-parameter LOGIC_PTP_PERIOD_FNS = 16'h0000;
 parameter IF_PTP_PERIOD_NS = 6'h3;
 parameter IF_PTP_PERIOD_FNS = 16'h1a60;
 parameter PTP_TS_ENABLE = 0;

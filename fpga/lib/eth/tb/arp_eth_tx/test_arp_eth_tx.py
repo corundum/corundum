@@ -27,7 +27,8 @@ import itertools
 import logging
 import os
 
-from scapy.layers.l2 import Ether
+from scapy.layers.l2 import Ether, ARP
+from scapy.utils import mac2str, atol
 
 import pytest
 import cocotb_test.simulator
@@ -37,12 +38,17 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge
 from cocotb.regression import TestFactory
 
-from cocotbext.axi import AxiStreamBus, AxiStreamSource, AxiStreamSink
+from cocotbext.axi import AxiStreamBus, AxiStreamSink
 from cocotbext.axi.stream import define_stream
 
 
 EthHdrBus, EthHdrTransaction, EthHdrSource, EthHdrSink, EthHdrMonitor = define_stream("EthHdr",
     signals=["hdr_valid", "hdr_ready", "dest_mac", "src_mac", "type"]
+)
+
+ArpHdrBus, ArpHdrTransaction, ArpHdrSource, ArpHdrSink, ArpHdrMonitor = define_stream("ArpHdr",
+    signals=["frame_valid", "frame_ready", "eth_dest_mac", "eth_src_mac", "eth_type",
+    "arp_htype", "arp_ptype", "arp_oper", "arp_sha", "arp_spa", "arp_tha", "arp_tpa"]
 )
 
 
@@ -55,7 +61,7 @@ class TB:
 
         cocotb.fork(Clock(dut.clk, 8, units="ns").start())
 
-        self.source = AxiStreamSource(AxiStreamBus.from_prefix(dut, "s_axis"), dut.clk, dut.rst)
+        self.source = ArpHdrSource(ArpHdrBus.from_prefix(dut, "s"), dut.clk, dut.rst)
 
         self.header_sink = EthHdrSink(EthHdrBus.from_prefix(dut, "m_eth"), dut.clk, dut.rst)
         self.payload_sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "m_eth_payload_axis"), dut.clk, dut.rst)
@@ -81,7 +87,21 @@ class TB:
         await RisingEdge(self.dut.clk)
 
     async def send(self, pkt):
-        await self.source.send(bytes(pkt))
+        tx_frame = ArpHdrTransaction()
+        tx_frame.eth_dest_mac = int.from_bytes(mac2str(pkt[Ether].dst), 'big')
+        tx_frame.eth_src_mac = int.from_bytes(mac2str(pkt[Ether].src), 'big')
+        tx_frame.eth_type = pkt[Ether].type
+        tx_frame.arp_htype = pkt[ARP].hwtype
+        tx_frame.arp_ptype = pkt[ARP].ptype
+        tx_frame.arp_hlen = pkt[ARP].hwlen
+        tx_frame.arp_plen = pkt[ARP].plen
+        tx_frame.arp_oper = pkt[ARP].op
+        tx_frame.arp_sha = int.from_bytes(mac2str(pkt[ARP].hwsrc), 'big')
+        tx_frame.arp_spa = atol(pkt[ARP].psrc)
+        tx_frame.arp_tha = int.from_bytes(mac2str(pkt[ARP].hwdst), 'big')
+        tx_frame.arp_tpa = atol(pkt[ARP].pdst)
+
+        await self.source.send(tx_frame)
 
     async def recv(self):
         rx_header = await self.header_sink.recv()
@@ -98,7 +118,7 @@ class TB:
         return Ether(bytes(rx_pkt))
 
 
-async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=None, backpressure_inserter=None):
+async def run_test(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb = TB(dut)
 
@@ -107,22 +127,19 @@ async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=N
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
 
-    test_pkts = []
+    eth = Ether(src='5A:51:52:53:54:55', dst='DA:D1:D2:D3:D4:D5')
+    arp = ARP(hwtype=1, ptype=0x0800, hwlen=6, plen=4, op=2,
+        hwsrc='5A:51:52:53:54:55', psrc='192.168.1.100',
+        hwdst='DA:D1:D2:D3:D4:D5', pdst='192.168.1.101')
+    test_pkt = eth / arp
 
-    for payload in [payload_data(x) for x in payload_lengths()]:
-        eth = Ether(src='5A:51:52:53:54:55', dst='DA:D1:D2:D3:D4:D5', type=0x8000)
-        test_pkt = eth / payload
+    await tb.send(test_pkt)
 
-        test_pkts.append(test_pkt.copy())
+    rx_pkt = await tb.recv()
 
-        await tb.send(test_pkt)
+    tb.log.info("RX packet: %s", repr(rx_pkt))
 
-    for test_pkt in test_pkts:
-        rx_pkt = await tb.recv()
-
-        tb.log.info("RX packet: %s", repr(rx_pkt))
-
-        assert bytes(rx_pkt) == bytes(test_pkt)
+    assert bytes(rx_pkt) == bytes(test_pkt)
 
     assert tb.header_sink.empty()
     assert tb.payload_sink.empty()
@@ -135,19 +152,9 @@ def cycle_pause():
     return itertools.cycle([1, 1, 1, 0])
 
 
-def size_list():
-    return list(range(1, 128)) + [512, 1514, 9214] + [60]*10
-
-
-def incrementing_payload(length):
-    return bytes(itertools.islice(itertools.cycle(range(256)), length))
-
-
 if cocotb.SIM_NAME:
 
     factory = TestFactory(run_test)
-    factory.add_option("payload_lengths", [size_list])
-    factory.add_option("payload_data", [incrementing_payload])
     factory.add_option("idle_inserter", [None, cycle_pause])
     factory.add_option("backpressure_inserter", [None, cycle_pause])
     factory.generate_tests()
@@ -162,8 +169,8 @@ axis_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'axis', 'rtl'))
 
 
 @pytest.mark.parametrize("data_width", [8, 16, 32, 64, 128, 256, 512])
-def test_eth_axis_rx(request, data_width):
-    dut = "eth_axis_rx"
+def test_arp_eth_tx(request, data_width):
+    dut = "arp_eth_tx"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
 

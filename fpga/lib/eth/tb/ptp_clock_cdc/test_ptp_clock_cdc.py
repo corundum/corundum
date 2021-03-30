@@ -51,6 +51,7 @@ class TB:
         if len(dut.input_ts) == 64:
             self.ptp_clock = PtpClock(
                 ts_64=dut.input_ts,
+                ts_step=dut.input_ts_step,
                 clock=dut.input_clk,
                 reset=dut.input_rst,
                 period_ns=6.4
@@ -58,6 +59,7 @@ class TB:
         else:
             self.ptp_clock = PtpClock(
                 ts_96=dut.input_ts,
+                ts_step=dut.input_ts_step,
                 clock=dut.input_clk,
                 reset=dut.input_rst,
                 period_ns=6.4
@@ -69,6 +71,7 @@ class TB:
     async def reset(self):
         self.dut.input_rst.setimmediatevalue(0)
         self.dut.output_rst.setimmediatevalue(0)
+        await RisingEdge(self.dut.input_clk)
         await RisingEdge(self.dut.input_clk)
         self.dut.input_rst <= 1
         self.dut.output_rst <= 1
@@ -109,6 +112,15 @@ class TB:
         else:
             return (ts >> 48) + ((ts & 0xffffffffffff)/2**16*1e-9)
 
+    async def measure_ts_diff(self, N=1000):
+        total = 0
+        for k in range(N):
+            input_ts_ns = self.get_input_ts_ns()
+            output_ts_ns = self.get_output_ts_ns()
+            total += input_ts_ns-output_ts_ns
+            await Timer(100, 'ps')
+        return total/N
+
 
 @cocotb.test()
 async def run_test(dut):
@@ -122,17 +134,16 @@ async def run_test(dut):
 
     await RisingEdge(dut.input_clk)
 
-    for i in range(20000):
+    for i in range(40000):
         await RisingEdge(dut.input_clk)
 
-    input_stop_ts = tb.get_input_ts_ns()
-    output_stop_ts = tb.get_output_ts_ns()
+    assert tb.dut.locked.value.integer
 
-    diff = input_stop_ts-output_stop_ts
+    diff = await tb.measure_ts_diff()*1e9
 
-    tb.log.info(f"Difference: {diff} s")
+    tb.log.info(f"Difference: {diff} ns")
 
-    assert abs(diff) < 1e-8
+    assert abs(diff) < 10
 
     await RisingEdge(dut.input_clk)
     tb.log.info("Slightly faster")
@@ -141,17 +152,16 @@ async def run_test(dut):
 
     await RisingEdge(dut.input_clk)
 
-    for i in range(20000):
+    for i in range(40000):
         await RisingEdge(dut.input_clk)
 
-    input_stop_ts = tb.get_input_ts_ns()
-    output_stop_ts = tb.get_output_ts_ns()
+    assert tb.dut.locked.value.integer
 
-    diff = input_stop_ts-output_stop_ts
+    diff = await tb.measure_ts_diff()*1e9
 
-    tb.log.info(f"Difference: {diff} s")
+    tb.log.info(f"Difference: {diff} ns")
 
-    assert abs(diff) < 1e-8
+    assert abs(diff) < 10
 
     await RisingEdge(dut.input_clk)
     tb.log.info("Slightly slower")
@@ -160,17 +170,16 @@ async def run_test(dut):
 
     await RisingEdge(dut.input_clk)
 
-    for i in range(20000):
+    for i in range(40000):
         await RisingEdge(dut.input_clk)
 
-    input_stop_ts = tb.get_input_ts_ns()
-    output_stop_ts = tb.get_output_ts_ns()
+    assert tb.dut.locked.value.integer
 
-    diff = input_stop_ts-output_stop_ts
+    diff = await tb.measure_ts_diff()*1e9
 
-    tb.log.info(f"Difference: {diff} s")
+    tb.log.info(f"Difference: {diff} ns")
 
-    assert abs(diff) < 1e-8
+    assert abs(diff) < 10
 
     await RisingEdge(dut.input_clk)
     tb.log.info("Significantly faster")
@@ -179,17 +188,16 @@ async def run_test(dut):
 
     await RisingEdge(dut.input_clk)
 
-    for i in range(20000):
+    for i in range(40000):
         await RisingEdge(dut.input_clk)
 
-    input_stop_ts = tb.get_input_ts_ns()
-    output_stop_ts = tb.get_output_ts_ns()
+    assert tb.dut.locked.value.integer
 
-    diff = input_stop_ts-output_stop_ts
+    diff = await tb.measure_ts_diff()*1e9
 
-    tb.log.info(f"Difference: {diff} s")
+    tb.log.info(f"Difference: {diff} ns")
 
-    assert abs(diff) < 1e-7
+    assert abs(diff) < 10
 
     await RisingEdge(dut.input_clk)
     tb.log.info("Significantly slower")
@@ -201,14 +209,13 @@ async def run_test(dut):
     for i in range(30000):
         await RisingEdge(dut.input_clk)
 
-    input_stop_ts = tb.get_input_ts_ns()
-    output_stop_ts = tb.get_output_ts_ns()
+    assert tb.dut.locked.value.integer
 
-    diff = input_stop_ts-output_stop_ts
+    diff = await tb.measure_ts_diff()*1e9
 
-    tb.log.info(f"Difference: {diff} s")
+    tb.log.info(f"Difference: {diff} ns")
 
-    assert abs(diff) < 1e-7
+    assert abs(diff) < 10
 
     await RisingEdge(dut.input_clk)
     await RisingEdge(dut.input_clk)
@@ -222,8 +229,9 @@ lib_dir = os.path.abspath(os.path.join(rtl_dir, '..', 'lib'))
 axis_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'axis', 'rtl'))
 
 
+@pytest.mark.parametrize("sample_clock", [1, 0])
 @pytest.mark.parametrize("ts_width", [96, 64])
-def test_ptp_clock_cdc(request, ts_width):
+def test_ptp_clock_cdc(request, ts_width, sample_clock):
     dut = "ptp_clock_cdc"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -237,12 +245,7 @@ def test_ptp_clock_cdc(request, ts_width):
     parameters['TS_WIDTH'] = ts_width
     parameters['NS_WIDTH'] = 4
     parameters['FNS_WIDTH'] = 16
-    parameters['INPUT_PERIOD_NS'] = 0x6
-    parameters['INPUT_PERIOD_FNS'] = 0x6666
-    parameters['OUTPUT_PERIOD_NS'] = 0x6
-    parameters['OUTPUT_PERIOD_FNS'] = 0x6666
-    parameters['USE_SAMPLE_CLOCK'] = 1
-    parameters['LOG_FIFO_DEPTH'] = 3
+    parameters['USE_SAMPLE_CLOCK'] = sample_clock
     parameters['LOG_RATE'] = 3
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}

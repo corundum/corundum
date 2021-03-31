@@ -1493,8 +1493,8 @@ always @(posedge clk) begin
 
         init_count_reg <= 0;
         init_done_reg <= 1'b0;
-        init_pcie_tag_reg = 1'b1;
-        init_op_tag_reg = 1'b1;
+        init_pcie_tag_reg <= 1'b1;
+        init_op_tag_reg <= 1'b1;
 
         req_pcie_tag_valid_reg <= 1'b0;
 

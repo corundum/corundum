@@ -183,7 +183,7 @@ always @* begin
             if (prescale_count_reg == 0 && bmc_clk_reg) begin
                 if (bit_count_reg != 8) begin
                     // shift in bit
-                    data_in_next <= {data_in_reg, bmc_miso_reg};
+                    data_in_next = {data_in_reg, bmc_miso_reg};
                 end
 
                 if (bit_count_reg != 0) begin

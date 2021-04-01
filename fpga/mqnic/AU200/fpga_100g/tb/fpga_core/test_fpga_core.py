@@ -46,7 +46,8 @@ from cocotb.log import SimLog
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, FallingEdge, Timer
 
-from cocotbext.axi import AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiLiteBus, AxiLiteRam
+from cocotbext.axi import AxiStreamBus, AxiLiteBus, AxiLiteRam
+from cocotbext.eth import EthMac
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
 
@@ -269,14 +270,38 @@ class TB(object):
 
         # Ethernet
         cocotb.fork(Clock(dut.qsfp0_rx_clk, 3.102, units="ns").start())
-        self.qsfp0_source = AxiStreamSource(AxiStreamBus.from_prefix(dut, "qsfp0_rx_axis"), dut.qsfp0_rx_clk, dut.qsfp0_rx_rst)
         cocotb.fork(Clock(dut.qsfp0_tx_clk, 3.102, units="ns").start())
-        self.qsfp0_sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "qsfp0_tx_axis"), dut.qsfp0_tx_clk, dut.qsfp0_tx_rst)
+
+        self.qsfp0_mac = EthMac(
+            tx_clk=dut.qsfp0_tx_clk,
+            tx_rst=dut.qsfp0_tx_rst,
+            tx_bus=AxiStreamBus.from_prefix(dut, "qsfp0_tx_axis"),
+            tx_ptp_time=dut.qsfp0_tx_ptp_time,
+            tx_ptp_ts=dut.qsfp0_tx_ptp_ts,
+            tx_ptp_ts_valid=dut.qsfp0_tx_ptp_ts_valid,
+            rx_clk=dut.qsfp0_rx_clk,
+            rx_rst=dut.qsfp0_rx_rst,
+            rx_bus=AxiStreamBus.from_prefix(dut, "qsfp0_rx_axis"),
+            rx_ptp_time=dut.qsfp0_rx_ptp_time,
+            ifg=12, speed=100e9
+        )
 
         cocotb.fork(Clock(dut.qsfp1_rx_clk, 3.102, units="ns").start())
-        self.qsfp1_source = AxiStreamSource(AxiStreamBus.from_prefix(dut, "qsfp1_rx_axis"), dut.qsfp1_rx_clk, dut.qsfp1_rx_rst)
         cocotb.fork(Clock(dut.qsfp1_tx_clk, 3.102, units="ns").start())
-        self.qsfp1_sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "qsfp1_tx_axis"), dut.qsfp1_tx_clk, dut.qsfp1_tx_rst)
+
+        self.qsfp1_mac = EthMac(
+            tx_clk=dut.qsfp1_tx_clk,
+            tx_rst=dut.qsfp1_tx_rst,
+            tx_bus=AxiStreamBus.from_prefix(dut, "qsfp1_tx_axis"),
+            tx_ptp_time=dut.qsfp1_tx_ptp_time,
+            tx_ptp_ts=dut.qsfp1_tx_ptp_ts,
+            tx_ptp_ts_valid=dut.qsfp1_tx_ptp_ts_valid,
+            rx_clk=dut.qsfp1_rx_clk,
+            rx_rst=dut.qsfp1_rx_rst,
+            rx_bus=AxiStreamBus.from_prefix(dut, "qsfp1_rx_axis"),
+            rx_ptp_time=dut.qsfp1_rx_ptp_time,
+            ifg=12, speed=100e9
+        )
 
         dut.sw.setimmediatevalue(0)
 
@@ -329,10 +354,10 @@ class TB(object):
             await RisingEdge(self.dut.clk_250mhz)
 
             if self.loopback_enable:
-                if not self.qsfp0_sink.empty():
-                    await self.qsfp0_source.send(await self.qsfp0_sink.recv())
-                if not self.qsfp1_sink.empty():
-                    await self.qsfp1_source.send(await self.qsfp1_sink.recv())
+                if not self.qsfp0_mac.tx.empty():
+                    await self.qsfp0_mac.rx.send(await self.qsfp0_mac.tx.recv())
+                if not self.qsfp1_mac.tx.empty():
+                    await self.qsfp1_mac.rx.send(await self.qsfp1_mac.tx.recv())
 
 
 @cocotb.test()
@@ -363,10 +388,10 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(data, 0)
 
-    pkt = await tb.qsfp0_sink.recv()
+    pkt = await tb.qsfp0_mac.tx.recv()
     tb.log.info("Packet: %s", pkt)
 
-    await tb.qsfp0_source.send(pkt)
+    await tb.qsfp0_mac.rx.send(pkt)
 
     pkt = await tb.driver.interfaces[0].recv()
 
@@ -375,10 +400,10 @@ async def run_test_nic(dut):
 
     # await tb.driver.interfaces[1].start_xmit(data, 0)
 
-    # pkt = await tb.qsfp1_0_sink.recv()
+    # pkt = await tb.qsfp1_mac.tx.recv()
     # tb.log.info("Packet: %s", pkt)
 
-    # await tb.qsfp1_0_source.send(pkt)
+    # await tb.qsfp1_mac.rx.send(pkt)
 
     # pkt = await tb.driver.interfaces[1].recv()
 
@@ -398,10 +423,10 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(test_pkt2.build(), 0, 34, 6)
 
-    pkt = await tb.qsfp0_sink.recv()
+    pkt = await tb.qsfp0_mac.tx.recv()
     tb.log.info("Packet: %s", pkt)
 
-    await tb.qsfp0_source.send(pkt)
+    await tb.qsfp0_mac.rx.send(pkt)
 
     pkt = await tb.driver.interfaces[0].recv()
 

@@ -168,6 +168,10 @@ module fpga_core #
     output wire                               qsfp0_tx_axis_tlast,
     output wire                               qsfp0_tx_axis_tuser,
 
+    output wire [79:0]                        qsfp0_tx_ptp_time,
+    input  wire [79:0]                        qsfp0_tx_ptp_ts,
+    input  wire                               qsfp0_tx_ptp_ts_valid,
+
     input  wire                               qsfp0_rx_clk,
     input  wire                               qsfp0_rx_rst,
 
@@ -175,7 +179,9 @@ module fpga_core #
     input  wire [AXIS_ETH_KEEP_WIDTH-1:0]     qsfp0_rx_axis_tkeep,
     input  wire                               qsfp0_rx_axis_tvalid,
     input  wire                               qsfp0_rx_axis_tlast,
-    input  wire                               qsfp0_rx_axis_tuser,
+    input  wire [80+1-1:0]                    qsfp0_rx_axis_tuser,
+
+    output wire [79:0]                        qsfp0_rx_ptp_time,
 
     output wire                               qsfp0_modsell,
     output wire                               qsfp0_resetl,
@@ -193,6 +199,10 @@ module fpga_core #
     output wire                               qsfp1_tx_axis_tlast,
     output wire                               qsfp1_tx_axis_tuser,
 
+    output wire [79:0]                        qsfp1_tx_ptp_time,
+    input  wire [79:0]                        qsfp1_tx_ptp_ts,
+    input  wire                               qsfp1_tx_ptp_ts_valid,
+
     input  wire                               qsfp1_rx_clk,
     input  wire                               qsfp1_rx_rst,
 
@@ -200,7 +210,9 @@ module fpga_core #
     input  wire [AXIS_ETH_KEEP_WIDTH-1:0]     qsfp1_rx_axis_tkeep,
     input  wire                               qsfp1_rx_axis_tvalid,
     input  wire                               qsfp1_rx_axis_tlast,
-    input  wire                               qsfp1_rx_axis_tuser,
+    input  wire [80+1-1:0]                    qsfp1_rx_axis_tuser,
+
+    output wire [79:0]                        qsfp1_rx_ptp_time,
 
     output wire                               qsfp1_modsell,
     output wire                               qsfp1_resetl,
@@ -293,9 +305,7 @@ parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE;
 parameter TDMA_INDEX_WIDTH = 6;
 
 // Timstamping parameters (port)
-parameter IF_PTP_PERIOD_NS = 6'h3;
-parameter IF_PTP_PERIOD_FNS = 16'h1a60;
-parameter PTP_TS_ENABLE = 0;
+parameter PTP_TS_ENABLE = 1;
 parameter PTP_TS_WIDTH = 96;
 parameter TX_PTP_TS_FIFO_DEPTH = 32;
 parameter RX_PTP_TS_FIFO_DEPTH = 32;
@@ -1960,6 +1970,8 @@ wire [PORT_COUNT-1:0] port_tx_axis_tvalid;
 wire [PORT_COUNT-1:0] port_tx_axis_tready;
 wire [PORT_COUNT-1:0] port_tx_axis_tlast;
 wire [PORT_COUNT-1:0] port_tx_axis_tuser;
+wire [PORT_COUNT*80-1:0] port_tx_ptp_ts;
+wire [PORT_COUNT-1:0] port_tx_ptp_ts_valid;
 
 wire [PORT_COUNT-1:0] port_rx_clk;
 wire [PORT_COUNT-1:0] port_rx_rst;
@@ -1967,7 +1979,7 @@ wire [PORT_COUNT*AXIS_ETH_DATA_WIDTH-1:0] port_rx_axis_tdata;
 wire [PORT_COUNT*AXIS_ETH_KEEP_WIDTH-1:0] port_rx_axis_tkeep;
 wire [PORT_COUNT-1:0] port_rx_axis_tvalid;
 wire [PORT_COUNT-1:0] port_rx_axis_tlast;
-wire [PORT_COUNT-1:0] port_rx_axis_tuser;
+wire [PORT_COUNT*81-1:0] port_rx_axis_tuser;
 
 assign led[0] = pps_led_reg;
 assign led[2:1] = 0;
@@ -1986,7 +1998,7 @@ localparam QSFP1_IND = 1;
 generate
     genvar m, n;
 
-    if (QSFP0_IND >= 0 && QSFP0_IND < PORT_COUNT) begin
+    if (QSFP0_IND >= 0 && QSFP0_IND < PORT_COUNT) begin : qsfp0
         assign port_tx_clk[QSFP0_IND] = qsfp0_tx_clk;
         assign port_tx_rst[QSFP0_IND] = qsfp0_tx_rst;
         assign qsfp0_tx_axis_tdata = port_tx_axis_tdata[QSFP0_IND*AXIS_ETH_DATA_WIDTH +: AXIS_ETH_DATA_WIDTH];
@@ -1995,6 +2007,8 @@ generate
         assign port_tx_axis_tready[QSFP0_IND] = qsfp0_tx_axis_tready;
         assign qsfp0_tx_axis_tlast = port_tx_axis_tlast[QSFP0_IND];
         assign qsfp0_tx_axis_tuser = port_tx_axis_tuser[QSFP0_IND];
+        assign port_tx_ptp_ts[QSFP0_IND*80 +: 80] = qsfp0_tx_ptp_ts;
+        assign port_tx_ptp_ts_valid[QSFP0_IND] = qsfp0_tx_ptp_ts_valid;
 
         assign port_rx_clk[QSFP0_IND] = qsfp0_rx_clk;
         assign port_rx_rst[QSFP0_IND] = qsfp0_rx_rst;
@@ -2002,16 +2016,69 @@ generate
         assign port_rx_axis_tkeep[QSFP0_IND*AXIS_ETH_KEEP_WIDTH +: AXIS_ETH_KEEP_WIDTH] = qsfp0_rx_axis_tkeep;
         assign port_rx_axis_tvalid[QSFP0_IND] = qsfp0_rx_axis_tvalid;
         assign port_rx_axis_tlast[QSFP0_IND] = qsfp0_rx_axis_tlast;
-        assign port_rx_axis_tuser[QSFP0_IND] = qsfp0_rx_axis_tuser;
+        assign port_rx_axis_tuser[QSFP0_IND*81 +: 81] = qsfp0_rx_axis_tuser;
+
+        if (PTP_TS_ENABLE) begin : ptp
+            wire [PTP_TS_WIDTH-1:0] tx_ptp_ts_96;
+            wire [PTP_TS_WIDTH-1:0] rx_ptp_ts_96;
+
+            assign qsfp0_tx_ptp_time = tx_ptp_ts_96[95:16];
+            assign qsfp0_rx_ptp_time = rx_ptp_ts_96[95:16];
+
+            ptp_clock_cdc #(
+                .TS_WIDTH(96),
+                .NS_WIDTH(4),
+                .FNS_WIDTH(16),
+                .USE_SAMPLE_CLOCK(1'b0)
+            )
+            tx_ptp_cdc (
+                .input_clk(clk_250mhz),
+                .input_rst(rst_250mhz),
+                .output_clk(qsfp0_tx_clk),
+                .output_rst(qsfp0_tx_rst),
+                .sample_clk(clk_250mhz),
+                .input_ts(ptp_ts_96),
+                .input_ts_step(ptp_ts_step),
+                .output_ts(tx_ptp_ts_96),
+                .output_ts_step(),
+                .output_pps(),
+                .locked()
+            );
+
+            ptp_clock_cdc #(
+                .TS_WIDTH(96),
+                .NS_WIDTH(4),
+                .FNS_WIDTH(16),
+                .USE_SAMPLE_CLOCK(1'b0)
+            )
+            rx_ptp_cdc (
+                .input_clk(clk_250mhz),
+                .input_rst(rst_250mhz),
+                .output_clk(qsfp0_rx_clk),
+                .output_rst(qsfp0_rx_rst),
+                .sample_clk(clk_250mhz),
+                .input_ts(ptp_ts_96),
+                .input_ts_step(ptp_ts_step),
+                .output_ts(rx_ptp_ts_96),
+                .output_ts_step(),
+                .output_pps(),
+                .locked()
+            );
+        end else begin
+            assign qsfp0_tx_ptp_time = 80'd0;
+            assign qsfp0_rx_ptp_time = 80'd0;
+        end
     end else begin
         assign qsfp0_tx_axis_tdata = {AXIS_ETH_DATA_WIDTH{1'b0}};
         assign qsfp0_tx_axis_tkeep = {AXIS_ETH_KEEP_WIDTH{1'b0}};
         assign qsfp0_tx_axis_tvalid = 1'b0;
         assign qsfp0_tx_axis_tlast = 1'b0;
         assign qsfp0_tx_axis_tuser = 1'b0;
+        assign qsfp0_tx_ptp_time = 80'd0;
+        assign qsfp0_rx_ptp_time = 80'd0;
     end
 
-    if (QSFP1_IND >= 0 && QSFP1_IND < PORT_COUNT) begin
+    if (QSFP1_IND >= 0 && QSFP1_IND < PORT_COUNT) begin : qsfp1
         assign port_tx_clk[QSFP1_IND] = qsfp1_tx_clk;
         assign port_tx_rst[QSFP1_IND] = qsfp1_tx_rst;
         assign qsfp1_tx_axis_tdata = port_tx_axis_tdata[QSFP1_IND*AXIS_ETH_DATA_WIDTH +: AXIS_ETH_DATA_WIDTH];
@@ -2020,6 +2087,8 @@ generate
         assign port_tx_axis_tready[QSFP1_IND] = qsfp1_tx_axis_tready;
         assign qsfp1_tx_axis_tlast = port_tx_axis_tlast[QSFP1_IND];
         assign qsfp1_tx_axis_tuser = port_tx_axis_tuser[QSFP1_IND];
+        assign port_tx_ptp_ts[QSFP1_IND*80 +: 80] = qsfp1_tx_ptp_ts;
+        assign port_tx_ptp_ts_valid[QSFP1_IND] = qsfp1_tx_ptp_ts_valid;
 
         assign port_rx_clk[QSFP1_IND] = qsfp1_rx_clk;
         assign port_rx_rst[QSFP1_IND] = qsfp1_rx_rst;
@@ -2027,13 +2096,66 @@ generate
         assign port_rx_axis_tkeep[QSFP1_IND*AXIS_ETH_KEEP_WIDTH +: AXIS_ETH_KEEP_WIDTH] = qsfp1_rx_axis_tkeep;
         assign port_rx_axis_tvalid[QSFP1_IND] = qsfp1_rx_axis_tvalid;
         assign port_rx_axis_tlast[QSFP1_IND] = qsfp1_rx_axis_tlast;
-        assign port_rx_axis_tuser[QSFP1_IND] = qsfp1_rx_axis_tuser;
+        assign port_rx_axis_tuser[QSFP1_IND*81 +: 81] = qsfp1_rx_axis_tuser;
+
+        if (PTP_TS_ENABLE) begin : ptp
+            wire [PTP_TS_WIDTH-1:0] tx_ptp_ts_96;
+            wire [PTP_TS_WIDTH-1:0] rx_ptp_ts_96;
+
+            assign qsfp1_tx_ptp_time = tx_ptp_ts_96[95:16];
+            assign qsfp1_rx_ptp_time = rx_ptp_ts_96[95:16];
+
+            ptp_clock_cdc #(
+                .TS_WIDTH(96),
+                .NS_WIDTH(4),
+                .FNS_WIDTH(16),
+                .USE_SAMPLE_CLOCK(1'b0)
+            )
+            tx_ptp_cdc (
+                .input_clk(clk_250mhz),
+                .input_rst(rst_250mhz),
+                .output_clk(qsfp1_tx_clk),
+                .output_rst(qsfp1_tx_rst),
+                .sample_clk(clk_250mhz),
+                .input_ts(ptp_ts_96),
+                .input_ts_step(ptp_ts_step),
+                .output_ts(tx_ptp_ts_96),
+                .output_ts_step(),
+                .output_pps(),
+                .locked()
+            );
+
+            ptp_clock_cdc #(
+                .TS_WIDTH(96),
+                .NS_WIDTH(4),
+                .FNS_WIDTH(16),
+                .USE_SAMPLE_CLOCK(1'b0)
+            )
+            rx_ptp_cdc (
+                .input_clk(clk_250mhz),
+                .input_rst(rst_250mhz),
+                .output_clk(qsfp1_rx_clk),
+                .output_rst(qsfp1_rx_rst),
+                .sample_clk(clk_250mhz),
+                .input_ts(ptp_ts_96),
+                .input_ts_step(ptp_ts_step),
+                .output_ts(rx_ptp_ts_96),
+                .output_ts_step(),
+                .output_pps(),
+                .locked()
+            );
+        end else begin
+            assign qsfp1_tx_ptp_time = 80'd0;
+            assign qsfp1_rx_ptp_time = 80'd0;
+        end
     end else begin
         assign qsfp1_tx_axis_tdata = {AXIS_ETH_DATA_WIDTH{1'b0}};
         assign qsfp1_tx_axis_tkeep = {AXIS_ETH_KEEP_WIDTH{1'b0}};
         assign qsfp1_tx_axis_tvalid = 1'b0;
         assign qsfp1_tx_axis_tlast = 1'b0;
         assign qsfp1_tx_axis_tuser = 1'b0;
+        assign qsfp1_tx_ptp_time = 80'd0;
+        assign qsfp1_rx_ptp_time = 80'd0;
     end
 
     case (IF_COUNT)
@@ -2060,6 +2182,7 @@ generate
         wire [PORTS_PER_IF-1:0] rx_axis_tready;
         wire [PORTS_PER_IF-1:0] rx_axis_tlast;
         wire [PORTS_PER_IF-1:0] rx_axis_tuser;
+        wire [PORTS_PER_IF*81-1:0] rx_axis_tuser_int;
 
         wire [PORTS_PER_IF*PTP_TS_WIDTH-1:0] rx_ptp_ts_96;
         wire [PORTS_PER_IF-1:0] rx_ptp_ts_valid;
@@ -2320,6 +2443,171 @@ generate
 
         for (m = 0; m < PORTS_PER_IF; m = m + 1) begin : mac
 
+            if (PTP_TS_ENABLE) begin
+
+                wire [79:0] tx_ptp_ts_96_pipe;
+                wire tx_ptp_ts_valid_pipe;
+                wire tx_ptp_ts_ready_pipe;
+
+                axis_async_fifo #(
+                    .DEPTH(TX_PTP_TS_FIFO_DEPTH),
+                    .DATA_WIDTH(80),
+                    .KEEP_ENABLE(0),
+                    .LAST_ENABLE(0),
+                    .ID_ENABLE(0),
+                    .DEST_ENABLE(0),
+                    .USER_ENABLE(0),
+                    .FRAME_FIFO(0)
+                )
+                tx_ptp_ts_fifo (
+                    .async_rst(rst_250mhz | port_tx_rst[n*PORTS_PER_IF+m]),
+
+                    // AXI input
+                    .s_clk(port_tx_clk[n*PORTS_PER_IF+m]),
+                    .s_axis_tdata(port_tx_ptp_ts[(n*PORTS_PER_IF+m)*80 +: 80]),
+                    .s_axis_tkeep(0),
+                    .s_axis_tvalid(port_tx_ptp_ts_valid[n*PORTS_PER_IF+m]),
+                    .s_axis_tready(),
+                    .s_axis_tlast(0),
+                    .s_axis_tid(0),
+                    .s_axis_tdest(0),
+                    .s_axis_tuser(0),
+
+                    // AXI output
+                    .m_clk(clk_250mhz),
+                    .m_axis_tdata(tx_ptp_ts_96_pipe),
+                    .m_axis_tkeep(),
+                    .m_axis_tvalid(tx_ptp_ts_valid_pipe),
+                    .m_axis_tready(tx_ptp_ts_ready_pipe),
+                    .m_axis_tlast(),
+                    .m_axis_tid(),
+                    .m_axis_tdest(),
+                    .m_axis_tuser(),
+
+                    // Status
+                    .s_status_overflow(),
+                    .s_status_bad_frame(),
+                    .s_status_good_frame(),
+                    .m_status_overflow(),
+                    .m_status_bad_frame(),
+                    .m_status_good_frame()
+                );
+
+                axis_pipeline_register #(
+                    .DATA_WIDTH(80),
+                    .KEEP_ENABLE(0),
+                    .LAST_ENABLE(0),
+                    .ID_ENABLE(0),
+                    .DEST_ENABLE(0),
+                    .USER_ENABLE(0),
+                    .REG_TYPE(2),
+                    .LENGTH(2)
+                )
+                tx_ptp_ts_reg (
+                    .clk(clk_250mhz),
+                    .rst(rst_250mhz),
+                    // AXI input
+                    .s_axis_tdata(tx_ptp_ts_96_pipe),
+                    .s_axis_tkeep(0),
+                    .s_axis_tvalid(tx_ptp_ts_valid_pipe),
+                    .s_axis_tready(tx_ptp_ts_ready_pipe),
+                    .s_axis_tlast(0),
+                    .s_axis_tid(0),
+                    .s_axis_tdest(0),
+                    .s_axis_tuser(0),
+                    // AXI output
+                    .m_axis_tdata(tx_ptp_ts_96[m*PTP_TS_WIDTH+16 +: 80]),
+                    .m_axis_tkeep(),
+                    .m_axis_tvalid(tx_ptp_ts_valid[m +: 1]),
+                    .m_axis_tready(tx_ptp_ts_ready[m +: 1]),
+                    .m_axis_tlast(),
+                    .m_axis_tid(),
+                    .m_axis_tdest(),
+                    .m_axis_tuser()
+                );
+
+                assign tx_ptp_ts_96[m*PTP_TS_WIDTH +: 16] = 16'd0;
+
+            end else begin
+
+                assign tx_ptp_ts_96[m*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {PTP_TS_WIDTH{1'b0}};
+                assign tx_ptp_ts_valid = 1'b0;
+
+            end
+
+            if (PTP_TS_ENABLE) begin
+
+                wire [79:0] rx_ts;
+                wire rx_ts_valid;
+
+                ptp_ts_extract #(
+                    .TS_WIDTH(80),
+                    .TS_OFFSET(1),
+                    .USER_WIDTH(81)
+                )
+                rx_ptp_ts_extract (
+                    .clk(clk_250mhz),
+                    .rst(rst_250mhz),
+
+                    // AXI stream input
+                    .s_axis_tvalid(rx_axis_tvalid[m +: 1] && rx_axis_tready[m +: 1]),
+                    .s_axis_tlast(rx_axis_tlast[m +: 1]),
+                    .s_axis_tuser(rx_axis_tuser_int[m*81 +: 81]),
+
+                    // Timestamp output
+                    .m_axis_ts(rx_ts),
+                    .m_axis_ts_valid(rx_ts_valid)
+                );
+
+                axis_fifo #(
+                    .DEPTH(RX_PTP_TS_FIFO_DEPTH),
+                    .DATA_WIDTH(80),
+                    .KEEP_ENABLE(0),
+                    .LAST_ENABLE(0),
+                    .ID_ENABLE(0),
+                    .DEST_ENABLE(0),
+                    .USER_ENABLE(0),
+                    .FRAME_FIFO(0)
+                )
+                rx_ptp_ts_fifo (
+                    .clk(clk_250mhz),
+                    .rst(rst_250mhz),
+
+                    // AXI input
+                    .s_axis_tdata(rx_ts),
+                    .s_axis_tkeep(0),
+                    .s_axis_tvalid(rx_ts_valid),
+                    .s_axis_tready(),
+                    .s_axis_tlast(0),
+                    .s_axis_tid(0),
+                    .s_axis_tdest(0),
+                    .s_axis_tuser(0),
+
+                    // AXI output
+                    .m_axis_tdata(rx_ptp_ts_96[m*PTP_TS_WIDTH+16 +: 80]),
+                    .m_axis_tkeep(),
+                    .m_axis_tvalid(rx_ptp_ts_valid[m +: 1]),
+                    .m_axis_tready(rx_ptp_ts_ready[m +: 1]),
+                    .m_axis_tlast(),
+                    .m_axis_tid(),
+                    .m_axis_tdest(),
+                    .m_axis_tuser(),
+
+                    // Status
+                    .status_overflow(),
+                    .status_bad_frame(),
+                    .status_good_frame()
+                );
+
+                assign rx_ptp_ts_96[m*PTP_TS_WIDTH +: 16] = 16'd0;
+
+            end else begin
+
+                assign rx_ptp_ts_96[m*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {PTP_TS_WIDTH{1'b0}};
+                assign rx_ptp_ts_valid[m +: 1] = 1'b0;
+
+            end
+
             wire [AXIS_DATA_WIDTH-1:0] tx_axis_tdata_pipe;
             wire [AXIS_KEEP_WIDTH-1:0] tx_axis_tkeep_pipe;
             wire tx_axis_tvalid_pipe;
@@ -2327,20 +2615,12 @@ generate
             wire tx_axis_tlast_pipe;
             wire tx_axis_tuser_pipe;
 
-            // wire [PTP_TS_WIDTH-1:0] tx_ptp_ts_96_pipe;
-            // wire tx_ptp_ts_valid_pipe;
-            // wire tx_ptp_ts_ready_pipe;
-
             wire [AXIS_DATA_WIDTH-1:0] rx_axis_tdata_pipe;
             wire [AXIS_KEEP_WIDTH-1:0] rx_axis_tkeep_pipe;
             wire rx_axis_tvalid_pipe;
             wire rx_axis_tready_pipe;
             wire rx_axis_tlast_pipe;
-            wire rx_axis_tuser_pipe;
-
-            // wire [PTP_TS_WIDTH-1:0] rx_ptp_ts_96_pipe;
-            // wire rx_ptp_ts_valid_pipe;
-            // wire rx_ptp_ts_ready_pipe;
+            wire [80:0] rx_axis_tuser_pipe;
 
             axis_pipeline_register #(
                 .DATA_WIDTH(AXIS_DATA_WIDTH),
@@ -2352,7 +2632,7 @@ generate
                 .USER_ENABLE(1),
                 .USER_WIDTH(1),
                 .REG_TYPE(2),
-                .LENGTH(3)
+                .LENGTH(2)
             )
             tx_reg (
                 .clk(clk_250mhz),
@@ -2385,9 +2665,9 @@ generate
                 .ID_ENABLE(0),
                 .DEST_ENABLE(0),
                 .USER_ENABLE(1),
-                .USER_WIDTH(1),
+                .USER_WIDTH(PTP_TS_ENABLE ? 81 : 1),
                 .REG_TYPE(2),
-                .LENGTH(3)
+                .LENGTH(2)
             )
             rx_reg (
                 .clk(clk_250mhz),
@@ -2409,8 +2689,10 @@ generate
                 .m_axis_tlast(rx_axis_tlast[m +: 1]),
                 .m_axis_tid(),
                 .m_axis_tdest(),
-                .m_axis_tuser(rx_axis_tuser[m +: 1])
+                .m_axis_tuser(rx_axis_tuser_int[m*81 +: 81])
             );
+
+            assign rx_axis_tuser[m +: 1] = rx_axis_tuser_int[m*81 +: 1];
 
             axis_async_fifo #(
                 .DEPTH(TX_FIFO_DEPTH),
@@ -2469,7 +2751,7 @@ generate
                 .ID_ENABLE(0),
                 .DEST_ENABLE(0),
                 .USER_ENABLE(1),
-                .USER_WIDTH(1),
+                .USER_WIDTH(PTP_TS_ENABLE ? 81 : 1),
                 .FRAME_FIFO(1),
                 .USER_BAD_FRAME_VALUE(1'b1),
                 .USER_BAD_FRAME_MASK(1'b1),
@@ -2488,7 +2770,7 @@ generate
                 .s_axis_tlast(port_rx_axis_tlast[n*PORTS_PER_IF+m]),
                 .s_axis_tid(0),
                 .s_axis_tdest(0),
-                .s_axis_tuser(port_rx_axis_tuser[n*PORTS_PER_IF+m]),
+                .s_axis_tuser(port_rx_axis_tuser[(n*PORTS_PER_IF+m)*81 +: 81]),
                 // AXI output
                 .m_clk(clk_250mhz),
                 .m_axis_tdata(rx_axis_tdata_pipe),

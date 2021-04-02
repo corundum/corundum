@@ -16,5 +16,6 @@ set_property -dict [list \
     CONFIG.LANE2_GT_LOC {X1Y53} \
     CONFIG.LANE3_GT_LOC {X1Y54} \
     CONFIG.LANE4_GT_LOC {X1Y55} \
-    CONFIG.ENABLE_PIPELINE_REG {1}
+    CONFIG.ENABLE_PIPELINE_REG {1} \
+    CONFIG.ENABLE_TIME_STAMPING {1}
 ] [get_ips cmac_usplus_1]

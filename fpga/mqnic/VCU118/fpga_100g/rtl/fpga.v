@@ -789,6 +789,10 @@ wire                           qsfp1_mac_tx_axis_tready;
 wire                           qsfp1_mac_tx_axis_tlast;
 wire                           qsfp1_mac_tx_axis_tuser;
 
+wire [79:0]                    qsfp1_tx_ptp_time_int;
+wire [79:0]                    qsfp1_tx_ptp_ts_int;
+wire                           qsfp1_tx_ptp_ts_valid_int;
+
 wire                           qsfp1_rx_clk_int;
 wire                           qsfp1_rx_rst_int;
 
@@ -796,7 +800,9 @@ wire [AXIS_ETH_DATA_WIDTH-1:0] qsfp1_rx_axis_tdata_int;
 wire [AXIS_ETH_KEEP_WIDTH-1:0] qsfp1_rx_axis_tkeep_int;
 wire                           qsfp1_rx_axis_tvalid_int;
 wire                           qsfp1_rx_axis_tlast_int;
-wire                           qsfp1_rx_axis_tuser_int;
+wire [80+1-1:0]                qsfp1_rx_axis_tuser_int;
+
+wire [79:0]                    qsfp1_rx_ptp_time_int;
 
 wire                           qsfp2_tx_clk_int;
 wire                           qsfp2_tx_rst_int;
@@ -815,6 +821,10 @@ wire                           qsfp2_mac_tx_axis_tready;
 wire                           qsfp2_mac_tx_axis_tlast;
 wire                           qsfp2_mac_tx_axis_tuser;
 
+wire [79:0]                    qsfp2_tx_ptp_time_int;
+wire [79:0]                    qsfp2_tx_ptp_ts_int;
+wire                           qsfp2_tx_ptp_ts_valid_int;
+
 wire                           qsfp2_rx_clk_int;
 wire                           qsfp2_rx_rst_int;
 
@@ -822,7 +832,9 @@ wire [AXIS_ETH_DATA_WIDTH-1:0] qsfp2_rx_axis_tdata_int;
 wire [AXIS_ETH_KEEP_WIDTH-1:0] qsfp2_rx_axis_tkeep_int;
 wire                           qsfp2_rx_axis_tvalid_int;
 wire                           qsfp2_rx_axis_tlast_int;
-wire                           qsfp2_rx_axis_tuser_int;
+wire [80+1-1:0]                qsfp2_rx_axis_tuser_int;
+
+wire [79:0]                    qsfp2_rx_ptp_time_int;
 
 wire qsfp1_rx_status;
 wire qsfp2_rx_status;
@@ -883,7 +895,7 @@ qsfp1_cmac_inst (
     .rx_axis_tdata(qsfp1_rx_axis_tdata_int), // output [511:0]
     .rx_axis_tlast(qsfp1_rx_axis_tlast_int), // output
     .rx_axis_tkeep(qsfp1_rx_axis_tkeep_int), // output [63:0]
-    .rx_axis_tuser(qsfp1_rx_axis_tuser_int), // output
+    .rx_axis_tuser(qsfp1_rx_axis_tuser_int[0]), // output
 
     .rx_otn_bip8_0(), // output [7:0]
     .rx_otn_bip8_1(), // output [7:0]
@@ -901,6 +913,30 @@ qsfp1_cmac_inst (
     .rx_preambleout(), // output [55:0]
     .usr_rx_reset(qsfp1_rx_rst_int), // output
     .gt_rxusrclk2(), // output
+
+    .rx_lane_aligner_fill_0(), // output [6:0]
+    .rx_lane_aligner_fill_1(), // output [6:0]
+    .rx_lane_aligner_fill_10(), // output [6:0]
+    .rx_lane_aligner_fill_11(), // output [6:0]
+    .rx_lane_aligner_fill_12(), // output [6:0]
+    .rx_lane_aligner_fill_13(), // output [6:0]
+    .rx_lane_aligner_fill_14(), // output [6:0]
+    .rx_lane_aligner_fill_15(), // output [6:0]
+    .rx_lane_aligner_fill_16(), // output [6:0]
+    .rx_lane_aligner_fill_17(), // output [6:0]
+    .rx_lane_aligner_fill_18(), // output [6:0]
+    .rx_lane_aligner_fill_19(), // output [6:0]
+    .rx_lane_aligner_fill_2(), // output [6:0]
+    .rx_lane_aligner_fill_3(), // output [6:0]
+    .rx_lane_aligner_fill_4(), // output [6:0]
+    .rx_lane_aligner_fill_5(), // output [6:0]
+    .rx_lane_aligner_fill_6(), // output [6:0]
+    .rx_lane_aligner_fill_7(), // output [6:0]
+    .rx_lane_aligner_fill_8(), // output [6:0]
+    .rx_lane_aligner_fill_9(), // output [6:0]
+    .rx_ptp_tstamp_out(qsfp1_rx_axis_tuser_int[80:1]), // output [79:0]
+    .rx_ptp_pcslane_out(), // output [4:0]
+    .ctl_rx_systemtimerin(qsfp1_rx_ptp_time_int), // input [79:0]
 
     .stat_rx_aligned(), // output
     .stat_rx_aligned_err(), // output
@@ -1065,6 +1101,18 @@ qsfp1_cmac_inst (
     .stat_rx_rsfec_lane_mapping(), // output [7:0]
     .stat_rx_rsfec_uncorrected_cw_inc(), // output
 
+    .ctl_tx_systemtimerin(qsfp1_tx_ptp_time_int), // input [79:0]
+
+    .stat_tx_ptp_fifo_read_error(), // output
+    .stat_tx_ptp_fifo_write_error(), // output
+
+    .tx_ptp_tstamp_valid_out(qsfp1_tx_ptp_ts_valid_int), // output
+    .tx_ptp_pcslane_out(), // output [4:0]
+    .tx_ptp_tstamp_tag_out(), // output [15:0]
+    .tx_ptp_tstamp_out(qsfp1_tx_ptp_ts_int), // output [79:0]
+    .tx_ptp_1588op_in(2'b10), // input [1:0]
+    .tx_ptp_tag_field_in(16'd0), // input [15:0]
+
     .stat_tx_bad_fcs(), // output
     .stat_tx_broadcast(), // output
     .stat_tx_frame_error(), // output
@@ -1167,7 +1215,7 @@ qsfp2_cmac_inst (
     .rx_axis_tdata(qsfp2_rx_axis_tdata_int), // output [511:0]
     .rx_axis_tlast(qsfp2_rx_axis_tlast_int), // output
     .rx_axis_tkeep(qsfp2_rx_axis_tkeep_int), // output [63:0]
-    .rx_axis_tuser(qsfp2_rx_axis_tuser_int), // output
+    .rx_axis_tuser(qsfp2_rx_axis_tuser_int[0]), // output
 
     .rx_otn_bip8_0(), // output [7:0]
     .rx_otn_bip8_1(), // output [7:0]
@@ -1185,6 +1233,30 @@ qsfp2_cmac_inst (
     .rx_preambleout(), // output [55:0]
     .usr_rx_reset(qsfp2_rx_rst_int), // output
     .gt_rxusrclk2(), // output
+
+    .rx_lane_aligner_fill_0(), // output [6:0]
+    .rx_lane_aligner_fill_1(), // output [6:0]
+    .rx_lane_aligner_fill_10(), // output [6:0]
+    .rx_lane_aligner_fill_11(), // output [6:0]
+    .rx_lane_aligner_fill_12(), // output [6:0]
+    .rx_lane_aligner_fill_13(), // output [6:0]
+    .rx_lane_aligner_fill_14(), // output [6:0]
+    .rx_lane_aligner_fill_15(), // output [6:0]
+    .rx_lane_aligner_fill_16(), // output [6:0]
+    .rx_lane_aligner_fill_17(), // output [6:0]
+    .rx_lane_aligner_fill_18(), // output [6:0]
+    .rx_lane_aligner_fill_19(), // output [6:0]
+    .rx_lane_aligner_fill_2(), // output [6:0]
+    .rx_lane_aligner_fill_3(), // output [6:0]
+    .rx_lane_aligner_fill_4(), // output [6:0]
+    .rx_lane_aligner_fill_5(), // output [6:0]
+    .rx_lane_aligner_fill_6(), // output [6:0]
+    .rx_lane_aligner_fill_7(), // output [6:0]
+    .rx_lane_aligner_fill_8(), // output [6:0]
+    .rx_lane_aligner_fill_9(), // output [6:0]
+    .rx_ptp_tstamp_out(qsfp2_rx_axis_tuser_int[80:1]), // output [79:0]
+    .rx_ptp_pcslane_out(), // output [4:0]
+    .ctl_rx_systemtimerin(qsfp2_rx_ptp_time_int), // input [79:0]
 
     .stat_rx_aligned(), // output
     .stat_rx_aligned_err(), // output
@@ -1348,6 +1420,18 @@ qsfp2_cmac_inst (
     .stat_rx_rsfec_lane_fill_3(), // output [13:0]
     .stat_rx_rsfec_lane_mapping(), // output [7:0]
     .stat_rx_rsfec_uncorrected_cw_inc(), // output
+
+    .ctl_tx_systemtimerin(qsfp2_tx_ptp_time_int), // input [79:0]
+
+    .stat_tx_ptp_fifo_read_error(), // output
+    .stat_tx_ptp_fifo_write_error(), // output
+
+    .tx_ptp_tstamp_valid_out(qsfp2_tx_ptp_ts_valid_int), // output
+    .tx_ptp_pcslane_out(), // output [4:0]
+    .tx_ptp_tstamp_tag_out(), // output [15:0]
+    .tx_ptp_tstamp_out(qsfp2_tx_ptp_ts_int), // output [79:0]
+    .tx_ptp_1588op_in(2'b10), // input [1:0]
+    .tx_ptp_tag_field_in(16'd0), // input [15:0]
 
     .stat_tx_bad_fcs(), // output
     .stat_tx_broadcast(), // output
@@ -1542,6 +1626,9 @@ core_inst (
     .qsfp1_tx_axis_tready(qsfp1_tx_axis_tready_int),
     .qsfp1_tx_axis_tlast(qsfp1_tx_axis_tlast_int),
     .qsfp1_tx_axis_tuser(qsfp1_tx_axis_tuser_int),
+    .qsfp1_tx_ptp_time(qsfp1_tx_ptp_time_int),
+    .qsfp1_tx_ptp_ts(qsfp1_tx_ptp_ts_int),
+    .qsfp1_tx_ptp_ts_valid(qsfp1_tx_ptp_ts_valid_int),
     .qsfp1_rx_clk(qsfp1_rx_clk_int),
     .qsfp1_rx_rst(qsfp1_rx_rst_int),
     .qsfp1_rx_axis_tdata(qsfp1_rx_axis_tdata_int),
@@ -1549,6 +1636,7 @@ core_inst (
     .qsfp1_rx_axis_tvalid(qsfp1_rx_axis_tvalid_int),
     .qsfp1_rx_axis_tlast(qsfp1_rx_axis_tlast_int),
     .qsfp1_rx_axis_tuser(qsfp1_rx_axis_tuser_int),
+    .qsfp1_rx_ptp_time(qsfp1_rx_ptp_time_int),
     .qsfp1_modprsl(qsfp1_modprsl_int),
     .qsfp1_modsell(qsfp1_modsell),
     .qsfp1_resetl(qsfp1_resetl),
@@ -1563,6 +1651,9 @@ core_inst (
     .qsfp2_tx_axis_tready(qsfp2_tx_axis_tready_int),
     .qsfp2_tx_axis_tlast(qsfp2_tx_axis_tlast_int),
     .qsfp2_tx_axis_tuser(qsfp2_tx_axis_tuser_int),
+    .qsfp2_tx_ptp_time(qsfp2_tx_ptp_time_int),
+    .qsfp2_tx_ptp_ts(qsfp2_tx_ptp_ts_int),
+    .qsfp2_tx_ptp_ts_valid(qsfp2_tx_ptp_ts_valid_int),
     .qsfp2_rx_clk(qsfp2_rx_clk_int),
     .qsfp2_rx_rst(qsfp2_rx_rst_int),
     .qsfp2_rx_axis_tdata(qsfp2_rx_axis_tdata_int),
@@ -1570,6 +1661,7 @@ core_inst (
     .qsfp2_rx_axis_tvalid(qsfp2_rx_axis_tvalid_int),
     .qsfp2_rx_axis_tlast(qsfp2_rx_axis_tlast_int),
     .qsfp2_rx_axis_tuser(qsfp2_rx_axis_tuser_int),
+    .qsfp2_rx_ptp_time(qsfp2_rx_ptp_time_int),
     .qsfp2_modprsl(qsfp2_modprsl_int),
     .qsfp2_modsell(qsfp2_modsell),
     .qsfp2_resetl(qsfp2_resetl),

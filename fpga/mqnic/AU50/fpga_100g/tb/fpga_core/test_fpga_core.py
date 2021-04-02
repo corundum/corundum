@@ -46,7 +46,8 @@ from cocotb.log import SimLog
 from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, FallingEdge, Timer
 
-from cocotbext.axi import AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiLiteBus, AxiLiteRam
+from cocotbext.axi import AxiStreamBus, AxiLiteBus, AxiLiteRam
+from cocotbext.eth import EthMac
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
 
@@ -269,9 +270,21 @@ class TB(object):
 
         # Ethernet
         cocotb.fork(Clock(dut.qsfp_rx_clk, 3.102, units="ns").start())
-        self.qsfp_source = AxiStreamSource(AxiStreamBus.from_prefix(dut, "qsfp_rx_axis"), dut.qsfp_rx_clk, dut.qsfp_rx_rst)
         cocotb.fork(Clock(dut.qsfp_tx_clk, 3.102, units="ns").start())
-        self.qsfp_sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "qsfp_tx_axis"), dut.qsfp_tx_clk, dut.qsfp_tx_rst)
+
+        self.qsfp_mac = EthMac(
+            tx_clk=dut.qsfp_tx_clk,
+            tx_rst=dut.qsfp_tx_rst,
+            tx_bus=AxiStreamBus.from_prefix(dut, "qsfp_tx_axis"),
+            tx_ptp_time=dut.qsfp_tx_ptp_time,
+            tx_ptp_ts=dut.qsfp_tx_ptp_ts,
+            tx_ptp_ts_valid=dut.qsfp_tx_ptp_ts_valid,
+            rx_clk=dut.qsfp_rx_clk,
+            rx_rst=dut.qsfp_rx_rst,
+            rx_bus=AxiStreamBus.from_prefix(dut, "qsfp_rx_axis"),
+            rx_ptp_time=dut.qsfp_rx_ptp_time,
+            ifg=12, speed=100e9
+        )
 
         dut.qspi_dq_i.setimmediatevalue(0)
 
@@ -307,8 +320,8 @@ class TB(object):
             await RisingEdge(self.dut.clk_250mhz)
 
             if self.loopback_enable:
-                if not self.qsfp_sink.empty():
-                    await self.qsfp_source.send(await self.qsfp_sink.recv())
+                if not self.qsfp_mac.tx.empty():
+                    await self.qsfp_mac.rx.send(await self.qsfp_mac.tx.recv())
 
 
 @cocotb.test()
@@ -338,10 +351,10 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(data, 0)
 
-    pkt = await tb.qsfp_sink.recv()
+    pkt = await tb.qsfp_mac.tx.recv()
     tb.log.info("Packet: %s", pkt)
 
-    await tb.qsfp_source.send(pkt)
+    await tb.qsfp_mac.rx.send(pkt)
 
     pkt = await tb.driver.interfaces[0].recv()
 
@@ -361,10 +374,10 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(test_pkt2.build(), 0, 34, 6)
 
-    pkt = await tb.qsfp_sink.recv()
+    pkt = await tb.qsfp_mac.tx.recv()
     tb.log.info("Packet: %s", pkt)
 
-    await tb.qsfp_source.send(pkt)
+    await tb.qsfp_mac.rx.send(pkt)
 
     pkt = await tb.driver.interfaces[0].recv()
 

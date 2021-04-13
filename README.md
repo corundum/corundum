@@ -9,8 +9,8 @@ GitHub repository: https://github.com/alexforencich/verilog-axi
 ## Introduction
 
 Collection of AXI4 and AXI4 lite bus components.  Most components are fully
-parametrizable in interface widths.  Includes full cocotb testbench that
-utilizes [cocotbext-axi](https://github.com/alexforencich/cocotbext-axi).
+parametrizable in interface widths.  Includes full cocotb testbenches that
+utilize [cocotbext-axi](https://github.com/alexforencich/cocotbext-axi).
 
 ## Documentation
 

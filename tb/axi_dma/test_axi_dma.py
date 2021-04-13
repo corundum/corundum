@@ -107,8 +107,8 @@ async def run_test_write(dut, data_in=None, idle_inserter=None, backpressure_ins
 
     tb = TB(dut)
 
-    byte_width = tb.axi_ram.write_if.byte_width
-    step_size = 1 if int(os.getenv("PARAM_ENABLE_UNALIGNED")) else byte_width
+    byte_lanes = tb.axi_ram.write_if.byte_lanes
+    step_size = 1 if int(os.getenv("PARAM_ENABLE_UNALIGNED")) else byte_lanes
     tag_count = 2**len(tb.write_desc_source.bus.tag)
 
     cur_tag = 1
@@ -120,8 +120,8 @@ async def run_test_write(dut, data_in=None, idle_inserter=None, backpressure_ins
 
     dut.write_enable <= 1
 
-    for length in list(range(1, byte_width*4+1))+[128]:
-        for offset in list(range(0, byte_width*2, step_size))+list(range(4096-byte_width*2, 4096, step_size)):
+    for length in list(range(1, byte_lanes*4+1))+[128]:
+        for offset in list(range(0, byte_lanes*2, step_size))+list(range(4096-byte_lanes*2, 4096, step_size)):
             for diff in [-8, -2, -1, 0, 1, 2, 8]:
                 if length+diff < 1:
                     continue
@@ -162,8 +162,8 @@ async def run_test_read(dut, data_in=None, idle_inserter=None, backpressure_inse
 
     tb = TB(dut)
 
-    byte_width = tb.axi_ram.read_if.byte_width
-    step_size = 1 if int(os.getenv("PARAM_ENABLE_UNALIGNED")) else byte_width
+    byte_lanes = tb.axi_ram.read_if.byte_lanes
+    step_size = 1 if int(os.getenv("PARAM_ENABLE_UNALIGNED")) else byte_lanes
     tag_count = 2**len(tb.read_desc_source.bus.tag)
 
     cur_tag = 1
@@ -175,8 +175,8 @@ async def run_test_read(dut, data_in=None, idle_inserter=None, backpressure_inse
 
     dut.read_enable <= 1
 
-    for length in list(range(1, byte_width*4+1))+[128]:
-        for offset in list(range(0, byte_width*2, step_size))+list(range(4096-byte_width*2, 4096, step_size)):
+    for length in list(range(1, byte_lanes*4+1))+[128]:
+        for offset in list(range(0, byte_lanes*2, step_size))+list(range(4096-byte_lanes*2, 4096, step_size)):
             tb.log.info("length %d, offset %d", length, offset)
             addr = offset+0x1000
             test_data = bytearray([x % 256 for x in range(length)])

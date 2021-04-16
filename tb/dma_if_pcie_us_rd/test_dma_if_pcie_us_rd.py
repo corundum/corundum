@@ -162,7 +162,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
     else:
         pcie_offsets = [int(os.getenv("PCIE_OFFSET"))]
 
-    byte_width = tb.dma_ram.byte_width
+    byte_lanes = tb.dma_ram.byte_lanes
     tag_count = 2**len(tb.read_desc_source.bus.tag)
 
     cur_tag = 1
@@ -179,9 +179,9 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb.dut.enable <= 1
 
-    for length in list(range(1, byte_width+3))+list(range(128-4, 128+4))+[1024]:
+    for length in list(range(1, byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
         for pcie_offset in pcie_offsets:
-            for ram_offset in range(byte_width+1):
+            for ram_offset in range(byte_lanes+1):
                 tb.log.info("length %d, pcie_offset %d, ram_offset %d", length, pcie_offset, ram_offset)
                 pcie_addr = pcie_offset+0x1000
                 ram_addr = ram_offset+0x1000

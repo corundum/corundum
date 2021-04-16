@@ -98,13 +98,14 @@ class PsdpRamWrite(Memory):
         self._pause_cr = None
 
         self.width = len(self.bus.wr_cmd_data)
-        self.byte_width = len(self.bus.wr_cmd_be)
+        self.byte_size = 8
+        self.byte_lanes = len(self.bus.wr_cmd_be)
 
         self.seg_count = len(self.bus.wr_cmd_valid)
         self.seg_data_width = self.width // self.seg_count
-        self.seg_byte_width = self.seg_data_width // 8
+        self.seg_byte_lanes = self.seg_data_width // self.byte_size
         self.seg_addr_width = len(self.bus.wr_cmd_addr) // self.seg_count
-        self.seg_be_width = self.seg_data_width // 8
+        self.seg_be_width = self.seg_data_width // self.byte_size
 
         self.seg_data_mask = 2**self.seg_data_width-1
         self.seg_addr_mask = 2**self.seg_addr_width-1
@@ -114,8 +115,8 @@ class PsdpRamWrite(Memory):
         self.log.info("  Memory size: %d bytes", len(self.mem))
         self.log.info("  Segment count: %d", self.seg_count)
         self.log.info("  Segment addr width: %d bits", self.seg_addr_width)
-        self.log.info("  Segment data width: %d bits (%d bytes)", self.seg_data_width, self.seg_byte_width)
-        self.log.info("  Total data width: %d bits (%d bytes)", self.width, self.width // 8)
+        self.log.info("  Segment data width: %d bits (%d bytes)", self.seg_data_width, self.seg_byte_lanes)
+        self.log.info("  Total data width: %d bits (%d bytes)", self.width, self.width // self.byte_size)
 
         assert self.seg_be_width*self.seg_count == len(self.bus.wr_cmd_be)
 
@@ -162,13 +163,13 @@ class PsdpRamWrite(Memory):
                     seg_data = (cmd_data_sample >> self.seg_data_width*seg) & self.seg_data_mask
                     seg_be = (cmd_be_sample >> self.seg_be_width*seg) & self.seg_be_mask
 
-                    addr = (seg_addr*self.seg_count+seg)*self.seg_byte_width
+                    addr = (seg_addr*self.seg_count+seg)*self.seg_byte_lanes
 
                     self.mem.seek(addr % self.size)
 
-                    data = seg_data.to_bytes(self.seg_byte_width, 'little')
+                    data = seg_data.to_bytes(self.seg_byte_lanes, 'little')
 
-                    for i in range(self.seg_byte_width):
+                    for i in range(self.seg_byte_lanes):
                         if seg_be & (1 << i):
                             self.mem.write(data[i:i+1])
                         else:
@@ -211,11 +212,12 @@ class PsdpRamRead(Memory):
         self._pause_cr = None
 
         self.width = len(self.bus.rd_resp_data)
-        self.byte_width = self.width // 8
+        self.byte_size = 8
+        self.byte_lanes = self.width // self.byte_size
 
         self.seg_count = len(self.bus.rd_cmd_valid)
         self.seg_data_width = self.width // self.seg_count
-        self.seg_byte_width = self.seg_data_width // 8
+        self.seg_byte_lanes = self.seg_data_width // self.byte_size
         self.seg_addr_width = len(self.bus.rd_cmd_addr) // self.seg_count
 
         self.seg_data_mask = 2**self.seg_data_width-1
@@ -225,8 +227,8 @@ class PsdpRamRead(Memory):
         self.log.info("  Memory size: %d bytes", len(self.mem))
         self.log.info("  Segment count: %d", self.seg_count)
         self.log.info("  Segment addr width: %d bits", self.seg_addr_width)
-        self.log.info("  Segment data width: %d bits (%d bytes)", self.seg_data_width, self.seg_byte_width)
-        self.log.info("  Total data width: %d bits (%d bytes)", self.width, self.width // 8)
+        self.log.info("  Segment data width: %d bits (%d bytes)", self.seg_data_width, self.seg_byte_lanes)
+        self.log.info("  Total data width: %d bits (%d bytes)", self.width, self.width // self.byte_size)
 
         self.bus.rd_cmd_ready.setimmediatevalue(0)
         self.bus.rd_resp_valid.setimmediatevalue(0)
@@ -289,11 +291,11 @@ class PsdpRamRead(Memory):
                 if cmd_ready & cmd_valid_sample & seg_mask:
                     seg_addr = (cmd_addr_sample >> self.seg_addr_width*seg) & self.seg_addr_mask
 
-                    addr = (seg_addr*self.seg_count+seg)*self.seg_byte_width
+                    addr = (seg_addr*self.seg_count+seg)*self.seg_byte_lanes
 
                     self.mem.seek(addr % self.size)
 
-                    data = self.mem.read(self.seg_byte_width)
+                    data = self.mem.read(self.seg_byte_lanes)
                     pipeline[seg][0] = int.from_bytes(data, 'little')
 
                     self.log.info("Read word seg: %d addr: 0x%08x data %s",

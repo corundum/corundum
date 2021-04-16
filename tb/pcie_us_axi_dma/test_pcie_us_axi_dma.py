@@ -158,7 +158,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb = TB(dut)
 
-    byte_width = tb.axi_ram.write_if.byte_width
+    byte_lanes = tb.axi_ram.write_if.byte_lanes
     tag_count = 2**len(tb.write_desc_source.bus.tag)
 
     cur_tag = 1
@@ -175,7 +175,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb.dut.write_enable <= 1
 
-    for length in list(range(1, byte_width+3))+list(range(128-4, 128+4))+[1024]:
+    for length in list(range(1, byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
         for pcie_offset in list(range(4))+list(range(4096-4, 4096)):
             for axi_offset in range(1):
                 tb.log.info("length %d, pcie_offset %d, axi_offset %d", length, pcie_offset, axi_offset)
@@ -193,7 +193,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
                 await tb.write_desc_source.send(desc)
 
                 status = await tb.write_desc_status_sink.recv()
-                await Timer(100 + (length // byte_width), 'ns')
+                await Timer(100 + (length // byte_lanes), 'ns')
 
                 tb.log.info("status: %s", status)
 
@@ -213,7 +213,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb = TB(dut)
 
-    byte_width = tb.axi_ram.write_if.byte_width
+    byte_lanes = tb.axi_ram.write_if.byte_lanes
     tag_count = 2**len(tb.read_desc_source.bus.tag)
 
     cur_tag = 1
@@ -230,7 +230,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb.dut.read_enable <= 1
 
-    for length in list(range(1, byte_width+3))+list(range(128-4, 128+4))+[1024]:
+    for length in list(range(1, byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
         for pcie_offset in list(range(4))+list(range(4096-4, 4096)):
             for axi_offset in range(1):
                 tb.log.info("length %d, pcie_offset %d, axi_offset %d", length, pcie_offset, axi_offset)

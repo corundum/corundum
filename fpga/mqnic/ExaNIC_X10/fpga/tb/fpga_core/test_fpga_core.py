@@ -258,7 +258,7 @@ class TB(object):
 
         self.driver = mqnic.Driver(self.rc)
 
-        self.dev.functions[0].msi_multiple_message_capable = 5
+        self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
 
         self.dev.functions[0].configure_bar(0, 2**self.BAR0_APERTURE, ext=True, prefetch=True)
 

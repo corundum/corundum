@@ -329,6 +329,41 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
         init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0, MQNIC_MAX_IF);
 
         break;
+    case MQNIC_BOARD_ID_BW_XUPP3R:
+      // FPGA U1 I2C0  ??
+        //     QSFP0 J3 0xA0 ??
+        // FPGA U1 I2C1  ??
+        //     QSFP1 J4 0xA0 ?? 
+
+
+        // FPGA U??
+        //   PCA9546 U28 0x74
+        //     CH0: QSFP0 J7 0x50
+        //     CH1: QSFP1 J9 0x50
+        //     CH2: M24C08 EEPROM U62 0x54
+        //          SI570 Osc U14 0x5D
+        //     CH3: SYSMON U13 0x32
+
+        request_module("at24");
+
+        // I2C adapter
+        adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr+MQNIC_REG_GPIO_I2C_0);
+
+        // QSFP0
+        mqnic->mod_i2c_client[0] = create_i2c_client(adapter, "24c02", 0xA0, NULL);
+
+        // I2C adapter
+        adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr+MQNIC_REG_GPIO_I2C_1);
+
+        // QSFP1
+        mqnic->mod_i2c_client[1] = create_i2c_client(adapter, "24c02", 0xA0, NULL);
+
+        mqnic->mod_i2c_client_count = 2;
+	
+        // read MACs from EEPROM
+        init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0, MQNIC_MAX_IF);
+
+        break;
     case MQNIC_BOARD_ID_ZCU106:
         // FPGA U1 / MSP430 U41 I2C0
         //   TCA6416 U61 0x21

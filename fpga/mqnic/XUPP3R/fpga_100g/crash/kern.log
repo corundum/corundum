@@ -1,0 +1,59 @@
+May 10 16:23:33 patates kernel: [ 3578.830715] mqnic: loading out-of-tree module taints kernel.
+May 10 16:23:33 patates kernel: [ 3578.830849] mqnic: module verification failed: signature and/or required key missing - tainting kernel
+May 10 16:23:33 patates kernel: [ 3578.833327] mqnic 0000:01:00.0: mqnic PCI probe
+May 10 16:23:33 patates kernel: [ 3578.833332] mqnic 0000:01:00.0: can't disable ASPM; OS doesn't have ASPM control
+May 10 16:23:33 patates kernel: [ 3578.833482] mqnic 0000:01:00.0: FW ID: 0x00000000
+May 10 16:23:33 patates kernel: [ 3578.833485] mqnic 0000:01:00.0: FW version: 0.1
+May 10 16:23:33 patates kernel: [ 3578.833488] mqnic 0000:01:00.0: Board ID: 0x12ba9823
+May 10 16:23:33 patates kernel: [ 3578.833491] mqnic 0000:01:00.0: Board version: 0.1
+May 10 16:23:33 patates kernel: [ 3578.833493] mqnic 0000:01:00.0: PHC count: 1
+May 10 16:23:33 patates kernel: [ 3578.833495] mqnic 0000:01:00.0: PHC offset: 0x00000200
+May 10 16:23:33 patates kernel: [ 3578.833498] mqnic 0000:01:00.0: IF count: 2
+May 10 16:23:33 patates kernel: [ 3578.833500] mqnic 0000:01:00.0: IF stride: 0x00800000
+May 10 16:23:33 patates kernel: [ 3578.833503] mqnic 0000:01:00.0: IF CSR offset: 0x00040000
+May 10 16:23:33 patates kernel: [ 3579.246530] mqnic 0000:01:00.0: registered PHC (index 0)
+May 10 16:23:33 patates kernel: [ 3579.246532] mqnic 0000:01:00.0: Creating interface 0
+May 10 16:23:33 patates kernel: [ 3579.247481] mqnic 0000:01:00.0: IF ID: 0x00000000
+May 10 16:23:33 patates kernel: [ 3579.247483] mqnic 0000:01:00.0: IF features: 0x00000711
+May 10 16:23:33 patates kernel: [ 3579.247484] mqnic 0000:01:00.0: Event queue count: 32
+May 10 16:23:33 patates kernel: [ 3579.247485] mqnic 0000:01:00.0: Event queue offset: 0x00080000
+May 10 16:23:33 patates kernel: [ 3579.247486] mqnic 0000:01:00.0: TX queue count: 8192
+May 10 16:23:33 patates kernel: [ 3579.247487] mqnic 0000:01:00.0: TX queue offset: 0x00100000
+May 10 16:23:33 patates kernel: [ 3579.247488] mqnic 0000:01:00.0: TX completion queue count: 8192
+May 10 16:23:33 patates kernel: [ 3579.247489] mqnic 0000:01:00.0: TX completion queue offset: 0x00200000
+May 10 16:23:33 patates kernel: [ 3579.247491] mqnic 0000:01:00.0: RX queue count: 256
+May 10 16:23:33 patates kernel: [ 3579.247492] mqnic 0000:01:00.0: RX queue offset: 0x00300000
+May 10 16:23:33 patates kernel: [ 3579.247493] mqnic 0000:01:00.0: RX completion queue count: 256
+May 10 16:23:33 patates kernel: [ 3579.247494] mqnic 0000:01:00.0: RX completion queue offset: 0x00380000
+May 10 16:23:33 patates kernel: [ 3579.247495] mqnic 0000:01:00.0: Port count: 1
+May 10 16:23:33 patates kernel: [ 3579.247496] mqnic 0000:01:00.0: Port offset: 0x00400000
+May 10 16:23:33 patates kernel: [ 3579.247497] mqnic 0000:01:00.0: Port stride: 0x00100000
+May 10 16:23:33 patates kernel: [ 3579.247498] mqnic 0000:01:00.0: Exhausted permanent MAC addresses; using random MAC
+May 10 16:23:33 patates kernel: [ 3579.247500] mqnic 0000:01:00.0: Max desc block size: 8
+May 10 16:23:36 patates kernel: [ 3581.859141] mqnic 0000:01:00.0: Port ID: 0x00000000
+May 10 16:23:36 patates kernel: [ 3581.859144] mqnic 0000:01:00.0: Port features: 0x00000711
+May 10 16:23:36 patates kernel: [ 3581.859145] mqnic 0000:01:00.0: Port MTU: 16384
+May 10 16:23:36 patates kernel: [ 3581.859146] mqnic 0000:01:00.0: Scheduler count: 1
+May 10 16:23:36 patates kernel: [ 3581.859147] mqnic 0000:01:00.0: Scheduler offset: 0x00080000
+May 10 16:23:36 patates kernel: [ 3581.859148] mqnic 0000:01:00.0: Scheduler stride: 0x00080000
+May 10 16:23:36 patates kernel: [ 3581.859150] mqnic 0000:01:00.0: Scheduler type: 0x00000000
+May 10 16:23:36 patates kernel: [ 3581.962447] mqnic 0000:01:00.0: Creating interface 1
+May 10 16:23:36 patates kernel: [ 3581.963381] mqnic 0000:01:00.0: IF ID: 0x00000000
+May 10 16:23:36 patates kernel: [ 3581.963383] mqnic 0000:01:00.0: IF features: 0x00000711
+May 10 16:23:36 patates kernel: [ 3581.963384] mqnic 0000:01:00.0: Event queue count: 32
+May 10 16:23:36 patates kernel: [ 3581.963385] mqnic 0000:01:00.0: Event queue offset: 0x00080000
+May 10 16:23:36 patates kernel: [ 3581.963386] mqnic 0000:01:00.0: TX queue count: 8192
+May 10 16:23:36 patates kernel: [ 3581.963387] mqnic 0000:01:00.0: TX queue offset: 0x00100000
+May 10 16:23:36 patates kernel: [ 3581.963388] mqnic 0000:01:00.0: TX completion queue count: 8192
+May 10 16:23:36 patates kernel: [ 3581.963390] mqnic 0000:01:00.0: TX completion queue offset: 0x00200000
+May 10 16:23:36 patates kernel: [ 3581.963391] mqnic 0000:01:00.0: RX queue count: 256
+May 10 16:23:36 patates kernel: [ 3581.963392] mqnic 0000:01:00.0: RX queue offset: 0x00300000
+May 10 16:23:36 patates kernel: [ 3581.963393] mqnic 0000:01:00.0: RX completion queue count: 256
+May 10 16:23:36 patates kernel: [ 3581.963394] mqnic 0000:01:00.0: RX completion queue offset: 0x00380000
+May 10 16:23:36 patates kernel: [ 3581.963395] mqnic 0000:01:00.0: Port count: 1
+May 10 16:23:36 patates kernel: [ 3581.963396] mqnic 0000:01:00.0: Port offset: 0x00400000
+May 10 16:23:36 patates kernel: [ 3581.963397] mqnic 0000:01:00.0: Port stride: 0x00100000
+May 10 16:23:36 patates kernel: [ 3581.963398] mqnic 0000:01:00.0: Exhausted permanent MAC addresses; using random MAC
+May 10 16:23:36 patates kernel: [ 3581.963400] mqnic 0000:01:00.0: Max desc block size: 8
+Connection to kabatas.parkyeri.com closed by remote host.
+Connection to kabatas.parkyeri.com closed.

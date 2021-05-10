@@ -57,178 +57,191 @@ module fpga_core #
      * Clock: 250 MHz
      * Synchronous reset
      */
-    input  wire                               clk_250mhz,
-    input  wire                               rst_250mhz,
+    input wire 				      clk_250mhz,
+    input wire 				      rst_250mhz,
 
     /*
      * GPIO
      */
-    input  wire [3:0]                         sw,
-    output wire [2:0]                         led,
+    input wire [3:0] 			      sw,
+    output wire [2:0] 			      led,
 
     /*
      * I2C
      */
-    input  wire                               i2c_scl_i,
+/*    input  wire                               i2c_scl_i,
     output wire                               i2c_scl_o,
     output wire                               i2c_scl_t,
     input  wire                               i2c_sda_i,
     output wire                               i2c_sda_o,
     output wire                               i2c_sda_t,
-
+*/
+ 
     /*
      * PCIe
      */
     output wire [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_rq_tdata,
     output wire [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_rq_tkeep,
-    output wire                               m_axis_rq_tlast,
-    input  wire                               m_axis_rq_tready,
+    output wire 			      m_axis_rq_tlast,
+    input wire 				      m_axis_rq_tready,
     output wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser,
-    output wire                               m_axis_rq_tvalid,
+    output wire 			      m_axis_rq_tvalid,
 
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]    s_axis_rc_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]    s_axis_rc_tkeep,
-    input  wire                               s_axis_rc_tlast,
-    output wire                               s_axis_rc_tready,
-    input  wire [AXIS_PCIE_RC_USER_WIDTH-1:0] s_axis_rc_tuser,
-    input  wire                               s_axis_rc_tvalid,
+    input wire [AXIS_PCIE_DATA_WIDTH-1:0]     s_axis_rc_tdata,
+    input wire [AXIS_PCIE_KEEP_WIDTH-1:0]     s_axis_rc_tkeep,
+    input wire 				      s_axis_rc_tlast,
+    output wire 			      s_axis_rc_tready,
+    input wire [AXIS_PCIE_RC_USER_WIDTH-1:0]  s_axis_rc_tuser,
+    input wire 				      s_axis_rc_tvalid,
 
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]    s_axis_cq_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]    s_axis_cq_tkeep,
-    input  wire                               s_axis_cq_tlast,
-    output wire                               s_axis_cq_tready,
-    input  wire [AXIS_PCIE_CQ_USER_WIDTH-1:0] s_axis_cq_tuser,
-    input  wire                               s_axis_cq_tvalid,
+    input wire [AXIS_PCIE_DATA_WIDTH-1:0]     s_axis_cq_tdata,
+    input wire [AXIS_PCIE_KEEP_WIDTH-1:0]     s_axis_cq_tkeep,
+    input wire 				      s_axis_cq_tlast,
+    output wire 			      s_axis_cq_tready,
+    input wire [AXIS_PCIE_CQ_USER_WIDTH-1:0]  s_axis_cq_tuser,
+    input wire 				      s_axis_cq_tvalid,
 
     output wire [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_cc_tdata,
     output wire [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_cc_tkeep,
-    output wire                               m_axis_cc_tlast,
-    input  wire                               m_axis_cc_tready,
+    output wire 			      m_axis_cc_tlast,
+    input wire 				      m_axis_cc_tready,
     output wire [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser,
-    output wire                               m_axis_cc_tvalid,
+    output wire 			      m_axis_cc_tvalid,
 
-    input  wire [RQ_SEQ_NUM_WIDTH-1:0]        s_axis_rq_seq_num_0,
-    input  wire                               s_axis_rq_seq_num_valid_0,
-    input  wire [RQ_SEQ_NUM_WIDTH-1:0]        s_axis_rq_seq_num_1,
-    input  wire                               s_axis_rq_seq_num_valid_1,
+    input wire [RQ_SEQ_NUM_WIDTH-1:0] 	      s_axis_rq_seq_num_0,
+    input wire 				      s_axis_rq_seq_num_valid_0,
+    input wire [RQ_SEQ_NUM_WIDTH-1:0] 	      s_axis_rq_seq_num_1,
+    input wire 				      s_axis_rq_seq_num_valid_1,
 
-    input  wire [1:0]                         pcie_tfc_nph_av,
-    input  wire [1:0]                         pcie_tfc_npd_av,
+    input wire [1:0] 			      pcie_tfc_nph_av,
+    input wire [1:0] 			      pcie_tfc_npd_av,
 
-    input  wire [2:0]                         cfg_max_payload,
-    input  wire [2:0]                         cfg_max_read_req,
+    input wire [2:0] 			      cfg_max_payload,
+    input wire [2:0] 			      cfg_max_read_req,
 
-    output wire [9:0]                         cfg_mgmt_addr,
-    output wire [7:0]                         cfg_mgmt_function_number,
-    output wire                               cfg_mgmt_write,
-    output wire [31:0]                        cfg_mgmt_write_data,
-    output wire [3:0]                         cfg_mgmt_byte_enable,
-    output wire                               cfg_mgmt_read,
-    input  wire [31:0]                        cfg_mgmt_read_data,
-    input  wire                               cfg_mgmt_read_write_done,
+    output wire [9:0] 			      cfg_mgmt_addr,
+    output wire [7:0] 			      cfg_mgmt_function_number,
+    output wire 			      cfg_mgmt_write,
+    output wire [31:0] 			      cfg_mgmt_write_data,
+    output wire [3:0] 			      cfg_mgmt_byte_enable,
+    output wire 			      cfg_mgmt_read,
+    input wire [31:0] 			      cfg_mgmt_read_data,
+    input wire 				      cfg_mgmt_read_write_done,
 
-    input  wire [7:0]                         cfg_fc_ph,
-    input  wire [11:0]                        cfg_fc_pd,
-    input  wire [7:0]                         cfg_fc_nph,
-    input  wire [11:0]                        cfg_fc_npd,
-    input  wire [7:0]                         cfg_fc_cplh,
-    input  wire [11:0]                        cfg_fc_cpld,
-    output wire [2:0]                         cfg_fc_sel,
+    input wire [7:0] 			      cfg_fc_ph,
+    input wire [11:0] 			      cfg_fc_pd,
+    input wire [7:0] 			      cfg_fc_nph,
+    input wire [11:0] 			      cfg_fc_npd,
+    input wire [7:0] 			      cfg_fc_cplh,
+    input wire [11:0] 			      cfg_fc_cpld,
+    output wire [2:0] 			      cfg_fc_sel,
 
-    input  wire [3:0]                         cfg_interrupt_msi_enable,
-    input  wire [11:0]                        cfg_interrupt_msi_mmenable,
-    input  wire                               cfg_interrupt_msi_mask_update,
-    input  wire [31:0]                        cfg_interrupt_msi_data,
-    output wire [3:0]                         cfg_interrupt_msi_select,
-    output wire [31:0]                        cfg_interrupt_msi_int,
-    output wire [31:0]                        cfg_interrupt_msi_pending_status,
-    output wire                               cfg_interrupt_msi_pending_status_data_enable,
-    output wire [3:0]                         cfg_interrupt_msi_pending_status_function_num,
-    input  wire                               cfg_interrupt_msi_sent,
-    input  wire                               cfg_interrupt_msi_fail,
-    output wire [2:0]                         cfg_interrupt_msi_attr,
-    output wire                               cfg_interrupt_msi_tph_present,
-    output wire [1:0]                         cfg_interrupt_msi_tph_type,
-    output wire [8:0]                         cfg_interrupt_msi_tph_st_tag,
-    output wire [3:0]                         cfg_interrupt_msi_function_number,
+    input wire [3:0] 			      cfg_interrupt_msi_enable,
+    input wire [11:0] 			      cfg_interrupt_msi_mmenable,
+    input wire 				      cfg_interrupt_msi_mask_update,
+    input wire [31:0] 			      cfg_interrupt_msi_data,
+    output wire [3:0] 			      cfg_interrupt_msi_select,
+    output wire [31:0] 			      cfg_interrupt_msi_int,
+    output wire [31:0] 			      cfg_interrupt_msi_pending_status,
+    output wire 			      cfg_interrupt_msi_pending_status_data_enable,
+    output wire [3:0] 			      cfg_interrupt_msi_pending_status_function_num,
+    input wire 				      cfg_interrupt_msi_sent,
+    input wire 				      cfg_interrupt_msi_fail,
+    output wire [2:0] 			      cfg_interrupt_msi_attr,
+    output wire 			      cfg_interrupt_msi_tph_present,
+    output wire [1:0] 			      cfg_interrupt_msi_tph_type,
+    output wire [8:0] 			      cfg_interrupt_msi_tph_st_tag,
+    output wire [3:0] 			      cfg_interrupt_msi_function_number,
 
-    output wire                               status_error_cor,
-    output wire                               status_error_uncor,
+    output wire 			      status_error_cor,
+    output wire 			      status_error_uncor,
 
     /*
      * Ethernet: QSFP28
      */
-    input  wire                               qsfp0_tx_clk,
-    input  wire                               qsfp0_tx_rst,
+    input wire 				      qsfp0_tx_clk,
+    input wire 				      qsfp0_tx_rst,
 
     output wire [AXIS_ETH_DATA_WIDTH-1:0]     qsfp0_tx_axis_tdata,
     output wire [AXIS_ETH_KEEP_WIDTH-1:0]     qsfp0_tx_axis_tkeep,
-    output wire                               qsfp0_tx_axis_tvalid,
-    input  wire                               qsfp0_tx_axis_tready,
-    output wire                               qsfp0_tx_axis_tlast,
-    output wire                               qsfp0_tx_axis_tuser,
+    output wire 			      qsfp0_tx_axis_tvalid,
+    input wire 				      qsfp0_tx_axis_tready,
+    output wire 			      qsfp0_tx_axis_tlast,
+    output wire 			      qsfp0_tx_axis_tuser,
 
-    output wire [79:0]                        qsfp0_tx_ptp_time,
-    input  wire [79:0]                        qsfp0_tx_ptp_ts,
-    input  wire                               qsfp0_tx_ptp_ts_valid,
+    output wire [79:0] 			      qsfp0_tx_ptp_time,
+    input wire [79:0] 			      qsfp0_tx_ptp_ts,
+    input wire 				      qsfp0_tx_ptp_ts_valid,
 
-    input  wire                               qsfp0_rx_clk,
-    input  wire                               qsfp0_rx_rst,
+    input wire 				      qsfp0_rx_clk,
+    input wire 				      qsfp0_rx_rst,
 
-    input  wire [AXIS_ETH_DATA_WIDTH-1:0]     qsfp0_rx_axis_tdata,
-    input  wire [AXIS_ETH_KEEP_WIDTH-1:0]     qsfp0_rx_axis_tkeep,
-    input  wire                               qsfp0_rx_axis_tvalid,
-    input  wire                               qsfp0_rx_axis_tlast,
-    input  wire [80+1-1:0]                    qsfp0_rx_axis_tuser,
+    input wire [AXIS_ETH_DATA_WIDTH-1:0]      qsfp0_rx_axis_tdata,
+    input wire [AXIS_ETH_KEEP_WIDTH-1:0]      qsfp0_rx_axis_tkeep,
+    input wire 				      qsfp0_rx_axis_tvalid,
+    input wire 				      qsfp0_rx_axis_tlast,
+    input wire [80+1-1:0] 		      qsfp0_rx_axis_tuser,
 
-    output wire [79:0]                        qsfp0_rx_ptp_time,
+    output wire [79:0] 			      qsfp0_rx_ptp_time,
 
-    output wire                               qsfp0_modsell,
-    output wire                               qsfp0_resetl,
-    input  wire                               qsfp0_modprsl,
-    input  wire                               qsfp0_intl,
-    output wire                               qsfp0_lpmode,
+    output wire 			      qsfp0_modsell,
+    output wire 			      qsfp0_resetl,
+    input wire 				      qsfp0_modprsl,
+    input wire 				      qsfp0_intl,
+    output wire 			      qsfp0_lpmode,
+    input wire 				      qsfp0_i2c_scl_i,
+    output wire 			      qsfp0_i2c_scl_o,
+    output wire 			      qsfp0_i2c_scl_t,
+    input wire 				      qsfp0_i2c_sda_i,
+    output wire 			      qsfp0_i2c_sda_o,
+    output wire 			      qsfp0_i2c_sda_t,
 
-    input  wire                               qsfp1_tx_clk,
-    input  wire                               qsfp1_tx_rst,
+    input wire 				      qsfp1_tx_clk,
+    input wire 				      qsfp1_tx_rst,
 
     output wire [AXIS_ETH_DATA_WIDTH-1:0]     qsfp1_tx_axis_tdata,
     output wire [AXIS_ETH_KEEP_WIDTH-1:0]     qsfp1_tx_axis_tkeep,
-    output wire                               qsfp1_tx_axis_tvalid,
-    input  wire                               qsfp1_tx_axis_tready,
-    output wire                               qsfp1_tx_axis_tlast,
-    output wire                               qsfp1_tx_axis_tuser,
+    output wire 			      qsfp1_tx_axis_tvalid,
+    input wire 				      qsfp1_tx_axis_tready,
+    output wire 			      qsfp1_tx_axis_tlast,
+    output wire 			      qsfp1_tx_axis_tuser,
 
-    output wire [79:0]                        qsfp1_tx_ptp_time,
-    input  wire [79:0]                        qsfp1_tx_ptp_ts,
-    input  wire                               qsfp1_tx_ptp_ts_valid,
+    output wire [79:0] 			      qsfp1_tx_ptp_time,
+    input wire [79:0] 			      qsfp1_tx_ptp_ts,
+    input wire 				      qsfp1_tx_ptp_ts_valid,
 
-    input  wire                               qsfp1_rx_clk,
-    input  wire                               qsfp1_rx_rst,
+    input wire 				      qsfp1_rx_clk,
+    input wire 				      qsfp1_rx_rst,
 
-    input  wire [AXIS_ETH_DATA_WIDTH-1:0]     qsfp1_rx_axis_tdata,
-    input  wire [AXIS_ETH_KEEP_WIDTH-1:0]     qsfp1_rx_axis_tkeep,
-    input  wire                               qsfp1_rx_axis_tvalid,
-    input  wire                               qsfp1_rx_axis_tlast,
-    input  wire [80+1-1:0]                    qsfp1_rx_axis_tuser,
+    input wire [AXIS_ETH_DATA_WIDTH-1:0]      qsfp1_rx_axis_tdata,
+    input wire [AXIS_ETH_KEEP_WIDTH-1:0]      qsfp1_rx_axis_tkeep,
+    input wire 				      qsfp1_rx_axis_tvalid,
+    input wire 				      qsfp1_rx_axis_tlast,
+    input wire [80+1-1:0] 		      qsfp1_rx_axis_tuser,
 
-    output wire [79:0]                        qsfp1_rx_ptp_time,
+    output wire [79:0] 			      qsfp1_rx_ptp_time,
 
-    output wire                               qsfp1_modsell,
-    output wire                               qsfp1_resetl,
-    input  wire                               qsfp1_modprsl,
-    input  wire                               qsfp1_intl,
-    output wire                               qsfp1_lpmode,
+    output wire 			      qsfp1_modsell,
+    output wire 			      qsfp1_resetl,
+    input wire 				      qsfp1_modprsl,
+    input wire 				      qsfp1_intl,
+    output wire 			      qsfp1_lpmode,
+    input wire 				      qsfp1_i2c_scl_i,
+    output wire 			      qsfp1_i2c_scl_o,
+    output wire 			      qsfp1_i2c_scl_t,
+    input wire 				      qsfp1_i2c_sda_i,
+    output wire 			      qsfp1_i2c_sda_o,
+    output wire 			      qsfp1_i2c_sda_t,
 
     /*
      * QSPI flash
      */
-    output wire                               fpga_boot,
-    output wire                               qspi_clk,
-    input  wire [3:0]                         qspi_dq_i,
-    output wire [3:0]                         qspi_dq_o,
-    output wire [3:0]                         qspi_dq_oe,
-    output wire                               qspi_cs
+    output wire 			      fpga_boot,
+    output wire 			      qspi_clk,
+    input wire [3:0] 			      qspi_dq_i,
+    output wire [3:0] 			      qspi_dq_o,
+    output wire [3:0] 			      qspi_dq_oe,
+    output wire 			      qspi_cs
 );
 
 // PHC parameters
@@ -440,9 +453,17 @@ reg qsfp1_reset_reg = 1'b0;
 reg qsfp0_lpmode_reg = 1'b0;
 reg qsfp1_lpmode_reg = 1'b0;
 
-reg i2c_scl_o_reg = 1'b1;
-reg i2c_sda_o_reg = 1'b1;
+reg qsfp0_i2c_scl_o_reg = 1'b1;
+reg qsfp0_i2c_sda_o_reg = 1'b1;
 
+reg qsfp1_i2c_scl_o_reg = 1'b1;
+reg qsfp1_i2c_sda_o_reg = 1'b1;
+
+/*
+ reg i2c_scl_o_reg = 1'b1;
+reg i2c_sda_o_reg = 1'b1;
+*/
+   
 reg fpga_boot_reg = 1'b0;
 
 reg qspi_clk_reg = 1'b0;
@@ -482,18 +503,33 @@ assign qsfp1_resetl = !qsfp1_reset_reg;
 assign qsfp0_lpmode = qsfp0_lpmode_reg;
 assign qsfp1_lpmode = qsfp1_lpmode_reg;
 
+   /*
+    
 assign i2c_scl_o = i2c_scl_o_reg;
 assign i2c_scl_t = i2c_scl_o_reg;
 assign i2c_sda_o = i2c_sda_o_reg;
 assign i2c_sda_t = i2c_sda_o_reg;
+*/
 
+
+assign qsfp0_i2c_scl_o = qsfp0_i2c_scl_o_reg;
+assign qsfp0_i2c_scl_t = qsfp0_i2c_scl_o_reg;
+assign qsfp0_i2c_sda_o = qsfp0_i2c_sda_o_reg;
+assign qsfp0_i2c_sda_t = qsfp0_i2c_sda_o_reg;
+
+
+assign qsfp1_i2c_scl_o = qsfp1_i2c_scl_o_reg;
+assign qsfp1_i2c_scl_t = qsfp1_i2c_scl_o_reg;
+assign qsfp1_i2c_sda_o = qsfp1_i2c_sda_o_reg;
+assign qsfp1_i2c_sda_t = qsfp1_i2c_sda_o_reg;
+   
 assign fpga_boot = fpga_boot_reg;
 
 assign qspi_clk = qspi_clk_reg;
 assign qspi_cs = qspi_cs_reg;
 assign qspi_dq_o = qspi_dq_o_reg;
 assign qspi_dq_oe = qspi_dq_oe_reg;
-
+   
 //assign pcie_dma_enable = pcie_dma_enable_reg;
 
 always @(posedge clk_250mhz) begin
@@ -524,12 +560,22 @@ always @(posedge clk_250mhz) begin
             16'h0110: begin
                 // GPIO I2C 0
                 if (axil_csr_wstrb[0]) begin
-                    i2c_scl_o_reg <= axil_csr_wdata[1];
+                    qsfp0_i2c_scl_o_reg <= axil_csr_wdata[1];
                 end
                 if (axil_csr_wstrb[1]) begin
-                    i2c_sda_o_reg <= axil_csr_wdata[9];
+                    qsfp0_i2c_sda_o_reg <= axil_csr_wdata[9];
                 end
             end
+	    16'h0114: begin
+                // GPIO I2C 1
+                if (axil_csr_wstrb[0]) begin
+                    qsfp1_i2c_scl_o_reg <= axil_csr_wdata[1];
+                end
+                if (axil_csr_wstrb[1]) begin
+                    qsfp1_i2c_sda_o_reg <= axil_csr_wdata[9];
+                end
+            end
+
             16'h0120: begin
                 // GPIO XCVR 0123
                 if (axil_csr_wstrb[0]) begin
@@ -601,11 +647,19 @@ always @(posedge clk_250mhz) begin
             // GPIO
             16'h0110: begin
                 // GPIO I2C 0
-                axil_csr_rdata_reg[0] <= i2c_scl_i;
-                axil_csr_rdata_reg[1] <= i2c_scl_o_reg;
-                axil_csr_rdata_reg[8] <= i2c_sda_i;
-                axil_csr_rdata_reg[9] <= i2c_sda_o_reg;
+                axil_csr_rdata_reg[0] <= qsfp0_i2c_scl_i;
+                axil_csr_rdata_reg[1] <= qsfp0_i2c_scl_o_reg;
+                axil_csr_rdata_reg[8] <= qsfp0_i2c_sda_i;
+                axil_csr_rdata_reg[9] <= qsfp0_i2c_sda_o_reg;
             end
+	    16'h0114: begin
+                // GPIO I2C 1
+                axil_csr_rdata_reg[0] <= qsfp1_i2c_scl_i;
+                axil_csr_rdata_reg[1] <= qsfp1_i2c_scl_o_reg;
+                axil_csr_rdata_reg[8] <= qsfp1_i2c_sda_i;
+                axil_csr_rdata_reg[9] <= qsfp1_i2c_sda_o_reg;
+            end
+
             16'h0120: begin
                 // GPIO XCVR 0123
                 axil_csr_rdata_reg[0] <= !qsfp0_modprsl;
@@ -668,8 +722,10 @@ always @(posedge clk_250mhz) begin
         qsfp0_lpmode_reg <= 1'b0;
         qsfp1_lpmode_reg <= 1'b0;
 
-        i2c_scl_o_reg <= 1'b1;
-        i2c_sda_o_reg <= 1'b1;
+        qsfp0_i2c_scl_o_reg <= 1'b1;
+        qsfp0_i2c_sda_o_reg <= 1'b1;
+        qsfp1_i2c_scl_o_reg <= 1'b1;
+        qsfp1_i2c_sda_o_reg <= 1'b1;
 
         fpga_boot_reg <= 1'b0;
 

@@ -42,84 +42,88 @@ module fpga (
     /*
      * GPIO
      */
-    input  wire [3:0]   sw,
-    output wire [2:0]   led,
+    input wire [3:0]   sw,
+    output wire [2:0]  led,
 
     /*
      * I2C for board management
      */
-    inout  wire         i2c_scl,
+/*    inout  wire         i2c_scl,
     inout  wire         i2c_sda,
-
+*/
+	   
     /*
      * PCI express
      */
-    input  wire [15:0]  pcie_rx_p,
-    input  wire [15:0]  pcie_rx_n,
-    output wire [15:0]  pcie_tx_p,
-    output wire [15:0]  pcie_tx_n,
-    input  wire         pcie_refclk_p,
-    input  wire         pcie_refclk_n,
-    input  wire         pcie_reset_n,
+    input wire [15:0]  pcie_rx_p,
+    input wire [15:0]  pcie_rx_n,
+    output wire [15:0] pcie_tx_p,
+    output wire [15:0] pcie_tx_n,
+    input wire 	       pcie_refclk_p,
+    input wire 	       pcie_refclk_n,
+    input wire 	       pcie_reset_n,
 
     /*
      * Ethernet: QSFP28
      */
-    output wire         qsfp0_tx1_p,
-    output wire         qsfp0_tx1_n,
-    input  wire         qsfp0_rx1_p,
-    input  wire         qsfp0_rx1_n,
-    output wire         qsfp0_tx2_p,
-    output wire         qsfp0_tx2_n,
-    input  wire         qsfp0_rx2_p,
-    input  wire         qsfp0_rx2_n,
-    output wire         qsfp0_tx3_p,
-    output wire         qsfp0_tx3_n,
-    input  wire         qsfp0_rx3_p,
-    input  wire         qsfp0_rx3_n,
-    output wire         qsfp0_tx4_p,
-    output wire         qsfp0_tx4_n,
-    input  wire         qsfp0_rx4_p,
-    input  wire         qsfp0_rx4_n,
-    // input  wire         qsfp0_mgt_refclk_0_p,
-    // input  wire         qsfp0_mgt_refclk_0_n,
-    input  wire         qsfp0_mgt_refclk_1_p,
-    input  wire         qsfp0_mgt_refclk_1_n,
-    output wire         qsfp0_modsell,
-    output wire         qsfp0_resetl,
-    input  wire         qsfp0_modprsl,
-    input  wire         qsfp0_intl,
-    output wire         qsfp0_lpmode,
-    output wire         qsfp0_refclk_reset,
-    output wire [1:0]   qsfp0_fs,
-
-    output wire         qsfp1_tx1_p,
-    output wire         qsfp1_tx1_n,
-    input  wire         qsfp1_rx1_p,
-    input  wire         qsfp1_rx1_n,
-    output wire         qsfp1_tx2_p,
-    output wire         qsfp1_tx2_n,
-    input  wire         qsfp1_rx2_p,
-    input  wire         qsfp1_rx2_n,
-    output wire         qsfp1_tx3_p,
-    output wire         qsfp1_tx3_n,
-    input  wire         qsfp1_rx3_p,
-    input  wire         qsfp1_rx3_n,
-    output wire         qsfp1_tx4_p,
-    output wire         qsfp1_tx4_n,
-    input  wire         qsfp1_rx4_p,
-    input  wire         qsfp1_rx4_n,
-    // input  wire         qsfp1_mgt_refclk_0_p,
-    // input  wire         qsfp1_mgt_refclk_0_n,
-    input  wire         qsfp1_mgt_refclk_1_p,
-    input  wire         qsfp1_mgt_refclk_1_n,
-    output wire         qsfp1_modsell,
-    output wire         qsfp1_resetl,
-    input  wire         qsfp1_modprsl,
-    input  wire         qsfp1_intl,
-    output wire         qsfp1_lpmode,
-    output wire         qsfp1_refclk_reset,
-    output wire [1:0]   qsfp1_fs
+    output wire        qsfp0_tx1_p,
+    output wire        qsfp0_tx1_n,
+    input wire 	       qsfp0_rx1_p,
+    input wire 	       qsfp0_rx1_n,
+    output wire        qsfp0_tx2_p,
+    output wire        qsfp0_tx2_n,
+    input wire 	       qsfp0_rx2_p,
+    input wire 	       qsfp0_rx2_n,
+    output wire        qsfp0_tx3_p,
+    output wire        qsfp0_tx3_n,
+    input wire 	       qsfp0_rx3_p,
+    input wire 	       qsfp0_rx3_n,
+    output wire        qsfp0_tx4_p,
+    output wire        qsfp0_tx4_n,
+    input wire 	       qsfp0_rx4_p,
+    input wire 	       qsfp0_rx4_n,
+    input wire 	       qsfp0_mgt_refclk_0_p,
+    input wire 	       qsfp0_mgt_refclk_0_n,
+    // input  wire         qsfp0_mgt_refclk_1_p,
+    // input  wire         qsfp0_mgt_refclk_1_n,
+    output wire        qsfp0_modsell,
+    output wire        qsfp0_resetl,
+    input wire 	       qsfp0_modprsl,
+    input wire 	       qsfp0_intl,
+    output wire        qsfp0_lpmode,
+    output wire        qsfp0_refclk_reset,
+//    output wire [1:0]  qsfp0_fs,
+    inout wire 	       qsfp0_i2c_scl,
+    inout wire 	       qsfp0_i2c_sda,
+    output wire        qsfp1_tx1_p,
+    output wire        qsfp1_tx1_n,
+    input wire 	       qsfp1_rx1_p,
+    input wire 	       qsfp1_rx1_n,
+    output wire        qsfp1_tx2_p,
+    output wire        qsfp1_tx2_n,
+    input wire 	       qsfp1_rx2_p,
+    input wire 	       qsfp1_rx2_n,
+    output wire        qsfp1_tx3_p,
+    output wire        qsfp1_tx3_n,
+    input wire 	       qsfp1_rx3_p,
+    input wire 	       qsfp1_rx3_n,
+    output wire        qsfp1_tx4_p,
+    output wire        qsfp1_tx4_n,
+    input wire 	       qsfp1_rx4_p,
+    input wire 	       qsfp1_rx4_n,
+    // input wire 	       qsfp1_mgt_refclk_0_p,
+    // input wire 	       qsfp1_mgt_refclk_0_n,
+    input wire 	       qsfp1_mgt_refclk_1_p,
+    input wire 	       qsfp1_mgt_refclk_1_n,
+    output wire        qsfp1_modsell,
+    output wire        qsfp1_resetl,
+    input wire 	       qsfp1_modprsl,
+    input wire 	       qsfp1_intl,
+    output wire        qsfp1_lpmode,
+    output wire        qsfp1_refclk_reset,
+//    output wire [1:0]  qsfp1_fs
+    inout wire 	       qsfp1_i2c_scl,
+    inout wire 	       qsfp1_i2c_sda
 );
 
 parameter AXIS_PCIE_DATA_WIDTH = 512;
@@ -240,6 +244,8 @@ wire qsfp0_modprsl_int;
 wire qsfp1_modprsl_int;
 wire qsfp0_intl_int;
 wire qsfp1_intl_int;
+
+/*   
 wire i2c_scl_i;
 wire i2c_scl_o;
 wire i2c_scl_t;
@@ -259,6 +265,64 @@ always @(posedge pcie_user_clk) begin
     i2c_sda_t_reg <= i2c_sda_t;
 end
 
+
+ */
+   
+// GPIO                                                                                                 
+wire qsfp0_i2c_scl_i;
+wire qsfp0_i2c_scl_o;
+wire qsfp0_i2c_scl_t;
+wire qsfp0_i2c_sda_i;
+wire qsfp0_i2c_sda_o;
+wire qsfp0_i2c_sda_t;
+
+wire qsfp1_i2c_scl_i;
+wire qsfp1_i2c_scl_o;
+wire qsfp1_i2c_scl_t;
+wire qsfp1_i2c_sda_i;
+wire qsfp1_i2c_sda_o;
+wire qsfp1_i2c_sda_t;
+
+reg qsfp0_i2c_scl_o_reg;
+reg qsfp0_i2c_scl_t_reg;
+reg qsfp0_i2c_sda_o_reg;
+reg qsfp0_i2c_sda_t_reg;
+reg qsfp1_i2c_scl_o_reg;
+reg qsfp1_i2c_scl_t_reg;
+reg qsfp1_i2c_sda_o_reg;
+reg qsfp1_i2c_sda_t_reg;
+
+always @(posedge pcie_user_clk) begin
+    qsfp0_i2c_scl_o_reg <= qsfp0_i2c_scl_o;
+    qsfp0_i2c_scl_t_reg <= qsfp0_i2c_scl_t;
+    qsfp0_i2c_sda_o_reg <= qsfp0_i2c_sda_o;
+    qsfp0_i2c_sda_t_reg <= qsfp0_i2c_sda_t;
+    qsfp1_i2c_scl_o_reg <= qsfp1_i2c_scl_o;
+    qsfp1_i2c_scl_t_reg <= qsfp1_i2c_scl_t;
+    qsfp1_i2c_sda_o_reg <= qsfp1_i2c_sda_o;
+    qsfp1_i2c_sda_t_reg <= qsfp1_i2c_sda_t;
+end
+
+sync_signal #(
+    .WIDTH(10),
+    .N(2)
+)
+sync_signal_inst (
+    .clk(pcie_user_clk),
+    .in({qsfp0_modprsl, qsfp1_modprsl, qsfp0_intl, qsfp1_intl,
+        qsfp0_i2c_scl, qsfp0_i2c_sda, qsfp1_i2c_scl, qsfp1_i2c_sda}),
+    .out({qsfp0_modprsl_int, qsfp1_modprsl_int, qsfp0_intl_int, qsfp1_intl_int,
+        qsfp0_i2c_scl_i, qsfp0_i2c_sda_i, qsfp1_i2c_scl_i, qsfp1_i2c_sda_i})
+);
+
+// assign i2c_scl = i2c_scl_t_reg ? 1'bz : i2c_scl_o_reg;
+// assign i2c_sda = i2c_sda_t_reg ? 1'bz : i2c_sda_o_reg;
+   
+assign qsfp0_i2c_scl = qsfp0_i2c_scl_t_reg ? 1'bz : qsfp0_i2c_scl_o_reg;
+assign qsfp0_i2c_sda = qsfp0_i2c_sda_t_reg ? 1'bz : qsfp0_i2c_sda_o_reg;
+assign qsfp1_i2c_scl = qsfp1_i2c_scl_t_reg ? 1'bz : qsfp1_i2c_scl_o_reg;
+assign qsfp1_i2c_sda = qsfp1_i2c_sda_t_reg ? 1'bz : qsfp1_i2c_sda_o_reg;
+
 debounce_switch #(
     .WIDTH(4),
     .N(4),
@@ -271,20 +335,6 @@ debounce_switch_inst (
     .out({sw_int})
 );
 
-sync_signal #(
-    .WIDTH(6),
-    .N(2)
-)
-sync_signal_inst (
-    .clk(pcie_user_clk),
-    .in({qsfp0_modprsl, qsfp1_modprsl, qsfp0_intl, qsfp1_intl,
-        i2c_scl, i2c_sda}),
-    .out({qsfp0_modprsl_int, qsfp1_modprsl_int, qsfp0_intl_int, qsfp1_intl_int,
-        i2c_scl_i, i2c_sda_i})
-);
-
-assign i2c_scl = i2c_scl_t_reg ? 1'bz : i2c_scl_o_reg;
-assign i2c_sda = i2c_sda_t_reg ? 1'bz : i2c_sda_o_reg;
 
 // Flash
 wire qspi_clk_int;
@@ -756,7 +806,7 @@ pcie4_uscale_plus_inst (
 
 // CMAC
 assign qsfp0_refclk_reset = qsfp_refclk_reset_reg;
-assign qsfp0_fs = 2'b10;
+// assign qsfp0_fs = 2'b10;
 
 wire                           qsfp0_tx_clk_int;
 wire                           qsfp0_tx_rst_int;
@@ -873,11 +923,14 @@ qsfp0_cmac_inst (
     .gt_rxrecclkout(), // output [3:0]
     .gt_powergoodout(), // output [3:0]
     .gt_ref_clk_out(clk_161mhz_ref_int), // output
+    .gt_ref_clk_p(qsfp0_mgt_refclk_0_p), // input
+    .gt_ref_clk_n(qsfp0_mgt_refclk_0_n), // input
+
     .gtwiz_reset_tx_datapath(1'b0), // input
     .gtwiz_reset_rx_datapath(1'b0), // input
     .sys_reset(rst_125mhz_int), // input
-    .gt_ref_clk_p(qsfp0_mgt_refclk_1_p), // input
-    .gt_ref_clk_n(qsfp0_mgt_refclk_1_n), // input
+// .gt_ref_clk_p(qsfp0_mgt_refclk_1_p), // input
+// .gt_ref_clk_n(qsfp0_mgt_refclk_1_n), // input
     .init_clk(clk_125mhz_int), // input
 
     .rx_axis_tvalid(qsfp0_rx_axis_tvalid_int), // output
@@ -1511,13 +1564,14 @@ core_inst (
     /*
      * I2C
      */
-    .i2c_scl_i(i2c_scl_i),
+/*    .i2c_scl_i(i2c_scl_i),
     .i2c_scl_o(i2c_scl_o),
     .i2c_scl_t(i2c_scl_t),
     .i2c_sda_i(i2c_sda_i),
     .i2c_sda_o(i2c_sda_o),
     .i2c_sda_t(i2c_sda_t),
-
+*/
+	   
     /*
      * PCIe
      */
@@ -1624,6 +1678,12 @@ core_inst (
     .qsfp0_resetl(qsfp0_resetl),
     .qsfp0_intl(qsfp0_intl_int),
     .qsfp0_lpmode(qsfp0_lpmode),
+    .qsfp0_i2c_scl_i(qsfp0_i2c_scl_i),
+    .qsfp0_i2c_scl_o(qsfp0_i2c_scl_o),
+    .qsfp0_i2c_scl_t(qsfp0_i2c_scl_t),
+    .qsfp0_i2c_sda_i(qsfp0_i2c_sda_i),
+    .qsfp0_i2c_sda_o(qsfp0_i2c_sda_o),
+    .qsfp0_i2c_sda_t(qsfp0_i2c_sda_t),
 
     .qsfp1_tx_clk(qsfp1_tx_clk_int),
     .qsfp1_tx_rst(qsfp1_tx_rst_int),
@@ -1649,6 +1709,12 @@ core_inst (
     .qsfp1_resetl(qsfp1_resetl),
     .qsfp1_intl(qsfp1_intl_int),
     .qsfp1_lpmode(qsfp1_lpmode),
+    .qsfp1_i2c_scl_i(qsfp1_i2c_scl_i),
+    .qsfp1_i2c_scl_o(qsfp1_i2c_scl_o),
+    .qsfp1_i2c_scl_t(qsfp1_i2c_scl_t),
+    .qsfp1_i2c_sda_i(qsfp1_i2c_sda_i),
+    .qsfp1_i2c_sda_o(qsfp1_i2c_sda_o),
+    .qsfp1_i2c_sda_t(qsfp1_i2c_sda_t),
 
     /*
      * QSPI flash

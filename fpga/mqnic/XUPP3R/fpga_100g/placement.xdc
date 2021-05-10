@@ -21,7 +21,7 @@ add_cells_to_pblock [get_pblocks pblock_pcie] [get_cells -quiet [list core_inst/
 add_cells_to_pblock [get_pblocks pblock_pcie] [get_cells -quiet [list core_inst/pcie_us_cfg_inst]]
 add_cells_to_pblock [get_pblocks pblock_pcie] [get_cells -quiet [list core_inst/pcie_us_axil_master_inst]]
 add_cells_to_pblock [get_pblocks pblock_pcie] [get_cells -quiet [list core_inst/dma_if_pcie_us_inst]]
-resize_pblock [get_pblocks pblock_pcie] -add {CLOCKREGION_X4Y5:CLOCKREGION_X5Y8}
+resize_pblock [get_pblocks pblock_pcie] -add {CLOCKREGION_X1Y2:CLOCKREGION_X5Y8}
 
 create_pblock pblock_eth
 add_cells_to_pblock [get_pblocks pblock_eth] [get_cells -quiet [list qsfp0_cmac_pad_inst]]
@@ -32,4 +32,4 @@ add_cells_to_pblock [get_pblocks pblock_eth] [get_cells -quiet [list qsfp1_cmac_
 add_cells_to_pblock [get_pblocks pblock_eth] [get_cells -quiet [list core_inst/iface[1].mac[0].mac_tx_fifo_inst]]
 add_cells_to_pblock [get_pblocks pblock_eth] [get_cells -quiet [list core_inst/iface[1].mac[0].mac_rx_fifo_inst]]
 add_cells_to_pblock [get_pblocks pblock_eth] [get_cells -quiet [list core_inst/iface[1].mac[0].tx_ptp_ts_fifo]]
-resize_pblock [get_pblocks pblock_eth] -add {CLOCKREGION_X0Y10:CLOCKREGION_X0Y14}
+resize_pblock [get_pblocks pblock_eth] -add {CLOCKREGION_X0Y1:CLOCKREGION_X0Y14}

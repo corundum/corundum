@@ -80,6 +80,11 @@ set_property -dict {LOC AY30 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {
 #set_input_delay 0 [get_ports {qsfp0_modprsl qsfp0_intl}]
 
 
+# Misc QSFP signals
+set_property -dict {LOC AN23 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp_ctl_en]
+set_property -dict {LOC AT24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports fpga_i2c_master_l]
+
+
 ## QSFP28 Interfaces - qsfp0
 set_property -dict {LOC BC45 } [get_ports qsfp0_rx1_p]
 set_property -dict {LOC BC46 } [get_ports qsfp0_rx1_n]
@@ -98,24 +103,23 @@ set_property -dict {LOC AV44 } [get_ports qsfp0_rx4_n]
 set_property -dict {LOC AW40 } [get_ports qsfp0_tx4_p]
 set_property -dict {LOC AW41 } [get_ports qsfp0_tx4_n]
 
-set_property -dict {LOC AV38 } [get_ports qsfp0_mgt_refclk_0_p]
-set_property -dict {LOC AV39 } [get_ports qsfp0_mgt_refclk_0_n]
-set_property -dict {LOC AU36 } [get_ports qsfp0_mgt_refclk_1_p]
-set_property -dict {LOC AU37 } [get_ports qsfp0_mgt_refclk_1_n]
+set_property -dict {LOC BA40 } [get_ports qsfp0_mgt_refclk_0_p]
+set_property -dict {LOC BA41 } [get_ports qsfp0_mgt_refclk_0_n]
+# set_property -dict {LOC  } [get_ports qsfp0_mgt_refclk_1_p]
+# set_property -dict {LOC AU37 } [get_ports qsfp0_mgt_refclk_1_n]
 
 # still not done
-set_property -dict {LOC AN23 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_modsell]
-set_property -dict {LOC BD24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_resetl]
-set_property -dict {LOC BD23 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_modprsl]
-set_property -dict {LOC BE23 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_intl]
-set_property -dict {LOC BC24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_lpmode]
-
+# set_property -dict {LOC AN23 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_modsell]
+set_property -dict {LOC BD24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_resetl] # 
+set_property -dict {LOC BD23 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_modprsl] # 
+set_property -dict {LOC BE23 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_intl] #
+set_property -dict {LOC BC24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_lpmode] #
 
 set_property -dict {LOC BF24 IOSTANDARD LVCMOS18 } [get_ports qsfp0_i2c_scl]
 set_property -dict {LOC BF23 IOSTANDARD LVCMOS18 } [get_ports qsfp0_i2c_sda]
 
 # just junk out to SEP connector
-set_property -dict {LOC BF9 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_refclk_reset]
+# set_property -dict {LOC BF9 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_refclk_reset]
 # set_property -dict {LOC BB10 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {qsfp0_fs[0]}]
 # set_property -dict {LOC BC12 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {qsfp0_fs[1]}]
 
@@ -146,11 +150,12 @@ set_property -dict {LOC J41 } [get_ports qsfp1_tx4_n]
 
 #set_property -dict {LOC R37 } [get_ports qsfp1_mgt_refclk_0_p] ;# MGTREFCLK0P_230 from U14.4 via U43.15
 #set_property -dict {LOC R36 } [get_ports qsfp1_mgt_refclk_0_n] ;# MGTREFCLK0N_230 from U14.5 via U43.16
+
 set_property -dict {LOC N36 } [get_ports qsfp1_mgt_refclk_1_p] ;# MGTREFCLK1P_230 from U12.18
 set_property -dict {LOC N37 } [get_ports qsfp1_mgt_refclk_1_n] ;# MGTREFCLK1N_230 from U12.17
 
 # put modsell in some random output
-set_property -dict {LOC BC11 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_modsell]
+#set_property -dict {LOC BC11 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_modsell]
 
 set_property -dict {LOC BC23 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_resetl]
 set_property -dict {LOC BB24 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp1_modprsl]
@@ -158,7 +163,7 @@ set_property -dict {LOC AY22 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp1_i
 set_property -dict {LOC BA22 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_lpmode]
 
 # just junk out to SEP connector
-set_property -dict {LOC BE8 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_refclk_reset]
+# set_property -dict {LOC BE8 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_refclk_reset]
 # set_property -dict {LOC BF8 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {qsfp1_fs[0]}]
 # set_property -dict {LOC BE7 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {qsfp1_fs[1]}]
 

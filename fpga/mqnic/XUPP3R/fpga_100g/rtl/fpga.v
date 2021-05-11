@@ -51,6 +51,9 @@ module fpga (
 /*    inout  wire         i2c_scl,
     inout  wire         i2c_sda,
 */
+
+    /* enalbles sfp? */	     
+    output wire        qsfp_ctl_en,
 	   
     /*
      * PCI express
@@ -86,12 +89,12 @@ module fpga (
     input wire 	       qsfp0_mgt_refclk_0_n,
     // input  wire         qsfp0_mgt_refclk_1_p,
     // input  wire         qsfp0_mgt_refclk_1_n,
-    output wire        qsfp0_modsell,
+//    output wire        qsfp0_modsell,
     output wire        qsfp0_resetl,
     input wire 	       qsfp0_modprsl,
     input wire 	       qsfp0_intl,
     output wire        qsfp0_lpmode,
-    output wire        qsfp0_refclk_reset,
+//    output wire        qsfp0_refclk_reset,
 //    output wire [1:0]  qsfp0_fs,
     inout wire 	       qsfp0_i2c_scl,
     inout wire 	       qsfp0_i2c_sda,
@@ -115,12 +118,12 @@ module fpga (
     // input wire 	       qsfp1_mgt_refclk_0_n,
     input wire 	       qsfp1_mgt_refclk_1_p,
     input wire 	       qsfp1_mgt_refclk_1_n,
-    output wire        qsfp1_modsell,
+//    output wire        qsfp1_modsell,
     output wire        qsfp1_resetl,
     input wire 	       qsfp1_modprsl,
     input wire 	       qsfp1_intl,
     output wire        qsfp1_lpmode,
-    output wire        qsfp1_refclk_reset,
+//    output wire        qsfp1_refclk_reset,
 //    output wire [1:0]  qsfp1_fs
     inout wire 	       qsfp1_i2c_scl,
     inout wire 	       qsfp1_i2c_sda
@@ -804,9 +807,11 @@ pcie4_uscale_plus_inst (
     .phy_rdy_out()
 );
 
+assign qsfp_ctl_en = 1'b1;
+assign fpga_i2c_master_l = 1'b1;
+
 // CMAC
-assign qsfp0_refclk_reset = qsfp_refclk_reset_reg;
-// assign qsfp0_fs = 2'b10;
+// assign qsfp0_refclk_reset = qsfp_refclk_reset_reg;
 
 wire                           qsfp0_tx_clk_int;
 wire                           qsfp0_tx_rst_int;
@@ -840,8 +845,8 @@ wire [80+1-1:0]                qsfp0_rx_axis_tuser_int;
 
 wire [79:0]                    qsfp0_rx_ptp_time_int;
 
-assign qsfp1_refclk_reset = qsfp_refclk_reset_reg;
-assign qsfp1_fs = 2'b10;
+// assign qsfp1_refclk_reset = qsfp_refclk_reset_reg;
+// assign qsfp1_fs = 2'b10;
 
 wire                           qsfp1_tx_clk_int;
 wire                           qsfp1_tx_rst_int;
@@ -1674,7 +1679,7 @@ core_inst (
     .qsfp0_rx_axis_tuser(qsfp0_rx_axis_tuser_int),
     .qsfp0_rx_ptp_time(qsfp0_rx_ptp_time_int),
     .qsfp0_modprsl(qsfp0_modprsl_int),
-    .qsfp0_modsell(qsfp0_modsell),
+//    .qsfp0_modsell(qsfp0_modsell),
     .qsfp0_resetl(qsfp0_resetl),
     .qsfp0_intl(qsfp0_intl_int),
     .qsfp0_lpmode(qsfp0_lpmode),
@@ -1705,7 +1710,7 @@ core_inst (
     .qsfp1_rx_axis_tuser(qsfp1_rx_axis_tuser_int),
     .qsfp1_rx_ptp_time(qsfp1_rx_ptp_time_int),
     .qsfp1_modprsl(qsfp1_modprsl_int),
-    .qsfp1_modsell(qsfp1_modsell),
+//    .qsfp1_modsell(qsfp1_modsell),
     .qsfp1_resetl(qsfp1_resetl),
     .qsfp1_intl(qsfp1_intl_int),
     .qsfp1_lpmode(qsfp1_lpmode),

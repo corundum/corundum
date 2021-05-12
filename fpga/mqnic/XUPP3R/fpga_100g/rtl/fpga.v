@@ -147,7 +147,7 @@ wire pcie_user_reset;
 
 wire cfgmclk_int;
 
-wire clk_161mhz_ref_int;
+wire clk_322mhz_ref_int;
 
 wire clk_125mhz_mmcm_out;
 
@@ -164,10 +164,10 @@ wire mmcm_locked;
 wire mmcm_clkfb;
 
 // MMCM instance
-// 161.13 MHz in, 125 MHz out
+// 322 MHz in, 125 MHz out
 // PFD range: 10 MHz to 500 MHz
 // VCO range: 800 MHz to 1600 MHz
-// M = 64, D = 11 sets Fvco = 937.5 MHz (in range)
+// M = 32, D = 11 sets Fvco = 937.5 MHz (in range)
 // Divide by 7.5 to get output frequency of 125 MHz
 MMCME4_BASE #(
     .BANDWIDTH("OPTIMIZED"),
@@ -192,7 +192,7 @@ MMCME4_BASE #(
     .CLKOUT6_DIVIDE(1),
     .CLKOUT6_DUTY_CYCLE(0.5),
     .CLKOUT6_PHASE(0),
-    .CLKFBOUT_MULT_F(64),
+    .CLKFBOUT_MULT_F(32),
     .CLKFBOUT_PHASE(0),
     .DIVCLK_DIVIDE(11),
     .REF_JITTER1(0.010),
@@ -201,7 +201,7 @@ MMCME4_BASE #(
     .CLKOUT4_CASCADE("FALSE")
 )
 clk_mmcm_inst (
-    .CLKIN1(clk_161mhz_ref_int),
+    .CLKIN1(clk_322mhz_ref_int),
     .CLKFBIN(mmcm_clkfb),
     .RST(mmcm_rst),
     .PWRDWN(1'b0),
@@ -307,7 +307,7 @@ always @(posedge pcie_user_clk) begin
 end
 
 sync_signal #(
-    .WIDTH(10),
+    .WIDTH(8),
     .N(2)
 )
 sync_signal_inst (
@@ -808,6 +808,8 @@ pcie4_uscale_plus_inst (
 );
 
 assign qsfp_ctl_en = 1'b1;
+
+wire fpga_i2c_master;
 assign fpga_i2c_master_l = 1'b1;
 
 // CMAC
@@ -927,7 +929,7 @@ qsfp0_cmac_inst (
     .gt_loopback_in(12'd0), // input [11:0]
     .gt_rxrecclkout(), // output [3:0]
     .gt_powergoodout(), // output [3:0]
-    .gt_ref_clk_out(clk_161mhz_ref_int), // output
+    .gt_ref_clk_out(clk_322mhz_ref_int), // output
     .gt_ref_clk_p(qsfp0_mgt_refclk_0_p), // input
     .gt_ref_clk_n(qsfp0_mgt_refclk_0_n), // input
 

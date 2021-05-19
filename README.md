@@ -61,107 +61,107 @@ Block diagram of the Corundum NIC. PCIe HIP: PCIe hard IP core; AXIL M: AXI lite
 
 ### Modules
 
-#### cmac_pad module
+#### `cmac_pad` module
 
 Frame pad module for 512 bit 100G CMAC TX interface.  Zero pads transmit
 frames to minimum 64 bytes.
 
-#### cpl_op_mux module
+#### `cpl_op_mux` module
 
 Completion operation multiplexer module.  Merges completion write operations
-from different sources to enable sharing a single cpl_write module instance.
+from different sources to enable sharing a single `cpl_write` module instance.
 
-#### cpl_queue_manager module
+#### `cpl_queue_manager` module
 
 Completion queue manager module.  Stores device to host queue state in block
 RAM or ultra RAM.
 
-#### cpl_write module
+#### `cpl_write` module
 
 Completion write module.  Responsible for enqueuing completion and event
 records into the completion queue managers and writing records into host
 memory via DMA.
 
-#### desc_fetch module
+#### `desc_fetch` module
 
 Descriptor fetch module.  Responsible for dequeuing descriptors from the queue
 managers and reading descriptors from host memory via DMA.
 
-#### desc_op_mux module
+#### `desc_op_mux` module
 
 Descriptor operation multiplexer module.  Merges descriptor fetch operations
-from different sources to enable sharing a single desc_fetch module instance.
+from different sources to enable sharing a single `desc_fetch` module instance.
 
-#### event_mux module
+#### `event_mux` module
 
 Event mux module.  Enables multiple event sources to feed the same event queue.
 
-#### mqnic_interface module
+#### `mqnic_interface` module
 
 Interface module.  Contains the event queues, interface queues, and ports.
 
-#### mqnic_port module
+#### `mqnic_port` module
 
 Port module.  Contains the transmit and receive datapath components, including
 transmit and receive engines and checksum and hash offloading.
 
-#### queue_manager module
+#### `queue_manager` module
 
 Queue manager module.  Stores host to device queue state in block RAM or ultra
 RAM.
 
-#### rx_checksum module
+#### `rx_checksum` module
 
 Receive checksum computation module.  Computes 16 bit checksum of Ethernet
 frame payload to aid in IP checksum offloading.
 
-#### rx_engine module
+#### `rx_engine` module
 
 Receive engine.  Manages receive datapath operations including descriptor
 dequeue and fetch via DMA, packet reception, data writeback via DMA, and
 completion enqueue and writeback via DMA.  Handles PTP timestamps for
 inclusion in completion records.
 
-#### rx_hash module
+#### `rx_hash` module
 
 Receive hash computation module.  Extracts IP addresses and ports from packet
 headers and computes 32 bit Toeplitz flow hash.
 
-#### tdma_ber_ch module
+#### `tdma_ber_ch` module
 
 TDMA bit error ratio (BER) test channel module.  Controls PRBS logic in
 Ethernet PHY and accumulates bit errors.  Can be configured to bin error
 counts by TDMA timeslot.
 
-#### tdma_ber module
+#### `tdma_ber` module
 
 TDMA bit error ratio (BER) test module.  Wrapper for a tdma_scheduler and
-multiple instances of tdma_ber_ch.
+multiple instances of `tdma_ber_ch`.
 
-#### tdma_scheduler module
+#### `tdma_scheduler` module
 
 TDMA scheduler module.  Generates TDMA timeslot index and timing signals from
 PTP time.
 
-#### tx_checksum module
+#### `tx_checksum` module
 
 Transmit checksum computation and insertion module.  Computes 16 bit checksum
 of frame data with specified start offset, then inserts computed checksum at
 the specified position.
 
-#### tx_engine module
+#### `tx_engine` module
 
 Transmit engine.  Manages transmit datapath operations including descriptor
 dequeue and fetch via DMA, packet data fetch via DMA, packet transmission, and
 completion enqueue and writeback via DMA.  Handles PTP timestamps for
 inclusion in completion records.
 
-#### tx_scheduler_ctrl_tdma module
+#### `tx_scheduler_ctrl_tdma` module
 
 TDMA transmit scheduler control module.  Controls queues in a transmit
-scheduler based on PTP time, via a tdma_scheduler instance.
+scheduler based on PTP time, via a `tdma_scheduler` instance.
 
-#### tx_scheduler_rr module
+#### `tx_scheduler_rr` module
 
 Round-robin transmit scheduler.  Determines which queues from which to send
 packets.

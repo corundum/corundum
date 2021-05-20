@@ -96,7 +96,7 @@ async def run_test_write(dut, data_in=None, idle_inserter=None, backpressure_ins
 
     tb = TB(dut)
 
-    byte_width = tb.axi_master[s].write_if.byte_width
+    byte_lanes = tb.axi_master[s].write_if.byte_lanes
     max_burst_size = tb.axi_master[s].write_if.max_burst_size
 
     if size is None:
@@ -107,8 +107,8 @@ async def run_test_write(dut, data_in=None, idle_inserter=None, backpressure_ins
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
 
-    for length in list(range(1, byte_width*2))+[1024]:
-        for offset in list(range(byte_width, byte_width*2))+list(range(4096-byte_width, 4096)):
+    for length in list(range(1, byte_lanes*2))+[1024]:
+        for offset in list(range(byte_lanes, byte_lanes*2))+list(range(4096-byte_lanes, 4096)):
             tb.log.info("length %d, offset %d, size %d", length, offset, size)
             ram_addr = offset+0x1000
             addr = ram_addr + m*0x1000000
@@ -132,7 +132,7 @@ async def run_test_read(dut, data_in=None, idle_inserter=None, backpressure_inse
 
     tb = TB(dut)
 
-    byte_width = tb.axi_master[s].write_if.byte_width
+    byte_lanes = tb.axi_master[s].write_if.byte_lanes
     max_burst_size = tb.axi_master[s].write_if.max_burst_size
 
     if size is None:
@@ -143,8 +143,8 @@ async def run_test_read(dut, data_in=None, idle_inserter=None, backpressure_inse
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
 
-    for length in list(range(1, byte_width*2))+[1024]:
-        for offset in list(range(byte_width, byte_width*2))+list(range(4096-byte_width, 4096)):
+    for length in list(range(1, byte_lanes*2))+[1024]:
+        for offset in list(range(byte_lanes, byte_lanes*2))+list(range(4096-byte_lanes, 4096)):
             tb.log.info("length %d, offset %d, size %d", length, offset, size)
             ram_addr = offset+0x1000
             addr = ram_addr + m*0x1000000
@@ -207,8 +207,8 @@ if cocotb.SIM_NAME:
     m_count = int(os.getenv("PARAM_M_COUNT"))
 
     data_width = len(cocotb.top.s00_axi_wdata)
-    byte_width = data_width // 8
-    max_burst_size = (byte_width-1).bit_length()
+    byte_lanes = data_width // 8
+    max_burst_size = (byte_lanes-1).bit_length()
 
     for test in [run_test_write, run_test_read]:
 

@@ -92,8 +92,8 @@ async def run_test(dut, data_in=None, idle_inserter=None, backpressure_inserter=
 
     tb = TB(dut)
 
-    byte_width = tb.axi_ram.write_if.byte_width
-    step_size = 1 if int(os.getenv("PARAM_ENABLE_UNALIGNED")) else byte_width
+    byte_lanes = tb.axi_ram.write_if.byte_lanes
+    step_size = 1 if int(os.getenv("PARAM_ENABLE_UNALIGNED")) else byte_lanes
     tag_count = 2**len(tb.desc_source.bus.tag)
 
     cur_tag = 1
@@ -105,9 +105,9 @@ async def run_test(dut, data_in=None, idle_inserter=None, backpressure_inserter=
 
     dut.enable <= 1
 
-    for length in list(range(1, byte_width*4+1))+[128]:
-        for read_offset in list(range(8, 8+byte_width*2, step_size))+list(range(4096-byte_width*2, 4096, step_size)):
-            for write_offset in list(range(8, 8+byte_width*2, step_size))+list(range(4096-byte_width*2, 4096, step_size)):
+    for length in list(range(1, byte_lanes*4+1))+[128]:
+        for read_offset in list(range(8, 8+byte_lanes*2, step_size))+list(range(4096-byte_lanes*2, 4096, step_size)):
+            for write_offset in list(range(8, 8+byte_lanes*2, step_size))+list(range(4096-byte_lanes*2, 4096, step_size)):
                 tb.log.info("length %d, read_offset %d, write_offset %d", length, read_offset, write_offset)
                 read_addr = read_offset+0x1000
                 write_addr = 0x00008000+write_offset+0x1000

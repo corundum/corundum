@@ -82,15 +82,15 @@ async def run_test_write(dut, data_in=None, idle_inserter=None, backpressure_ins
 
     tb = TB(dut)
 
-    byte_width = tb.axil_master.write_if.byte_width
+    byte_lanes = tb.axil_master.write_if.byte_lanes
 
     await tb.cycle_reset()
 
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
 
-    for length in range(1, byte_width*2):
-        for offset in range(byte_width):
+    for length in range(1, byte_lanes*2):
+        for offset in range(byte_lanes):
             tb.log.info("length %d, offset %d", length, offset)
             addr = offset+0x1000
             test_data = bytearray([x % 256 for x in range(length)])
@@ -113,15 +113,15 @@ async def run_test_read(dut, data_in=None, idle_inserter=None, backpressure_inse
 
     tb = TB(dut)
 
-    byte_width = tb.axil_master.write_if.byte_width
+    byte_lanes = tb.axil_master.write_if.byte_lanes
 
     await tb.cycle_reset()
 
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
 
-    for length in range(1, byte_width*2):
-        for offset in range(byte_width):
+    for length in range(1, byte_lanes*2):
+        for offset in range(byte_lanes):
             tb.log.info("length %d, offset %d", length, offset)
             addr = offset+0x1000
             test_data = bytearray([x % 256 for x in range(length)])

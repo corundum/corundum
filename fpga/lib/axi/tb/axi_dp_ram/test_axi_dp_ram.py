@@ -87,7 +87,7 @@ async def run_test_write(dut, port=0, data_in=None, idle_inserter=None, backpres
     tb = TB(dut)
 
     axi_master = tb.axi_master[port]
-    byte_width = axi_master.write_if.byte_width
+    byte_lanes = axi_master.write_if.byte_lanes
     max_burst_size = axi_master.write_if.max_burst_size
 
     if size is None:
@@ -98,8 +98,8 @@ async def run_test_write(dut, port=0, data_in=None, idle_inserter=None, backpres
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
 
-    for length in list(range(1, byte_width*2))+[1024]:
-        for offset in list(range(byte_width, byte_width*2))+list(range(4096-byte_width, 4096)):
+    for length in list(range(1, byte_lanes*2))+[1024]:
+        for offset in list(range(byte_lanes, byte_lanes*2))+list(range(4096-byte_lanes, 4096)):
             tb.log.info("length %d, offset %d, size %d", length, offset, size)
             addr = offset+0x1000
             test_data = bytearray([x % 256 for x in range(length)])
@@ -121,7 +121,7 @@ async def run_test_read(dut, port=0, data_in=None, idle_inserter=None, backpress
     tb = TB(dut)
 
     axi_master = tb.axi_master[port]
-    byte_width = axi_master.write_if.byte_width
+    byte_lanes = axi_master.write_if.byte_lanes
     max_burst_size = axi_master.write_if.max_burst_size
 
     if size is None:
@@ -132,8 +132,8 @@ async def run_test_read(dut, port=0, data_in=None, idle_inserter=None, backpress
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
 
-    for length in list(range(1, byte_width*2))+[1024]:
-        for offset in list(range(byte_width, byte_width*2))+list(range(4096-byte_width, 4096)):
+    for length in list(range(1, byte_lanes*2))+[1024]:
+        for offset in list(range(byte_lanes, byte_lanes*2))+list(range(4096-byte_lanes, 4096)):
             tb.log.info("length %d, offset %d, size %d", length, offset, size)
             addr = offset+0x1000
             test_data = bytearray([x % 256 for x in range(length)])
@@ -220,8 +220,8 @@ def cycle_pause():
 if cocotb.SIM_NAME:
 
     data_width = len(cocotb.top.s_axi_a_wdata)
-    byte_width = data_width // 8
-    max_burst_size = (byte_width-1).bit_length()
+    byte_lanes = data_width // 8
+    max_burst_size = (byte_lanes-1).bit_length()
 
     for test in [run_test_write, run_test_read]:
 

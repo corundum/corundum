@@ -9,69 +9,71 @@ GitHub repository: https://github.com/alexforencich/verilog-axi
 ## Introduction
 
 Collection of AXI4 and AXI4 lite bus components.  Most components are fully
-parametrizable in interface widths.  Includes full cocotb testbench that
-utilizes [cocotbext-axi](https://github.com/alexforencich/cocotbext-axi).
+parametrizable in interface widths.  Includes full cocotb testbenches that
+utilize [cocotbext-axi](https://github.com/alexforencich/cocotbext-axi).
 
 ## Documentation
 
-### axi_adapter module
+### `axi_adapter` module
 
 AXI width adapter module with parametrizable data and address interface widths.
-Supports INCR burst types and narrow bursts.  Wrapper for axi_adapter_rd and axi_adapter_wr.
+Supports INCR burst types and narrow bursts.  Wrapper for `axi_adapter_rd` and `axi_adapter_wr`.
 
-### axi_adapter_rd module
-
-AXI width adapter module with parametrizable data and address interface widths.
-Supports INCR burst types and narrow bursts.
-
-### axi_adapter_wr module
+### `axi_adapter_rd` module
 
 AXI width adapter module with parametrizable data and address interface widths.
 Supports INCR burst types and narrow bursts.
 
-### axi_axil_adapter module
+### `axi_adapter_wr` module
+
+AXI width adapter module with parametrizable data and address interface widths.
+Supports INCR burst types and narrow bursts.
+
+### `axi_axil_adapter` module
 
 AXI to AXI lite converter and width adapter module with parametrizable data
 and address interface widths.  Supports INCR burst types and narrow bursts.
-Wrapper for axi_axil_adapter_rd and axi_axil_adapter_wr.
+Wrapper for `axi_axil_adapter_rd` and `axi_axil_adapter_wr`.
 
-### axi_axil_adapter_rd module
-
-AXI to AXI lite converter and width adapter module with parametrizable data
-and address interface widths.  Supports INCR burst types and narrow bursts.
-
-### axi_axil_adapter_wr module
+### `axi_axil_adapter_rd` module
 
 AXI to AXI lite converter and width adapter module with parametrizable data
 and address interface widths.  Supports INCR burst types and narrow bursts.
 
-### axi_cdma module
+### `axi_axil_adapter_wr` module
+
+AXI to AXI lite converter and width adapter module with parametrizable data
+and address interface widths.  Supports INCR burst types and narrow bursts.
+
+### `axi_cdma` module
 
 AXI to AXI DMA engine with parametrizable data and address interface widths.
 Generates full-width INCR bursts only, with parametrizable maximum burst
 length.  Supports unaligned transfers, which can be disabled via parameter
 to save on resource consumption.
 
-### axi_cdma_desc_mux module
+### `axi_cdma_desc_mux` module
 
 Descriptor multiplexer/demultiplexer for AXI CDMA module.  Enables sharing the
 AXI CDMA module between multiple request sources, interleaving requests and
 distributing responses.
 
-### axi_crossbar module
+### `axi_crossbar` module
 
 AXI nonblocking crossbar interconnect with parametrizable data and address
 interface widths and master and slave interface counts.  Supports all burst
 types.  Fully nonblocking with completely separate read and write paths; ID
 based transaction ordering protection logic; and per-port address decode,
-admission control, and decode error handling.  Wrapper for axi_crossbar_rd and
-axi_crossbar_wr.  
+admission control, and decode error handling.  Wrapper for `axi_crossbar_rd`
+and `axi_crossbar_wr`.
 
-### axi_crossbar_addr module
+Wrappers can generated with `axi_crossbar_wrap.py`.
+
+### `axi_crossbar_addr` module
 
 Address decode and admission control module for AXI nonblocking crossbar interconnect.
 
-### axi_crossbar_rd module
+### `axi_crossbar_rd` module
 
 AXI nonblocking crossbar interconnect with parametrizable data and address
 interface widths and master and slave interface counts.  Read interface only.
@@ -79,7 +81,7 @@ Supports all burst types.  Fully nonblocking with completely separate read and
 write paths; ID based transaction ordering protection logic; and per-port
 address decode, admission control, and decode error handling.
 
-### axi_crossbar_wr module
+### `axi_crossbar_wr` module
 
 AXI nonblocking crossbar interconnect with parametrizable data and address
 interface widths and master and slave interface counts.  Write interface only.
@@ -87,140 +89,168 @@ Supports all burst types.  Fully nonblocking with completely separate read and
 write paths; ID based transaction ordering protection logic; and per-port
 address decode, admission control, and decode error handling.
 
-### axi_dma module
+### `axi_dma` module
 
 AXI to AXI stream DMA engine with parametrizable data and address interface
 widths.  Generates full-width INCR bursts only, with parametrizable maximum
 burst length.  Supports unaligned transfers, which can be disabled via
-parameter to save on resource consumption.  Wrapper for axi_dma_rd and
-axi_dma_wr.
+parameter to save on resource consumption.  Wrapper for `axi_dma_rd` and
+`axi_dma_wr`.
 
-### axi_dma_desc_mux module
+### `axi_dma_desc_mux` module
 
 Descriptor multiplexer/demultiplexer for AXI DMA module.  Enables sharing the
 AXI DMA module between multiple request sources, interleaving requests and
 distributing responses.
 
-### axi_dma_rd module
+### `axi_dma_rd` module
 
 AXI to AXI stream DMA engine with parametrizable data and address interface
 widths.  Generates full-width INCR bursts only, with parametrizable maximum
 burst length.  Supports unaligned transfers, which can be disabled via
 parameter to save on resource consumption.
 
-### axi_dma_wr module
+### `axi_dma_wr` module
 
 AXI stream to AXI DMA engine with parametrizable data and address interface
 widths.  Generates full-width INCR bursts only, with parametrizable maximum
 burst length.  Supports unaligned transfers, which can be disabled via
 parameter to save on resource consumption.
 
-### axi_fifo module
+### `axi_dp_ram` module
+
+AXI dual-port RAM with parametrizable data and address interface widths.
+Supports FIXED and INCR burst types as well as narrow bursts.
+
+### `axi_fifo` module
 
 AXI FIFO with parametrizable data and address interface widths.  Supports all
 burst types.  Optionally can delay the address channel until either the write
 data is completely shifted into the FIFO or the read data FIFO has enough
-capacity to fit the whole burst.  Wrapper for axi_fifo_rd and axi_fifo_wr.
+capacity to fit the whole burst.  Wrapper for `axi_fifo_rd` and `axi_fifo_wr`.
 
-### axi_fifo_rd module
+### `axi_fifo_rd` module
 
 AXI FIFO with parametrizable data and address interface widths.  AR and R
 channels only.  Supports all burst types.  Optionally can delay the address
 channel until either the read data FIFO is empty or has enough capacity to fit
 the whole burst.
 
-### axi_fifo_wr module
+### `axi_fifo_wr` module
 
 AXI FIFO with parametrizable data and address interface widths.  WR, W, and B
 channels only.  Supports all burst types.  Optionally can delay the address
 channel until the write data is shifted completely into the write data FIFO,
 or the current burst completely fills the write data FIFO.
 
-### axi_interconnect module
+### `axi_interconnect` module
 
 AXI shared interconnect with parametrizable data and address interface
 widths and master and slave interface counts.  Supports all burst types.
 Small in area, but does not support concurrent operations.
 
-### axi_ram module
+Wrappers can generated with `axi_interconnect_wrap.py`.
 
-AXI RAM with parametrizable data and address interface widths. Supports FIXED
+### `axi_ram` module
+
+AXI RAM with parametrizable data and address interface widths.  Supports FIXED
 and INCR burst types as well as narrow bursts.
 
-### axi_register module
+### `axi_ram_rd_if` module
+
+AXI RAM read interface with parametrizable data and address interface widths.
+Handles bursts and presents a simplified internal memory interface.  Supports
+FIXED and INCR burst types as well as narrow bursts.
+
+### `axi_ram_wr_if` module
+
+AXI RAM write interface with parametrizable data and address interface widths.
+Handles bursts and presents a simplified internal memory interface.  Supports
+FIXED and INCR burst types as well as narrow bursts.
+
+### `axi_ram_wr_rd_if` module
+
+AXI RAM read/write interface with parametrizable data and address interface
+widths.  Handles bursts and presents a simplified internal memory interface.
+Supports FIXED and INCR burst types as well as narrow bursts.  Wrapper for
+`axi_ram_rd_if` and `axi_ram_wr_if`.
+
+### `axi_register` module
 
 AXI register with parametrizable data and address interface widths.  Supports
 all burst types.  Inserts simple buffers or skid buffers into all channels.
 Channel register types can be individually changed or bypassed.  Wrapper for
-axi_register_rd and axi_register_wr.
+`axi_register_rd` and `axi_register_wr`.
 
-### axi_register_rd module
+### `axi_register_rd` module
 
 AXI register with parametrizable data and address interface widths.  AR and R
 channels only.  Supports all burst types.  Inserts simple buffers or skid
 buffers into all channels.  Channel register types can be individually changed
 or bypassed.
 
-### axi_register_wr module
+### `axi_register_wr` module
 
 AXI register with parametrizable data and address interface widths.  WR, W,
 and B channels only.  Supports all burst types.  Inserts simple buffers or
 skid buffers into all channels.  Channel register types can be individually
 changed or bypassed.
 
-### axil_adapter module
+### `axil_adapter` module
 
 AXI lite width adapter module with parametrizable data and address interface
-widths.  Wrapper for axi_adapter_rd and axi_adapter_wr.
+widths.  Wrapper for `axi_adapter_rd` and `axi_adapter_wr`.
 
-### axil_adapter_rd module
-
-AXI lite width adapter module with parametrizable data and address interface
-widths.
-
-### axil_adapter_wr module
+### `axil_adapter_rd` module
 
 AXI lite width adapter module with parametrizable data and address interface
 widths.
 
-### axil_cdc module
+### `axil_adapter_wr` module
+
+AXI lite width adapter module with parametrizable data and address interface
+widths.
+
+### `axil_cdc` module
 
 AXI lite clock domain crossing module with parametrizable data and address
-interface widths.  Wrapper for axi_cdc_rd and axi_cdc_wr.
+interface widths.  Wrapper for `axi_cdc_rd` and `axi_cdc_wr`.
 
-### axil_cdc_rd module
+### `axil_cdc_rd` module
 
 AXI lite clock domain crossing module with parametrizable data and address
 interface widths.
 
-### axil_cdc_wr module
+### `axil_cdc_wr` module
 
 AXI lite clock domain crossing module with parametrizable data and address
 interface widths.
 
-### axil_interconnect module
+### `axil_interconnect` module
 
 AXI lite shared interconnect with parametrizable data and address interface
 widths and master and slave interface counts.  Small in area, but does not
 support concurrent operations.
 
-### axil_ram module
+Wrappers can generated with `axil_interconnect_wrap.py`.
+
+### `axil_ram` module
 
 AXI lite RAM with parametrizable data and address interface widths.
 
-### axil_register module
+### `axil_register` module
 
 AXI lite register with parametrizable data and address interface widths.
 Inserts skid buffers into all channels.  Channel registers can be individually
-bypassed.  Wrapper for axil_register_rd and axil_register_wr.
+bypassed.  Wrapper for `axil_register_rd` and `axil_register_wr`.
 
-### axil_register_rd module
+### `axil_register_rd` module
 
 AXI lite register with parametrizable data and address interface widths.  AR
 and R channels only.  Inserts simple buffers into all channels.  Channel
 registers can be individually bypassed.
 
-### axil_register_wr module
+### `axil_register_wr` module
 
 AXI lite register with parametrizable data and address interface widths.  WR,
 W, and B channels only.  Inserts simple buffers into all channels.  Channel
@@ -309,11 +339,15 @@ registers can be individually bypassed.
     rtl/axi_dma_desc_mux.v          : AXI DMA descriptor mux
     rtl/axi_dma_rd.v                : AXI DMA engine (read)
     rtl/axi_dma_wr.v                : AXI DMA engine (write)
+    rtl/axi_dp_ram.v                : AXI dual-port RAM
     rtl/axi_fifo.v                  : AXI FIFO
     rtl/axi_fifo_rd.v               : AXI FIFO (read)
     rtl/axi_fifo_wr.v               : AXI FIFO (write)
     rtl/axi_interconnect.v          : AXI shared interconnect
     rtl/axi_ram.v                   : AXI RAM
+    rtl/axi_ram_rd_if.v             : AXI RAM read interface
+    rtl/axi_ram_wr_if.v             : AXI RAM write interface
+    rtl/axi_ram_wr_rd_if.v          : AXI RAM read/write interface
     rtl/axi_register.v              : AXI register
     rtl/axi_register_rd.v           : AXI register (read)
     rtl/axi_register_wr.v           : AXI register (write)

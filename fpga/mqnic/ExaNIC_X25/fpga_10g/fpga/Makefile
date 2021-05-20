@@ -72,10 +72,10 @@ SYN_FILES += lib/pcie/rtl/pulse_merge.v
 # XDC files
 XDC_FILES = fpga.xdc
 XDC_FILES += boot.xdc
-XDC_FILES += lib/axis/syn/axis_async_fifo.tcl
-XDC_FILES += lib/axis/syn/sync_reset.tcl
-XDC_FILES += lib/eth/syn/ptp_clock_cdc.tcl
-XDC_FILES += ../../../common/syn/tdma_ber_ch.tcl
+XDC_FILES += lib/axis/syn/vivado/axis_async_fifo.tcl
+XDC_FILES += lib/axis/syn/vivado/sync_reset.tcl
+XDC_FILES += lib/eth/syn/vivado/ptp_clock_cdc.tcl
+XDC_FILES += ../../../common/syn/vivado/tdma_ber_ch.tcl
 
 # IP
 IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl

@@ -98,13 +98,14 @@ class PsdpRamWrite(Memory):
         self._pause_cr = None
 
         self.width = len(self.bus.wr_cmd_data)
-        self.byte_width = len(self.bus.wr_cmd_be)
+        self.byte_size = 8
+        self.byte_lanes = len(self.bus.wr_cmd_be)
 
         self.seg_count = len(self.bus.wr_cmd_valid)
         self.seg_data_width = self.width // self.seg_count
-        self.seg_byte_width = self.seg_data_width // 8
+        self.seg_byte_lanes = self.seg_data_width // self.byte_size
         self.seg_addr_width = len(self.bus.wr_cmd_addr) // self.seg_count
-        self.seg_be_width = self.seg_data_width // 8
+        self.seg_be_width = self.seg_data_width // self.byte_size
 
         self.seg_data_mask = 2**self.seg_data_width-1
         self.seg_addr_mask = 2**self.seg_addr_width-1
@@ -114,8 +115,8 @@ class PsdpRamWrite(Memory):
         self.log.info("  Memory size: %d bytes", len(self.mem))
         self.log.info("  Segment count: %d", self.seg_count)
         self.log.info("  Segment addr width: %d bits", self.seg_addr_width)
-        self.log.info("  Segment data width: %d bits (%d bytes)", self.seg_data_width, self.seg_byte_width)
-        self.log.info("  Total data width: %d bits (%d bytes)", self.width, self.width // 8)
+        self.log.info("  Segment data width: %d bits (%d bytes)", self.seg_data_width, self.seg_byte_lanes)
+        self.log.info("  Total data width: %d bits (%d bytes)", self.width, self.width // self.byte_size)
 
         assert self.seg_be_width*self.seg_count == len(self.bus.wr_cmd_be)
 
@@ -138,6 +139,8 @@ class PsdpRamWrite(Memory):
         self.set_pause_generator(None)
 
     async def _run(self):
+        cmd_ready = 0
+
         while True:
             await RisingEdge(self.clock)
 
@@ -146,7 +149,6 @@ class PsdpRamWrite(Memory):
             cmd_be_sample = self.bus.wr_cmd_be.value
             cmd_addr_sample = self.bus.wr_cmd_addr.value
             cmd_data_sample = self.bus.wr_cmd_data.value
-            cmd_ready_sample = self.bus.wr_cmd_ready.value
             cmd_valid_sample = self.bus.wr_cmd_valid.value
 
             if self.reset is not None and self.reset.value:
@@ -156,18 +158,18 @@ class PsdpRamWrite(Memory):
 
             # process segments
             for seg in range(self.seg_count):
-                if cmd_ready_sample & cmd_valid_sample & (1 << seg):
+                if cmd_ready & cmd_valid_sample & (1 << seg):
                     seg_addr = (cmd_addr_sample >> self.seg_addr_width*seg) & self.seg_addr_mask
                     seg_data = (cmd_data_sample >> self.seg_data_width*seg) & self.seg_data_mask
                     seg_be = (cmd_be_sample >> self.seg_be_width*seg) & self.seg_be_mask
 
-                    addr = (seg_addr*self.seg_count+seg)*self.seg_byte_width
+                    addr = (seg_addr*self.seg_count+seg)*self.seg_byte_lanes
 
                     self.mem.seek(addr % self.size)
 
-                    data = seg_data.to_bytes(self.seg_byte_width, 'little')
+                    data = seg_data.to_bytes(self.seg_byte_lanes, 'little')
 
-                    for i in range(self.seg_byte_width):
+                    for i in range(self.seg_byte_lanes):
                         if seg_be & (1 << i):
                             self.mem.write(data[i:i+1])
                         else:
@@ -178,11 +180,12 @@ class PsdpRamWrite(Memory):
                     self.log.info("Write word seg: %d addr: 0x%08x be 0x%02x data %s",
                         seg, addr, seg_be, ' '.join((f'{c:02x}' for c in data)))
 
-            if self.pause:
-                self.bus.wr_cmd_ready <= 0
-            else:
-                self.bus.wr_cmd_ready <= 2**self.seg_count-1
+            cmd_ready = 2**self.seg_count-1
 
+            if self.pause:
+                cmd_ready = 0
+
+            self.bus.wr_cmd_ready <= cmd_ready
             self.bus.wr_done <= wr_done
 
     async def _run_pause(self):
@@ -209,11 +212,12 @@ class PsdpRamRead(Memory):
         self._pause_cr = None
 
         self.width = len(self.bus.rd_resp_data)
-        self.byte_width = self.width // 8
+        self.byte_size = 8
+        self.byte_lanes = self.width // self.byte_size
 
         self.seg_count = len(self.bus.rd_cmd_valid)
         self.seg_data_width = self.width // self.seg_count
-        self.seg_byte_width = self.seg_data_width // 8
+        self.seg_byte_lanes = self.seg_data_width // self.byte_size
         self.seg_addr_width = len(self.bus.rd_cmd_addr) // self.seg_count
 
         self.seg_data_mask = 2**self.seg_data_width-1
@@ -223,8 +227,8 @@ class PsdpRamRead(Memory):
         self.log.info("  Memory size: %d bytes", len(self.mem))
         self.log.info("  Segment count: %d", self.seg_count)
         self.log.info("  Segment addr width: %d bits", self.seg_addr_width)
-        self.log.info("  Segment data width: %d bits (%d bytes)", self.seg_data_width, self.seg_byte_width)
-        self.log.info("  Total data width: %d bits (%d bytes)", self.width, self.width // 8)
+        self.log.info("  Segment data width: %d bits (%d bytes)", self.seg_data_width, self.seg_byte_lanes)
+        self.log.info("  Total data width: %d bits (%d bytes)", self.width, self.width // self.byte_size)
 
         self.bus.rd_cmd_ready.setimmediatevalue(0)
         self.bus.rd_resp_valid.setimmediatevalue(0)
@@ -255,11 +259,9 @@ class PsdpRamRead(Memory):
             await RisingEdge(self.clock)
 
             cmd_addr_sample = self.bus.rd_cmd_addr.value
-            cmd_ready_sample = self.bus.rd_cmd_ready.value
             cmd_valid_sample = self.bus.rd_cmd_valid.value
 
             resp_ready_sample = self.bus.rd_resp_ready.value
-            resp_valid_sample = self.bus.rd_resp_valid.value
 
             if self.reset is not None and self.reset.value:
                 self.bus.rd_cmd_ready.setimmediatevalue(0)
@@ -272,7 +274,7 @@ class PsdpRamRead(Memory):
             for seg in range(self.seg_count):
                 seg_mask = 1 << seg
 
-                if (resp_ready_sample & seg_mask) or not (resp_valid_sample & seg_mask):
+                if (resp_ready_sample & seg_mask) or not (resp_valid & seg_mask):
                     if pipeline[seg][-1] is not None:
                         resp_data &= ~(self.seg_data_mask << self.seg_data_width*seg)
                         resp_data |= ((pipeline[seg][-1] & self.seg_data_mask) << self.seg_data_width*seg)
@@ -286,14 +288,14 @@ class PsdpRamRead(Memory):
                         pipeline[i] = pipeline[i-1]
                         pipeline[i-1] = None
 
-                if cmd_ready_sample & cmd_valid_sample & seg_mask:
+                if cmd_ready & cmd_valid_sample & seg_mask:
                     seg_addr = (cmd_addr_sample >> self.seg_addr_width*seg) & self.seg_addr_mask
 
-                    addr = (seg_addr*self.seg_count+seg)*self.seg_byte_width
+                    addr = (seg_addr*self.seg_count+seg)*self.seg_byte_lanes
 
                     self.mem.seek(addr % self.size)
 
-                    data = self.mem.read(self.seg_byte_width)
+                    data = self.mem.read(self.seg_byte_lanes)
                     pipeline[seg][0] = int.from_bytes(data, 'little')
 
                     self.log.info("Read word seg: %d addr: 0x%08x data %s",
@@ -305,9 +307,9 @@ class PsdpRamRead(Memory):
                     cmd_ready &= ~seg_mask
 
             if self.pause:
-                self.bus.rd_cmd_ready <= 0
-            else:
-                self.bus.rd_cmd_ready <= cmd_ready
+                cmd_ready = 0
+
+            self.bus.rd_cmd_ready <= cmd_ready
 
             self.bus.rd_resp_data <= resp_data
             self.bus.rd_resp_valid <= resp_valid

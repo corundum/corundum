@@ -106,7 +106,7 @@ async def run_test_write(dut, data_in=None, idle_inserter=None, backpressure_ins
 
     tb = TB(dut)
 
-    byte_width = tb.dma_ram.byte_width
+    byte_lanes = tb.dma_ram.byte_lanes
     step_size = tb.write_data_source.byte_lanes
     tag_count = 2**len(tb.write_desc_source.bus.tag)
 
@@ -119,8 +119,8 @@ async def run_test_write(dut, data_in=None, idle_inserter=None, backpressure_ins
 
     dut.enable <= 1
 
-    for length in list(range(1, byte_width*3+1))+[128]:
-        for offset in range(0, byte_width*2, step_size):
+    for length in list(range(1, byte_lanes*3+1))+[128]:
+        for offset in range(0, byte_lanes*2, step_size):
             for diff in [-8, -2, -1, 0, 1, 2, 8]:
                 if length+diff < 1:
                     continue

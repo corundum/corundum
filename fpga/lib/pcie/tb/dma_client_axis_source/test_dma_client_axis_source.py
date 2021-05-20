@@ -104,7 +104,7 @@ async def run_test_read(dut, data_in=None, idle_inserter=None, backpressure_inse
 
     tb = TB(dut)
 
-    byte_width = tb.dma_ram.byte_width
+    byte_lanes = tb.dma_ram.byte_lanes
     step_size = tb.read_data_sink.byte_lanes
     tag_count = 2**len(tb.read_desc_source.bus.tag)
 
@@ -117,8 +117,8 @@ async def run_test_read(dut, data_in=None, idle_inserter=None, backpressure_inse
 
     dut.enable <= 1
 
-    for length in list(range(1, byte_width*3+1))+[128]:
-        for offset in range(0, byte_width*2, step_size):
+    for length in list(range(1, byte_lanes*3+1))+[128]:
+        for offset in range(0, byte_lanes*2, step_size):
             tb.log.info("length %d, offset %d", length, offset)
             ram_addr = offset+0x1000
             test_data = bytearray([x % 256 for x in range(length)])

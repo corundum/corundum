@@ -94,7 +94,7 @@ distclean: clean
 %.runs/synth_1/%.dcp: %.xpr $(SYN_FILES_REL) $(INC_FILES_REL) $(XDC_FILES_REL)
 	echo "open_project $*.xpr" > run_synth.tcl
 	echo "reset_run synth_1" >> run_synth.tcl
-	echo "launch_runs -jobs 4 synth_1" >> run_synth.tcl
+	echo "launch_runs -jobs 16 synth_1" >> run_synth.tcl
 	echo "wait_on_run synth_1" >> run_synth.tcl
 	echo "exit" >> run_synth.tcl
 	vivado -nojournal -nolog -mode batch -source run_synth.tcl
@@ -103,7 +103,7 @@ distclean: clean
 %.runs/impl_1/%_routed.dcp: %.runs/synth_1/%.dcp
 	echo "open_project $*.xpr" > run_impl.tcl
 	echo "reset_run impl_1" >> run_impl.tcl
-	echo "launch_runs -jobs 4 impl_1" >> run_impl.tcl
+	echo "launch_runs -jobs 16 impl_1" >> run_impl.tcl
 	echo "wait_on_run impl_1" >> run_impl.tcl
 	echo "exit" >> run_impl.tcl
 	vivado -nojournal -nolog -mode batch -source run_impl.tcl
@@ -113,6 +113,7 @@ distclean: clean
 	echo "open_project $*.xpr" > generate_bit.tcl
 	echo "open_run impl_1" >> generate_bit.tcl
 	echo "write_bitstream -force $*.bit" >> generate_bit.tcl
+	echo "write_debug_probes -force  debug_probes.ltx"  >> generate_bit.tcl
 	echo "exit" >> generate_bit.tcl
 	vivado -nojournal -nolog -mode batch -source generate_bit.tcl
 	mkdir -p rev

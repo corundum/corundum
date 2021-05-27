@@ -52,8 +52,10 @@ module fpga (
     inout  wire         i2c_sda,
 */
 
-    /* enalbles sfp? */	     
+    /* enables sfp? */	     
     output wire        qsfp_ctl_en,
+    wire 	       fpga_i2c_master_l,
+
 	   
     /*
      * PCI express
@@ -145,6 +147,38 @@ parameter AXIS_ETH_KEEP_WIDTH = AXIS_ETH_DATA_WIDTH/8;
 wire pcie_user_clk;
 wire pcie_user_reset;
 
+
+   /*
+ila_0 ila_rq (
+    .clk(pcie_user_clk),
+    .trig_out(),
+    .trig_out_ack(1'b0),
+    .trig_in(1'b0),
+    .trig_in_ack(),
+    .probe0(axis_rq_tdata),
+    .probe1(axis_rq_tkeep),
+    .probe2(axis_rq_tvalid),
+    .probe3(axis_rq_tready),
+    .probe4({pcie_tfc_npd_av, pcie_tfc_nph_av, axis_rq_tuser}),
+    .probe5(axis_rq_tlast)
+);
+
+ila_0 ila_rc (
+    .clk(pcie_user_clk),
+    .trig_out(),
+    .trig_out_ack(1'b0),
+    .trig_in(1'b0),
+    .trig_in_ack(),
+    .probe0(axis_rc_tdata),
+    .probe1(axis_rc_tkeep),
+    .probe2(axis_rc_tvalid),
+    .probe3(axis_rc_tready),
+    .probe4(axis_rc_tuser),
+    .probe5(axis_rc_tlast)
+);
+   
+    */
+   
 wire cfgmclk_int;
 
 wire clk_322mhz_ref_int;
@@ -326,7 +360,8 @@ assign qsfp0_i2c_sda = qsfp0_i2c_sda_t_reg ? 1'bz : qsfp0_i2c_sda_o_reg;
 assign qsfp1_i2c_scl = qsfp1_i2c_scl_t_reg ? 1'bz : qsfp1_i2c_scl_o_reg;
 assign qsfp1_i2c_sda = qsfp1_i2c_sda_t_reg ? 1'bz : qsfp1_i2c_sda_o_reg;
 
-debounce_switch #(
+/*
+ debounce_switch #(
     .WIDTH(4),
     .N(4),
     .RATE(250000)
@@ -337,7 +372,8 @@ debounce_switch_inst (
     .in({sw}),
     .out({sw_int})
 );
-
+*/
+   
 
 // Flash
 wire qspi_clk_int;
@@ -806,11 +842,6 @@ pcie4_uscale_plus_inst (
 
     .phy_rdy_out()
 );
-
-assign qsfp_ctl_en = 1'b1;
-
-wire fpga_i2c_master;
-assign fpga_i2c_master_l = 1'b1;
 
 // CMAC
 // assign qsfp0_refclk_reset = qsfp_refclk_reset_reg;
@@ -1565,7 +1596,7 @@ core_inst (
     /*
      * GPIO
      */
-    .sw(sw_int),
+//    .sw(sw_int),
     .led(led_int),
 
     /*
@@ -1722,6 +1753,9 @@ core_inst (
     .qsfp1_i2c_sda_i(qsfp1_i2c_sda_i),
     .qsfp1_i2c_sda_o(qsfp1_i2c_sda_o),
     .qsfp1_i2c_sda_t(qsfp1_i2c_sda_t),
+
+    .qsfp_ctl_en(qsfp_ctl_en),
+    .fpga_i2c_master_l(fpga_i2c_master_l),
 
     /*
      * QSPI flash

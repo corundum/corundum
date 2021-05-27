@@ -63,7 +63,7 @@ module fpga_core #
     /*
      * GPIO
      */
-    input wire [3:0] 			      sw,
+//    input wire [3:0] 			      sw,
     output wire [2:0] 			      led,
 
     /*
@@ -232,6 +232,9 @@ module fpga_core #
     input wire 				      qsfp1_i2c_sda_i,
     output wire 			      qsfp1_i2c_sda_o,
     output wire 			      qsfp1_i2c_sda_t,
+
+    output wire 			      qsfp_ctl_en,
+    output wire 			      fpga_i2c_master_l,
 
     /*
      * QSPI flash
@@ -459,6 +462,9 @@ reg qsfp0_i2c_sda_o_reg = 1'b1;
 reg qsfp1_i2c_scl_o_reg = 1'b1;
 reg qsfp1_i2c_sda_o_reg = 1'b1;
 
+reg qsfp_ctl_en_reg =  1'b1;
+reg fpga_i2c_master_l_reg = 1'b0;
+   
 /*
  reg i2c_scl_o_reg = 1'b1;
 reg i2c_sda_o_reg = 1'b1;
@@ -522,7 +528,12 @@ assign qsfp1_i2c_scl_o = qsfp1_i2c_scl_o_reg;
 assign qsfp1_i2c_scl_t = qsfp1_i2c_scl_o_reg;
 assign qsfp1_i2c_sda_o = qsfp1_i2c_sda_o_reg;
 assign qsfp1_i2c_sda_t = qsfp1_i2c_sda_o_reg;
+
    
+   assign qsfp_ctl_en = qsfp_ctl_en_reg;
+   assign fpga_i2c_master_l = fpga_i2c_master_l_reg;
+   
+
 assign fpga_boot = fpga_boot_reg;
 
 assign qspi_clk = qspi_clk_reg;
@@ -735,6 +746,10 @@ always @(posedge clk_250mhz) begin
         qspi_dq_oe_reg <= 4'd0;
 
         pcie_dma_enable_reg <= 1'b0;
+
+        qsfp_ctl_en_reg <= 1'b1;
+        fpga_i2c_master_l_reg <= 1'b0;
+
     end
 end
 
@@ -931,6 +946,96 @@ rq_reg (
 
 assign cfg_fc_sel = 3'b100;
 
+   /*
+ila_0 ila_desc (
+    .clk(clk_250mhz),
+    .trig_out(),
+    .trig_out_ack(1'b0),
+    .trig_in(1'b0),
+    .trig_in_ack(),
+    .probe0({pcie_dma_read_desc_pcie_addr, pcie_dma_read_desc_ram_sel, pcie_dma_read_desc_ram_addr, pcie_dma_read_desc_tag, pcie_dma_read_desc_status_tag, pcie_dma_write_desc_pcie_addr, pcie_dma_write_desc_ram_sel, pcie_dma_write_desc_ram_addr, pcie_dma_write_desc_tag, pcie_dma_write_desc_status_tag}),
+    .probe1(0),
+    .probe2(0),
+    .probe3(0),
+    .probe4({pcie_dma_read_desc_valid, pcie_dma_read_desc_ready, pcie_dma_read_desc_len, pcie_dma_read_desc_status_valid, pcie_dma_write_desc_valid, pcie_dma_write_desc_ready, pcie_dma_write_desc_len, pcie_dma_write_desc_status_valid, status_error_cor_int, status_error_uncor_int}),
+    .probe5(0)
+);
+
+ila_0 ila_rq (
+    .clk(clk_250mhz),
+    .trig_out(),
+    .trig_out_ack(1'b0),
+    .trig_in(1'b0),
+    .trig_in_ack(),
+    .probe0(m_axis_rq_tdata),
+    .probe1(m_axis_rq_tkeep),
+    .probe2(m_axis_rq_tvalid),
+    .probe3(m_axis_rq_tready),
+    .probe4(m_axis_rq_tuser),
+    .probe5(m_axis_rq_tlast)
+);
+
+    */
+ila_0 ila_sfp (
+    .clk(clk_250mhz),
+    .trig_out(),
+    .trig_out_ack(1'b0),
+    .trig_in(1'b0),
+    .trig_in_ack(),
+    .probe0({qsfp1_modprsel, qsfp1_intl, qsfp1_resetl, qsfp1_mgt_refclk_1_p, qsfp_mgr_refclk_1_n, qsfp0_rx1_n, qsfp0_rx1_p, qsfp0_rx2_n, qsfp0_rx2_p}),
+    .probe1(qsfp0_rx1_n),
+    .probe2({qsfp0_mgt_refclk_0_p,qsfp0_mgt_refclk_0_n}),
+    .probe3(qsfp0_resetl),
+    .probe4({qsfp0_modprsl,qsfp_ctl_en, fpga_i2c_master_l}),
+    .probe5(qsfp0_intl)
+);
+
+	       /*
+ila_0 ila_rc (
+    .clk(clk_250mhz),
+    .trig_out(),
+    .trig_out_ack(1'b0),
+    .trig_in(1'b0),
+    .trig_in_ack(),
+    .probe0(axis_rc_tdata_r),
+    .probe1(axis_rc_tkeep_r),
+    .probe2(axis_rc_tvalid_r),
+    .probe3(axis_rc_tready_r),
+    .probe4({axis_rc_tuser_r, dma_if_pcie_us_inst.dma_if_pcie_us_rd_inst.req_state_reg, dma_if_pcie_us_inst.dma_if_pcie_us_rd_inst.tlp_state_reg, dma_if_pcie_us_inst.dma_if_pcie_us_rd_inst.ram_mask_reg}),
+    .probe5(axis_rc_tlast_r)
+);
+
+ila_0 ila_mem (
+    .clk(clk_250mhz),
+    .trig_out(),
+    .trig_out_ack(1'b0),
+    .trig_in(1'b0),
+    .trig_in_ack(),
+    .probe0({dma_ram_wr_cmd_valid, dma_ram_wr_cmd_ready, dma_ram_wr_cmd_sel, if_dma_ram_wr_cmd_valid, if_dma_ram_wr_cmd_ready, if_dma_ram_wr_cmd_sel }),
+// iface[0].interface_inst.desc_dma_ram_wr_cmd_valid, iface[0].interface_inst.desc_dma_ram_wr_cmd_ready, iface[0].interface_inst.port_dma_ram_wr_cmd_valid, iface[0].interface_inst.port_dma_ram_wr_cmd_ready}),
+    .probe1(0),
+    .probe2(0),
+    .probe3(0),
+    .probe4(0),
+    .probe5(0)
+);
+
+	       
+ila_0 ila_w (
+    .clk(clk_250mhz),
+    .trig_out(),
+    .trig_out_ack(1'b0),
+    .trig_in(1'b0),
+    .trig_in_ack(),
+    .probe0(axi_pcie_dma_wdata),
+    .probe1(0),
+    .probe2(axi_pcie_dma_wvalid),
+    .probe3(axi_pcie_dma_wready),
+    .probe4({axi_pcie_dma_wstrb, axi_pcie_dma_awaddr, axi_pcie_dma_awid, axi_pcie_dma_awlen, axi_pcie_dma_awvalid, axi_pcie_dma_awready, dbg}),
+    .probe5(axi_pcie_dma_wlast)
+);
+*/
+   
 wire [7:0] pcie_tx_fc_nph_av = cfg_fc_nph;
 wire [7:0] pcie_tx_fc_ph_av = cfg_fc_ph;
 wire [11:0] pcie_tx_fc_pd_av = cfg_fc_pd;

@@ -38,85 +38,50 @@ set_property -dict {LOC AY30 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {
 #set_false_path -from [get_ports {uart_rxd}]
 #set_input_delay 0 [get_ports {uart_rxd}]
 
-## QSFP28 Interfaces - qsfp2
-#set_property -dict {LOC AA45 } [get_ports qsfp0_rx1_p]
-#set_property -dict {LOC AA46 } [get_ports qsfp0_rx1_n]
-#set_property -dict {LOC AA40 } [get_ports qsfp0_tx1_p]
-#set_property -dict {LOC AA41 } [get_ports qsfp0_tx1_n]
-#set_property -dict {LOC Y43 } [get_ports qsfp0_rx2_p]
-#set_property -dict {LOC Y44 } [get_ports qsfp0_rx2_n]
-#set_property -dict {LOC Y38 } [get_ports qsfp0_tx2_p]
-#set_property -dict {LOC Y39 } [get_ports qsfp0_tx2_n]
-#set_property -dict {LOC W45 } [get_ports qsfp0_rx3_p]
-#set_property -dict {LOC W46 } [get_ports qsfp0_rx3_n]
-#set_property -dict {LOC W40 } [get_ports qsfp0_tx3_p]
-#set_property -dict {LOC W41 } [get_ports qsfp0_tx3_n]
-#set_property -dict {LOC V43 } [get_ports qsfp0_rx4_p]
-#set_property -dict {LOC V44 } [get_ports qsfp0_rx4_n]
-#set_property -dict {LOC W38 } [get_ports qsfp0_tx4_p]
-#set_property -dict {LOC V39 } [get_ports qsfp0_tx4_n]
-
-#set_property -dict {LOC AC36 } [get_ports qsfp0_mgt_refclk_0_p]
-#set_property -dict {LOC AC37 } [get_ports qsfp0_mgt_refclk_0_n]
-#set_property -dict {LOC AA36 } [get_ports qsfp0_mgt_refclk_1_p]
-#set_property -dict {LOC AA37 } [get_ports qsfp0_mgt_refclk_1_n]
-
-# still not done
-#set_property -dict {LOC AN23 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_modsell]
-#set_property -dict {LOC BB22 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_resetl]
-#set_property -dict {LOC AL21 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_modprsl]
-#set_property -dict {LOC BB21 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_intl]
-#set_property -dict {LOC BC21 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_lpmode]
-
-
-# just junk out to SEP connector
-#set_property -dict {LOC BF9 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_refclk_reset]
-#set_property -dict {LOC BB10 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {qsfp0_fs[0]}]
-#set_property -dict {LOC BC12 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {qsfp0_fs[1]}]
-
-#set_false_path -to [get_ports {qsfp0_modsell qsfp0_resetl qsfp0_lpmode qsfp0_refclk_reset qsfp0_fs[*]}]
-#set_output_delay 0 [get_ports {qsfp0_modsell qsfp0_resetl qsfp0_lpmode qsfp0_refclk_reset qsfp0_fs[*]}]
-#set_false_path -from [get_ports {qsfp0_modprsl qsfp0_intl}]
-#set_input_delay 0 [get_ports {qsfp0_modprsl qsfp0_intl}]
-
-
 # Misc QSFP signals
 set_property -dict {LOC AN23 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp_ctl_en]
 set_property -dict {LOC AT24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports fpga_i2c_master_l]
 
+#######################################################
+# QSFP0
+#######################################################
 
-## QSFP28 Interfaces - qsfp0
-set_property -dict {LOC BC45 } [get_ports qsfp0_rx1_p]
-set_property -dict {LOC BC46 } [get_ports qsfp0_rx1_n]
-set_property -dict {LOC BF42 } [get_ports qsfp0_tx1_p]
-set_property -dict {LOC BF43 } [get_ports qsfp0_tx1_n]
-set_property -dict {LOC BA45 } [get_ports qsfp0_rx2_p]
-set_property -dict {LOC BA46 } [get_ports qsfp0_rx2_n]
-set_property -dict {LOC BD42 } [get_ports qsfp0_tx2_p]
-set_property -dict {LOC BD43 } [get_ports qsfp0_tx2_n]
-set_property -dict {LOC AW45 } [get_ports qsfp0_rx3_p]
-set_property -dict {LOC AW46 } [get_ports qsfp0_rx3_n]
-set_property -dict {LOC BB42 } [get_ports qsfp0_tx3_p]
-set_property -dict {LOC BB43 } [get_ports qsfp0_tx3_n]
-set_property -dict {LOC AV43 } [get_ports qsfp0_rx4_p]
-set_property -dict {LOC AV44 } [get_ports qsfp0_rx4_n]
-set_property -dict {LOC AW40 } [get_ports qsfp0_tx4_p]
-set_property -dict {LOC AW41 } [get_ports qsfp0_tx4_n]
+# QSFP28 Interfaces GTY Bank 120 - qsfp0/First port, connected to TAP
+#--------------------------------------------------------------------
+#set_property -dict {LOC BC45 } [get_ports qsfp0_rx1_p]
+#set_property -dict {LOC BC46 } [get_ports qsfp0_rx1_n]
+#set_property -dict {LOC BF42 } [get_ports qsfp0_tx1_p]
+#set_property -dict {LOC BF43 } [get_ports qsfp0_tx1_n]
+#set_property -dict {LOC BA45 } [get_ports qsfp0_rx2_p]
+#set_property -dict {LOC BA46 } [get_ports qsfp0_rx2_n]
+#set_property -dict {LOC BD42 } [get_ports qsfp0_tx2_p]
+#set_property -dict {LOC BD43 } [get_ports qsfp0_tx2_n]
+#set_property -dict {LOC AW45 } [get_ports qsfp0_rx3_p]
+#set_property -dict {LOC AW46 } [get_ports qsfp0_rx3_n]
+#set_property -dict {LOC BB42 } [get_ports qsfp0_tx3_p]
+#set_property -dict {LOC BB43 } [get_ports qsfp0_tx3_n]
+#set_property -dict {LOC AV43 } [get_ports qsfp0_rx4_p]
+#set_property -dict {LOC AV44 } [get_ports qsfp0_rx4_n]
+#set_property -dict {LOC AW40 } [get_ports qsfp0_tx4_p]
+#set_property -dict {LOC AW41 } [get_ports qsfp0_tx4_n]
 
-set_property -dict {LOC BA40 } [get_ports qsfp0_mgt_refclk_0_p]
-set_property -dict {LOC BA41 } [get_ports qsfp0_mgt_refclk_0_n]
-# set_property -dict {LOC  } [get_ports qsfp0_mgt_refclk_1_p]
-# set_property -dict {LOC AU37 } [get_ports qsfp0_mgt_refclk_1_n]
+# suspect
+# GTY Bank 120 OSC 0
+#set_property -dict {LOC BA40 } [get_ports qsfp0_mgt_refclk_0_p]
+#set_property -dict {LOC BA41 } [get_ports qsfp0_mgt_refclk_0_n]
+# GTY Bank 120 Prog Clk B1 3
+# set_property -dict {LOC AY38 } [get_ports qsfp0_mgt_refclk_1_p]
+# set_property -dict {LOC AY39 } [get_ports qsfp0_mgt_refclk_1_n]
 
-# still not done
+# put modsell in some random output
 # set_property -dict {LOC AN23 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_modsell]
-set_property -dict {LOC BD24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_resetl]
-set_property -dict {LOC BD23 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_modprsl] 
-set_property -dict {LOC BE23 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_intl]
-set_property -dict {LOC BC24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_lpmode]
+#set_property -dict {LOC BD24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_resetl]
+#set_property -dict {LOC BD23 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_modprsl] 
+#set_property -dict {LOC BE23 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_intl]
+#set_property -dict {LOC BC24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_lpmode]
 
-set_property -dict {LOC BF24 IOSTANDARD LVCMOS18 } [get_ports qsfp0_i2c_scl]
-set_property -dict {LOC BF23 IOSTANDARD LVCMOS18 } [get_ports qsfp0_i2c_sda]
+#set_property -dict {LOC BF24 IOSTANDARD LVCMOS18 } [get_ports qsfp0_i2c_scl]
+#set_property -dict {LOC BF23 IOSTANDARD LVCMOS18 } [get_ports qsfp0_i2c_sda]
 
 # just junk out to SEP connector
 # set_property -dict {LOC BF9 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_refclk_reset]
@@ -125,10 +90,115 @@ set_property -dict {LOC BF23 IOSTANDARD LVCMOS18 } [get_ports qsfp0_i2c_sda]
 
 # set_false_path -to [get_ports {qsfp0_modsell qsfp0_resetl qsfp0_lpmode qsfp0_refclk_reset qsfp0_fs[*]}]
 # set_output_delay 0 [get_ports {qsfp0_modsell qsfp0_resetl qsfp0_lpmode qsfp0_refclk_reset qsfp0_fs[*]}]
+
 set_false_path -from [get_ports {qsfp0_modprsl qsfp0_intl}]
 set_input_delay 0 [get_ports {qsfp0_modprsl qsfp0_intl}]
 
-# qsfp3
+
+## QSFP28 Interfaces GTY Bank 125 - qsfp2/Third port, connected to qsfp3/Fourth port
+##----------------------------------------------------------------------------------
+set_property -dict {LOC AA45 } [get_ports qsfp0_rx1_p]
+set_property -dict {LOC AA46 } [get_ports qsfp0_rx1_n]
+set_property -dict {LOC AA40 } [get_ports qsfp0_tx1_p]
+set_property -dict {LOC AA41 } [get_ports qsfp0_tx1_n]
+set_property -dict {LOC Y43 } [get_ports qsfp0_rx2_p]
+set_property -dict {LOC Y44 } [get_ports qsfp0_rx2_n]
+set_property -dict {LOC Y38 } [get_ports qsfp0_tx2_p]
+set_property -dict {LOC Y39 } [get_ports qsfp0_tx2_n]
+set_property -dict {LOC W45 } [get_ports qsfp0_rx3_p]
+set_property -dict {LOC W46 } [get_ports qsfp0_rx3_n]
+set_property -dict {LOC W40 } [get_ports qsfp0_tx3_p]
+set_property -dict {LOC W41 } [get_ports qsfp0_tx3_n]
+set_property -dict {LOC V43 } [get_ports qsfp0_rx4_p]
+set_property -dict {LOC V44 } [get_ports qsfp0_rx4_n]
+set_property -dict {LOC V38 } [get_ports qsfp0_tx4_p]
+set_property -dict {LOC V39 } [get_ports qsfp0_tx4_n]
+
+## suspect
+## GTY Bank 125 OSC 2
+set_property -dict {LOC AC36 } [get_ports qsfp0_mgt_refclk_0_p] ;# MGTREFCLK0P_230 from U14.4 via U43.15
+set_property -dict {LOC AC37 } [get_ports qsfp0_mgt_refclk_0_n] ;# MGTREFCLK0N_230 from U14.5 via U43.16
+## GTY Bank 125 Prog Clk B2 0
+## set_property -dict {LOC AA36 } [get_ports qsfp0_mgt_refclk_1_p] ;# MGTREFCLK1P_230 from U12.18
+## set_property -dict {LOC AA37 } [get_ports qsfp0_mgt_refclk_1_n] ;# MGTREFCLK1N_230 from U12.17
+
+## put modsell in some random output
+## set_property -dict {LOC AY20 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_modsell]
+set_property -dict {LOC BB22 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_resetl]
+set_property -dict {LOC BB20 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_modprsl]
+set_property -dict {LOC BB21 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp0_intl]
+set_property -dict {LOC BC21 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_lpmode]
+
+set_property -dict {LOC BF20 IOSTANDARD LVCMOS18 } [get_ports qsfp0_i2c_scl]
+set_property -dict {LOC BA20 IOSTANDARD LVCMOS18 } [get_ports qsfp0_i2c_sda]
+
+## just junk out to SEP connector
+## set_property -dict {LOC AR21 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp0_refclk_reset]
+## set_property -dict {LOC AR22 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {qsfp0_fs[0]}]
+## set_property -dict {LOC AU20 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {qsfp0_fs[1]}]
+
+## set_false_path -to [get_ports {qsfp0_modsell qsfp0_resetl qsfp0_lpmode qsfp0_refclk_reset qsfp0_fs[*]}]
+## set_output_delay 0 [get_ports {qsfp0_modsell qsfp0_resetl qsfp0_lpmode qsfp0_refclk_reset qsfp0_fs[*]}]
+
+#set_false_path -from [get_ports {qsfp0_modprsl qsfp0_intl}]
+#set_input_delay 0 [get_ports {qsfp0_modprsl qsfp0_intl}]
+
+
+#######################################################
+# QSFP1
+#######################################################
+
+## QSFP28 Interfaces GTY Bank 122 - qsfp1/Second port, connected to ROUTER
+##------------------------------------------------------------------------
+#set_property -dict {LOC AN45 } [get_ports qsfp1_rx1_p]
+#set_property -dict {LOC AN46 } [get_ports qsfp1_rx1_n]
+#set_property -dict {LOC AN40 } [get_ports qsfp1_tx1_p]
+#set_property -dict {LOC AN41 } [get_ports qsfp1_tx1_n]
+#set_property -dict {LOC AM43 } [get_ports qsfp1_rx2_p]
+#set_property -dict {LOC AM44 } [get_ports qsfp1_rx2_n]
+#set_property -dict {LOC AM38 } [get_ports qsfp1_tx2_p]
+#set_property -dict {LOC AM39 } [get_ports qsfp1_tx2_n]
+#set_property -dict {LOC AL45 } [get_ports qsfp1_rx3_p]
+#set_property -dict {LOC AL46 } [get_ports qsfp1_rx3_n]
+#set_property -dict {LOC AL40 } [get_ports qsfp1_tx3_p]
+#set_property -dict {LOC AL41 } [get_ports qsfp1_tx3_n]
+#set_property -dict {LOC AK43 } [get_ports qsfp1_rx4_p]
+#set_property -dict {LOC AK44 } [get_ports qsfp1_rx4_n]
+#set_property -dict {LOC AK38 } [get_ports qsfp1_tx4_p]
+#set_property -dict {LOC AK39 } [get_ports qsfp1_tx4_n]
+
+## suspect
+## GTY Bank 122 OSC 1
+#set_property -dict {LOC AR36 } [get_ports qsfp1_mgt_refclk_1_p]
+#set_property -dict {LOC AR37 } [get_ports qsfp1_mgt_refclk_1_n]
+## GTY Bank 122 Prog Clk B1 0
+### set_property -dict {LOC AN36 } [get_ports qsfp1_mgt_refclk_1_p]
+### set_property -dict {LOC AN37 } [get_ports qsfp1_mgt_refclk_1_n]
+
+## put modsell in some random output
+## set_property -dict {LOC AN23 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_modsell]
+#set_property -dict {LOC BE20 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_resetl]
+#set_property -dict {LOC BD21 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp1_modprsl]
+#set_property -dict {LOC BE21 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp1_intl]
+#set_property -dict {LOC BD20 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_lpmode]
+
+#set_property -dict {LOC BE22 IOSTANDARD LVCMOS18 } [get_ports qsfp1_i2c_scl]
+#set_property -dict {LOC BF22 IOSTANDARD LVCMOS18 } [get_ports qsfp1_i2c_sda]
+
+## just junk out to SEP connector
+## set_property -dict {LOC BF9 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_refclk_reset]
+## set_property -dict {LOC BB10 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {qsfp1_fs[0]}]
+## set_property -dict {LOC BC12 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {qsfp1_fs[1]}]
+
+## set_false_path -to [get_ports {qsfp1_modsell qsfp1_resetl qsfp1_lpmode qsfp1_refclk_reset qsfp1_fs[*]}]
+## set_output_delay 0 [get_ports {qsfp1_modsell qsfp1_resetl qsfp1_lpmode qsfp1_refclk_reset qsfp1_fs[*]}]
+
+#set_false_path -from [get_ports {qsfp1_modprsl qsfp1_intl}]
+#set_input_delay 0 [get_ports {qsfp1_modprsl qsfp1_intl}]
+
+
+## QSFP28 Interfaces GTY Bank 127 - qsfp3/Fourth port, connected to qsfp3/Third port
+#-----------------------------------------------------------------------------------
 set_property -dict {LOC N45 } [get_ports qsfp1_rx1_p]
 set_property -dict {LOC N46 } [get_ports qsfp1_rx1_n]
 set_property -dict {LOC N40 } [get_ports qsfp1_tx1_p]
@@ -147,20 +217,22 @@ set_property -dict {LOC J40 } [get_ports qsfp1_tx4_p]
 set_property -dict {LOC J41 } [get_ports qsfp1_tx4_n]
 
 # suspect
-
-#set_property -dict {LOC R37 } [get_ports qsfp1_mgt_refclk_0_p] ;# MGTREFCLK0P_230 from U14.4 via U43.15
-#set_property -dict {LOC R36 } [get_ports qsfp1_mgt_refclk_0_n] ;# MGTREFCLK0N_230 from U14.5 via U43.16
-
+# GTY Bank 127 OSC 3
+## set_property -dict {LOC R36 } [get_ports qsfp1_mgt_refclk_0_p] ;# MGTREFCLK0P_230 from U14.4 via U43.15
+## set_property -dict {LOC R37 } [get_ports qsfp1_mgt_refclk_0_n] ;# MGTREFCLK0N_230 from U14.5 via U43.16
+# GTY Bank 127 Prog Clk B3
 set_property -dict {LOC N36 } [get_ports qsfp1_mgt_refclk_1_p] ;# MGTREFCLK1P_230 from U12.18
 set_property -dict {LOC N37 } [get_ports qsfp1_mgt_refclk_1_n] ;# MGTREFCLK1N_230 from U12.17
 
 # put modsell in some random output
-#set_property -dict {LOC BC11 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_modsell]
-
+## set_property -dict {LOC BC11 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_modsell]
 set_property -dict {LOC BC23 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_resetl]
 set_property -dict {LOC BB24 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp1_modprsl]
 set_property -dict {LOC AY22 IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp1_intl]
 set_property -dict {LOC BA22 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_lpmode]
+
+set_property -dict {LOC BC22 IOSTANDARD LVCMOS18 } [get_ports qsfp1_i2c_scl]
+set_property -dict {LOC BA24 IOSTANDARD LVCMOS18 } [get_ports qsfp1_i2c_sda]
 
 # just junk out to SEP connector
 # set_property -dict {LOC BE8 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp1_refclk_reset]
@@ -169,85 +241,33 @@ set_property -dict {LOC BA22 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports q
 
 # set_false_path -to [get_ports {qsfp1_modsell qsfp1_resetl qsfp1_lpmode qsfp1_refclk_reset qsfp1_fs[*]}]
 # set_output_delay 0 [get_ports {qsfp1_modsell qsfp1_resetl qsfp1_lpmode qsfp1_refclk_reset qsfp1_fs[*]}]
+
 set_false_path -from [get_ports {qsfp1_modprsl qsfp1_intl}]
 set_input_delay 0 [get_ports {qsfp1_modprsl qsfp1_intl}]
 
-set_property -dict {LOC BC22 IOSTANDARD LVCMOS18 } [get_ports qsfp1_i2c_scl]
-set_property -dict {LOC BA24 IOSTANDARD LVCMOS18 } [get_ports qsfp1_i2c_sda]
 
-## QSFP28 Interfaces
-#set_property -dict {LOC BC45 } [get_ports qsfp0_rx1_p]
-#set_property -dict {LOC BC46 } [get_ports qsfp0_rx1_n]
-#set_property -dict {LOC BF42 } [get_ports qsfp0_tx1_p]
-#set_property -dict {LOC BF43 } [get_ports qsfp0_tx1_n]
-#set_property -dict {LOC BA45 } [get_ports qsfp0_rx2_p]
-#set_property -dict {LOC BA46 } [get_ports qsfp0_rx2_n]
-#set_property -dict {LOC BD42 } [get_ports qsfp0_tx2_p]
-#set_property -dict {LOC BD43 } [get_ports qsfp0_tx2_n]
-#set_property -dict {LOC AW45 } [get_ports qsfp0_rx3_p]
-#set_property -dict {LOC AW46 } [get_ports qsfp0_rx3_n]
-#set_property -dict {LOC BB42 } [get_ports qsfp0_tx3_p]
-#set_property -dict {LOC BB43 } [get_ports qsfp0_tx3_n]
-#set_property -dict {LOC AV43 } [get_ports qsfp0_rx4_p]
-#set_property -dict {LOC AV44 } [get_ports qsfp0_rx4_n]
-#set_property -dict {LOC AW40 } [get_ports qsfp0_tx4_p]
-#set_property -dict {LOC AW41 } [get_ports qsfp0_tx4_n]
-#set_property -dict {LOC BA40 } [get_ports qsfp0_mgt_refclk_0_p]
-#set_property -dict {LOC BA41 } [get_ports qsfp0_mgt_refclk_0_n]
-#set_property -dict {LOC AY38 } [get_ports qsfp0_mgt_refclk_1_p]
-#set_property -dict {LOC AY39 } [get_ports qsfp0_mgt_refclk_1_n]#
-#
-### still not done
-#set_property -dict {LOC BE16 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports qsfp0_modsell]
-#set_property -dict {LOC BE17 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports qsfp0_resetl]
-#set_property -dict {LOC BE20 IOSTANDARD LVCMOS12 PULLUP true} [get_ports qsfp0_modprsl]
-#set_property -dict {LOC BE21 IOSTANDARD LVCMOS12 PULLUP true} [get_ports qsfp0_intl]
-#set_property -dict {LOC BD18 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports qsfp0_lpmode]
-#set_property -dict {LOC AT22 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports qsfp0_refclk_reset]
-#set_property -dict {LOC AT20 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports {qsfp0_fs[0]}]
-#set_property -dict {LOC AU22 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports {qsfp0_fs[1]}]###
-#
-#set_false_path -to [get_ports {qsfp0_modsell qsfp0_resetl qsfp0_lpmode qsfp0_refclk_reset qsfp0_fs[*]}]
-#set_output_delay 0 [get_ports {qsfp0_modsell qsfp0_resetl qsfp0_lpmode qsfp0_refclk_reset qsfp0_fs[*]}]
-#set_false_path -from [get_ports {qsfp0_modprsl qsfp0_intl}]
-#set_input_delay 0 [get_ports {qsfp0_modprsl qsfp0_intl}]
 
-# qsfp1
-#set_property -dict {LOC AN45 } [get_ports qsfp1_rx1_p]
-#set_property -dict {LOC AN46 } [get_ports qsfp1_rx1_n]
-#set_property -dict {LOC AN40 } [get_ports qsfp1_tx1_p]
-#set_property -dict {LOC AN41 } [get_ports qsfp1_tx1_n]
-#set_property -dict {LOC AM43 } [get_ports qsfp1_rx2_p]
-#set_property -dict {LOC AM44 } [get_ports qsfp1_rx2_n]
-#set_property -dict {LOC AM38 } [get_ports qsfp1_tx2_p]
-#set_property -dict {LOC AM39 } [get_ports qsfp1_tx2_n]
-#set_property -dict {LOC AL45 } [get_ports qsfp1_rx3_p]
-#set_property -dict {LOC AL46 } [get_ports qsfp1_rx3_n]
-#set_property -dict {LOC AL40 } [get_ports qsfp1_tx3_p]
-#set_property -dict {LOC AL41 } [get_ports qsfp1_tx3_n]
-#set_property -dict {LOC AK43 } [get_ports qsfp1_rx4_p]
-#set_property -dict {LOC AK44 } [get_ports qsfp1_rx4_n]
-#set_property -dict {LOC AK38 } [get_ports qsfp1_tx4_p]
-#set_property -dict {LOC AK39 } [get_ports qsfp1_tx4_n] #
 
-# suspect
-##set_property -dict {LOC T11 } [get_ports qsfp1_mgt_refclk_0_p] ;# MGTREFCLK0P_230 from U14.4 via U43.15
-##set_property -dict {LOC T10 } [get_ports qsfp1_mgt_refclk_0_n] ;# MGTREFCLK0N_230 from U14.5 via U43.16
-#set_property -dict {LOC P11 } [get_ports qsfp1_mgt_refclk_1_p] ;# MGTREFCLK1P_230 from U12.18
-#set_property -dict {LOC P10 } [get_ports qsfp1_mgt_refclk_1_n] ;# MGTREFCLK1N_230 from U12.17
-#set_property -dict {LOC AY20 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports qsfp1_modsell]
-#set_property -dict {LOC BC18 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports qsfp1_resetl]
-#set_property -dict {LOC BC19 IOSTANDARD LVCMOS12 PULLUP true} [get_ports qsfp1_modprsl]
-#set_property -dict {LOC AV21 IOSTANDARD LVCMOS12 PULLUP true} [get_ports qsfp1_intl]
-#set_property -dict {LOC AV22 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports qsfp1_lpmode]
-#set_property -dict {LOC AR21 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports qsfp1_refclk_reset]
-#set_property -dict {LOC AR22 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports {qsfp1_fs[0]}]
-#set_property -dict {LOC AU20 IOSTANDARD LVCMOS12 SLEW SLOW DRIVE 8} [get_ports {qsfp1_fs[1]}]
 
-#set_false_path -to [get_ports {qsfp1_modsell qsfp1_resetl qsfp1_lpmode qsfp1_refclk_reset qsfp1_fs[*]}]
-#set_output_delay 0 [get_ports {qsfp1_modsell qsfp1_resetl qsfp1_lpmode qsfp1_refclk_reset qsfp1_fs[*]}]
-#set_false_path -from [get_ports {qsfp1_modprsl qsfp1_intl}]
-#set_input_delay 0 [get_ports {qsfp1_modprsl qsfp1_intl}]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # I2C interface

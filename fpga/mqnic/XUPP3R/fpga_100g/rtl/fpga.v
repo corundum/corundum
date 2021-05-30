@@ -201,7 +201,7 @@ wire mmcm_clkfb;
 // 322 MHz in, 125 MHz out
 // PFD range: 10 MHz to 500 MHz
 // VCO range: 800 MHz to 1600 MHz
-// M = 32, D = 11 sets Fvco = 937.5 MHz (in range)
+// M = 64, D = 22 sets Fvco = 937.5 MHz (in range)
 // Divide by 7.5 to get output frequency of 125 MHz
 MMCME4_BASE #(
     .BANDWIDTH("OPTIMIZED"),
@@ -226,11 +226,11 @@ MMCME4_BASE #(
     .CLKOUT6_DIVIDE(1),
     .CLKOUT6_DUTY_CYCLE(0.5),
     .CLKOUT6_PHASE(0),
-    .CLKFBOUT_MULT_F(32),
+    .CLKFBOUT_MULT_F(64),
     .CLKFBOUT_PHASE(0),
-    .DIVCLK_DIVIDE(11),
+    .DIVCLK_DIVIDE(22),
     .REF_JITTER1(0.010),
-    .CLKIN1_PERIOD(6.206),
+    .CLKIN1_PERIOD(3.103),
     .STARTUP_WAIT("FALSE"),
     .CLKOUT4_CASCADE("FALSE")
 )
@@ -1119,9 +1119,9 @@ qsfp0_cmac_inst (
     .ctl_rx_force_resync(1'b0), // input
     .ctl_rx_test_pattern(1'b0), // input
     .ctl_rsfec_ieee_error_indication_mode(1'b0), // input
-    .ctl_rx_rsfec_enable(1'b1), // input
-    .ctl_rx_rsfec_enable_correction(1'b1), // input
-    .ctl_rx_rsfec_enable_indication(1'b1), // input
+    .ctl_rx_rsfec_enable(1'b0), // input
+    .ctl_rx_rsfec_enable_correction(1'b0), // input
+    .ctl_rx_rsfec_enable_indication(1'b0), // input
     .core_rx_reset(1'b0), // input
     .rx_clk(qsfp0_rx_clk_int), // input
 
@@ -1221,7 +1221,7 @@ qsfp0_cmac_inst (
 
     .ctl_tx_enable(1'b1), // input
     .ctl_tx_test_pattern(1'b0), // input
-    .ctl_tx_rsfec_enable(1'b1), // input
+    .ctl_tx_rsfec_enable(1'b0), // input
     .ctl_tx_send_idle(1'b0), // input
     .ctl_tx_send_rfi(1'b0), // input
     .ctl_tx_send_lfi(1'b0), // input
@@ -1439,9 +1439,9 @@ qsfp1_cmac_inst (
     .ctl_rx_force_resync(1'b0), // input
     .ctl_rx_test_pattern(1'b0), // input
     .ctl_rsfec_ieee_error_indication_mode(1'b0), // input
-    .ctl_rx_rsfec_enable(1'b1), // input
-    .ctl_rx_rsfec_enable_correction(1'b1), // input
-    .ctl_rx_rsfec_enable_indication(1'b1), // input
+    .ctl_rx_rsfec_enable(1'b0), // input
+    .ctl_rx_rsfec_enable_correction(1'b0), // input
+    .ctl_rx_rsfec_enable_indication(1'b0), // input
     .core_rx_reset(1'b0), // input
     .rx_clk(qsfp1_rx_clk_int), // input
 
@@ -1541,7 +1541,7 @@ qsfp1_cmac_inst (
 
     .ctl_tx_enable(1'b1), // input
     .ctl_tx_test_pattern(1'b0), // input
-    .ctl_tx_rsfec_enable(1'b1), // input
+    .ctl_tx_rsfec_enable(1'b0), // input
     .ctl_tx_send_idle(1'b0), // input
     .ctl_tx_send_rfi(1'b0), // input
     .ctl_tx_send_lfi(1'b0), // input

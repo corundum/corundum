@@ -25,21 +25,21 @@ add_cells_to_pblock [get_pblocks pblock_pcie] [get_cells -quiet [list core_inst/
 resize_pblock [get_pblocks pblock_pcie] -add {CLOCKREGION_X4Y5:CLOCKREGION_X5Y8}
 # resize_pblock [get_pblocks pblock_pcie] -add {CLOCKREGION_X1Y20:CLOCKREGION_X1Y35}
 
-create_pblock pblock_eth0
-add_cells_to_pblock [get_pblocks pblock_eth0] [get_cells -quiet [list qsfp0_cmac_pad_inst]]
-add_cells_to_pblock [get_pblocks pblock_eth0] [get_cells -quiet [list core_inst/iface[0].mac[0].mac_tx_fifo_inst]]
-add_cells_to_pblock [get_pblocks pblock_eth0] [get_cells -quiet [list core_inst/iface[0].mac[0].mac_rx_fifo_inst]]
-add_cells_to_pblock [get_pblocks pblock_eth0] [get_cells -quiet [list core_inst/iface[0].mac[0].tx_ptp_ts_fifo]]
-resize_pblock [get_pblocks pblock_eth0] -add {CLOCKREGION_X0Y3:CLOCKREGION_X1Y9}
+#create_pblock pblock_eth0
+#add_cells_to_pblock [get_pblocks pblock_eth0] [get_cells -quiet [list qsfp0_cmac_pad_inst]]
+#add_cells_to_pblock [get_pblocks pblock_eth0] [get_cells -quiet [list core_inst/iface[0].mac[0].mac_tx_fifo_inst]]
+#add_cells_to_pblock [get_pblocks pblock_eth0] [get_cells -quiet [list core_inst/iface[0].mac[0].mac_rx_fifo_inst]]
+#add_cells_to_pblock [get_pblocks pblock_eth0] [get_cells -quiet [list core_inst/iface[0].mac[0].tx_ptp_ts_fifo]]
+#resize_pblock [get_pblocks pblock_eth0] -add {CLOCKREGION_X0Y0:CLOCKREGION_X0Y2}
 #resize_pblock [get_pblocks pblock_eth0] -add {CLOCKREGION_X0Y4:CLOCKREGION_X0Y7}
 
 
-create_pblock pblock_eth1
-add_cells_to_pblock [get_pblocks pblock_eth1] [get_cells -quiet [list qsfp1_cmac_pad_inst]]
-add_cells_to_pblock [get_pblocks pblock_eth1] [get_cells -quiet [list core_inst/iface[1].mac[0].mac_tx_fifo_inst]]
-add_cells_to_pblock [get_pblocks pblock_eth1] [get_cells -quiet [list core_inst/iface[1].mac[0].mac_rx_fifo_inst]]
+#create_pblock pblock_eth1
+#add_cells_to_pblock [get_pblocks pblock_eth1] [get_cells -quiet [list qsfp1_cmac_pad_inst]]
+#add_cells_to_pblock [get_pblocks pblock_eth1] [get_cells -quiet [list core_inst/iface[1].mac[0].mac_tx_fifo_inst]]
+#add_cells_to_pblock [get_pblocks pblock_eth1] [get_cells -quiet [list core_inst/iface[1].mac[0].mac_rx_fifo_inst]]
 #add_cells_to_pblock [get_pblocks pblock_eth1] [get_cells -quiet [list core_inst/iface[1].mac[0].tx_ptp_ts_fifo]]
-resize_pblock [get_pblocks pblock_eth1] -add {CLOCKREGION_X0Y0:CLOCKREGION_X1Y4}
+#resize_pblock [get_pblocks pblock_eth1] -add {CLOCKREGION_X0Y3:CLOCKREGION_X0Y5}
 #resize_pblock [get_pblocks pblock_eth1] -add {CLOCKREGION_X0Y32:CLOCKREGION_X0Y35}#
 
 

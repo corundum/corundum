@@ -13,6 +13,7 @@ lite bridges, a simple PCIe AXI DMA engine, and a flexible, high-performance
 DMA subsystem.  Currently supports operation with the Xilinx UltraScale and
 UltraScale+ PCIe hard IP cores with interfaces between 64 and 512 bits.
 Includes full cocotb testbenches that utilize
+[cocotbext-pcie](https://github.com/alexforencich/cocotbext-pcie) and
 [cocotbext-axi](https://github.com/alexforencich/cocotbext-axi).
 
 ## Documentation

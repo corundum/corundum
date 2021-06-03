@@ -94,9 +94,10 @@ wire grant_valid;
 // arbiter instance
 arbiter #(
     .PORTS(MSI_COUNT),
-    .TYPE("ROUND_ROBIN"),
-    .BLOCK("ACKNOWLEDGE"),
-    .LSB_PRIORITY("HIGH")
+    .ARB_TYPE_ROUND_ROBIN(1),
+    .ARB_BLOCK(1),
+    .ARB_BLOCK_ACK(1),
+    .ARB_LSB_HIGH_PRIORITY(1)
 )
 arb_inst (
     .clk(clk),

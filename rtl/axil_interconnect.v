@@ -276,9 +276,10 @@ assign s_select = grant_encoded >> 1;
 
 arbiter #(
     .PORTS(S_COUNT*2),
-    .TYPE("ROUND_ROBIN"),
-    .BLOCK("ACKNOWLEDGE"),
-    .LSB_PRIORITY("HIGH")
+    .ARB_TYPE_ROUND_ROBIN(1),
+    .ARB_BLOCK(1),
+    .ARB_BLOCK_ACK(1),
+    .ARB_LSB_HIGH_PRIORITY(1)
 )
 arb_inst (
     .clk(clk),

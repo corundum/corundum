@@ -378,9 +378,10 @@ generate
 
         arbiter #(
             .PORTS(M_COUNT_P1),
-            .TYPE("ROUND_ROBIN"),
-            .BLOCK("ACKNOWLEDGE"),
-            .LSB_PRIORITY("HIGH")
+            .ARB_TYPE_ROUND_ROBIN(1),
+            .ARB_BLOCK(1),
+            .ARB_BLOCK_ACK(1),
+            .ARB_LSB_HIGH_PRIORITY(1)
         )
         b_arb_inst (
             .clk(clk),
@@ -516,9 +517,10 @@ generate
 
         arbiter #(
             .PORTS(S_COUNT),
-            .TYPE("ROUND_ROBIN"),
-            .BLOCK("ACKNOWLEDGE"),
-            .LSB_PRIORITY("HIGH")
+            .ARB_TYPE_ROUND_ROBIN(1),
+            .ARB_BLOCK(1),
+            .ARB_BLOCK_ACK(1),
+            .ARB_LSB_HIGH_PRIORITY(1)
         )
         a_arb_inst (
             .clk(clk),

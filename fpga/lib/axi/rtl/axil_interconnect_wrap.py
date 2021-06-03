@@ -173,7 +173,7 @@ axil_interconnect #(
     .M_CONNECT_WRITE({ {% for p in range(n-1,-1,-1) %}w_s(M{{'%02d'%p}}_CONNECT_WRITE){% if not loop.last %}, {% endif %}{% endfor %} }),
     .M_SECURE({ {% for p in range(n-1,-1,-1) %}w_1(M{{'%02d'%p}}_SECURE){% if not loop.last %}, {% endif %}{% endfor %} })
 )
-UUT (
+axil_interconnect_inst (
     .clk(clk),
     .rst(rst),
     .s_axil_awaddr({ {% for p in range(m-1,-1,-1) %}s{{'%02d'%p}}_axil_awaddr{% if not loop.last %}, {% endif %}{% endfor %} }),

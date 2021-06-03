@@ -334,7 +334,7 @@ axi_crossbar #(
     .M_W_REG_TYPE({ {% for p in range(n-1,-1,-1) %}w_2(M{{'%02d'%p}}_W_REG_TYPE){% if not loop.last %}, {% endif %}{% endfor %} }),
     .M_B_REG_TYPE({ {% for p in range(n-1,-1,-1) %}w_2(M{{'%02d'%p}}_B_REG_TYPE){% if not loop.last %}, {% endif %}{% endfor %} })
 )
-UUT (
+axi_crossbar_inst (
     .clk(clk),
     .rst(rst),
     .s_axi_awid({ {% for p in range(m-1,-1,-1) %}s{{'%02d'%p}}_axi_awid{% if not loop.last %}, {% endif %}{% endfor %} }),

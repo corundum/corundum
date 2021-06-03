@@ -43,8 +43,8 @@ class TB(object):
     def __init__(self, dut):
         self.dut = dut
 
-        s_count = int(os.getenv("PARAM_S_COUNT"))
-        m_count = int(os.getenv("PARAM_M_COUNT"))
+        s_count = len(dut.axi_interconnect_inst.s_axi_awvalid)
+        m_count = len(dut.axi_interconnect_inst.m_axi_awvalid)
 
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
@@ -197,8 +197,8 @@ def cycle_pause():
 
 if cocotb.SIM_NAME:
 
-    s_count = int(os.getenv("PARAM_S_COUNT"))
-    m_count = int(os.getenv("PARAM_M_COUNT"))
+    s_count = len(cocotb.top.axi_interconnect_inst.s_axi_awvalid)
+    m_count = len(cocotb.top.axi_interconnect_inst.m_axi_awvalid)
 
     data_width = len(cocotb.top.s00_axi_wdata)
     byte_lanes = data_width // 8

@@ -57,10 +57,10 @@ module dma_if_mux #
     // Output tag field width (towards DMA module)
     // Additional bits required for response routing
     parameter M_TAG_WIDTH = S_TAG_WIDTH+$clog2(PORTS),
-    // arbitration type: "PRIORITY" or "ROUND_ROBIN"
-    parameter ARB_TYPE = "PRIORITY",
-    // LSB priority: "LOW", "HIGH"
-    parameter LSB_PRIORITY = "HIGH"
+    // select round robin arbitration
+    parameter ARB_TYPE_ROUND_ROBIN = 0,
+    // LSB priority selection
+    parameter ARB_LSB_HIGH_PRIORITY = 1
 )
 (
     input  wire                                       clk,
@@ -184,8 +184,8 @@ dma_if_mux_rd #(
     .LEN_WIDTH(LEN_WIDTH),
     .S_TAG_WIDTH(S_TAG_WIDTH),
     .M_TAG_WIDTH(M_TAG_WIDTH),
-    .ARB_TYPE(ARB_TYPE),
-    .LSB_PRIORITY(LSB_PRIORITY)
+    .ARB_TYPE_ROUND_ROBIN(ARB_TYPE_ROUND_ROBIN),
+    .ARB_LSB_HIGH_PRIORITY(ARB_LSB_HIGH_PRIORITY)
 )
 dma_if_mux_rd_inst (
     .clk(clk),
@@ -261,8 +261,8 @@ dma_if_mux_wr #(
     .LEN_WIDTH(LEN_WIDTH),
     .S_TAG_WIDTH(S_TAG_WIDTH),
     .M_TAG_WIDTH(M_TAG_WIDTH),
-    .ARB_TYPE(ARB_TYPE),
-    .LSB_PRIORITY(LSB_PRIORITY)
+    .ARB_TYPE_ROUND_ROBIN(ARB_TYPE_ROUND_ROBIN),
+    .ARB_LSB_HIGH_PRIORITY(ARB_LSB_HIGH_PRIORITY)
 )
 dma_if_mux_wr_inst (
     .clk(clk),

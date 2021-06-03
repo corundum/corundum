@@ -366,7 +366,7 @@ rr_fifo (
 
 priority_encoder #(
     .WIDTH(OP_TABLE_SIZE),
-    .LSB_PRIORITY("HIGH")
+    .LSB_HIGH_PRIORITY(1)
 )
 op_table_start_enc_inst (
     .input_unencoded(~op_table_active),

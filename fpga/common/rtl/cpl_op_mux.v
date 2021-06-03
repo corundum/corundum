@@ -53,10 +53,10 @@ module cpl_op_mux #
     parameter M_REQ_TAG_WIDTH = S_REQ_TAG_WIDTH+$clog2(PORTS),
     // Completion size (bytes)
     parameter CPL_SIZE = 32,
-    // arbitration type: "PRIORITY" or "ROUND_ROBIN"
-    parameter ARB_TYPE = "PRIORITY",
-    // LSB priority: "LOW", "HIGH"
-    parameter LSB_PRIORITY = "HIGH"
+    // select round robin arbitration
+    parameter ARB_TYPE_ROUND_ROBIN = 0,
+    // LSB priority selection
+    parameter ARB_LSB_HIGH_PRIORITY = 1
 )
 (
     input  wire                                   clk,
@@ -138,9 +138,10 @@ wire                         current_s_desc_ready = s_axis_req_ready[grant_encod
 // arbiter instance
 arbiter #(
     .PORTS(PORTS),
-    .TYPE(ARB_TYPE),
-    .BLOCK("ACKNOWLEDGE"),
-    .LSB_PRIORITY(LSB_PRIORITY)
+    .ARB_TYPE_ROUND_ROBIN(ARB_TYPE_ROUND_ROBIN),
+    .ARB_BLOCK(1),
+    .ARB_BLOCK_ACK(1),
+    .ARB_LSB_HIGH_PRIORITY(ARB_LSB_HIGH_PRIORITY)
 )
 arb_inst (
     .clk(clk),

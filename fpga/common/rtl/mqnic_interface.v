@@ -1362,8 +1362,8 @@ if (PORTS > 1) begin
         .M_REQ_TAG_WIDTH(DESC_REQ_TAG_WIDTH),
         .AXIS_DATA_WIDTH(AXIS_DESC_DATA_WIDTH),
         .AXIS_KEEP_WIDTH(AXIS_DESC_KEEP_WIDTH),
-        .ARB_TYPE("ROUND_ROBIN"),
-        .LSB_PRIORITY("HIGH")
+        .ARB_TYPE_ROUND_ROBIN(1),
+        .ARB_LSB_HIGH_PRIORITY(1)
     )
     desc_op_mux_inst (
         .clk(clk),
@@ -1588,8 +1588,8 @@ cpl_op_mux #(
     .S_REQ_TAG_WIDTH(PORT_DESC_REQ_TAG_WIDTH),
     .M_REQ_TAG_WIDTH(DESC_REQ_TAG_WIDTH),
     .CPL_SIZE(CPL_SIZE),
-    .ARB_TYPE("ROUND_ROBIN"),
-    .LSB_PRIORITY("HIGH")
+    .ARB_TYPE_ROUND_ROBIN(1),
+    .ARB_LSB_HIGH_PRIORITY(1)
 )
 cpl_op_mux_inst (
     .clk(clk),
@@ -1749,8 +1749,8 @@ if (PORTS > 1) begin
         .LEN_WIDTH(DMA_LEN_WIDTH),
         .S_TAG_WIDTH(DMA_TAG_WIDTH_INT),
         .M_TAG_WIDTH(DMA_TAG_WIDTH),
-        .ARB_TYPE("ROUND_ROBIN"),
-        .LSB_PRIORITY("HIGH")
+        .ARB_TYPE_ROUND_ROBIN(1),
+        .ARB_LSB_HIGH_PRIORITY(1)
     )
     dma_if_mux_inst (
         .clk(clk),
@@ -1905,8 +1905,8 @@ event_mux #(
     .QUEUE_INDEX_WIDTH(EVENT_QUEUE_INDEX_WIDTH),
     .EVENT_TYPE_WIDTH(EVENT_TYPE_WIDTH),
     .EVENT_SOURCE_WIDTH(EVENT_SOURCE_WIDTH),
-    .ARB_TYPE("ROUND_ROBIN"),
-    .LSB_PRIORITY("HIGH")
+    .ARB_TYPE_ROUND_ROBIN(1),
+    .ARB_LSB_HIGH_PRIORITY(1)
 )
 event_mux_inst (
     .clk(clk),

@@ -1298,8 +1298,8 @@ dma_if_mux #
     .LEN_WIDTH(PCIE_DMA_LEN_WIDTH),
     .S_TAG_WIDTH(PCIE_DMA_TAG_WIDTH-1),
     .M_TAG_WIDTH(PCIE_DMA_TAG_WIDTH),
-    .ARB_TYPE("PRIORITY"),
-    .LSB_PRIORITY("HIGH")
+    .ARB_TYPE_ROUND_ROBIN(0),
+    .ARB_LSB_HIGH_PRIORITY(1)
 )
 dma_if_mux_inst (
     .clk(clk_250mhz),
@@ -1500,8 +1500,8 @@ if (IF_COUNT > 1) begin
         .LEN_WIDTH(PCIE_DMA_LEN_WIDTH),
         .S_TAG_WIDTH(IF_PCIE_DMA_TAG_WIDTH),
         .M_TAG_WIDTH(PCIE_DMA_TAG_WIDTH-1),
-        .ARB_TYPE("ROUND_ROBIN"),
-        .LSB_PRIORITY("HIGH")
+        .ARB_TYPE_ROUND_ROBIN(1),
+        .ARB_LSB_HIGH_PRIORITY(1)
     )
     dma_if_mux_ctrl_inst (
         .clk(clk_250mhz),
@@ -1626,8 +1626,8 @@ if (IF_COUNT > 1) begin
         .LEN_WIDTH(PCIE_DMA_LEN_WIDTH),
         .S_TAG_WIDTH(IF_PCIE_DMA_TAG_WIDTH),
         .M_TAG_WIDTH(PCIE_DMA_TAG_WIDTH-1),
-        .ARB_TYPE("ROUND_ROBIN"),
-        .LSB_PRIORITY("HIGH")
+        .ARB_TYPE_ROUND_ROBIN(1),
+        .ARB_LSB_HIGH_PRIORITY(1)
     )
     dma_if_mux_data_inst (
         .clk(clk_250mhz),

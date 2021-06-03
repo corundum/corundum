@@ -48,10 +48,10 @@ module event_mux #
     parameter EVENT_TYPE_WIDTH = 16,
     // Event source field width
     parameter EVENT_SOURCE_WIDTH = 16,
-    // arbitration type: "PRIORITY" or "ROUND_ROBIN"
-    parameter ARB_TYPE = "PRIORITY",
-    // LSB priority: "LOW", "HIGH"
-    parameter LSB_PRIORITY = "HIGH"
+    // select round robin arbitration
+    parameter ARB_TYPE_ROUND_ROBIN = 0,
+    // LSB priority selection
+    parameter ARB_LSB_HIGH_PRIORITY = 1
 )
 (
     input  wire                                clk,
@@ -105,9 +105,10 @@ wire                          current_s_event_ready   = s_axis_event_ready[grant
 // arbiter instance
 arbiter #(
     .PORTS(PORTS),
-    .TYPE(ARB_TYPE),
-    .BLOCK("ACKNOWLEDGE"),
-    .LSB_PRIORITY(LSB_PRIORITY)
+    .ARB_TYPE_ROUND_ROBIN(ARB_TYPE_ROUND_ROBIN),
+    .ARB_BLOCK(1),
+    .ARB_BLOCK_ACK(1),
+    .ARB_LSB_HIGH_PRIORITY(ARB_LSB_HIGH_PRIORITY)
 )
 arb_inst (
     .clk(clk),

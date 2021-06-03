@@ -801,8 +801,8 @@ desc_op_mux #(
     .M_REQ_TAG_WIDTH(DESC_REQ_TAG_WIDTH),
     .AXIS_DATA_WIDTH(AXIS_DESC_DATA_WIDTH),
     .AXIS_KEEP_WIDTH(AXIS_DESC_KEEP_WIDTH),
-    .ARB_TYPE("ROUND_ROBIN"),
-    .LSB_PRIORITY("HIGH")
+    .ARB_TYPE_ROUND_ROBIN(1),
+    .ARB_LSB_HIGH_PRIORITY(1)
 )
 desc_op_mux_inst (
     .clk(clk),
@@ -878,8 +878,8 @@ cpl_op_mux #(
     .S_REQ_TAG_WIDTH(DESC_REQ_TAG_WIDTH_INT),
     .M_REQ_TAG_WIDTH(DESC_REQ_TAG_WIDTH),
     .CPL_SIZE(CPL_SIZE),
-    .ARB_TYPE("ROUND_ROBIN"),
-    .LSB_PRIORITY("HIGH")
+    .ARB_TYPE_ROUND_ROBIN(1),
+    .ARB_LSB_HIGH_PRIORITY(1)
 )
 cpl_op_mux_inst (
     .clk(clk),

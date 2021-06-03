@@ -59,10 +59,10 @@ module desc_op_mux #
     parameter AXIS_DATA_WIDTH = 256,
     // AXI stream tkeep signal width (words per cycle)
     parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
-    // arbitration type: "PRIORITY" or "ROUND_ROBIN"
-    parameter ARB_TYPE = "PRIORITY",
-    // LSB priority: "LOW", "HIGH"
-    parameter LSB_PRIORITY = "HIGH"
+    // select round robin arbitration
+    parameter ARB_TYPE_ROUND_ROBIN = 0,
+    // LSB priority selection
+    parameter ARB_LSB_HIGH_PRIORITY = 1
 )
 (
     input  wire                                   clk,
@@ -168,9 +168,10 @@ wire                         current_s_desc_ready = s_axis_req_ready[grant_encod
 // arbiter instance
 arbiter #(
     .PORTS(PORTS),
-    .TYPE(ARB_TYPE),
-    .BLOCK("ACKNOWLEDGE"),
-    .LSB_PRIORITY(LSB_PRIORITY)
+    .ARB_TYPE_ROUND_ROBIN(ARB_TYPE_ROUND_ROBIN),
+    .ARB_BLOCK(1),
+    .ARB_BLOCK_ACK(1),
+    .ARB_LSB_HIGH_PRIORITY(ARB_LSB_HIGH_PRIORITY)
 )
 arb_inst (
     .clk(clk),

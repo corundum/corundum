@@ -258,7 +258,7 @@ wire enqueue_resp_enc_valid;
 
 priority_encoder #(
     .WIDTH(PORTS),
-    .LSB_PRIORITY("HIGH")
+    .LSB_HIGH_PRIORITY(1)
 )
 op_table_start_enc_inst (
     .input_unencoded(s_axis_cpl_enqueue_resp_valid & ~s_axis_cpl_enqueue_resp_ready),

@@ -283,7 +283,7 @@ static int enumerate_bars(struct example_dev *edev, struct pci_dev *pdev)
     struct device *dev = &pdev->dev;
     int i;
 
-    for (i = 0; i < DEV_BAR_CNT; i++)
+    for (i = 0; i < 6; i++)
     {
         resource_size_t bar_start = pci_resource_start(pdev, i);
         if (bar_start)
@@ -303,7 +303,7 @@ static int map_bars(struct example_dev *edev, struct pci_dev *pdev)
     struct device *dev = &pdev->dev;
     int i;
 
-    for (i = 0; i < DEV_BAR_CNT; i++)
+    for (i = 0; i < 6; i++)
     {
         resource_size_t bar_start = pci_resource_start(pdev, i);
         resource_size_t bar_end = pci_resource_end(pdev, i);
@@ -341,7 +341,7 @@ static void free_bars(struct example_dev *edev, struct pci_dev *pdev)
     struct device *dev = &pdev->dev;
     int i;
 
-    for (i = 0; i < DEV_BAR_CNT; i++)
+    for (i = 0; i < 6; i++)
     {
         if (edev->bar[i])
         {

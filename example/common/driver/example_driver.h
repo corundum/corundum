@@ -30,14 +30,12 @@ THE SOFTWARE.
 #define DRIVER_NAME "edev"
 #define DRIVER_VERSION "0.1"
 
-#define DEV_BAR_CNT 2
-
 struct example_dev {
     struct pci_dev *pdev;
 
     // BAR pointers
-    void * __iomem bar[DEV_BAR_CNT];
-    resource_size_t bar_len[DEV_BAR_CNT];
+    void * __iomem bar[6];
+    resource_size_t bar_len[6];
 
     // DMA buffer
     size_t dma_region_len;

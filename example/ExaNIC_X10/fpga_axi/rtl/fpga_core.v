@@ -145,19 +145,19 @@ wire                               axis_cc_tready_bar_0;
 wire                               axis_cc_tlast_bar_0;
 wire [AXIS_PCIE_CC_USER_WIDTH-1:0] axis_cc_tuser_bar_0;
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_cq_tdata_bar_1;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_cq_tkeep_bar_1;
-wire                               axis_cq_tvalid_bar_1;
-wire                               axis_cq_tready_bar_1;
-wire                               axis_cq_tlast_bar_1;
-wire [AXIS_PCIE_CQ_USER_WIDTH-1:0] axis_cq_tuser_bar_1;
+wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_cq_tdata_bar_2;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_cq_tkeep_bar_2;
+wire                               axis_cq_tvalid_bar_2;
+wire                               axis_cq_tready_bar_2;
+wire                               axis_cq_tlast_bar_2;
+wire [AXIS_PCIE_CQ_USER_WIDTH-1:0] axis_cq_tuser_bar_2;
 
-wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_cc_tdata_bar_1;
-wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_cc_tkeep_bar_1;
-wire                               axis_cc_tvalid_bar_1;
-wire                               axis_cc_tready_bar_1;
-wire                               axis_cc_tlast_bar_1;
-wire [AXIS_PCIE_CC_USER_WIDTH-1:0] axis_cc_tuser_bar_1;
+wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_cc_tdata_bar_2;
+wire [AXIS_PCIE_KEEP_WIDTH-1:0]    axis_cc_tkeep_bar_2;
+wire                               axis_cc_tvalid_bar_2;
+wire                               axis_cc_tready_bar_2;
+wire                               axis_cc_tlast_bar_2;
+wire [AXIS_PCIE_CC_USER_WIDTH-1:0] axis_cc_tuser_bar_2;
 
 wire [2:0] bar_id;
 wire [1:0] select;
@@ -185,12 +185,12 @@ cq_demux_inst (
     /*
      * AXI output (CQ)
      */
-    .m_axis_cq_tdata({axis_cq_tdata_bar_1, axis_cq_tdata_bar_0}),
-    .m_axis_cq_tkeep({axis_cq_tkeep_bar_1, axis_cq_tkeep_bar_0}),
-    .m_axis_cq_tvalid({axis_cq_tvalid_bar_1, axis_cq_tvalid_bar_0}),
-    .m_axis_cq_tready({axis_cq_tready_bar_1, axis_cq_tready_bar_0}),
-    .m_axis_cq_tlast({axis_cq_tlast_bar_1, axis_cq_tlast_bar_0}),
-    .m_axis_cq_tuser({axis_cq_tuser_bar_1, axis_cq_tuser_bar_0}),
+    .m_axis_cq_tdata({axis_cq_tdata_bar_2, axis_cq_tdata_bar_0}),
+    .m_axis_cq_tkeep({axis_cq_tkeep_bar_2, axis_cq_tkeep_bar_0}),
+    .m_axis_cq_tvalid({axis_cq_tvalid_bar_2, axis_cq_tvalid_bar_0}),
+    .m_axis_cq_tready({axis_cq_tready_bar_2, axis_cq_tready_bar_0}),
+    .m_axis_cq_tlast({axis_cq_tlast_bar_2, axis_cq_tlast_bar_0}),
+    .m_axis_cq_tuser({axis_cq_tuser_bar_2, axis_cq_tuser_bar_0}),
 
     /*
      * Fields
@@ -209,7 +209,7 @@ cq_demux_inst (
     .select(select)
 );
 
-assign select[1] = bar_id == 3'd1;
+assign select[1] = bar_id == 3'd2;
 assign select[0] = bar_id == 3'd0;
 
 axis_arb_mux #(
@@ -229,14 +229,14 @@ cc_mux_inst (
     /*
      * AXI inputs
      */
-    .s_axis_tdata({axis_cc_tdata_bar_1, axis_cc_tdata_bar_0}),
-    .s_axis_tkeep({axis_cc_tkeep_bar_1, axis_cc_tkeep_bar_0}),
-    .s_axis_tvalid({axis_cc_tvalid_bar_1, axis_cc_tvalid_bar_0}),
-    .s_axis_tready({axis_cc_tready_bar_1, axis_cc_tready_bar_0}),
-    .s_axis_tlast({axis_cc_tlast_bar_1, axis_cc_tlast_bar_0}),
+    .s_axis_tdata({axis_cc_tdata_bar_2, axis_cc_tdata_bar_0}),
+    .s_axis_tkeep({axis_cc_tkeep_bar_2, axis_cc_tkeep_bar_0}),
+    .s_axis_tvalid({axis_cc_tvalid_bar_2, axis_cc_tvalid_bar_0}),
+    .s_axis_tready({axis_cc_tready_bar_2, axis_cc_tready_bar_0}),
+    .s_axis_tlast({axis_cc_tlast_bar_2, axis_cc_tlast_bar_0}),
     .s_axis_tid(0),
     .s_axis_tdest(0),
-    .s_axis_tuser({axis_cc_tuser_bar_1, axis_cc_tuser_bar_0}),
+    .s_axis_tuser({axis_cc_tuser_bar_2, axis_cc_tuser_bar_0}),
 
     /*
      * AXI output
@@ -699,22 +699,22 @@ pcie_us_axi_master_inst (
     /*
      * AXI input (CQ)
      */
-    .s_axis_cq_tdata(axis_cq_tdata_bar_1),
-    .s_axis_cq_tkeep(axis_cq_tkeep_bar_1),
-    .s_axis_cq_tvalid(axis_cq_tvalid_bar_1),
-    .s_axis_cq_tready(axis_cq_tready_bar_1),
-    .s_axis_cq_tlast(axis_cq_tlast_bar_1),
-    .s_axis_cq_tuser(axis_cq_tuser_bar_1),
+    .s_axis_cq_tdata(axis_cq_tdata_bar_2),
+    .s_axis_cq_tkeep(axis_cq_tkeep_bar_2),
+    .s_axis_cq_tvalid(axis_cq_tvalid_bar_2),
+    .s_axis_cq_tready(axis_cq_tready_bar_2),
+    .s_axis_cq_tlast(axis_cq_tlast_bar_2),
+    .s_axis_cq_tuser(axis_cq_tuser_bar_2),
 
     /*
      * AXI output (CC)
      */
-    .m_axis_cc_tdata(axis_cc_tdata_bar_1),
-    .m_axis_cc_tkeep(axis_cc_tkeep_bar_1),
-    .m_axis_cc_tvalid(axis_cc_tvalid_bar_1),
-    .m_axis_cc_tready(axis_cc_tready_bar_1),
-    .m_axis_cc_tlast(axis_cc_tlast_bar_1),
-    .m_axis_cc_tuser(axis_cc_tuser_bar_1),
+    .m_axis_cc_tdata(axis_cc_tdata_bar_2),
+    .m_axis_cc_tkeep(axis_cc_tkeep_bar_2),
+    .m_axis_cc_tvalid(axis_cc_tvalid_bar_2),
+    .m_axis_cc_tready(axis_cc_tready_bar_2),
+    .m_axis_cc_tlast(axis_cc_tlast_bar_2),
+    .m_axis_cc_tuser(axis_cc_tuser_bar_2),
 
     /*
      * AXI Master output

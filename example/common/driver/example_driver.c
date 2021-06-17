@@ -157,11 +157,11 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     dev_info(dev, "CC: %d", ioread32(edev->bar[0]+0x00040C));
 
     // Read/write test
-    dev_info(dev, "write to BAR1");
-    iowrite32(0x11223344, edev->bar[1]);
+    dev_info(dev, "write to BAR2");
+    iowrite32(0x11223344, edev->bar[2]);
 
-    dev_info(dev, "read from BAR1");
-    dev_info(dev, "%08x", ioread32(edev->bar[1]));
+    dev_info(dev, "read from BAR2");
+    dev_info(dev, "%08x", ioread32(edev->bar[2]));
 
     // Dump counters
     dev_info(dev, "TLP counters");

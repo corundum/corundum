@@ -19,12 +19,16 @@ set_property -dict [list \
     CONFIG.pf0_class_code_sub {00} \
     CONFIG.pf0_base_class_menu {Network_controller} \
     CONFIG.pf0_sub_class_interface_menu {Ethernet_controller} \
+    CONFIG.pf0_bar0_64bit {true} \
+    CONFIG.pf0_bar0_prefetchable {true} \
     CONFIG.pf0_bar0_scale {Megabytes} \
     CONFIG.pf0_bar0_size {16} \
-    CONFIG.pf0_bar1_enabled {true} \
-    CONFIG.pf0_bar1_type {Memory} \
-    CONFIG.pf0_bar1_scale {Megabytes} \
-    CONFIG.pf0_bar1_size {16} \
+    CONFIG.pf0_bar2_64bit {true} \
+    CONFIG.pf0_bar2_prefetchable {true} \
+    CONFIG.pf0_bar2_enabled {true} \
+    CONFIG.pf0_bar2_type {Memory} \
+    CONFIG.pf0_bar2_scale {Megabytes} \
+    CONFIG.pf0_bar2_size {16} \
     CONFIG.vendor_id {1234} \
     CONFIG.en_msi_per_vec_masking {true} \
     CONFIG.mode_selection {Advanced} \

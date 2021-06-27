@@ -40,6 +40,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <sys/mman.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <linux/pci.h>
 
 #include "mqnic.h"
 #include "bitfile.h"
@@ -364,16 +365,16 @@ int pcie_hot_reset(const char *pcie_port_path)
 
     // set and then clear secondary bus reset bit (mask 0x0040)
     // in the bridge control register (offset 0x3e)
-    pread(fd, buf, 2, 0x3e);
+    pread(fd, buf, 2, PCI_BRIDGE_CONTROL);
 
-    buf[2] = buf[0] | 0x40;
+    buf[2] = buf[0] | PCI_BRIDGE_CTL_BUS_RESET;
     buf[3] = buf[1];
 
-    pwrite(fd, buf+2, 2, 0x3e);
+    pwrite(fd, buf+2, 2, PCI_BRIDGE_CONTROL);
 
     usleep(10000);
 
-    pwrite(fd, buf, 2, 0x3e);
+    pwrite(fd, buf, 2, PCI_BRIDGE_CONTROL);
 
     close(fd);
 
@@ -398,17 +399,17 @@ int pcie_disable_fatal_err(const char *pcie_port_path)
     }
 
     // clear SERR bit (mask 0x0100) in command register (offset 0x04)
-    pread(fd, buf, 2, 0x04);
+    pread(fd, buf, 2, PCI_COMMAND);
 
-    buf[1] &= ~0x01;
+    buf[1] &= ~(PCI_COMMAND_SERR >> 8);
 
-    pwrite(fd, buf, 2, 0x04);
+    pwrite(fd, buf, 2, PCI_COMMAND);
 
     // clear fatal error reporting bit (mask 0x0004) in
     // PCIe capability device control register (offset 0x08)
 
     // find PCIe capability (ID 0x10)
-    pread(fd, buf, 1, 0x34);
+    pread(fd, buf, 1, PCI_CAPABILITY_LIST);
 
     offset = buf[0] & 0xfc;
 
@@ -416,7 +417,7 @@ int pcie_disable_fatal_err(const char *pcie_port_path)
     {
         pread(fd, buf, 2, offset);
 
-        if (buf[0] == 0x10)
+        if (buf[0] == PCI_CAP_ID_EXP)
             break;
 
         offset = buf[1] & 0xfc;
@@ -425,11 +426,11 @@ int pcie_disable_fatal_err(const char *pcie_port_path)
     // clear bit
     if (offset)
     {
-        pread(fd, buf, 2, offset+0x08);
+        pread(fd, buf, 2, offset+PCI_EXP_DEVCTL);
 
-        buf[0] &= ~0x04;
+        buf[0] &= ~PCI_EXP_DEVCTL_FERE;
 
-        pwrite(fd, buf, 2, offset+0x08);
+        pwrite(fd, buf, 2, offset+PCI_EXP_DEVCTL);
     }
 
     close(fd);

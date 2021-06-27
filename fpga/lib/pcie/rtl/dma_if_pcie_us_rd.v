@@ -530,7 +530,7 @@ always @* begin
     if (req_op_count_reg + req_pcie_addr_reg[1:0] <= {max_read_request_size_dw_reg, 2'b00}) begin
         // packet smaller than max read request size
         if (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) >> 12 != 0 || req_op_count_reg >> 12 != 0) begin
-            // crosses 4k boundary
+            // crosses 4k boundary, split on 4K boundary
             req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
             dword_count = 11'h400 - req_pcie_addr_reg[11:2];
             req_last_tlp = (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) & 12'hfff) == 0;
@@ -549,7 +549,7 @@ always @* begin
     end else begin
         // packet larger than max read request size
         if (((req_pcie_addr_reg & 12'hfff) + {max_read_request_size_dw_reg, 2'b00}) >> 12 != 0) begin
-            // crosses 4k boundary
+            // crosses 4k boundary, split on 4K boundary
             req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
             dword_count = 11'h400 - req_pcie_addr_reg[11:2];
             req_last_tlp = 1'b0;
@@ -557,13 +557,13 @@ always @* begin
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12]+1;
             req_pcie_addr[11:0] = 12'd0;
         end else begin
-            // does not cross 4k boundary, send one TLP
-            req_tlp_count_next = {max_read_request_size_dw_reg, 2'b00} - req_pcie_addr_reg[1:0];
-            dword_count = max_read_request_size_dw_reg;
+            // does not cross 4k boundary, split on 128-byte read completion boundary
+            req_tlp_count_next = {max_read_request_size_dw_reg, 2'b00} - req_pcie_addr_reg[6:0];
+            dword_count = max_read_request_size_dw_reg - req_pcie_addr_reg[6:2];
             req_last_tlp = 1'b0;
             // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12];
-            req_pcie_addr[11:0] = {req_pcie_addr_reg[11:2] + max_read_request_size_dw_reg, 2'b00};
+            req_pcie_addr[11:0] = {{req_pcie_addr_reg[11:7], 5'd0} + max_read_request_size_dw_reg, 2'b00};
         end
     end
 

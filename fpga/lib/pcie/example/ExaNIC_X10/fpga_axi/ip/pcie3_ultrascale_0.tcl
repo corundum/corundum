@@ -18,12 +18,16 @@ set_property -dict [list \
     CONFIG.pf0_sub_class_interface_menu {Ethernet_controller} \
     CONFIG.pf0_class_code_base {02} \
     CONFIG.pf0_class_code_sub {00} \
+    CONFIG.pf0_bar0_64bit {true} \
+    CONFIG.pf0_bar0_prefetchable {true} \
     CONFIG.pf0_bar0_scale {Megabytes} \
     CONFIG.pf0_bar0_size {16} \
-    CONFIG.pf0_bar1_enabled {true} \
-    CONFIG.pf0_bar1_type {Memory} \
-    CONFIG.pf0_bar1_scale {Megabytes} \
-    CONFIG.pf0_bar1_size {16} \
+    CONFIG.pf0_bar2_64bit {true} \
+    CONFIG.pf0_bar2_prefetchable {true} \
+    CONFIG.pf0_bar2_enabled {true} \
+    CONFIG.pf0_bar2_type {Memory} \
+    CONFIG.pf0_bar2_scale {Megabytes} \
+    CONFIG.pf0_bar2_size {16} \
     CONFIG.PF0_INTERRUPT_PIN {NONE} \
     CONFIG.PF0_MSIX_CAP_TABLE_BIR {BAR_0} \
     CONFIG.PF0_MSIX_CAP_PBA_BIR {BAR_0} \

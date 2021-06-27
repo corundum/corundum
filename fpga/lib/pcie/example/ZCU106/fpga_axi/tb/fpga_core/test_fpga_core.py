@@ -235,7 +235,7 @@ class TB(object):
         self.dev.functions[0].msi_multiple_message_capable = 5
 
         self.dev.functions[0].configure_bar(0, 2**22)
-        self.dev.functions[0].configure_bar(1, 2**22)
+        self.dev.functions[0].configure_bar(2, 2**22)
 
         dut.btnu.setimmediatevalue(0)
         dut.btnl.setimmediatevalue(0)
@@ -262,17 +262,17 @@ async def run_test(dut):
     mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
 
     dev_pf0_bar0 = tb.rc.tree[0][0].bar_addr[0]
-    dev_pf0_bar1 = tb.rc.tree[0][0].bar_addr[1]
+    dev_pf0_bar2 = tb.rc.tree[0][0].bar_addr[2]
 
-    tb.log.info("Test memory write to BAR 1")
+    tb.log.info("Test memory write to BAR 2")
 
-    await tb.rc.mem_write(dev_pf0_bar1, b'\x11\x22\x33\x44')
+    await tb.rc.mem_write(dev_pf0_bar2, b'\x11\x22\x33\x44')
 
     await Timer(100, 'ns')
 
-    tb.log.info("Test memory read from BAR 1")
+    tb.log.info("Test memory read from BAR 2")
 
-    val = await tb.rc.mem_read(dev_pf0_bar1, 4, 1000)
+    val = await tb.rc.mem_read(dev_pf0_bar2, 4, 1000)
     tb.log.info("Read data: %s", val)
     assert val == b'\x11\x22\x33\x44'
 

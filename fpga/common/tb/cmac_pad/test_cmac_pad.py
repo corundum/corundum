@@ -79,7 +79,44 @@ class TB(object):
         await RisingEdge(self.dut.clk)
 
 
-async def run_test(dut, payload_data=None, idle_inserter=None):
+async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=None):
+
+    tb = TB(dut)
+
+    await tb.reset()
+
+    tb.set_idle_generator(idle_inserter)
+
+    test_pkts = []
+    test_frames = []
+
+    for payload in [payload_data(x) for x in payload_lengths()]:
+        test_pkt = bytearray(payload)
+
+        test_pkts.append(test_pkt)
+        test_frame = AxiStreamFrame(test_pkt)
+        test_frames.append(test_frame)
+
+        await tb.source.send(test_frame)
+
+    for test_pkt, test_frame in zip(test_pkts, test_frames):
+        rx_frame = await tb.sink.recv()
+
+        rx_pkt = bytes(rx_frame)
+
+        tb.log.info("RX packet: %s", repr(rx_pkt))
+
+        # padded to 60 if the packet size is less than 60
+        padded_pkt = test_pkt.ljust(60, b'\x00')
+        assert rx_frame.tdata == padded_pkt
+
+    assert tb.sink.empty()
+
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
+
+async def run_test_pad(dut, payload_data=None, idle_inserter=None):
 
     tb = TB(dut)
 
@@ -117,6 +154,10 @@ def cycle_pause():
     return itertools.cycle([1, 1, 1, 0])
 
 
+def size_list():
+    return list(range(1, 129))
+
+
 def incrementing_payload(length):
     return bytes(itertools.islice(itertools.cycle(range(1, 256)), length))
 
@@ -124,6 +165,12 @@ def incrementing_payload(length):
 if cocotb.SIM_NAME:
 
     factory = TestFactory(run_test)
+    factory.add_option("payload_lengths", [size_list])
+    factory.add_option("payload_data", [incrementing_payload])
+    factory.add_option("idle_inserter", [None, cycle_pause])
+    factory.generate_tests()
+
+    factory = TestFactory(run_test_pad)
     factory.add_option("payload_data", [incrementing_payload])
     factory.add_option("idle_inserter", [None, cycle_pause])
     factory.generate_tests()

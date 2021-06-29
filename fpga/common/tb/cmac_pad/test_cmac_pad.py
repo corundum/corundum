@@ -79,7 +79,7 @@ class TB(object):
         await RisingEdge(self.dut.clk)
 
 
-async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=None):
+async def run_test(dut, payload_data=None, idle_inserter=None):
 
     tb = TB(dut)
 
@@ -87,19 +87,14 @@ async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=N
 
     tb.set_idle_generator(idle_inserter)
 
-    test_pkts = []
-    test_frames = []
+    test_pkt = bytearray(payload_data(60))
 
-    for payload in [payload_data(x) for x in payload_lengths()]:
-        test_pkt = bytearray(payload)
+    for k in range(1, 60):
+        test_frame = AxiStreamFrame(tdata=test_pkt, tkeep=[1 if i < k else 0 for i in range(60)])
 
-        test_pkts.append(test_pkt)
-        test_frame = AxiStreamFrame(test_pkt)
-        test_frames.append(test_frame)
-        
         await tb.source.send(test_frame)
 
-    for test_pkt, test_frame in zip(test_pkts, test_frames):
+    for k in range(1, 60):
         rx_frame = await tb.sink.recv()
 
         rx_pkt = bytes(rx_frame)
@@ -107,11 +102,10 @@ async def run_test(dut, payload_lengths=None, payload_data=None, idle_inserter=N
         tb.log.info("RX packet: %s", repr(rx_pkt))
 
         # padded to 60 if the packet size is less than 60
-        if len(test_pkt) < 60:
-            padded_pkt = test_pkt + bytearray([0]*(60-len(test_pkt)))
-            assert rx_frame.tdata == padded_pkt
-        else:
-            assert rx_frame.tdata == test_pkt
+        padded_pkt = test_pkt[:k].ljust(60, b'\x00')
+
+        assert len(rx_frame.tdata) == 60
+        assert rx_frame.tdata == padded_pkt
 
     assert tb.sink.empty()
 
@@ -123,18 +117,13 @@ def cycle_pause():
     return itertools.cycle([1, 1, 1, 0])
 
 
-def size_list():
-    return list(range(1, 129))
-
-
 def incrementing_payload(length):
-    return bytes(itertools.islice(itertools.cycle(range(256)), length))
+    return bytes(itertools.islice(itertools.cycle(range(1, 256)), length))
 
 
 if cocotb.SIM_NAME:
 
     factory = TestFactory(run_test)
-    factory.add_option("payload_lengths", [size_list])
     factory.add_option("payload_data", [incrementing_payload])
     factory.add_option("idle_inserter", [None, cycle_pause])
     factory.generate_tests()

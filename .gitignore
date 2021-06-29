@@ -4,3 +4,21 @@
 *.vvp
 *.kate-swp
 
+.*
+!.gitignore
+
+# Kernel
+*.o
+*.cmd
+*.mod
+*.mod.c
+Module.symvers
+modules.order
+*.ko
+
+# Vivado
+*.jou
+*.log
+*.str
+
+tags

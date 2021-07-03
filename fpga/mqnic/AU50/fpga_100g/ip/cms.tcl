@@ -3,7 +3,7 @@
 create_bd_design "cms"
 
 # create CMS IP
-set cms_block [create_bd_cell -type ip -vlnv xilinx.com:ip:cms_subsystem:3.0 cms_subsystem_0]
+set cms_block [create_bd_cell -type ip -vlnv xilinx.com:ip:cms_subsystem cms_subsystem_0]
 make_bd_pins_external $cms_block
 make_bd_intf_pins_external $cms_block
 

@@ -1,0 +1,17 @@
+rtl/fpga_core.v
+690
+699
+719
+720
+721
+723
+724
+725
+800
+807
+825-832
+1136-1148??? # I did not replicate these lines
+
+placement.xdc
+49
+57

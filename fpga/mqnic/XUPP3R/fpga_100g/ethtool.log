@@ -1,0 +1,43 @@
+root@TNpp99FPGA1:/home/giray# ethtool -m eth0
+        Identifier                                : 0x11 (QSFP28)
+        Extended identifier                       : 0xcd
+        Extended identifier description           : 3.5W max. Power consumption
+        Extended identifier description           : CDR present in TX, CDR present in RX
+        Extended identifier description           : 4.0W max. Power consumption, High Power Class (> 3.5 W) enabled
+        Connector                                 : 0x07 (LC)
+        Transceiver codes                         : 0x80 0x00 0x00 0x00 0x00 0x00 0x01 0x00
+        Transceiver type                          : 100G Ethernet: 100G Base-LR4
+        Transceiver type                          : FC: Single Mode (SM)
+        Encoding                                  : 0x05 (64B/66B)
+        BR, Nominal                               : 25500Mbps
+        Rate identifier                           : 0x00
+        Length (SMF,km)                           : 10km
+        Length (OM3 50um)                         : 0m
+        Length (OM2 50um)                         : 0m
+        Length (OM1 62.5um)                       : 0m
+        Length (Copper or Active cable)           : 0m
+        Transmitter technology                    : 0x60 (1310 nm EML)
+        Laser wavelength                          : 1310.000nm
+        Laser wavelength tolerance                : 2.000nm
+        Vendor name                               : HISILICON
+        Vendor OUI                                : 00:00:00
+        Vendor PN                                 : OM9558L
+        Vendor rev                                : A0
+        Vendor SN                                 : 033GDA10K9000964
+        Date code                                 : 19090611
+        Revision Compliance                       : SFF-8636 Rev 2.5/2.6/2.7
+        Module temperature                        : 64.38 degrees C / 147.88 degrees F
+        Module voltage                            : 3.2729 V
+        Alarm/warning flags implemented           : No
+        Laser tx bias current (Channel 1)         : 55.790 mA
+        Laser tx bias current (Channel 2)         : 60.770 mA
+        Laser tx bias current (Channel 3)         : 59.158 mA
+        Laser tx bias current (Channel 4)         : 78.342 mA
+        Transmit avg optical power (Channel 1)    : 1.0413 mW / 0.18 dBm
+        Transmit avg optical power (Channel 2)    : 1.0890 mW / 0.37 dBm
+        Transmit avg optical power (Channel 3)    : 1.2257 mW / 0.88 dBm
+        Transmit avg optical power (Channel 4)    : 1.0450 mW / 0.19 dBm
+        Rcvr signal avg optical power(Channel 1)  : 0.2819 mW / -5.50 dBm
+        Rcvr signal avg optical power(Channel 2)  : 0.3426 mW / -4.65 dBm
+        Rcvr signal avg optical power(Channel 3)  : 0.2828 mW / -5.49 dBm
+        Rcvr signal avg optical power(Channel 4)  : 0.3073 mW / -5.12 dBm

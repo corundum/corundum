@@ -139,7 +139,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
 
-    for length in list(range(1, byte_lanes*2))+[1024]:
+    for length in list(range(0, byte_lanes*2))+[1024]:
         for pcie_offset in list(range(byte_lanes))+list(range(4096-byte_lanes, 4096)):
             tb.log.info("length %d, pcie_offset %d", length, pcie_offset)
             pcie_addr = pcie_offset+0x1000

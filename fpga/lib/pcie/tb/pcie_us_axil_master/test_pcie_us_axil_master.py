@@ -154,7 +154,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
     dev_bar1 = tb.rc.tree[0][0].bar_addr[1]
 
-    for length in range(1, 5):
+    for length in range(0, 5):
         for pcie_offset in range(4-length+1):
             tb.log.info("length %d, pcie_offset %d", length, pcie_offset)
             pcie_addr = pcie_offset+0x1000
@@ -192,7 +192,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
     dev_bar1 = tb.rc.tree[0][0].bar_addr[1]
 
-    for length in range(1, 5):
+    for length in range(0, 5):
         for pcie_offset in range(4-length+1):
             tb.log.info("length %d, pcie_offset %d", length, pcie_offset)
             pcie_addr = pcie_offset+0x1000
@@ -355,7 +355,13 @@ def cycle_pause():
 
 if cocotb.SIM_NAME:
 
-    for test in [run_test_write, run_test_read, run_test_io_write, run_test_io_read, run_test_bad_ops]:
+    for test in [
+                run_test_write,
+                run_test_read,
+                run_test_io_write,
+                run_test_io_read,
+                run_test_bad_ops
+            ]:
 
         factory = TestFactory(test)
         factory.add_option("idle_inserter", [None, cycle_pause])

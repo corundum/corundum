@@ -272,7 +272,7 @@ always @* begin
     endcase
     m_axis_cc_tdata_int[9:8] = at_reg;
     casez (first_be_reg)
-        4'b0000: m_axis_cc_tdata_int[28:16] = 13'd0; // Byte count
+        4'b0000: m_axis_cc_tdata_int[28:16] = 13'd1; // Byte count
         4'b0001: m_axis_cc_tdata_int[28:16] = 13'd1; // Byte count
         4'b0010: m_axis_cc_tdata_int[28:16] = 13'd1; // Byte count
         4'b0100: m_axis_cc_tdata_int[28:16] = 13'd1; // Byte count

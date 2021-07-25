@@ -306,7 +306,7 @@ assign status_error_uncor = status_error_uncor_reg;
 
 always @* begin
     casez (first_be_next)
-        4'b0000: single_dword_len = 3'd0;
+        4'b0000: single_dword_len = 3'd1;
         4'b0001: single_dword_len = 3'd1;
         4'b0010: single_dword_len = 3'd1;
         4'b0100: single_dword_len = 3'd1;

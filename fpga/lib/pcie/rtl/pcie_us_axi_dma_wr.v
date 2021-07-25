@@ -290,9 +290,11 @@ reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
 reg [LEN_WIDTH-1:0] op_count_reg = {LEN_WIDTH{1'b0}}, op_count_next;
 reg [LEN_WIDTH-1:0] tr_count_reg = {LEN_WIDTH{1'b0}}, tr_count_next;
 reg [12:0] tlp_count_reg = 13'd0, tlp_count_next;
+reg zero_len_reg = 1'b0, zero_len_next;
 
 reg [PCIE_ADDR_WIDTH-1:0] tlp_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, tlp_addr_next;
 reg [11:0] tlp_len_reg = 12'd0, tlp_len_next;
+reg tlp_zero_len_reg = 1'b0, tlp_zero_len_next;
 reg [OFFSET_WIDTH-1:0] offset_reg = {OFFSET_WIDTH{1'b0}}, offset_next;
 reg [9:0] dword_count_reg = 10'd0, dword_count_next;
 reg [CYCLE_COUNT_WIDTH-1:0] input_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, input_cycle_count_next;
@@ -370,6 +372,7 @@ assign m_axi_rready = m_axi_rready_reg;
 reg [OP_TAG_WIDTH+1-1:0] op_table_start_ptr_reg = 0;
 reg [PCIE_ADDR_WIDTH-1:0] op_table_start_pcie_addr;
 reg [11:0] op_table_start_len;
+reg op_table_start_zero_len;
 reg [9:0] op_table_start_dword_len;
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_start_input_cycle_count;
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_start_output_cycle_count;
@@ -389,6 +392,7 @@ reg [2**OP_TAG_WIDTH-1:0] op_table_active = 0;
 reg [2**OP_TAG_WIDTH-1:0] op_table_tx_done = 0;
 reg [PCIE_ADDR_WIDTH-1:0] op_table_pcie_addr[2**OP_TAG_WIDTH-1:0];
 reg [11:0] op_table_len[2**OP_TAG_WIDTH-1:0];
+reg op_table_zero_len[2**OP_TAG_WIDTH-1:0];
 reg [9:0] op_table_dword_len[2**OP_TAG_WIDTH-1:0];
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_input_cycle_count[2**OP_TAG_WIDTH-1:0];
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_output_cycle_count[2**OP_TAG_WIDTH-1:0];
@@ -403,6 +407,7 @@ initial begin
     for (i = 0; i < 2**OP_TAG_WIDTH; i = i + 1) begin
         op_table_pcie_addr[i] = 0;
         op_table_len[i] = 0;
+        op_table_zero_len[i] = 0;
         op_table_dword_len[i] = 0;
         op_table_input_cycle_count[i] = 0;
         op_table_output_cycle_count[i] = 0;
@@ -427,6 +432,7 @@ always @* begin
     op_count_next = op_count_reg;
     tr_count_next = tr_count_reg;
     tlp_count_next = tlp_count_reg;
+    zero_len_next = zero_len_reg;
 
     tlp_cmd_tag_next = tlp_cmd_tag_reg;
     tlp_cmd_last_next = tlp_cmd_last_reg;
@@ -511,6 +517,7 @@ always @* begin
 
     op_table_start_pcie_addr = pcie_addr_reg;
     op_table_start_len = tlp_count;
+    op_table_start_zero_len = zero_len_reg;
     op_table_start_dword_len = dword_count;
     op_table_start_input_cycle_count = (tlp_count + axi_addr_reg[OFFSET_WIDTH-1:0] - 1) >> AXI_BURST_SIZE;
     if (AXIS_PCIE_DATA_WIDTH >= 256) begin
@@ -537,7 +544,14 @@ always @* begin
 
             pcie_addr_next = s_axis_write_desc_pcie_addr;
             axi_addr_next = s_axis_write_desc_axi_addr;
-            op_count_next = s_axis_write_desc_len;
+            if (s_axis_write_desc_len == 0) begin
+                // zero-length operation
+                op_count_next = 1;
+                zero_len_next = 1'b1;
+            end else begin
+                op_count_next = s_axis_write_desc_len;
+                zero_len_next = 1'b0;
+            end
 
             if (s_axis_write_desc_ready & s_axis_write_desc_valid) begin
                 s_axis_write_desc_ready_next = 1'b0;
@@ -553,6 +567,7 @@ always @* begin
 
             op_table_start_pcie_addr = pcie_addr_reg;
             op_table_start_len = tlp_count;
+            op_table_start_zero_len = zero_len_reg;
             op_table_start_dword_len = dword_count;
             op_table_start_input_cycle_count = (tlp_count + axi_addr_reg[OFFSET_WIDTH-1:0] - 1) >> AXI_BURST_SIZE;
             if (AXIS_PCIE_DATA_WIDTH >= 256) begin
@@ -627,6 +642,7 @@ always @* begin
 
     tlp_addr_next = tlp_addr_reg;
     tlp_len_next = tlp_len_reg;
+    tlp_zero_len_next = tlp_zero_len_reg;
     dword_count_next = dword_count_reg;
     offset_next = offset_reg;
     input_cycle_count_next = input_cycle_count_reg;
@@ -655,9 +671,9 @@ always @* begin
     tlp_header_data[127] = 1'b0; // force ECRC
 
     if (AXIS_PCIE_DATA_WIDTH == 512) begin
-        tlp_tuser[3:0] = dword_count_reg == 1 ? first_be & last_be : first_be; // first BE 0
+        tlp_tuser[3:0] = tlp_zero_len_reg ? 4'b0000 : (dword_count_reg == 1 ? first_be & last_be : first_be); // first BE 0
         tlp_tuser[7:4] = 4'd0; // first BE 1
-        tlp_tuser[11:8] = dword_count_reg == 1 ? 4'b0000 : last_be; // last BE 0
+        tlp_tuser[11:8] = tlp_zero_len_reg ? 4'b0000 : (dword_count_reg == 1 ? 4'b0000 : last_be); // last BE 0
         tlp_tuser[15:12] = 4'd0; // last BE 1
         tlp_tuser[19:16] = 3'd0; // addr_offset
         tlp_tuser[21:20] = 2'b01; // is_sop
@@ -675,8 +691,8 @@ always @* begin
         tlp_tuser[72:67] = 6'd0; // seq_num1
         tlp_tuser[136:73] = 64'd0; // parity
     end else begin
-        tlp_tuser[3:0] = dword_count_reg == 1 ? first_be & last_be : first_be; // first BE
-        tlp_tuser[7:4] = dword_count_reg == 1 ? 4'b0000 : last_be; // last BE
+        tlp_tuser[3:0] = tlp_zero_len_reg ? 4'b0000 : (dword_count_reg == 1 ? first_be & last_be : first_be); // first BE
+        tlp_tuser[7:4] = tlp_zero_len_reg ? 4'b0000 : (dword_count_reg == 1 ? 4'b0000 : last_be); // last BE
         tlp_tuser[10:8] = 3'd0; // addr_offset
         tlp_tuser[11] = 1'b0; // discontinue
         tlp_tuser[12] = 1'b0; // tph_present
@@ -733,6 +749,7 @@ always @* begin
 
             tlp_addr_next = op_table_pcie_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             tlp_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            tlp_zero_len_next = op_table_zero_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             dword_count_next = op_table_dword_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             offset_next = op_table_offset[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             input_cycle_count_next = op_table_input_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
@@ -1010,9 +1027,11 @@ always @(posedge clk) begin
     op_count_reg <= op_count_next;
     tr_count_reg <= tr_count_next;
     tlp_count_reg <= tlp_count_next;
+    zero_len_reg <= zero_len_next;
 
     tlp_addr_reg <= tlp_addr_next;
     tlp_len_reg <= tlp_len_next;
+    tlp_zero_len_reg <= tlp_zero_len_next;
     dword_count_reg <= dword_count_next;
     offset_reg <= offset_next;
     input_cycle_count_reg <= input_cycle_count_next;
@@ -1062,6 +1081,7 @@ always @(posedge clk) begin
         op_table_tx_done[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= 1'b0;
         op_table_pcie_addr[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_pcie_addr;
         op_table_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_len;
+        op_table_zero_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_zero_len;
         op_table_dword_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_dword_len;
         op_table_input_cycle_count[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_input_cycle_count;
         op_table_output_cycle_count[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_output_cycle_count;

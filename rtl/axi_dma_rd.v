@@ -91,6 +91,7 @@ module axi_dma_rd #
      * AXI read descriptor status output
      */
     output wire [TAG_WIDTH-1:0]       m_axis_read_desc_status_tag,
+    output wire [3:0]                 m_axis_read_desc_status_error,
     output wire                       m_axis_read_desc_status_valid,
 
     /*
@@ -183,6 +184,25 @@ initial begin
     end
 end
 
+localparam [1:0]
+    AXI_RESP_OKAY = 2'b00,
+    AXI_RESP_EXOKAY = 2'b01,
+    AXI_RESP_SLVERR = 2'b10,
+    AXI_RESP_DECERR = 2'b11;
+
+localparam [3:0]
+    DMA_ERROR_NONE = 4'd0,
+    DMA_ERROR_TIMEOUT = 4'd1,
+    DMA_ERROR_PARITY = 4'd2,
+    DMA_ERROR_AXI_RD_SLVERR = 4'd4,
+    DMA_ERROR_AXI_RD_DECERR = 4'd5,
+    DMA_ERROR_AXI_WR_SLVERR = 4'd6,
+    DMA_ERROR_AXI_WR_DECERR = 4'd7,
+    DMA_ERROR_PCIE_FLR = 4'd8,
+    DMA_ERROR_PCIE_CPL_POISONED = 4'd9,
+    DMA_ERROR_PCIE_CPL_STATUS_UR = 4'd10,
+    DMA_ERROR_PCIE_CPL_STATUS_CA = 4'd11;
+
 localparam [0:0]
     AXI_STATE_IDLE = 1'd0,
     AXI_STATE_START = 1'd1;
@@ -223,6 +243,7 @@ reg output_active_reg = 1'b0, output_active_next;
 reg bubble_cycle_reg = 1'b0, bubble_cycle_next;
 reg first_cycle_reg = 1'b0, first_cycle_next;
 reg output_last_cycle_reg = 1'b0, output_last_cycle_next;
+reg [1:0] rresp_reg = AXI_RESP_OKAY, rresp_next;
 
 reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
 reg [AXIS_ID_WIDTH-1:0] axis_id_reg = {AXIS_ID_WIDTH{1'b0}}, axis_id_next;
@@ -232,6 +253,7 @@ reg [AXIS_USER_WIDTH-1:0] axis_user_reg = {AXIS_USER_WIDTH{1'b0}}, axis_user_nex
 reg s_axis_read_desc_ready_reg = 1'b0, s_axis_read_desc_ready_next;
 
 reg [TAG_WIDTH-1:0] m_axis_read_desc_status_tag_reg = {TAG_WIDTH{1'b0}}, m_axis_read_desc_status_tag_next;
+reg [3:0] m_axis_read_desc_status_error_reg = 4'd0, m_axis_read_desc_status_error_next;
 reg m_axis_read_desc_status_valid_reg = 1'b0, m_axis_read_desc_status_valid_next;
 
 reg [AXI_ADDR_WIDTH-1:0] m_axi_araddr_reg = {AXI_ADDR_WIDTH{1'b0}}, m_axi_araddr_next;
@@ -257,6 +279,7 @@ wire                       m_axis_read_data_tready_int_early;
 assign s_axis_read_desc_ready = s_axis_read_desc_ready_reg;
 
 assign m_axis_read_desc_status_tag = m_axis_read_desc_status_tag_reg;
+assign m_axis_read_desc_status_error = m_axis_read_desc_status_error_reg;
 assign m_axis_read_desc_status_valid = m_axis_read_desc_status_valid_reg;
 
 assign m_axi_arid = {AXI_ID_WIDTH{1'b0}};
@@ -384,6 +407,7 @@ always @* begin
     axis_state_next = AXIS_STATE_IDLE;
 
     m_axis_read_desc_status_tag_next = m_axis_read_desc_status_tag_reg;
+    m_axis_read_desc_status_error_next = m_axis_read_desc_status_error_reg;
     m_axis_read_desc_status_valid_next = 1'b0;
 
     m_axis_read_data_tdata_int = shift_axi_rdata;
@@ -413,6 +437,12 @@ always @* begin
     axis_id_next = axis_id_reg;
     axis_dest_next = axis_dest_reg;
     axis_user_next = axis_user_reg;
+
+    if (m_axi_rready && m_axi_rvalid && (m_axi_rresp == AXI_RESP_SLVERR || m_axi_rresp == AXI_RESP_DECERR)) begin
+        rresp_next = m_axi_rresp;
+    end else begin
+        rresp_next = rresp_reg;
+    end
 
     case (axis_state_reg)
         AXIS_STATE_IDLE: begin
@@ -490,7 +520,16 @@ always @* begin
                         m_axis_read_data_tlast_int = 1'b1;
 
                         m_axis_read_desc_status_tag_next = tag_reg;
+                        if (rresp_next == AXI_RESP_SLVERR) begin
+                            m_axis_read_desc_status_error_next = DMA_ERROR_AXI_RD_SLVERR;
+                        end else if (rresp_next == AXI_RESP_DECERR) begin
+                            m_axis_read_desc_status_error_next = DMA_ERROR_AXI_RD_DECERR;
+                        end else begin
+                            m_axis_read_desc_status_error_next = DMA_ERROR_NONE;
+                        end
                         m_axis_read_desc_status_valid_next = 1'b1;
+
+                        rresp_next = AXI_RESP_OKAY;
 
                         m_axi_rready_next = 1'b0;
                         axis_state_next = AXIS_STATE_IDLE;
@@ -513,8 +552,9 @@ always @(posedge clk) begin
 
     s_axis_read_desc_ready_reg <= s_axis_read_desc_ready_next;
 
-    m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
     m_axis_read_desc_status_tag_reg <= m_axis_read_desc_status_tag_next;
+    m_axis_read_desc_status_error_reg <= m_axis_read_desc_status_error_next;
+    m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
 
     m_axi_araddr_reg <= m_axi_araddr_next;
     m_axi_arlen_reg <= m_axi_arlen_next;
@@ -545,6 +585,7 @@ always @(posedge clk) begin
     bubble_cycle_reg <= bubble_cycle_next;
     first_cycle_reg <= first_cycle_next;
     output_last_cycle_reg <= output_last_cycle_next;
+    rresp_reg <= rresp_next;
 
     tag_reg <= tag_next;
     axis_id_reg <= axis_id_next;
@@ -566,6 +607,8 @@ always @(posedge clk) begin
         m_axis_read_desc_status_valid_reg <= 1'b0;
         m_axi_arvalid_reg <= 1'b0;
         m_axi_rready_reg <= 1'b0;
+
+        rresp_reg <= AXI_RESP_OKAY;
     end
 end
 

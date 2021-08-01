@@ -44,7 +44,7 @@ DescBus, DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Des
 )
 
 DescStatusBus, DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",
-    signals=["tag", "valid"],
+    signals=["tag", "error", "valid"],
     optional_signals=["len", "id", "dest", "user"]
 )
 
@@ -129,6 +129,7 @@ async def run_test_read(dut, data_in=None, idle_inserter=None, backpressure_inse
             tb.log.info("read_data: %s", read_data)
 
             assert int(status.tag) == cur_tag
+            assert int(status.error) == 0
             assert read_data.tdata == test_data
             assert read_data.tid == cur_tag
 

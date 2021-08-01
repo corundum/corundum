@@ -83,6 +83,7 @@ module axi_dma_desc_mux #
     input  wire [AXIS_ID_WIDTH-1:0]         s_axis_desc_status_id,
     input  wire [AXIS_DEST_WIDTH-1:0]       s_axis_desc_status_dest,
     input  wire [AXIS_USER_WIDTH-1:0]       s_axis_desc_status_user,
+    input  wire [3:0]                       s_axis_desc_status_error,
     input  wire                             s_axis_desc_status_valid,
 
     /*
@@ -105,6 +106,7 @@ module axi_dma_desc_mux #
     output wire [PORTS*AXIS_ID_WIDTH-1:0]   m_axis_desc_status_id,
     output wire [PORTS*AXIS_DEST_WIDTH-1:0] m_axis_desc_status_dest,
     output wire [PORTS*AXIS_USER_WIDTH-1:0] m_axis_desc_status_user,
+    output wire [PORTS*4-1:0]               m_axis_desc_status_error,
     output wire [PORTS-1:0]                 m_axis_desc_status_valid
 );
 
@@ -284,6 +286,7 @@ reg [S_TAG_WIDTH-1:0] m_axis_desc_status_tag_reg = {S_TAG_WIDTH{1'b0}};
 reg [AXIS_ID_WIDTH-1:0] m_axis_desc_status_id_reg = {AXIS_ID_WIDTH{1'b0}};
 reg [AXIS_DEST_WIDTH-1:0] m_axis_desc_status_dest_reg = {AXIS_DEST_WIDTH{1'b0}};
 reg [AXIS_USER_WIDTH-1:0] m_axis_desc_status_user_reg = {AXIS_USER_WIDTH{1'b0}};
+reg [3:0] m_axis_desc_status_error_reg = 4'd0;
 reg [PORTS-1:0] m_axis_desc_status_valid_reg = {PORTS{1'b0}};
 
 assign m_axis_desc_status_len   = {PORTS{m_axis_desc_status_len_reg}};
@@ -291,6 +294,7 @@ assign m_axis_desc_status_tag   = {PORTS{m_axis_desc_status_tag_reg}};
 assign m_axis_desc_status_id    = AXIS_ID_ENABLE ? {PORTS{m_axis_desc_status_id_reg}} : {AXIS_ID_WIDTH*PORTS{1'b0}};
 assign m_axis_desc_status_dest  = AXIS_DEST_ENABLE ? {PORTS{m_axis_desc_status_dest_reg}} : {AXIS_DEST_WIDTH*PORTS{1'b0}};
 assign m_axis_desc_status_user  = AXIS_USER_ENABLE ? {PORTS{m_axis_desc_status_user_reg}} : {AXIS_USER_WIDTH*PORTS{1'b0}};
+assign m_axis_desc_status_error  = {PORTS{m_axis_desc_status_error_reg}};
 assign m_axis_desc_status_valid = m_axis_desc_status_valid_reg;
 
 always @(posedge clk) begin
@@ -305,6 +309,7 @@ always @(posedge clk) begin
     m_axis_desc_status_id_reg <= s_axis_desc_status_id;
     m_axis_desc_status_dest_reg <= s_axis_desc_status_dest;
     m_axis_desc_status_user_reg <= s_axis_desc_status_user;
+    m_axis_desc_status_error_reg <= s_axis_desc_status_error;
 end
 
 endmodule

@@ -92,6 +92,7 @@ module axi_dma_wr #
     output wire [AXIS_ID_WIDTH-1:0]   m_axis_write_desc_status_id,
     output wire [AXIS_DEST_WIDTH-1:0] m_axis_write_desc_status_dest,
     output wire [AXIS_USER_WIDTH-1:0] m_axis_write_desc_status_user,
+    output wire [3:0]                 m_axis_write_desc_status_error,
     output wire                       m_axis_write_desc_status_valid,
 
     /*
@@ -190,6 +191,25 @@ initial begin
     end
 end
 
+localparam [1:0]
+    AXI_RESP_OKAY = 2'b00,
+    AXI_RESP_EXOKAY = 2'b01,
+    AXI_RESP_SLVERR = 2'b10,
+    AXI_RESP_DECERR = 2'b11;
+
+localparam [3:0]
+    DMA_ERROR_NONE = 4'd0,
+    DMA_ERROR_TIMEOUT = 4'd1,
+    DMA_ERROR_PARITY = 4'd2,
+    DMA_ERROR_AXI_RD_SLVERR = 4'd4,
+    DMA_ERROR_AXI_RD_DECERR = 4'd5,
+    DMA_ERROR_AXI_WR_SLVERR = 4'd6,
+    DMA_ERROR_AXI_WR_DECERR = 4'd7,
+    DMA_ERROR_PCIE_FLR = 4'd8,
+    DMA_ERROR_PCIE_CPL_POISONED = 4'd9,
+    DMA_ERROR_PCIE_CPL_STATUS_UR = 4'd10,
+    DMA_ERROR_PCIE_CPL_STATUS_CA = 4'd11;
+
 localparam [2:0]
     STATE_IDLE = 3'd0,
     STATE_START = 3'd1,
@@ -223,6 +243,7 @@ reg first_cycle_reg = 1'b0, first_cycle_next;
 reg input_last_cycle_reg = 1'b0, input_last_cycle_next;
 reg output_last_cycle_reg = 1'b0, output_last_cycle_next;
 reg last_transfer_reg = 1'b0, last_transfer_next;
+reg [1:0] bresp_reg = AXI_RESP_OKAY, bresp_next;
 
 reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
 reg [AXIS_ID_WIDTH-1:0] axis_id_reg = {AXIS_ID_WIDTH{1'b0}}, axis_id_next;
@@ -256,6 +277,7 @@ reg [TAG_WIDTH-1:0] m_axis_write_desc_status_tag_reg = {TAG_WIDTH{1'b0}}, m_axis
 reg [AXIS_ID_WIDTH-1:0] m_axis_write_desc_status_id_reg = {AXIS_ID_WIDTH{1'b0}}, m_axis_write_desc_status_id_next;
 reg [AXIS_DEST_WIDTH-1:0] m_axis_write_desc_status_dest_reg = {AXIS_DEST_WIDTH{1'b0}}, m_axis_write_desc_status_dest_next;
 reg [AXIS_USER_WIDTH-1:0] m_axis_write_desc_status_user_reg = {AXIS_USER_WIDTH{1'b0}}, m_axis_write_desc_status_user_next;
+reg [3:0] m_axis_write_desc_status_error_reg = 4'd0, m_axis_write_desc_status_error_next;
 reg m_axis_write_desc_status_valid_reg = 1'b0, m_axis_write_desc_status_valid_next;
 
 reg [AXI_ADDR_WIDTH-1:0] m_axi_awaddr_reg = {AXI_ADDR_WIDTH{1'b0}}, m_axi_awaddr_next;
@@ -291,6 +313,7 @@ assign m_axis_write_desc_status_tag = m_axis_write_desc_status_tag_reg;
 assign m_axis_write_desc_status_id = m_axis_write_desc_status_id_reg;
 assign m_axis_write_desc_status_dest = m_axis_write_desc_status_dest_reg;
 assign m_axis_write_desc_status_user = m_axis_write_desc_status_user_reg;
+assign m_axis_write_desc_status_error = m_axis_write_desc_status_error_reg;
 assign m_axis_write_desc_status_valid = m_axis_write_desc_status_valid_reg;
 
 assign s_axis_write_data_tready = s_axis_write_data_tready_reg;
@@ -345,6 +368,7 @@ always @* begin
     m_axis_write_desc_status_id_next = m_axis_write_desc_status_id_reg;
     m_axis_write_desc_status_dest_next = m_axis_write_desc_status_dest_reg;
     m_axis_write_desc_status_user_next = m_axis_write_desc_status_user_reg;
+    m_axis_write_desc_status_error_next = m_axis_write_desc_status_error_reg;
     m_axis_write_desc_status_valid_next = 1'b0;
 
     s_axis_write_data_tready_next = 1'b0;
@@ -396,6 +420,12 @@ always @* begin
     status_fifo_wr_dest = axis_dest_reg;
     status_fifo_wr_user = axis_user_reg;
     status_fifo_wr_last = 1'b0;
+
+    if (m_axi_bready && m_axi_bvalid && (m_axi_bresp == AXI_RESP_SLVERR || m_axi_bresp == AXI_RESP_DECERR)) begin
+        bresp_next = m_axi_bresp;
+    end else begin
+        bresp_next = bresp_reg;
+    end
 
     case (state_reg)
         STATE_IDLE: begin
@@ -729,9 +759,20 @@ always @* begin
             m_axis_write_desc_status_id_next = status_fifo_id[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
             m_axis_write_desc_status_dest_next = status_fifo_dest[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
             m_axis_write_desc_status_user_next = status_fifo_user[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+            if (bresp_next == AXI_RESP_SLVERR) begin
+                m_axis_write_desc_status_error_next = DMA_ERROR_AXI_WR_SLVERR;
+            end else if (bresp_next == AXI_RESP_DECERR) begin
+                m_axis_write_desc_status_error_next = DMA_ERROR_AXI_WR_DECERR;
+            end else begin
+                m_axis_write_desc_status_error_next = DMA_ERROR_NONE;
+            end
             m_axis_write_desc_status_valid_next = status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
             status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
             m_axi_bready_next = 1'b0;
+
+            if (status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]]) begin
+                bresp_next = AXI_RESP_OKAY;
+            end
 
             dec_active = 1'b1;
         end else begin
@@ -751,6 +792,7 @@ always @(posedge clk) begin
     m_axis_write_desc_status_id_reg <= m_axis_write_desc_status_id_next;
     m_axis_write_desc_status_dest_reg <= m_axis_write_desc_status_dest_next;
     m_axis_write_desc_status_user_reg <= m_axis_write_desc_status_user_next;
+    m_axis_write_desc_status_error_reg <= m_axis_write_desc_status_error_next;
     m_axis_write_desc_status_valid_reg <= m_axis_write_desc_status_valid_next;
 
     s_axis_write_data_tready_reg <= s_axis_write_data_tready_next;
@@ -775,6 +817,7 @@ always @(posedge clk) begin
     input_last_cycle_reg <= input_last_cycle_next;
     output_last_cycle_reg <= output_last_cycle_next;
     last_transfer_reg <= last_transfer_next;
+    bresp_reg <= bresp_next;
 
     tag_reg <= tag_next;
     axis_id_reg <= axis_id_next;
@@ -824,6 +867,8 @@ always @(posedge clk) begin
 
         m_axi_awvalid_reg <= 1'b0;
         m_axi_bready_reg <= 1'b0;
+
+        bresp_reg <= AXI_RESP_OKAY;
 
         save_axis_tlast_reg <= 1'b0;
         shift_axis_extra_cycle_reg <= 1'b0;

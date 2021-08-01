@@ -66,6 +66,7 @@ module axi_cdma #
      * AXI descriptor status output
      */
     output wire [TAG_WIDTH-1:0]       m_axis_desc_status_tag,
+    output wire [3:0]                 m_axis_desc_status_error,
     output wire                       m_axis_desc_status_valid,
 
     /*
@@ -148,6 +149,25 @@ initial begin
 end
 
 localparam [1:0]
+    AXI_RESP_OKAY = 2'b00,
+    AXI_RESP_EXOKAY = 2'b01,
+    AXI_RESP_SLVERR = 2'b10,
+    AXI_RESP_DECERR = 2'b11;
+
+localparam [3:0]
+    DMA_ERROR_NONE = 4'd0,
+    DMA_ERROR_TIMEOUT = 4'd1,
+    DMA_ERROR_PARITY = 4'd2,
+    DMA_ERROR_AXI_RD_SLVERR = 4'd4,
+    DMA_ERROR_AXI_RD_DECERR = 4'd5,
+    DMA_ERROR_AXI_WR_SLVERR = 4'd6,
+    DMA_ERROR_AXI_WR_DECERR = 4'd7,
+    DMA_ERROR_PCIE_FLR = 4'd8,
+    DMA_ERROR_PCIE_CPL_POISONED = 4'd9,
+    DMA_ERROR_PCIE_CPL_STATUS_UR = 4'd10,
+    DMA_ERROR_PCIE_CPL_STATUS_CA = 4'd11;
+
+localparam [1:0]
     READ_STATE_IDLE = 2'd0,
     READ_STATE_START = 2'd1,
     READ_STATE_REQ = 2'd2;
@@ -194,14 +214,18 @@ reg first_input_cycle_reg = 1'b0, first_input_cycle_next;
 reg first_output_cycle_reg = 1'b0, first_output_cycle_next;
 reg output_last_cycle_reg = 1'b0, output_last_cycle_next;
 reg last_transfer_reg = 1'b0, last_transfer_next;
+reg [1:0] rresp_reg = AXI_RESP_OKAY, rresp_next;
+reg [1:0] bresp_reg = AXI_RESP_OKAY, bresp_next;
 
 reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
 
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_wr_ptr_reg = 0;
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0, status_fifo_rd_ptr_next;
 reg [TAG_WIDTH-1:0] status_fifo_tag[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg [1:0] status_fifo_resp[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 reg status_fifo_last[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 reg [TAG_WIDTH-1:0] status_fifo_wr_tag;
+reg [1:0] status_fifo_wr_resp;
 reg status_fifo_wr_last;
 
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] active_count_reg = 0;
@@ -212,6 +236,7 @@ reg dec_active;
 reg s_axis_desc_ready_reg = 1'b0, s_axis_desc_ready_next;
 
 reg [TAG_WIDTH-1:0] m_axis_desc_status_tag_reg = {TAG_WIDTH{1'b0}}, m_axis_desc_status_tag_next;
+reg [3:0] m_axis_desc_status_error_reg = 4'd0, m_axis_desc_status_error_next;
 reg m_axis_desc_status_valid_reg = 1'b0, m_axis_desc_status_valid_next;
 
 reg [AXI_ADDR_WIDTH-1:0] m_axi_araddr_reg = {AXI_ADDR_WIDTH{1'b0}}, m_axi_araddr_next;
@@ -239,6 +264,7 @@ wire                      m_axi_wready_int_early;
 assign s_axis_desc_ready = s_axis_desc_ready_reg;
 
 assign m_axis_desc_status_tag = m_axis_desc_status_tag_reg;
+assign m_axis_desc_status_error = m_axis_desc_status_error_reg;
 assign m_axis_desc_status_valid = m_axis_desc_status_valid_reg;
 
 assign m_axi_arid = {AXI_ID_WIDTH{1'b0}};
@@ -418,6 +444,7 @@ always @* begin
     axi_state_next = AXI_STATE_IDLE;
 
     m_axis_desc_status_tag_next = m_axis_desc_status_tag_reg;
+    m_axis_desc_status_error_next = m_axis_desc_status_error_reg;
     m_axis_desc_status_valid_next = 1'b0;
 
     m_axi_awaddr_next = m_axi_awaddr_reg;
@@ -454,7 +481,20 @@ always @* begin
 
     dec_active = 1'b0;
 
+    if (m_axi_rready && m_axi_rvalid && (m_axi_rresp == AXI_RESP_SLVERR || m_axi_rresp == AXI_RESP_DECERR)) begin
+        rresp_next = m_axi_rresp;
+    end else begin
+        rresp_next = rresp_reg;
+    end
+
+    if (m_axi_bready && m_axi_bvalid && (m_axi_bresp == AXI_RESP_SLVERR || m_axi_bresp == AXI_RESP_DECERR)) begin
+        bresp_next = m_axi_bresp;
+    end else begin
+        bresp_next = bresp_reg;
+    end
+
     status_fifo_wr_tag = tag_reg;
+    status_fifo_wr_resp = rresp_next;
     status_fifo_wr_last = 1'b0;
 
     case (axi_state_reg)
@@ -545,7 +585,12 @@ always @* begin
 
                         status_fifo_we = 1'b1;
                         status_fifo_wr_tag = tag_reg;
+                        status_fifo_wr_resp = rresp_next;
                         status_fifo_wr_last = last_transfer_reg;
+
+                        if (last_transfer_reg) begin
+                            rresp_next = AXI_RESP_OKAY;
+                        end
 
                         m_axi_rready_next = 1'b0;
                         axi_state_next = AXI_STATE_IDLE;
@@ -565,9 +610,24 @@ always @* begin
         if (m_axi_bready && m_axi_bvalid) begin
             // got write completion, pop and return status
             m_axis_desc_status_tag_next = status_fifo_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+            if (status_fifo_resp[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] == AXI_RESP_SLVERR) begin
+                m_axis_desc_status_error_next = DMA_ERROR_AXI_RD_SLVERR;
+            end else if (status_fifo_resp[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] == AXI_RESP_DECERR) begin
+                m_axis_desc_status_error_next = DMA_ERROR_AXI_RD_DECERR;
+            end else if (bresp_next == AXI_RESP_SLVERR) begin
+                m_axis_desc_status_error_next = DMA_ERROR_AXI_WR_SLVERR;
+            end else if (bresp_next == AXI_RESP_DECERR) begin
+                m_axis_desc_status_error_next = DMA_ERROR_AXI_WR_DECERR;
+            end else begin
+                m_axis_desc_status_error_next = DMA_ERROR_NONE;
+            end
             m_axis_desc_status_valid_next = status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
             status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
             m_axi_bready_next = 1'b0;
+
+            if (status_fifo_last[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]]) begin
+                bresp_next = AXI_RESP_OKAY;
+            end
 
             dec_active = 1'b1;
         end else begin
@@ -584,6 +644,7 @@ always @(posedge clk) begin
     s_axis_desc_ready_reg <= s_axis_desc_ready_next;
 
     m_axis_desc_status_tag_reg <= m_axis_desc_status_tag_next;
+    m_axis_desc_status_error_reg <= m_axis_desc_status_error_next;
     m_axis_desc_status_valid_reg <= m_axis_desc_status_valid_next;
 
     m_axi_awaddr_reg <= m_axi_awaddr_next;
@@ -624,6 +685,8 @@ always @(posedge clk) begin
     first_output_cycle_reg <= first_output_cycle_next;
     output_last_cycle_reg <= output_last_cycle_next;
     last_transfer_reg <= last_transfer_next;
+    rresp_reg <= rresp_next;
+    bresp_reg <= bresp_next;
 
     tag_reg <= tag_next;
 
@@ -633,6 +696,7 @@ always @(posedge clk) begin
 
     if (status_fifo_we) begin
         status_fifo_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_tag;
+        status_fifo_resp[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_resp;
         status_fifo_last[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_last;
         status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
     end
@@ -652,8 +716,6 @@ always @(posedge clk) begin
         read_state_reg <= READ_STATE_IDLE;
         axi_state_reg <= AXI_STATE_IDLE;
 
-        axi_cmd_valid_reg <= 1'b0;
-
         s_axis_desc_ready_reg <= 1'b0;
         m_axis_desc_status_valid_reg <= 1'b0;
 
@@ -661,6 +723,11 @@ always @(posedge clk) begin
         m_axi_bready_reg <= 1'b0;
         m_axi_arvalid_reg <= 1'b0;
         m_axi_rready_reg <= 1'b0;
+
+        axi_cmd_valid_reg <= 1'b0;
+
+        rresp_reg <= AXI_RESP_OKAY;
+        bresp_reg <= AXI_RESP_OKAY;
 
         status_fifo_wr_ptr_reg <= 0;
         status_fifo_rd_ptr_reg <= 0;

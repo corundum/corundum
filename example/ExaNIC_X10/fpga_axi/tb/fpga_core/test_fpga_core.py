@@ -284,7 +284,7 @@ async def run_test(dut):
     # read status
     val = await tb.rc.mem_read_dword(dev_pf0_bar0+0x100118)
     tb.log.info("Status: 0x%x", val)
-    assert val == 0xAA
+    assert val == 0x800000AA
 
     # write pcie write descriptor
     await tb.rc.mem_write_dword(dev_pf0_bar0+0x100200, (mem_base+0x1000) & 0xffffffff)
@@ -299,7 +299,7 @@ async def run_test(dut):
     # read status
     val = await tb.rc.mem_read_dword(dev_pf0_bar0+0x100218)
     tb.log.info("Status: 0x%x", val)
-    assert val == 0x55
+    assert val == 0x80000055
 
     tb.log.info("%s", hexdump_str(mem_data, 0x1000, 64))
 

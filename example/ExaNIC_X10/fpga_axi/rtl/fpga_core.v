@@ -352,8 +352,8 @@ wire                       pcie_dma_read_desc_valid;
 wire                       pcie_dma_read_desc_ready;
 
 wire [DMA_TAG_WIDTH-1:0]   pcie_dma_read_desc_status_tag;
+wire [3:0]                 pcie_dma_read_desc_status_error;
 wire                       pcie_dma_read_desc_status_valid;
-wire                       pcie_dma_read_desc_status_ready;
 
 wire [PCIE_ADDR_WIDTH-1:0] pcie_dma_write_desc_pcie_addr;
 wire [AXI_ADDR_WIDTH-1:0]  pcie_dma_write_desc_axi_addr;
@@ -363,8 +363,8 @@ wire                       pcie_dma_write_desc_valid;
 wire                       pcie_dma_write_desc_ready;
 
 wire [DMA_TAG_WIDTH-1:0]   pcie_dma_write_desc_status_tag;
+wire [3:0]                 pcie_dma_write_desc_status_error;
 wire                       pcie_dma_write_desc_status_valid;
-wire                       pcie_dma_write_desc_status_ready;
 
 wire                       pcie_dma_enable;
 
@@ -392,7 +392,9 @@ reg [15:0] pcie_dma_read_desc_len_reg = 0, pcie_dma_read_desc_len_next;
 reg [DMA_TAG_WIDTH-1:0] pcie_dma_read_desc_tag_reg = 0, pcie_dma_read_desc_tag_next;
 reg pcie_dma_read_desc_valid_reg = 0, pcie_dma_read_desc_valid_next;
 
-reg pcie_dma_read_desc_status_ready_reg = 0, pcie_dma_read_desc_status_ready_next;
+reg [DMA_TAG_WIDTH-1:0] pcie_dma_read_desc_status_tag_reg = 0, pcie_dma_read_desc_status_tag_next;
+reg [31:0] pcie_dma_read_desc_status_error_reg = 0, pcie_dma_read_desc_status_error_next;
+reg pcie_dma_read_desc_status_valid_reg = 0, pcie_dma_read_desc_status_valid_next;
 
 reg [PCIE_ADDR_WIDTH-1:0] pcie_dma_write_desc_pcie_addr_reg = 0, pcie_dma_write_desc_pcie_addr_next;
 reg [AXI_ADDR_WIDTH-1:0] pcie_dma_write_desc_axi_addr_reg = 0, pcie_dma_write_desc_axi_addr_next;
@@ -400,7 +402,9 @@ reg [15:0] pcie_dma_write_desc_len_reg = 0, pcie_dma_write_desc_len_next;
 reg [DMA_TAG_WIDTH-1:0] pcie_dma_write_desc_tag_reg = 0, pcie_dma_write_desc_tag_next;
 reg pcie_dma_write_desc_valid_reg = 0, pcie_dma_write_desc_valid_next;
 
-reg pcie_dma_write_desc_status_ready_reg = 0, pcie_dma_write_desc_status_ready_next;
+reg [DMA_TAG_WIDTH-1:0] pcie_dma_write_desc_status_tag_reg = 0, pcie_dma_write_desc_status_tag_next;
+reg [31:0] pcie_dma_write_desc_status_error_reg = 0, pcie_dma_write_desc_status_error_next;
+reg pcie_dma_write_desc_status_valid_reg = 0, pcie_dma_write_desc_status_valid_next;
 
 reg pcie_dma_enable_reg = 0, pcie_dma_enable_next;
 
@@ -423,13 +427,11 @@ assign pcie_dma_read_desc_axi_addr = pcie_dma_read_desc_axi_addr_reg;
 assign pcie_dma_read_desc_len = pcie_dma_read_desc_len_reg;
 assign pcie_dma_read_desc_tag = pcie_dma_read_desc_tag_reg;
 assign pcie_dma_read_desc_valid = pcie_dma_read_desc_valid_reg;
-assign pcie_dma_read_desc_status_ready = pcie_dma_read_desc_status_ready_reg;
 assign pcie_dma_write_desc_pcie_addr = pcie_dma_write_desc_pcie_addr_reg;
 assign pcie_dma_write_desc_axi_addr = pcie_dma_write_desc_axi_addr_reg;
 assign pcie_dma_write_desc_len = pcie_dma_write_desc_len_reg;
 assign pcie_dma_write_desc_tag = pcie_dma_write_desc_tag_reg;
 assign pcie_dma_write_desc_valid = pcie_dma_write_desc_valid_reg;
-assign pcie_dma_write_desc_status_ready = pcie_dma_write_desc_status_ready_reg;
 assign pcie_dma_enable = pcie_dma_enable_reg;
 
 assign msi_irq[0] = pcie_dma_read_desc_status_valid || pcie_dma_write_desc_status_valid;
@@ -450,14 +452,20 @@ always @* begin
     pcie_dma_read_desc_len_next = pcie_dma_read_desc_len_reg;
     pcie_dma_read_desc_tag_next = pcie_dma_read_desc_tag_reg;
     pcie_dma_read_desc_valid_next = pcie_dma_read_desc_valid_reg && !pcie_dma_read_desc_ready;
-    pcie_dma_read_desc_status_ready_next = 1'b0;
+
+    pcie_dma_read_desc_status_tag_next = pcie_dma_read_desc_status_tag_reg;
+    pcie_dma_read_desc_status_error_next = pcie_dma_read_desc_status_error_reg;
+    pcie_dma_read_desc_status_valid_next = pcie_dma_read_desc_status_valid_reg;
 
     pcie_dma_write_desc_pcie_addr_next = pcie_dma_write_desc_pcie_addr_reg;
     pcie_dma_write_desc_axi_addr_next = pcie_dma_write_desc_axi_addr_reg;
     pcie_dma_write_desc_len_next = pcie_dma_write_desc_len_reg;
     pcie_dma_write_desc_tag_next = pcie_dma_write_desc_tag_reg;
     pcie_dma_write_desc_valid_next = pcie_dma_write_desc_valid_reg && !pcie_dma_read_desc_ready;
-    pcie_dma_write_desc_status_ready_next = 1'b0;
+
+    pcie_dma_write_desc_status_tag_next = pcie_dma_write_desc_status_tag_reg;
+    pcie_dma_write_desc_status_error_next = pcie_dma_write_desc_status_error_reg;
+    pcie_dma_write_desc_status_valid_next = pcie_dma_write_desc_status_valid_reg;
 
     pcie_dma_enable_next = pcie_dma_enable_reg;
 
@@ -500,12 +508,16 @@ always @* begin
         case ({axil_ctrl_araddr[15:2], 2'b00})
             16'h0000: axil_ctrl_rdata_next = pcie_dma_enable_reg;
             16'h0118: begin
-                axil_ctrl_rdata_next = pcie_dma_read_desc_status_tag | (pcie_dma_read_desc_status_valid ? 32'h80000000 : 32'd0);
-                pcie_dma_read_desc_status_ready_next = pcie_dma_read_desc_status_valid;
+                axil_ctrl_rdata_next[7:0] = pcie_dma_read_desc_status_tag_reg;
+                axil_ctrl_rdata_next[15:8] = pcie_dma_read_desc_status_error_reg;
+                axil_ctrl_rdata_next[31] = pcie_dma_read_desc_status_valid_reg;
+                pcie_dma_read_desc_status_valid_next = 1'b0;
             end
             16'h0218: begin
-                axil_ctrl_rdata_next = pcie_dma_write_desc_status_tag | (pcie_dma_write_desc_status_valid ? 32'h80000000 : 32'd0);
-                pcie_dma_write_desc_status_ready_next = pcie_dma_write_desc_status_valid;
+                axil_ctrl_rdata_next[7:0] = pcie_dma_write_desc_status_tag_reg;
+                axil_ctrl_rdata_next[15:8] = pcie_dma_write_desc_status_error_reg;
+                axil_ctrl_rdata_next[31] = pcie_dma_write_desc_status_valid_reg;
+                pcie_dma_write_desc_status_valid_next = 1'b0;
             end
             16'h0400: axil_ctrl_rdata_next = pcie_rq_count_reg;
             16'h0404: axil_ctrl_rdata_next = pcie_rc_count_reg;
@@ -513,9 +525,68 @@ always @* begin
             16'h040C: axil_ctrl_rdata_next = pcie_cc_count_reg;
         endcase
     end
+
+    if (pcie_dma_read_desc_status_valid) begin
+        pcie_dma_read_desc_status_tag_next = pcie_dma_read_desc_status_tag;
+        pcie_dma_read_desc_status_error_next = pcie_dma_read_desc_status_error;
+        pcie_dma_read_desc_status_valid_next = pcie_dma_read_desc_status_valid;
+    end
+
+    if (pcie_dma_write_desc_status_valid) begin
+        pcie_dma_write_desc_status_tag_next = pcie_dma_write_desc_status_tag;
+        pcie_dma_write_desc_status_error_next = pcie_dma_write_desc_status_error;
+        pcie_dma_write_desc_status_valid_next = pcie_dma_write_desc_status_valid;
+    end
 end
 
 always @(posedge clk) begin
+    axil_ctrl_awready_reg <= axil_ctrl_awready_next;
+    axil_ctrl_wready_reg <= axil_ctrl_wready_next;
+    axil_ctrl_bresp_reg <= axil_ctrl_bresp_next;
+    axil_ctrl_bvalid_reg <= axil_ctrl_bvalid_next;
+    axil_ctrl_arready_reg <= axil_ctrl_arready_next;
+    axil_ctrl_rdata_reg <= axil_ctrl_rdata_next;
+    axil_ctrl_rresp_reg <= axil_ctrl_rresp_next;
+    axil_ctrl_rvalid_reg <= axil_ctrl_rvalid_next;
+
+    pcie_dma_read_desc_pcie_addr_reg <= pcie_dma_read_desc_pcie_addr_next;
+    pcie_dma_read_desc_axi_addr_reg <= pcie_dma_read_desc_axi_addr_next;
+    pcie_dma_read_desc_len_reg <= pcie_dma_read_desc_len_next;
+    pcie_dma_read_desc_tag_reg <= pcie_dma_read_desc_tag_next;
+    pcie_dma_read_desc_valid_reg <= pcie_dma_read_desc_valid_next;
+
+    pcie_dma_read_desc_status_tag_reg <= pcie_dma_read_desc_status_tag_next;
+    pcie_dma_read_desc_status_error_reg <= pcie_dma_read_desc_status_error_next;
+    pcie_dma_read_desc_status_valid_reg <= pcie_dma_read_desc_status_valid_next;
+
+    pcie_dma_write_desc_pcie_addr_reg <= pcie_dma_write_desc_pcie_addr_next;
+    pcie_dma_write_desc_axi_addr_reg <= pcie_dma_write_desc_axi_addr_next;
+    pcie_dma_write_desc_len_reg <= pcie_dma_write_desc_len_next;
+    pcie_dma_write_desc_tag_reg <= pcie_dma_write_desc_tag_next;
+    pcie_dma_write_desc_valid_reg <= pcie_dma_write_desc_valid_next;
+
+    pcie_dma_write_desc_status_tag_reg <= pcie_dma_write_desc_status_tag_next;
+    pcie_dma_write_desc_status_error_reg <= pcie_dma_write_desc_status_error_next;
+    pcie_dma_write_desc_status_valid_reg <= pcie_dma_write_desc_status_valid_next;
+
+    pcie_dma_enable_reg <= pcie_dma_enable_next;
+
+    if (m_axis_rq_tready && m_axis_rq_tvalid && m_axis_rq_tlast) begin
+        pcie_rq_count_reg <= pcie_rq_count_reg + 1;
+    end
+
+    if (s_axis_rc_tready && s_axis_rc_tvalid && s_axis_rc_tlast) begin
+        pcie_rc_count_reg <= pcie_rc_count_reg + 1;
+    end
+
+    if (s_axis_cq_tready && s_axis_cq_tvalid && s_axis_cq_tlast) begin
+        pcie_cq_count_reg <= pcie_cq_count_reg + 1;
+    end
+
+    if (m_axis_cc_tready && m_axis_cc_tvalid && m_axis_cc_tlast) begin
+        pcie_cc_count_reg <= pcie_cc_count_reg + 1;
+    end
+
     if (rst) begin
         axil_ctrl_awready_reg <= 1'b0;
         axil_ctrl_wready_reg <= 1'b0;
@@ -524,57 +595,16 @@ always @(posedge clk) begin
         axil_ctrl_rvalid_reg <= 1'b0;
 
         pcie_dma_read_desc_valid_reg <= 1'b0;
-        pcie_dma_read_desc_status_ready_reg <= 1'b0;
+        pcie_dma_read_desc_status_valid_reg <= 1'b0;
         pcie_dma_write_desc_valid_reg <= 1'b0;
-        pcie_dma_write_desc_status_ready_reg <= 1'b0;
+        pcie_dma_write_desc_status_valid_reg <= 1'b0;
         pcie_dma_enable_reg <= 1'b0;
 
         pcie_rq_count_reg <= 0;
         pcie_rc_count_reg <= 0;
         pcie_cq_count_reg <= 0;
         pcie_cc_count_reg <= 0;
-    end else begin
-        axil_ctrl_awready_reg <= axil_ctrl_awready_next;
-        axil_ctrl_wready_reg <= axil_ctrl_wready_next;
-        axil_ctrl_bvalid_reg <= axil_ctrl_bvalid_next;
-        axil_ctrl_arready_reg <= axil_ctrl_arready_next;
-        axil_ctrl_rvalid_reg <= axil_ctrl_rvalid_next;
-
-        pcie_dma_read_desc_valid_reg <= pcie_dma_read_desc_valid_next;
-        pcie_dma_read_desc_status_ready_reg <= pcie_dma_read_desc_status_ready_next;
-        pcie_dma_write_desc_valid_reg <= pcie_dma_write_desc_valid_next;
-        pcie_dma_write_desc_status_ready_reg <= pcie_dma_write_desc_status_ready_next;
-        pcie_dma_enable_reg <= pcie_dma_enable_next;
-
-        if (m_axis_rq_tready && m_axis_rq_tvalid && m_axis_rq_tlast) begin
-            pcie_rq_count_reg <= pcie_rq_count_reg + 1;
-        end
-
-        if (s_axis_rc_tready && s_axis_rc_tvalid && s_axis_rc_tlast) begin
-            pcie_rc_count_reg <= pcie_rc_count_reg + 1;
-        end
-
-        if (s_axis_cq_tready && s_axis_cq_tvalid && s_axis_cq_tlast) begin
-            pcie_cq_count_reg <= pcie_cq_count_reg + 1;
-        end
-
-        if (m_axis_cc_tready && m_axis_cc_tvalid && m_axis_cc_tlast) begin
-            pcie_cc_count_reg <= pcie_cc_count_reg + 1;
-        end
     end
-
-    axil_ctrl_bresp_reg <= axil_ctrl_bresp_next;
-    axil_ctrl_rdata_reg <= axil_ctrl_rdata_next;
-    axil_ctrl_rresp_reg <= axil_ctrl_rresp_next;
-
-    pcie_dma_read_desc_pcie_addr_reg <= pcie_dma_read_desc_pcie_addr_next;
-    pcie_dma_read_desc_axi_addr_reg <= pcie_dma_read_desc_axi_addr_next;
-    pcie_dma_read_desc_len_reg <= pcie_dma_read_desc_len_next;
-    pcie_dma_read_desc_tag_reg <= pcie_dma_read_desc_tag_next;
-    pcie_dma_write_desc_pcie_addr_reg <= pcie_dma_write_desc_pcie_addr_next;
-    pcie_dma_write_desc_axi_addr_reg <= pcie_dma_write_desc_axi_addr_next;
-    pcie_dma_write_desc_len_reg <= pcie_dma_write_desc_len_next;
-    pcie_dma_write_desc_tag_reg <= pcie_dma_write_desc_tag_next;
 end
 
 assign sfp_1_led = 2'b00;
@@ -914,6 +944,7 @@ pcie_us_axi_dma_inst (
      * AXI read descriptor status output
      */
     .m_axis_read_desc_status_tag(pcie_dma_read_desc_status_tag),
+    .m_axis_read_desc_status_error(pcie_dma_read_desc_status_error),
     .m_axis_read_desc_status_valid(pcie_dma_read_desc_status_valid),
 
     /*
@@ -930,6 +961,7 @@ pcie_us_axi_dma_inst (
      * AXI write descriptor status output
      */
     .m_axis_write_desc_status_tag(pcie_dma_write_desc_status_tag),
+    .m_axis_write_desc_status_error(pcie_dma_write_desc_status_error),
     .m_axis_write_desc_status_valid(pcie_dma_write_desc_status_valid),
 
     /*

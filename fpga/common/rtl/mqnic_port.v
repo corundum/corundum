@@ -218,6 +218,7 @@ module mqnic_port #
      * DMA read descriptor status input
      */
     input  wire [DMA_TAG_WIDTH-1:0]             s_axis_dma_read_desc_status_tag,
+    input  wire [3:0]                           s_axis_dma_read_desc_status_error,
     input  wire                                 s_axis_dma_read_desc_status_valid,
 
     /*
@@ -234,6 +235,7 @@ module mqnic_port #
      * DMA write descriptor status input
      */
     input  wire [DMA_TAG_WIDTH-1:0]             s_axis_dma_write_desc_status_tag,
+    input  wire [3:0]                           s_axis_dma_write_desc_status_error,
     input  wire                                 s_axis_dma_write_desc_status_valid,
 
     /*
@@ -543,6 +545,7 @@ wire                            dma_tx_desc_valid;
 wire                            dma_tx_desc_ready;
 
 wire [DMA_CLIENT_TAG_WIDTH-1:0] dma_tx_desc_status_tag;
+wire [3:0]                      dma_tx_desc_status_error;
 wire                            dma_tx_desc_status_valid;
 
 wire [RAM_ADDR_WIDTH-1:0]       dma_rx_desc_addr;
@@ -554,6 +557,7 @@ wire                            dma_rx_desc_ready;
 wire [DMA_CLIENT_LEN_WIDTH-1:0] dma_rx_desc_status_len;
 wire [DMA_CLIENT_TAG_WIDTH-1:0] dma_rx_desc_status_tag;
 wire                            dma_rx_desc_status_user;
+wire [3:0]                      dma_rx_desc_status_error;
 wire                            dma_rx_desc_status_valid;
 
 wire                            dma_enable = 1;
@@ -1244,6 +1248,7 @@ tx_engine_inst (
      * DMA read descriptor status input
      */
     .s_axis_dma_read_desc_status_tag(s_axis_dma_read_desc_status_tag),
+    .s_axis_dma_read_desc_status_error(s_axis_dma_read_desc_status_error),
     .s_axis_dma_read_desc_status_valid(s_axis_dma_read_desc_status_valid),
 
     /*
@@ -1260,6 +1265,7 @@ tx_engine_inst (
      * Transmit descriptor status input
      */
     .s_axis_tx_desc_status_tag(dma_tx_desc_status_tag),
+    .s_axis_tx_desc_status_error(dma_tx_desc_status_error),
     .s_axis_tx_desc_status_valid(dma_tx_desc_status_valid),
 
     /*
@@ -1433,6 +1439,7 @@ rx_engine_inst (
      * DMA write descriptor status input
      */
     .s_axis_dma_write_desc_status_tag(s_axis_dma_write_desc_status_tag),
+    .s_axis_dma_write_desc_status_error(s_axis_dma_write_desc_status_error),
     .s_axis_dma_write_desc_status_valid(s_axis_dma_write_desc_status_valid),
 
     /*
@@ -1450,6 +1457,7 @@ rx_engine_inst (
     .s_axis_rx_desc_status_len(dma_rx_desc_status_len),
     .s_axis_rx_desc_status_tag(dma_rx_desc_status_tag),
     .s_axis_rx_desc_status_user(dma_rx_desc_status_user),
+    .s_axis_rx_desc_status_error(dma_rx_desc_status_error),
     .s_axis_rx_desc_status_valid(dma_rx_desc_status_valid),
 
     /*
@@ -1919,6 +1927,7 @@ dma_client_axis_source_inst (
      * DMA read descriptor status output
      */
     .m_axis_read_desc_status_tag(dma_tx_desc_status_tag),
+    .m_axis_read_desc_status_error(dma_tx_desc_status_error),
     .m_axis_read_desc_status_valid(dma_tx_desc_status_valid),
 
     /*
@@ -2027,6 +2036,7 @@ dma_client_axis_sink_inst (
     .m_axis_write_desc_status_id(),
     .m_axis_write_desc_status_dest(),
     .m_axis_write_desc_status_user(dma_rx_desc_status_user),
+    .m_axis_write_desc_status_error(dma_rx_desc_status_error),
     .m_axis_write_desc_status_valid(dma_rx_desc_status_valid),
 
     /*

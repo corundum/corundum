@@ -170,6 +170,7 @@ module mqnic_interface #
      * DMA read descriptor status input (control)
      */
     input  wire [DMA_TAG_WIDTH-1:0]            s_axis_ctrl_dma_read_desc_status_tag,
+    input  wire [3:0]                          s_axis_ctrl_dma_read_desc_status_error,
     input  wire                                s_axis_ctrl_dma_read_desc_status_valid,
 
     /*
@@ -187,6 +188,7 @@ module mqnic_interface #
      * DMA write descriptor status input (control)
      */
     input  wire [DMA_TAG_WIDTH-1:0]            s_axis_ctrl_dma_write_desc_status_tag,
+    input  wire [3:0]                          s_axis_ctrl_dma_write_desc_status_error,
     input  wire                                s_axis_ctrl_dma_write_desc_status_valid,
 
     /*
@@ -204,6 +206,7 @@ module mqnic_interface #
      * DMA read descriptor status input (data)
      */
     input  wire [DMA_TAG_WIDTH-1:0]            s_axis_data_dma_read_desc_status_tag,
+    input  wire [3:0]                          s_axis_data_dma_read_desc_status_error,
     input  wire                                s_axis_data_dma_read_desc_status_valid,
 
     /*
@@ -221,6 +224,7 @@ module mqnic_interface #
      * DMA write descriptor status input (data)
      */
     input  wire [DMA_TAG_WIDTH-1:0]            s_axis_data_dma_write_desc_status_tag,
+    input  wire [3:0]                          s_axis_data_dma_write_desc_status_error,
     input  wire                                s_axis_data_dma_write_desc_status_valid,
 
     /*
@@ -549,6 +553,7 @@ wire [PORTS-1:0]                   port_dma_read_desc_valid;
 wire [PORTS-1:0]                   port_dma_read_desc_ready;
 
 wire [PORTS*DMA_TAG_WIDTH_INT-1:0] port_dma_read_desc_status_tag;
+wire [PORTS*4-1:0]                 port_dma_read_desc_status_error;
 wire [PORTS-1:0]                   port_dma_read_desc_status_valid;
 
 wire [PORTS*DMA_ADDR_WIDTH-1:0]    port_dma_write_desc_dma_addr;
@@ -559,6 +564,7 @@ wire [PORTS-1:0]                   port_dma_write_desc_valid;
 wire [PORTS-1:0]                   port_dma_write_desc_ready;
 
 wire [PORTS*DMA_TAG_WIDTH_INT-1:0] port_dma_write_desc_status_tag;
+wire [PORTS*4-1:0]                 port_dma_write_desc_status_error;
 wire [PORTS-1:0]                   port_dma_write_desc_status_valid;
 
 wire [PORTS*SEG_COUNT*SEG_BE_WIDTH-1:0]    port_dma_ram_wr_cmd_be;
@@ -1561,6 +1567,7 @@ desc_fetch_inst (
      * DMA read descriptor status input
      */
     .s_axis_dma_read_desc_status_tag(s_axis_ctrl_dma_read_desc_status_tag),
+    .s_axis_dma_read_desc_status_error(s_axis_ctrl_dma_read_desc_status_error),
     .s_axis_dma_read_desc_status_valid(s_axis_ctrl_dma_read_desc_status_valid),
 
     /*
@@ -1713,6 +1720,7 @@ cpl_write_inst (
      * DMA write descriptor status input
      */
     .s_axis_dma_write_desc_status_tag(s_axis_ctrl_dma_write_desc_status_tag),
+    .s_axis_dma_write_desc_status_error(s_axis_ctrl_dma_write_desc_status_error),
     .s_axis_dma_write_desc_status_valid(s_axis_ctrl_dma_write_desc_status_valid),
 
     /*
@@ -1771,6 +1779,7 @@ if (PORTS > 1) begin
          * Read descriptor status input (from DMA interface)
          */
         .s_axis_read_desc_status_tag(s_axis_data_dma_read_desc_status_tag),
+        .s_axis_read_desc_status_error(s_axis_data_dma_read_desc_status_error),
         .s_axis_read_desc_status_valid(s_axis_data_dma_read_desc_status_valid),
 
         /*
@@ -1788,6 +1797,7 @@ if (PORTS > 1) begin
          * Read descriptor status output
          */
         .m_axis_read_desc_status_tag(port_dma_read_desc_status_tag),
+        .m_axis_read_desc_status_error(port_dma_read_desc_status_error),
         .m_axis_read_desc_status_valid(port_dma_read_desc_status_valid),
 
         /*
@@ -1805,6 +1815,7 @@ if (PORTS > 1) begin
          * Write descriptor status input (from DMA interface)
          */
         .s_axis_write_desc_status_tag(s_axis_data_dma_write_desc_status_tag),
+        .s_axis_write_desc_status_error(s_axis_data_dma_write_desc_status_error),
         .s_axis_write_desc_status_valid(s_axis_data_dma_write_desc_status_valid),
 
         /*
@@ -1822,6 +1833,7 @@ if (PORTS > 1) begin
          * Write descriptor status output
          */
         .m_axis_write_desc_status_tag(port_dma_write_desc_status_tag),
+        .m_axis_write_desc_status_error(port_dma_write_desc_status_error),
         .m_axis_write_desc_status_valid(port_dma_write_desc_status_valid),
 
         /*
@@ -1872,6 +1884,7 @@ end else begin
     assign port_dma_read_desc_ready = m_axis_data_dma_read_desc_ready;
 
     assign port_dma_read_desc_status_tag = s_axis_data_dma_read_desc_status_tag;
+    assign port_dma_read_desc_status_error = s_axis_data_dma_read_desc_status_error;
     assign port_dma_read_desc_status_valid = s_axis_data_dma_read_desc_status_valid;
 
     assign m_axis_data_dma_write_desc_dma_addr = port_dma_write_desc_dma_addr;
@@ -1883,6 +1896,7 @@ end else begin
     assign port_dma_write_desc_ready = m_axis_data_dma_write_desc_ready;
 
     assign port_dma_write_desc_status_tag = s_axis_data_dma_write_desc_status_tag;
+    assign port_dma_write_desc_status_error = s_axis_data_dma_write_desc_status_error;
     assign port_dma_write_desc_status_valid = s_axis_data_dma_write_desc_status_valid;
 
     assign port_dma_ram_wr_cmd_be = data_dma_ram_wr_cmd_be;
@@ -2153,6 +2167,7 @@ generate
              * DMA read descriptor status input
              */
             .s_axis_dma_read_desc_status_tag(port_dma_read_desc_status_tag[n*DMA_TAG_WIDTH_INT +: DMA_TAG_WIDTH_INT]),
+            .s_axis_dma_read_desc_status_error(port_dma_read_desc_status_error[n*4 +: 4]),
             .s_axis_dma_read_desc_status_valid(port_dma_read_desc_status_valid[n +: 1]),
 
             /*
@@ -2169,6 +2184,7 @@ generate
              * DMA write descriptor status input
              */
             .s_axis_dma_write_desc_status_tag(port_dma_write_desc_status_tag[n*DMA_TAG_WIDTH_INT +: DMA_TAG_WIDTH_INT]),
+            .s_axis_dma_write_desc_status_error(port_dma_write_desc_status_error[n*4 +: 4]),
             .s_axis_dma_write_desc_status_valid(port_dma_write_desc_status_valid[n +: 1]),
 
             /*

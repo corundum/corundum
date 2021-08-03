@@ -137,6 +137,7 @@ module cpl_write #
      * DMA write descriptor status input
      */
     input  wire [DMA_TAG_WIDTH-1:0]             s_axis_dma_write_desc_status_tag,
+    input  wire [3:0]                           s_axis_dma_write_desc_status_error,
     input  wire                                 s_axis_dma_write_desc_status_valid,
 
     /*
@@ -345,6 +346,7 @@ dma_client_axis_sink_inst (
     .m_axis_write_desc_status_id(),
     .m_axis_write_desc_status_dest(),
     .m_axis_write_desc_status_user(),
+    .m_axis_write_desc_status_error(),
     .m_axis_write_desc_status_valid(dma_write_desc_status_valid),
 
     /*

@@ -175,6 +175,7 @@ module rx_engine #
      * DMA write descriptor status input
      */
     input  wire [DMA_TAG_WIDTH-1:0]         s_axis_dma_write_desc_status_tag,
+    input  wire [3:0]                       s_axis_dma_write_desc_status_error,
     input  wire                             s_axis_dma_write_desc_status_valid,
 
     /*
@@ -192,6 +193,7 @@ module rx_engine #
     input  wire [DMA_CLIENT_LEN_WIDTH-1:0]  s_axis_rx_desc_status_len,
     input  wire [DMA_CLIENT_TAG_WIDTH-1:0]  s_axis_rx_desc_status_tag,
     input  wire                             s_axis_rx_desc_status_user,
+    input  wire [3:0]                       s_axis_rx_desc_status_error,
     input  wire                             s_axis_rx_desc_status_valid,
 
     /*

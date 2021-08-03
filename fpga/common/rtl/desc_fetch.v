@@ -164,6 +164,7 @@ module desc_fetch #
      * DMA read descriptor status input
      */
     input  wire [DMA_TAG_WIDTH-1:0]               s_axis_dma_read_desc_status_tag,
+    input  wire [3:0]                             s_axis_dma_read_desc_status_error,
     input  wire                                   s_axis_dma_read_desc_status_valid,
 
     /*
@@ -398,6 +399,7 @@ dma_client_axis_source_inst (
      * DMA read descriptor status output
      */
     .m_axis_read_desc_status_tag(dma_read_desc_status_tag),
+    .m_axis_read_desc_status_error(),
     .m_axis_read_desc_status_valid(dma_read_desc_status_valid),
 
     /*

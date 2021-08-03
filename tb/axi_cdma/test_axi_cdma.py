@@ -157,7 +157,7 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 @pytest.mark.parametrize("unaligned", [0, 1])
 @pytest.mark.parametrize("axi_data_width", [8, 16, 32])
-def test_axi_dma(request, axi_data_width, unaligned):
+def test_axi_cdma(request, axi_data_width, unaligned):
     dut = "axi_cdma"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut

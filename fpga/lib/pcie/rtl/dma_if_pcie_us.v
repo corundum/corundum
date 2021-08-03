@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2019 Alex Forencich
+Copyright (c) 2019-2021 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -130,6 +130,7 @@ module dma_if_pcie_us #
      * AXI read descriptor status output
      */
     output wire [TAG_WIDTH-1:0]                 m_axis_read_desc_status_tag,
+    output wire [3:0]                           m_axis_read_desc_status_error,
     output wire                                 m_axis_read_desc_status_valid,
 
     /*
@@ -147,6 +148,7 @@ module dma_if_pcie_us #
      * AXI write descriptor status output
      */
     output wire [TAG_WIDTH-1:0]                 m_axis_write_desc_status_tag,
+    output wire [3:0]                           m_axis_write_desc_status_error,
     output wire                                 m_axis_write_desc_status_valid,
 
     /*
@@ -270,6 +272,7 @@ dma_if_pcie_us_rd_inst (
      * AXI read descriptor status output
      */
     .m_axis_read_desc_status_tag(m_axis_read_desc_status_tag),
+    .m_axis_read_desc_status_error(m_axis_read_desc_status_error),
     .m_axis_read_desc_status_valid(m_axis_read_desc_status_valid),
 
     /*
@@ -379,6 +382,7 @@ dma_if_pcie_us_wr_inst (
      * AXI write descriptor status output
      */
     .m_axis_write_desc_status_tag(m_axis_write_desc_status_tag),
+    .m_axis_write_desc_status_error(m_axis_write_desc_status_error),
     .m_axis_write_desc_status_valid(m_axis_write_desc_status_valid),
 
     /*

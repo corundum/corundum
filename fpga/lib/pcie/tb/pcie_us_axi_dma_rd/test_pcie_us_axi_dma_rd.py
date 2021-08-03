@@ -46,7 +46,7 @@ DescBus, DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Des
 )
 
 DescStatusBus, DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",
-    signals=["tag", "valid"]
+    signals=["tag", "error", "valid"]
 )
 
 
@@ -192,6 +192,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
                 tb.log.info("status: %s", status)
 
                 assert int(status.tag) == cur_tag
+                assert int(status.error) == 0
 
                 tb.log.debug("%s", tb.axi_ram.hexdump_str((axi_addr & ~0xf)-16, (((axi_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
 
@@ -203,15 +204,86 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
     await RisingEdge(dut.clk)
 
 
+async def run_test_read_errors(dut, idle_inserter=None, backpressure_inserter=None):
+
+    tb = TB(dut)
+
+    tag_count = 2**len(tb.read_desc_source.bus.tag)
+
+    cur_tag = 1
+
+    tb.set_idle_generator(idle_inserter)
+    tb.set_backpressure_generator(backpressure_inserter)
+
+    await FallingEdge(dut.rst)
+    await Timer(100, 'ns')
+
+    await tb.rc.enumerate(enable_bus_mastering=True)
+
+    mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
+
+    tb.dut.enable <= 1
+
+    tb.log.info("Test bad DMA read (UR) short")
+
+    desc = DescTransaction(pcie_addr=mem_base-512, axi_addr=0, len=8, tag=cur_tag)
+    await tb.read_desc_source.send(desc)
+
+    status = await tb.read_desc_status_sink.recv()
+
+    tb.log.info("status: %s", status)
+
+    assert int(status.tag) == cur_tag
+    assert int(status.error) == 10
+
+    cur_tag = (cur_tag + 1) % tag_count
+
+    tb.log.info("Test bad DMA read (UR) first")
+
+    desc = DescTransaction(pcie_addr=mem_base-512, axi_addr=0, len=1024, tag=cur_tag)
+    await tb.read_desc_source.send(desc)
+
+    status = await tb.read_desc_status_sink.recv()
+
+    tb.log.info("status: %s", status)
+
+    assert int(status.tag) == cur_tag
+    assert int(status.error) == 10
+
+    cur_tag = (cur_tag + 1) % tag_count
+
+    tb.log.info("Test bad DMA read (UR) last")
+
+    desc = DescTransaction(pcie_addr=mem_base+16*1024*1024-512, axi_addr=0, len=1024, tag=cur_tag)
+    await tb.read_desc_source.send(desc)
+
+    status = await tb.read_desc_status_sink.recv()
+
+    tb.log.info("status: %s", status)
+
+    assert int(status.tag) == cur_tag
+    assert int(status.error) == 10
+
+    cur_tag = (cur_tag + 1) % tag_count
+
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
+
 def cycle_pause():
     return itertools.cycle([1, 1, 1, 0])
 
 
 if cocotb.SIM_NAME:
 
-    factory = TestFactory(run_test_read)
-    factory.add_option(("idle_inserter", "backpressure_inserter"), [(None, None), (cycle_pause, cycle_pause)])
-    factory.generate_tests()
+    for test in [
+                run_test_read,
+                run_test_read_errors,
+            ]:
+
+        factory = TestFactory(test)
+        factory.add_option(("idle_inserter", "backpressure_inserter"), [(None, None), (cycle_pause, cycle_pause)])
+        factory.generate_tests()
 
 
 # cocotb-test
@@ -248,7 +320,7 @@ def test_pcie_us_axi_dma_rd(request, axis_pcie_data_width, pcie_offset):
     parameters['PCIE_TAG_COUNT'] = 64 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 256
     parameters['LEN_WIDTH'] = 20
     parameters['TAG_WIDTH'] = 8
-    parameters['OP_TABLE_SIZE'] = min(2**parameters['AXI_ID_WIDTH'], parameters['PCIE_TAG_COUNT'])
+    parameters['OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
     parameters['TX_LIMIT'] = 2**(parameters['RQ_SEQ_NUM_WIDTH']-1)
     parameters['TX_FC_ENABLE'] = 1
 

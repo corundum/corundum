@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2019 Alex Forencich
+Copyright (c) 2019-2021 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -122,6 +122,7 @@ module dma_if_pcie_us_rd #
      * AXI read descriptor status output
      */
     output wire [TAG_WIDTH-1:0]                 m_axis_read_desc_status_tag,
+    output wire [3:0]                           m_axis_read_desc_status_error,
     output wire                                 m_axis_read_desc_status_valid,
 
     /*
@@ -289,7 +290,7 @@ localparam [2:0]
     CPL_STATUS_CRS = 3'b010, // configuration request retry status
     CPL_STATUS_CA  = 3'b100; // completer abort
 
-localparam [4:0]
+localparam [3:0]
     RC_ERROR_NORMAL_TERMINATION = 4'b0000,
     RC_ERROR_POISONED = 4'b0001,
     RC_ERROR_BAD_STATUS = 4'b0010,
@@ -299,6 +300,19 @@ localparam [4:0]
     RC_ERROR_INVALID_TAG = 4'b0110,
     RC_ERROR_TIMEOUT = 4'b1001,
     RC_ERROR_FLR = 4'b1000;
+
+localparam [3:0]
+    DMA_ERROR_NONE = 4'd0,
+    DMA_ERROR_TIMEOUT = 4'd1,
+    DMA_ERROR_PARITY = 4'd2,
+    DMA_ERROR_AXI_RD_SLVERR = 4'd4,
+    DMA_ERROR_AXI_RD_DECERR = 4'd5,
+    DMA_ERROR_AXI_WR_SLVERR = 4'd6,
+    DMA_ERROR_AXI_WR_DECERR = 4'd7,
+    DMA_ERROR_PCIE_FLR = 4'd8,
+    DMA_ERROR_PCIE_CPL_POISONED = 4'd9,
+    DMA_ERROR_PCIE_CPL_STATUS_UR = 4'd10,
+    DMA_ERROR_PCIE_CPL_STATUS_CA = 4'd11;
 
 localparam [1:0]
     REQ_STATE_IDLE = 2'd0,
@@ -355,6 +369,7 @@ reg ram_wrap_reg = 1'b0, ram_wrap_next;
 reg [OFFSET_WIDTH+1-1:0] cycle_byte_count_reg = {OFFSET_WIDTH+1{1'b0}}, cycle_byte_count_next;
 reg [RAM_OFFSET_WIDTH-1:0] start_offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, start_offset_next;
 reg [RAM_OFFSET_WIDTH-1:0] end_offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, end_offset_next;
+reg [2:0] cpl_status_reg = 3'b000, cpl_status_next;
 reg [PCIE_TAG_WIDTH-1:0] pcie_tag_reg = {PCIE_TAG_WIDTH{1'b0}}, pcie_tag_next;
 reg [OP_TAG_WIDTH-1:0] op_tag_reg = {OP_TAG_WIDTH{1'b0}}, op_tag_next;
 reg final_cpl_reg = 1'b0, final_cpl_next;
@@ -377,17 +392,21 @@ reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0, status_fifo_rd_pt
 reg [OP_TAG_WIDTH-1:0] status_fifo_op_tag[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 reg [SEG_COUNT-1:0] status_fifo_mask[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 reg status_fifo_finish[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+reg [3:0] status_fifo_error[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 reg [OP_TAG_WIDTH-1:0] status_fifo_wr_op_tag;
 reg [SEG_COUNT-1:0] status_fifo_wr_mask;
 reg status_fifo_wr_finish;
+reg [3:0] status_fifo_wr_error;
 reg status_fifo_we;
 reg status_fifo_mask_reg = 1'b0, status_fifo_mask_next;
 reg status_fifo_finish_reg = 1'b0, status_fifo_finish_next;
+reg [3:0] status_fifo_error_reg = 4'd0, status_fifo_error_next;
 reg status_fifo_we_reg = 1'b0, status_fifo_we_next;
 reg status_fifo_half_full_reg = 1'b0;
 reg [OP_TAG_WIDTH-1:0] status_fifo_rd_op_tag_reg = 0, status_fifo_rd_op_tag_next;
 reg [SEG_COUNT-1:0] status_fifo_rd_mask_reg = 0, status_fifo_rd_mask_next;
 reg status_fifo_rd_finish_reg = 1'b0, status_fifo_rd_finish_next;
+reg [3:0] status_fifo_rd_error_reg = 4'd0, status_fifo_rd_error_next;
 reg status_fifo_rd_valid_reg = 1'b0, status_fifo_rd_valid_next;
 
 reg [RQ_SEQ_NUM_WIDTH-1:0] active_tx_count_reg = {RQ_SEQ_NUM_WIDTH{1'b0}};
@@ -398,6 +417,7 @@ reg s_axis_rc_tready_reg = 1'b0, s_axis_rc_tready_next;
 reg s_axis_read_desc_ready_reg = 1'b0, s_axis_read_desc_ready_next;
 
 reg [TAG_WIDTH-1:0] m_axis_read_desc_status_tag_reg = {TAG_WIDTH{1'b0}}, m_axis_read_desc_status_tag_next;
+reg [3:0] m_axis_read_desc_status_error_reg = 4'd0, m_axis_read_desc_status_error_next;
 reg m_axis_read_desc_status_valid_reg = 1'b0, m_axis_read_desc_status_valid_next;
 
 reg status_error_cor_reg = 1'b0, status_error_cor_next;
@@ -426,6 +446,7 @@ assign s_axis_rc_tready = s_axis_rc_tready_reg;
 assign s_axis_read_desc_ready = s_axis_read_desc_ready_reg;
 
 assign m_axis_read_desc_status_tag = m_axis_read_desc_status_tag_reg;
+assign m_axis_read_desc_status_error = m_axis_read_desc_status_error_reg;
 assign m_axis_read_desc_status_valid = m_axis_read_desc_status_valid_reg;
 
 assign status_error_cor = status_error_cor_reg;
@@ -467,6 +488,9 @@ reg op_table_start_en;
 reg [OP_TAG_WIDTH-1:0] op_table_read_start_ptr;
 reg op_table_read_start_commit;
 reg op_table_read_start_en;
+reg [OP_TAG_WIDTH-1:0] op_table_update_status_ptr;
+reg [3:0] op_table_update_status_error;
+reg op_table_update_status_en;
 reg [OP_TAG_WIDTH-1:0] op_table_read_finish_ptr;
 reg op_table_read_finish_en;
 
@@ -476,6 +500,9 @@ reg op_table_read_init_b [2**OP_TAG_WIDTH-1:0];
 reg op_table_read_commit [2**OP_TAG_WIDTH-1:0];
 reg [OP_TABLE_READ_COUNT_WIDTH-1:0] op_table_read_count_start [2**OP_TAG_WIDTH-1:0];
 reg [OP_TABLE_READ_COUNT_WIDTH-1:0] op_table_read_count_finish [2**OP_TAG_WIDTH-1:0];
+reg op_table_error_a [2**OP_TAG_WIDTH-1:0];
+reg op_table_error_b [2**OP_TAG_WIDTH-1:0];
+reg [3:0] op_table_error_code [2**OP_TAG_WIDTH-1:0];
 
 reg [OP_TAG_WIDTH+1-1:0] op_tag_fifo_wr_ptr_reg = 0;
 reg [OP_TAG_WIDTH+1-1:0] op_tag_fifo_rd_ptr_reg = 0, op_tag_fifo_rd_ptr_next;
@@ -493,6 +520,9 @@ initial begin
         op_table_read_commit[i] = 0;
         op_table_read_count_start[i] = 0;
         op_table_read_count_finish[i] = 0;
+        op_table_error_a[i] = 0;
+        op_table_error_b[i] = 0;
+        op_table_error_code[i] = 0;
     end
 
     for (i = 0; i < 2**PCIE_TAG_WIDTH; i = i + 1) begin
@@ -796,6 +826,7 @@ always @* begin
     start_offset_next = start_offset_reg;
     end_offset_next = end_offset_reg;
     op_dword_count_next = op_dword_count_reg;
+    cpl_status_next = cpl_status_reg;
     pcie_tag_next = pcie_tag_reg;
     op_tag_next = op_tag_reg;
     final_cpl_next = final_cpl_reg;
@@ -807,6 +838,7 @@ always @* begin
 
     status_fifo_mask_next = 1'b1;
     status_fifo_finish_next = 1'b0;
+    status_fifo_error_next = DMA_ERROR_NONE;
     status_fifo_we_next = 1'b0;
 
     out_done_ack = {SEG_COUNT{1'b0}};
@@ -849,7 +881,7 @@ always @* begin
                     //s_axis_rc_tdata[29]; // locked read
                     //s_axis_rc_tdata[30]; // request completed
                     op_dword_count_next = s_axis_rc_tdata[42:32]; // DWORD count
-                    //s_axis_rc_tdata[45:43]; // completion status
+                    cpl_status_next = s_axis_rc_tdata[45:43]; // completion status
                     //s_axis_rc_tdata[46]; // poisoned completion
                     //s_axis_rc_tdata[63:48]; // requester ID
                     pcie_tag_next = s_axis_rc_tdata[71:64]; // tag
@@ -931,21 +963,85 @@ always @* begin
 
                     op_tag_next = pcie_tag_table_op_tag[pcie_tag_next];
 
-                    if (pcie_tag_table_active_b[pcie_tag_next] != pcie_tag_table_active_a[pcie_tag_next] && error_code_next == RC_ERROR_NORMAL_TERMINATION) begin
+                    if (pcie_tag_table_active_b[pcie_tag_next] == pcie_tag_table_active_a[pcie_tag_next]) begin
+                        // tag not active, handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
+
+                        // drop TLP and report correctable error
+                        status_error_cor_next = 1'b1;
+                        if (s_axis_rc_tlast) begin
+                            tlp_state_next = TLP_STATE_IDLE;
+                        end else begin
+                            s_axis_rc_tready_next = init_done_reg;
+                            tlp_state_next = TLP_STATE_WAIT_END;
+                        end
+                    end else if (error_code_next == RC_ERROR_MISMATCH) begin
+                        // format/status mismatch, handle as malformed TLP (2.3.2)
+                        // ATTR or TC mismatch, handle as malformed TLP (2.3.2)
+
+                        // drop TLP and report uncorrectable error
+                        status_error_uncor_next = 1'b1;
+                        if (s_axis_rc_tlast) begin
+                            tlp_state_next = TLP_STATE_IDLE;
+                        end else begin
+                            s_axis_rc_tready_next = init_done_reg;
+                            tlp_state_next = TLP_STATE_WAIT_END;
+                        end
+                    end else if (error_code_next == RC_ERROR_POISONED || error_code_next == RC_ERROR_BAD_STATUS ||
+                            error_code_next == RC_ERROR_TIMEOUT || error_code_next == RC_ERROR_FLR) begin
+                        // transfer-terminating error
+
+                        if (error_code_next == RC_ERROR_POISONED) begin
+                            // poisoned TLP, handle as advisory non-fatal (6.2.3.2.4.3)
+                            // drop TLP and report correctable error
+                            status_error_cor_next = 1'b1;
+                            status_fifo_error_next = DMA_ERROR_PCIE_CPL_POISONED;
+                        end else if (error_code_next == RC_ERROR_BAD_STATUS) begin
+                            // bad status, handle as advisory non-fatal (6.2.3.2.4.1)
+                            // drop TLP and report correctable error
+                            status_error_cor_next = 1'b1;
+                            if (cpl_status_next == CPL_STATUS_CA) begin
+                                status_fifo_error_next = DMA_ERROR_PCIE_CPL_STATUS_CA;
+                            end else begin
+                                status_fifo_error_next = DMA_ERROR_PCIE_CPL_STATUS_UR;
+                            end
+                        end else if (error_code_next == RC_ERROR_TIMEOUT) begin
+                            // timeout, handle as uncorrectable (6.2.3.2.4.4)
+                            // drop TLP and report uncorrectable error
+                            status_error_uncor_next = 1'b1;
+                            status_fifo_error_next = DMA_ERROR_TIMEOUT;
+                        end else if (error_code_next == RC_ERROR_FLR) begin
+                            // FLR; not an actual completion so no error to report
+                            // drop TLP
+                            status_fifo_error_next = DMA_ERROR_PCIE_FLR;
+                        end
+
+                        finish_tag_next = 1'b1;
+
+                        status_fifo_mask_next = 1'b0;
+                        status_fifo_finish_next = 1'b1;
+                        status_fifo_we_next = 1'b1;
+
+                        if (s_axis_rc_tlast) begin
+                            tlp_state_next = TLP_STATE_IDLE;
+                        end else begin
+                            s_axis_rc_tready_next = init_done_reg;
+                            tlp_state_next = TLP_STATE_WAIT_END;
+                        end
+                    end else begin
                         // no error
 
                         if (zero_len_next) begin
                             status_fifo_mask_next = 1'b0;
-                            status_fifo_finish_next = 1'b0;
-                            status_fifo_we_next = 1'b1;
                         end else begin
                             rc_tdata_int_next = s_axis_rc_tdata;
                             rc_tvalid_int_next = 1'b1;
 
                             status_fifo_mask_next = 1'b1;
-                            status_fifo_finish_next = 1'b0;
-                            status_fifo_we_next = 1'b1;
                         end
+
+                        status_fifo_finish_next = 1'b0;
+                        status_fifo_error_next = DMA_ERROR_NONE;
+                        status_fifo_we_next = 1'b1;
 
                         if (last_cycle) begin
                             if (final_cpl_next) begin
@@ -958,58 +1054,6 @@ always @* begin
                             tlp_state_next = TLP_STATE_IDLE;
                         end else begin
                             tlp_state_next = TLP_STATE_WRITE;
-                        end
-                    end else if (error_code_next == RC_ERROR_MISMATCH) begin
-                        // mismatched fields
-                        // Handle as malformed TLP (2.3.2)
-                        // drop TLP and report uncorrectable error
-                        status_error_uncor_next = 1'b1;
-                        if (s_axis_rc_tlast) begin
-                            tlp_state_next = TLP_STATE_IDLE;
-                        end else begin
-                            s_axis_rc_tready_next = init_done_reg;
-                            tlp_state_next = TLP_STATE_WAIT_END;
-                        end
-                    end else if (pcie_tag_table_active_b[pcie_tag_next] == pcie_tag_table_active_a[pcie_tag_next] || error_code_next == RC_ERROR_INVALID_TAG) begin
-                        // invalid tag
-                        // Handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
-                        // drop TLP and report correctable error
-                        status_error_cor_next = 1'b1;
-                        if (s_axis_rc_tlast) begin
-                            tlp_state_next = TLP_STATE_IDLE;
-                        end else begin
-                            s_axis_rc_tready_next = init_done_reg;
-                            tlp_state_next = TLP_STATE_WAIT_END;
-                        end
-                    end else begin
-                        // request terminated by other error (tag valid)
-                        // report error
-                        case (error_code_next)
-                            RC_ERROR_POISONED: status_error_cor_next = 1'b1; // advisory non-fatal (6.2.3.2.4.3)
-                            RC_ERROR_BAD_STATUS: status_error_cor_next = 1'b1; // advisory non-fatal (6.2.3.2.4.1)
-                            RC_ERROR_INVALID_LENGTH: status_error_cor_next = 1'b1; // unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
-                            RC_ERROR_MISMATCH: status_error_uncor_next = 1'b1; // malformed TLP (2.3.2)
-                            RC_ERROR_INVALID_ADDRESS: status_error_cor_next = 1'b1; // unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
-                            RC_ERROR_INVALID_TAG: status_error_cor_next = 1'b1; // unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
-                            RC_ERROR_TIMEOUT: status_error_uncor_next = 1'b1; // uncorrectable (6.2.3.2.4.4)
-                            RC_ERROR_FLR: status_error_cor_next = 1'b1; // unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
-                            default: status_error_uncor_next = 1'b1;
-                        endcase
-                        // last request in current transfer
-
-                        // release tag
-                        finish_tag_next = 1'b1;
-
-                        status_fifo_mask_next = 1'b0;
-                        status_fifo_finish_next = 1'b1;
-                        status_fifo_we_next = 1'b1;
-
-                        // drop TLP
-                        if (s_axis_rc_tlast) begin
-                            tlp_state_next = TLP_STATE_IDLE;
-                        end else begin
-                            s_axis_rc_tready_next = init_done_reg;
-                            tlp_state_next = TLP_STATE_WAIT_END;
                         end
                     end
                 end else begin
@@ -1026,7 +1070,7 @@ always @* begin
                     //s_axis_rc_tdata[29]; // locked read
                     //s_axis_rc_tdata[30]; // request completed
                     op_dword_count_next = s_axis_rc_tdata[42:32]; // DWORD count
-                    //s_axis_rc_tdata[45:43]; // completion status
+                    cpl_status_next = s_axis_rc_tdata[45:43]; // completion status
                     //s_axis_rc_tdata[46]; // poisoned completion
                     //s_axis_rc_tdata[63:48]; // requester ID
 
@@ -1107,21 +1151,85 @@ always @* begin
 
                 op_tag_next = pcie_tag_table_op_tag[pcie_tag_next];
 
-                if (pcie_tag_table_active_b[pcie_tag_next] != pcie_tag_table_active_a[pcie_tag_next] && error_code_reg == RC_ERROR_NORMAL_TERMINATION) begin
+                if (pcie_tag_table_active_b[pcie_tag_next] == pcie_tag_table_active_a[pcie_tag_next]) begin
+                    // tag not active, handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
+
+                    // drop TLP and report correctable error
+                    status_error_cor_next = 1'b1;
+                    if (s_axis_rc_tlast) begin
+                        tlp_state_next = TLP_STATE_IDLE;
+                    end else begin
+                        s_axis_rc_tready_next = init_done_reg;
+                        tlp_state_next = TLP_STATE_WAIT_END;
+                    end
+                end else if (error_code_next == RC_ERROR_MISMATCH) begin
+                    // format/status mismatch, handle as malformed TLP (2.3.2)
+                    // ATTR or TC mismatch, handle as malformed TLP (2.3.2)
+
+                    // drop TLP and report uncorrectable error
+                    status_error_uncor_next = 1'b1;
+                    if (s_axis_rc_tlast) begin
+                        tlp_state_next = TLP_STATE_IDLE;
+                    end else begin
+                        s_axis_rc_tready_next = init_done_reg;
+                        tlp_state_next = TLP_STATE_WAIT_END;
+                    end
+                end else if (error_code_next == RC_ERROR_POISONED || error_code_next == RC_ERROR_BAD_STATUS ||
+                        error_code_next == RC_ERROR_TIMEOUT || error_code_next == RC_ERROR_FLR) begin
+                    // transfer-terminating error
+
+                    if (error_code_next == RC_ERROR_POISONED) begin
+                        // poisoned TLP, handle as advisory non-fatal (6.2.3.2.4.3)
+                        // drop TLP and report correctable error
+                        status_error_cor_next = 1'b1;
+                        status_fifo_error_next = DMA_ERROR_PCIE_CPL_POISONED;
+                    end else if (error_code_next == RC_ERROR_BAD_STATUS) begin
+                        // bad status, handle as advisory non-fatal (6.2.3.2.4.1)
+                        // drop TLP and report correctable error
+                        status_error_cor_next = 1'b1;
+                        if (cpl_status_reg == CPL_STATUS_CA) begin
+                            status_fifo_error_next = DMA_ERROR_PCIE_CPL_STATUS_CA;
+                        end else begin
+                            status_fifo_error_next = DMA_ERROR_PCIE_CPL_STATUS_UR;
+                        end
+                    end else if (error_code_next == RC_ERROR_TIMEOUT) begin
+                        // timeout, handle as uncorrectable (6.2.3.2.4.4)
+                        // drop TLP and report uncorrectable error
+                        status_error_uncor_next = 1'b1;
+                        status_fifo_error_next = DMA_ERROR_TIMEOUT;
+                    end else if (error_code_next == RC_ERROR_FLR) begin
+                        // FLR; not an actual completion so no error to report
+                        // drop TLP
+                        status_fifo_error_next = DMA_ERROR_PCIE_FLR;
+                    end
+
+                    finish_tag_next = 1'b1;
+
+                    status_fifo_mask_next = 1'b0;
+                    status_fifo_finish_next = 1'b1;
+                    status_fifo_we_next = 1'b1;
+
+                    if (s_axis_rc_tlast) begin
+                        tlp_state_next = TLP_STATE_IDLE;
+                    end else begin
+                        s_axis_rc_tready_next = init_done_reg;
+                        tlp_state_next = TLP_STATE_WAIT_END;
+                    end
+                end else begin
                     // no error
 
                     if (zero_len_next) begin
                         status_fifo_mask_next = 1'b0;
-                        status_fifo_finish_next = 1'b0;
-                        status_fifo_we_next = 1'b1;
                     end else begin
                         rc_tdata_int_next = s_axis_rc_tdata;
                         rc_tvalid_int_next = 1'b1;
 
                         status_fifo_mask_next = 1'b1;
-                        status_fifo_finish_next = 1'b0;
-                        status_fifo_we_next = 1'b1;
                     end
+
+                    status_fifo_finish_next = 1'b0;
+                    status_fifo_error_next = DMA_ERROR_NONE;
+                    status_fifo_we_next = 1'b1;
 
                     if (last_cycle) begin
                         if (final_cpl_next) begin
@@ -1131,62 +1239,9 @@ always @* begin
                             finish_tag_next = 1'b1;
                             status_fifo_finish_next = 1'b1;
                         end
-                        s_axis_rc_tready_next = init_done_reg;
                         tlp_state_next = TLP_STATE_IDLE;
                     end else begin
                         tlp_state_next = TLP_STATE_WRITE;
-                    end
-                end else if (error_code_next == RC_ERROR_MISMATCH) begin
-                    // mismatched fields
-                    // Handle as malformed TLP (2.3.2)
-                    // drop TLP and report uncorrectable error
-                    status_error_uncor_next = 1'b1;
-                    s_axis_rc_tready_next = init_done_reg;
-                    if (s_axis_rc_tlast) begin
-                        tlp_state_next = TLP_STATE_IDLE;
-                    end else begin
-                        tlp_state_next = TLP_STATE_WAIT_END;
-                    end
-                end else if (pcie_tag_table_active_b[pcie_tag_next] == pcie_tag_table_active_a[pcie_tag_next] || error_code_next == RC_ERROR_INVALID_TAG) begin
-                    // invalid tag or mismatched fields (tag invalid)
-                    // Handle as unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
-                    // drop TLP and report correctable error
-                    status_error_cor_next = 1'b1;
-                    s_axis_rc_tready_next = init_done_reg;
-                    if (s_axis_rc_tlast) begin
-                        tlp_state_next = TLP_STATE_IDLE;
-                    end else begin
-                        tlp_state_next = TLP_STATE_WAIT_END;
-                    end
-                end else begin
-                    // request terminated by other error (tag valid)
-                    // report error
-                    case (error_code_next)
-                        RC_ERROR_POISONED: status_error_cor_next = 1'b1; // advisory non-fatal (6.2.3.2.4.3)
-                        RC_ERROR_BAD_STATUS: status_error_cor_next = 1'b1; // advisory non-fatal (6.2.3.2.4.1)
-                        RC_ERROR_INVALID_LENGTH: status_error_cor_next = 1'b1; // unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
-                        RC_ERROR_MISMATCH: status_error_uncor_next = 1'b1; // malformed TLP (2.3.2)
-                        RC_ERROR_INVALID_ADDRESS: status_error_cor_next = 1'b1; // unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
-                        RC_ERROR_INVALID_TAG: status_error_cor_next = 1'b1; // unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
-                        RC_ERROR_TIMEOUT: status_error_uncor_next = 1'b1; // uncorrectable (6.2.3.2.4.4)
-                        RC_ERROR_FLR: status_error_cor_next = 1'b1; // unexpected completion (2.3.2), advisory non-fatal (6.2.3.2.4.5)
-                        default: status_error_uncor_next = 1'b1;
-                    endcase
-                    // last request in current transfer
-
-                    // release tag
-                    finish_tag_next = 1'b1;
-
-                    status_fifo_mask_next = 1'b0;
-                    status_fifo_finish_next = 1'b1;
-                    status_fifo_we_next = 1'b1;
-
-                    // drop TLP
-                    s_axis_rc_tready_next = init_done_reg;
-                    if (s_axis_rc_tlast) begin
-                        tlp_state_next = TLP_STATE_IDLE;
-                    end else begin
-                        tlp_state_next = TLP_STATE_WAIT_END;
                     end
                 end
             end else begin
@@ -1230,6 +1285,7 @@ always @* begin
 
                 status_fifo_mask_next = 1'b1;
                 status_fifo_finish_next = 1'b0;
+                status_fifo_error_next = DMA_ERROR_NONE;
                 status_fifo_we_next = 1'b1;
 
                 if (last_cycle) begin
@@ -1305,22 +1361,40 @@ always @* begin
     status_fifo_wr_op_tag = op_tag_reg;
     status_fifo_wr_mask = status_fifo_mask_reg ? ram_mask_reg : 0;
     status_fifo_wr_finish = status_fifo_finish_reg;
+    status_fifo_wr_error = status_fifo_error_reg;
     status_fifo_we = 1'b0;
 
     if (status_fifo_we_reg) begin
         status_fifo_wr_op_tag = op_tag_reg;
         status_fifo_wr_mask = status_fifo_mask_reg ? ram_mask_reg : 0;
         status_fifo_wr_finish = status_fifo_finish_reg;
+        status_fifo_wr_error = status_fifo_error_reg;
         status_fifo_we = 1'b1;
     end
 
     status_fifo_rd_op_tag_next = status_fifo_rd_op_tag_reg;
     status_fifo_rd_mask_next = status_fifo_rd_mask_reg;
     status_fifo_rd_finish_next = status_fifo_rd_finish_reg;
+    status_fifo_rd_error_next = status_fifo_rd_error_reg;
     status_fifo_rd_valid_next = status_fifo_rd_valid_reg;
 
     m_axis_read_desc_status_tag_next = op_table_tag[status_fifo_rd_op_tag_reg];
+    if (status_fifo_rd_error_reg != DMA_ERROR_NONE) begin
+        m_axis_read_desc_status_error_next = status_fifo_rd_error_reg;
+    end else if (op_table_error_a[status_fifo_rd_op_tag_reg] != op_table_error_b[status_fifo_rd_op_tag_reg]) begin
+        m_axis_read_desc_status_error_next = op_table_error_code[status_fifo_rd_op_tag_reg];
+    end else begin
+        m_axis_read_desc_status_error_next = DMA_ERROR_NONE;
+    end
     m_axis_read_desc_status_valid_next = 1'b0;
+
+    op_table_update_status_ptr = status_fifo_rd_op_tag_reg;
+    if (status_fifo_rd_error_reg != DMA_ERROR_NONE) begin
+        op_table_update_status_error = status_fifo_rd_error_reg;
+    end else begin
+        op_table_update_status_error = DMA_ERROR_NONE;
+    end
+    op_table_update_status_en = 1'b0;
 
     op_table_read_finish_ptr = status_fifo_rd_op_tag_reg;
     op_table_read_finish_en = 1'b0;
@@ -1335,17 +1409,13 @@ always @* begin
     end else if (status_fifo_rd_valid_reg && (status_fifo_rd_mask_reg & ~out_done) == 0) begin
         // got write completion, pop and return status
         status_fifo_rd_valid_next = 1'b0;
+        op_table_update_status_en = 1'b1;
 
         out_done_ack = status_fifo_rd_mask_reg;
 
         if (status_fifo_rd_finish_reg) begin
             // mark done
-            op_table_read_finish_ptr = status_fifo_rd_op_tag_reg;
             op_table_read_finish_en = 1'b1;
-
-            op_tag_fifo_wr_tag = status_fifo_rd_op_tag_reg;
-
-            m_axis_read_desc_status_tag_next = op_table_tag[status_fifo_rd_op_tag_reg];
 
             if (op_table_read_commit[op_table_read_finish_ptr] && (op_table_read_count_start[op_table_read_finish_ptr] == op_table_read_count_finish[op_table_read_finish_ptr])) begin
                 op_tag_fifo_we = 1'b1;
@@ -1359,6 +1429,7 @@ always @* begin
         status_fifo_rd_op_tag_next = status_fifo_op_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
         status_fifo_rd_mask_next = status_fifo_mask[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
         status_fifo_rd_finish_next = status_fifo_finish[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+        status_fifo_rd_error_next = status_fifo_error[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
         status_fifo_rd_valid_next = 1'b1;
         status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
     end
@@ -1403,6 +1474,7 @@ always @(posedge clk) begin
     start_offset_reg <= start_offset_next;
     end_offset_reg <= end_offset_next;
     op_dword_count_reg <= op_dword_count_next;
+    cpl_status_reg <= cpl_status_next;
     pcie_tag_reg <= pcie_tag_next;
     op_tag_reg <= op_tag_next;
     final_cpl_reg <= final_cpl_next;
@@ -1417,6 +1489,7 @@ always @(posedge clk) begin
     s_axis_read_desc_ready_reg <= s_axis_read_desc_ready_next;
 
     m_axis_read_desc_status_tag_reg <= m_axis_read_desc_status_tag_next;
+    m_axis_read_desc_status_error_reg <= m_axis_read_desc_status_error_next;
     m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
 
     max_read_request_size_dw_reg <= 11'd32 << (max_read_request_size > 5 ? 5 : max_read_request_size);
@@ -1427,17 +1500,20 @@ always @(posedge clk) begin
         status_fifo_op_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_op_tag;
         status_fifo_mask[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_mask;
         status_fifo_finish[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_finish;
+        status_fifo_error[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_error;
         status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
     end
     status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
 
     status_fifo_mask_reg <= status_fifo_mask_next;
     status_fifo_finish_reg <= status_fifo_finish_next;
+    status_fifo_error_reg <= status_fifo_error_next;
     status_fifo_we_reg <= status_fifo_we_next;
 
     status_fifo_rd_op_tag_reg <= status_fifo_rd_op_tag_next;
     status_fifo_rd_mask_reg <= status_fifo_rd_mask_next;
     status_fifo_rd_finish_reg <= status_fifo_rd_finish_next;
+    status_fifo_rd_error_reg <= status_fifo_rd_error_next;
     status_fifo_rd_valid_reg <= status_fifo_rd_valid_next;
 
     status_fifo_half_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**(STATUS_FIFO_ADDR_WIDTH-1);
@@ -1494,9 +1570,11 @@ always @(posedge clk) begin
 
     if (init_op_tag_reg) begin
         op_table_read_init_a[init_count_reg] <= 1'b0;
+        op_table_error_a[init_count_reg] <= 1'b0;
     end else if (op_table_start_en) begin
         op_table_tag[op_table_start_ptr] <= op_table_start_tag;
         op_table_read_init_a[op_table_start_ptr] <= !op_table_read_init_b[op_table_start_ptr];
+        op_table_error_a[op_table_start_ptr] <= op_table_error_b[op_table_start_ptr];
     end
 
     if (init_op_tag_reg) begin
@@ -1509,6 +1587,15 @@ always @(posedge clk) begin
             op_table_read_count_start[op_table_read_start_ptr] <= op_table_read_count_finish[op_table_read_start_ptr];
         end else begin
             op_table_read_count_start[op_table_read_start_ptr] <= op_table_read_count_start[op_table_read_start_ptr] + 1;
+        end
+    end
+
+    if (init_op_tag_reg) begin
+        op_table_error_b[init_count_reg] <= 1'b0;
+    end else if (op_table_update_status_en) begin
+        if (op_table_update_status_error != 0) begin
+            op_table_error_code[op_table_update_status_ptr] <= op_table_update_status_error;
+            op_table_error_b[op_table_update_status_ptr] <= !op_table_error_a[op_table_update_status_ptr];
         end
     end
 

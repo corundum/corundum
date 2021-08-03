@@ -46,7 +46,7 @@ DescBus, DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Des
 )
 
 DescStatusBus, DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",
-    signals=["tag", "valid"]
+    signals=["tag", "error", "valid"]
 )
 
 
@@ -179,6 +179,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
                 tb.log.info("status: %s", status)
 
                 assert int(status.tag) == cur_tag
+                assert int(status.error) == 0
 
                 tb.log.debug("%s", hexdump_str(mem_data, (pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="PCIe "))
 

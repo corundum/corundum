@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2019 Alex Forencich
+Copyright (c) 2019-2021 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -81,6 +81,7 @@ module dma_if_mux_wr #
      * Write descriptor status input (from DMA interface)
      */
     input  wire [M_TAG_WIDTH-1:0]                     s_axis_write_desc_status_tag,
+    input  wire [3:0]                                 s_axis_write_desc_status_error,
     input  wire                                       s_axis_write_desc_status_valid,
 
     /*
@@ -98,6 +99,7 @@ module dma_if_mux_wr #
      * Write descriptor status output
      */
     output wire [PORTS*S_TAG_WIDTH-1:0]               m_axis_write_desc_status_tag,
+    output wire [PORTS*4-1:0]                         m_axis_write_desc_status_error,
     output wire [PORTS-1:0]                           m_axis_write_desc_status_valid,
 
     /*
@@ -301,13 +303,16 @@ end
 
 // descriptor status demux
 reg [S_TAG_WIDTH-1:0] m_axis_write_desc_status_tag_reg = {S_TAG_WIDTH{1'b0}}, m_axis_write_desc_status_tag_next;
+reg [5:0] m_axis_write_desc_status_error_reg = 6'd0, m_axis_write_desc_status_error_next;
 reg [PORTS-1:0] m_axis_write_desc_status_valid_reg = {PORTS{1'b0}}, m_axis_write_desc_status_valid_next;
 
 assign m_axis_write_desc_status_tag = {PORTS{m_axis_write_desc_status_tag_reg}};
+assign m_axis_write_desc_status_error = {PORTS{m_axis_write_desc_status_error_reg}};
 assign m_axis_write_desc_status_valid = m_axis_write_desc_status_valid_reg;
 
 always @* begin
     m_axis_write_desc_status_tag_next = s_axis_write_desc_status_tag;
+    m_axis_write_desc_status_error_next = s_axis_write_desc_status_error;
     m_axis_write_desc_status_valid_next = s_axis_write_desc_status_valid << (PORTS > 1 ? s_axis_write_desc_status_tag[S_TAG_WIDTH+CL_PORTS-1:S_TAG_WIDTH] : 0);
 end
 
@@ -319,6 +324,7 @@ always @(posedge clk) begin
     end
 
     m_axis_write_desc_status_tag_reg <= m_axis_write_desc_status_tag_next;
+    m_axis_write_desc_status_error_reg <= m_axis_write_desc_status_error_next;
 end
 
 generate

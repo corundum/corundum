@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2019 Alex Forencich
+Copyright (c) 2019-2021 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -127,6 +127,7 @@ module dma_if_pcie_us_wr #
      * AXI write descriptor status output
      */
     output wire [TAG_WIDTH-1:0]                 m_axis_write_desc_status_tag,
+    output wire [3:0]                           m_axis_write_desc_status_error,
     output wire                                 m_axis_write_desc_status_valid,
 
     /*
@@ -398,6 +399,7 @@ wire axis_rq_seq_num_valid_1_int = s_axis_rq_seq_num_valid_1 && !(s_axis_rq_seq_
 assign s_axis_write_desc_ready = s_axis_write_desc_ready_reg;
 
 assign m_axis_write_desc_status_tag = m_axis_write_desc_status_tag_reg;
+assign m_axis_write_desc_status_error = 4'd0;
 assign m_axis_write_desc_status_valid = m_axis_write_desc_status_valid_reg;
 
 assign ram_rd_cmd_sel = ram_rd_cmd_sel_reg;
@@ -763,9 +765,6 @@ wire [3:0] last_be = 4'b1111 >> (3 - ((tlp_addr_reg[1:0] + tlp_len_reg[1:0] - 1)
 always @* begin
     tlp_state_next = TLP_STATE_IDLE;
     tlp_output_state_next = TLP_OUTPUT_STATE_IDLE;
-
-    m_axis_write_desc_status_tag_next = m_axis_write_desc_status_tag_reg;
-    m_axis_write_desc_status_valid_next = 1'b0;
 
     ram_rd_resp_ready_cmb = {SEG_COUNT{1'b0}};
 
@@ -1155,13 +1154,15 @@ always @* begin
         mask_fifo_rd_ptr_next = mask_fifo_rd_ptr_reg+1;
     end
 
+    m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
+    m_axis_write_desc_status_valid_next = 1'b0;
+
     op_table_finish_en = 1'b0;
 
     if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && (!RQ_SEQ_NUM_ENABLE || op_table_tx_done[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) && op_table_finish_ptr_reg != op_table_tx_finish_ptr_reg) begin
         op_table_finish_en = 1'b1;
 
         if (op_table_last[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
-            m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
             m_axis_write_desc_status_valid_next = 1'b1;
         end
     end

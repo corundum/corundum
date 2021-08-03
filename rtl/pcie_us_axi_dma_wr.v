@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2018 Alex Forencich
+Copyright (c) 2018-2021 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -124,6 +124,7 @@ module pcie_us_axi_dma_wr #
      * AXI write descriptor status output
      */
     output wire [TAG_WIDTH-1:0]               m_axis_write_desc_status_tag,
+    output wire [3:0]                         m_axis_write_desc_status_error,
     output wire                               m_axis_write_desc_status_valid,
 
     /*
@@ -251,11 +252,25 @@ localparam [3:0]
     REQ_MSG_VENDOR = 4'b1101,
     REQ_MSG_ATS = 4'b1110;
 
-localparam [2:0]
-    CPL_STATUS_SC  = 3'b000, // successful completion
-    CPL_STATUS_UR  = 3'b001, // unsupported request
-    CPL_STATUS_CRS = 3'b010, // configuration request retry status
-    CPL_STATUS_CA  = 3'b100; // completer abort
+localparam [1:0]
+    AXI_RESP_OKAY = 2'b00,
+    AXI_RESP_EXOKAY = 2'b01,
+    AXI_RESP_SLVERR = 2'b10,
+    AXI_RESP_DECERR = 2'b11;
+
+localparam [3:0]
+    DMA_ERROR_NONE = 4'd0,
+    DMA_ERROR_PARITY = 4'd1,
+    DMA_ERROR_CPL_POISONED = 4'd2,
+    DMA_ERROR_CPL_STATUS_UR = 4'd3,
+    DMA_ERROR_CPL_STATUS_CRS = 4'd4,
+    DMA_ERROR_CPL_STATUS_CA = 4'd5,
+    DMA_ERROR_PCIE_FLR = 4'd6,
+    DMA_ERROR_AXI_RD_SLVERR = 4'd8,
+    DMA_ERROR_AXI_RD_DECERR = 4'd9,
+    DMA_ERROR_AXI_WR_SLVERR = 4'd10,
+    DMA_ERROR_AXI_WR_DECERR = 4'd11,
+    DMA_ERROR_TIMEOUT = 4'd15;
 
 localparam [1:0]
     AXI_STATE_IDLE = 2'd0,
@@ -302,6 +317,7 @@ reg [CYCLE_COUNT_WIDTH-1:0] output_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, 
 reg input_active_reg = 1'b0, input_active_next;
 reg bubble_cycle_reg = 1'b0, bubble_cycle_next;
 reg last_cycle_reg = 1'b0, last_cycle_next;
+reg [1:0] rresp_reg = AXI_RESP_OKAY, rresp_next;
 
 reg [TAG_WIDTH-1:0] tlp_cmd_tag_reg = {TAG_WIDTH{1'b0}}, tlp_cmd_tag_next;
 reg tlp_cmd_last_reg = 1'b0, tlp_cmd_last_next;
@@ -322,6 +338,7 @@ reg s_axis_rq_tready_reg = 1'b0, s_axis_rq_tready_next;
 reg s_axis_write_desc_ready_reg = 1'b0, s_axis_write_desc_ready_next;
 
 reg [TAG_WIDTH-1:0] m_axis_write_desc_status_tag_reg = {TAG_WIDTH{1'b0}}, m_axis_write_desc_status_tag_next;
+reg [3:0] m_axis_write_desc_status_error_reg = 4'd0, m_axis_write_desc_status_error_next;
 reg m_axis_write_desc_status_valid_reg = 1'b0, m_axis_write_desc_status_valid_next;
 
 reg [AXI_ADDR_WIDTH-1:0] m_axi_araddr_reg = {AXI_ADDR_WIDTH{1'b0}}, m_axi_araddr_next;
@@ -355,6 +372,7 @@ wire axis_rq_seq_num_valid_1_int = s_axis_rq_seq_num_valid_1 && !(s_axis_rq_seq_
 assign s_axis_write_desc_ready = s_axis_write_desc_ready_reg;
 
 assign m_axis_write_desc_status_tag = m_axis_write_desc_status_tag_reg;
+assign m_axis_write_desc_status_error = m_axis_write_desc_status_error_reg;
 assign m_axis_write_desc_status_valid = m_axis_write_desc_status_valid_reg;
 
 assign m_axi_arid = {AXI_ID_WIDTH{1'b0}};
@@ -384,6 +402,7 @@ reg op_table_start_en;
 reg [OP_TAG_WIDTH+1-1:0] op_table_tx_start_ptr_reg = 0;
 reg op_table_tx_start_en;
 reg [OP_TAG_WIDTH+1-1:0] op_table_tx_finish_ptr_reg = 0;
+reg [1:0] op_table_tx_finish_resp = 0;
 reg op_table_tx_finish_en;
 reg [OP_TAG_WIDTH+1-1:0] op_table_finish_ptr_reg = 0;
 reg op_table_finish_en;
@@ -400,6 +419,7 @@ reg [OFFSET_WIDTH-1:0] op_table_offset[2**OP_TAG_WIDTH-1:0];
 reg op_table_bubble_cycle[2**OP_TAG_WIDTH-1:0];
 reg [TAG_WIDTH-1:0] op_table_tag[2**OP_TAG_WIDTH-1:0];
 reg op_table_last[2**OP_TAG_WIDTH-1:0];
+reg [1:0] op_table_resp[2**OP_TAG_WIDTH-1:0];
 
 integer i;
 
@@ -415,6 +435,7 @@ initial begin
         op_table_tag[i] = 0;
         op_table_bubble_cycle[i] = 0;
         op_table_last[i] = 0;
+        op_table_resp[i] = 0;
     end
 end
 
@@ -635,9 +656,6 @@ always @* begin
 
     s_axis_rq_tready_next = 1'b0;
 
-    m_axis_write_desc_status_tag_next = m_axis_write_desc_status_tag_reg;
-    m_axis_write_desc_status_valid_next = 1'b0;
-
     m_axi_rready_next = 1'b0;
 
     tlp_addr_next = tlp_addr_reg;
@@ -651,7 +669,14 @@ always @* begin
     bubble_cycle_next = bubble_cycle_reg;
     last_cycle_next = last_cycle_reg;
 
+    if (m_axi_rready && m_axi_rvalid && (m_axi_rresp == AXI_RESP_SLVERR || m_axi_rresp == AXI_RESP_DECERR)) begin
+        rresp_next = m_axi_rresp;
+    end else begin
+        rresp_next = rresp_reg;
+    end
+
     op_table_tx_start_en = 1'b0;
+    op_table_tx_finish_resp = rresp_next;
     op_table_tx_finish_en = 1'b0;
 
     inc_active_tx = 1'b0;
@@ -818,7 +843,10 @@ always @* begin
 
                         if (last_cycle_reg) begin
                             m_axis_rq_tlast_int = 1'b1;
+                            op_table_tx_finish_resp = rresp_next;
                             op_table_tx_finish_en = 1'b1;
+
+                            rresp_next = AXI_RESP_OKAY;
 
                             // skip idle state if possible
                             tlp_addr_next = op_table_pcie_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
@@ -941,7 +969,10 @@ always @* begin
 
                     if (last_cycle_reg) begin
                         m_axis_rq_tlast_int = 1'b1;
+                        op_table_tx_finish_resp = rresp_next;
                         op_table_tx_finish_en = 1'b1;
+
+                        rresp_next = AXI_RESP_OKAY;
 
                         // skip idle state if possible
                         tlp_addr_next = op_table_pcie_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
@@ -1006,13 +1037,22 @@ always @* begin
         end
     endcase
 
+    m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
+    if (op_table_resp[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] == AXI_RESP_SLVERR) begin
+        m_axis_write_desc_status_error_next = DMA_ERROR_AXI_RD_SLVERR;
+    end else if (op_table_resp[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] == AXI_RESP_DECERR) begin
+        m_axis_write_desc_status_error_next = DMA_ERROR_AXI_RD_DECERR;
+    end else begin
+        m_axis_write_desc_status_error_next = DMA_ERROR_NONE;
+    end
+    m_axis_write_desc_status_valid_next = 1'b0;
+
     op_table_finish_en = 1'b0;
 
     if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && (!RQ_SEQ_NUM_ENABLE || op_table_tx_done[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) && op_table_finish_ptr_reg != op_table_tx_finish_ptr_reg) begin
         op_table_finish_en = 1'b1;
 
         if (op_table_last[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
-            m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
             m_axis_write_desc_status_valid_next = 1'b1;
         end
     end
@@ -1039,6 +1079,7 @@ always @(posedge clk) begin
     input_active_reg <= input_active_next;
     bubble_cycle_reg <= bubble_cycle_next;
     last_cycle_reg <= last_cycle_next;
+    rresp_reg <= rresp_next;
 
     tlp_cmd_tag_reg <= tlp_cmd_tag_next;
     tlp_cmd_last_reg <= tlp_cmd_last_next;
@@ -1048,6 +1089,7 @@ always @(posedge clk) begin
     s_axis_write_desc_ready_reg <= s_axis_write_desc_ready_next;
 
     m_axis_write_desc_status_tag_reg <= m_axis_write_desc_status_tag_next;
+    m_axis_write_desc_status_error_reg <= m_axis_write_desc_status_error_next;
     m_axis_write_desc_status_valid_reg <= m_axis_write_desc_status_valid_next;
 
     m_axi_araddr_reg <= m_axi_araddr_next;
@@ -1097,6 +1139,7 @@ always @(posedge clk) begin
 
     if (op_table_tx_finish_en) begin
         op_table_tx_finish_ptr_reg <= op_table_tx_finish_ptr_reg + 1;
+        op_table_resp[op_table_tx_finish_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_tx_finish_resp;
     end
 
     if (axis_rq_seq_num_valid_0_int) begin
@@ -1125,6 +1168,8 @@ always @(posedge clk) begin
         m_axis_write_desc_status_valid_reg <= 1'b0;
         m_axi_arvalid_reg <= 1'b0;
         m_axi_rready_reg <= 1'b0;
+
+        rresp_reg <= AXI_RESP_OKAY;
 
         active_tx_count_reg <= {RQ_SEQ_NUM_WIDTH{1'b0}};
         active_tx_count_av_reg <= 1'b1;

@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2019 Alex Forencich
+Copyright (c) 2019-2021 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -81,6 +81,7 @@ module dma_if_mux #
      * Read descriptor status input (from DMA interface)
      */
     input  wire [M_TAG_WIDTH-1:0]                     s_axis_read_desc_status_tag,
+    input  wire [3:0]                                 s_axis_read_desc_status_error,
     input  wire                                       s_axis_read_desc_status_valid,
 
     /*
@@ -98,6 +99,7 @@ module dma_if_mux #
      * Write descriptor status input (from DMA interface)
      */
     input  wire [M_TAG_WIDTH-1:0]                     s_axis_write_desc_status_tag,
+    input  wire [3:0]                                 s_axis_write_desc_status_error,
     input  wire                                       s_axis_write_desc_status_valid,
 
     /*
@@ -115,6 +117,7 @@ module dma_if_mux #
      * Read descriptor status output
      */
     output wire [PORTS*S_TAG_WIDTH-1:0]               m_axis_read_desc_status_tag,
+    output wire [PORTS*4-1:0]                         m_axis_read_desc_status_error,
     output wire [PORTS-1:0]                           m_axis_read_desc_status_valid,
 
     /*
@@ -132,6 +135,7 @@ module dma_if_mux #
      * Write descriptor status output
      */
     output wire [PORTS*S_TAG_WIDTH-1:0]               m_axis_write_desc_status_tag,
+    output wire [PORTS*4-1:0]                         m_axis_write_desc_status_error,
     output wire [PORTS-1:0]                           m_axis_write_desc_status_valid,
 
     /*
@@ -206,6 +210,7 @@ dma_if_mux_rd_inst (
      * Descriptor status input (from DMA interface)
      */
     .s_axis_read_desc_status_tag(s_axis_read_desc_status_tag),
+    .s_axis_read_desc_status_error(s_axis_read_desc_status_error),
     .s_axis_read_desc_status_valid(s_axis_read_desc_status_valid),
 
     /*
@@ -223,6 +228,7 @@ dma_if_mux_rd_inst (
      * Descriptor status output
      */
     .m_axis_read_desc_status_tag(m_axis_read_desc_status_tag),
+    .m_axis_read_desc_status_error(m_axis_read_desc_status_error),
     .m_axis_read_desc_status_valid(m_axis_read_desc_status_valid),
 
     /*
@@ -283,6 +289,7 @@ dma_if_mux_wr_inst (
      * Descriptor status input (from DMA interface)
      */
     .s_axis_write_desc_status_tag(s_axis_write_desc_status_tag),
+    .s_axis_write_desc_status_error(s_axis_write_desc_status_error),
     .s_axis_write_desc_status_valid(s_axis_write_desc_status_valid),
 
     /*
@@ -300,6 +307,7 @@ dma_if_mux_wr_inst (
      * Descriptor status output
      */
     .m_axis_write_desc_status_tag(m_axis_write_desc_status_tag),
+    .m_axis_write_desc_status_error(m_axis_write_desc_status_error),
     .m_axis_write_desc_status_valid(m_axis_write_desc_status_valid),
 
     /*

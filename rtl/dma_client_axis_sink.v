@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2019 Alex Forencich
+Copyright (c) 2019-2021 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -87,6 +87,7 @@ module dma_client_axis_sink #
     output wire [AXIS_ID_WIDTH-1:0]             m_axis_write_desc_status_id,
     output wire [AXIS_DEST_WIDTH-1:0]           m_axis_write_desc_status_dest,
     output wire [AXIS_USER_WIDTH-1:0]           m_axis_write_desc_status_user,
+    output wire [3:0]                           m_axis_write_desc_status_error,
     output wire                                 m_axis_write_desc_status_valid,
 
     /*
@@ -250,6 +251,7 @@ assign m_axis_write_desc_status_tag = m_axis_write_desc_status_tag_reg;
 assign m_axis_write_desc_status_id = m_axis_write_desc_status_id_reg;
 assign m_axis_write_desc_status_dest = m_axis_write_desc_status_dest_reg;
 assign m_axis_write_desc_status_user = m_axis_write_desc_status_user_reg;
+assign m_axis_write_desc_status_error = 4'd0;
 assign m_axis_write_desc_status_valid = m_axis_write_desc_status_valid_reg;
 
 assign s_axis_write_data_tready = s_axis_write_data_tready_reg;

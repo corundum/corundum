@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2018 Alex Forencich
+Copyright (c) 2018-2021 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -62,7 +62,7 @@ module pcie_us_axi_dma #
     // Tag field width
     parameter TAG_WIDTH = 8,
     // Operation table size (read)
-    parameter READ_OP_TABLE_SIZE = (2**AXI_ID_WIDTH < PCIE_TAG_COUNT) ? 2**AXI_ID_WIDTH : PCIE_TAG_COUNT,
+    parameter READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
     // In-flight transmit limit (read)
     parameter READ_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
     // Transmit flow control (read)
@@ -127,6 +127,7 @@ module pcie_us_axi_dma #
      * AXI read descriptor status output
      */
     output wire [TAG_WIDTH-1:0]               m_axis_read_desc_status_tag,
+    output wire [3:0]                         m_axis_read_desc_status_error,
     output wire                               m_axis_read_desc_status_valid,
 
     /*
@@ -143,6 +144,7 @@ module pcie_us_axi_dma #
      * AXI write descriptor status output
      */
     output wire [TAG_WIDTH-1:0]               m_axis_write_desc_status_tag,
+    output wire [3:0]                         m_axis_write_desc_status_error,
     output wire                               m_axis_write_desc_status_valid,
 
     /*
@@ -285,6 +287,7 @@ pcie_us_axi_dma_rd_inst (
      * AXI read descriptor status output
      */
     .m_axis_read_desc_status_tag(m_axis_read_desc_status_tag),
+    .m_axis_read_desc_status_error(m_axis_read_desc_status_error),
     .m_axis_read_desc_status_valid(m_axis_read_desc_status_valid),
 
     /*
@@ -404,6 +407,7 @@ pcie_us_axi_dma_wr_inst (
      * AXI write descriptor status output
      */
     .m_axis_write_desc_status_tag(m_axis_write_desc_status_tag),
+    .m_axis_write_desc_status_error(m_axis_write_desc_status_error),
     .m_axis_write_desc_status_valid(m_axis_write_desc_status_valid),
 
     /*

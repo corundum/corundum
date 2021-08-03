@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2019 Alex Forencich
+Copyright (c) 2019-2021 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -86,6 +86,7 @@ module dma_client_axis_source #
      * AXI read descriptor status output
      */
     output wire [TAG_WIDTH-1:0]                 m_axis_read_desc_status_tag,
+    output wire [3:0]                           m_axis_read_desc_status_error,
     output wire                                 m_axis_read_desc_status_valid,
 
     /*
@@ -236,6 +237,7 @@ reg  [AXIS_USER_WIDTH-1:0] m_axis_read_data_tuser_int;
 assign s_axis_read_desc_ready = s_axis_read_desc_ready_reg;
 
 assign m_axis_read_desc_status_tag = m_axis_read_desc_status_tag_reg;
+assign m_axis_read_desc_status_error = 4'd0;
 assign m_axis_read_desc_status_valid = m_axis_read_desc_status_valid_reg;
 
 assign ram_rd_cmd_addr = ram_rd_cmd_addr_reg;

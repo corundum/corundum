@@ -152,6 +152,7 @@ parameter ADDR_MASK = {AXI_ADDR_WIDTH{1'b1}} << $clog2(AXI_STRB_WIDTH);
 parameter CYCLE_COUNT_WIDTH = LEN_WIDTH - AXI_BURST_SIZE + 1;
 
 parameter STATUS_FIFO_ADDR_WIDTH = 5;
+parameter OUTPUT_FIFO_ADDR_WIDTH = 5;
 
 // bus width assertions
 initial begin
@@ -303,8 +304,7 @@ reg  [AXI_DATA_WIDTH-1:0] m_axi_wdata_int;
 reg  [AXI_STRB_WIDTH-1:0] m_axi_wstrb_int;
 reg                       m_axi_wlast_int;
 reg                       m_axi_wvalid_int;
-reg                       m_axi_wready_int_reg = 1'b0;
-wire                      m_axi_wready_int_early;
+wire                      m_axi_wready_int;
 
 assign s_axis_write_desc_ready = s_axis_write_desc_ready_reg;
 
@@ -510,7 +510,7 @@ always @* begin
                     addr_next = addr_reg + tr_word_count_next;
                     op_word_count_next = op_word_count_reg - tr_word_count_next;
 
-                    s_axis_write_data_tready_next = m_axi_wready_int_early && input_active_next;
+                    s_axis_write_data_tready_next = m_axi_wready_int && input_active_next;
 
                     inc_active = 1'b1;
 
@@ -523,9 +523,9 @@ always @* begin
             end
         end
         STATE_WRITE: begin
-            s_axis_write_data_tready_next = m_axi_wready_int_early && (last_transfer_reg || input_active_reg) && shift_axis_input_tready;
+            s_axis_write_data_tready_next = m_axi_wready_int && (last_transfer_reg || input_active_reg) && shift_axis_input_tready;
 
-            if (m_axi_wready_int_reg && ((s_axis_write_data_tready && shift_axis_tvalid) || (!input_active_reg && !last_transfer_reg) || !shift_axis_input_tready)) begin
+            if ((s_axis_write_data_tready && shift_axis_tvalid) || (!input_active_reg && !last_transfer_reg) || !shift_axis_input_tready) begin
                 if (s_axis_write_data_tready && s_axis_write_data_tvalid) begin
                     transfer_in_save = 1'b1;
 
@@ -689,7 +689,7 @@ always @* begin
                         end
                     end
                 end else begin
-                    s_axis_write_data_tready_next = m_axi_wready_int_early && (last_transfer_reg || input_active_next) && shift_axis_input_tready;
+                    s_axis_write_data_tready_next = m_axi_wready_int && (last_transfer_reg || input_active_next) && shift_axis_input_tready;
                     state_next = STATE_WRITE;
                 end
             end else begin
@@ -699,7 +699,7 @@ always @* begin
         STATE_FINISH_BURST: begin
             // finish current AXI burst
 
-            if (m_axi_wready_int_reg) begin
+            if (m_axi_wready_int) begin
                 // update counters
                 if (input_active_reg) begin
                     input_cycle_count_next = input_cycle_count_reg - 1;
@@ -885,80 +885,53 @@ end
 reg [AXI_DATA_WIDTH-1:0] m_axi_wdata_reg  = {AXI_DATA_WIDTH{1'b0}};
 reg [AXI_STRB_WIDTH-1:0] m_axi_wstrb_reg  = {AXI_STRB_WIDTH{1'b0}};
 reg                      m_axi_wlast_reg  = 1'b0;
-reg                      m_axi_wvalid_reg = 1'b0, m_axi_wvalid_next;
+reg                      m_axi_wvalid_reg = 1'b0;
 
-reg [AXI_DATA_WIDTH-1:0] temp_m_axi_wdata_reg  = {AXI_DATA_WIDTH{1'b0}};
-reg [AXI_STRB_WIDTH-1:0] temp_m_axi_wstrb_reg  = {AXI_STRB_WIDTH{1'b0}};
-reg                      temp_m_axi_wlast_reg  = 1'b0;
-reg                      temp_m_axi_wvalid_reg = 1'b0, temp_m_axi_wvalid_next;
+reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_fifo_wr_ptr_reg = 0;
+reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_fifo_rd_ptr_reg = 0;
+reg out_fifo_half_full_reg = 1'b0;
 
-// datapath control
-reg store_axi_w_int_to_output;
-reg store_axi_w_int_to_temp;
-reg store_axi_w_temp_to_output;
+wire out_fifo_full = out_fifo_wr_ptr_reg == (out_fifo_rd_ptr_reg ^ {1'b1, {OUTPUT_FIFO_ADDR_WIDTH{1'b0}}});
+wire out_fifo_empty = out_fifo_wr_ptr_reg == out_fifo_rd_ptr_reg;
+
+(* ram_style = "distributed" *)
+reg [AXI_DATA_WIDTH-1:0] out_fifo_wdata[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+(* ram_style = "distributed" *)
+reg [AXI_STRB_WIDTH-1:0] out_fifo_wstrb[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+(* ram_style = "distributed" *)
+reg                      out_fifo_wlast[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+
+assign m_axi_wready_int = !out_fifo_half_full_reg;
 
 assign m_axi_wdata  = m_axi_wdata_reg;
 assign m_axi_wstrb  = m_axi_wstrb_reg;
 assign m_axi_wvalid = m_axi_wvalid_reg;
 assign m_axi_wlast  = m_axi_wlast_reg;
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign m_axi_wready_int_early = m_axi_wready || (!temp_m_axi_wvalid_reg && (!m_axi_wvalid_reg || !m_axi_wvalid_int));
-
-always @* begin
-    // transfer sink ready state to source
-    m_axi_wvalid_next = m_axi_wvalid_reg;
-    temp_m_axi_wvalid_next = temp_m_axi_wvalid_reg;
-
-    store_axi_w_int_to_output = 1'b0;
-    store_axi_w_int_to_temp = 1'b0;
-    store_axi_w_temp_to_output = 1'b0;
-
-    if (m_axi_wready_int_reg) begin
-        // input is ready
-        if (m_axi_wready || !m_axi_wvalid_reg) begin
-            // output is ready or currently not valid, transfer data to output
-            m_axi_wvalid_next = m_axi_wvalid_int;
-            store_axi_w_int_to_output = 1'b1;
-        end else begin
-            // output is not ready, store input in temp
-            temp_m_axi_wvalid_next = m_axi_wvalid_int;
-            store_axi_w_int_to_temp = 1'b1;
-        end
-    end else if (m_axi_wready) begin
-        // input is not ready, but output is ready
-        m_axi_wvalid_next = temp_m_axi_wvalid_reg;
-        temp_m_axi_wvalid_next = 1'b0;
-        store_axi_w_temp_to_output = 1'b1;
-    end
-end
-
 always @(posedge clk) begin
+    m_axi_wvalid_reg <= m_axi_wvalid_reg && !m_axi_wready;
+
+    out_fifo_half_full_reg <= $unsigned(out_fifo_wr_ptr_reg - out_fifo_rd_ptr_reg) >= 2**(OUTPUT_FIFO_ADDR_WIDTH-1);
+
+    if (!out_fifo_full && m_axi_wvalid_int) begin
+        out_fifo_wdata[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axi_wdata_int;
+        out_fifo_wstrb[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axi_wstrb_int;
+        out_fifo_wlast[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axi_wlast_int;
+        out_fifo_wr_ptr_reg <= out_fifo_wr_ptr_reg + 1;
+    end
+
+    if (!out_fifo_empty && (!m_axi_wvalid_reg || m_axi_wready)) begin
+        m_axi_wdata_reg <= out_fifo_wdata[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+        m_axi_wstrb_reg <= out_fifo_wstrb[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+        m_axi_wlast_reg <= out_fifo_wlast[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+        m_axi_wvalid_reg <= 1'b1;
+        out_fifo_rd_ptr_reg <= out_fifo_rd_ptr_reg + 1;
+    end
+
     if (rst) begin
+        out_fifo_wr_ptr_reg <= 0;
+        out_fifo_rd_ptr_reg <= 0;
         m_axi_wvalid_reg <= 1'b0;
-        m_axi_wready_int_reg <= 1'b0;
-        temp_m_axi_wvalid_reg <= 1'b0;
-    end else begin
-        m_axi_wvalid_reg <= m_axi_wvalid_next;
-        m_axi_wready_int_reg <= m_axi_wready_int_early;
-        temp_m_axi_wvalid_reg <= temp_m_axi_wvalid_next;
-    end
-
-    // datapath
-    if (store_axi_w_int_to_output) begin
-        m_axi_wdata_reg <= m_axi_wdata_int;
-        m_axi_wstrb_reg <= m_axi_wstrb_int;
-        m_axi_wlast_reg <= m_axi_wlast_int;
-    end else if (store_axi_w_temp_to_output) begin
-        m_axi_wdata_reg <= temp_m_axi_wdata_reg;
-        m_axi_wstrb_reg <= temp_m_axi_wstrb_reg;
-        m_axi_wlast_reg <= temp_m_axi_wlast_reg;
-    end
-
-    if (store_axi_w_int_to_temp) begin
-        temp_m_axi_wdata_reg <= m_axi_wdata_int;
-        temp_m_axi_wstrb_reg <= m_axi_wstrb_int;
-        temp_m_axi_wlast_reg <= m_axi_wlast_int;
     end
 end
 

@@ -114,6 +114,21 @@ DMA interface mux module.  Enables sharing a DMA interface module between
 multiple DMA client modules.  Muxes descriptors, demuxes memory read commands,
 and muxes read data.
 
+### `dma_if_pcie` module
+
+PCIe DMA interface module.  Parametrizable interface width.  Uses a double
+width segmented memory interface.
+
+### `dma_if_pcie_rd` module
+
+PCIe DMA interface module.  Parametrizable interface width.  Uses a double
+width segmented memory interface.
+
+### `dma_if_pcie_wr` module
+
+PCIe DMA interface module.  Parametrizable interface width.  Uses a double
+width segmented memory interface.
+
 ### `dma_if_pcie_us` module
 
 PCIe DMA interface module for Xilinx UltraScale series FPGAs.  Supports 64,
@@ -142,6 +157,10 @@ module to a DMA client.
 Descriptor multiplexer/demultiplexer for PCIe AXI DMA module.  Enables sharing
 the PCIe AXI DMA module between multiple request sources, interleaving
 requests and distributing responses.
+
+### `pcie_axil_master` module
+
+PCIe AXI lite master module.  Parametrizable interface width.
 
 ### `pcie_us_axi_dma` module
 
@@ -196,6 +215,26 @@ incoming completions based on the requester ID (function).  Supports 64, 128,
 
 Configuration shim for Xilinx UltraScale series FPGAs.
 
+### `pcie_us_if` module
+
+PCIe interface shim for Xilinx UltraScale series FPGAs.
+
+### `pcie_us_if_cc` module
+
+PCIe interface shim (CC) for Xilinx UltraScale series FPGAs.
+
+### `pcie_us_if_cq` module
+
+PCIe interface shim (CQ) for Xilinx UltraScale series FPGAs.
+
+### `pcie_us_if_rc` module
+
+PCIe interface shim (RC) for Xilinx UltraScale series FPGAs.
+
+### `pcie_us_if_rq` module
+
+PCIe interface shim (RQ) for Xilinx UltraScale series FPGAs.
+
 ### `pcie_us_msi` module
 
 MSI shim for Xilinx UltraScale series FPGAs.
@@ -222,21 +261,30 @@ signals together.
     dma_if_mux.v             : DMA interface mux
     dma_if_mux_rd.v          : DMA interface mux (read)
     dma_if_mux_wr.v          : DMA interface mux (write)
-    dma_if_pcie_us.v         ; DMA interface for Xilinx UltraScale PCIe
-    dma_if_pcie_us_rd.v      ; DMA interface for Xilinx UltraScale PCIe (read)
-    dma_if_pcie_us_wr.v      ; DMA interface for Xilinx UltraScale PCIe (write)
+    dma_if_pcie.v            : DMA interface
+    dma_if_pcie_rd.v         : DMA interface (read)
+    dma_if_pcie_wr.v         : DMA interface (write)
+    dma_if_pcie_us.v         : DMA interface for Xilinx UltraScale PCIe
+    dma_if_pcie_us_rd.v      : DMA interface for Xilinx UltraScale PCIe (read)
+    dma_if_pcie_us_wr.v      : DMA interface for Xilinx UltraScale PCIe (write)
     dma_psdpram.v            : DMA RAM (segmented simple dual port RAM)
     pcie_axi_dma_desc_mux.v  : Descriptor mux for DMA engine
+    pcie_axil_master.v       : PCIe AXI Lite master module
     pcie_us_axi_dma.v        : PCIe AXI DMA module (Xilinx UltraScale)
     pcie_us_axi_dma_rd.v     : PCIe AXI DMA read module (Xilinx UltraScale)
     pcie_us_axi_dma_wr.v     : PCIe AXI DMA write module (Xilinx UltraScale)
-    pcie_us_axi_master.v     : PCIe AXI Master module (Xilinx UltraScale)
-    pcie_us_axi_master_rd.v  : PCIe AXI Master read module (Xilinx UltraScale)
-    pcie_us_axi_master_wr.v  : PCIe AXI Master write module (Xilinx UltraScale)
-    pcie_us_axil_master.v    : PCIe AXI Lite Master module (Xilinx UltraScale)
+    pcie_us_axi_master.v     : PCIe AXI master module (Xilinx UltraScale)
+    pcie_us_axi_master_rd.v  : PCIe AXI master read module (Xilinx UltraScale)
+    pcie_us_axi_master_wr.v  : PCIe AXI master write module (Xilinx UltraScale)
+    pcie_us_axil_master.v    : PCIe AXI Lite master module (Xilinx UltraScale)
     pcie_us_axis_cq_demux.v  : Parametrizable AXI stream CQ demux
     pcie_us_axis_rc_demux.v  : Parametrizable AXI stream RC demux
     pcie_us_cfg.v            : Configuration shim for Xilinx UltraScale devices
+    pcie_us_if.v             : PCIe interface shim (Xilinx UltraScale)
+    pcie_us_if_cc.v          : PCIe interface shim (CC) (Xilinx UltraScale)
+    pcie_us_if_cq.v          : PCIe interface shim (CQ) (Xilinx UltraScale)
+    pcie_us_if_rc.v          : PCIe interface shim (RC) (Xilinx UltraScale)
+    pcie_us_if_rq.v          : PCIe interface shim (RQ) (Xilinx UltraScale)
     pcie_us_msi.v            : MSI shim for Xilinx UltraScale devices
     priority_encoder.v       : Parametrizable priority encoder
     pulse_merge              : Parametrizable pulse merge module

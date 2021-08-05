@@ -84,7 +84,7 @@ class TB(object):
 
             rx_req_tlp_bus=PcieIfRxBus.from_prefix(dut, "rx_req_tlp"),
 
-            tx_cpl_tlp_bus=PcieIfTxBus.from_prefix(dut, "tx_cpl_tlp"),
+            tx_cpl_tlp_bus=PcieIfTxBus.from_prefix(dut, "tx_cpl_tlp")
         )
 
         self.dev.log.setLevel(logging.DEBUG)
@@ -154,6 +154,8 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
 
+    tb.dut.completer_id <= int(tb.dev.functions[0].pcie_id)
+
     for length in range(0, 5):
         for pcie_offset in range(4-length+1):
             tb.log.info("length %d, pcie_offset %d", length, pcie_offset)
@@ -189,6 +191,8 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
     await tb.rc.enumerate()
 
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
+
+    tb.dut.completer_id <= int(tb.dev.functions[0].pcie_id)
 
     for length in range(0, 5):
         for pcie_offset in range(4-length+1):
@@ -226,6 +230,8 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     await tb.rc.enumerate()
 
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
+
+    tb.dut.completer_id <= int(tb.dev.functions[0].pcie_id)
 
     tb.log.info("Test bad write")
 

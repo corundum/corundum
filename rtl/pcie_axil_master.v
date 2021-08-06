@@ -337,7 +337,7 @@ always @* begin
                 m_axil_wdata_next = rx_req_tlp_data[31:0];
                 m_axil_wstrb_next = rx_req_tlp_hdr_first_be;
 
-                if (!rx_req_tlp_hdr_fmt[1] && (rx_req_tlp_hdr_type == 5'b00000 || rx_req_tlp_hdr_type == 5'b00001)) begin
+                if (!rx_req_tlp_hdr_fmt[1] && rx_req_tlp_hdr_type == 5'b00000) begin
                     // read request
                     if (rx_req_tlp_hdr_length == 10'd1) begin
                         // length OK

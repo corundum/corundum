@@ -279,7 +279,6 @@ always @* begin
 
     m_axi_aregion_next = m_axi_aregion_reg;
     m_select_next = m_select_reg;
-    m_select_next = m_select_reg;
     m_axi_avalid_next = m_axi_avalid_reg && !m_axi_aready;
     m_decerr_next = m_decerr_reg;
     m_wc_valid_next = m_wc_valid_reg && !m_wc_ready;

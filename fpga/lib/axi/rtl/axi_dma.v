@@ -91,6 +91,7 @@ module axi_dma #
      * AXI read descriptor status output
      */
     output wire [TAG_WIDTH-1:0]       m_axis_read_desc_status_tag,
+    output wire [3:0]                 m_axis_read_desc_status_error,
     output wire                       m_axis_read_desc_status_valid,
 
     /*
@@ -122,6 +123,7 @@ module axi_dma #
     output wire [AXIS_ID_WIDTH-1:0]   m_axis_write_desc_status_id,
     output wire [AXIS_DEST_WIDTH-1:0] m_axis_write_desc_status_dest,
     output wire [AXIS_USER_WIDTH-1:0] m_axis_write_desc_status_user,
+    output wire [3:0]                 m_axis_write_desc_status_error,
     output wire                       m_axis_write_desc_status_valid,
 
     /*
@@ -224,6 +226,7 @@ axi_dma_rd_inst (
      * AXI read descriptor status output
      */
     .m_axis_read_desc_status_tag(m_axis_read_desc_status_tag),
+    .m_axis_read_desc_status_error(m_axis_read_desc_status_error),
     .m_axis_read_desc_status_valid(m_axis_read_desc_status_valid),
 
     /*
@@ -306,6 +309,7 @@ axi_dma_wr_inst (
     .m_axis_write_desc_status_id(m_axis_write_desc_status_id),
     .m_axis_write_desc_status_dest(m_axis_write_desc_status_dest),
     .m_axis_write_desc_status_user(m_axis_write_desc_status_user),
+    .m_axis_write_desc_status_error(m_axis_write_desc_status_error),
     .m_axis_write_desc_status_valid(m_axis_write_desc_status_valid),
 
     /*

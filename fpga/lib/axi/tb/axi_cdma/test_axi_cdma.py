@@ -42,7 +42,7 @@ DescBus, DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Des
 )
 
 DescStatusBus, DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",
-    signals=["tag", "valid"]
+    signals=["tag", "error", "valid"]
 )
 
 
@@ -123,6 +123,7 @@ async def run_test(dut, data_in=None, idle_inserter=None, backpressure_inserter=
 
                 tb.log.info("status: %s", status)
                 assert int(status.tag) == cur_tag
+                assert int(status.error) == 0
 
                 tb.log.debug("%s", tb.axi_ram.hexdump_str((write_addr & ~0xf)-16, (((write_addr & 0xf)+length-1) & ~0xf)+48))
 
@@ -156,7 +157,7 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 @pytest.mark.parametrize("unaligned", [0, 1])
 @pytest.mark.parametrize("axi_data_width", [8, 16, 32])
-def test_axi_dma(request, axi_data_width, unaligned):
+def test_axi_cdma(request, axi_data_width, unaligned):
     dut = "axi_cdma"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut

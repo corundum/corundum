@@ -1288,7 +1288,7 @@ wire [IF_COUNT*2-1:0]                   axil_if_csr_rresp;
 wire [IF_COUNT-1:0]                     axil_if_csr_rvalid;
 wire [IF_COUNT-1:0]                     axil_if_csr_rready;
 
-axil_interconnect #(
+axil_crossbar #(
     .DATA_WIDTH(AXIL_DATA_WIDTH),
     .ADDR_WIDTH(AXIL_ADDR_WIDTH),
     .S_COUNT(1),
@@ -1298,7 +1298,7 @@ axil_interconnect #(
     .M_CONNECT_READ({IF_COUNT{1'b1}}),
     .M_CONNECT_WRITE({IF_COUNT{1'b1}})
 )
-axil_interconnect_inst (
+axil_crossbar_inst (
     .clk(clk_250mhz),
     .rst(rst_250mhz),
     .s_axil_awaddr(axil_pcie_awaddr),
@@ -1341,7 +1341,7 @@ axil_interconnect_inst (
     .m_axil_rready(axil_if_rready)
 );
 
-axil_interconnect #(
+axil_crossbar #(
     .DATA_WIDTH(AXIL_DATA_WIDTH),
     .ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .S_COUNT(IF_COUNT),
@@ -1351,7 +1351,7 @@ axil_interconnect #(
     .M_CONNECT_READ({1{{IF_COUNT{1'b1}}}}),
     .M_CONNECT_WRITE({1{{IF_COUNT{1'b1}}}})
 )
-axil_csr_interconnect_inst (
+axil_csr_crossbar_inst (
     .clk(clk_250mhz),
     .rst(rst_250mhz),
     .s_axil_awaddr(axil_if_csr_awaddr),

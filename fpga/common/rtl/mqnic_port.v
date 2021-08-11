@@ -738,11 +738,11 @@ always @(posedge clk) begin
     end
 end
 
-// AXI lite interconnect
+// AXI lite crossbar
 parameter AXIL_S_COUNT = 1;
 parameter AXIL_M_COUNT = SCHED_COUNT+1;
 
-axil_interconnect #(
+axil_crossbar #(
     .DATA_WIDTH(AXIL_DATA_WIDTH),
     .ADDR_WIDTH(AXIL_ADDR_WIDTH),
     .STRB_WIDTH(AXIL_STRB_WIDTH),
@@ -752,7 +752,7 @@ axil_interconnect #(
     .M_CONNECT_READ({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}}),
     .M_CONNECT_WRITE({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}})
 )
-axil_interconnect_inst (
+axil_crossbar_inst (
     .clk(clk),
     .rst(rst),
     .s_axil_awaddr(s_axil_awaddr),

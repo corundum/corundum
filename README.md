@@ -62,8 +62,8 @@ distributing responses.
 
 AXI nonblocking crossbar interconnect with parametrizable data and address
 interface widths and master and slave interface counts.  Supports all burst
-types.  Fully nonblocking with completely separate read and write paths; ID
-based transaction ordering protection logic; and per-port address decode,
+types.  Fully nonblocking with completely separate read and write paths;
+ID-based transaction ordering protection logic; and per-port address decode,
 admission control, and decode error handling.  Wrapper for `axi_crossbar_rd`
 and `axi_crossbar_wr`.
 
@@ -78,7 +78,7 @@ Address decode and admission control module for AXI nonblocking crossbar interco
 AXI nonblocking crossbar interconnect with parametrizable data and address
 interface widths and master and slave interface counts.  Read interface only.
 Supports all burst types.  Fully nonblocking with completely separate read and
-write paths; ID based transaction ordering protection logic; and per-port
+write paths; ID-based transaction ordering protection logic; and per-port
 address decode, admission control, and decode error handling.
 
 ### `axi_crossbar_wr` module
@@ -86,7 +86,7 @@ address decode, admission control, and decode error handling.
 AXI nonblocking crossbar interconnect with parametrizable data and address
 interface widths and master and slave interface counts.  Write interface only.
 Supports all burst types.  Fully nonblocking with completely separate read and
-write paths; ID based transaction ordering protection logic; and per-port
+write paths; ID-based transaction ordering protection logic; and per-port
 address decode, admission control, and decode error handling.
 
 ### `axi_dma` module
@@ -226,6 +226,36 @@ interface widths.
 AXI lite clock domain crossing module with parametrizable data and address
 interface widths.
 
+### `axil_crossbar` module
+
+AXI lite nonblocking crossbar interconnect with parametrizable data and address
+interface widths and master and slave interface counts.  Fully nonblocking
+with completely separate read and write paths; FIFO-based transaction ordering
+protection logic; and per-port address decode, admission control, and decode
+error handling.  Wrapper for `axil_crossbar_rd` and `axil_crossbar_wr`.
+
+Wrappers can generated with `axil_crossbar_wrap.py`.
+
+### `axil_crossbar_addr` module
+
+Address decode and admission control module for AXI lite nonblocking crossbar interconnect.
+
+### `axil_crossbar_rd` module
+
+AXI lite nonblocking crossbar interconnect with parametrizable data and address
+interface widths and master and slave interface counts.  Read interface only.
+Fully nonblocking with completely separate read and write paths; FIFO-based
+transaction ordering protection logic; and per-port address decode, admission
+control, and decode error handling.
+
+### `axil_crossbar_wr` module
+
+AXI lite nonblocking crossbar interconnect with parametrizable data and address
+interface widths and master and slave interface counts.  Write interface only.
+Fully nonblocking with completely separate read and write paths; FIFO-based
+transaction ordering protection logic; and per-port address decode, admission
+control, and decode error handling.
+
 ### `axil_interconnect` module
 
 AXI lite shared interconnect with parametrizable data and address interface
@@ -333,8 +363,8 @@ registers can be individually bypassed.
     rtl/axi_cdma_desc_mux.v         : AXI CDMA descriptor mux
     rtl/axi_crossbar.v              : AXI nonblocking crossbar interconnect
     rtl/axi_crossbar_addr.v         : AXI crossbar address module
-    rtl/axi_crossbar_rd.v           : AXI crossbar read module
-    rtl/axi_crossbar_wr.v           : AXI crossbar write module
+    rtl/axi_crossbar_rd.v           : AXI crossbar interconnect (read)
+    rtl/axi_crossbar_wr.v           : AXI crossbar interconnect (write)
     rtl/axi_dma.v                   : AXI DMA engine
     rtl/axi_dma_desc_mux.v          : AXI DMA descriptor mux
     rtl/axi_dma_rd.v                : AXI DMA engine (read)
@@ -357,6 +387,10 @@ registers can be individually bypassed.
     rtl/axil_cdc.v                  : AXI lite CDC
     rtl/axil_cdc_rd.v               : AXI lite CDC (read)
     rtl/axil_cdc_wr.v               : AXI lite CDC (write)
+    rtl/axil_crossbar.v             : AXI lite nonblocking crossbar interconnect
+    rtl/axil_crossbar_addr.v        : AXI lite crossbar address module
+    rtl/axil_crossbar_rd.v          : AXI lite crossbar interconnect (read)
+    rtl/axil_crossbar_wr.v          : AXI lite crossbar interconnect (write)
     rtl/axil_interconnect.v         : AXI lite shared interconnect
     rtl/axil_ram.v                  : AXI lite RAM
     rtl/axil_register.v             : AXI lite register

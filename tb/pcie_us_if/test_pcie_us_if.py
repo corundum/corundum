@@ -92,10 +92,10 @@ class TB(object):
 
             # Requester reQuest Interface
             rq_bus=AxiStreamBus.from_prefix(dut, "m_axis_rq"),
-            # pcie_rq_seq_num0=dut.s_axis_rq_seq_num_0,
-            # pcie_rq_seq_num_vld0=dut.s_axis_rq_seq_num_valid_0,
-            # pcie_rq_seq_num1=dut.s_axis_rq_seq_num_1,
-            # pcie_rq_seq_num_vld1=dut.s_axis_rq_seq_num_valid_1,
+            pcie_rq_seq_num0=dut.s_axis_rq_seq_num_0,
+            pcie_rq_seq_num_vld0=dut.s_axis_rq_seq_num_valid_0,
+            pcie_rq_seq_num1=dut.s_axis_rq_seq_num_1,
+            pcie_rq_seq_num_vld1=dut.s_axis_rq_seq_num_valid_1,
             # pcie_rq_tag0
             # pcie_rq_tag1
             # pcie_rq_tag_av

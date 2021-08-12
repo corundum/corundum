@@ -376,6 +376,10 @@ wire [1:0] status_error_cor_int;
 
 wire [31:0] msi_irq;
 
+wire [7:0] pcie_tx_fc_nph_av;
+wire [7:0] pcie_tx_fc_ph_av;
+wire [11:0] pcie_tx_fc_pd_av;
+
 wire ext_tag_enable;
 
 // PCIe DMA control
@@ -815,6 +819,17 @@ pcie_if_inst (
     .s_axis_rq_seq_num_valid_1(1'b0),
 
     /*
+     * Flow control
+     */
+    .cfg_fc_ph(cfg_fc_ph),
+    .cfg_fc_pd(cfg_fc_pd),
+    .cfg_fc_nph(cfg_fc_nph),
+    .cfg_fc_npd(cfg_fc_npd),
+    .cfg_fc_cplh(cfg_fc_cplh),
+    .cfg_fc_cpld(cfg_fc_cpld),
+    .cfg_fc_sel(cfg_fc_sel),
+
+    /*
      * Configuration interface
      */
     .cfg_mgmt_addr(cfg_mgmt_addr[9:0]),
@@ -916,6 +931,16 @@ pcie_if_inst (
     .tx_cpl_tlp_ready(pcie_tx_cpl_tlp_ready),
 
     /*
+     * Flow control
+     */
+    .tx_fc_ph_av(pcie_tx_fc_ph_av),
+    .tx_fc_pd_av(pcie_tx_fc_pd_av),
+    .tx_fc_nph_av(pcie_tx_fc_nph_av),
+    .tx_fc_npd_av(),
+    .tx_fc_cplh_av(),
+    .tx_fc_cpld_av(),
+
+    /*
      * Configuration outputs
      */
     .ext_tag_enable(ext_tag_enable),
@@ -999,12 +1024,6 @@ pcie_axil_master_inst (
     .status_error_cor(status_error_cor_int[0]),
     .status_error_uncor(status_error_uncor_int[0])
 );
-
-assign cfg_fc_sel = 3'b100;
-
-wire [7:0] pcie_tx_fc_nph_av = cfg_fc_nph;
-wire [7:0] pcie_tx_fc_ph_av = cfg_fc_ph;
-wire [11:0] pcie_tx_fc_pd_av = cfg_fc_pd;
 
 dma_if_pcie #(
     .TLP_SEG_COUNT(TLP_SEG_COUNT),

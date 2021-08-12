@@ -376,6 +376,8 @@ class PcieIfSource(PcieIfBase):
 
         if hasattr(self.bus, "error"):
             self.bus.error.setimmediatevalue(0)
+        if hasattr(self.bus, "seq"):
+            self.bus.seq.setimmediatevalue(0)
         if hasattr(self.bus, "bar_id"):
             self.bus.bar_id.setimmediatevalue(0)
         if hasattr(self.bus, "tlp_abort"):

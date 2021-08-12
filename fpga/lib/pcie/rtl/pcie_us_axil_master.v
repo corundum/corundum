@@ -188,7 +188,6 @@ localparam [2:0]
 
 reg [2:0] state_reg = STATE_IDLE, state_next;
 
-reg [1:0] at_reg = 2'd0, at_next;
 reg [10:0] dword_count_reg = 11'd0, dword_count_next;
 reg [3:0] type_reg = 4'd0, type_next;
 reg [2:0] status_reg = 3'b000, status_next;
@@ -245,7 +244,6 @@ always @* begin
 
     s_axis_cq_tready_next = 1'b0;
 
-    at_next = at_reg;
     dword_count_next = dword_count_reg;
     type_next = type_reg;
     status_next = status_reg;
@@ -270,7 +268,7 @@ always @* begin
         4'bz100: m_axis_cc_tdata_int[6:0] = {m_axil_addr_reg[6:2], 2'b10}; // lower address
         4'b1000: m_axis_cc_tdata_int[6:0] = {m_axil_addr_reg[6:2], 2'b11}; // lower address
     endcase
-    m_axis_cc_tdata_int[9:8] = at_reg;
+    m_axis_cc_tdata_int[9:8] = 2'b00; // AT
     casez (first_be_reg)
         4'b0000: m_axis_cc_tdata_int[28:16] = 13'd1; // Byte count
         4'b0001: m_axis_cc_tdata_int[28:16] = 13'd1; // Byte count
@@ -340,7 +338,6 @@ always @* begin
 
             if (s_axis_cq_tready && s_axis_cq_tvalid) begin
                 // header fields
-                at_next = s_axis_cq_tdata[1:0];
                 m_axil_addr_next = {s_axis_cq_tdata[63:2], 2'b00};
                 if (AXIS_PCIE_DATA_WIDTH > 64) begin
                     dword_count_next = s_axis_cq_tdata[74:64];
@@ -826,7 +823,6 @@ always @(posedge clk) begin
         status_error_uncor_reg <= status_error_uncor_next;
     end
 
-    at_reg <= at_next;
     dword_count_reg <= dword_count_next;
     type_reg <= type_next;
     tag_reg <= tag_next;

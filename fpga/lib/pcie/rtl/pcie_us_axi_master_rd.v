@@ -230,7 +230,6 @@ reg [10:0] tlp_dword_count_reg = 11'd0, tlp_dword_count_next;
 reg [3:0] first_be_reg = 4'd0, first_be_next;
 reg [3:0] last_be_reg = 4'd0, last_be_next;
 
-reg [1:0] at_reg = 2'd0, at_next;
 reg [PCIE_ADDR_WIDTH-1:0] tlp_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, tlp_addr_next;
 reg [12:0] tlp_len_reg = 13'd0, tlp_len_next;
 reg [OFFSET_WIDTH-1:0] offset_reg = {OFFSET_WIDTH{1'b0}}, offset_next;
@@ -247,7 +246,6 @@ reg [7:0] tag_reg = 8'd0, tag_next;
 reg [2:0] tc_reg = 3'd0, tc_next;
 reg [2:0] attr_reg = 3'd0, attr_next;
 
-reg [1:0] tlp_cmd_at_reg = 2'd0, tlp_cmd_at_next;
 reg [PCIE_ADDR_WIDTH-1:0] tlp_cmd_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, tlp_cmd_addr_next;
 reg [12:0] tlp_cmd_byte_len_reg = 13'd0, tlp_cmd_byte_len_next;
 reg [10:0] tlp_cmd_dword_len_reg = 11'd0, tlp_cmd_dword_len_next;
@@ -354,7 +352,6 @@ always @* begin
     first_be_next = first_be_reg;
     last_be_next = last_be_reg;
 
-    tlp_cmd_at_next = tlp_cmd_at_reg;
     tlp_cmd_addr_next = tlp_cmd_addr_reg;
     tlp_cmd_byte_len_next = tlp_cmd_byte_len_reg;
     tlp_cmd_dword_len_next = tlp_cmd_dword_len_reg;
@@ -381,7 +378,6 @@ always @* begin
 
             if (s_axis_cq_tready & s_axis_cq_tvalid) begin
                 // header fields
-                tlp_cmd_at_next = s_axis_cq_tdata[1:0];
                 pcie_addr_next = {s_axis_cq_tdata[63:2], first_be_offset};
                 tlp_cmd_status_next = CPL_STATUS_SC; // successful completion
                 if (AXIS_PCIE_DATA_WIDTH > 64) begin
@@ -607,7 +603,6 @@ always @* begin
 
     m_axi_rready_next = 1'b0;
 
-    at_next = at_reg;
     tlp_addr_next = tlp_addr_reg;
     tlp_len_next = tlp_len_reg;
     dword_count_next = dword_count_reg;
@@ -631,7 +626,7 @@ always @* begin
     m_axis_cc_tuser_int = {AXIS_PCIE_CC_USER_WIDTH{1'b0}};
 
     m_axis_cc_tdata_int[6:0] = tlp_addr_reg; // lower address
-    m_axis_cc_tdata_int[9:8] = at_reg;
+    m_axis_cc_tdata_int[9:8] = 2'b00; // AT
     m_axis_cc_tdata_int[28:16] = tlp_len_reg; // byte count
     m_axis_cc_tdata_int[42:32] = dword_count_reg;
     m_axis_cc_tdata_int[45:43] = status_reg;
@@ -681,7 +676,6 @@ always @* begin
             m_axi_rready_next = 1'b0;
 
             // store TLP fields and transfer parameters
-            at_next = tlp_cmd_at_reg;
             tlp_addr_next = tlp_cmd_addr_reg;
             tlp_len_next = tlp_cmd_byte_len_reg;
             dword_count_next = tlp_cmd_dword_len_reg;
@@ -772,7 +766,6 @@ always @* begin
                             m_axis_cc_tlast_int = 1'b1;
 
                             // skip idle state if possible
-                            at_next = tlp_cmd_at_reg;
                             tlp_addr_next = tlp_cmd_addr_reg;
                             tlp_len_next = tlp_cmd_byte_len_reg;
                             dword_count_next = tlp_cmd_dword_len_reg;
@@ -844,7 +837,6 @@ always @* begin
                     m_axis_cc_tlast_int = 1'b1;
 
                     // skip idle state if possible
-                    at_next = tlp_cmd_at_reg;
                     tlp_addr_next = tlp_cmd_addr_reg;
                     tlp_len_next = tlp_cmd_byte_len_reg;
                     dword_count_next = tlp_cmd_dword_len_reg;
@@ -917,7 +909,6 @@ always @* begin
                         m_axis_cc_tlast_int = 1'b1;
 
                         // skip idle state if possible
-                        at_next = tlp_cmd_at_reg;
                         tlp_addr_next = tlp_cmd_addr_reg;
                         tlp_len_next = tlp_cmd_byte_len_reg;
                         dword_count_next = tlp_cmd_dword_len_reg;
@@ -982,7 +973,6 @@ always @* begin
                     tlp_state_next = TLP_STATE_CPL_2;
                 end else begin
                     // skip idle state if possible
-                    at_next = tlp_cmd_at_reg;
                     tlp_addr_next = tlp_cmd_addr_reg;
                     tlp_len_next = tlp_cmd_byte_len_reg;
                     dword_count_next = tlp_cmd_dword_len_reg;
@@ -1027,7 +1017,6 @@ always @* begin
 
             if (m_axis_cc_tready_int_reg) begin
                 // skip idle state if possible
-                at_next = tlp_cmd_at_reg;
                 tlp_addr_next = tlp_cmd_addr_reg;
                 tlp_len_next = tlp_cmd_byte_len_reg;
                 dword_count_next = tlp_cmd_dword_len_reg;
@@ -1091,7 +1080,6 @@ always @(posedge clk) begin
     first_be_reg <= first_be_next;
     last_be_reg <= last_be_next;
 
-    at_reg <= at_next;
     tlp_addr_reg <= tlp_addr_next;
     tlp_len_reg <= tlp_len_next;
     dword_count_reg <= dword_count_next;
@@ -1108,7 +1096,6 @@ always @(posedge clk) begin
     tc_reg <= tc_next;
     attr_reg <= attr_next;
 
-    tlp_cmd_at_reg <= tlp_cmd_at_next;
     tlp_cmd_addr_reg <= tlp_cmd_addr_next;
     tlp_cmd_byte_len_reg <= tlp_cmd_byte_len_next;
     tlp_cmd_dword_len_reg <= tlp_cmd_dword_len_next;

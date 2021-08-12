@@ -92,10 +92,10 @@ class TB(object):
 
             # Requester reQuest Interface
             rq_bus=AxiStreamBus.from_prefix(dut, "m_axis_rq"),
-            # pcie_rq_seq_num0=dut.s_axis_rq_seq_num_0,
-            # pcie_rq_seq_num_vld0=dut.s_axis_rq_seq_num_valid_0,
-            # pcie_rq_seq_num1=dut.s_axis_rq_seq_num_1,
-            # pcie_rq_seq_num_vld1=dut.s_axis_rq_seq_num_valid_1,
+            pcie_rq_seq_num0=dut.s_axis_rq_seq_num_0,
+            pcie_rq_seq_num_vld0=dut.s_axis_rq_seq_num_valid_0,
+            pcie_rq_seq_num1=dut.s_axis_rq_seq_num_1,
+            pcie_rq_seq_num_vld1=dut.s_axis_rq_seq_num_valid_1,
             # pcie_rq_tag0
             # pcie_rq_tag1
             # pcie_rq_tag_av
@@ -168,13 +168,13 @@ class TB(object):
             # cfg_msg_transmit_done
 
             # Configuration Flow Control Interface
-            # cfg_fc_ph=dut.cfg_fc_ph,
-            # cfg_fc_pd=dut.cfg_fc_pd,
-            # cfg_fc_nph=dut.cfg_fc_nph,
-            # cfg_fc_npd=dut.cfg_fc_npd,
-            # cfg_fc_cplh=dut.cfg_fc_cplh,
-            # cfg_fc_cpld=dut.cfg_fc_cpld,
-            # cfg_fc_sel=dut.cfg_fc_sel,
+            cfg_fc_ph=dut.cfg_fc_ph,
+            cfg_fc_pd=dut.cfg_fc_pd,
+            cfg_fc_nph=dut.cfg_fc_nph,
+            cfg_fc_npd=dut.cfg_fc_npd,
+            cfg_fc_cplh=dut.cfg_fc_cplh,
+            cfg_fc_cpld=dut.cfg_fc_cpld,
+            cfg_fc_sel=dut.cfg_fc_sel,
 
             # Configuration Control Interface
             # cfg_hot_reset_in

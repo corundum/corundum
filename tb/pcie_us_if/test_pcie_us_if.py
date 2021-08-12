@@ -168,13 +168,13 @@ class TB(object):
             # cfg_msg_transmit_done
 
             # Configuration Flow Control Interface
-            # cfg_fc_ph=dut.cfg_fc_ph,
-            # cfg_fc_pd=dut.cfg_fc_pd,
-            # cfg_fc_nph=dut.cfg_fc_nph,
-            # cfg_fc_npd=dut.cfg_fc_npd,
-            # cfg_fc_cplh=dut.cfg_fc_cplh,
-            # cfg_fc_cpld=dut.cfg_fc_cpld,
-            # cfg_fc_sel=dut.cfg_fc_sel,
+            cfg_fc_ph=dut.cfg_fc_ph,
+            cfg_fc_pd=dut.cfg_fc_pd,
+            cfg_fc_nph=dut.cfg_fc_nph,
+            cfg_fc_npd=dut.cfg_fc_npd,
+            cfg_fc_cplh=dut.cfg_fc_cplh,
+            cfg_fc_cpld=dut.cfg_fc_cpld,
+            cfg_fc_sel=dut.cfg_fc_sel,
 
             # Configuration Control Interface
             # cfg_hot_reset_in

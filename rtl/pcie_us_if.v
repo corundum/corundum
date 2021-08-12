@@ -127,6 +127,17 @@ module pcie_us_if #
     input  wire                                          s_axis_rq_seq_num_valid_1,
 
     /*
+     * Flow control
+     */
+    input  wire [7:0]                                    cfg_fc_ph,
+    input  wire [11:0]                                   cfg_fc_pd,
+    input  wire [7:0]                                    cfg_fc_nph,
+    input  wire [11:0]                                   cfg_fc_npd,
+    input  wire [7:0]                                    cfg_fc_cplh,
+    input  wire [11:0]                                   cfg_fc_cpld,
+    output wire [2:0]                                    cfg_fc_sel,
+
+    /*
      * Configuration interface
      */
     output wire [9:0]                                    cfg_mgmt_addr,
@@ -226,6 +237,16 @@ module pcie_us_if #
     input  wire [TLP_SEG_COUNT-1:0]                      tx_cpl_tlp_sop,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_cpl_tlp_eop,
     output wire                                          tx_cpl_tlp_ready,
+
+    /*
+     * Flow control
+     */
+    output wire [7:0]                                    tx_fc_ph_av,
+    output wire [11:0]                                   tx_fc_pd_av,
+    output wire [7:0]                                    tx_fc_nph_av,
+    output wire [11:0]                                   tx_fc_npd_av,
+    output wire [7:0]                                    tx_fc_cplh_av,
+    output wire [11:0]                                   tx_fc_cpld_av,
 
     /*
      * Configuration outputs
@@ -418,6 +439,15 @@ pcie_us_if_cc_inst
     .tx_cpl_tlp_eop(tx_cpl_tlp_eop),
     .tx_cpl_tlp_ready(tx_cpl_tlp_ready)
 );
+
+assign tx_fc_ph_av = cfg_fc_ph;
+assign tx_fc_pd_av = cfg_fc_pd;
+assign tx_fc_nph_av = cfg_fc_nph;
+assign tx_fc_npd_av = cfg_fc_npd;
+assign tx_fc_cplh_av = cfg_fc_cplh;
+assign tx_fc_cpld_av = cfg_fc_cpld;
+
+assign cfg_fc_sel = 3'b100;
 
 generate
 

@@ -455,6 +455,10 @@ if (READ_EXT_TAG_ENABLE || READ_MAX_READ_REQ_SIZE || READ_MAX_PAYLOAD_SIZE) begi
 
 end else begin
 
+    assign ext_tag_enable = 0;
+    assign max_read_request_size = 0;
+    assign max_payload_size = 0;
+
     assign cfg_mgmt_addr = 0;
     assign cfg_mgmt_function_number = 0;
     assign cfg_mgmt_write = 0;

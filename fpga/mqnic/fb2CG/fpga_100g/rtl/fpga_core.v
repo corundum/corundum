@@ -1192,6 +1192,7 @@ dma_if_pcie_inst (
      */
     .rx_cpl_tlp_data(pcie_rx_cpl_tlp_data),
     .rx_cpl_tlp_hdr(pcie_rx_cpl_tlp_hdr),
+    .rx_cpl_tlp_error(pcie_rx_cpl_tlp_error),
     .rx_cpl_tlp_valid(pcie_rx_cpl_tlp_valid),
     .rx_cpl_tlp_sop(pcie_rx_cpl_tlp_sop),
     .rx_cpl_tlp_eop(pcie_rx_cpl_tlp_eop),

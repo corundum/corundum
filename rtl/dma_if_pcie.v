@@ -91,6 +91,7 @@ module dma_if_pcie #
      */
     input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]   rx_cpl_tlp_data,
     input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    rx_cpl_tlp_hdr,
+    input  wire [TLP_SEG_COUNT*4-1:0]                    rx_cpl_tlp_error,
     input  wire [TLP_SEG_COUNT-1:0]                      rx_cpl_tlp_valid,
     input  wire [TLP_SEG_COUNT-1:0]                      rx_cpl_tlp_sop,
     input  wire [TLP_SEG_COUNT-1:0]                      rx_cpl_tlp_eop,
@@ -236,6 +237,7 @@ dma_if_pcie_rd_inst (
      */
     .rx_cpl_tlp_data(rx_cpl_tlp_data),
     .rx_cpl_tlp_hdr(rx_cpl_tlp_hdr),
+    .rx_cpl_tlp_error(rx_cpl_tlp_error),
     .rx_cpl_tlp_valid(rx_cpl_tlp_valid),
     .rx_cpl_tlp_sop(rx_cpl_tlp_sop),
     .rx_cpl_tlp_eop(rx_cpl_tlp_eop),

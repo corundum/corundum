@@ -157,7 +157,7 @@ module dma_if_mux #
     input  wire [SEG_COUNT-1:0]                       if_ram_rd_resp_ready,
 
     /*
-     * RAM interface
+     * RAM interface (towards RAM)
      */
     output wire [PORTS*SEG_COUNT*S_RAM_SEL_WIDTH-1:0] ram_wr_cmd_sel,
     output wire [PORTS*SEG_COUNT*SEG_BE_WIDTH-1:0]    ram_wr_cmd_be,
@@ -243,7 +243,7 @@ dma_if_mux_rd_inst (
     .if_ram_wr_done(if_ram_wr_done),
 
     /*
-     * RAM interface
+     * RAM interface (towards RAM)
      */
     .ram_wr_cmd_sel(ram_wr_cmd_sel),
     .ram_wr_cmd_be(ram_wr_cmd_be),
@@ -322,7 +322,7 @@ dma_if_mux_wr_inst (
     .if_ram_rd_resp_ready(if_ram_rd_resp_ready),
 
     /*
-     * RAM interface
+     * RAM interface (towards RAM)
      */
     .ram_rd_cmd_sel(ram_rd_cmd_sel),
     .ram_rd_cmd_addr(ram_rd_cmd_addr),

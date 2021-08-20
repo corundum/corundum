@@ -307,7 +307,7 @@ reg [3:0] error_code_reg = 4'd0, error_code_next;
 reg [RAM_SEL_WIDTH-1:0] ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] addr_reg = {RAM_ADDR_WIDTH{1'b0}}, addr_next;
 reg [RAM_ADDR_WIDTH-1:0] addr_delay_reg = {RAM_ADDR_WIDTH{1'b0}}, addr_delay_next;
-reg [9:0] op_dword_count_reg = 10'd0, op_dword_count_next;
+reg [10:0] op_dword_count_reg = 11'd0, op_dword_count_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
 reg zero_len_reg = 1'b0, zero_len_next;
 reg [RAM_SEG_COUNT-1:0] ram_mask_reg = {RAM_SEG_COUNT{1'b0}}, ram_mask_next;
@@ -336,11 +336,11 @@ reg rx_cpl_tlp_hdr_td;
 reg rx_cpl_tlp_hdr_ep;
 reg [2:0] rx_cpl_tlp_hdr_attr;
 reg [1:0] rx_cpl_tlp_hdr_at;
-reg [9:0] rx_cpl_tlp_hdr_length;
+reg [10:0] rx_cpl_tlp_hdr_length;
 reg [15:0] rx_cpl_tlp_hdr_completer_id;
 reg [2:0] rx_cpl_tlp_hdr_cpl_status;
 reg rx_cpl_tlp_hdr_bcm;
-reg [11:0] rx_cpl_tlp_hdr_byte_count;
+reg [12:0] rx_cpl_tlp_hdr_byte_count;
 reg [15:0] rx_cpl_tlp_hdr_requester_id;
 reg [9:0] rx_cpl_tlp_hdr_tag;
 reg [6:0] rx_cpl_tlp_hdr_lower_addr;
@@ -776,12 +776,12 @@ always @* begin
     rx_cpl_tlp_hdr_ep = rx_cpl_tlp_hdr[110]; // EP
     rx_cpl_tlp_hdr_attr[1:0] = rx_cpl_tlp_hdr[109:108]; // attr
     rx_cpl_tlp_hdr_at = rx_cpl_tlp_hdr[107:106]; // AT
-    rx_cpl_tlp_hdr_length = rx_cpl_tlp_hdr[105:96]; // length
+    rx_cpl_tlp_hdr_length = {rx_cpl_tlp_hdr[105:96] == 0, rx_cpl_tlp_hdr[105:96]}; // length
     // DW 1
     rx_cpl_tlp_hdr_completer_id = rx_cpl_tlp_hdr[95:80]; // completer ID
     rx_cpl_tlp_hdr_cpl_status = rx_cpl_tlp_hdr[79:77]; // completion status
     rx_cpl_tlp_hdr_bcm = rx_cpl_tlp_hdr[76]; // BCM
-    rx_cpl_tlp_hdr_byte_count = rx_cpl_tlp_hdr[75:64]; // byte count
+    rx_cpl_tlp_hdr_byte_count = {rx_cpl_tlp_hdr[75:64] == 0, rx_cpl_tlp_hdr[75:64]}; // byte count
     // DW 2
     rx_cpl_tlp_hdr_requester_id = rx_cpl_tlp_hdr[63:48]; // requester ID
     rx_cpl_tlp_hdr_tag[7:0] = rx_cpl_tlp_hdr[47:40]; // tag
@@ -794,7 +794,7 @@ always @* begin
             rx_cpl_tlp_ready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
 
             if (rx_cpl_tlp_ready && rx_cpl_tlp_valid && rx_cpl_tlp_sop) begin
-                op_dword_count_next = (rx_cpl_tlp_hdr_length != 0) ? rx_cpl_tlp_hdr_length : 11'd1024;
+                op_dword_count_next = rx_cpl_tlp_hdr_length;
                 pcie_tag_next = rx_cpl_tlp_hdr_tag;
 
                 ram_sel_next = pcie_tag_table_ram_sel[pcie_tag_next];

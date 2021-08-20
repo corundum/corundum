@@ -189,7 +189,7 @@ reg rx_req_tlp_hdr_td;
 reg rx_req_tlp_hdr_ep;
 reg [2:0] rx_req_tlp_hdr_attr;
 reg [1:0] rx_req_tlp_hdr_at;
-reg [9:0] rx_req_tlp_hdr_length;
+reg [10:0] rx_req_tlp_hdr_length;
 reg [15:0] rx_req_tlp_hdr_requester_id;
 reg [9:0] rx_req_tlp_hdr_tag;
 reg [7:0] rx_req_tlp_hdr_last_be;
@@ -294,7 +294,7 @@ always @* begin
     rx_req_tlp_hdr_ep = rx_req_tlp_hdr[110]; // EP
     rx_req_tlp_hdr_attr[1:0] = rx_req_tlp_hdr[109:108]; // attr
     rx_req_tlp_hdr_at = rx_req_tlp_hdr[107:106]; // AT
-    rx_req_tlp_hdr_length = rx_req_tlp_hdr[105:96]; // length
+    rx_req_tlp_hdr_length = {rx_req_tlp_hdr[105:96] == 0, rx_req_tlp_hdr[105:96]}; // length
     // DW 1
     rx_req_tlp_hdr_requester_id = rx_req_tlp_hdr[95:80]; // requester ID
     rx_req_tlp_hdr_tag[7:0] = rx_req_tlp_hdr[79:72]; // tag
@@ -339,7 +339,7 @@ always @* begin
 
                 if (!rx_req_tlp_hdr_fmt[1] && rx_req_tlp_hdr_type == 5'b00000) begin
                     // read request
-                    if (rx_req_tlp_hdr_length == 10'd1) begin
+                    if (rx_req_tlp_hdr_length == 11'd1) begin
                         // length OK
                         m_axil_arvalid_next = 1'b1;
                         rx_req_tlp_ready_next = 1'b0;
@@ -398,7 +398,7 @@ always @* begin
                     end
                 end else if (rx_req_tlp_hdr_fmt[1] && rx_req_tlp_hdr_type == 5'b00000) begin
                     // write request
-                    if (rx_req_tlp_hdr_length == 10'd1) begin
+                    if (rx_req_tlp_hdr_length == 11'd1) begin
                         // length OK
                         m_axil_awvalid_next = 1'b1;
                         m_axil_wvalid_next = 1'b1;

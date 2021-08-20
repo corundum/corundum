@@ -171,7 +171,11 @@ class PcieIfFrame:
     def __eq__(self, other):
         if isinstance(other, PcieIfFrame):
             return (
+                self.tlp_prfx == other.tlp_prfx and
+                self.hdr == other.hdr and
                 self.data == other.data and
+                self.tlp_prfx_par == other.tlp_prfx_par and
+                self.hdr_par == other.hdr_par and
                 self.parity == other.parity and
                 self.func_num == other.func_num and
                 self.vf_num == other.vf_num and

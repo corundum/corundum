@@ -359,7 +359,7 @@ reg [3:0] error_code_reg = 4'd0, error_code_next;
 reg [RAM_SEL_WIDTH-1:0] ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] addr_reg = {RAM_ADDR_WIDTH{1'b0}}, addr_next;
 reg [RAM_ADDR_WIDTH-1:0] addr_delay_reg = {RAM_ADDR_WIDTH{1'b0}}, addr_delay_next;
-reg [9:0] op_dword_count_reg = 10'd0, op_dword_count_next;
+reg [10:0] op_dword_count_reg = 11'd0, op_dword_count_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
 reg zero_len_reg = 1'b0, zero_len_next;
 reg [SEG_COUNT-1:0] ram_mask_reg = {SEG_COUNT{1'b0}}, ram_mask_next;
@@ -569,7 +569,7 @@ always @* begin
             // crosses 4k boundary, split on 4K boundary
             req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
             dword_count = 11'h400 - req_pcie_addr_reg[11:2];
-            req_last_tlp = (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) & 12'hfff) == 0;
+            req_last_tlp = (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) & 12'hfff) == 0 && req_op_count_reg >> 12 == 0;
             // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12]+1;
             req_pcie_addr[11:0] = 12'd0;

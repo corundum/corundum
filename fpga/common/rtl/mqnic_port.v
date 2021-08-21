@@ -68,12 +68,8 @@ module mqnic_port #
     parameter CPL_QUEUE_INDEX_WIDTH = TX_CPL_QUEUE_INDEX_WIDTH > RX_CPL_QUEUE_INDEX_WIDTH ? TX_CPL_QUEUE_INDEX_WIDTH : RX_CPL_QUEUE_INDEX_WIDTH,
     // Transmit descriptor table size (number of in-flight operations)
     parameter TX_DESC_TABLE_SIZE = 16,
-    // Transmit packet table size (number of in-progress packets)
-    parameter TX_PKT_TABLE_SIZE = 8,
     // Receive descriptor table size (number of in-flight operations)
     parameter RX_DESC_TABLE_SIZE = 16,
-    // Receive packet table size (number of in-progress packets)
-    parameter RX_PKT_TABLE_SIZE = 8,
     // Width of descriptor table field for tracking outstanding DMA operations
     parameter DESC_TABLE_DMA_OP_COUNT_WIDTH = 4,
     // Max number of in-flight descriptor requests (transmit)
@@ -132,6 +128,10 @@ module mqnic_port #
     parameter MAX_TX_SIZE = 2048,
     // Max receive packet size
     parameter MAX_RX_SIZE = 2048,
+    // DMA TX RAM size
+    parameter TX_RAM_SIZE = 8*MAX_TX_SIZE,
+    // DMA RX RAM size
+    parameter RX_RAM_SIZE = 8*MAX_RX_SIZE,
     // Descriptor size (in bytes)
     parameter DESC_SIZE = 16,
     // Descriptor size (in bytes)
@@ -139,11 +139,7 @@ module mqnic_port #
     // Width of AXI stream descriptor interfaces in bits
     parameter AXIS_DESC_DATA_WIDTH = DESC_SIZE*8,
     // AXI stream descriptor tkeep signal width (words per cycle)
-    parameter AXIS_DESC_KEEP_WIDTH = AXIS_DESC_DATA_WIDTH/8,
-    // DMA TX RAM size
-    parameter TX_RAM_SIZE = TX_PKT_TABLE_SIZE*MAX_TX_SIZE,
-    // DMA RX RAM size
-    parameter RX_RAM_SIZE = RX_PKT_TABLE_SIZE*MAX_RX_SIZE
+    parameter AXIS_DESC_KEEP_WIDTH = AXIS_DESC_DATA_WIDTH/8
 )
 (
     input  wire                                 clk,

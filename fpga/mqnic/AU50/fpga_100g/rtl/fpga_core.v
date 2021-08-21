@@ -248,9 +248,7 @@ parameter RX_CPL_QUEUE_PIPELINE = RX_QUEUE_PIPELINE;
 
 // TX and RX engine parameters (port)
 parameter TX_DESC_TABLE_SIZE = 32;
-parameter TX_PKT_TABLE_SIZE = 8;
 parameter RX_DESC_TABLE_SIZE = 32;
-parameter RX_PKT_TABLE_SIZE = 8;
 
 // Scheduler parameters (port)
 parameter TX_SCHEDULER = "RR";
@@ -276,6 +274,8 @@ parameter TX_FIFO_DEPTH = 32768;
 parameter RX_FIFO_DEPTH = 131072;
 parameter MAX_TX_SIZE = 16384;
 parameter MAX_RX_SIZE = 16384;
+parameter TX_RAM_SIZE = 8*MAX_TX_SIZE;
+parameter RX_RAM_SIZE = 8*MAX_RX_SIZE;
 
 // AXI lite interface parameters
 parameter AXIL_DATA_WIDTH = 32;
@@ -302,9 +302,6 @@ parameter IF_RAM_SEL_WIDTH = PORTS_PER_IF > 1 ? $clog2(PORTS_PER_IF) : 1;
 parameter RAM_SEL_WIDTH = $clog2(IF_COUNT)+IF_RAM_SEL_WIDTH+1;
 parameter RAM_ADDR_WIDTH = SEG_ADDR_WIDTH+$clog2(SEG_COUNT)+$clog2(SEG_BE_WIDTH);
 parameter RAM_PIPELINE = 2;
-
-parameter TX_RAM_SIZE = TX_PKT_TABLE_SIZE*MAX_TX_SIZE;
-parameter RX_RAM_SIZE = RX_PKT_TABLE_SIZE*MAX_RX_SIZE;
 
 // parameter sizing helpers
 function [31:0] w_32(input [31:0] val);
@@ -2171,9 +2168,7 @@ generate
             .TX_CPL_QUEUE_PIPELINE(TX_CPL_QUEUE_PIPELINE),
             .RX_CPL_QUEUE_PIPELINE(RX_CPL_QUEUE_PIPELINE),
             .TX_DESC_TABLE_SIZE(TX_DESC_TABLE_SIZE),
-            .TX_PKT_TABLE_SIZE(TX_PKT_TABLE_SIZE),
             .RX_DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
-            .RX_PKT_TABLE_SIZE(RX_PKT_TABLE_SIZE),
             .TX_SCHEDULER(TX_SCHEDULER),
             .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
             .TX_SCHEDULER_PIPELINE(TX_SCHEDULER_PIPELINE),

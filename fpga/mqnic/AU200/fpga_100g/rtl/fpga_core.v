@@ -318,10 +318,10 @@ parameter ENABLE_DIC = 1;
 parameter MIN_FRAME_LENGTH = 64;
 parameter TX_FIFO_DEPTH = 32768;
 parameter RX_FIFO_DEPTH = 131072;
-parameter MAX_TX_SIZE = 16384;
-parameter MAX_RX_SIZE = 16384;
-parameter TX_RAM_SIZE = 8*MAX_TX_SIZE;
-parameter RX_RAM_SIZE = 8*MAX_RX_SIZE;
+parameter MAX_TX_SIZE = 9214;
+parameter MAX_RX_SIZE = 9214;
+parameter TX_RAM_SIZE = 131072;
+parameter RX_RAM_SIZE = 131072;
 
 // AXI lite interface parameters
 parameter AXIL_DATA_WIDTH = 32;

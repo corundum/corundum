@@ -34,6 +34,8 @@ either expressed or implied, of The Regents of the University of California.
 #include "mqnic.h"
 #include "mqnic_ioctl.h"
 
+#include <linux/uaccess.h>
+
 static int mqnic_open(struct inode *inode, struct file *file)
 {
     // struct miscdevice *miscdev = file->private_data;

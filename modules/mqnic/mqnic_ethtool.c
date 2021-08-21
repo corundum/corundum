@@ -33,6 +33,8 @@ either expressed or implied, of The Regents of the University of California.
 
 #include "mqnic.h"
 
+#include <linux/ethtool.h>
+
 #define SFF_MODULE_ID_SFP        0x03
 #define SFF_MODULE_ID_QSFP       0x0c
 #define SFF_MODULE_ID_QSFP_PLUS  0x0d

@@ -50,15 +50,15 @@ module eth_mac_phy_10g_fifo #
     parameter TX_FIFO_DEPTH = 4096,
     parameter TX_FIFO_PIPELINE_OUTPUT = 2,
     parameter TX_FRAME_FIFO = 1,
-    parameter TX_DROP_BAD_FRAME = TX_FRAME_FIFO,
+    parameter TX_DROP_OVERSIZE_FRAME = TX_FRAME_FIFO,
+    parameter TX_DROP_BAD_FRAME = TX_DROP_OVERSIZE_FRAME,
     parameter TX_DROP_WHEN_FULL = 0,
     parameter RX_FIFO_DEPTH = 4096,
     parameter RX_FIFO_PIPELINE_OUTPUT = 2,
     parameter RX_FRAME_FIFO = 1,
-    parameter RX_DROP_BAD_FRAME = RX_FRAME_FIFO,
-    parameter RX_DROP_WHEN_FULL = RX_FRAME_FIFO,
-    parameter LOGIC_PTP_PERIOD_NS = 4'h6,
-    parameter LOGIC_PTP_PERIOD_FNS = 16'h6666,
+    parameter RX_DROP_OVERSIZE_FRAME = RX_FRAME_FIFO,
+    parameter RX_DROP_BAD_FRAME = RX_DROP_OVERSIZE_FRAME,
+    parameter RX_DROP_WHEN_FULL = RX_DROP_OVERSIZE_FRAME,
     parameter PTP_PERIOD_NS = 4'h6,
     parameter PTP_PERIOD_FNS = 16'h6666,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
@@ -150,6 +150,7 @@ module eth_mac_phy_10g_fifo #
      * PTP clock
      */
     input  wire [PTP_TS_WIDTH-1:0]    ptp_ts_96,
+    input  wire                       ptp_ts_step,
 
     /*
      * Configuration
@@ -269,10 +270,6 @@ if (TX_PTP_TS_ENABLE) begin
         .TS_WIDTH(PTP_TS_WIDTH),
         .NS_WIDTH(4),
         .FNS_WIDTH(16),
-        .INPUT_PERIOD_NS(LOGIC_PTP_PERIOD_NS),
-        .INPUT_PERIOD_FNS(LOGIC_PTP_PERIOD_FNS),
-        .OUTPUT_PERIOD_NS(PTP_PERIOD_NS),
-        .OUTPUT_PERIOD_FNS(PTP_PERIOD_FNS),
         .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK)
     )
     tx_ptp_cdc (
@@ -282,9 +279,11 @@ if (TX_PTP_TS_ENABLE) begin
         .output_rst(tx_rst),
         .sample_clk(ptp_sample_clk),
         .input_ts(ptp_ts_96),
+        .input_ts_step(ptp_ts_step),
         .output_ts(tx_ptp_ts_96),
         .output_ts_step(),
-        .output_pps()
+        .output_pps(),
+        .locked()
     );
 
     if (TX_PTP_TAG_ENABLE) begin
@@ -449,10 +448,6 @@ if (RX_PTP_TS_ENABLE) begin
         .TS_WIDTH(PTP_TS_WIDTH),
         .NS_WIDTH(4),
         .FNS_WIDTH(16),
-        .INPUT_PERIOD_NS(LOGIC_PTP_PERIOD_NS),
-        .INPUT_PERIOD_FNS(LOGIC_PTP_PERIOD_FNS),
-        .OUTPUT_PERIOD_NS(PTP_PERIOD_NS),
-        .OUTPUT_PERIOD_FNS(PTP_PERIOD_FNS),
         .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK)
     )
     rx_ptp_cdc (
@@ -462,9 +457,11 @@ if (RX_PTP_TS_ENABLE) begin
         .output_rst(rx_rst),
         .sample_clk(ptp_sample_clk),
         .input_ts(ptp_ts_96),
+        .input_ts_step(ptp_ts_step),
         .output_ts(rx_ptp_ts_96),
         .output_ts_step(),
-        .output_pps()
+        .output_pps(),
+        .locked()
     );
 
     axis_fifo #(
@@ -625,6 +622,7 @@ axis_async_fifo_adapter #(
     .FRAME_FIFO(TX_FRAME_FIFO),
     .USER_BAD_FRAME_VALUE(1'b1),
     .USER_BAD_FRAME_MASK(1'b1),
+    .DROP_OVERSIZE_FRAME(TX_DROP_OVERSIZE_FRAME),
     .DROP_BAD_FRAME(TX_DROP_BAD_FRAME),
     .DROP_WHEN_FULL(TX_DROP_WHEN_FULL)
 )
@@ -676,6 +674,7 @@ axis_async_fifo_adapter #(
     .FRAME_FIFO(RX_FRAME_FIFO),
     .USER_BAD_FRAME_VALUE(1'b1),
     .USER_BAD_FRAME_MASK(1'b1),
+    .DROP_OVERSIZE_FRAME(RX_DROP_OVERSIZE_FRAME),
     .DROP_BAD_FRAME(RX_DROP_BAD_FRAME),
     .DROP_WHEN_FULL(RX_DROP_WHEN_FULL)
 )

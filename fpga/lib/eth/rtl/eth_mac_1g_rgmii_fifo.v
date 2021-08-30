@@ -38,10 +38,9 @@ module eth_mac_1g_rgmii_fifo #
     // Use IODDR2 for Spartan-6
     parameter IODDR_STYLE = "IODDR2",
     // Clock input style ("BUFG", "BUFR", "BUFIO", "BUFIO2")
-    // Use BUFR for Virtex-5, Virtex-6, 7-series
-    // Use BUFG for Ultrascale
-    // Use BUFIO2 for Spartan-6
-    parameter CLOCK_INPUT_STYLE = "BUFIO2",
+    // Use BUFR for Virtex-6, 7-series
+    // Use BUFG for Virtex-5, Spartan-6, Ultrascale
+    parameter CLOCK_INPUT_STYLE = "BUFG",
     // Use 90 degree clock for RGMII transmit ("TRUE", "FALSE")
     parameter USE_CLK90 = "TRUE",
     parameter AXIS_DATA_WIDTH = 8,
@@ -52,13 +51,15 @@ module eth_mac_1g_rgmii_fifo #
     parameter TX_FIFO_DEPTH = 4096,
     parameter TX_FIFO_PIPELINE_OUTPUT = 2,
     parameter TX_FRAME_FIFO = 1,
-    parameter TX_DROP_BAD_FRAME = TX_FRAME_FIFO,
+    parameter TX_DROP_OVERSIZE_FRAME = TX_FRAME_FIFO,
+    parameter TX_DROP_BAD_FRAME = TX_DROP_OVERSIZE_FRAME,
     parameter TX_DROP_WHEN_FULL = 0,
     parameter RX_FIFO_DEPTH = 4096,
     parameter RX_FIFO_PIPELINE_OUTPUT = 2,
     parameter RX_FRAME_FIFO = 1,
-    parameter RX_DROP_BAD_FRAME = RX_FRAME_FIFO,
-    parameter RX_DROP_WHEN_FULL = RX_FRAME_FIFO
+    parameter RX_DROP_OVERSIZE_FRAME = RX_FRAME_FIFO,
+    parameter RX_DROP_BAD_FRAME = RX_DROP_OVERSIZE_FRAME,
+    parameter RX_DROP_WHEN_FULL = RX_DROP_OVERSIZE_FRAME
 )
 (
     input  wire                       gtx_clk,
@@ -259,6 +260,7 @@ axis_async_fifo_adapter #(
     .FRAME_FIFO(TX_FRAME_FIFO),
     .USER_BAD_FRAME_VALUE(1'b1),
     .USER_BAD_FRAME_MASK(1'b1),
+    .DROP_OVERSIZE_FRAME(TX_DROP_OVERSIZE_FRAME),
     .DROP_BAD_FRAME(TX_DROP_BAD_FRAME),
     .DROP_WHEN_FULL(TX_DROP_WHEN_FULL)
 )
@@ -309,6 +311,7 @@ axis_async_fifo_adapter #(
     .FRAME_FIFO(RX_FRAME_FIFO),
     .USER_BAD_FRAME_VALUE(1'b1),
     .USER_BAD_FRAME_MASK(1'b1),
+    .DROP_OVERSIZE_FRAME(RX_DROP_OVERSIZE_FRAME),
     .DROP_BAD_FRAME(RX_DROP_BAD_FRAME),
     .DROP_WHEN_FULL(RX_DROP_WHEN_FULL)
 )

@@ -100,12 +100,20 @@ module mqnic_port #
     parameter RX_HASH_ENABLE = 1,
     // Enable RX checksum offload
     parameter RX_CHECKSUM_ENABLE = 1,
+    // Width of control register interface address in bits
+    parameter REG_ADDR_WIDTH = 16,
+    // Width of control register interface data in bits
+    parameter REG_DATA_WIDTH = 32,
+    // Width of control register interface strb
+    parameter REG_STRB_WIDTH = (REG_DATA_WIDTH/8),
     // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
     // Width of AXI lite address bus in bits
     parameter AXIL_ADDR_WIDTH = 16,
     // Width of AXI lite wstrb (width of data bus in words)
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
+    // Offset to AXI lite interface
+    parameter AXIL_OFFSET = 0,
     // DMA RAM segment count
     parameter SEG_COUNT = 2,
     // DMA RAM segment data width
@@ -233,7 +241,22 @@ module mqnic_port #
     input  wire                                 s_axis_dma_write_desc_status_valid,
 
     /*
-     * AXI-Lite slave interface
+     * Control register interface
+     */
+    input  wire [REG_ADDR_WIDTH-1:0]            ctrl_reg_wr_addr,
+    input  wire [REG_DATA_WIDTH-1:0]            ctrl_reg_wr_data,
+    input  wire [REG_STRB_WIDTH-1:0]            ctrl_reg_wr_strb,
+    input  wire                                 ctrl_reg_wr_en,
+    output wire                                 ctrl_reg_wr_wait,
+    output wire                                 ctrl_reg_wr_ack,
+    input  wire [REG_ADDR_WIDTH-1:0]            ctrl_reg_rd_addr,
+    input  wire                                 ctrl_reg_rd_en,
+    output wire [REG_DATA_WIDTH-1:0]            ctrl_reg_rd_data,
+    output wire                                 ctrl_reg_rd_wait,
+    output wire                                 ctrl_reg_rd_ack,
+
+    /*
+     * AXI-Lite slave interface (schedulers)
      */
     input  wire [AXIL_ADDR_WIDTH-1:0]           s_axil_awaddr,
     input  wire [2:0]                           s_axil_awprot,
@@ -316,54 +339,6 @@ parameter DMA_CLIENT_TAG_WIDTH = $clog2(TX_DESC_TABLE_SIZE > RX_DESC_TABLE_SIZE 
 parameter DMA_CLIENT_LEN_WIDTH = DMA_LEN_WIDTH;
 
 parameter DESC_REQ_TAG_WIDTH_INT = DESC_REQ_TAG_WIDTH - $clog2(2);
-
-parameter AXIL_SCHED_ADDR_WIDTH = AXIL_ADDR_WIDTH-1;
-
-// parameter sizing helpers
-function [31:0] w_32(input [31:0] val);
-    w_32 = val;
-endfunction
-
-// AXI lite connections
-wire [AXIL_ADDR_WIDTH-1:0] axil_ctrl_awaddr;
-wire [2:0]                 axil_ctrl_awprot;
-wire                       axil_ctrl_awvalid;
-wire                       axil_ctrl_awready;
-wire [AXIL_DATA_WIDTH-1:0] axil_ctrl_wdata;
-wire [AXIL_STRB_WIDTH-1:0] axil_ctrl_wstrb;
-wire                       axil_ctrl_wvalid;
-wire                       axil_ctrl_wready;
-wire [1:0]                 axil_ctrl_bresp;
-wire                       axil_ctrl_bvalid;
-wire                       axil_ctrl_bready;
-wire [AXIL_ADDR_WIDTH-1:0] axil_ctrl_araddr;
-wire [2:0]                 axil_ctrl_arprot;
-wire                       axil_ctrl_arvalid;
-wire                       axil_ctrl_arready;
-wire [AXIL_DATA_WIDTH-1:0] axil_ctrl_rdata;
-wire [1:0]                 axil_ctrl_rresp;
-wire                       axil_ctrl_rvalid;
-wire                       axil_ctrl_rready;
-
-wire [AXIL_ADDR_WIDTH-1:0] axil_sched_awaddr;
-wire [2:0]                 axil_sched_awprot;
-wire                       axil_sched_awvalid;
-wire                       axil_sched_awready;
-wire [AXIL_DATA_WIDTH-1:0] axil_sched_wdata;
-wire [AXIL_STRB_WIDTH-1:0] axil_sched_wstrb;
-wire                       axil_sched_wvalid;
-wire                       axil_sched_wready;
-wire [1:0]                 axil_sched_bresp;
-wire                       axil_sched_bvalid;
-wire                       axil_sched_bready;
-wire [AXIL_ADDR_WIDTH-1:0] axil_sched_araddr;
-wire [2:0]                 axil_sched_arprot;
-wire                       axil_sched_arvalid;
-wire                       axil_sched_arready;
-wire [AXIL_DATA_WIDTH-1:0] axil_sched_rdata;
-wire [1:0]                 axil_sched_rresp;
-wire                       axil_sched_rvalid;
-wire                       axil_sched_rready;
 
 // Checksumming and RSS
 wire [AXIS_DATA_WIDTH-1:0] rx_axis_tdata_int;
@@ -553,68 +528,6 @@ wire                            dma_rx_desc_status_user;
 wire [3:0]                      dma_rx_desc_status_error;
 wire                            dma_rx_desc_status_valid;
 
-// control registers
-wire [AXIL_SCHED_ADDR_WIDTH-1:0]  ctrl_reg_wr_addr;
-wire [AXIL_DATA_WIDTH-1:0]        ctrl_reg_wr_data;
-wire [AXIL_STRB_WIDTH-1:0]        ctrl_reg_wr_strb;
-wire                              ctrl_reg_wr_en;
-wire                              ctrl_reg_wr_wait;
-wire                              ctrl_reg_wr_ack;
-wire [AXIL_SCHED_ADDR_WIDTH-1:0]  ctrl_reg_rd_addr;
-wire                              ctrl_reg_rd_en;
-wire [AXIL_DATA_WIDTH-1:0]        ctrl_reg_rd_data;
-wire                              ctrl_reg_rd_wait;
-wire                              ctrl_reg_rd_ack;
-
-axil_reg_if #(
-    .DATA_WIDTH(AXIL_DATA_WIDTH),
-    .ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
-    .STRB_WIDTH(AXIL_STRB_WIDTH),
-    .TIMEOUT(4)
-)
-axil_reg_if_inst (
-    .clk(clk),
-    .rst(rst),
-
-    /*
-     * AXI-Lite slave interface
-     */
-    .s_axil_awaddr(axil_ctrl_awaddr),
-    .s_axil_awprot(axil_ctrl_awprot),
-    .s_axil_awvalid(axil_ctrl_awvalid),
-    .s_axil_awready(axil_ctrl_awready),
-    .s_axil_wdata(axil_ctrl_wdata),
-    .s_axil_wstrb(axil_ctrl_wstrb),
-    .s_axil_wvalid(axil_ctrl_wvalid),
-    .s_axil_wready(axil_ctrl_wready),
-    .s_axil_bresp(axil_ctrl_bresp),
-    .s_axil_bvalid(axil_ctrl_bvalid),
-    .s_axil_bready(axil_ctrl_bready),
-    .s_axil_araddr(axil_ctrl_araddr),
-    .s_axil_arprot(axil_ctrl_arprot),
-    .s_axil_arvalid(axil_ctrl_arvalid),
-    .s_axil_arready(axil_ctrl_arready),
-    .s_axil_rdata(axil_ctrl_rdata),
-    .s_axil_rresp(axil_ctrl_rresp),
-    .s_axil_rvalid(axil_ctrl_rvalid),
-    .s_axil_rready(axil_ctrl_rready),
-
-    /*
-     * Register interface
-     */
-    .reg_wr_addr(ctrl_reg_wr_addr),
-    .reg_wr_data(ctrl_reg_wr_data),
-    .reg_wr_strb(ctrl_reg_wr_strb),
-    .reg_wr_en(ctrl_reg_wr_en),
-    .reg_wr_wait(ctrl_reg_wr_wait),
-    .reg_wr_ack(ctrl_reg_wr_ack),
-    .reg_rd_addr(ctrl_reg_rd_addr),
-    .reg_rd_en(ctrl_reg_rd_en),
-    .reg_rd_data(ctrl_reg_rd_data),
-    .reg_rd_wait(ctrl_reg_rd_wait),
-    .reg_rd_ack(ctrl_reg_rd_ack)
-);
-
 wire sched_ctrl_reg_wr_wait;
 wire sched_ctrl_reg_wr_ack;
 wire [AXIL_DATA_WIDTH-1:0] sched_ctrl_reg_rd_data;
@@ -682,60 +595,6 @@ always @(posedge clk) begin
         rx_mtu_reg <= MAX_RX_SIZE;
     end
 end
-
-// AXI lite crossbar
-axil_crossbar #(
-    .DATA_WIDTH(AXIL_DATA_WIDTH),
-    .ADDR_WIDTH(AXIL_ADDR_WIDTH),
-    .STRB_WIDTH(AXIL_STRB_WIDTH),
-    .S_COUNT(1),
-    .M_COUNT(2),
-    .M_ADDR_WIDTH({2{w_32(AXIL_SCHED_ADDR_WIDTH)}}),
-    .M_CONNECT_READ({2{1'b1}}),
-    .M_CONNECT_WRITE({2{1'b1}})
-)
-axil_crossbar_inst (
-    .clk(clk),
-    .rst(rst),
-    .s_axil_awaddr(s_axil_awaddr),
-    .s_axil_awprot(s_axil_awprot),
-    .s_axil_awvalid(s_axil_awvalid),
-    .s_axil_awready(s_axil_awready),
-    .s_axil_wdata(s_axil_wdata),
-    .s_axil_wstrb(s_axil_wstrb),
-    .s_axil_wvalid(s_axil_wvalid),
-    .s_axil_wready(s_axil_wready),
-    .s_axil_bresp(s_axil_bresp),
-    .s_axil_bvalid(s_axil_bvalid),
-    .s_axil_bready(s_axil_bready),
-    .s_axil_araddr(s_axil_araddr),
-    .s_axil_arprot(s_axil_arprot),
-    .s_axil_arvalid(s_axil_arvalid),
-    .s_axil_arready(s_axil_arready),
-    .s_axil_rdata(s_axil_rdata),
-    .s_axil_rresp(s_axil_rresp),
-    .s_axil_rvalid(s_axil_rvalid),
-    .s_axil_rready(s_axil_rready),
-    .m_axil_awaddr( {axil_sched_awaddr,  axil_ctrl_awaddr}),
-    .m_axil_awprot( {axil_sched_awprot,  axil_ctrl_awprot}),
-    .m_axil_awvalid({axil_sched_awvalid, axil_ctrl_awvalid}),
-    .m_axil_awready({axil_sched_awready, axil_ctrl_awready}),
-    .m_axil_wdata(  {axil_sched_wdata,   axil_ctrl_wdata}),
-    .m_axil_wstrb(  {axil_sched_wstrb,   axil_ctrl_wstrb}),
-    .m_axil_wvalid( {axil_sched_wvalid,  axil_ctrl_wvalid}),
-    .m_axil_wready( {axil_sched_wready,  axil_ctrl_wready}),
-    .m_axil_bresp(  {axil_sched_bresp,   axil_ctrl_bresp}),
-    .m_axil_bvalid( {axil_sched_bvalid,  axil_ctrl_bvalid}),
-    .m_axil_bready( {axil_sched_bready,  axil_ctrl_bready}),
-    .m_axil_araddr( {axil_sched_araddr,  axil_ctrl_araddr}),
-    .m_axil_arprot( {axil_sched_arprot,  axil_ctrl_arprot}),
-    .m_axil_arvalid({axil_sched_arvalid, axil_ctrl_arvalid}),
-    .m_axil_arready({axil_sched_arready, axil_ctrl_arready}),
-    .m_axil_rdata(  {axil_sched_rdata,   axil_ctrl_rdata}),
-    .m_axil_rresp(  {axil_sched_rresp,   axil_ctrl_rresp}),
-    .m_axil_rvalid( {axil_sched_rvalid,  axil_ctrl_rvalid}),
-    .m_axil_rready( {axil_sched_rready,  axil_ctrl_rready})
-);
 
 desc_op_mux #(
     .PORTS(2),
@@ -869,13 +728,13 @@ cpl_op_mux_inst (
 );
 
 mqnic_tx_scheduler_block #(
-    .REG_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .REG_ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
-    .REG_STRB_WIDTH(AXIL_STRB_WIDTH),
+    .REG_DATA_WIDTH(REG_DATA_WIDTH),
+    .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
+    .REG_STRB_WIDTH(REG_STRB_WIDTH),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
-    .AXIL_OFFSET(2**AXIL_SCHED_ADDR_WIDTH),
+    .AXIL_OFFSET(AXIL_OFFSET),
     .LEN_WIDTH(DMA_CLIENT_LEN_WIDTH),
     .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
     .OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
@@ -907,25 +766,25 @@ scheduler_block (
     /*
      * AXI-Lite slave interface
      */
-    .s_axil_awaddr(axil_sched_awaddr),
-    .s_axil_awprot(axil_sched_awprot),
-    .s_axil_awvalid(axil_sched_awvalid),
-    .s_axil_awready(axil_sched_awready),
-    .s_axil_wdata(axil_sched_wdata),
-    .s_axil_wstrb(axil_sched_wstrb),
-    .s_axil_wvalid(axil_sched_wvalid),
-    .s_axil_wready(axil_sched_wready),
-    .s_axil_bresp(axil_sched_bresp),
-    .s_axil_bvalid(axil_sched_bvalid),
-    .s_axil_bready(axil_sched_bready),
-    .s_axil_araddr(axil_sched_araddr),
-    .s_axil_arprot(axil_sched_arprot),
-    .s_axil_arvalid(axil_sched_arvalid),
-    .s_axil_arready(axil_sched_arready),
-    .s_axil_rdata(axil_sched_rdata),
-    .s_axil_rresp(axil_sched_rresp),
-    .s_axil_rvalid(axil_sched_rvalid),
-    .s_axil_rready(axil_sched_rready),
+    .s_axil_awaddr(s_axil_awaddr),
+    .s_axil_awprot(s_axil_awprot),
+    .s_axil_awvalid(s_axil_awvalid),
+    .s_axil_awready(s_axil_awready),
+    .s_axil_wdata(s_axil_wdata),
+    .s_axil_wstrb(s_axil_wstrb),
+    .s_axil_wvalid(s_axil_wvalid),
+    .s_axil_wready(s_axil_wready),
+    .s_axil_bresp(s_axil_bresp),
+    .s_axil_bvalid(s_axil_bvalid),
+    .s_axil_bready(s_axil_bready),
+    .s_axil_araddr(s_axil_araddr),
+    .s_axil_arprot(s_axil_arprot),
+    .s_axil_arvalid(s_axil_arvalid),
+    .s_axil_arready(s_axil_arready),
+    .s_axil_rdata(s_axil_rdata),
+    .s_axil_rresp(s_axil_rresp),
+    .s_axil_rvalid(s_axil_rvalid),
+    .s_axil_rready(s_axil_rready),
 
     /*
      * Transmit request output (queue index)

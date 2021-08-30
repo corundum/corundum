@@ -392,6 +392,8 @@ parameter AXIL_RX_QM_BASE_ADDR = AXIL_TX_CQM_BASE_ADDR + 2**AXIL_TX_CQM_ADDR_WID
 parameter AXIL_RX_CQM_BASE_ADDR = AXIL_RX_QM_BASE_ADDR + 2**AXIL_RX_QM_ADDR_WIDTH;
 parameter AXIL_PORT_BASE_ADDR = AXIL_RX_CQM_BASE_ADDR + 2**AXIL_RX_CQM_ADDR_WIDTH;
 
+parameter PORT_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(PORTS+1);
+
 // parameter sizing helpers
 function [31:0] w_32(input [31:0] val);
     w_32 = val;
@@ -787,85 +789,154 @@ wire event_int_valid;
 
 assign msi_irq = (event_int_valid << event_int);
 
-// Interface control registers
-reg axil_ctrl_awready_reg = 1'b0;
-reg axil_ctrl_wready_reg = 1'b0;
-reg [1:0] axil_ctrl_bresp_reg = 2'b00;
-reg axil_ctrl_bvalid_reg = 1'b0;
-reg axil_ctrl_arready_reg = 1'b0;
-reg [AXIL_DATA_WIDTH-1:0] axil_ctrl_rdata_reg = {AXIL_DATA_WIDTH{1'b0}};
-reg [1:0] axil_ctrl_rresp_reg = 2'b00;
-reg axil_ctrl_rvalid_reg = 1'b0;
+// control registers
+wire [AXIL_CTRL_ADDR_WIDTH-1:0]  ctrl_reg_wr_addr;
+wire [AXIL_DATA_WIDTH-1:0]       ctrl_reg_wr_data;
+wire [AXIL_STRB_WIDTH-1:0]       ctrl_reg_wr_strb;
+wire                             ctrl_reg_wr_en;
+wire                             ctrl_reg_wr_wait;
+wire                             ctrl_reg_wr_ack;
+wire [AXIL_CTRL_ADDR_WIDTH-1:0]  ctrl_reg_rd_addr;
+wire                             ctrl_reg_rd_en;
+wire [AXIL_DATA_WIDTH-1:0]       ctrl_reg_rd_data;
+wire                             ctrl_reg_rd_wait;
+wire                             ctrl_reg_rd_ack;
 
-assign axil_ctrl_awready = axil_ctrl_awready_reg;
-assign axil_ctrl_wready = axil_ctrl_wready_reg;
-assign axil_ctrl_bresp = axil_ctrl_bresp_reg;
-assign axil_ctrl_bvalid = axil_ctrl_bvalid_reg;
-assign axil_ctrl_arready = axil_ctrl_arready_reg;
-assign axil_ctrl_rdata = axil_ctrl_rdata_reg;
-assign axil_ctrl_rresp = axil_ctrl_rresp_reg;
-assign axil_ctrl_rvalid = axil_ctrl_rvalid_reg;
+axil_reg_if #(
+    .DATA_WIDTH(AXIL_DATA_WIDTH),
+    .ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+    .STRB_WIDTH(AXIL_STRB_WIDTH),
+    .TIMEOUT(4)
+)
+axil_reg_if_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * AXI-Lite slave interface
+     */
+    .s_axil_awaddr(axil_ctrl_awaddr),
+    .s_axil_awprot(axil_ctrl_awprot),
+    .s_axil_awvalid(axil_ctrl_awvalid),
+    .s_axil_awready(axil_ctrl_awready),
+    .s_axil_wdata(axil_ctrl_wdata),
+    .s_axil_wstrb(axil_ctrl_wstrb),
+    .s_axil_wvalid(axil_ctrl_wvalid),
+    .s_axil_wready(axil_ctrl_wready),
+    .s_axil_bresp(axil_ctrl_bresp),
+    .s_axil_bvalid(axil_ctrl_bvalid),
+    .s_axil_bready(axil_ctrl_bready),
+    .s_axil_araddr(axil_ctrl_araddr),
+    .s_axil_arprot(axil_ctrl_arprot),
+    .s_axil_arvalid(axil_ctrl_arvalid),
+    .s_axil_arready(axil_ctrl_arready),
+    .s_axil_rdata(axil_ctrl_rdata),
+    .s_axil_rresp(axil_ctrl_rresp),
+    .s_axil_rvalid(axil_ctrl_rvalid),
+    .s_axil_rready(axil_ctrl_rready),
+
+    /*
+     * Register interface
+     */
+    .reg_wr_addr(ctrl_reg_wr_addr),
+    .reg_wr_data(ctrl_reg_wr_data),
+    .reg_wr_strb(ctrl_reg_wr_strb),
+    .reg_wr_en(ctrl_reg_wr_en),
+    .reg_wr_wait(ctrl_reg_wr_wait),
+    .reg_wr_ack(ctrl_reg_wr_ack),
+    .reg_rd_addr(ctrl_reg_rd_addr),
+    .reg_rd_en(ctrl_reg_rd_en),
+    .reg_rd_data(ctrl_reg_rd_data),
+    .reg_rd_wait(ctrl_reg_rd_wait),
+    .reg_rd_ack(ctrl_reg_rd_ack)
+);
+
+reg ctrl_reg_wr_ack_reg = 1'b0;
+reg [AXIL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_DATA_WIDTH{1'b0}};
+reg ctrl_reg_rd_ack_reg = 1'b0;
+
+wire port_ctrl_reg_wr_wait[PORTS-1:0];
+wire port_ctrl_reg_wr_ack[PORTS-1:0];
+wire [AXIL_DATA_WIDTH-1:0] port_ctrl_reg_rd_data[PORTS-1:0];
+wire port_ctrl_reg_rd_wait[PORTS-1:0];
+wire port_ctrl_reg_rd_ack[PORTS-1:0];
+
+reg ctrl_reg_wr_wait_cmb;
+reg ctrl_reg_wr_ack_cmb;
+reg [AXIL_DATA_WIDTH-1:0] ctrl_reg_rd_data_cmb;
+reg ctrl_reg_rd_wait_cmb;
+reg ctrl_reg_rd_ack_cmb;
+
+assign ctrl_reg_wr_wait = ctrl_reg_wr_wait_cmb;
+assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_cmb;
+assign ctrl_reg_rd_data = ctrl_reg_rd_data_cmb;
+assign ctrl_reg_rd_wait = ctrl_reg_rd_wait_cmb;
+assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_cmb;
+
+integer k;
+
+always @* begin
+    ctrl_reg_wr_wait_cmb = 1'b0;
+    ctrl_reg_wr_ack_cmb = ctrl_reg_wr_ack_reg;
+    ctrl_reg_rd_data_cmb = ctrl_reg_rd_data_reg;
+    ctrl_reg_rd_wait_cmb = 1'b0;
+    ctrl_reg_rd_ack_cmb = ctrl_reg_rd_ack_reg;
+
+    for (k = 0; k < PORTS; k = k + 1) begin
+        ctrl_reg_wr_wait_cmb = ctrl_reg_wr_wait_cmb | port_ctrl_reg_wr_wait[k];
+        ctrl_reg_wr_ack_cmb = ctrl_reg_wr_ack_cmb | port_ctrl_reg_wr_ack[k];
+        ctrl_reg_rd_data_cmb = ctrl_reg_rd_data_cmb | port_ctrl_reg_rd_data[k];
+        ctrl_reg_rd_wait_cmb = ctrl_reg_rd_wait_cmb | port_ctrl_reg_rd_wait[k];
+        ctrl_reg_rd_ack_cmb = ctrl_reg_rd_ack_cmb | port_ctrl_reg_rd_ack[k];
+    end
+end
 
 always @(posedge clk) begin
-    axil_ctrl_awready_reg <= 1'b0;
-    axil_ctrl_wready_reg <= 1'b0;
-    axil_ctrl_bresp_reg <= 2'b00;
-    axil_ctrl_bvalid_reg <= axil_ctrl_bvalid_reg && !axil_ctrl_bready;
-    axil_ctrl_arready_reg <= 1'b0;
-    axil_ctrl_rresp_reg <= 2'b00;
-    axil_ctrl_rvalid_reg <= axil_ctrl_rvalid_reg && !axil_ctrl_rready;
+    ctrl_reg_wr_ack_reg <= 1'b0;
+    ctrl_reg_rd_data_reg <= {AXIL_DATA_WIDTH{1'b0}};
+    ctrl_reg_rd_ack_reg <= 1'b0;
 
-    if (axil_ctrl_awvalid && axil_ctrl_wvalid && !axil_ctrl_bvalid) begin
+    if (ctrl_reg_wr_en && !ctrl_reg_wr_ack_reg) begin
         // write operation
-        axil_ctrl_awready_reg <= 1'b1;
-        axil_ctrl_wready_reg <= 1'b1;
-        axil_ctrl_bresp_reg <= 2'b00;
-        axil_ctrl_bvalid_reg <= 1'b1;
-
-        // case ({axil_ctrl_awaddr[15:2], 2'b00})
-        //     16'h0000: 
+        ctrl_reg_wr_ack_reg <= 1'b0;
+        // case ({ctrl_reg_wr_addr >> 2, 2'b00})
+        //     default: ctrl_reg_wr_ack_reg <= 1'b0;
         // endcase
     end
 
-    if (axil_ctrl_arvalid && !axil_ctrl_rvalid) begin
+    if (ctrl_reg_rd_en && !ctrl_reg_rd_ack_reg) begin
         // read operation
-        axil_ctrl_arready_reg <= 1'b1;
-        axil_ctrl_rresp_reg <= 2'b00;
-        axil_ctrl_rvalid_reg <= 1'b1;
-        axil_ctrl_rdata_reg <= {AXIL_DATA_WIDTH{1'b0}};
-
-        case ({axil_ctrl_araddr[15:2], 2'b00})
-            16'h0000: axil_ctrl_rdata_reg <= 32'd0;                       // if_id
+        ctrl_reg_rd_ack_reg <= 1'b1;
+        case ({ctrl_reg_rd_addr >> 2, 2'b00})
+            16'h0000: ctrl_reg_rd_data_reg <= 32'd0;                       // if_id
             16'h0004: begin
                 // if_features
-                axil_ctrl_rdata_reg[0] <= RX_RSS_ENABLE && RX_HASH_ENABLE;
-                axil_ctrl_rdata_reg[4] <= PTP_TS_ENABLE;
-                axil_ctrl_rdata_reg[8] <= TX_CHECKSUM_ENABLE;
-                axil_ctrl_rdata_reg[9] <= RX_CHECKSUM_ENABLE;
-                axil_ctrl_rdata_reg[10] <= RX_HASH_ENABLE;
+                ctrl_reg_rd_data_reg[0] <= RX_RSS_ENABLE && RX_HASH_ENABLE;
+                ctrl_reg_rd_data_reg[4] <= PTP_TS_ENABLE;
+                ctrl_reg_rd_data_reg[8] <= TX_CHECKSUM_ENABLE;
+                ctrl_reg_rd_data_reg[9] <= RX_CHECKSUM_ENABLE;
+                ctrl_reg_rd_data_reg[10] <= RX_HASH_ENABLE;
             end
-            16'h0010: axil_ctrl_rdata_reg <= 2**EVENT_QUEUE_INDEX_WIDTH;  // event_queue_count
-            16'h0014: axil_ctrl_rdata_reg <= AXIL_EQM_BASE_ADDR;          // event_queue_offset
-            16'h0020: axil_ctrl_rdata_reg <= 2**TX_QUEUE_INDEX_WIDTH;     // tx_queue_count
-            16'h0024: axil_ctrl_rdata_reg <= AXIL_TX_QM_BASE_ADDR;        // tx_queue_offset
-            16'h0028: axil_ctrl_rdata_reg <= 2**TX_CPL_QUEUE_INDEX_WIDTH; // tx_cpl_queue_count
-            16'h002C: axil_ctrl_rdata_reg <= AXIL_TX_CQM_BASE_ADDR;       // tx_cpl_queue_offset
-            16'h0030: axil_ctrl_rdata_reg <= 2**RX_QUEUE_INDEX_WIDTH;     // rx_queue_count
-            16'h0034: axil_ctrl_rdata_reg <= AXIL_RX_QM_BASE_ADDR;        // rx_queue_offset
-            16'h0038: axil_ctrl_rdata_reg <= 2**RX_CPL_QUEUE_INDEX_WIDTH; // rx_cpl_queue_count
-            16'h003C: axil_ctrl_rdata_reg <= AXIL_RX_CQM_BASE_ADDR;       // rx_cpl_queue_offset
-            16'h0040: axil_ctrl_rdata_reg <= PORTS;                       // port_count
-            16'h0044: axil_ctrl_rdata_reg <= AXIL_PORT_BASE_ADDR;         // port_offset
-            16'h0048: axil_ctrl_rdata_reg <= 2**AXIL_PORT_ADDR_WIDTH;     // port_stride
+            16'h0010: ctrl_reg_rd_data_reg <= 2**EVENT_QUEUE_INDEX_WIDTH;  // event_queue_count
+            16'h0014: ctrl_reg_rd_data_reg <= AXIL_EQM_BASE_ADDR;          // event_queue_offset
+            16'h0020: ctrl_reg_rd_data_reg <= 2**TX_QUEUE_INDEX_WIDTH;     // tx_queue_count
+            16'h0024: ctrl_reg_rd_data_reg <= AXIL_TX_QM_BASE_ADDR;        // tx_queue_offset
+            16'h0028: ctrl_reg_rd_data_reg <= 2**TX_CPL_QUEUE_INDEX_WIDTH; // tx_cpl_queue_count
+            16'h002C: ctrl_reg_rd_data_reg <= AXIL_TX_CQM_BASE_ADDR;       // tx_cpl_queue_offset
+            16'h0030: ctrl_reg_rd_data_reg <= 2**RX_QUEUE_INDEX_WIDTH;     // rx_queue_count
+            16'h0034: ctrl_reg_rd_data_reg <= AXIL_RX_QM_BASE_ADDR;        // rx_queue_offset
+            16'h0038: ctrl_reg_rd_data_reg <= 2**RX_CPL_QUEUE_INDEX_WIDTH; // rx_cpl_queue_count
+            16'h003C: ctrl_reg_rd_data_reg <= AXIL_RX_CQM_BASE_ADDR;       // rx_cpl_queue_offset
+            16'h0040: ctrl_reg_rd_data_reg <= PORTS;                       // port_count
+            16'h0044: ctrl_reg_rd_data_reg <= AXIL_CTRL_BASE_ADDR + 2**PORT_CTRL_ADDR_WIDTH; // port_offset
+            16'h0048: ctrl_reg_rd_data_reg <= 2**PORT_CTRL_ADDR_WIDTH;     // port_stride
+            default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end
 
     if (rst) begin
-        axil_ctrl_awready_reg <= 1'b0;
-        axil_ctrl_wready_reg <= 1'b0;
-        axil_ctrl_bvalid_reg <= 1'b0;
-        axil_ctrl_arready_reg <= 1'b0;
-        axil_ctrl_rvalid_reg <= 1'b0;
+        ctrl_reg_wr_ack_reg <= 1'b0;
+        ctrl_reg_rd_ack_reg <= 1'b0;
     end
 end
 
@@ -2065,9 +2136,13 @@ generate
             .RX_RSS_ENABLE(RX_RSS_ENABLE),
             .RX_HASH_ENABLE(RX_HASH_ENABLE),
             .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
+            .REG_DATA_WIDTH(AXIL_DATA_WIDTH),
+            .REG_ADDR_WIDTH(PORT_CTRL_ADDR_WIDTH),
+            .REG_STRB_WIDTH(AXIL_STRB_WIDTH),
             .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
             .AXIL_ADDR_WIDTH(AXIL_PORT_ADDR_WIDTH),
             .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
+            .AXIL_OFFSET(AXIL_PORT_BASE_ADDR + (2**AXIL_PORT_ADDR_WIDTH)*n - (2**PORT_CTRL_ADDR_WIDTH)*(n+1)),
             .SEG_COUNT(SEG_COUNT),
             .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
             .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
@@ -2179,7 +2254,22 @@ generate
             .s_axis_dma_write_desc_status_valid(port_dma_write_desc_status_valid[n +: 1]),
 
             /*
-             * AXI-Lite slave interface
+             * Control register interface
+             */
+            .ctrl_reg_wr_addr(ctrl_reg_wr_addr),
+            .ctrl_reg_wr_data(ctrl_reg_wr_data),
+            .ctrl_reg_wr_strb(ctrl_reg_wr_strb),
+            .ctrl_reg_wr_en(ctrl_reg_wr_en && ((ctrl_reg_wr_addr >> PORT_CTRL_ADDR_WIDTH) == n+1)),
+            .ctrl_reg_wr_wait(port_ctrl_reg_wr_wait[n]),
+            .ctrl_reg_wr_ack(port_ctrl_reg_wr_ack[n]),
+            .ctrl_reg_rd_addr(ctrl_reg_rd_addr),
+            .ctrl_reg_rd_en(ctrl_reg_rd_en && ((ctrl_reg_rd_addr >> PORT_CTRL_ADDR_WIDTH) == n+1)),
+            .ctrl_reg_rd_data(port_ctrl_reg_rd_data[n]),
+            .ctrl_reg_rd_wait(port_ctrl_reg_rd_wait[n]),
+            .ctrl_reg_rd_ack(port_ctrl_reg_rd_ack[n]),
+
+            /*
+             * AXI-Lite slave interface (schedulers)
              */
             .s_axil_awaddr(axil_port_awaddr[n*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
             .s_axil_awprot(axil_port_awprot[n*3 +: 3]),

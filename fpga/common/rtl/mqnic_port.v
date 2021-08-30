@@ -80,8 +80,6 @@ module mqnic_port #
     parameter RX_MAX_DESC_REQ = 16,
     // Receive descriptor FIFO size
     parameter RX_DESC_FIFO_SIZE = RX_MAX_DESC_REQ*8,
-    // Transmit scheduler type
-    parameter TX_SCHEDULER = "RR",
     // Scheduler operation table size
     parameter TX_SCHEDULER_OP_TABLE_SIZE = 32,
     // Scheduler pipeline setting
@@ -319,8 +317,7 @@ parameter DMA_CLIENT_LEN_WIDTH = DMA_LEN_WIDTH;
 
 parameter DESC_REQ_TAG_WIDTH_INT = DESC_REQ_TAG_WIDTH - $clog2(2);
 
-parameter SCHED_COUNT = (TX_SCHEDULER == "TDMA_RR") ? 2 : 1;
-parameter AXIL_SCHED_ADDR_WIDTH = AXIL_ADDR_WIDTH-$clog2(SCHED_COUNT+1);
+parameter AXIL_SCHED_ADDR_WIDTH = AXIL_ADDR_WIDTH-1;
 
 // parameter sizing helpers
 function [31:0] w_32(input [31:0] val);
@@ -348,25 +345,25 @@ wire [1:0]                 axil_ctrl_rresp;
 wire                       axil_ctrl_rvalid;
 wire                       axil_ctrl_rready;
 
-wire [SCHED_COUNT*AXIL_ADDR_WIDTH-1:0] axil_sched_awaddr;
-wire [SCHED_COUNT*3-1:0]               axil_sched_awprot;
-wire [SCHED_COUNT-1:0]                 axil_sched_awvalid;
-wire [SCHED_COUNT-1:0]                 axil_sched_awready;
-wire [SCHED_COUNT*AXIL_DATA_WIDTH-1:0] axil_sched_wdata;
-wire [SCHED_COUNT*AXIL_STRB_WIDTH-1:0] axil_sched_wstrb;
-wire [SCHED_COUNT-1:0]                 axil_sched_wvalid;
-wire [SCHED_COUNT-1:0]                 axil_sched_wready;
-wire [SCHED_COUNT*2-1:0]               axil_sched_bresp;
-wire [SCHED_COUNT-1:0]                 axil_sched_bvalid;
-wire [SCHED_COUNT-1:0]                 axil_sched_bready;
-wire [SCHED_COUNT*AXIL_ADDR_WIDTH-1:0] axil_sched_araddr;
-wire [SCHED_COUNT*3-1:0]               axil_sched_arprot;
-wire [SCHED_COUNT-1:0]                 axil_sched_arvalid;
-wire [SCHED_COUNT-1:0]                 axil_sched_arready;
-wire [SCHED_COUNT*AXIL_DATA_WIDTH-1:0] axil_sched_rdata;
-wire [SCHED_COUNT*2-1:0]               axil_sched_rresp;
-wire [SCHED_COUNT-1:0]                 axil_sched_rvalid;
-wire [SCHED_COUNT-1:0]                 axil_sched_rready;
+wire [AXIL_ADDR_WIDTH-1:0] axil_sched_awaddr;
+wire [2:0]                 axil_sched_awprot;
+wire                       axil_sched_awvalid;
+wire                       axil_sched_awready;
+wire [AXIL_DATA_WIDTH-1:0] axil_sched_wdata;
+wire [AXIL_STRB_WIDTH-1:0] axil_sched_wstrb;
+wire                       axil_sched_wvalid;
+wire                       axil_sched_wready;
+wire [1:0]                 axil_sched_bresp;
+wire                       axil_sched_bvalid;
+wire                       axil_sched_bready;
+wire [AXIL_ADDR_WIDTH-1:0] axil_sched_araddr;
+wire [2:0]                 axil_sched_arprot;
+wire                       axil_sched_arvalid;
+wire                       axil_sched_arready;
+wire [AXIL_DATA_WIDTH-1:0] axil_sched_rdata;
+wire [1:0]                 axil_sched_rresp;
+wire                       axil_sched_rvalid;
+wire                       axil_sched_rready;
 
 // Checksumming and RSS
 wire [AXIS_DATA_WIDTH-1:0] rx_axis_tdata_int;
@@ -556,197 +553,146 @@ wire                            dma_rx_desc_status_user;
 wire [3:0]                      dma_rx_desc_status_error;
 wire                            dma_rx_desc_status_valid;
 
-wire                            dma_enable = 1;
+// control registers
+wire [AXIL_SCHED_ADDR_WIDTH-1:0]  ctrl_reg_wr_addr;
+wire [AXIL_DATA_WIDTH-1:0]        ctrl_reg_wr_data;
+wire [AXIL_STRB_WIDTH-1:0]        ctrl_reg_wr_strb;
+wire                              ctrl_reg_wr_en;
+wire                              ctrl_reg_wr_wait;
+wire                              ctrl_reg_wr_ack;
+wire [AXIL_SCHED_ADDR_WIDTH-1:0]  ctrl_reg_rd_addr;
+wire                              ctrl_reg_rd_en;
+wire [AXIL_DATA_WIDTH-1:0]        ctrl_reg_rd_data;
+wire                              ctrl_reg_rd_wait;
+wire                              ctrl_reg_rd_ack;
 
-// Port control registers
-reg axil_ctrl_awready_reg = 1'b0;
-reg axil_ctrl_wready_reg = 1'b0;
-reg axil_ctrl_bvalid_reg = 1'b0;
-reg axil_ctrl_arready_reg = 1'b0;
-reg [AXIL_DATA_WIDTH-1:0] axil_ctrl_rdata_reg = {AXIL_DATA_WIDTH{1'b0}};
-reg axil_ctrl_rvalid_reg = 1'b0;
+axil_reg_if #(
+    .DATA_WIDTH(AXIL_DATA_WIDTH),
+    .ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
+    .STRB_WIDTH(AXIL_STRB_WIDTH),
+    .TIMEOUT(4)
+)
+axil_reg_if_inst (
+    .clk(clk),
+    .rst(rst),
 
-reg sched_enable_reg = 1'b0;
+    /*
+     * AXI-Lite slave interface
+     */
+    .s_axil_awaddr(axil_ctrl_awaddr),
+    .s_axil_awprot(axil_ctrl_awprot),
+    .s_axil_awvalid(axil_ctrl_awvalid),
+    .s_axil_awready(axil_ctrl_awready),
+    .s_axil_wdata(axil_ctrl_wdata),
+    .s_axil_wstrb(axil_ctrl_wstrb),
+    .s_axil_wvalid(axil_ctrl_wvalid),
+    .s_axil_wready(axil_ctrl_wready),
+    .s_axil_bresp(axil_ctrl_bresp),
+    .s_axil_bvalid(axil_ctrl_bvalid),
+    .s_axil_bready(axil_ctrl_bready),
+    .s_axil_araddr(axil_ctrl_araddr),
+    .s_axil_arprot(axil_ctrl_arprot),
+    .s_axil_arvalid(axil_ctrl_arvalid),
+    .s_axil_arready(axil_ctrl_arready),
+    .s_axil_rdata(axil_ctrl_rdata),
+    .s_axil_rresp(axil_ctrl_rresp),
+    .s_axil_rvalid(axil_ctrl_rvalid),
+    .s_axil_rready(axil_ctrl_rready),
+
+    /*
+     * Register interface
+     */
+    .reg_wr_addr(ctrl_reg_wr_addr),
+    .reg_wr_data(ctrl_reg_wr_data),
+    .reg_wr_strb(ctrl_reg_wr_strb),
+    .reg_wr_en(ctrl_reg_wr_en),
+    .reg_wr_wait(ctrl_reg_wr_wait),
+    .reg_wr_ack(ctrl_reg_wr_ack),
+    .reg_rd_addr(ctrl_reg_rd_addr),
+    .reg_rd_en(ctrl_reg_rd_en),
+    .reg_rd_data(ctrl_reg_rd_data),
+    .reg_rd_wait(ctrl_reg_rd_wait),
+    .reg_rd_ack(ctrl_reg_rd_ack)
+);
+
+wire sched_ctrl_reg_wr_wait;
+wire sched_ctrl_reg_wr_ack;
+wire [AXIL_DATA_WIDTH-1:0] sched_ctrl_reg_rd_data;
+wire sched_ctrl_reg_rd_wait;
+wire sched_ctrl_reg_rd_ack;
+
+reg ctrl_reg_wr_ack_reg = 1'b0;
+reg [AXIL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_DATA_WIDTH{1'b0}};
+reg ctrl_reg_rd_ack_reg = 1'b0;
 
 reg [RX_QUEUE_INDEX_WIDTH-1:0] rss_mask_reg = 0;
 
 reg [DMA_CLIENT_LEN_WIDTH-1:0] tx_mtu_reg = MAX_TX_SIZE;
 reg [DMA_CLIENT_LEN_WIDTH-1:0] rx_mtu_reg = MAX_RX_SIZE;
 
-reg tdma_enable_reg = 1'b0;
-wire tdma_locked;
-wire tdma_error;
-
-reg [79:0] set_tdma_schedule_start_reg = 0;
-reg set_tdma_schedule_start_valid_reg = 0;
-reg [79:0] set_tdma_schedule_period_reg = 0;
-reg set_tdma_schedule_period_valid_reg = 0;
-reg [79:0] set_tdma_timeslot_period_reg = 0;
-reg set_tdma_timeslot_period_valid_reg = 0;
-reg [79:0] set_tdma_active_period_reg = 0;
-reg set_tdma_active_period_valid_reg = 0;
-
-wire tdma_schedule_start;
-wire [TDMA_INDEX_WIDTH-1:0] tdma_timeslot_index;
-wire tdma_timeslot_start;
-wire tdma_timeslot_end;
-wire tdma_timeslot_active;
-
-assign axil_ctrl_awready = axil_ctrl_awready_reg;
-assign axil_ctrl_wready = axil_ctrl_wready_reg;
-assign axil_ctrl_bresp = 2'b00;
-assign axil_ctrl_bvalid = axil_ctrl_bvalid_reg;
-assign axil_ctrl_arready = axil_ctrl_arready_reg;
-assign axil_ctrl_rdata = axil_ctrl_rdata_reg;
-assign axil_ctrl_rresp = 2'b00;
-assign axil_ctrl_rvalid = axil_ctrl_rvalid_reg;
+assign ctrl_reg_wr_wait = sched_ctrl_reg_wr_wait;
+assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg | sched_ctrl_reg_wr_ack;
+assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg | sched_ctrl_reg_rd_data;
+assign ctrl_reg_rd_wait = sched_ctrl_reg_rd_wait;
+assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg | sched_ctrl_reg_rd_ack;
 
 always @(posedge clk) begin
-    axil_ctrl_awready_reg <= 1'b0;
-    axil_ctrl_wready_reg <= 1'b0;
-    axil_ctrl_bvalid_reg <= axil_ctrl_bvalid_reg && !axil_ctrl_bready;
-    axil_ctrl_arready_reg <= 1'b0;
-    axil_ctrl_rvalid_reg <= axil_ctrl_rvalid_reg && !axil_ctrl_rready;
+    ctrl_reg_wr_ack_reg <= 1'b0;
+    ctrl_reg_rd_data_reg <= {AXIL_DATA_WIDTH{1'b0}};
+    ctrl_reg_rd_ack_reg <= 1'b0;
 
-    set_tdma_schedule_start_valid_reg <= 1'b0;
-    set_tdma_schedule_period_valid_reg <= 1'b0;
-    set_tdma_timeslot_period_valid_reg <= 1'b0;
-    set_tdma_active_period_valid_reg <= 1'b0;
-
-    if (axil_ctrl_awvalid && axil_ctrl_wvalid && !axil_ctrl_bvalid) begin
+    if (ctrl_reg_wr_en && !ctrl_reg_wr_ack_reg) begin
         // write operation
-        axil_ctrl_awready_reg <= 1'b1;
-        axil_ctrl_wready_reg <= 1'b1;
-        axil_ctrl_bvalid_reg <= 1'b1;
-
-        case ({axil_ctrl_awaddr[15:2], 2'b00})
-            16'h0040: begin
-                // Scheduler enable
-                if (axil_ctrl_wstrb[0]) begin
-                    sched_enable_reg <= axil_ctrl_wdata[0];
-                end
-            end
-            16'h0080: rss_mask_reg <= axil_ctrl_wdata; // RSS mask
-            16'h0100: tx_mtu_reg <= axil_ctrl_wdata; // TX MTU
-            16'h0200: rx_mtu_reg <= axil_ctrl_wdata; // RX MTU
-            16'h1000: begin
-                // TDMA control
-                if (axil_ctrl_wstrb[0]) begin
-                    tdma_enable_reg <= axil_ctrl_wdata[0];
-                end
-            end
-            16'h1014: set_tdma_schedule_start_reg[29:0] <= axil_ctrl_wdata; // TDMA schedule start ns
-            16'h1018: set_tdma_schedule_start_reg[63:32] <= axil_ctrl_wdata; // TDMA schedule start sec l
-            16'h101C: begin
-                // TDMA schedule start sec h
-                set_tdma_schedule_start_reg[79:64] <= axil_ctrl_wdata;
-                set_tdma_schedule_start_valid_reg <= 1'b1;
-            end
-            16'h1024: set_tdma_schedule_period_reg[29:0] <= axil_ctrl_wdata; // TDMA schedule period ns
-            16'h1028: set_tdma_schedule_period_reg[63:32] <= axil_ctrl_wdata; // TDMA schedule period sec l
-            16'h102C: begin
-                // TDMA schedule period sec h
-                set_tdma_schedule_period_reg[79:64] <= axil_ctrl_wdata;
-                set_tdma_schedule_period_valid_reg <= 1'b1;
-            end
-            16'h1034: set_tdma_timeslot_period_reg[29:0] <= axil_ctrl_wdata; // TDMA timeslot period ns
-            16'h1038: set_tdma_timeslot_period_reg[63:32] <= axil_ctrl_wdata; // TDMA timeslot period sec l
-            16'h103C: begin
-                // TDMA timeslot period sec h
-                set_tdma_timeslot_period_reg[79:64] <= axil_ctrl_wdata;
-                set_tdma_timeslot_period_valid_reg <= 1'b1;
-            end
-            16'h1044: set_tdma_active_period_reg[29:0] <= axil_ctrl_wdata; // TDMA active period ns
-            16'h1048: set_tdma_active_period_reg[63:32] <= axil_ctrl_wdata; // TDMA active period sec l
-            16'h104C: begin
-                // TDMA active period sec h
-                set_tdma_active_period_reg[79:64] <= axil_ctrl_wdata;
-                set_tdma_active_period_valid_reg <= 1'b1;
-            end
+        ctrl_reg_wr_ack_reg <= 1'b1;
+        case ({ctrl_reg_wr_addr >> 2, 2'b00})
+            16'h0080: rss_mask_reg <= ctrl_reg_wr_data; // RSS mask
+            16'h0100: tx_mtu_reg <= ctrl_reg_wr_data; // TX MTU
+            16'h0200: rx_mtu_reg <= ctrl_reg_wr_data; // RX MTU
+            default: ctrl_reg_wr_ack_reg <= 1'b0;
         endcase
     end
 
-    if (axil_ctrl_arvalid && !axil_ctrl_rvalid) begin
+    if (ctrl_reg_rd_en && !ctrl_reg_rd_ack_reg) begin
         // read operation
-        axil_ctrl_arready_reg <= 1'b1;
-        axil_ctrl_rvalid_reg <= 1'b1;
-        axil_ctrl_rdata_reg <= {AXIL_DATA_WIDTH{1'b0}};
-
-        case ({axil_ctrl_araddr[15:2], 2'b00})
-            16'h0000: axil_ctrl_rdata_reg <= 32'd0;       // port_id
+        ctrl_reg_rd_ack_reg <= 1'b1;
+        case ({ctrl_reg_rd_addr >> 2, 2'b00})
+            16'h0000: ctrl_reg_rd_data_reg <= 32'd0;       // port_id
             16'h0004: begin
                 // port_features
-                axil_ctrl_rdata_reg[0] <= RX_RSS_ENABLE && RX_HASH_ENABLE;
-                axil_ctrl_rdata_reg[4] <= PTP_TS_ENABLE;
-                axil_ctrl_rdata_reg[8] <= TX_CHECKSUM_ENABLE;
-                axil_ctrl_rdata_reg[9] <= RX_CHECKSUM_ENABLE;
-                axil_ctrl_rdata_reg[10] <= RX_HASH_ENABLE;
+                ctrl_reg_rd_data_reg[0] <= RX_RSS_ENABLE && RX_HASH_ENABLE;
+                ctrl_reg_rd_data_reg[4] <= PTP_TS_ENABLE;
+                ctrl_reg_rd_data_reg[8] <= TX_CHECKSUM_ENABLE;
+                ctrl_reg_rd_data_reg[9] <= RX_CHECKSUM_ENABLE;
+                ctrl_reg_rd_data_reg[10] <= RX_HASH_ENABLE;
             end
-            16'h0008: axil_ctrl_rdata_reg <= MAX_TX_SIZE; // port_mtu
-            16'h0010: axil_ctrl_rdata_reg <= SCHED_COUNT; // scheduler_count
-            16'h0014: axil_ctrl_rdata_reg <= 2**AXIL_SCHED_ADDR_WIDTH; // scheduler_offset
-            16'h0018: axil_ctrl_rdata_reg <= 2**AXIL_SCHED_ADDR_WIDTH; // scheduler_stride
-            16'h001C: axil_ctrl_rdata_reg <= 32'd0;       // scheduler_type
-            16'h0040: begin
-                // Scheduler enable
-                axil_ctrl_rdata_reg[0] <= sched_enable_reg;
-            end
-            16'h0080: axil_ctrl_rdata_reg <= rss_mask_reg; // RSS mask
-            16'h0100: axil_ctrl_rdata_reg <= tx_mtu_reg; // TX MTU
-            16'h0200: axil_ctrl_rdata_reg <= rx_mtu_reg; // RX MTU
-            16'h1000: begin
-                // TDMA control
-                axil_ctrl_rdata_reg[0] <= tdma_enable_reg;
-            end
-            16'h1004: begin
-                // TDMA status
-                axil_ctrl_rdata_reg[0] <= tdma_locked;
-                axil_ctrl_rdata_reg[1] <= tdma_error;
-            end
-            16'h1008: axil_ctrl_rdata_reg <= 2**TDMA_INDEX_WIDTH; // TDMA timeslot count
-            16'h1014: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[29:0]; // TDMA schedule start ns
-            16'h1018: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[63:32]; // TDMA schedule start sec l
-            16'h101C: axil_ctrl_rdata_reg <= set_tdma_schedule_start_reg[79:64]; // TDMA schedule start sec h
-            16'h1024: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[29:0]; // TDMA schedule period ns
-            16'h1028: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[63:32]; // TDMA schedule period sec l
-            16'h102C: axil_ctrl_rdata_reg <= set_tdma_schedule_period_reg[79:64]; // TDMA schedule period sec h
-            16'h1034: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[29:0]; // TDMA timeslot period ns
-            16'h1038: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[63:32]; // TDMA timeslot period sec l
-            16'h103C: axil_ctrl_rdata_reg <= set_tdma_timeslot_period_reg[79:64]; // TDMA timeslot period sec h
-            16'h1044: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[29:0]; // TDMA active period ns
-            16'h1048: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[63:32]; // TDMA active period sec l
-            16'h104C: axil_ctrl_rdata_reg <= set_tdma_active_period_reg[79:64]; // TDMA active period sec h
+            16'h0008: ctrl_reg_rd_data_reg <= MAX_TX_SIZE; // port_mtu
+            16'h0080: ctrl_reg_rd_data_reg <= rss_mask_reg; // RSS mask
+            16'h0100: ctrl_reg_rd_data_reg <= tx_mtu_reg; // TX MTU
+            16'h0200: ctrl_reg_rd_data_reg <= rx_mtu_reg; // RX MTU
+            default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end
 
     if (rst) begin
-        axil_ctrl_awready_reg <= 1'b0;
-        axil_ctrl_wready_reg <= 1'b0;
-        axil_ctrl_bvalid_reg <= 1'b0;
-        axil_ctrl_arready_reg <= 1'b0;
-        axil_ctrl_rvalid_reg <= 1'b0;
+        ctrl_reg_wr_ack_reg <= 1'b0;
+        ctrl_reg_rd_ack_reg <= 1'b0;
 
-        sched_enable_reg <= 1'b0;
         rss_mask_reg <= 0;
         tx_mtu_reg <= MAX_TX_SIZE;
         rx_mtu_reg <= MAX_RX_SIZE;
-        tdma_enable_reg <= 1'b0;
     end
 end
 
 // AXI lite crossbar
-parameter AXIL_S_COUNT = 1;
-parameter AXIL_M_COUNT = SCHED_COUNT+1;
-
 axil_crossbar #(
     .DATA_WIDTH(AXIL_DATA_WIDTH),
     .ADDR_WIDTH(AXIL_ADDR_WIDTH),
     .STRB_WIDTH(AXIL_STRB_WIDTH),
-    .S_COUNT(AXIL_S_COUNT),
-    .M_COUNT(AXIL_M_COUNT),
-    .M_ADDR_WIDTH({AXIL_M_COUNT{w_32(AXIL_SCHED_ADDR_WIDTH)}}),
-    .M_CONNECT_READ({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}}),
-    .M_CONNECT_WRITE({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}})
+    .S_COUNT(1),
+    .M_COUNT(2),
+    .M_ADDR_WIDTH({2{w_32(AXIL_SCHED_ADDR_WIDTH)}}),
+    .M_CONNECT_READ({2{1'b1}}),
+    .M_CONNECT_WRITE({2{1'b1}})
 )
 axil_crossbar_inst (
     .clk(clk),
@@ -922,178 +868,92 @@ cpl_op_mux_inst (
     .m_axis_req_status_valid({rx_cpl_req_status_valid, tx_cpl_req_status_valid})
 );
 
-generate
+mqnic_tx_scheduler_block #(
+    .REG_DATA_WIDTH(AXIL_DATA_WIDTH),
+    .REG_ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
+    .REG_STRB_WIDTH(AXIL_STRB_WIDTH),
+    .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
+    .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
+    .AXIL_OFFSET(2**AXIL_SCHED_ADDR_WIDTH),
+    .LEN_WIDTH(DMA_CLIENT_LEN_WIDTH),
+    .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
+    .OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
+    .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
+    .PIPELINE(TX_SCHEDULER_PIPELINE),
+    .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
+    .PTP_TS_WIDTH(PTP_TS_WIDTH),
+    .MAX_TX_SIZE(MAX_TX_SIZE)
+)
+scheduler_block (
+    .clk(clk),
+    .rst(rst),
 
-if (TX_SCHEDULER == "RR" || TX_SCHEDULER == "TDMA_RR") begin
+    /*
+     * Control register interface
+     */
+    .ctrl_reg_wr_addr(ctrl_reg_wr_addr),
+    .ctrl_reg_wr_data(ctrl_reg_wr_data),
+    .ctrl_reg_wr_strb(ctrl_reg_wr_strb),
+    .ctrl_reg_wr_en(ctrl_reg_wr_en),
+    .ctrl_reg_wr_wait(sched_ctrl_reg_wr_wait),
+    .ctrl_reg_wr_ack(sched_ctrl_reg_wr_ack),
+    .ctrl_reg_rd_addr(ctrl_reg_rd_addr),
+    .ctrl_reg_rd_en(ctrl_reg_rd_en),
+    .ctrl_reg_rd_data(sched_ctrl_reg_rd_data),
+    .ctrl_reg_rd_wait(sched_ctrl_reg_rd_wait),
+    .ctrl_reg_rd_ack(sched_ctrl_reg_rd_ack),
 
-    tx_scheduler_rr #(
-        .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-        .AXIL_ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
-        .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
-        .LEN_WIDTH(DMA_CLIENT_LEN_WIDTH),
-        .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-        .OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
-        .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
-        .PIPELINE(TX_SCHEDULER_PIPELINE),
-        .SCHED_CTRL_ENABLE(TX_SCHEDULER == "TDMA_RR")
-    )
-    tx_scheduler_inst (
-        .clk(clk),
-        .rst(rst),
+    /*
+     * AXI-Lite slave interface
+     */
+    .s_axil_awaddr(axil_sched_awaddr),
+    .s_axil_awprot(axil_sched_awprot),
+    .s_axil_awvalid(axil_sched_awvalid),
+    .s_axil_awready(axil_sched_awready),
+    .s_axil_wdata(axil_sched_wdata),
+    .s_axil_wstrb(axil_sched_wstrb),
+    .s_axil_wvalid(axil_sched_wvalid),
+    .s_axil_wready(axil_sched_wready),
+    .s_axil_bresp(axil_sched_bresp),
+    .s_axil_bvalid(axil_sched_bvalid),
+    .s_axil_bready(axil_sched_bready),
+    .s_axil_araddr(axil_sched_araddr),
+    .s_axil_arprot(axil_sched_arprot),
+    .s_axil_arvalid(axil_sched_arvalid),
+    .s_axil_arready(axil_sched_arready),
+    .s_axil_rdata(axil_sched_rdata),
+    .s_axil_rresp(axil_sched_rresp),
+    .s_axil_rvalid(axil_sched_rvalid),
+    .s_axil_rready(axil_sched_rready),
 
-        /*
-         * Transmit request output (queue index)
-         */
-        .m_axis_tx_req_queue(tx_req_queue),
-        .m_axis_tx_req_tag(tx_req_tag),
-        .m_axis_tx_req_valid(tx_req_valid),
-        .m_axis_tx_req_ready(tx_req_ready),
+    /*
+     * Transmit request output (queue index)
+     */
+    .m_axis_tx_req_queue(tx_req_queue),
+    .m_axis_tx_req_tag(tx_req_tag),
+    .m_axis_tx_req_valid(tx_req_valid),
+    .m_axis_tx_req_ready(tx_req_ready),
 
-        /*
-         * Transmit request status input
-         */
-        .s_axis_tx_req_status_len(tx_req_status_len),
-        .s_axis_tx_req_status_tag(tx_req_status_tag),
-        .s_axis_tx_req_status_valid(tx_req_status_valid),
+    /*
+     * Transmit request status input
+     */
+    .s_axis_tx_req_status_len(tx_req_status_len),
+    .s_axis_tx_req_status_tag(tx_req_status_tag),
+    .s_axis_tx_req_status_valid(tx_req_status_valid),
 
-        /*
-         * Doorbell input
-         */
-        .s_axis_doorbell_queue(s_axis_tx_doorbell_queue),
-        .s_axis_doorbell_valid(s_axis_tx_doorbell_valid),
+    /*
+     * Doorbell input
+     */
+    .s_axis_doorbell_queue(s_axis_tx_doorbell_queue),
+    .s_axis_doorbell_valid(s_axis_tx_doorbell_valid),
 
-        /*
-         * Scheduler control input
-         */
-        .s_axis_sched_ctrl_queue(tx_sched_ctrl_queue),
-        .s_axis_sched_ctrl_enable(tx_sched_ctrl_enable),
-        .s_axis_sched_ctrl_valid(tx_sched_ctrl_valid),
-        .s_axis_sched_ctrl_ready(tx_sched_ctrl_ready),
-
-        /*
-         * AXI-Lite slave interface
-         */
-        .s_axil_awaddr(axil_sched_awaddr[0*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
-        .s_axil_awprot(axil_sched_awprot[0*3 +: 3]),
-        .s_axil_awvalid(axil_sched_awvalid[0*1 +: 1]),
-        .s_axil_awready(axil_sched_awready[0*1 +: 1]),
-        .s_axil_wdata(axil_sched_wdata[0*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
-        .s_axil_wstrb(axil_sched_wstrb[0*AXIL_STRB_WIDTH +: AXIL_STRB_WIDTH]),
-        .s_axil_wvalid(axil_sched_wvalid[0*1 +: 1]),
-        .s_axil_wready(axil_sched_wready[0*1 +: 1]),
-        .s_axil_bresp(axil_sched_bresp[0*2 +: 2]),
-        .s_axil_bvalid(axil_sched_bvalid[0*1 +: 1]),
-        .s_axil_bready(axil_sched_bready[0*1 +: 1]),
-        .s_axil_araddr(axil_sched_araddr[0*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
-        .s_axil_arprot(axil_sched_arprot[0*3 +: 3]),
-        .s_axil_arvalid(axil_sched_arvalid[0*1 +: 1]),
-        .s_axil_arready(axil_sched_arready[0*1 +: 1]),
-        .s_axil_rdata(axil_sched_rdata[0*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
-        .s_axil_rresp(axil_sched_rresp[0*2 +: 2]),
-        .s_axil_rvalid(axil_sched_rvalid[0*1 +: 1]),
-        .s_axil_rready(axil_sched_rready[0*1 +: 1]),
-
-        /*
-         * Control
-         */
-        .enable(sched_enable_reg),
-        .active()
-    );
-
-end
-
-if (TX_SCHEDULER == "TDMA_RR") begin
-
-    tdma_scheduler #(
-        .INDEX_WIDTH(TDMA_INDEX_WIDTH),
-        .SCHEDULE_START_S(48'h0),
-        .SCHEDULE_START_NS(30'h0),
-        .SCHEDULE_PERIOD_S(48'd0),
-        .SCHEDULE_PERIOD_NS(30'd1000000),
-        .TIMESLOT_PERIOD_S(48'd0),
-        .TIMESLOT_PERIOD_NS(30'd100000),
-        .ACTIVE_PERIOD_S(48'd0),
-        .ACTIVE_PERIOD_NS(30'd100000)
-    )
-    tdma_scheduler_inst (
-        .clk(clk),
-        .rst(rst),
-        .input_ts_96(ptp_ts_96),
-        .input_ts_step(ptp_ts_step),
-        .enable(tdma_enable_reg),
-        .input_schedule_start(set_tdma_schedule_start_reg),
-        .input_schedule_start_valid(set_tdma_schedule_start_valid_reg),
-        .input_schedule_period(set_tdma_schedule_period_reg),
-        .input_schedule_period_valid(set_tdma_schedule_period_valid_reg),
-        .input_timeslot_period(set_tdma_timeslot_period_reg),
-        .input_timeslot_period_valid(set_tdma_timeslot_period_valid_reg),
-        .input_active_period(set_tdma_active_period_reg),
-        .input_active_period_valid(set_tdma_active_period_valid_reg),
-        .locked(tdma_locked),
-        .error(tdma_error),
-        .schedule_start(tdma_schedule_start),
-        .timeslot_index(tdma_timeslot_index),
-        .timeslot_start(tdma_timeslot_start),
-        .timeslot_end(tdma_timeslot_end),
-        .timeslot_active(tdma_timeslot_active)
-    );
-
-    tx_scheduler_ctrl_tdma #(
-        .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-        .AXIL_ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
-        .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
-        .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
-        .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
-        .PIPELINE(2)
-    )
-    tx_scheduler_ctrl_tdma_inst (
-        .clk(clk),
-        .rst(rst),
-
-        /*
-         * Scheduler control output
-         */
-        .m_axis_sched_ctrl_queue(tx_sched_ctrl_queue),
-        .m_axis_sched_ctrl_enable(tx_sched_ctrl_enable),
-        .m_axis_sched_ctrl_valid(tx_sched_ctrl_valid),
-        .m_axis_sched_ctrl_ready(tx_sched_ctrl_ready),
-
-        /*
-         * AXI-Lite slave interface
-         */
-        .s_axil_awaddr(axil_sched_awaddr[1*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
-        .s_axil_awprot(axil_sched_awprot[1*3 +: 3]),
-        .s_axil_awvalid(axil_sched_awvalid[1*1 +: 1]),
-        .s_axil_awready(axil_sched_awready[1*1 +: 1]),
-        .s_axil_wdata(axil_sched_wdata[1*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
-        .s_axil_wstrb(axil_sched_wstrb[1*AXIL_STRB_WIDTH +: AXIL_STRB_WIDTH]),
-        .s_axil_wvalid(axil_sched_wvalid[1*1 +: 1]),
-        .s_axil_wready(axil_sched_wready[1*1 +: 1]),
-        .s_axil_bresp(axil_sched_bresp[1*2 +: 2]),
-        .s_axil_bvalid(axil_sched_bvalid[1*1 +: 1]),
-        .s_axil_bready(axil_sched_bready[1*1 +: 1]),
-        .s_axil_araddr(axil_sched_araddr[1*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
-        .s_axil_arprot(axil_sched_arprot[1*3 +: 3]),
-        .s_axil_arvalid(axil_sched_arvalid[1*1 +: 1]),
-        .s_axil_arready(axil_sched_arready[1*1 +: 1]),
-        .s_axil_rdata(axil_sched_rdata[1*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
-        .s_axil_rresp(axil_sched_rresp[1*2 +: 2]),
-        .s_axil_rvalid(axil_sched_rvalid[1*1 +: 1]),
-        .s_axil_rready(axil_sched_rready[1*1 +: 1]),
-
-        /*
-         * TDMA schedule inputs
-         */
-        .tdma_schedule_start(tdma_schedule_start),
-        .tdma_timeslot_index(tdma_timeslot_index),
-        .tdma_timeslot_start(tdma_timeslot_start),
-        .tdma_timeslot_end(tdma_timeslot_end),
-        .tdma_timeslot_active(tdma_timeslot_active)
-    );
-
-end
-
-endgenerate
+    /*
+     * PTP clock
+     */
+    .ptp_ts_96(ptp_ts_96),
+    .ptp_ts_step(ptp_ts_step)
+);
 
 axis_fifo #(
     .DEPTH(TX_DESC_FIFO_SIZE*DESC_SIZE),
@@ -1951,7 +1811,7 @@ dma_client_axis_source_inst (
     /*
      * Configuration
      */
-    .enable(dma_enable)
+    .enable(1'b1)
 );
 
 wire [SEG_COUNT*SEG_BE_WIDTH-1:0]    dma_ram_wr_cmd_be_int;
@@ -2060,7 +1920,7 @@ dma_client_axis_sink_inst (
     /*
      * Configuration
      */
-    .enable(dma_enable),
+    .enable(1'b1),
     .abort(1'b0)
 );
 

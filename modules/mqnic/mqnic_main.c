@@ -122,6 +122,31 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
     int k = 0;
 
     dev_info(dev, "mqnic PCI probe");
+    dev_info(dev, " Vendor: 0x%04x", pdev->vendor);
+    dev_info(dev, " Device: 0x%04x", pdev->device);
+    dev_info(dev, " Class: 0x%06x", pdev->class);
+    dev_info(dev, " PCI ID: %04x:%02x:%02x.%d", pci_domain_nr(pdev->bus),
+        pdev->bus->number, PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));
+    if (pdev->pcie_cap) {
+        u16 devctl;
+        u32 lnkcap;
+        u16 lnksta;
+        pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_DEVCTL, &devctl);
+        pci_read_config_dword(pdev, pdev->pcie_cap + PCI_EXP_LNKCAP, &lnkcap);
+        pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_LNKSTA, &lnksta);
+        dev_info(dev, " Max payload size: %d bytes", 128 << ((devctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
+        dev_info(dev, " Max read request size: %d bytes", 128 << ((devctl & PCI_EXP_DEVCTL_READRQ) >> 12));
+        dev_info(dev, " Link capability: gen %d x%d", lnkcap & PCI_EXP_LNKCAP_SLS, (lnkcap & PCI_EXP_LNKCAP_MLW) >> 4);
+        dev_info(dev, " Link status: gen %d x%d", lnksta & PCI_EXP_LNKSTA_CLS, (lnksta & PCI_EXP_LNKSTA_NLW) >> 4);
+        dev_info(dev, " Relaxed ordering: %s", devctl & PCI_EXP_DEVCTL_RELAX_EN ? "enabled" : "disabled");
+        dev_info(dev, " Phantom functions: %s", devctl & PCI_EXP_DEVCTL_PHANTOM ? "enabled" : "disabled");
+        dev_info(dev, " Extended tags: %s", devctl & PCI_EXP_DEVCTL_EXT_TAG ? "enabled" : "disabled");
+        dev_info(dev, " No snoop: %s", devctl & PCI_EXP_DEVCTL_NOSNOOP_EN ? "enabled" : "disabled");
+    }
+#ifdef CONFIG_NUMA
+    dev_info(dev, " NUMA node: %d", pdev->dev.numa_node);
+#endif
+    pcie_print_link_status(pdev);
 
     if (!(mqnic = devm_kzalloc(dev, sizeof(*mqnic), GFP_KERNEL)))
     {

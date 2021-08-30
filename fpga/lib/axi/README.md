@@ -268,6 +268,27 @@ Wrappers can generated with `axil_interconnect_wrap.py`.
 
 AXI lite RAM with parametrizable data and address interface widths.
 
+### `axil_reg_if` module
+
+AXI lite register interface with parametrizable data and address interface
+widths.  Can be used to assemble a set of control registers across multiple
+modules and hierarchy levels without complicated arbitration logic.  Wrapper
+for `axil_reg_if_rd` and `axil_reg_if_wr`.
+
+### `axil_reg_if_rd` module
+
+AXI lite register interface with parametrizable data and address interface
+widths.  Read direction only.  Can be used to assemble a set of control
+registers across multiple modules and hierarchy levels without complicated
+arbitration logic.
+
+### `axil_reg_if_wr` module
+
+AXI lite register interface with parametrizable data and address interface
+widths.  Write direction only.  Can be used to assemble a set of control
+registers across multiple modules and hierarchy levels without complicated
+arbitration logic.
+
 ### `axil_register` module
 
 AXI lite register with parametrizable data and address interface widths.
@@ -393,6 +414,9 @@ registers can be individually bypassed.
     rtl/axil_crossbar_wr.v          : AXI lite crossbar interconnect (write)
     rtl/axil_interconnect.v         : AXI lite shared interconnect
     rtl/axil_ram.v                  : AXI lite RAM
+    rtl/axil_reg_if.v               : AXI lite register interface
+    rtl/axil_reg_if_rd.v            : AXI lite register interface (read)
+    rtl/axil_reg_if_wr.v            : AXI lite register interface (write)
     rtl/axil_register.v             : AXI lite register
     rtl/axil_register_rd.v          : AXI lite register (read)
     rtl/axil_register_wr.v          : AXI lite register (write)

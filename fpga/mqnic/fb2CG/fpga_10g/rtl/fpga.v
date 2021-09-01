@@ -232,6 +232,8 @@ parameter PTP_FNS_WIDTH = 32;
 parameter PTP_PERIOD_NS = 4'd4;
 parameter PTP_PERIOD_FNS = 32'd0;
 parameter PTP_USE_SAMPLE_CLOCK = 0;
+parameter IF_PTP_PERIOD_NS = 6'h6;
+parameter IF_PTP_PERIOD_FNS = 16'h6666;
 
 // PCIe interface configuration
 parameter MSI_COUNT = 32;
@@ -1561,6 +1563,8 @@ fpga_core #(
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
+    .IF_PTP_PERIOD_NS(IF_PTP_PERIOD_NS),
+    .IF_PTP_PERIOD_FNS(IF_PTP_PERIOD_FNS),
 
     // Queue manager configuration (interface)
     .EVENT_QUEUE_OP_TABLE_SIZE(EVENT_QUEUE_OP_TABLE_SIZE),

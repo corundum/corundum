@@ -62,8 +62,8 @@ module fpga_core #
     parameter PTP_USE_SAMPLE_CLOCK = 0,
     parameter PTP_PEROUT_ENABLE = 1,
     parameter PTP_PEROUT_COUNT = 1,
-    parameter IF_PTP_PERIOD_NS = 6'h6,
-    parameter IF_PTP_PERIOD_FNS = 16'h6666,
+    parameter IF_PTP_PERIOD_NS = 6'h2,
+    parameter IF_PTP_PERIOD_FNS = 16'h8F5C,
 
     // Queue manager configuration (interface)
     parameter EVENT_QUEUE_OP_TABLE_SIZE = 32,

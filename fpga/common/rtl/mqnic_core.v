@@ -1269,7 +1269,7 @@ end
 endgenerate
 
 wire [MSI_COUNT-1:0] if_msi_irq[IF_COUNT-1:0];
-reg [MSI_COUNT-1:0] msi_irq_cmb;
+reg [MSI_COUNT-1:0] msi_irq_cmb = 0;
 
 assign msi_irq = msi_irq_cmb;
 

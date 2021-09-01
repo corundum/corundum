@@ -787,7 +787,17 @@ wire                                rx_event_valid;
 wire [INT_WIDTH-1:0] event_int;
 wire event_int_valid;
 
-assign msi_irq = (event_int_valid << event_int);
+reg [31:0] msi_irq_reg = 0;
+
+assign msi_irq = msi_irq_reg;
+
+always @(posedge clk) begin
+    msi_irq_reg <= 0;
+
+    if (event_int_valid) begin
+        msi_irq_reg <= 1'b1 << event_int;
+    end
+end
 
 // control registers
 wire [AXIL_CTRL_ADDR_WIDTH-1:0]  ctrl_reg_wr_addr;

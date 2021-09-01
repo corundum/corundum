@@ -768,15 +768,15 @@ wire [PORT_COUNT-1:0]                         axis_eth_rx_tready;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tlast;
 wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  axis_eth_rx_tuser;
 
-wire [PORT_COUNT-1:0]     port_xgmii_tx_clk;
-wire [PORT_COUNT-1:0]     port_xgmii_tx_rst;
-wire [PORT_COUNT*64-1:0]  port_xgmii_txd;
-wire [PORT_COUNT*8-1:0]   port_xgmii_txc;
+wire [PORT_COUNT-1:0]                   port_xgmii_tx_clk;
+wire [PORT_COUNT-1:0]                   port_xgmii_tx_rst;
+wire [PORT_COUNT*XGMII_DATA_WIDTH-1:0]  port_xgmii_txd;
+wire [PORT_COUNT*XGMII_CTRL_WIDTH-1:0]  port_xgmii_txc;
 
-wire [PORT_COUNT-1:0]     port_xgmii_rx_clk;
-wire [PORT_COUNT-1:0]     port_xgmii_rx_rst;
-wire [PORT_COUNT*64-1:0]  port_xgmii_rxd;
-wire [PORT_COUNT*8-1:0]   port_xgmii_rxc;
+wire [PORT_COUNT-1:0]                   port_xgmii_rx_clk;
+wire [PORT_COUNT-1:0]                   port_xgmii_rx_rst;
+wire [PORT_COUNT*XGMII_DATA_WIDTH-1:0]  port_xgmii_rxd;
+wire [PORT_COUNT*XGMII_CTRL_WIDTH-1:0]  port_xgmii_rxc;
 
 assign led_red = 8'd0;
 assign led_green = 8'd0;

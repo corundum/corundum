@@ -106,6 +106,11 @@ dict set params PCIE_DMA_WRITE_OP_TABLE_SIZE "16"
 dict set params PCIE_DMA_WRITE_TX_LIMIT "3"
 dict set params PCIE_DMA_WRITE_TX_FC_ENABLE "1"
 
+# Ethernet interface configuration
+dict set params AXIS_ETH_TX_PIPELINE "0"
+dict set params AXIS_ETH_TX_TS_PIPELINE "0"
+dict set params AXIS_ETH_RX_PIPELINE "0"
+
 # PCIe IP core settings
 set pcie [get_ips pcie4_uscale_plus_0]
 

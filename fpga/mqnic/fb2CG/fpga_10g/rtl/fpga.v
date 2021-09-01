@@ -38,7 +38,7 @@ either expressed or implied, of The Regents of the University of California.
 /*
  * FPGA top-level module
  */
-module fpga  #
+module fpga #
 (
     // FW and board IDs
     parameter FW_ID = 32'd0,
@@ -117,7 +117,12 @@ module fpga  #
     parameter PCIE_DMA_READ_TX_FC_ENABLE = 1,
     parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 16,
     parameter PCIE_DMA_WRITE_TX_LIMIT = 3,
-    parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 1
+    parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 1,
+
+    // Ethernet interface configuration
+    parameter AXIS_ETH_TX_PIPELINE = 0,
+    parameter AXIS_ETH_TX_TS_PIPELINE = 0,
+    parameter AXIS_ETH_RX_PIPELINE = 0
 )
 (
     /*
@@ -1629,7 +1634,10 @@ fpga_core #(
     .AXIS_ETH_KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
     .AXIS_ETH_INT_DATA_WIDTH(AXIS_ETH_INT_DATA_WIDTH),
     .AXIS_ETH_TX_USER_WIDTH(AXIS_ETH_TX_USER_WIDTH),
-    .AXIS_ETH_RX_USER_WIDTH(AXIS_ETH_RX_USER_WIDTH)
+    .AXIS_ETH_RX_USER_WIDTH(AXIS_ETH_RX_USER_WIDTH),
+    .AXIS_ETH_TX_PIPELINE(AXIS_ETH_TX_PIPELINE),
+    .AXIS_ETH_TX_TS_PIPELINE(AXIS_ETH_TX_TS_PIPELINE),
+    .AXIS_ETH_RX_PIPELINE(AXIS_ETH_RX_PIPELINE)
 )
 core_inst (
     /*

@@ -564,6 +564,7 @@ def test_fpga_core(request):
         os.path.join(axis_rtl_dir, "axis_async_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_async_fifo_adapter.v"),
         os.path.join(axis_rtl_dir, "axis_fifo.v"),
+        os.path.join(axis_rtl_dir, "axis_pipeline_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_register.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_if.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_if_rc.v"),
@@ -655,6 +656,11 @@ def test_fpga_core(request):
     parameters['PCIE_DMA_WRITE_OP_TABLE_SIZE'] = 16
     parameters['PCIE_DMA_WRITE_TX_LIMIT'] = 3
     parameters['PCIE_DMA_WRITE_TX_FC_ENABLE'] = 1
+
+    # Ethernet interface configuration
+    parameters['AXIS_ETH_TX_PIPELINE'] = 0
+    parameters['AXIS_ETH_TX_TS_PIPELINE'] = 0
+    parameters['AXIS_ETH_RX_PIPELINE'] = 0
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

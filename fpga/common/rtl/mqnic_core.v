@@ -135,7 +135,10 @@ module mqnic_core #
     parameter AXIS_INT_DATA_WIDTH = AXIS_DATA_WIDTH,
     parameter AXIS_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
     parameter AXIS_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1,
-    parameter AXIS_RX_USE_READY = 0
+    parameter AXIS_RX_USE_READY = 0,
+    parameter AXIS_TX_PIPELINE = 0,
+    parameter AXIS_TX_TS_PIPELINE = 0,
+    parameter AXIS_RX_PIPELINE = 0
 )
 (
     input  wire                                         clk,
@@ -1610,6 +1613,11 @@ generate
                 );
 
                 // PTP TS FIFO (TX)
+                wire [PTP_TS_WIDTH-1:0] tx_pipe_ptp_ts;
+                wire [PTP_TAG_WIDTH-1:0] tx_pipe_ptp_ts_tag;
+                wire tx_pipe_ptp_ts_valid;
+                wire tx_pipe_ptp_ts_ready;
+
                 axis_async_fifo #(
                     .DEPTH(TX_PTP_TS_FIFO_DEPTH),
                     .DATA_WIDTH(PTP_TS_WIDTH),
@@ -1637,12 +1645,12 @@ generate
 
                     // AXI output
                     .m_clk(clk),
-                    .m_axis_tdata(if_tx_ptp_ts_96[m*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
+                    .m_axis_tdata(tx_pipe_ptp_ts),
                     .m_axis_tkeep(),
-                    .m_axis_tvalid(if_tx_ptp_ts_valid[m +: 1]),
-                    .m_axis_tready(if_tx_ptp_ts_ready[m +: 1]),
+                    .m_axis_tvalid(tx_pipe_ptp_ts_valid),
+                    .m_axis_tready(tx_pipe_ptp_ts_ready),
                     .m_axis_tlast(),
-                    .m_axis_tid(if_tx_ptp_ts_tag[m*PTP_TAG_WIDTH +: PTP_TAG_WIDTH]),
+                    .m_axis_tid(tx_pipe_ptp_ts_tag),
                     .m_axis_tdest(),
                     .m_axis_tuser(),
 
@@ -1653,6 +1661,41 @@ generate
                     .m_status_overflow(),
                     .m_status_bad_frame(),
                     .m_status_good_frame()
+                );
+
+                axis_pipeline_fifo #(
+                    .DATA_WIDTH(PTP_TS_WIDTH),
+                    .KEEP_ENABLE(0),
+                    .LAST_ENABLE(0),
+                    .ID_ENABLE(1),
+                    .ID_WIDTH(PTP_TAG_WIDTH),
+                    .DEST_ENABLE(0),
+                    .USER_ENABLE(0),
+                    .LENGTH(AXIS_TX_TS_PIPELINE)
+                )
+                tx_ptp_ts_pipeline_fifo_inst (
+                    .clk(clk),
+                    .rst(rst),
+
+                    // AXI input
+                    .s_axis_tdata(tx_pipe_ptp_ts),
+                    .s_axis_tkeep(0),
+                    .s_axis_tvalid(tx_pipe_ptp_ts_valid),
+                    .s_axis_tready(tx_pipe_ptp_ts_ready),
+                    .s_axis_tlast(0),
+                    .s_axis_tid(tx_pipe_ptp_ts_tag),
+                    .s_axis_tdest(0),
+                    .s_axis_tuser(0),
+
+                    // AXI output
+                    .m_axis_tdata(if_tx_ptp_ts_96[m*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
+                    .m_axis_tkeep(),
+                    .m_axis_tvalid(if_tx_ptp_ts_valid[m +: 1]),
+                    .m_axis_tready(if_tx_ptp_ts_ready[m +: 1]),
+                    .m_axis_tlast(),
+                    .m_axis_tid(if_tx_ptp_ts_tag[m*PTP_TAG_WIDTH +: PTP_TAG_WIDTH]),
+                    .m_axis_tdest(),
+                    .m_axis_tuser()
                 );
 
                 wire [PTP_TS_WIDTH-1:0] rx_ts;
@@ -1743,6 +1786,13 @@ generate
             wire axis_tx_fifo_tlast;
             wire [AXIS_TX_USER_WIDTH-1:0] axis_tx_fifo_tuser;
 
+            wire [AXIS_INT_DATA_WIDTH-1:0] axis_tx_pipe_tdata;
+            wire [AXIS_INT_KEEP_WIDTH-1:0] axis_tx_pipe_tkeep;
+            wire axis_tx_pipe_tvalid;
+            wire axis_tx_pipe_tready;
+            wire axis_tx_pipe_tlast;
+            wire [AXIS_TX_USER_WIDTH-1:0] axis_tx_pipe_tuser;
+
             axis_fifo #(
                 .DEPTH(TX_FIFO_DEPTH),
                 .DATA_WIDTH(AXIS_INT_DATA_WIDTH),
@@ -1790,6 +1840,42 @@ generate
                 .status_good_frame()
             );
 
+            axis_pipeline_fifo #(
+                .DATA_WIDTH(AXIS_INT_DATA_WIDTH),
+                .KEEP_ENABLE(AXIS_INT_KEEP_WIDTH > 1),
+                .KEEP_WIDTH(AXIS_INT_KEEP_WIDTH),
+                .LAST_ENABLE(1),
+                .ID_ENABLE(0),
+                .DEST_ENABLE(0),
+                .USER_ENABLE(1),
+                .USER_WIDTH(AXIS_TX_USER_WIDTH),
+                .LENGTH(AXIS_TX_PIPELINE)
+            )
+            tx_pipeline_fifo_inst (
+                .clk(clk),
+                .rst(rst),
+
+                // AXI input
+                .s_axis_tdata(axis_tx_fifo_tdata),
+                .s_axis_tkeep(axis_tx_fifo_tkeep),
+                .s_axis_tvalid(axis_tx_fifo_tvalid),
+                .s_axis_tready(axis_tx_fifo_tready),
+                .s_axis_tlast(axis_tx_fifo_tlast),
+                .s_axis_tid(0),
+                .s_axis_tdest(0),
+                .s_axis_tuser(axis_tx_fifo_tuser),
+
+                // AXI output
+                .m_axis_tdata(axis_tx_pipe_tdata),
+                .m_axis_tkeep(axis_tx_pipe_tkeep),
+                .m_axis_tvalid(axis_tx_pipe_tvalid),
+                .m_axis_tready(axis_tx_pipe_tready),
+                .m_axis_tlast(axis_tx_pipe_tlast),
+                .m_axis_tid(),
+                .m_axis_tdest(),
+                .m_axis_tuser(axis_tx_pipe_tuser)
+            );
+
             axis_async_fifo_adapter #(
                 .DEPTH(MAX_TX_SIZE),
                 .S_DATA_WIDTH(AXIS_INT_DATA_WIDTH),
@@ -1812,14 +1898,14 @@ generate
                 // AXI input
                 .s_clk(clk),
                 .s_rst(rst),
-                .s_axis_tdata(axis_tx_fifo_tdata),
-                .s_axis_tkeep(axis_tx_fifo_tkeep),
-                .s_axis_tvalid(axis_tx_fifo_tvalid),
-                .s_axis_tready(axis_tx_fifo_tready),
-                .s_axis_tlast(axis_tx_fifo_tlast),
+                .s_axis_tdata(axis_tx_pipe_tdata),
+                .s_axis_tkeep(axis_tx_pipe_tkeep),
+                .s_axis_tvalid(axis_tx_pipe_tvalid),
+                .s_axis_tready(axis_tx_pipe_tready),
+                .s_axis_tlast(axis_tx_pipe_tlast),
                 .s_axis_tid(0),
                 .s_axis_tdest(0),
-                .s_axis_tuser(axis_tx_fifo_tuser),
+                .s_axis_tuser(axis_tx_pipe_tuser),
 
                 // AXI output
                 .m_clk(tx_clk[n*PORTS_PER_IF+m]),
@@ -1849,6 +1935,13 @@ generate
             wire axis_rx_fifo_tready;
             wire axis_rx_fifo_tlast;
             wire [AXIS_RX_USER_WIDTH-1:0] axis_rx_fifo_tuser;
+
+            wire [AXIS_INT_DATA_WIDTH-1:0] axis_rx_pipe_tdata;
+            wire [AXIS_INT_KEEP_WIDTH-1:0] axis_rx_pipe_tkeep;
+            wire axis_rx_pipe_tvalid;
+            wire axis_rx_pipe_tready;
+            wire axis_rx_pipe_tlast;
+            wire [AXIS_RX_USER_WIDTH-1:0] axis_rx_pipe_tuser;
 
             axis_async_fifo_adapter #(
                 .DEPTH(MAX_RX_SIZE),
@@ -1902,6 +1995,42 @@ generate
                 .m_status_good_frame()
             );
 
+            axis_pipeline_fifo #(
+                .DATA_WIDTH(AXIS_INT_DATA_WIDTH),
+                .KEEP_ENABLE(AXIS_INT_KEEP_WIDTH > 1),
+                .KEEP_WIDTH(AXIS_INT_KEEP_WIDTH),
+                .LAST_ENABLE(1),
+                .ID_ENABLE(0),
+                .DEST_ENABLE(0),
+                .USER_ENABLE(1),
+                .USER_WIDTH(AXIS_RX_USER_WIDTH),
+                .LENGTH(AXIS_RX_PIPELINE)
+            )
+            rx_pipeline_fifo_inst (
+                .clk(clk),
+                .rst(rst),
+
+                // AXI input
+                .s_axis_tdata(axis_rx_fifo_tdata),
+                .s_axis_tkeep(axis_rx_fifo_tkeep),
+                .s_axis_tvalid(axis_rx_fifo_tvalid),
+                .s_axis_tready(axis_rx_fifo_tready),
+                .s_axis_tlast(axis_rx_fifo_tlast),
+                .s_axis_tid(0),
+                .s_axis_tdest(0),
+                .s_axis_tuser(axis_rx_fifo_tuser),
+
+                // AXI output
+                .m_axis_tdata(axis_rx_pipe_tdata),
+                .m_axis_tkeep(axis_rx_pipe_tkeep),
+                .m_axis_tvalid(axis_rx_pipe_tvalid),
+                .m_axis_tready(axis_rx_pipe_tready),
+                .m_axis_tlast(axis_rx_pipe_tlast),
+                .m_axis_tid(),
+                .m_axis_tdest(),
+                .m_axis_tuser(axis_rx_pipe_tuser)
+            );
+
             axis_fifo #(
                 .DEPTH(RX_FIFO_DEPTH),
                 .DATA_WIDTH(AXIS_INT_DATA_WIDTH),
@@ -1923,14 +2052,14 @@ generate
                 .rst(rst),
 
                 // AXI input
-                .s_axis_tdata(axis_rx_fifo_tdata),
-                .s_axis_tkeep(axis_rx_fifo_tkeep),
-                .s_axis_tvalid(axis_rx_fifo_tvalid),
-                .s_axis_tready(axis_rx_fifo_tready),
-                .s_axis_tlast(axis_rx_fifo_tlast),
+                .s_axis_tdata(axis_rx_pipe_tdata),
+                .s_axis_tkeep(axis_rx_pipe_tkeep),
+                .s_axis_tvalid(axis_rx_pipe_tvalid),
+                .s_axis_tready(axis_rx_pipe_tready),
+                .s_axis_tlast(axis_rx_pipe_tlast),
                 .s_axis_tid(0),
                 .s_axis_tdest(0),
-                .s_axis_tuser(axis_rx_fifo_tuser),
+                .s_axis_tuser(axis_rx_pipe_tuser),
 
                 // AXI output
                 .m_axis_tdata(if_rx_axis_tdata[m*AXIS_INT_DATA_WIDTH +: AXIS_INT_DATA_WIDTH]),

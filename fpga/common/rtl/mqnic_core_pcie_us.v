@@ -144,7 +144,10 @@ module mqnic_core_pcie_us #
     parameter AXIS_ETH_INT_DATA_WIDTH = AXIS_ETH_DATA_WIDTH,
     parameter AXIS_ETH_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
     parameter AXIS_ETH_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1,
-    parameter AXIS_ETH_RX_USE_READY = 0
+    parameter AXIS_ETH_RX_USE_READY = 0,
+    parameter AXIS_ETH_TX_PIPELINE = 0,
+    parameter AXIS_ETH_TX_TS_PIPELINE = 0,
+    parameter AXIS_ETH_RX_PIPELINE = 0
 )
 (
     input  wire                                          clk,
@@ -715,7 +718,10 @@ mqnic_core_pcie #(
     .AXIS_INT_DATA_WIDTH(AXIS_ETH_INT_DATA_WIDTH),
     .AXIS_TX_USER_WIDTH(AXIS_ETH_TX_USER_WIDTH),
     .AXIS_RX_USER_WIDTH(AXIS_ETH_RX_USER_WIDTH),
-    .AXIS_RX_USE_READY(AXIS_ETH_RX_USE_READY)
+    .AXIS_RX_USE_READY(AXIS_ETH_RX_USE_READY),
+    .AXIS_TX_PIPELINE(AXIS_ETH_TX_PIPELINE),
+    .AXIS_TX_TS_PIPELINE(AXIS_ETH_TX_TS_PIPELINE),
+    .AXIS_RX_PIPELINE(AXIS_ETH_RX_PIPELINE)
 )
 core_pcie_inst (
     .clk(clk),

@@ -545,6 +545,7 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
         os.path.join(axis_rtl_dir, "axis_async_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_async_fifo_adapter.v"),
         os.path.join(axis_rtl_dir, "axis_fifo.v"),
+        os.path.join(axis_rtl_dir, "axis_pipeline_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_register.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_if.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_if_rc.v"),
@@ -646,6 +647,9 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
     parameters['AXIS_ETH_DATA_WIDTH'] = axis_eth_data_width
     parameters['AXIS_ETH_INT_DATA_WIDTH'] = axis_eth_int_data_width
     parameters['AXIS_ETH_RX_USE_READY'] = 0
+    parameters['AXIS_ETH_TX_PIPELINE'] = 0
+    parameters['AXIS_ETH_TX_TS_PIPELINE'] = 0
+    parameters['AXIS_ETH_RX_PIPELINE'] = 0
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

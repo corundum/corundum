@@ -1062,7 +1062,8 @@ qsfp_0_cmac_inst (
     .rx_lane_aligner_fill_9(), // output [6:0]
     .rx_ptp_tstamp_out(qsfp_0_rx_axis_tuser_int[80:1]), // output [79:0]
     .rx_ptp_pcslane_out(), // output [4:0]
-    .ctl_rx_systemtimerin(qsfp_0_rx_ptp_time_int), // input [79:0]
+    // RX fed from TX clock, so use same PTP time source
+    .ctl_rx_systemtimerin(qsfp_0_tx_ptp_time_int), // input [79:0]
 
     .stat_rx_aligned(), // output
     .stat_rx_aligned_err(), // output
@@ -1382,7 +1383,8 @@ qsfp_1_cmac_inst (
     .rx_lane_aligner_fill_9(), // output [6:0]
     .rx_ptp_tstamp_out(qsfp_1_rx_axis_tuser_int[80:1]), // output [79:0]
     .rx_ptp_pcslane_out(), // output [4:0]
-    .ctl_rx_systemtimerin(qsfp_1_rx_ptp_time_int), // input [79:0]
+    // RX fed from TX clock, so use same PTP time source
+    .ctl_rx_systemtimerin(qsfp_1_tx_ptp_time_int), // input [79:0]
 
     .stat_rx_aligned(), // output
     .stat_rx_aligned_err(), // output

@@ -1578,7 +1578,7 @@ generate
                     .FNS_WIDTH(16),
                     .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK)
                 )
-                tx_ptp_cdc (
+                tx_ptp_cdc_inst (
                     .input_clk(clk),
                     .input_rst(rst),
                     .output_clk(tx_clk[n*PORTS_PER_IF+m]),
@@ -1598,7 +1598,7 @@ generate
                     .FNS_WIDTH(16),
                     .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK)
                 )
-                rx_ptp_cdc (
+                rx_ptp_cdc_inst (
                     .input_clk(clk),
                     .input_rst(rst),
                     .output_clk(rx_clk[n*PORTS_PER_IF+m]),
@@ -1629,7 +1629,7 @@ generate
                     .USER_ENABLE(0),
                     .FRAME_FIFO(0)
                 )
-                tx_ptp_ts_fifo (
+                tx_ptp_ts_fifo_inst (
                     .async_rst(rst | tx_rst[n*PORTS_PER_IF+m]),
 
                     // AXI input
@@ -1706,7 +1706,7 @@ generate
                     .TS_OFFSET(1),
                     .USER_WIDTH(PTP_TS_WIDTH+1)
                 )
-                rx_ptp_ts_extract (
+                rx_ptp_ts_extract_inst (
                     .clk(clk),
                     .rst(rst),
 
@@ -1731,7 +1731,7 @@ generate
                     .USER_ENABLE(0),
                     .FRAME_FIFO(0)
                 )
-                rx_ptp_ts_fifo (
+                rx_ptp_ts_fifo_inst (
                     .clk(clk),
                     .rst(rst),
 

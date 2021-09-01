@@ -37,13 +37,14 @@
 CONFIG ?= config.mk
 -include ../$(CONFIG)
 
-SYN_FILES_REL = $(patsubst %, ../%, $(SYN_FILES))
-INC_FILES_REL = $(patsubst %, ../%, $(INC_FILES))
-XCI_FILES_REL = $(patsubst %, ../%, $(XCI_FILES))
-IP_TCL_FILES_REL = $(patsubst %, ../%, $(IP_TCL_FILES))
+SYN_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(SYN_FILES))) $(filter /% ./%,$(SYN_FILES))
+INC_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(INC_FILES))) $(filter /% ./%,$(INC_FILES))
+XCI_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(XCI_FILES))) $(filter /% ./%,$(XCI_FILES))
+IP_TCL_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(IP_TCL_FILES))) $(filter /% ./%,$(IP_TCL_FILES))
+CONFIG_TCL_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(CONFIG_TCL_FILES))) $(filter /% ./%,$(CONFIG_TCL_FILES))
 
 ifdef XDC_FILES
-  XDC_FILES_REL = $(patsubst %, ../%, $(XDC_FILES))
+  XDC_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(XDC_FILES))) $(filter /% ./%,$(XDC_FILES))
 else
   XDC_FILES_REL = $(FPGA_TOP).xdc
 endif
@@ -77,7 +78,7 @@ distclean: clean
 ###################################################################
 
 # Vivado project file
-%.xpr: Makefile $(XCI_FILES_REL) $(IP_TCL_FILES_REL)
+%.xpr: Makefile $(XCI_FILES_REL) $(IP_TCL_FILES_REL) $(CONFIG_TCL_FILES_REL)
 	rm -rf defines.v
 	touch defines.v
 	for x in $(DEFS); do echo '`define' $$x >> defines.v; done
@@ -87,6 +88,7 @@ distclean: clean
 	for x in $(XDC_FILES_REL); do echo "add_files -fileset constrs_1 $$x" >> create_project.tcl; done
 	for x in $(XCI_FILES_REL); do echo "import_ip $$x" >> create_project.tcl; done
 	for x in $(IP_TCL_FILES_REL); do echo "source $$x" >> create_project.tcl; done
+	for x in $(CONFIG_TCL_FILES_REL); do echo "source $$x" >> create_project.tcl; done
 	echo "exit" >> create_project.tcl
 	vivado -nojournal -nolog -mode batch -source create_project.tcl
 

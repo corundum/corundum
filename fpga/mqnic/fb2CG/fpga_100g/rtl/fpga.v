@@ -978,7 +978,7 @@ assign qsfp_1_rx_clk_int = qsfp_1_txuserclk2;
 cmac_pad #(
     .DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
     .KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
-    .USER_WIDTH(17)
+    .USER_WIDTH(16+1)
 )
 qsfp_0_cmac_pad_inst (
     .clk(qsfp_0_tx_clk_int),
@@ -1298,7 +1298,7 @@ qsfp_0_cmac_inst (
 cmac_pad #(
     .DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
     .KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
-    .USER_WIDTH(17)
+    .USER_WIDTH(16+1)
 )
 qsfp_1_cmac_pad_inst (
     .clk(qsfp_1_tx_clk_int),

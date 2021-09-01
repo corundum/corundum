@@ -257,7 +257,7 @@ module fpga_core #
     output wire                               qsfp_0_tx_axis_tvalid,
     input  wire                               qsfp_0_tx_axis_tready,
     output wire                               qsfp_0_tx_axis_tlast,
-    output wire [16:0]                        qsfp_0_tx_axis_tuser,
+    output wire [16+1-1:0]                    qsfp_0_tx_axis_tuser,
 
     output wire [79:0]                        qsfp_0_tx_ptp_time,
     input  wire [79:0]                        qsfp_0_tx_ptp_ts,
@@ -294,7 +294,7 @@ module fpga_core #
     output wire                               qsfp_1_tx_axis_tvalid,
     input  wire                               qsfp_1_tx_axis_tready,
     output wire                               qsfp_1_tx_axis_tlast,
-    output wire [16:0]                        qsfp_1_tx_axis_tuser,
+    output wire [16+1-1:0]                    qsfp_1_tx_axis_tuser,
 
     output wire [79:0]                        qsfp_1_tx_ptp_time,
     input  wire [79:0]                        qsfp_1_tx_ptp_ts,

@@ -10,23 +10,28 @@ SYN_FILES += rtl/fpga_core.v
 SYN_FILES += rtl/bmc_spi.v
 SYN_FILES += rtl/led_sreg_driver.v
 SYN_FILES += rtl/sync_signal.v
+SYN_FILES += rtl/common/mqnic_core_pcie_us.v
+SYN_FILES += rtl/common/mqnic_core_pcie.v
+SYN_FILES += rtl/common/mqnic_core.v
 SYN_FILES += rtl/common/mqnic_interface.v
 SYN_FILES += rtl/common/mqnic_port.v
+SYN_FILES += rtl/common/mqnic_ptp.v
+SYN_FILES += rtl/common/mqnic_ptp_clock.v
+SYN_FILES += rtl/common/mqnic_ptp_perout.v
 SYN_FILES += rtl/common/cpl_write.v
 SYN_FILES += rtl/common/cpl_op_mux.v
 SYN_FILES += rtl/common/desc_fetch.v
 SYN_FILES += rtl/common/desc_op_mux.v
 SYN_FILES += rtl/common/queue_manager.v
 SYN_FILES += rtl/common/cpl_queue_manager.v
-SYN_FILES += rtl/common/event_mux.v
-SYN_FILES += rtl/common/mqnic_tx_scheduler_block_rr.v
-SYN_FILES += rtl/common/tx_scheduler_rr.v
-SYN_FILES += rtl/common/tdma_scheduler.v
 SYN_FILES += rtl/common/tx_engine.v
 SYN_FILES += rtl/common/rx_engine.v
 SYN_FILES += rtl/common/tx_checksum.v
 SYN_FILES += rtl/common/rx_hash.v
 SYN_FILES += rtl/common/rx_checksum.v
+SYN_FILES += rtl/common/mqnic_tx_scheduler_block_rr.v
+SYN_FILES += rtl/common/tx_scheduler_rr.v
+SYN_FILES += rtl/common/event_mux.v
 SYN_FILES += rtl/common/cmac_pad.v
 SYN_FILES += lib/eth/rtl/ptp_clock.v
 SYN_FILES += lib/eth/rtl/ptp_clock_cdc.v
@@ -46,6 +51,7 @@ SYN_FILES += lib/axi/rtl/arbiter.v
 SYN_FILES += lib/axi/rtl/priority_encoder.v
 SYN_FILES += lib/axis/rtl/axis_adapter.v
 SYN_FILES += lib/axis/rtl/axis_async_fifo.v
+SYN_FILES += lib/axis/rtl/axis_async_fifo_adapter.v
 SYN_FILES += lib/axis/rtl/axis_fifo.v
 SYN_FILES += lib/axis/rtl/axis_register.v
 SYN_FILES += lib/axis/rtl/sync_reset.v
@@ -85,6 +91,9 @@ XDC_FILES += ../../../common/syn/vivado/tdma_ber_ch.tcl
 IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl
 IP_TCL_FILES += ip/cmac_usplus_0.tcl
 IP_TCL_FILES += ip/cmac_usplus_1.tcl
+
+# Configuration
+CONFIG_TCL_FILES = ./config.tcl
 
 include ../common/vivado.mk
 

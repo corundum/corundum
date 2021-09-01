@@ -1,6 +1,6 @@
 """
 
-Copyright 2020, The Regents of the University of California.
+Copyright 2020-2021, The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -563,8 +563,14 @@ def test_fpga_core(request):
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
         os.path.join(rtl_dir, "bmc_spi.v"),
+        os.path.join(rtl_dir, "common", "mqnic_core_pcie_us.v"),
+        os.path.join(rtl_dir, "common", "mqnic_core_pcie.v"),
+        os.path.join(rtl_dir, "common", "mqnic_core.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface.v"),
         os.path.join(rtl_dir, "common", "mqnic_port.v"),
+        os.path.join(rtl_dir, "common", "mqnic_ptp.v"),
+        os.path.join(rtl_dir, "common", "mqnic_ptp_clock.v"),
+        os.path.join(rtl_dir, "common", "mqnic_ptp_perout.v"),
         os.path.join(rtl_dir, "common", "cpl_write.v"),
         os.path.join(rtl_dir, "common", "cpl_op_mux.v"),
         os.path.join(rtl_dir, "common", "desc_fetch.v"),
@@ -582,7 +588,6 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "tdma_scheduler.v"),
         os.path.join(rtl_dir, "common", "tdma_ber.v"),
         os.path.join(rtl_dir, "common", "tdma_ber_ch.v"),
-        os.path.join(eth_rtl_dir, "eth_mac_10g_fifo.v"),
         os.path.join(eth_rtl_dir, "eth_mac_10g.v"),
         os.path.join(eth_rtl_dir, "axis_xgmii_rx_64.v"),
         os.path.join(eth_rtl_dir, "axis_xgmii_tx_64.v"),
@@ -634,14 +639,71 @@ def test_fpga_core(request):
 
     parameters = {}
 
+    # Structural configuration
+    parameters['IF_COUNT'] = 2
+    parameters['PORTS_PER_IF'] = 1
+
+    # PTP configuration
+    parameters['PTP_PEROUT_ENABLE'] = 1
+    parameters['PTP_PEROUT_COUNT'] = 1
+
+    # Queue manager configuration (interface)
+    parameters['EVENT_QUEUE_OP_TABLE_SIZE'] = 32
+    parameters['TX_QUEUE_OP_TABLE_SIZE'] = 32
+    parameters['RX_QUEUE_OP_TABLE_SIZE'] = 32
+    parameters['TX_CPL_QUEUE_OP_TABLE_SIZE'] = parameters['TX_QUEUE_OP_TABLE_SIZE']
+    parameters['RX_CPL_QUEUE_OP_TABLE_SIZE'] = parameters['RX_QUEUE_OP_TABLE_SIZE']
+    parameters['TX_QUEUE_INDEX_WIDTH'] = 13
+    parameters['RX_QUEUE_INDEX_WIDTH'] = 8
+    parameters['TX_CPL_QUEUE_INDEX_WIDTH'] = parameters['TX_QUEUE_INDEX_WIDTH']
+    parameters['RX_CPL_QUEUE_INDEX_WIDTH'] = parameters['RX_QUEUE_INDEX_WIDTH']
+    parameters['EVENT_QUEUE_PIPELINE'] = 3
+    parameters['TX_QUEUE_PIPELINE'] = 3 + max(parameters['TX_QUEUE_INDEX_WIDTH']-12, 0)
+    parameters['RX_QUEUE_PIPELINE'] = 3 + max(parameters['RX_QUEUE_INDEX_WIDTH']-12, 0)
+    parameters['TX_CPL_QUEUE_PIPELINE'] = parameters['TX_QUEUE_PIPELINE']
+    parameters['RX_CPL_QUEUE_PIPELINE'] = parameters['RX_QUEUE_PIPELINE']
+
+    # TX and RX engine configuration (port)
+    parameters['TX_DESC_TABLE_SIZE'] = 32
+    parameters['RX_DESC_TABLE_SIZE'] = 32
+
+    # Scheduler configuration (port)
+    parameters['TX_SCHEDULER_OP_TABLE_SIZE'] = parameters['TX_DESC_TABLE_SIZE']
+    parameters['TX_SCHEDULER_PIPELINE'] = parameters['TX_QUEUE_PIPELINE']
+    parameters['TDMA_INDEX_WIDTH'] = 6
+
+    # Timestamping configuration (port)
+    parameters['PTP_TS_ENABLE'] = 1
+    parameters['TX_PTP_TS_FIFO_DEPTH'] = 32
+    parameters['RX_PTP_TS_FIFO_DEPTH'] = 32
+
+    # Interface configuration (port)
+    parameters['TX_CHECKSUM_ENABLE'] = 1
+    parameters['RX_RSS_ENABLE'] = 1
+    parameters['RX_HASH_ENABLE'] = 1
+    parameters['RX_CHECKSUM_ENABLE'] = 1
+    parameters['TX_FIFO_DEPTH'] = 32768
+    parameters['RX_FIFO_DEPTH'] = 32768
+    parameters['MAX_TX_SIZE'] = 9214
+    parameters['MAX_RX_SIZE'] = 9214
+    parameters['TX_RAM_SIZE'] = 32768
+    parameters['RX_RAM_SIZE'] = 32768
+
+    # DMA interface configuration
+    parameters['RAM_PIPELINE'] = 2
+
+    # PCIe interface configuration
     parameters['AXIS_PCIE_DATA_WIDTH'] = 512
-    parameters['AXIS_PCIE_KEEP_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH'] // 32
-    parameters['AXIS_PCIE_RQ_USER_WIDTH'] = 62 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 137
-    parameters['AXIS_PCIE_RC_USER_WIDTH'] = 75 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 161
-    parameters['AXIS_PCIE_CQ_USER_WIDTH'] = 88 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 183
-    parameters['AXIS_PCIE_CC_USER_WIDTH'] = 33 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 81
-    parameters['RQ_SEQ_NUM_WIDTH'] = 6
     parameters['BAR0_APERTURE'] = 24
+    parameters['PF_COUNT'] = 1
+    parameters['VF_COUNT'] = 0
+    parameters['PCIE_TAG_COUNT'] = 64
+    parameters['PCIE_DMA_READ_OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
+    parameters['PCIE_DMA_READ_TX_LIMIT'] = 16
+    parameters['PCIE_DMA_READ_TX_FC_ENABLE'] = 1
+    parameters['PCIE_DMA_WRITE_OP_TABLE_SIZE'] = 16
+    parameters['PCIE_DMA_WRITE_TX_LIMIT'] = 3
+    parameters['PCIE_DMA_WRITE_TX_FC_ENABLE'] = 1
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

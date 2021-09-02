@@ -300,14 +300,14 @@ class TB(object):
                     tx_clk=port.tx_async_fifo_inst.m_clk,
                     tx_rst=port.tx_async_fifo_inst.m_rst,
                     tx_bus=AxiStreamBus.from_prefix(port.tx_async_fifo_inst, "m_axis"),
-                    tx_ptp_time=port.ptp.tx_ptp_cdc.output_ts,
-                    tx_ptp_ts=port.ptp.tx_ptp_ts_fifo.s_axis_tdata,
-                    tx_ptp_ts_tag=port.ptp.tx_ptp_ts_fifo.s_axis_tid,
-                    tx_ptp_ts_valid=port.ptp.tx_ptp_ts_fifo.s_axis_tvalid,
+                    tx_ptp_time=port.ptp.tx_ptp_cdc_inst.output_ts,
+                    tx_ptp_ts=port.ptp.tx_ptp_ts_fifo_inst.s_axis_tdata,
+                    tx_ptp_ts_tag=port.ptp.tx_ptp_ts_fifo_inst.s_axis_tid,
+                    tx_ptp_ts_valid=port.ptp.tx_ptp_ts_fifo_inst.s_axis_tvalid,
                     rx_clk=port.rx_async_fifo_inst.s_clk,
                     rx_rst=port.rx_async_fifo_inst.s_rst,
                     rx_bus=AxiStreamBus.from_prefix(port.rx_async_fifo_inst, "s_axis"),
-                    rx_ptp_time=port.ptp.rx_ptp_cdc.output_ts,
+                    rx_ptp_time=port.ptp.rx_ptp_cdc_inst.output_ts,
                     ifg=12, speed=speed
                 )
 

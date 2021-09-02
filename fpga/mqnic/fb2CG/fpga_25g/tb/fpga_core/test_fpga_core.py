@@ -708,8 +708,10 @@ def test_fpga_core(request):
 
     # Ethernet interface configuration
     parameters['AXIS_ETH_TX_PIPELINE'] = 0
+    parameters['AXIS_ETH_TX_FIFO_PIPELINE'] = 2
     parameters['AXIS_ETH_TX_TS_PIPELINE'] = 0
     parameters['AXIS_ETH_RX_PIPELINE'] = 0
+    parameters['AXIS_ETH_RX_FIFO_PIPELINE'] = 2
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

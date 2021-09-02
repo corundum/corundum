@@ -137,8 +137,10 @@ module mqnic_core #
     parameter AXIS_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1,
     parameter AXIS_RX_USE_READY = 0,
     parameter AXIS_TX_PIPELINE = 0,
+    parameter AXIS_TX_FIFO_PIPELINE = 2,
     parameter AXIS_TX_TS_PIPELINE = 0,
-    parameter AXIS_RX_PIPELINE = 0
+    parameter AXIS_RX_PIPELINE = 0,
+    parameter AXIS_RX_FIFO_PIPELINE = 2
 )
 (
     input  wire                                         clk,
@@ -1803,6 +1805,7 @@ generate
                 .DEST_ENABLE(0),
                 .USER_ENABLE(1),
                 .USER_WIDTH(AXIS_TX_USER_WIDTH),
+                .PIPELINE_OUTPUT(AXIS_TX_FIFO_PIPELINE),
                 .FRAME_FIFO(1),
                 .USER_BAD_FRAME_VALUE(1'b1),
                 .USER_BAD_FRAME_MASK(1'b1),
@@ -2041,6 +2044,7 @@ generate
                 .DEST_ENABLE(0),
                 .USER_ENABLE(1),
                 .USER_WIDTH(AXIS_RX_USER_WIDTH),
+                .PIPELINE_OUTPUT(AXIS_RX_FIFO_PIPELINE),
                 .FRAME_FIFO(1),
                 .USER_BAD_FRAME_VALUE(1'b1),
                 .USER_BAD_FRAME_MASK(1'b1),

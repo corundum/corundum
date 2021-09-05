@@ -386,7 +386,7 @@ always @* begin
     end
 
     // pipeline stage 0 - receive request
-    if (s_axil_awvalid && s_axil_wvalid && (!s_axil_bvalid || s_axil_bready) && !op_axil_write_pipe_reg[0] && !op_axil_write_pipe_hazard) begin
+    if (s_axil_awvalid && s_axil_wvalid && (!s_axil_bvalid || s_axil_bready) && !op_axil_write_pipe_reg && !op_axil_write_pipe_hazard) begin
         // AXIL write
         op_axil_write_pipe_next[0] = 1'b1;
 
@@ -399,7 +399,7 @@ always @* begin
         queue_ram_read_ptr = s_axil_awaddr_queue;
         queue_ram_addr_pipeline_next[0] = s_axil_awaddr_queue;
         axil_reg_pipeline_next[0] = s_axil_awaddr_reg;
-    end else if (s_axil_arvalid && (!s_axil_rvalid || s_axil_rready) && !op_axil_read_pipe_reg[0] && !op_axil_read_pipe_hazard) begin
+    end else if (s_axil_arvalid && (!s_axil_rvalid || s_axil_rready) && !op_axil_read_pipe_reg && !op_axil_read_pipe_hazard) begin
         // AXIL read
         op_axil_read_pipe_next[0] = 1'b1;
 

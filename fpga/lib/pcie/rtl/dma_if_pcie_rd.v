@@ -151,7 +151,29 @@ module dma_if_pcie_rd #
      * Status
      */
     output wire                                          status_error_cor,
-    output wire                                          status_error_uncor
+    output wire                                          status_error_uncor,
+
+    /*
+     * Statistics
+     */
+    output wire [$clog2(OP_TABLE_SIZE)-1:0]              stat_rd_op_start_tag,
+    output wire [LEN_WIDTH-1:0]                          stat_rd_op_start_len,
+    output wire                                          stat_rd_op_start_valid,
+    output wire [$clog2(OP_TABLE_SIZE)-1:0]              stat_rd_op_finish_tag,
+    output wire [3:0]                                    stat_rd_op_finish_status,
+    output wire                                          stat_rd_op_finish_valid,
+    output wire [$clog2(PCIE_TAG_COUNT)-1:0]             stat_rd_req_start_tag,
+    output wire [12:0]                                   stat_rd_req_start_len,
+    output wire                                          stat_rd_req_start_valid,
+    output wire [$clog2(PCIE_TAG_COUNT)-1:0]             stat_rd_req_finish_tag,
+    output wire [3:0]                                    stat_rd_req_finish_status,
+    output wire                                          stat_rd_req_finish_valid,
+    output wire                                          stat_rd_req_timeout,
+    output wire                                          stat_rd_op_table_full,
+    output wire                                          stat_rd_no_tags,
+    output wire                                          stat_rd_tx_no_credit,
+    output wire                                          stat_rd_tx_limit,
+    output wire                                          stat_rd_tx_stall
 );
 
 parameter RAM_DATA_WIDTH = RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH;
@@ -391,6 +413,25 @@ reg m_axis_read_desc_status_valid_reg = 1'b0, m_axis_read_desc_status_valid_next
 reg status_error_cor_reg = 1'b0, status_error_cor_next;
 reg status_error_uncor_reg = 1'b0, status_error_uncor_next;
 
+reg [OP_TAG_WIDTH-1:0] stat_rd_op_start_tag_reg = 0, stat_rd_op_start_tag_next;
+reg [LEN_WIDTH-1:0] stat_rd_op_start_len_reg = 0, stat_rd_op_start_len_next;
+reg stat_rd_op_start_valid_reg = 1'b0, stat_rd_op_start_valid_next;
+reg [OP_TAG_WIDTH-1:0] stat_rd_op_finish_tag_reg = 0, stat_rd_op_finish_tag_next;
+reg [3:0] stat_rd_op_finish_status_reg = 4'd0, stat_rd_op_finish_status_next;
+reg stat_rd_op_finish_valid_reg = 1'b0, stat_rd_op_finish_valid_next;
+reg [PCIE_TAG_WIDTH-1:0] stat_rd_req_start_tag_reg = 0, stat_rd_req_start_tag_next;
+reg [12:0] stat_rd_req_start_len_reg = 13'd0, stat_rd_req_start_len_next;
+reg stat_rd_req_start_valid_reg = 1'b0, stat_rd_req_start_valid_next;
+reg [PCIE_TAG_WIDTH-1:0] stat_rd_req_finish_tag_reg = 0, stat_rd_req_finish_tag_next;
+reg [3:0] stat_rd_req_finish_status_reg = 4'd0, stat_rd_req_finish_status_next;
+reg stat_rd_req_finish_valid_reg = 1'b0, stat_rd_req_finish_valid_next;
+reg stat_rd_req_timeout_reg = 1'b0, stat_rd_req_timeout_next;
+reg stat_rd_op_table_full_reg = 1'b0, stat_rd_op_table_full_next;
+reg stat_rd_no_tags_reg = 1'b0, stat_rd_no_tags_next;
+reg stat_rd_tx_no_credit_reg = 1'b0, stat_rd_tx_no_credit_next;
+reg stat_rd_tx_limit_reg = 1'b0, stat_rd_tx_limit_next;
+reg stat_rd_tx_stall_reg = 1'b0, stat_rd_tx_stall_next;
+
 // internal datapath
 reg  [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0]      ram_wr_cmd_sel_int = 0;
 reg  [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]   ram_wr_cmd_be_int = 0;
@@ -418,6 +459,25 @@ assign m_axis_read_desc_status_valid = m_axis_read_desc_status_valid_reg;
 
 assign status_error_cor = status_error_cor_reg;
 assign status_error_uncor = status_error_uncor_reg;
+
+assign stat_rd_op_start_tag = stat_rd_op_start_tag_reg;
+assign stat_rd_op_start_len = stat_rd_op_start_len_reg;
+assign stat_rd_op_start_valid = stat_rd_op_start_valid_reg;
+assign stat_rd_op_finish_tag = stat_rd_op_finish_tag_reg;
+assign stat_rd_op_finish_status = stat_rd_op_finish_status_reg;
+assign stat_rd_op_finish_valid = stat_rd_op_finish_valid_reg;
+assign stat_rd_req_start_tag = stat_rd_req_start_tag_reg;
+assign stat_rd_req_start_len = stat_rd_req_start_len_reg;
+assign stat_rd_req_start_valid = stat_rd_req_start_valid_reg;
+assign stat_rd_req_finish_tag = stat_rd_req_finish_tag_reg;
+assign stat_rd_req_finish_status = stat_rd_req_finish_status_reg;
+assign stat_rd_req_finish_valid = stat_rd_req_finish_valid_reg;
+assign stat_rd_req_timeout = stat_rd_req_timeout_reg;
+assign stat_rd_op_table_full = stat_rd_op_table_full_reg;
+assign stat_rd_no_tags = stat_rd_no_tags_reg;
+assign stat_rd_tx_no_credit = stat_rd_tx_no_credit_reg;
+assign stat_rd_tx_limit = stat_rd_tx_limit_reg;
+assign stat_rd_tx_stall = stat_rd_tx_stall_reg;
 
 // PCIe tag management
 reg [PCIE_TAG_WIDTH-1:0] pcie_tag_table_start_ptr_reg = 0, pcie_tag_table_start_ptr_next;
@@ -506,6 +566,18 @@ always @* begin
     req_state_next = REQ_STATE_IDLE;
 
     s_axis_read_desc_ready_next = 1'b0;
+
+    stat_rd_op_start_tag_next = stat_rd_op_start_tag_reg;
+    stat_rd_op_start_len_next = stat_rd_op_start_len_reg;
+    stat_rd_op_start_valid_next = 1'b0;
+    stat_rd_req_start_tag_next = stat_rd_req_start_tag_reg;
+    stat_rd_req_start_len_next = stat_rd_req_start_len_reg;
+    stat_rd_req_start_valid_next = 1'b0;
+    stat_rd_op_table_full_next = op_tag_fifo_rd_ptr_reg == op_tag_fifo_wr_ptr_reg;
+    stat_rd_no_tags_next = !req_pcie_tag_valid_reg;
+    stat_rd_tx_no_credit_next = !(!TX_FC_ENABLE || have_credit_reg);
+    stat_rd_tx_limit_next = !(!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg);
+    stat_rd_tx_stall_next = !(!tx_rd_req_tlp_valid_reg || tx_rd_req_tlp_ready);
 
     req_pcie_addr_next = req_pcie_addr_reg;
     req_ram_sel_next = req_ram_sel_reg;
@@ -642,6 +714,9 @@ always @* begin
                 op_table_start_tag = s_axis_read_desc_tag;
                 op_table_start_en = 1'b1;
                 op_tag_fifo_rd_ptr_next = op_tag_fifo_rd_ptr_reg+1;
+                stat_rd_op_start_tag_next = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
+                stat_rd_op_start_len_next = s_axis_read_desc_len;
+                stat_rd_op_start_valid_next = 1'b1;
                 req_state_next = REQ_STATE_START;
             end else begin
                 req_state_next = REQ_STATE_IDLE;
@@ -674,6 +749,10 @@ always @* begin
 
                 req_pcie_tag_valid_next = 1'b0;
 
+                stat_rd_req_start_tag_next = req_pcie_tag_reg;
+                stat_rd_req_start_len_next = req_tlp_count_next;
+                stat_rd_req_start_valid_next = 1'b1;
+
                 if (!req_last_tlp) begin
                     req_state_next = REQ_STATE_START;
                 end else begin
@@ -694,7 +773,7 @@ always @* begin
             req_pcie_tag_next = pcie_tag_fifo_1_mem[pcie_tag_fifo_1_rd_ptr_reg[PCIE_TAG_WIDTH_1-1:0]];
             req_pcie_tag_valid_next = 1'b1;
             pcie_tag_fifo_1_rd_ptr_next = pcie_tag_fifo_1_rd_ptr_reg + 1;
-        end else if (PCIE_TAG_COUNT > 32 && ext_tag_enable && pcie_tag_fifo_2_rd_ptr_reg != pcie_tag_fifo_2_wr_ptr_reg) begin
+        end else if (PCIE_TAG_COUNT_2 > 0 && ext_tag_enable && pcie_tag_fifo_2_rd_ptr_reg != pcie_tag_fifo_2_wr_ptr_reg) begin
             req_pcie_tag_next = pcie_tag_fifo_2_mem[pcie_tag_fifo_2_rd_ptr_reg[PCIE_TAG_WIDTH_2-1:0]];
             req_pcie_tag_valid_next = 1'b1;
             pcie_tag_fifo_2_rd_ptr_next = pcie_tag_fifo_2_rd_ptr_reg + 1;
@@ -708,6 +787,14 @@ always @* begin
     last_cycle = 1'b0;
 
     rx_cpl_tlp_ready_next = 1'b0;
+
+    stat_rd_op_finish_tag_next = stat_rd_op_finish_tag_reg;
+    stat_rd_op_finish_status_next = stat_rd_op_finish_status_reg;
+    stat_rd_op_finish_valid_next = 1'b0;
+    stat_rd_req_finish_tag_next = stat_rd_req_finish_tag_reg;
+    stat_rd_req_finish_status_next = stat_rd_req_finish_status_reg;
+    stat_rd_req_finish_valid_next = 1'b0;
+    stat_rd_req_timeout_next = 1'b0;
 
     error_code_next = error_code_reg;
     ram_sel_next = ram_sel_reg;
@@ -915,6 +1002,7 @@ always @* begin
                         // drop TLP and report uncorrectable error
                         status_error_uncor_next = 1'b1;
                         status_fifo_error_next = DMA_ERROR_TIMEOUT;
+                        stat_rd_req_timeout_next = 1'b1;
                     end else if (rx_cpl_tlp_error == PCIE_ERROR_FLR) begin
                         // FLR; not an actual completion so no error to report
                         // drop TLP
@@ -926,6 +1014,10 @@ always @* begin
                     status_fifo_mask_next = 1'b0;
                     status_fifo_finish_next = 1'b1;
                     status_fifo_we_next = 1'b1;
+
+                    stat_rd_req_finish_tag_next = pcie_tag_next;
+                    stat_rd_req_finish_status_next = status_fifo_error_next;
+                    stat_rd_req_finish_valid_next = 1'b1;
 
                     if (rx_cpl_tlp_eop) begin
                         tlp_state_next = TLP_STATE_IDLE;
@@ -949,6 +1041,9 @@ always @* begin
                     status_fifo_error_next = DMA_ERROR_NONE;
                     status_fifo_we_next = 1'b1;
 
+                    stat_rd_req_finish_tag_next = pcie_tag_next;
+                    stat_rd_req_finish_status_next = DMA_ERROR_NONE;
+
                     if (last_cycle) begin
                         if (final_cpl_next) begin
                             // last completion in current read request (PCIe tag)
@@ -956,6 +1051,8 @@ always @* begin
                             // release tag
                             finish_tag_next = 1'b1;
                             status_fifo_finish_next = 1'b1;
+
+                            stat_rd_req_finish_valid_next = 1'b1;
                         end
                         tlp_state_next = TLP_STATE_IDLE;
                     end else begin
@@ -1006,6 +1103,9 @@ always @* begin
                 status_fifo_error_next = DMA_ERROR_NONE;
                 status_fifo_we_next = 1'b1;
 
+                stat_rd_req_finish_tag_next = pcie_tag_next;
+                stat_rd_req_finish_status_next = DMA_ERROR_NONE;
+
                 if (last_cycle || rx_cpl_tlp_eop) begin
                     if (final_cpl_reg) begin
                         // last completion in current read request (PCIe tag)
@@ -1013,6 +1113,8 @@ always @* begin
                         // release tag
                         finish_tag_next = 1'b1;
                         status_fifo_finish_next = 1'b1;
+
+                        stat_rd_req_finish_valid_next = 1'b1;
                     end
 
                     if (rx_cpl_tlp_eop) begin
@@ -1117,6 +1219,8 @@ always @* begin
     op_tag_fifo_wr_tag = status_fifo_rd_op_tag_reg;
     op_tag_fifo_we = 1'b0;
 
+    stat_rd_op_finish_tag_next = status_fifo_rd_op_tag_reg;
+
     if (init_op_tag_reg) begin
         // initialize FIFO
         op_tag_fifo_wr_tag = init_count_reg;
@@ -1128,12 +1232,15 @@ always @* begin
 
         out_done_ack = status_fifo_rd_mask_reg;
 
+        stat_rd_op_finish_status_next = m_axis_read_desc_status_error_next;
+
         if (status_fifo_rd_finish_reg) begin
             // mark done
             op_table_read_finish_en = 1'b1;
 
             if (op_table_read_commit[op_table_read_finish_ptr] && (op_table_read_count_start[op_table_read_finish_ptr] == op_table_read_count_finish[op_table_read_finish_ptr])) begin
                 op_tag_fifo_we = 1'b1;
+                stat_rd_op_finish_valid_next = 1'b1;
                 m_axis_read_desc_status_valid_next = 1'b1;
             end
         end
@@ -1183,9 +1290,6 @@ always @(posedge clk) begin
         init_op_tag_reg <= init_count_reg + 1 < 2**OP_TAG_WIDTH;
     end
 
-    status_error_cor_reg <= status_error_cor_next;
-    status_error_uncor_reg <= status_error_uncor_next;
-
     req_pcie_addr_reg <= req_pcie_addr_next;
     req_ram_sel_reg <= req_ram_sel_next;
     req_ram_addr_reg <= req_ram_addr_next;
@@ -1230,6 +1334,28 @@ always @(posedge clk) begin
     m_axis_read_desc_status_tag_reg <= m_axis_read_desc_status_tag_next;
     m_axis_read_desc_status_error_reg <= m_axis_read_desc_status_error_next;
     m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
+
+    status_error_cor_reg <= status_error_cor_next;
+    status_error_uncor_reg <= status_error_uncor_next;
+
+    stat_rd_op_start_tag_reg <= stat_rd_op_start_tag_next;
+    stat_rd_op_start_len_reg <= stat_rd_op_start_len_next;
+    stat_rd_op_start_valid_reg <= stat_rd_op_start_valid_next;
+    stat_rd_op_finish_tag_reg <= stat_rd_op_finish_tag_next;
+    stat_rd_op_finish_status_reg <= stat_rd_op_finish_status_next;
+    stat_rd_op_finish_valid_reg <= stat_rd_op_finish_valid_next;
+    stat_rd_req_start_tag_reg <= stat_rd_req_start_tag_next;
+    stat_rd_req_start_len_reg <= stat_rd_req_start_len_next;
+    stat_rd_req_start_valid_reg <= stat_rd_req_start_valid_next;
+    stat_rd_req_finish_tag_reg <= stat_rd_req_finish_tag_next;
+    stat_rd_req_finish_status_reg <= stat_rd_req_finish_status_next;
+    stat_rd_req_finish_valid_reg <= stat_rd_req_finish_valid_next;
+    stat_rd_req_timeout_reg <= stat_rd_req_timeout_next;
+    stat_rd_op_table_full_reg <= stat_rd_op_table_full_next;
+    stat_rd_no_tags_reg <= stat_rd_no_tags_next;
+    stat_rd_tx_no_credit_reg <= stat_rd_tx_no_credit_next;
+    stat_rd_tx_limit_reg <= stat_rd_tx_limit_next;
+    stat_rd_tx_stall_reg <= stat_rd_tx_stall_next;
 
     max_read_request_size_dw_reg <= 11'd32 << (max_read_request_size > 5 ? 5 : max_read_request_size);
 
@@ -1360,6 +1486,20 @@ always @(posedge clk) begin
 
         m_axis_read_desc_status_valid_reg <= 1'b0;
 
+        status_error_cor_reg <= 1'b0;
+        status_error_uncor_reg <= 1'b0;
+
+        stat_rd_op_start_valid_reg <= 1'b0;
+        stat_rd_op_finish_valid_reg <= 1'b0;
+        stat_rd_req_start_valid_reg <= 1'b0;
+        stat_rd_req_finish_valid_reg <= 1'b0;
+        stat_rd_req_timeout_reg <= 1'b0;
+        stat_rd_op_table_full_reg <= 1'b0;
+        stat_rd_no_tags_reg <= 1'b0;
+        stat_rd_tx_no_credit_reg <= 1'b0;
+        stat_rd_tx_limit_reg <= 1'b0;
+        stat_rd_tx_stall_reg <= 1'b0;
+
         status_fifo_wr_ptr_reg <= 0;
         status_fifo_rd_ptr_reg <= 0;
         status_fifo_we_reg <= 1'b0;
@@ -1377,9 +1517,6 @@ always @(posedge clk) begin
 
         op_tag_fifo_wr_ptr_reg <= 0;
         op_tag_fifo_rd_ptr_reg <= 0;
-
-        status_error_cor_reg <= 1'b0;
-        status_error_uncor_reg <= 1'b0;
     end
 end
 

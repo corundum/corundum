@@ -202,7 +202,45 @@ module dma_if_pcie #
      * Status
      */
     output wire                                          status_error_cor,
-    output wire                                          status_error_uncor
+    output wire                                          status_error_uncor,
+
+    /*
+     * Statistics
+     */
+    output wire [$clog2(READ_OP_TABLE_SIZE)-1:0]         stat_rd_op_start_tag,
+    output wire [LEN_WIDTH-1:0]                          stat_rd_op_start_len,
+    output wire                                          stat_rd_op_start_valid,
+    output wire [$clog2(READ_OP_TABLE_SIZE)-1:0]         stat_rd_op_finish_tag,
+    output wire [3:0]                                    stat_rd_op_finish_status,
+    output wire                                          stat_rd_op_finish_valid,
+    output wire [$clog2(PCIE_TAG_COUNT)-1:0]             stat_rd_req_start_tag,
+    output wire [12:0]                                   stat_rd_req_start_len,
+    output wire                                          stat_rd_req_start_valid,
+    output wire [$clog2(PCIE_TAG_COUNT)-1:0]             stat_rd_req_finish_tag,
+    output wire [3:0]                                    stat_rd_req_finish_status,
+    output wire                                          stat_rd_req_finish_valid,
+    output wire                                          stat_rd_req_timeout,
+    output wire                                          stat_rd_op_table_full,
+    output wire                                          stat_rd_no_tags,
+    output wire                                          stat_rd_tx_no_credit,
+    output wire                                          stat_rd_tx_limit,
+    output wire                                          stat_rd_tx_stall,
+    output wire [$clog2(WRITE_OP_TABLE_SIZE)-1:0]        stat_wr_op_start_tag,
+    output wire [LEN_WIDTH-1:0]                          stat_wr_op_start_len,
+    output wire                                          stat_wr_op_start_valid,
+    output wire [$clog2(WRITE_OP_TABLE_SIZE)-1:0]        stat_wr_op_finish_tag,
+    output wire [3:0]                                    stat_wr_op_finish_status,
+    output wire                                          stat_wr_op_finish_valid,
+    output wire [$clog2(WRITE_OP_TABLE_SIZE)-1:0]        stat_wr_req_start_tag,
+    output wire [12:0]                                   stat_wr_req_start_len,
+    output wire                                          stat_wr_req_start_valid,
+    output wire [$clog2(WRITE_OP_TABLE_SIZE)-1:0]        stat_wr_req_finish_tag,
+    output wire [3:0]                                    stat_wr_req_finish_status,
+    output wire                                          stat_wr_req_finish_valid,
+    output wire                                          stat_wr_op_table_full,
+    output wire                                          stat_wr_tx_no_credit,
+    output wire                                          stat_wr_tx_limit,
+    output wire                                          stat_wr_tx_stall
 );
 
 dma_if_pcie_rd #(
@@ -305,7 +343,29 @@ dma_if_pcie_rd_inst (
      * Status
      */
     .status_error_cor(status_error_cor),
-    .status_error_uncor(status_error_uncor)
+    .status_error_uncor(status_error_uncor),
+
+    /*
+     * Statistics
+     */
+    .stat_rd_op_start_tag(stat_rd_op_start_tag),
+    .stat_rd_op_start_len(stat_rd_op_start_len),
+    .stat_rd_op_start_valid(stat_rd_op_start_valid),
+    .stat_rd_op_finish_tag(stat_rd_op_finish_tag),
+    .stat_rd_op_finish_status(stat_rd_op_finish_status),
+    .stat_rd_op_finish_valid(stat_rd_op_finish_valid),
+    .stat_rd_req_start_tag(stat_rd_req_start_tag),
+    .stat_rd_req_start_len(stat_rd_req_start_len),
+    .stat_rd_req_start_valid(stat_rd_req_start_valid),
+    .stat_rd_req_finish_tag(stat_rd_req_finish_tag),
+    .stat_rd_req_finish_status(stat_rd_req_finish_status),
+    .stat_rd_req_finish_valid(stat_rd_req_finish_valid),
+    .stat_rd_req_timeout(stat_rd_req_timeout),
+    .stat_rd_op_table_full(stat_rd_op_table_full),
+    .stat_rd_no_tags(stat_rd_no_tags),
+    .stat_rd_tx_no_credit(stat_rd_tx_no_credit),
+    .stat_rd_tx_limit(stat_rd_tx_limit),
+    .stat_rd_tx_stall(stat_rd_tx_stall)
 );
 
 dma_if_pcie_wr #(
@@ -392,7 +452,27 @@ dma_if_pcie_wr_inst (
      */
     .enable(write_enable),
     .requester_id(requester_id),
-    .max_payload_size(max_payload_size)
+    .max_payload_size(max_payload_size),
+
+    /*
+     * Statistics
+     */
+    .stat_wr_op_start_tag(stat_wr_op_start_tag),
+    .stat_wr_op_start_len(stat_wr_op_start_len),
+    .stat_wr_op_start_valid(stat_wr_op_start_valid),
+    .stat_wr_op_finish_tag(stat_wr_op_finish_tag),
+    .stat_wr_op_finish_status(stat_wr_op_finish_status),
+    .stat_wr_op_finish_valid(stat_wr_op_finish_valid),
+    .stat_wr_req_start_tag(stat_wr_req_start_tag),
+    .stat_wr_req_start_len(stat_wr_req_start_len),
+    .stat_wr_req_start_valid(stat_wr_req_start_valid),
+    .stat_wr_req_finish_tag(stat_wr_req_finish_tag),
+    .stat_wr_req_finish_status(stat_wr_req_finish_status),
+    .stat_wr_req_finish_valid(stat_wr_req_finish_valid),
+    .stat_wr_op_table_full(stat_wr_op_table_full),
+    .stat_wr_tx_no_credit(stat_wr_tx_no_credit),
+    .stat_wr_tx_limit(stat_wr_tx_limit),
+    .stat_wr_tx_stall(stat_wr_tx_stall)
 );
 
 endmodule

@@ -134,7 +134,27 @@ module dma_if_pcie_wr #
      */
     input  wire                                          enable,
     input  wire [15:0]                                   requester_id,
-    input  wire [2:0]                                    max_payload_size
+    input  wire [2:0]                                    max_payload_size,
+
+    /*
+     * Statistics
+     */
+    output wire [$clog2(OP_TABLE_SIZE)-1:0]              stat_wr_op_start_tag,
+    output wire [LEN_WIDTH-1:0]                          stat_wr_op_start_len,
+    output wire                                          stat_wr_op_start_valid,
+    output wire [$clog2(OP_TABLE_SIZE)-1:0]              stat_wr_op_finish_tag,
+    output wire [3:0]                                    stat_wr_op_finish_status,
+    output wire                                          stat_wr_op_finish_valid,
+    output wire [$clog2(OP_TABLE_SIZE)-1:0]              stat_wr_req_start_tag,
+    output wire [12:0]                                   stat_wr_req_start_len,
+    output wire                                          stat_wr_req_start_valid,
+    output wire [$clog2(OP_TABLE_SIZE)-1:0]              stat_wr_req_finish_tag,
+    output wire [3:0]                                    stat_wr_req_finish_status,
+    output wire                                          stat_wr_req_finish_valid,
+    output wire                                          stat_wr_op_table_full,
+    output wire                                          stat_wr_tx_no_credit,
+    output wire                                          stat_wr_tx_limit,
+    output wire                                          stat_wr_tx_stall
 );
 
 parameter RAM_DATA_WIDTH = RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH;
@@ -318,6 +338,21 @@ reg [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0] ram_rd_cmd_addr_reg = 0, ram_rd_cmd_a
 reg [RAM_SEG_COUNT-1:0] ram_rd_cmd_valid_reg = 0, ram_rd_cmd_valid_next;
 reg [RAM_SEG_COUNT-1:0] ram_rd_resp_ready_cmb;
 
+reg [OP_TAG_WIDTH-1:0] stat_wr_op_start_tag_reg = 0, stat_wr_op_start_tag_next;
+reg [LEN_WIDTH-1:0] stat_wr_op_start_len_reg = 0, stat_wr_op_start_len_next;
+reg stat_wr_op_start_valid_reg = 1'b0, stat_wr_op_start_valid_next;
+reg [OP_TAG_WIDTH-1:0] stat_wr_op_finish_tag_reg = 0, stat_wr_op_finish_tag_next;
+reg stat_wr_op_finish_valid_reg = 1'b0, stat_wr_op_finish_valid_next;
+reg [OP_TAG_WIDTH-1:0] stat_wr_req_start_tag_reg = 0, stat_wr_req_start_tag_next;
+reg [12:0] stat_wr_req_start_len_reg = 13'd0, stat_wr_req_start_len_next;
+reg stat_wr_req_start_valid_reg = 1'b0, stat_wr_req_start_valid_next;
+reg [OP_TAG_WIDTH-1:0] stat_wr_req_finish_tag_reg = 0, stat_wr_req_finish_tag_next;
+reg stat_wr_req_finish_valid_reg = 1'b0, stat_wr_req_finish_valid_next;
+reg stat_wr_op_table_full_reg = 1'b0, stat_wr_op_table_full_next;
+reg stat_wr_tx_no_credit_reg = 1'b0, stat_wr_tx_no_credit_next;
+reg stat_wr_tx_limit_reg = 1'b0, stat_wr_tx_limit_next;
+reg stat_wr_tx_stall_reg = 1'b0, stat_wr_tx_stall_next;
+
 assign tx_wr_req_tlp_data = tx_wr_req_tlp_data_reg;
 assign tx_wr_req_tlp_strb = tx_wr_req_tlp_strb_reg;
 assign tx_wr_req_tlp_hdr = tx_wr_req_tlp_hdr_reg;
@@ -336,6 +371,23 @@ assign ram_rd_cmd_sel = ram_rd_cmd_sel_reg;
 assign ram_rd_cmd_addr = ram_rd_cmd_addr_reg;
 assign ram_rd_cmd_valid = ram_rd_cmd_valid_reg;
 assign ram_rd_resp_ready = ram_rd_resp_ready_cmb;
+
+assign stat_wr_op_start_tag = stat_wr_op_start_tag_reg;
+assign stat_wr_op_start_len = stat_wr_op_start_len_reg;
+assign stat_wr_op_start_valid = stat_wr_op_start_valid_reg;
+assign stat_wr_op_finish_tag = stat_wr_op_finish_tag_reg;
+assign stat_wr_op_finish_status = 4'd0;
+assign stat_wr_op_finish_valid = stat_wr_op_finish_valid_reg;
+assign stat_wr_req_start_tag = stat_wr_req_start_tag_reg;
+assign stat_wr_req_start_len = stat_wr_req_start_len_reg;
+assign stat_wr_req_start_valid = stat_wr_req_start_valid_reg;
+assign stat_wr_req_finish_tag = stat_wr_req_finish_tag_reg;
+assign stat_wr_req_finish_status = 4'd00;
+assign stat_wr_req_finish_valid = stat_wr_req_finish_valid_reg;
+assign stat_wr_op_table_full = stat_wr_op_table_full_reg;
+assign stat_wr_tx_no_credit = stat_wr_tx_no_credit_reg;
+assign stat_wr_tx_limit = stat_wr_tx_limit_reg;
+assign stat_wr_tx_stall = stat_wr_tx_stall_reg;
 
 // operation tag management
 reg [OP_TAG_WIDTH+1-1:0] op_table_start_ptr_reg = 0;
@@ -385,6 +437,17 @@ always @* begin
     req_state_next = REQ_STATE_IDLE;
 
     s_axis_write_desc_ready_next = 1'b0;
+
+    stat_wr_op_start_tag_next = stat_wr_op_start_tag_reg;
+    stat_wr_op_start_len_next = stat_wr_op_start_len_reg;
+    stat_wr_op_start_valid_next = 1'b0;
+    stat_wr_req_start_tag_next = stat_wr_req_start_tag_reg;
+    stat_wr_req_start_len_next = stat_wr_req_start_len_reg;
+    stat_wr_req_start_valid_next = 1'b0;
+    stat_wr_op_table_full_next = !(!op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] && ($unsigned(op_table_start_ptr_reg - op_table_finish_ptr_reg) < 2**OP_TAG_WIDTH));
+    stat_wr_tx_no_credit_next = !(!TX_FC_ENABLE || have_credit_reg);
+    stat_wr_tx_limit_next = !(!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg);
+    stat_wr_tx_stall_next = !(!tx_wr_req_tlp_valid_reg || tx_wr_req_tlp_ready);
 
     pcie_addr_next = pcie_addr_reg;
     ram_sel_next = ram_sel_reg;
@@ -453,8 +516,12 @@ always @* begin
                 end
             end
 
+            stat_wr_op_start_len_next = s_axis_write_desc_len;
+
             if (s_axis_write_desc_ready & s_axis_write_desc_valid) begin
                 s_axis_write_desc_ready_next = 1'b0;
+                stat_wr_op_start_tag_next = stat_wr_op_start_tag_reg+1;
+                stat_wr_op_start_valid_next = 1'b1;
                 req_state_next = REQ_STATE_START;
             end else begin
                 req_state_next = REQ_STATE_IDLE;
@@ -485,6 +552,10 @@ always @* begin
 
                 op_table_start_tag = tag_reg;
                 op_table_start_en = 1'b1;
+
+                stat_wr_req_start_tag_next = op_table_start_ptr_reg;
+                stat_wr_req_start_len_next = tlp_count_reg;
+                stat_wr_req_start_valid_next = 1'b1;
 
                 // TLP size computation
                 if (op_count_next <= {max_payload_size_dw_reg, 2'b00}-pcie_addr_next[1:0]) begin
@@ -681,6 +752,11 @@ always @* begin
 
     ram_rd_resp_ready_cmb = {RAM_SEG_COUNT{1'b0}};
 
+    stat_wr_op_finish_tag_next = stat_wr_op_finish_tag_reg;
+    stat_wr_op_finish_valid_next = 1'b0;
+    stat_wr_req_finish_tag_next = stat_wr_req_finish_tag_reg;
+    stat_wr_req_finish_valid_next = 1'b0;
+
     tlp_addr_next = tlp_addr_reg;
     tlp_len_next = tlp_len_reg;
     tlp_zero_len_next = tlp_zero_len_reg;
@@ -840,10 +916,17 @@ always @* begin
 
     op_table_finish_en = 1'b0;
 
+    stat_wr_req_finish_tag_next = op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0];
+
     if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && (!TX_SEQ_NUM_ENABLE || op_table_tx_done[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) && op_table_finish_ptr_reg != op_table_tx_finish_ptr_reg) begin
         op_table_finish_en = 1'b1;
 
+        stat_wr_req_finish_valid_next = 1'b1;
+
         if (op_table_last[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
+            stat_wr_op_finish_tag_next = stat_wr_op_finish_tag_reg + 1;
+            stat_wr_op_finish_valid_next = 1'b1;
+
             m_axis_write_desc_status_valid_next = 1'b1;
         end
     end
@@ -938,6 +1021,21 @@ always @(posedge clk) begin
     ram_rd_cmd_addr_reg <= ram_rd_cmd_addr_next;
     ram_rd_cmd_valid_reg <= ram_rd_cmd_valid_next;
 
+    stat_wr_op_start_tag_reg <= stat_wr_op_start_tag_next;
+    stat_wr_op_start_len_reg <= stat_wr_op_start_len_next;
+    stat_wr_op_start_valid_reg <= stat_wr_op_start_valid_next;
+    stat_wr_op_finish_tag_reg <= stat_wr_op_finish_tag_next;
+    stat_wr_op_finish_valid_reg <= stat_wr_op_finish_valid_next;
+    stat_wr_req_start_tag_reg <= stat_wr_req_start_tag_next;
+    stat_wr_req_start_len_reg <= stat_wr_req_start_len_next;
+    stat_wr_req_start_valid_reg <= stat_wr_req_start_valid_next;
+    stat_wr_req_finish_tag_reg <= stat_wr_req_finish_tag_next;
+    stat_wr_req_finish_valid_reg <= stat_wr_req_finish_valid_next;
+    stat_wr_op_table_full_reg <= stat_wr_op_table_full_next;
+    stat_wr_tx_no_credit_reg <= stat_wr_tx_no_credit_next;
+    stat_wr_tx_limit_reg <= stat_wr_tx_limit_next;
+    stat_wr_tx_stall_reg <= stat_wr_tx_stall_next;
+
     max_payload_size_dw_reg <= 11'd32 << (max_payload_size > 5 ? 5 : max_payload_size);
 
     have_credit_reg <= (pcie_tx_fc_ph_av > 4) && (pcie_tx_fc_pd_av > (max_payload_size_dw_reg >> 1));
@@ -1000,6 +1098,17 @@ always @(posedge clk) begin
         m_axis_write_desc_status_valid_reg <= 1'b0;
 
         ram_rd_cmd_valid_reg <= {RAM_SEG_COUNT{1'b0}};
+
+        stat_wr_op_start_tag_reg <= 0;
+        stat_wr_op_start_valid_reg <= 1'b0;
+        stat_wr_op_finish_tag_reg <= 0;
+        stat_wr_op_finish_valid_reg <= 1'b0;
+        stat_wr_req_start_valid_reg <= 1'b0;
+        stat_wr_req_finish_valid_reg <= 1'b0;
+        stat_wr_op_table_full_reg <= 1'b0;
+        stat_wr_tx_no_credit_reg <= 1'b0;
+        stat_wr_tx_limit_reg <= 1'b0;
+        stat_wr_tx_stall_reg <= 1'b0;
 
         active_tx_count_reg <= {TX_COUNT_WIDTH{1'b0}};
         active_tx_count_av_reg <= 1'b1;

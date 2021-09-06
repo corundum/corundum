@@ -1,0 +1,86 @@
+# Copyright (c) 2021 Alex Forencich
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+# THE SOFTWARE.
+
+TOPLEVEL_LANG = verilog
+
+SIM ?= icarus
+WAVES ?= 0
+
+COCOTB_HDL_TIMEUNIT = 1ns
+COCOTB_HDL_TIMEPRECISION = 1ps
+
+DUT      = stats_counter
+TOPLEVEL = $(DUT)
+MODULE   = test_$(DUT)
+VERILOG_SOURCES += ../../rtl/$(DUT).v
+
+# module parameters
+export PARAM_STAT_INC_WIDTH ?= 16
+export PARAM_STAT_ID_WIDTH ?= 8
+export PARAM_STAT_COUNT_WIDTH ?= 32
+export PARAM_AXIL_DATA_WIDTH ?= 32
+export PARAM_AXIL_ADDR_WIDTH ?= $(shell python -c "print($(PARAM_STAT_ID_WIDTH) + (($(PARAM_STAT_COUNT_WIDTH)+7)//8-1).bit_length())")
+export PARAM_AXIL_STRB_WIDTH ?= $(shell expr $(PARAM_AXIL_DATA_WIDTH) / 8 )
+export PARAM_PIPELINE ?= 0
+
+ifeq ($(SIM), icarus)
+	PLUSARGS += -fst
+
+	COMPILE_ARGS += -P $(TOPLEVEL).STAT_INC_WIDTH=$(PARAM_STAT_INC_WIDTH)
+	COMPILE_ARGS += -P $(TOPLEVEL).STAT_ID_WIDTH=$(PARAM_STAT_ID_WIDTH)
+	COMPILE_ARGS += -P $(TOPLEVEL).STAT_COUNT_WIDTH=$(PARAM_STAT_COUNT_WIDTH)
+	COMPILE_ARGS += -P $(TOPLEVEL).AXIL_DATA_WIDTH=$(PARAM_AXIL_DATA_WIDTH)
+	COMPILE_ARGS += -P $(TOPLEVEL).AXIL_ADDR_WIDTH=$(PARAM_AXIL_ADDR_WIDTH)
+	COMPILE_ARGS += -P $(TOPLEVEL).AXIL_STRB_WIDTH=$(PARAM_AXIL_STRB_WIDTH)
+	COMPILE_ARGS += -P $(TOPLEVEL).PIPELINE=$(PARAM_PIPELINE)
+
+	ifeq ($(WAVES), 1)
+		VERILOG_SOURCES += iverilog_dump.v
+		COMPILE_ARGS += -s iverilog_dump
+	endif
+else ifeq ($(SIM), verilator)
+	COMPILE_ARGS += -Wno-SELRANGE -Wno-WIDTH
+
+	COMPILE_ARGS += -GSTAT_INC_WIDTH=$(PARAM_STAT_INC_WIDTH)
+	COMPILE_ARGS += -GSTAT_ID_WIDTH=$(PARAM_STAT_ID_WIDTH)
+	COMPILE_ARGS += -GSTAT_COUNT_WIDTH=$(PARAM_STAT_COUNT_WIDTH)
+	COMPILE_ARGS += -GAXIL_DATA_WIDTH=$(PARAM_AXIL_DATA_WIDTH)
+	COMPILE_ARGS += -GAXIL_ADDR_WIDTH=$(PARAM_AXIL_ADDR_WIDTH)
+	COMPILE_ARGS += -GAXIL_STRB_WIDTH=$(PARAM_AXIL_STRB_WIDTH)
+	COMPILE_ARGS += -GPIPELINE=$(PARAM_PIPELINE)
+
+	ifeq ($(WAVES), 1)
+		COMPILE_ARGS += --trace-fst
+	endif
+endif
+
+include $(shell cocotb-config --makefiles)/Makefile.sim
+
+iverilog_dump.v:
+	echo 'module iverilog_dump();' > $@
+	echo 'initial begin' >> $@
+	echo '    $$dumpfile("$(TOPLEVEL).fst");' >> $@
+	echo '    $$dumpvars(0, $(TOPLEVEL));' >> $@
+	echo 'end' >> $@
+	echo 'endmodule' >> $@
+
+clean::
+	@rm -rf iverilog_dump.v
+	@rm -rf dump.fst $(TOPLEVEL).fst

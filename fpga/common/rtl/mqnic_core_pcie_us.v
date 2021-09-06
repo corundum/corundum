@@ -149,7 +149,14 @@ module mqnic_core_pcie_us #
     parameter AXIS_ETH_TX_FIFO_PIPELINE = 2,
     parameter AXIS_ETH_TX_TS_PIPELINE = 0,
     parameter AXIS_ETH_RX_PIPELINE = 0,
-    parameter AXIS_ETH_RX_FIFO_PIPELINE = 2
+    parameter AXIS_ETH_RX_FIFO_PIPELINE = 2,
+
+    // Statistics counter subsystem
+    parameter STAT_ENABLE = 1,
+    parameter STAT_DMA_ENABLE = 1,
+    parameter STAT_PCIE_ENABLE = 1,
+    parameter STAT_INC_WIDTH = 24,
+    parameter STAT_ID_WIDTH = 12
 )
 (
     input  wire                                          clk,
@@ -340,7 +347,15 @@ module mqnic_core_pcie_us #
     input  wire [PORT_COUNT-1:0]                         s_axis_eth_rx_tvalid,
     output wire [PORT_COUNT-1:0]                         s_axis_eth_rx_tready,
     input  wire [PORT_COUNT-1:0]                         s_axis_eth_rx_tlast,
-    input  wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  s_axis_eth_rx_tuser
+    input  wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  s_axis_eth_rx_tuser,
+
+    /*
+     * Statistics increment input
+     */
+    input  wire [STAT_INC_WIDTH-1:0]                    s_axis_stat_tdata,
+    input  wire [STAT_ID_WIDTH-1:0]                     s_axis_stat_tid,
+    input  wire                                         s_axis_stat_tvalid,
+    output wire                                         s_axis_stat_tready
 );
 
 parameter TLP_SEG_COUNT = 1;
@@ -725,7 +740,14 @@ mqnic_core_pcie #(
     .AXIS_TX_FIFO_PIPELINE(AXIS_ETH_TX_FIFO_PIPELINE),
     .AXIS_TX_TS_PIPELINE(AXIS_ETH_TX_TS_PIPELINE),
     .AXIS_RX_PIPELINE(AXIS_ETH_RX_PIPELINE),
-    .AXIS_RX_FIFO_PIPELINE(AXIS_ETH_RX_FIFO_PIPELINE)
+    .AXIS_RX_FIFO_PIPELINE(AXIS_ETH_RX_FIFO_PIPELINE),
+
+    // Statistics counter subsystem
+    .STAT_ENABLE(STAT_ENABLE),
+    .STAT_DMA_ENABLE(STAT_DMA_ENABLE),
+    .STAT_PCIE_ENABLE(STAT_PCIE_ENABLE),
+    .STAT_INC_WIDTH(STAT_INC_WIDTH),
+    .STAT_ID_WIDTH(STAT_ID_WIDTH)
 )
 core_pcie_inst (
     .clk(clk),
@@ -905,7 +927,15 @@ core_pcie_inst (
     .s_axis_rx_tvalid(s_axis_eth_rx_tvalid),
     .s_axis_rx_tready(s_axis_eth_rx_tready),
     .s_axis_rx_tlast(s_axis_eth_rx_tlast),
-    .s_axis_rx_tuser(s_axis_eth_rx_tuser)
+    .s_axis_rx_tuser(s_axis_eth_rx_tuser),
+
+    /*
+     * Statistics input
+     */
+    .s_axis_stat_tdata(s_axis_stat_tdata),
+    .s_axis_stat_tid(s_axis_stat_tid),
+    .s_axis_stat_tvalid(s_axis_stat_tvalid),
+    .s_axis_stat_tready(s_axis_stat_tready)
 );
 
 endmodule

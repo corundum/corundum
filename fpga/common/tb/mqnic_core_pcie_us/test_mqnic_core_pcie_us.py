@@ -321,6 +321,10 @@ class TB(object):
 
         dut.ptp_sample_clk.setimmediatevalue(0)
 
+        dut.s_axis_stat_tdata.setimmediatevalue(0)
+        dut.s_axis_stat_tid.setimmediatevalue(0)
+        dut.s_axis_stat_tvalid.setimmediatevalue(0)
+
         self.loopback_enable = False
         cocotb.fork(self._run_loopback())
 
@@ -480,6 +484,17 @@ async def run_test_nic(dut):
 
     tb.loopback_enable = False
 
+    tb.log.info("Read statistics counters")
+
+    await Timer(2000, 'ns')
+
+    lst = []
+
+    for k in range(64):
+        lst.append(await tb.rc.mem_read_dword(tb.driver.hw_addr+0x010000+k*8))
+
+    print(lst)
+
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
 
@@ -525,6 +540,12 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
         os.path.join(rtl_dir, "mqnic_tx_scheduler_block_rr.v"),
         os.path.join(rtl_dir, "tx_scheduler_rr.v"),
         os.path.join(rtl_dir, "event_mux.v"),
+        os.path.join(rtl_dir, "stats_counter.v"),
+        os.path.join(rtl_dir, "stats_collect.v"),
+        os.path.join(rtl_dir, "stats_pcie_if.v"),
+        os.path.join(rtl_dir, "stats_pcie_tlp.v"),
+        os.path.join(rtl_dir, "stats_dma_if_pcie.v"),
+        os.path.join(rtl_dir, "stats_dma_latency.v"),
         os.path.join(eth_rtl_dir, "ptp_clock.v"),
         os.path.join(eth_rtl_dir, "ptp_clock_cdc.v"),
         os.path.join(eth_rtl_dir, "ptp_perout.v"),
@@ -652,6 +673,13 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
     parameters['AXIS_ETH_TX_TS_PIPELINE'] = 0
     parameters['AXIS_ETH_RX_PIPELINE'] = 0
     parameters['AXIS_ETH_RX_FIFO_PIPELINE'] = 2
+
+    # Statistics counter subsystem
+    parameters['STAT_ENABLE'] = 1
+    parameters['STAT_DMA_ENABLE'] = 1
+    parameters['STAT_PCIE_ENABLE'] = 1
+    parameters['STAT_INC_WIDTH'] = 24
+    parameters['STAT_ID_WIDTH'] = 12
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

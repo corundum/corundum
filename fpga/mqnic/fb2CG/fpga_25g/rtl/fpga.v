@@ -124,7 +124,14 @@ module fpga #
     parameter AXIS_ETH_TX_FIFO_PIPELINE = 2,
     parameter AXIS_ETH_TX_TS_PIPELINE = 0,
     parameter AXIS_ETH_RX_PIPELINE = 0,
-    parameter AXIS_ETH_RX_FIFO_PIPELINE = 2
+    parameter AXIS_ETH_RX_FIFO_PIPELINE = 2,
+
+    // Statistics counter subsystem
+    parameter STAT_ENABLE = 1,
+    parameter STAT_DMA_ENABLE = 1,
+    parameter STAT_PCIE_ENABLE = 1,
+    parameter STAT_INC_WIDTH = 24,
+    parameter STAT_ID_WIDTH = 12
 )
 (
     /*
@@ -1661,7 +1668,14 @@ fpga_core #(
     .AXIS_ETH_TX_FIFO_PIPELINE(AXIS_ETH_TX_FIFO_PIPELINE),
     .AXIS_ETH_TX_TS_PIPELINE(AXIS_ETH_TX_TS_PIPELINE),
     .AXIS_ETH_RX_PIPELINE(AXIS_ETH_RX_PIPELINE),
-    .AXIS_ETH_RX_FIFO_PIPELINE(AXIS_ETH_RX_FIFO_PIPELINE)
+    .AXIS_ETH_RX_FIFO_PIPELINE(AXIS_ETH_RX_FIFO_PIPELINE),
+
+    // Statistics counter subsystem
+    .STAT_ENABLE(STAT_ENABLE),
+    .STAT_DMA_ENABLE(STAT_DMA_ENABLE),
+    .STAT_PCIE_ENABLE(STAT_PCIE_ENABLE),
+    .STAT_INC_WIDTH(STAT_INC_WIDTH),
+    .STAT_ID_WIDTH(STAT_ID_WIDTH)
 )
 core_inst (
     /*

@@ -138,7 +138,14 @@ module fpga_core #
     parameter AXIS_ETH_TX_FIFO_PIPELINE = 2,
     parameter AXIS_ETH_TX_TS_PIPELINE = 0,
     parameter AXIS_ETH_RX_PIPELINE = 0,
-    parameter AXIS_ETH_RX_FIFO_PIPELINE = 2
+    parameter AXIS_ETH_RX_FIFO_PIPELINE = 2,
+
+    // Statistics counter subsystem
+    parameter STAT_ENABLE = 1,
+    parameter STAT_DMA_ENABLE = 1,
+    parameter STAT_PCIE_ENABLE = 1,
+    parameter STAT_INC_WIDTH = 24,
+    parameter STAT_ID_WIDTH = 12
 )
 (
     /*
@@ -859,7 +866,14 @@ mqnic_core_pcie_us #(
     .AXIS_ETH_TX_FIFO_PIPELINE(AXIS_ETH_TX_FIFO_PIPELINE),
     .AXIS_ETH_TX_TS_PIPELINE(AXIS_ETH_TX_TS_PIPELINE),
     .AXIS_ETH_RX_PIPELINE(AXIS_ETH_RX_PIPELINE),
-    .AXIS_ETH_RX_FIFO_PIPELINE(AXIS_ETH_RX_FIFO_PIPELINE)
+    .AXIS_ETH_RX_FIFO_PIPELINE(AXIS_ETH_RX_FIFO_PIPELINE),
+
+    // Statistics counter subsystem
+    .STAT_ENABLE(STAT_ENABLE),
+    .STAT_DMA_ENABLE(STAT_DMA_ENABLE),
+    .STAT_PCIE_ENABLE(STAT_PCIE_ENABLE),
+    .STAT_INC_WIDTH(STAT_INC_WIDTH),
+    .STAT_ID_WIDTH(STAT_ID_WIDTH)
 )
 core_inst (
     .clk(clk_250mhz),
@@ -1050,7 +1064,15 @@ core_inst (
     .s_axis_eth_rx_tvalid(axis_eth_rx_tvalid),
     .s_axis_eth_rx_tready(axis_eth_rx_tready),
     .s_axis_eth_rx_tlast(axis_eth_rx_tlast),
-    .s_axis_eth_rx_tuser(axis_eth_rx_tuser)
+    .s_axis_eth_rx_tuser(axis_eth_rx_tuser),
+
+    /*
+     * Statistics input
+     */
+    .s_axis_stat_tdata(0),
+    .s_axis_stat_tid(0),
+    .s_axis_stat_tvalid(1'b0),
+    .s_axis_stat_tready()
 );
 
 endmodule

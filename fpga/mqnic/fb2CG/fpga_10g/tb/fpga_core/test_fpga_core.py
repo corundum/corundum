@@ -585,6 +585,12 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "mqnic_tx_scheduler_block_rr.v"),
         os.path.join(rtl_dir, "common", "tx_scheduler_rr.v"),
         os.path.join(rtl_dir, "common", "event_mux.v"),
+        os.path.join(rtl_dir, "common", "stats_counter.v"),
+        os.path.join(rtl_dir, "common", "stats_collect.v"),
+        os.path.join(rtl_dir, "common", "stats_pcie_if.v"),
+        os.path.join(rtl_dir, "common", "stats_pcie_tlp.v"),
+        os.path.join(rtl_dir, "common", "stats_dma_if_pcie.v"),
+        os.path.join(rtl_dir, "common", "stats_dma_latency.v"),
         os.path.join(rtl_dir, "common", "tdma_scheduler.v"),
         os.path.join(rtl_dir, "common", "tdma_ber.v"),
         os.path.join(rtl_dir, "common", "tdma_ber_ch.v"),
@@ -712,6 +718,13 @@ def test_fpga_core(request):
     parameters['AXIS_ETH_TX_TS_PIPELINE'] = 0
     parameters['AXIS_ETH_RX_PIPELINE'] = 0
     parameters['AXIS_ETH_RX_FIFO_PIPELINE'] = 2
+
+    # Statistics counter subsystem
+    parameters['STAT_ENABLE'] = 1
+    parameters['STAT_DMA_ENABLE'] = 1
+    parameters['STAT_PCIE_ENABLE'] = 1
+    parameters['STAT_INC_WIDTH'] = 24
+    parameters['STAT_ID_WIDTH'] = 12
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

@@ -151,7 +151,14 @@ module mqnic_core_pcie #
     parameter AXIS_TX_FIFO_PIPELINE = 2,
     parameter AXIS_TX_TS_PIPELINE = 0,
     parameter AXIS_RX_PIPELINE = 0,
-    parameter AXIS_RX_FIFO_PIPELINE = 2
+    parameter AXIS_RX_FIFO_PIPELINE = 2,
+
+    // Statistics counter subsystem
+    parameter STAT_ENABLE = 1,
+    parameter STAT_DMA_ENABLE = 1,
+    parameter STAT_PCIE_ENABLE = 1,
+    parameter STAT_INC_WIDTH = 24,
+    parameter STAT_ID_WIDTH = 12
 )
 (
     input  wire                                          clk,
@@ -331,7 +338,15 @@ module mqnic_core_pcie #
     input  wire [PORT_COUNT-1:0]                         s_axis_rx_tvalid,
     output wire [PORT_COUNT-1:0]                         s_axis_rx_tready,
     input  wire [PORT_COUNT-1:0]                         s_axis_rx_tlast,
-    input  wire [PORT_COUNT*AXIS_RX_USER_WIDTH-1:0]      s_axis_rx_tuser
+    input  wire [PORT_COUNT*AXIS_RX_USER_WIDTH-1:0]      s_axis_rx_tuser,
+
+    /*
+     * Statistics increment input
+     */
+    input  wire [STAT_INC_WIDTH-1:0]                    s_axis_stat_tdata,
+    input  wire [STAT_ID_WIDTH-1:0]                     s_axis_stat_tid,
+    input  wire                                         s_axis_stat_tvalid,
+    output wire                                         s_axis_stat_tready
 );
 
 parameter DMA_ADDR_WIDTH = 64;
@@ -484,6 +499,41 @@ pcie_axil_master_inst (
     .status_error_uncor(pcie_error_uncor_int[0])
 );
 
+wire [$clog2(PCIE_DMA_READ_OP_TABLE_SIZE)-1:0] stat_rd_op_start_tag;
+wire [DMA_LEN_WIDTH-1:0] stat_rd_op_start_len;
+wire stat_rd_op_start_valid;
+wire [$clog2(PCIE_DMA_READ_OP_TABLE_SIZE)-1:0] stat_rd_op_finish_tag;
+wire [3:0] stat_rd_op_finish_status;
+wire stat_rd_op_finish_valid;
+wire [$clog2(PCIE_TAG_COUNT)-1:0] stat_rd_req_start_tag;
+wire [12:0] stat_rd_req_start_len;
+wire stat_rd_req_start_valid;
+wire [$clog2(PCIE_TAG_COUNT)-1:0] stat_rd_req_finish_tag;
+wire [3:0] stat_rd_req_finish_status;
+wire stat_rd_req_finish_valid;
+wire stat_rd_req_timeout;
+wire stat_rd_op_table_full;
+wire stat_rd_no_tags;
+wire stat_rd_tx_no_credit;
+wire stat_rd_tx_limit;
+wire stat_rd_tx_stall;
+wire [$clog2(PCIE_DMA_WRITE_OP_TABLE_SIZE)-1:0] stat_wr_op_start_tag;
+wire [DMA_LEN_WIDTH-1:0] stat_wr_op_start_len;
+wire stat_wr_op_start_valid;
+wire [$clog2(PCIE_DMA_WRITE_OP_TABLE_SIZE)-1:0] stat_wr_op_finish_tag;
+wire [3:0] stat_wr_op_finish_status;
+wire stat_wr_op_finish_valid;
+wire [$clog2(PCIE_DMA_WRITE_OP_TABLE_SIZE)-1:0] stat_wr_req_start_tag;
+wire [12:0] stat_wr_req_start_len;
+wire stat_wr_req_start_valid;
+wire [$clog2(PCIE_DMA_WRITE_OP_TABLE_SIZE)-1:0] stat_wr_req_finish_tag;
+wire [3:0] stat_wr_req_finish_status;
+wire stat_wr_req_finish_valid;
+wire stat_wr_op_table_full;
+wire stat_wr_tx_no_credit;
+wire stat_wr_tx_limit;
+wire stat_wr_tx_stall;
+
 dma_if_pcie #(
     .TLP_SEG_COUNT(TLP_SEG_COUNT),
     .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
@@ -630,7 +680,45 @@ dma_if_pcie_inst (
      * Status
      */
     .status_error_cor(pcie_error_cor_int[1]),
-    .status_error_uncor(pcie_error_uncor_int[1])
+    .status_error_uncor(pcie_error_uncor_int[1]),
+
+    /*
+     * Statistics
+     */
+    .stat_rd_op_start_tag(stat_rd_op_start_tag),
+    .stat_rd_op_start_len(stat_rd_op_start_len),
+    .stat_rd_op_start_valid(stat_rd_op_start_valid),
+    .stat_rd_op_finish_tag(stat_rd_op_finish_tag),
+    .stat_rd_op_finish_status(stat_rd_op_finish_status),
+    .stat_rd_op_finish_valid(stat_rd_op_finish_valid),
+    .stat_rd_req_start_tag(stat_rd_req_start_tag),
+    .stat_rd_req_start_len(stat_rd_req_start_len),
+    .stat_rd_req_start_valid(stat_rd_req_start_valid),
+    .stat_rd_req_finish_tag(stat_rd_req_finish_tag),
+    .stat_rd_req_finish_status(stat_rd_req_finish_status),
+    .stat_rd_req_finish_valid(stat_rd_req_finish_valid),
+    .stat_rd_req_timeout(stat_rd_req_timeout),
+    .stat_rd_op_table_full(stat_rd_op_table_full),
+    .stat_rd_no_tags(stat_rd_no_tags),
+    .stat_rd_tx_no_credit(stat_rd_tx_no_credit),
+    .stat_rd_tx_limit(stat_rd_tx_limit),
+    .stat_rd_tx_stall(stat_rd_tx_stall),
+    .stat_wr_op_start_tag(stat_wr_op_start_tag),
+    .stat_wr_op_start_len(stat_wr_op_start_len),
+    .stat_wr_op_start_valid(stat_wr_op_start_valid),
+    .stat_wr_op_finish_tag(stat_wr_op_finish_tag),
+    .stat_wr_op_finish_status(stat_wr_op_finish_status),
+    .stat_wr_op_finish_valid(stat_wr_op_finish_valid),
+    .stat_wr_req_start_tag(stat_wr_req_start_tag),
+    .stat_wr_req_start_len(stat_wr_req_start_len),
+    .stat_wr_req_start_valid(stat_wr_req_start_valid),
+    .stat_wr_req_finish_tag(stat_wr_req_finish_tag),
+    .stat_wr_req_finish_status(stat_wr_req_finish_status),
+    .stat_wr_req_finish_valid(stat_wr_req_finish_valid),
+    .stat_wr_op_table_full(stat_wr_op_table_full),
+    .stat_wr_tx_no_credit(stat_wr_tx_no_credit),
+    .stat_wr_tx_limit(stat_wr_tx_limit),
+    .stat_wr_tx_stall(stat_wr_tx_stall)
 );
 
 pulse_merge #(
@@ -658,6 +746,231 @@ pcie_error_uncor_pm_inst (
     .count_out(),
     .pulse_out(pcie_error_uncor)
 );
+
+wire [STAT_INC_WIDTH-1:0]  axis_stat_tdata;
+wire [STAT_ID_WIDTH-1:0]   axis_stat_tid;
+wire                       axis_stat_tvalid;
+wire                       axis_stat_tready;
+
+wire [STAT_INC_WIDTH-1:0]  axis_stat_pcie_tdata;
+wire [STAT_ID_WIDTH-1:0]   axis_stat_pcie_tid;
+wire                       axis_stat_pcie_tvalid;
+wire                       axis_stat_pcie_tready;
+
+wire [STAT_INC_WIDTH-1:0]  axis_stat_dma_tdata;
+wire [STAT_ID_WIDTH-1:0]   axis_stat_dma_tid;
+wire                       axis_stat_dma_tvalid;
+wire                       axis_stat_dma_tready;
+
+generate
+
+if (STAT_ENABLE && STAT_PCIE_ENABLE) begin
+
+    stats_pcie_if #(
+        .TLP_SEG_COUNT(TLP_SEG_COUNT),
+        .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH),
+        .STAT_INC_WIDTH(STAT_INC_WIDTH),
+        .STAT_ID_WIDTH(5),
+        .UPDATE_PERIOD(1024)
+    )
+    stats_pcie_if_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * monitor input (request to BAR)
+         */
+        .rx_req_tlp_hdr(pcie_rx_req_tlp_hdr),
+        .rx_req_tlp_valid(pcie_rx_req_tlp_valid && pcie_rx_req_tlp_ready),
+        .rx_req_tlp_sop(pcie_rx_req_tlp_sop),
+        .rx_req_tlp_eop(pcie_rx_req_tlp_eop),
+
+        /*
+         * monitor input (completion to DMA)
+         */
+        .rx_cpl_tlp_hdr(pcie_rx_cpl_tlp_hdr),
+        .rx_cpl_tlp_valid(pcie_rx_cpl_tlp_valid && pcie_rx_cpl_tlp_ready),
+        .rx_cpl_tlp_sop(pcie_rx_cpl_tlp_sop),
+        .rx_cpl_tlp_eop(pcie_rx_cpl_tlp_eop),
+
+        /*
+         * monitor input (read request from DMA)
+         */
+        .tx_rd_req_tlp_hdr(pcie_tx_rd_req_tlp_hdr),
+        .tx_rd_req_tlp_valid(pcie_tx_rd_req_tlp_valid && pcie_tx_rd_req_tlp_ready),
+        .tx_rd_req_tlp_sop(pcie_tx_rd_req_tlp_sop),
+        .tx_rd_req_tlp_eop(pcie_tx_rd_req_tlp_eop),
+
+        /*
+         * monitor input (write request from DMA)
+         */
+        .tx_wr_req_tlp_hdr(pcie_tx_wr_req_tlp_hdr),
+        .tx_wr_req_tlp_valid(pcie_tx_wr_req_tlp_valid && pcie_tx_wr_req_tlp_ready),
+        .tx_wr_req_tlp_sop(pcie_tx_wr_req_tlp_sop),
+        .tx_wr_req_tlp_eop(pcie_tx_wr_req_tlp_eop),
+
+        /*
+         * monitor input (completion from BAR)
+         */
+        .tx_cpl_tlp_hdr(pcie_tx_cpl_tlp_hdr),
+        .tx_cpl_tlp_valid(pcie_tx_cpl_tlp_valid && pcie_tx_cpl_tlp_ready),
+        .tx_cpl_tlp_sop(pcie_tx_cpl_tlp_sop),
+        .tx_cpl_tlp_eop(pcie_tx_cpl_tlp_eop),
+
+        /*
+         * Statistics output
+         */
+        .m_axis_stat_tdata(axis_stat_pcie_tdata),
+        .m_axis_stat_tid(axis_stat_pcie_tid[4:0]),
+        .m_axis_stat_tvalid(axis_stat_pcie_tvalid),
+        .m_axis_stat_tready(axis_stat_pcie_tready),
+
+        /*
+         * Control inputs
+         */
+        .update(1'b0)
+    );
+
+    assign axis_stat_pcie_tid[STAT_ID_WIDTH-1:5] = 0;
+
+end else begin
+
+    assign axis_stat_pcie_tdata = 0;
+    assign axis_stat_pcie_tid = 0;
+    assign axis_stat_pcie_tvalid = 0;
+
+end
+
+if (STAT_ENABLE && STAT_DMA_ENABLE) begin
+
+    stats_dma_if_pcie #(
+        .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
+        .LEN_WIDTH(DMA_LEN_WIDTH),
+        .READ_OP_TABLE_SIZE(PCIE_DMA_READ_OP_TABLE_SIZE),
+        .WRITE_OP_TABLE_SIZE(PCIE_DMA_WRITE_OP_TABLE_SIZE),
+        .STAT_INC_WIDTH(STAT_INC_WIDTH),
+        .STAT_ID_WIDTH(5),
+        .UPDATE_PERIOD(1024)
+    )
+    stats_dma_if_pcie_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * Statistics from dma_if_pcie
+         */
+        .stat_rd_op_start_tag(stat_rd_op_start_tag),
+        .stat_rd_op_start_len(stat_rd_op_start_len),
+        .stat_rd_op_start_valid(stat_rd_op_start_valid),
+        .stat_rd_op_finish_tag(stat_rd_op_finish_tag),
+        .stat_rd_op_finish_status(stat_rd_op_finish_status),
+        .stat_rd_op_finish_valid(stat_rd_op_finish_valid),
+        .stat_rd_req_start_tag(stat_rd_req_start_tag),
+        .stat_rd_req_start_len(stat_rd_req_start_len),
+        .stat_rd_req_start_valid(stat_rd_req_start_valid),
+        .stat_rd_req_finish_tag(stat_rd_req_finish_tag),
+        .stat_rd_req_finish_status(stat_rd_req_finish_status),
+        .stat_rd_req_finish_valid(stat_rd_req_finish_valid),
+        .stat_rd_req_timeout(stat_rd_req_timeout),
+        .stat_rd_op_table_full(stat_rd_op_table_full),
+        .stat_rd_no_tags(stat_rd_no_tags),
+        .stat_rd_tx_no_credit(stat_rd_tx_no_credit),
+        .stat_rd_tx_limit(stat_rd_tx_limit),
+        .stat_rd_tx_stall(stat_rd_tx_stall),
+        .stat_wr_op_start_tag(stat_wr_op_start_tag),
+        .stat_wr_op_start_len(stat_wr_op_start_len),
+        .stat_wr_op_start_valid(stat_wr_op_start_valid),
+        .stat_wr_op_finish_tag(stat_wr_op_finish_tag),
+        .stat_wr_op_finish_status(stat_wr_op_finish_status),
+        .stat_wr_op_finish_valid(stat_wr_op_finish_valid),
+        .stat_wr_req_start_tag(stat_wr_req_start_tag),
+        .stat_wr_req_start_len(stat_wr_req_start_len),
+        .stat_wr_req_start_valid(stat_wr_req_start_valid),
+        .stat_wr_req_finish_tag(stat_wr_req_finish_tag),
+        .stat_wr_req_finish_status(stat_wr_req_finish_status),
+        .stat_wr_req_finish_valid(stat_wr_req_finish_valid),
+        .stat_wr_op_table_full(stat_wr_op_table_full),
+        .stat_wr_tx_no_credit(stat_wr_tx_no_credit),
+        .stat_wr_tx_limit(stat_wr_tx_limit),
+        .stat_wr_tx_stall(stat_wr_tx_stall),
+
+        /*
+         * Statistics output
+         */
+        .m_axis_stat_tdata(axis_stat_dma_tdata),
+        .m_axis_stat_tid(axis_stat_dma_tid[4:0]),
+        .m_axis_stat_tvalid(axis_stat_dma_tvalid),
+        .m_axis_stat_tready(axis_stat_dma_tready),
+
+        /*
+         * Control inputs
+         */
+        .update(1'b0)
+    );
+
+    assign axis_stat_dma_tid[STAT_ID_WIDTH-1:5] = 1;
+
+end else begin
+
+    assign axis_stat_dma_tdata = 0;
+    assign axis_stat_dma_tid = 0;
+    assign axis_stat_dma_tvalid = 0;
+
+end
+
+if (STAT_ENABLE && (STAT_DMA_ENABLE || STAT_PCIE_ENABLE)) begin
+
+    axis_arb_mux #(
+        .S_COUNT(3),
+        .DATA_WIDTH(STAT_INC_WIDTH),
+        .KEEP_ENABLE(0),
+        .ID_ENABLE(1),
+        .ID_WIDTH(STAT_ID_WIDTH),
+        .DEST_ENABLE(0),
+        .USER_ENABLE(0),
+        .LAST_ENABLE(0),
+        .ARB_TYPE_ROUND_ROBIN(1),
+        .ARB_LSB_HIGH_PRIORITY(1)
+    )
+    axis_stat_mux_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * AXI Stream inputs
+         */
+        .s_axis_tdata({axis_stat_dma_tdata, axis_stat_pcie_tdata, s_axis_stat_tdata}),
+        .s_axis_tkeep(0),
+        .s_axis_tvalid({axis_stat_dma_tvalid, axis_stat_pcie_tvalid, s_axis_stat_tvalid}),
+        .s_axis_tready({axis_stat_dma_tready, axis_stat_pcie_tready, s_axis_stat_tready}),
+        .s_axis_tlast(0),
+        .s_axis_tid({axis_stat_dma_tid, axis_stat_pcie_tid, s_axis_stat_tid}),
+        .s_axis_tdest(0),
+        .s_axis_tuser(0),
+
+        /*
+         * AXI Stream output
+         */
+        .m_axis_tdata(axis_stat_tdata),
+        .m_axis_tkeep(),
+        .m_axis_tvalid(axis_stat_tvalid),
+        .m_axis_tready(axis_stat_tready),
+        .m_axis_tlast(),
+        .m_axis_tid(axis_stat_tid),
+        .m_axis_tdest(),
+        .m_axis_tuser()
+    );
+
+end else begin
+
+    assign axis_stat_tdata = s_axis_stat_tdata;
+    assign axis_stat_tid = s_axis_stat_tid;
+    assign axis_stat_tvalid = s_axis_stat_tvalid;
+    assign s_axis_stat_tready = axis_stat_tready;
+
+end
+
+endgenerate
 
 mqnic_core #(
     // FW and board IDs
@@ -760,7 +1073,12 @@ mqnic_core #(
     .AXIS_TX_FIFO_PIPELINE(AXIS_TX_FIFO_PIPELINE),
     .AXIS_TX_TS_PIPELINE(AXIS_TX_TS_PIPELINE),
     .AXIS_RX_PIPELINE(AXIS_RX_PIPELINE),
-    .AXIS_RX_FIFO_PIPELINE(AXIS_RX_FIFO_PIPELINE)
+    .AXIS_RX_FIFO_PIPELINE(AXIS_RX_FIFO_PIPELINE),
+
+    // Statistics counter subsystem
+    .STAT_ENABLE(STAT_ENABLE),
+    .STAT_INC_WIDTH(STAT_INC_WIDTH),
+    .STAT_ID_WIDTH(STAT_ID_WIDTH)
 )
 core_inst (
     .clk(clk),
@@ -929,7 +1247,15 @@ core_inst (
     .s_axis_rx_tvalid(s_axis_rx_tvalid),
     .s_axis_rx_tready(s_axis_rx_tready),
     .s_axis_rx_tlast(s_axis_rx_tlast),
-    .s_axis_rx_tuser(s_axis_rx_tuser)
+    .s_axis_rx_tuser(s_axis_rx_tuser),
+
+    /*
+     * Statistics input
+     */
+    .s_axis_stat_tdata(axis_stat_tdata),
+    .s_axis_stat_tid(axis_stat_tid),
+    .s_axis_stat_tvalid(axis_stat_tvalid),
+    .s_axis_stat_tready(axis_stat_tready)
 );
 
 endmodule

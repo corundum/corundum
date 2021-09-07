@@ -343,10 +343,10 @@ module mqnic_core_pcie #
     /*
      * Statistics increment input
      */
-    input  wire [STAT_INC_WIDTH-1:0]                    s_axis_stat_tdata,
-    input  wire [STAT_ID_WIDTH-1:0]                     s_axis_stat_tid,
-    input  wire                                         s_axis_stat_tvalid,
-    output wire                                         s_axis_stat_tready
+    input  wire [STAT_INC_WIDTH-1:0]                     s_axis_stat_tdata,
+    input  wire [STAT_ID_WIDTH-1:0]                      s_axis_stat_tid,
+    input  wire                                          s_axis_stat_tvalid,
+    output wire                                          s_axis_stat_tready
 );
 
 parameter DMA_ADDR_WIDTH = 64;

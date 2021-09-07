@@ -122,11 +122,11 @@ module mqnic_core #
     parameter MSI_COUNT = 32,
 
     // AXI lite interface configuration (control)
-    parameter AXIL_DATA_WIDTH = 32,
-    parameter AXIL_ADDR_WIDTH = 16,
-    parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
-    parameter IF_AXIL_ADDR_WIDTH = AXIL_ADDR_WIDTH-$clog2(IF_COUNT),
-    parameter AXIL_CSR_ADDR_WIDTH = IF_AXIL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
+    parameter AXIL_CTRL_DATA_WIDTH = 32,
+    parameter AXIL_CTRL_ADDR_WIDTH = 16,
+    parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8),
+    parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT),
+    parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
     parameter AXIL_CSR_PASSTHROUGH_ENABLE = 0,
 
     // Ethernet interface configuration
@@ -154,25 +154,25 @@ module mqnic_core #
     /*
      * AXI-Lite slave interface (control)
      */
-    input  wire [AXIL_ADDR_WIDTH-1:0]                   s_axil_awaddr,
-    input  wire [2:0]                                   s_axil_awprot,
-    input  wire                                         s_axil_awvalid,
-    output wire                                         s_axil_awready,
-    input  wire [AXIL_DATA_WIDTH-1:0]                   s_axil_wdata,
-    input  wire [AXIL_STRB_WIDTH-1:0]                   s_axil_wstrb,
-    input  wire                                         s_axil_wvalid,
-    output wire                                         s_axil_wready,
-    output wire [1:0]                                   s_axil_bresp,
-    output wire                                         s_axil_bvalid,
-    input  wire                                         s_axil_bready,
-    input  wire [AXIL_ADDR_WIDTH-1:0]                   s_axil_araddr,
-    input  wire [2:0]                                   s_axil_arprot,
-    input  wire                                         s_axil_arvalid,
-    output wire                                         s_axil_arready,
-    output wire [AXIL_DATA_WIDTH-1:0]                   s_axil_rdata,
-    output wire [1:0]                                   s_axil_rresp,
-    output wire                                         s_axil_rvalid,
-    input  wire                                         s_axil_rready,
+    input  wire [AXIL_CTRL_ADDR_WIDTH-1:0]              s_axil_ctrl_awaddr,
+    input  wire [2:0]                                   s_axil_ctrl_awprot,
+    input  wire                                         s_axil_ctrl_awvalid,
+    output wire                                         s_axil_ctrl_awready,
+    input  wire [AXIL_CTRL_DATA_WIDTH-1:0]              s_axil_ctrl_wdata,
+    input  wire [AXIL_CTRL_STRB_WIDTH-1:0]              s_axil_ctrl_wstrb,
+    input  wire                                         s_axil_ctrl_wvalid,
+    output wire                                         s_axil_ctrl_wready,
+    output wire [1:0]                                   s_axil_ctrl_bresp,
+    output wire                                         s_axil_ctrl_bvalid,
+    input  wire                                         s_axil_ctrl_bready,
+    input  wire [AXIL_CTRL_ADDR_WIDTH-1:0]              s_axil_ctrl_araddr,
+    input  wire [2:0]                                   s_axil_ctrl_arprot,
+    input  wire                                         s_axil_ctrl_arvalid,
+    output wire                                         s_axil_ctrl_arready,
+    output wire [AXIL_CTRL_DATA_WIDTH-1:0]              s_axil_ctrl_rdata,
+    output wire [1:0]                                   s_axil_ctrl_rresp,
+    output wire                                         s_axil_ctrl_rvalid,
+    input  wire                                         s_axil_ctrl_rready,
 
     /*
      * AXI-Lite master interface (passthrough for NIC control and status)
@@ -181,8 +181,8 @@ module mqnic_core #
     output wire [2:0]                                   m_axil_csr_awprot,
     output wire                                         m_axil_csr_awvalid,
     input  wire                                         m_axil_csr_awready,
-    output wire [AXIL_DATA_WIDTH-1:0]                   m_axil_csr_wdata,
-    output wire [AXIL_STRB_WIDTH-1:0]                   m_axil_csr_wstrb,
+    output wire [AXIL_CTRL_DATA_WIDTH-1:0]              m_axil_csr_wdata,
+    output wire [AXIL_CTRL_STRB_WIDTH-1:0]              m_axil_csr_wstrb,
     output wire                                         m_axil_csr_wvalid,
     input  wire                                         m_axil_csr_wready,
     input  wire [1:0]                                   m_axil_csr_bresp,
@@ -192,7 +192,7 @@ module mqnic_core #
     output wire [2:0]                                   m_axil_csr_arprot,
     output wire                                         m_axil_csr_arvalid,
     input  wire                                         m_axil_csr_arready,
-    input  wire [AXIL_DATA_WIDTH-1:0]                   m_axil_csr_rdata,
+    input  wire [AXIL_CTRL_DATA_WIDTH-1:0]              m_axil_csr_rdata,
     input  wire [1:0]                                   m_axil_csr_rresp,
     input  wire                                         m_axil_csr_rvalid,
     output wire                                         m_axil_csr_rready,
@@ -201,14 +201,14 @@ module mqnic_core #
      * Control register interface
      */
     output wire [AXIL_CSR_ADDR_WIDTH-1:0]               ctrl_reg_wr_addr,
-    output wire [AXIL_DATA_WIDTH-1:0]                   ctrl_reg_wr_data,
-    output wire [AXIL_STRB_WIDTH-1:0]                   ctrl_reg_wr_strb,
+    output wire [AXIL_CTRL_DATA_WIDTH-1:0]              ctrl_reg_wr_data,
+    output wire [AXIL_CTRL_STRB_WIDTH-1:0]              ctrl_reg_wr_strb,
     output wire                                         ctrl_reg_wr_en,
     input  wire                                         ctrl_reg_wr_wait,
     input  wire                                         ctrl_reg_wr_ack,
     output wire [AXIL_CSR_ADDR_WIDTH-1:0]               ctrl_reg_rd_addr,
     output wire                                         ctrl_reg_rd_en,
-    input  wire [AXIL_DATA_WIDTH-1:0]                   ctrl_reg_rd_data,
+    input  wire [AXIL_CTRL_DATA_WIDTH-1:0]              ctrl_reg_rd_data,
     input  wire                                         ctrl_reg_rd_wait,
     input  wire                                         ctrl_reg_rd_ack,
 
@@ -335,57 +335,57 @@ function [31:0] w_32(input [31:0] val);
 endfunction
 
 // AXI lite connections
-wire [AXIL_CSR_ADDR_WIDTH-1:0] axil_csr_awaddr;
-wire [2:0]                     axil_csr_awprot;
-wire                           axil_csr_awvalid;
-wire                           axil_csr_awready;
-wire [AXIL_DATA_WIDTH-1:0]     axil_csr_wdata;
-wire [AXIL_STRB_WIDTH-1:0]     axil_csr_wstrb;
-wire                           axil_csr_wvalid;
-wire                           axil_csr_wready;
-wire [1:0]                     axil_csr_bresp;
-wire                           axil_csr_bvalid;
-wire                           axil_csr_bready;
-wire [AXIL_CSR_ADDR_WIDTH-1:0] axil_csr_araddr;
-wire [2:0]                     axil_csr_arprot;
-wire                           axil_csr_arvalid;
-wire                           axil_csr_arready;
-wire [AXIL_DATA_WIDTH-1:0]     axil_csr_rdata;
-wire [1:0]                     axil_csr_rresp;
-wire                           axil_csr_rvalid;
-wire                           axil_csr_rready;
+wire [AXIL_CSR_ADDR_WIDTH-1:0]   axil_csr_awaddr;
+wire [2:0]                       axil_csr_awprot;
+wire                             axil_csr_awvalid;
+wire                             axil_csr_awready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_csr_wdata;
+wire [AXIL_CTRL_STRB_WIDTH-1:0]  axil_csr_wstrb;
+wire                             axil_csr_wvalid;
+wire                             axil_csr_wready;
+wire [1:0]                       axil_csr_bresp;
+wire                             axil_csr_bvalid;
+wire                             axil_csr_bready;
+wire [AXIL_CSR_ADDR_WIDTH-1:0]   axil_csr_araddr;
+wire [2:0]                       axil_csr_arprot;
+wire                             axil_csr_arvalid;
+wire                             axil_csr_arready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_csr_rdata;
+wire [1:0]                       axil_csr_rresp;
+wire                             axil_csr_rvalid;
+wire                             axil_csr_rready;
 
-wire [AXIL_CSR_ADDR_WIDTH-1:0] axil_stats_awaddr;
-wire [2:0]                     axil_stats_awprot;
-wire                           axil_stats_awvalid;
-wire                           axil_stats_awready;
-wire [AXIL_DATA_WIDTH-1:0]     axil_stats_wdata;
-wire [AXIL_STRB_WIDTH-1:0]     axil_stats_wstrb;
-wire                           axil_stats_wvalid;
-wire                           axil_stats_wready;
-wire [1:0]                     axil_stats_bresp;
-wire                           axil_stats_bvalid;
-wire                           axil_stats_bready;
-wire [AXIL_CSR_ADDR_WIDTH-1:0] axil_stats_araddr;
-wire [2:0]                     axil_stats_arprot;
-wire                           axil_stats_arvalid;
-wire                           axil_stats_arready;
-wire [AXIL_DATA_WIDTH-1:0]     axil_stats_rdata;
-wire [1:0]                     axil_stats_rresp;
-wire                           axil_stats_rvalid;
-wire                           axil_stats_rready;
+wire [AXIL_CSR_ADDR_WIDTH-1:0]   axil_stats_awaddr;
+wire [2:0]                       axil_stats_awprot;
+wire                             axil_stats_awvalid;
+wire                             axil_stats_awready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_stats_wdata;
+wire [AXIL_CTRL_STRB_WIDTH-1:0]  axil_stats_wstrb;
+wire                             axil_stats_wvalid;
+wire                             axil_stats_wready;
+wire [1:0]                       axil_stats_bresp;
+wire                             axil_stats_bvalid;
+wire                             axil_stats_bready;
+wire [AXIL_CSR_ADDR_WIDTH-1:0]   axil_stats_araddr;
+wire [2:0]                       axil_stats_arprot;
+wire                             axil_stats_arvalid;
+wire                             axil_stats_arready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_stats_rdata;
+wire [1:0]                       axil_stats_rresp;
+wire                             axil_stats_rvalid;
+wire                             axil_stats_rready;
 
 // control registers
 wire ctrl_reg_wr_wait_int;
 wire ctrl_reg_wr_ack_int;
-wire [AXIL_DATA_WIDTH-1:0] ctrl_reg_rd_data_int;
+wire [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_int;
 wire ctrl_reg_rd_wait_int;
 wire ctrl_reg_rd_ack_int;
 
 axil_reg_if #(
-    .DATA_WIDTH(AXIL_DATA_WIDTH),
+    .DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
-    .STRB_WIDTH(AXIL_STRB_WIDTH),
+    .STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
     .TIMEOUT(4)
 )
 axil_reg_if_inst (
@@ -433,12 +433,12 @@ axil_reg_if_inst (
 
 wire ptp_ctrl_reg_wr_wait;
 wire ptp_ctrl_reg_wr_ack;
-wire [AXIL_DATA_WIDTH-1:0] ptp_ctrl_reg_rd_data;
+wire [AXIL_CTRL_DATA_WIDTH-1:0] ptp_ctrl_reg_rd_data;
 wire ptp_ctrl_reg_rd_wait;
 wire ptp_ctrl_reg_rd_ack;
 
 reg ctrl_reg_wr_ack_reg = 1'b0;
-reg [AXIL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_DATA_WIDTH{1'b0}};
+reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
 assign ctrl_reg_wr_wait_int = ctrl_reg_wr_wait | ptp_ctrl_reg_wr_wait;
@@ -449,7 +449,7 @@ assign ctrl_reg_rd_ack_int = ctrl_reg_rd_ack | ctrl_reg_rd_ack_reg | ptp_ctrl_re
 
 always @(posedge clk) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
-    ctrl_reg_rd_data_reg <= {AXIL_DATA_WIDTH{1'b0}};
+    ctrl_reg_rd_data_reg <= {AXIL_CTRL_DATA_WIDTH{1'b0}};
     ctrl_reg_rd_ack_reg <= 1'b0;
 
     if (ctrl_reg_wr_en && !ctrl_reg_wr_ack_reg) begin
@@ -472,7 +472,7 @@ always @(posedge clk) begin
             8'h14: ctrl_reg_rd_data_reg <= 16'h0200;   // phc_offset
             8'h18: ctrl_reg_rd_data_reg <= 16'h0080;   // phc_stride
             8'h20: ctrl_reg_rd_data_reg <= IF_COUNT;   // if_count
-            8'h24: ctrl_reg_rd_data_reg <= 2**IF_AXIL_ADDR_WIDTH; // if_stride
+            8'h24: ctrl_reg_rd_data_reg <= 2**AXIL_IF_CTRL_ADDR_WIDTH; // if_stride
             8'h2C: ctrl_reg_rd_data_reg <= 2**AXIL_CSR_ADDR_WIDTH; // if_csr_offset
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
@@ -493,8 +493,8 @@ mqnic_ptp #(
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
     .REG_ADDR_WIDTH(8),
-    .REG_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .REG_STRB_WIDTH(AXIL_STRB_WIDTH)
+    .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH)
 )
 mqnic_ptp_inst (
     .clk(clk),
@@ -526,97 +526,97 @@ mqnic_ptp_inst (
     .ptp_perout_pulse(ptp_perout_pulse)
 );
 
-wire [IF_COUNT*AXIL_ADDR_WIDTH-1:0] axil_if_awaddr;
-wire [IF_COUNT*3-1:0]               axil_if_awprot;
-wire [IF_COUNT-1:0]                 axil_if_awvalid;
-wire [IF_COUNT-1:0]                 axil_if_awready;
-wire [IF_COUNT*AXIL_DATA_WIDTH-1:0] axil_if_wdata;
-wire [IF_COUNT*AXIL_STRB_WIDTH-1:0] axil_if_wstrb;
-wire [IF_COUNT-1:0]                 axil_if_wvalid;
-wire [IF_COUNT-1:0]                 axil_if_wready;
-wire [IF_COUNT*2-1:0]               axil_if_bresp;
-wire [IF_COUNT-1:0]                 axil_if_bvalid;
-wire [IF_COUNT-1:0]                 axil_if_bready;
-wire [IF_COUNT*AXIL_ADDR_WIDTH-1:0] axil_if_araddr;
-wire [IF_COUNT*3-1:0]               axil_if_arprot;
-wire [IF_COUNT-1:0]                 axil_if_arvalid;
-wire [IF_COUNT-1:0]                 axil_if_arready;
-wire [IF_COUNT*AXIL_DATA_WIDTH-1:0] axil_if_rdata;
-wire [IF_COUNT*2-1:0]               axil_if_rresp;
-wire [IF_COUNT-1:0]                 axil_if_rvalid;
-wire [IF_COUNT-1:0]                 axil_if_rready;
+wire [IF_COUNT*AXIL_CTRL_ADDR_WIDTH-1:0]  axil_if_ctrl_awaddr;
+wire [IF_COUNT*3-1:0]                     axil_if_ctrl_awprot;
+wire [IF_COUNT-1:0]                       axil_if_ctrl_awvalid;
+wire [IF_COUNT-1:0]                       axil_if_ctrl_awready;
+wire [IF_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_if_ctrl_wdata;
+wire [IF_COUNT*AXIL_CTRL_STRB_WIDTH-1:0]  axil_if_ctrl_wstrb;
+wire [IF_COUNT-1:0]                       axil_if_ctrl_wvalid;
+wire [IF_COUNT-1:0]                       axil_if_ctrl_wready;
+wire [IF_COUNT*2-1:0]                     axil_if_ctrl_bresp;
+wire [IF_COUNT-1:0]                       axil_if_ctrl_bvalid;
+wire [IF_COUNT-1:0]                       axil_if_ctrl_bready;
+wire [IF_COUNT*AXIL_CTRL_ADDR_WIDTH-1:0]  axil_if_ctrl_araddr;
+wire [IF_COUNT*3-1:0]                     axil_if_ctrl_arprot;
+wire [IF_COUNT-1:0]                       axil_if_ctrl_arvalid;
+wire [IF_COUNT-1:0]                       axil_if_ctrl_arready;
+wire [IF_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_if_ctrl_rdata;
+wire [IF_COUNT*2-1:0]                     axil_if_ctrl_rresp;
+wire [IF_COUNT-1:0]                       axil_if_ctrl_rvalid;
+wire [IF_COUNT-1:0]                       axil_if_ctrl_rready;
 
-wire [IF_COUNT*AXIL_CSR_ADDR_WIDTH-1:0] axil_if_csr_awaddr;
-wire [IF_COUNT*3-1:0]                   axil_if_csr_awprot;
-wire [IF_COUNT-1:0]                     axil_if_csr_awvalid;
-wire [IF_COUNT-1:0]                     axil_if_csr_awready;
-wire [IF_COUNT*AXIL_DATA_WIDTH-1:0]     axil_if_csr_wdata;
-wire [IF_COUNT*AXIL_STRB_WIDTH-1:0]     axil_if_csr_wstrb;
-wire [IF_COUNT-1:0]                     axil_if_csr_wvalid;
-wire [IF_COUNT-1:0]                     axil_if_csr_wready;
-wire [IF_COUNT*2-1:0]                   axil_if_csr_bresp;
-wire [IF_COUNT-1:0]                     axil_if_csr_bvalid;
-wire [IF_COUNT-1:0]                     axil_if_csr_bready;
-wire [IF_COUNT*AXIL_CSR_ADDR_WIDTH-1:0] axil_if_csr_araddr;
-wire [IF_COUNT*3-1:0]                   axil_if_csr_arprot;
-wire [IF_COUNT-1:0]                     axil_if_csr_arvalid;
-wire [IF_COUNT-1:0]                     axil_if_csr_arready;
-wire [IF_COUNT*AXIL_DATA_WIDTH-1:0]     axil_if_csr_rdata;
-wire [IF_COUNT*2-1:0]                   axil_if_csr_rresp;
-wire [IF_COUNT-1:0]                     axil_if_csr_rvalid;
-wire [IF_COUNT-1:0]                     axil_if_csr_rready;
+wire [IF_COUNT*AXIL_CSR_ADDR_WIDTH-1:0]   axil_if_csr_awaddr;
+wire [IF_COUNT*3-1:0]                     axil_if_csr_awprot;
+wire [IF_COUNT-1:0]                       axil_if_csr_awvalid;
+wire [IF_COUNT-1:0]                       axil_if_csr_awready;
+wire [IF_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_if_csr_wdata;
+wire [IF_COUNT*AXIL_CTRL_STRB_WIDTH-1:0]  axil_if_csr_wstrb;
+wire [IF_COUNT-1:0]                       axil_if_csr_wvalid;
+wire [IF_COUNT-1:0]                       axil_if_csr_wready;
+wire [IF_COUNT*2-1:0]                     axil_if_csr_bresp;
+wire [IF_COUNT-1:0]                       axil_if_csr_bvalid;
+wire [IF_COUNT-1:0]                       axil_if_csr_bready;
+wire [IF_COUNT*AXIL_CSR_ADDR_WIDTH-1:0]   axil_if_csr_araddr;
+wire [IF_COUNT*3-1:0]                     axil_if_csr_arprot;
+wire [IF_COUNT-1:0]                       axil_if_csr_arvalid;
+wire [IF_COUNT-1:0]                       axil_if_csr_arready;
+wire [IF_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_if_csr_rdata;
+wire [IF_COUNT*2-1:0]                     axil_if_csr_rresp;
+wire [IF_COUNT-1:0]                       axil_if_csr_rvalid;
+wire [IF_COUNT-1:0]                       axil_if_csr_rready;
 
 axil_crossbar #(
-    .DATA_WIDTH(AXIL_DATA_WIDTH),
-    .ADDR_WIDTH(AXIL_ADDR_WIDTH),
+    .DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
     .S_COUNT(1),
     .M_COUNT(IF_COUNT),
     .M_BASE_ADDR(0),
-    .M_ADDR_WIDTH({IF_COUNT{w_32(IF_AXIL_ADDR_WIDTH)}}),
+    .M_ADDR_WIDTH({IF_COUNT{w_32(AXIL_IF_CTRL_ADDR_WIDTH)}}),
     .M_CONNECT_READ({IF_COUNT{1'b1}}),
     .M_CONNECT_WRITE({IF_COUNT{1'b1}})
 )
 axil_crossbar_inst (
     .clk(clk),
     .rst(rst),
-    .s_axil_awaddr(s_axil_awaddr),
-    .s_axil_awprot(s_axil_awprot),
-    .s_axil_awvalid(s_axil_awvalid),
-    .s_axil_awready(s_axil_awready),
-    .s_axil_wdata(s_axil_wdata),
-    .s_axil_wstrb(s_axil_wstrb),
-    .s_axil_wvalid(s_axil_wvalid),
-    .s_axil_wready(s_axil_wready),
-    .s_axil_bresp(s_axil_bresp),
-    .s_axil_bvalid(s_axil_bvalid),
-    .s_axil_bready(s_axil_bready),
-    .s_axil_araddr(s_axil_araddr),
-    .s_axil_arprot(s_axil_arprot),
-    .s_axil_arvalid(s_axil_arvalid),
-    .s_axil_arready(s_axil_arready),
-    .s_axil_rdata(s_axil_rdata),
-    .s_axil_rresp(s_axil_rresp),
-    .s_axil_rvalid(s_axil_rvalid),
-    .s_axil_rready(s_axil_rready),
-    .m_axil_awaddr(axil_if_awaddr),
-    .m_axil_awprot(axil_if_awprot),
-    .m_axil_awvalid(axil_if_awvalid),
-    .m_axil_awready(axil_if_awready),
-    .m_axil_wdata(axil_if_wdata),
-    .m_axil_wstrb(axil_if_wstrb),
-    .m_axil_wvalid(axil_if_wvalid),
-    .m_axil_wready(axil_if_wready),
-    .m_axil_bresp(axil_if_bresp),
-    .m_axil_bvalid(axil_if_bvalid),
-    .m_axil_bready(axil_if_bready),
-    .m_axil_araddr(axil_if_araddr),
-    .m_axil_arprot(axil_if_arprot),
-    .m_axil_arvalid(axil_if_arvalid),
-    .m_axil_arready(axil_if_arready),
-    .m_axil_rdata(axil_if_rdata),
-    .m_axil_rresp(axil_if_rresp),
-    .m_axil_rvalid(axil_if_rvalid),
-    .m_axil_rready(axil_if_rready)
+    .s_axil_awaddr(s_axil_ctrl_awaddr),
+    .s_axil_awprot(s_axil_ctrl_awprot),
+    .s_axil_awvalid(s_axil_ctrl_awvalid),
+    .s_axil_awready(s_axil_ctrl_awready),
+    .s_axil_wdata(s_axil_ctrl_wdata),
+    .s_axil_wstrb(s_axil_ctrl_wstrb),
+    .s_axil_wvalid(s_axil_ctrl_wvalid),
+    .s_axil_wready(s_axil_ctrl_wready),
+    .s_axil_bresp(s_axil_ctrl_bresp),
+    .s_axil_bvalid(s_axil_ctrl_bvalid),
+    .s_axil_bready(s_axil_ctrl_bready),
+    .s_axil_araddr(s_axil_ctrl_araddr),
+    .s_axil_arprot(s_axil_ctrl_arprot),
+    .s_axil_arvalid(s_axil_ctrl_arvalid),
+    .s_axil_arready(s_axil_ctrl_arready),
+    .s_axil_rdata(s_axil_ctrl_rdata),
+    .s_axil_rresp(s_axil_ctrl_rresp),
+    .s_axil_rvalid(s_axil_ctrl_rvalid),
+    .s_axil_rready(s_axil_ctrl_rready),
+    .m_axil_awaddr(axil_if_ctrl_awaddr),
+    .m_axil_awprot(axil_if_ctrl_awprot),
+    .m_axil_awvalid(axil_if_ctrl_awvalid),
+    .m_axil_awready(axil_if_ctrl_awready),
+    .m_axil_wdata(axil_if_ctrl_wdata),
+    .m_axil_wstrb(axil_if_ctrl_wstrb),
+    .m_axil_wvalid(axil_if_ctrl_wvalid),
+    .m_axil_wready(axil_if_ctrl_wready),
+    .m_axil_bresp(axil_if_ctrl_bresp),
+    .m_axil_bvalid(axil_if_ctrl_bvalid),
+    .m_axil_bready(axil_if_ctrl_bready),
+    .m_axil_araddr(axil_if_ctrl_araddr),
+    .m_axil_arprot(axil_if_ctrl_arprot),
+    .m_axil_arvalid(axil_if_ctrl_arvalid),
+    .m_axil_arready(axil_if_ctrl_arready),
+    .m_axil_rdata(axil_if_ctrl_rdata),
+    .m_axil_rresp(axil_if_ctrl_rresp),
+    .m_axil_rvalid(axil_if_ctrl_rvalid),
+    .m_axil_rready(axil_if_ctrl_rready)
 );
 
 localparam CSR_XBAR_CSR_OFFSET = 0;
@@ -636,25 +636,25 @@ function [CSR_XBAR_M_COUNT*32-1:0] calcCsrXbarWidths(input [31:0] dummy);
     end
 endfunction
 
-wire [CSR_XBAR_M_COUNT*AXIL_CSR_ADDR_WIDTH-1:0] axil_csr_xbar_awaddr;
-wire [CSR_XBAR_M_COUNT*3-1:0]                   axil_csr_xbar_awprot;
-wire [CSR_XBAR_M_COUNT-1:0]                     axil_csr_xbar_awvalid;
-wire [CSR_XBAR_M_COUNT-1:0]                     axil_csr_xbar_awready;
-wire [CSR_XBAR_M_COUNT*AXIL_DATA_WIDTH-1:0]     axil_csr_xbar_wdata;
-wire [CSR_XBAR_M_COUNT*AXIL_STRB_WIDTH-1:0]     axil_csr_xbar_wstrb;
-wire [CSR_XBAR_M_COUNT-1:0]                     axil_csr_xbar_wvalid;
-wire [CSR_XBAR_M_COUNT-1:0]                     axil_csr_xbar_wready;
-wire [CSR_XBAR_M_COUNT*2-1:0]                   axil_csr_xbar_bresp;
-wire [CSR_XBAR_M_COUNT-1:0]                     axil_csr_xbar_bvalid;
-wire [CSR_XBAR_M_COUNT-1:0]                     axil_csr_xbar_bready;
-wire [CSR_XBAR_M_COUNT*AXIL_CSR_ADDR_WIDTH-1:0] axil_csr_xbar_araddr;
-wire [CSR_XBAR_M_COUNT*3-1:0]                   axil_csr_xbar_arprot;
-wire [CSR_XBAR_M_COUNT-1:0]                     axil_csr_xbar_arvalid;
-wire [CSR_XBAR_M_COUNT-1:0]                     axil_csr_xbar_arready;
-wire [CSR_XBAR_M_COUNT*AXIL_DATA_WIDTH-1:0]     axil_csr_xbar_rdata;
-wire [CSR_XBAR_M_COUNT*2-1:0]                   axil_csr_xbar_rresp;
-wire [CSR_XBAR_M_COUNT-1:0]                     axil_csr_xbar_rvalid;
-wire [CSR_XBAR_M_COUNT-1:0]                     axil_csr_xbar_rready;
+wire [CSR_XBAR_M_COUNT*AXIL_CSR_ADDR_WIDTH-1:0]   axil_csr_xbar_awaddr;
+wire [CSR_XBAR_M_COUNT*3-1:0]                     axil_csr_xbar_awprot;
+wire [CSR_XBAR_M_COUNT-1:0]                       axil_csr_xbar_awvalid;
+wire [CSR_XBAR_M_COUNT-1:0]                       axil_csr_xbar_awready;
+wire [CSR_XBAR_M_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_csr_xbar_wdata;
+wire [CSR_XBAR_M_COUNT*AXIL_CTRL_STRB_WIDTH-1:0]  axil_csr_xbar_wstrb;
+wire [CSR_XBAR_M_COUNT-1:0]                       axil_csr_xbar_wvalid;
+wire [CSR_XBAR_M_COUNT-1:0]                       axil_csr_xbar_wready;
+wire [CSR_XBAR_M_COUNT*2-1:0]                     axil_csr_xbar_bresp;
+wire [CSR_XBAR_M_COUNT-1:0]                       axil_csr_xbar_bvalid;
+wire [CSR_XBAR_M_COUNT-1:0]                       axil_csr_xbar_bready;
+wire [CSR_XBAR_M_COUNT*AXIL_CSR_ADDR_WIDTH-1:0]   axil_csr_xbar_araddr;
+wire [CSR_XBAR_M_COUNT*3-1:0]                     axil_csr_xbar_arprot;
+wire [CSR_XBAR_M_COUNT-1:0]                       axil_csr_xbar_arvalid;
+wire [CSR_XBAR_M_COUNT-1:0]                       axil_csr_xbar_arready;
+wire [CSR_XBAR_M_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_csr_xbar_rdata;
+wire [CSR_XBAR_M_COUNT*2-1:0]                     axil_csr_xbar_rresp;
+wire [CSR_XBAR_M_COUNT-1:0]                       axil_csr_xbar_rvalid;
+wire [CSR_XBAR_M_COUNT-1:0]                       axil_csr_xbar_rready;
 
 generate
 
@@ -662,8 +662,8 @@ assign axil_csr_awaddr = axil_csr_xbar_awaddr[CSR_XBAR_CSR_OFFSET*AXIL_CSR_ADDR_
 assign axil_csr_awprot = axil_csr_xbar_awprot[CSR_XBAR_CSR_OFFSET*3 +: 3];
 assign axil_csr_awvalid = axil_csr_xbar_awvalid[CSR_XBAR_CSR_OFFSET +: 1];
 assign axil_csr_xbar_awready[CSR_XBAR_CSR_OFFSET +: 1] = axil_csr_awready;
-assign axil_csr_wdata = axil_csr_xbar_wdata[CSR_XBAR_CSR_OFFSET*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH];
-assign axil_csr_wstrb = axil_csr_xbar_wstrb[CSR_XBAR_CSR_OFFSET*AXIL_STRB_WIDTH +: AXIL_STRB_WIDTH];
+assign axil_csr_wdata = axil_csr_xbar_wdata[CSR_XBAR_CSR_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH];
+assign axil_csr_wstrb = axil_csr_xbar_wstrb[CSR_XBAR_CSR_OFFSET*AXIL_CTRL_STRB_WIDTH +: AXIL_CTRL_STRB_WIDTH];
 assign axil_csr_wvalid = axil_csr_xbar_wvalid[CSR_XBAR_CSR_OFFSET +: 1];
 assign axil_csr_xbar_wready[CSR_XBAR_CSR_OFFSET +: 1] = axil_csr_wready;
 assign axil_csr_xbar_bresp[CSR_XBAR_CSR_OFFSET*2 +: 2] = axil_csr_bresp;
@@ -673,7 +673,7 @@ assign axil_csr_araddr = axil_csr_xbar_araddr[CSR_XBAR_CSR_OFFSET*AXIL_CSR_ADDR_
 assign axil_csr_arprot = axil_csr_xbar_arprot[CSR_XBAR_CSR_OFFSET*3 +: 3];
 assign axil_csr_arvalid = axil_csr_xbar_arvalid[CSR_XBAR_CSR_OFFSET +: 1];
 assign axil_csr_xbar_arready[CSR_XBAR_CSR_OFFSET +: 1] = axil_csr_arready;
-assign axil_csr_xbar_rdata[CSR_XBAR_CSR_OFFSET*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH] = axil_csr_rdata;
+assign axil_csr_xbar_rdata[CSR_XBAR_CSR_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH] = axil_csr_rdata;
 assign axil_csr_xbar_rresp[CSR_XBAR_CSR_OFFSET*2 +: 2] = axil_csr_rresp;
 assign axil_csr_xbar_rvalid[CSR_XBAR_CSR_OFFSET +: 1] = axil_csr_rvalid;
 assign axil_csr_rready = axil_csr_xbar_rready[CSR_XBAR_CSR_OFFSET +: 1];
@@ -684,8 +684,8 @@ if (STAT_ENABLE) begin
     assign axil_stats_awprot = axil_csr_xbar_awprot[CSR_XBAR_STAT_OFFSET*3 +: 3];
     assign axil_stats_awvalid = axil_csr_xbar_awvalid[CSR_XBAR_STAT_OFFSET +: 1];
     assign axil_csr_xbar_awready[CSR_XBAR_STAT_OFFSET +: 1] = axil_stats_awready;
-    assign axil_stats_wdata = axil_csr_xbar_wdata[CSR_XBAR_STAT_OFFSET*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH];
-    assign axil_stats_wstrb = axil_csr_xbar_wstrb[CSR_XBAR_STAT_OFFSET*AXIL_STRB_WIDTH +: AXIL_STRB_WIDTH];
+    assign axil_stats_wdata = axil_csr_xbar_wdata[CSR_XBAR_STAT_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH];
+    assign axil_stats_wstrb = axil_csr_xbar_wstrb[CSR_XBAR_STAT_OFFSET*AXIL_CTRL_STRB_WIDTH +: AXIL_CTRL_STRB_WIDTH];
     assign axil_stats_wvalid = axil_csr_xbar_wvalid[CSR_XBAR_STAT_OFFSET +: 1];
     assign axil_csr_xbar_wready[CSR_XBAR_STAT_OFFSET +: 1] = axil_stats_wready;
     assign axil_csr_xbar_bresp[CSR_XBAR_STAT_OFFSET*2 +: 2] = axil_stats_bresp;
@@ -695,7 +695,7 @@ if (STAT_ENABLE) begin
     assign axil_stats_arprot = axil_csr_xbar_arprot[CSR_XBAR_STAT_OFFSET*3 +: 3];
     assign axil_stats_arvalid = axil_csr_xbar_arvalid[CSR_XBAR_STAT_OFFSET +: 1];
     assign axil_csr_xbar_arready[CSR_XBAR_STAT_OFFSET +: 1] = axil_stats_arready;
-    assign axil_csr_xbar_rdata[CSR_XBAR_STAT_OFFSET*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH] = axil_stats_rdata;
+    assign axil_csr_xbar_rdata[CSR_XBAR_STAT_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH] = axil_stats_rdata;
     assign axil_csr_xbar_rresp[CSR_XBAR_STAT_OFFSET*2 +: 2] = axil_stats_rresp;
     assign axil_csr_xbar_rvalid[CSR_XBAR_STAT_OFFSET +: 1] = axil_stats_rvalid;
     assign axil_stats_rready = axil_csr_xbar_rready[CSR_XBAR_STAT_OFFSET +: 1];
@@ -708,8 +708,8 @@ if (AXIL_CSR_PASSTHROUGH_ENABLE) begin
     assign m_axil_csr_awprot = axil_csr_xbar_awprot[CSR_XBAR_PASSTHROUGH_OFFSET*3 +: 3];
     assign m_axil_csr_awvalid = axil_csr_xbar_awvalid[CSR_XBAR_PASSTHROUGH_OFFSET +: 1];
     assign axil_csr_xbar_awready[CSR_XBAR_PASSTHROUGH_OFFSET +: 1] = m_axil_csr_awready;
-    assign m_axil_csr_wdata = axil_csr_xbar_wdata[CSR_XBAR_PASSTHROUGH_OFFSET*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH];
-    assign m_axil_csr_wstrb = axil_csr_xbar_wstrb[CSR_XBAR_PASSTHROUGH_OFFSET*AXIL_STRB_WIDTH +: AXIL_STRB_WIDTH];
+    assign m_axil_csr_wdata = axil_csr_xbar_wdata[CSR_XBAR_PASSTHROUGH_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH];
+    assign m_axil_csr_wstrb = axil_csr_xbar_wstrb[CSR_XBAR_PASSTHROUGH_OFFSET*AXIL_CTRL_STRB_WIDTH +: AXIL_CTRL_STRB_WIDTH];
     assign m_axil_csr_wvalid = axil_csr_xbar_wvalid[CSR_XBAR_PASSTHROUGH_OFFSET +: 1];
     assign axil_csr_xbar_wready[CSR_XBAR_PASSTHROUGH_OFFSET +: 1] = m_axil_csr_wready;
     assign axil_csr_xbar_bresp[CSR_XBAR_PASSTHROUGH_OFFSET*2 +: 2] = m_axil_csr_bresp;
@@ -719,7 +719,7 @@ if (AXIL_CSR_PASSTHROUGH_ENABLE) begin
     assign m_axil_csr_arprot = axil_csr_xbar_arprot[CSR_XBAR_PASSTHROUGH_OFFSET*3 +: 3];
     assign m_axil_csr_arvalid = axil_csr_xbar_arvalid[CSR_XBAR_PASSTHROUGH_OFFSET +: 1];
     assign axil_csr_xbar_arready[CSR_XBAR_PASSTHROUGH_OFFSET +: 1] = m_axil_csr_arready;
-    assign axil_csr_xbar_rdata[CSR_XBAR_PASSTHROUGH_OFFSET*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH] = m_axil_csr_rdata;
+    assign axil_csr_xbar_rdata[CSR_XBAR_PASSTHROUGH_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH] = m_axil_csr_rdata;
     assign axil_csr_xbar_rresp[CSR_XBAR_PASSTHROUGH_OFFSET*2 +: 2] = m_axil_csr_rresp;
     assign axil_csr_xbar_rvalid[CSR_XBAR_PASSTHROUGH_OFFSET +: 1] = m_axil_csr_rvalid;
     assign m_axil_csr_rready = axil_csr_xbar_rready[CSR_XBAR_PASSTHROUGH_OFFSET +: 1];
@@ -729,7 +729,7 @@ end
 endgenerate
 
 axil_crossbar #(
-    .DATA_WIDTH(AXIL_DATA_WIDTH),
+    .DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .S_COUNT(IF_COUNT),
     .M_COUNT(CSR_XBAR_M_COUNT),
@@ -789,9 +789,9 @@ if (STAT_ENABLE) begin
         .STAT_INC_WIDTH(STAT_INC_WIDTH),
         .STAT_ID_WIDTH(STAT_ID_WIDTH),
         .STAT_COUNT_WIDTH(64),
-        .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
+        .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
         .AXIL_ADDR_WIDTH(16),
-        .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
+        .AXIL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH)
     )
     stats_counter_inst (
         .clk(clk),
@@ -1546,9 +1546,9 @@ generate
             .RX_RSS_ENABLE(RX_RSS_ENABLE),
             .RX_HASH_ENABLE(RX_HASH_ENABLE),
             .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
-            .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-            .AXIL_ADDR_WIDTH(IF_AXIL_ADDR_WIDTH),
-            .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
+            .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+            .AXIL_ADDR_WIDTH(AXIL_IF_CTRL_ADDR_WIDTH),
+            .AXIL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
             .SEG_COUNT(RAM_SEG_COUNT),
             .SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
             .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
@@ -1642,25 +1642,25 @@ generate
             /*
              * AXI-Lite slave interface
              */
-            .s_axil_awaddr(axil_if_awaddr[n*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
-            .s_axil_awprot(axil_if_awprot[n*3 +: 3]),
-            .s_axil_awvalid(axil_if_awvalid[n]),
-            .s_axil_awready(axil_if_awready[n]),
-            .s_axil_wdata(axil_if_wdata[n*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
-            .s_axil_wstrb(axil_if_wstrb[n*AXIL_STRB_WIDTH +: AXIL_STRB_WIDTH]),
-            .s_axil_wvalid(axil_if_wvalid[n]),
-            .s_axil_wready(axil_if_wready[n]),
-            .s_axil_bresp(axil_if_bresp[n*2 +: 2]),
-            .s_axil_bvalid(axil_if_bvalid[n]),
-            .s_axil_bready(axil_if_bready[n]),
-            .s_axil_araddr(axil_if_araddr[n*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
-            .s_axil_arprot(axil_if_arprot[n*3 +: 3]),
-            .s_axil_arvalid(axil_if_arvalid[n]),
-            .s_axil_arready(axil_if_arready[n]),
-            .s_axil_rdata(axil_if_rdata[n*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
-            .s_axil_rresp(axil_if_rresp[n*2 +: 2]),
-            .s_axil_rvalid(axil_if_rvalid[n]),
-            .s_axil_rready(axil_if_rready[n]),
+            .s_axil_awaddr(axil_if_ctrl_awaddr[n*AXIL_CTRL_ADDR_WIDTH +: AXIL_CTRL_ADDR_WIDTH]),
+            .s_axil_awprot(axil_if_ctrl_awprot[n*3 +: 3]),
+            .s_axil_awvalid(axil_if_ctrl_awvalid[n]),
+            .s_axil_awready(axil_if_ctrl_awready[n]),
+            .s_axil_wdata(axil_if_ctrl_wdata[n*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH]),
+            .s_axil_wstrb(axil_if_ctrl_wstrb[n*AXIL_CTRL_STRB_WIDTH +: AXIL_CTRL_STRB_WIDTH]),
+            .s_axil_wvalid(axil_if_ctrl_wvalid[n]),
+            .s_axil_wready(axil_if_ctrl_wready[n]),
+            .s_axil_bresp(axil_if_ctrl_bresp[n*2 +: 2]),
+            .s_axil_bvalid(axil_if_ctrl_bvalid[n]),
+            .s_axil_bready(axil_if_ctrl_bready[n]),
+            .s_axil_araddr(axil_if_ctrl_araddr[n*AXIL_CTRL_ADDR_WIDTH +: AXIL_CTRL_ADDR_WIDTH]),
+            .s_axil_arprot(axil_if_ctrl_arprot[n*3 +: 3]),
+            .s_axil_arvalid(axil_if_ctrl_arvalid[n]),
+            .s_axil_arready(axil_if_ctrl_arready[n]),
+            .s_axil_rdata(axil_if_ctrl_rdata[n*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH]),
+            .s_axil_rresp(axil_if_ctrl_rresp[n*2 +: 2]),
+            .s_axil_rvalid(axil_if_ctrl_rvalid[n]),
+            .s_axil_rready(axil_if_ctrl_rready[n]),
 
             /*
              * AXI-Lite master interface (passthrough for NIC control and status)
@@ -1669,8 +1669,8 @@ generate
             .m_axil_csr_awprot(axil_if_csr_awprot[n*3 +: 3]),
             .m_axil_csr_awvalid(axil_if_csr_awvalid[n]),
             .m_axil_csr_awready(axil_if_csr_awready[n]),
-            .m_axil_csr_wdata(axil_if_csr_wdata[n*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
-            .m_axil_csr_wstrb(axil_if_csr_wstrb[n*AXIL_STRB_WIDTH +: AXIL_STRB_WIDTH]),
+            .m_axil_csr_wdata(axil_if_csr_wdata[n*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH]),
+            .m_axil_csr_wstrb(axil_if_csr_wstrb[n*AXIL_CTRL_STRB_WIDTH +: AXIL_CTRL_STRB_WIDTH]),
             .m_axil_csr_wvalid(axil_if_csr_wvalid[n]),
             .m_axil_csr_wready(axil_if_csr_wready[n]),
             .m_axil_csr_bresp(axil_if_csr_bresp[n*2 +: 2]),
@@ -1680,7 +1680,7 @@ generate
             .m_axil_csr_arprot(axil_if_csr_arprot[n*3 +: 3]),
             .m_axil_csr_arvalid(axil_if_csr_arvalid[n]),
             .m_axil_csr_arready(axil_if_csr_arready[n]),
-            .m_axil_csr_rdata(axil_if_csr_rdata[n*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
+            .m_axil_csr_rdata(axil_if_csr_rdata[n*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH]),
             .m_axil_csr_rresp(axil_if_csr_rresp[n*2 +: 2]),
             .m_axil_csr_rvalid(axil_if_csr_rvalid[n]),
             .m_axil_csr_rready(axil_if_csr_rready[n]),

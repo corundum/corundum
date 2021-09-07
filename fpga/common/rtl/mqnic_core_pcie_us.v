@@ -131,11 +131,11 @@ module mqnic_core_pcie_us #
     parameter MSI_COUNT = 32,
 
     // AXI lite interface configuration (control)
-    parameter AXIL_DATA_WIDTH = 32,
-    parameter AXIL_ADDR_WIDTH = BAR0_APERTURE,
-    parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
-    parameter IF_AXIL_ADDR_WIDTH = AXIL_ADDR_WIDTH-$clog2(IF_COUNT),
-    parameter AXIL_CSR_ADDR_WIDTH = IF_AXIL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
+    parameter AXIL_CTRL_DATA_WIDTH = 32,
+    parameter AXIL_CTRL_ADDR_WIDTH = BAR0_APERTURE,
+    parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8),
+    parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT),
+    parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
     parameter AXIL_CSR_PASSTHROUGH_ENABLE = 0,
 
     // Ethernet interface configuration
@@ -273,8 +273,8 @@ module mqnic_core_pcie_us #
     output wire [2:0]                                    m_axil_csr_awprot,
     output wire                                          m_axil_csr_awvalid,
     input  wire                                          m_axil_csr_awready,
-    output wire [AXIL_DATA_WIDTH-1:0]                    m_axil_csr_wdata,
-    output wire [AXIL_STRB_WIDTH-1:0]                    m_axil_csr_wstrb,
+    output wire [AXIL_CTRL_DATA_WIDTH-1:0]               m_axil_csr_wdata,
+    output wire [AXIL_CTRL_STRB_WIDTH-1:0]               m_axil_csr_wstrb,
     output wire                                          m_axil_csr_wvalid,
     input  wire                                          m_axil_csr_wready,
     input  wire [1:0]                                    m_axil_csr_bresp,
@@ -284,7 +284,7 @@ module mqnic_core_pcie_us #
     output wire [2:0]                                    m_axil_csr_arprot,
     output wire                                          m_axil_csr_arvalid,
     input  wire                                          m_axil_csr_arready,
-    input  wire [AXIL_DATA_WIDTH-1:0]                    m_axil_csr_rdata,
+    input  wire [AXIL_CTRL_DATA_WIDTH-1:0]               m_axil_csr_rdata,
     input  wire [1:0]                                    m_axil_csr_rresp,
     input  wire                                          m_axil_csr_rvalid,
     output wire                                          m_axil_csr_rready,
@@ -293,14 +293,14 @@ module mqnic_core_pcie_us #
      * Control register interface
      */
     output wire [AXIL_CSR_ADDR_WIDTH-1:0]                ctrl_reg_wr_addr,
-    output wire [AXIL_DATA_WIDTH-1:0]                    ctrl_reg_wr_data,
-    output wire [AXIL_STRB_WIDTH-1:0]                    ctrl_reg_wr_strb,
+    output wire [AXIL_CTRL_DATA_WIDTH-1:0]               ctrl_reg_wr_data,
+    output wire [AXIL_CTRL_STRB_WIDTH-1:0]               ctrl_reg_wr_strb,
     output wire                                          ctrl_reg_wr_en,
     input  wire                                          ctrl_reg_wr_wait,
     input  wire                                          ctrl_reg_wr_ack,
     output wire [AXIL_CSR_ADDR_WIDTH-1:0]                ctrl_reg_rd_addr,
     output wire                                          ctrl_reg_rd_en,
-    input  wire [AXIL_DATA_WIDTH-1:0]                    ctrl_reg_rd_data,
+    input  wire [AXIL_CTRL_DATA_WIDTH-1:0]               ctrl_reg_rd_data,
     input  wire                                          ctrl_reg_rd_wait,
     input  wire                                          ctrl_reg_rd_ack,
 
@@ -722,10 +722,10 @@ mqnic_core_pcie #(
     .MSI_COUNT(MSI_COUNT),
 
     // AXI lite interface configuration (control)
-    .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
-    .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
-    .IF_AXIL_ADDR_WIDTH(IF_AXIL_ADDR_WIDTH),
+    .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .AXIL_CTRL_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+    .AXIL_CTRL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .AXIL_IF_CTRL_ADDR_WIDTH(AXIL_IF_CTRL_ADDR_WIDTH),
     .AXIL_CSR_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .AXIL_CSR_PASSTHROUGH_ENABLE(AXIL_CSR_PASSTHROUGH_ENABLE),
 

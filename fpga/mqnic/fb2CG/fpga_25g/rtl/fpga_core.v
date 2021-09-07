@@ -392,11 +392,11 @@ parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF;
 
 parameter F_COUNT = PF_COUNT+VF_COUNT;
 
-parameter AXIL_DATA_WIDTH = 32;
-parameter AXIL_ADDR_WIDTH = BAR0_APERTURE;
-parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8);
-parameter IF_AXIL_ADDR_WIDTH = AXIL_ADDR_WIDTH-$clog2(IF_COUNT);
-parameter AXIL_CSR_ADDR_WIDTH = IF_AXIL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8);
+parameter AXIL_CTRL_DATA_WIDTH = 32;
+parameter AXIL_CTRL_ADDR_WIDTH = BAR0_APERTURE;
+parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8);
+parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT);
+parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8);
 
 initial begin
     if (PORT_COUNT > 8) begin
@@ -406,25 +406,25 @@ initial begin
 end
 
 // AXI lite connections
-wire [AXIL_CSR_ADDR_WIDTH-1:0] axil_csr_awaddr;
-wire [2:0]                     axil_csr_awprot;
-wire                           axil_csr_awvalid;
-wire                           axil_csr_awready;
-wire [AXIL_DATA_WIDTH-1:0]     axil_csr_wdata;
-wire [AXIL_STRB_WIDTH-1:0]     axil_csr_wstrb;
-wire                           axil_csr_wvalid;
-wire                           axil_csr_wready;
-wire [1:0]                     axil_csr_bresp;
-wire                           axil_csr_bvalid;
-wire                           axil_csr_bready;
-wire [AXIL_CSR_ADDR_WIDTH-1:0] axil_csr_araddr;
-wire [2:0]                     axil_csr_arprot;
-wire                           axil_csr_arvalid;
-wire                           axil_csr_arready;
-wire [AXIL_DATA_WIDTH-1:0]     axil_csr_rdata;
-wire [1:0]                     axil_csr_rresp;
-wire                           axil_csr_rvalid;
-wire                           axil_csr_rready;
+wire [AXIL_CSR_ADDR_WIDTH-1:0]   axil_csr_awaddr;
+wire [2:0]                       axil_csr_awprot;
+wire                             axil_csr_awvalid;
+wire                             axil_csr_awready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_csr_wdata;
+wire [AXIL_CTRL_STRB_WIDTH-1:0]  axil_csr_wstrb;
+wire                             axil_csr_wvalid;
+wire                             axil_csr_wready;
+wire [1:0]                       axil_csr_bresp;
+wire                             axil_csr_bvalid;
+wire                             axil_csr_bready;
+wire [AXIL_CSR_ADDR_WIDTH-1:0]   axil_csr_araddr;
+wire [2:0]                       axil_csr_arprot;
+wire                             axil_csr_arvalid;
+wire                             axil_csr_arready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_csr_rdata;
+wire [1:0]                       axil_csr_rresp;
+wire                             axil_csr_rvalid;
+wire                             axil_csr_rready;
 
 // PTP
 wire [PTP_TS_WIDTH-1:0]     ptp_ts_96;
@@ -436,20 +436,20 @@ wire [PTP_PEROUT_COUNT-1:0] ptp_perout_error;
 wire [PTP_PEROUT_COUNT-1:0] ptp_perout_pulse;
 
 // control registers
-wire [AXIL_CSR_ADDR_WIDTH-1:0]  ctrl_reg_wr_addr;
-wire [AXIL_DATA_WIDTH-1:0]      ctrl_reg_wr_data;
-wire [AXIL_STRB_WIDTH-1:0]      ctrl_reg_wr_strb;
-wire                            ctrl_reg_wr_en;
-wire                            ctrl_reg_wr_wait;
-wire                            ctrl_reg_wr_ack;
-wire [AXIL_CSR_ADDR_WIDTH-1:0]  ctrl_reg_rd_addr;
-wire                            ctrl_reg_rd_en;
-wire [AXIL_DATA_WIDTH-1:0]      ctrl_reg_rd_data;
-wire                            ctrl_reg_rd_wait;
-wire                            ctrl_reg_rd_ack;
+wire [AXIL_CSR_ADDR_WIDTH-1:0]   ctrl_reg_wr_addr;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  ctrl_reg_wr_data;
+wire [AXIL_CTRL_STRB_WIDTH-1:0]  ctrl_reg_wr_strb;
+wire                             ctrl_reg_wr_en;
+wire                             ctrl_reg_wr_wait;
+wire                             ctrl_reg_wr_ack;
+wire [AXIL_CSR_ADDR_WIDTH-1:0]   ctrl_reg_rd_addr;
+wire                             ctrl_reg_rd_en;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  ctrl_reg_rd_data;
+wire                             ctrl_reg_rd_wait;
+wire                             ctrl_reg_rd_ack;
 
 reg ctrl_reg_wr_ack_reg = 1'b0;
-reg [AXIL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_DATA_WIDTH{1'b0}};
+reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
 reg qsfp_0_reset_reg = 1'b0;
@@ -507,7 +507,7 @@ assign qspi_dq_oe = qspi_dq_oe_reg;
 
 always @(posedge clk_250mhz) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
-    ctrl_reg_rd_data_reg <= {AXIL_DATA_WIDTH{1'b0}};
+    ctrl_reg_rd_data_reg <= {AXIL_CTRL_DATA_WIDTH{1'b0}};
     ctrl_reg_rd_ack_reg <= 1'b0;
 
     bmc_ctrl_valid_reg <= 1'b0;
@@ -703,9 +703,9 @@ tdma_ber #(
     .COUNT(8),
     .INDEX_WIDTH(6),
     .SLICE_WIDTH(5),
-    .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
+    .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .AXIL_ADDR_WIDTH(8+6+$clog2(8)),
-    .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
+    .AXIL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
     .SCHEDULE_START_S(0),
     .SCHEDULE_START_NS(0),
     .SCHEDULE_PERIOD_S(0),
@@ -1106,10 +1106,10 @@ mqnic_core_pcie_us #(
     .MSI_COUNT(MSI_COUNT),
 
     // AXI lite interface configuration (control)
-    .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
-    .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
-    .IF_AXIL_ADDR_WIDTH(IF_AXIL_ADDR_WIDTH),
+    .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .AXIL_CTRL_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+    .AXIL_CTRL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .AXIL_IF_CTRL_ADDR_WIDTH(AXIL_IF_CTRL_ADDR_WIDTH),
     .AXIL_CSR_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .AXIL_CSR_PASSTHROUGH_ENABLE(1),
 

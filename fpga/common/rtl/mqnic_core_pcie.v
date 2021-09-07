@@ -133,11 +133,11 @@ module mqnic_core_pcie #
     parameter MSI_COUNT = 32,
 
     // AXI lite interface configuration (control)
-    parameter AXIL_DATA_WIDTH = 32,
-    parameter AXIL_ADDR_WIDTH = BAR0_APERTURE,
-    parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
-    parameter IF_AXIL_ADDR_WIDTH = AXIL_ADDR_WIDTH-$clog2(IF_COUNT),
-    parameter AXIL_CSR_ADDR_WIDTH = IF_AXIL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
+    parameter AXIL_CTRL_DATA_WIDTH = 32,
+    parameter AXIL_CTRL_ADDR_WIDTH = BAR0_APERTURE,
+    parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8),
+    parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT),
+    parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
     parameter AXIL_CSR_PASSTHROUGH_ENABLE = 0,
 
     // Ethernet interface configuration
@@ -259,8 +259,8 @@ module mqnic_core_pcie #
     output wire [2:0]                                    m_axil_csr_awprot,
     output wire                                          m_axil_csr_awvalid,
     input  wire                                          m_axil_csr_awready,
-    output wire [AXIL_DATA_WIDTH-1:0]                    m_axil_csr_wdata,
-    output wire [AXIL_STRB_WIDTH-1:0]                    m_axil_csr_wstrb,
+    output wire [AXIL_CTRL_DATA_WIDTH-1:0]               m_axil_csr_wdata,
+    output wire [AXIL_CTRL_STRB_WIDTH-1:0]               m_axil_csr_wstrb,
     output wire                                          m_axil_csr_wvalid,
     input  wire                                          m_axil_csr_wready,
     input  wire [1:0]                                    m_axil_csr_bresp,
@@ -270,7 +270,7 @@ module mqnic_core_pcie #
     output wire [2:0]                                    m_axil_csr_arprot,
     output wire                                          m_axil_csr_arvalid,
     input  wire                                          m_axil_csr_arready,
-    input  wire [AXIL_DATA_WIDTH-1:0]                    m_axil_csr_rdata,
+    input  wire [AXIL_CTRL_DATA_WIDTH-1:0]               m_axil_csr_rdata,
     input  wire [1:0]                                    m_axil_csr_rresp,
     input  wire                                          m_axil_csr_rvalid,
     output wire                                          m_axil_csr_rready,
@@ -279,14 +279,14 @@ module mqnic_core_pcie #
      * Control register interface
      */
     output wire [AXIL_CSR_ADDR_WIDTH-1:0]                ctrl_reg_wr_addr,
-    output wire [AXIL_DATA_WIDTH-1:0]                    ctrl_reg_wr_data,
-    output wire [AXIL_STRB_WIDTH-1:0]                    ctrl_reg_wr_strb,
+    output wire [AXIL_CTRL_DATA_WIDTH-1:0]               ctrl_reg_wr_data,
+    output wire [AXIL_CTRL_STRB_WIDTH-1:0]               ctrl_reg_wr_strb,
     output wire                                          ctrl_reg_wr_en,
     input  wire                                          ctrl_reg_wr_wait,
     input  wire                                          ctrl_reg_wr_ack,
     output wire [AXIL_CSR_ADDR_WIDTH-1:0]                ctrl_reg_rd_addr,
     output wire                                          ctrl_reg_rd_en,
-    input  wire [AXIL_DATA_WIDTH-1:0]                    ctrl_reg_rd_data,
+    input  wire [AXIL_CTRL_DATA_WIDTH-1:0]               ctrl_reg_rd_data,
     input  wire                                          ctrl_reg_rd_wait,
     input  wire                                          ctrl_reg_rd_ack,
 
@@ -362,25 +362,25 @@ parameter RAM_SEL_WIDTH = $clog2(IF_COUNT)+IF_RAM_SEL_WIDTH+1;
 parameter RAM_ADDR_WIDTH = RAM_SEG_ADDR_WIDTH+$clog2(RAM_SEG_COUNT)+$clog2(RAM_SEG_BE_WIDTH);
 
 // AXI lite connections
-wire [AXIL_ADDR_WIDTH-1:0] axil_pcie_awaddr;
-wire [2:0]                 axil_pcie_awprot;
-wire                       axil_pcie_awvalid;
-wire                       axil_pcie_awready;
-wire [AXIL_DATA_WIDTH-1:0] axil_pcie_wdata;
-wire [AXIL_STRB_WIDTH-1:0] axil_pcie_wstrb;
-wire                       axil_pcie_wvalid;
-wire                       axil_pcie_wready;
-wire [1:0]                 axil_pcie_bresp;
-wire                       axil_pcie_bvalid;
-wire                       axil_pcie_bready;
-wire [AXIL_ADDR_WIDTH-1:0] axil_pcie_araddr;
-wire [2:0]                 axil_pcie_arprot;
-wire                       axil_pcie_arvalid;
-wire                       axil_pcie_arready;
-wire [AXIL_DATA_WIDTH-1:0] axil_pcie_rdata;
-wire [1:0]                 axil_pcie_rresp;
-wire                       axil_pcie_rvalid;
-wire                       axil_pcie_rready;
+wire [AXIL_CTRL_ADDR_WIDTH-1:0]  axil_ctrl_awaddr;
+wire [2:0]                       axil_ctrl_awprot;
+wire                             axil_ctrl_awvalid;
+wire                             axil_ctrl_awready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_ctrl_wdata;
+wire [AXIL_CTRL_STRB_WIDTH-1:0]  axil_ctrl_wstrb;
+wire                             axil_ctrl_wvalid;
+wire                             axil_ctrl_wready;
+wire [1:0]                       axil_ctrl_bresp;
+wire                             axil_ctrl_bvalid;
+wire                             axil_ctrl_bready;
+wire [AXIL_CTRL_ADDR_WIDTH-1:0]  axil_ctrl_araddr;
+wire [2:0]                       axil_ctrl_arprot;
+wire                             axil_ctrl_arvalid;
+wire                             axil_ctrl_arready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_ctrl_rdata;
+wire [1:0]                       axil_ctrl_rresp;
+wire                             axil_ctrl_rvalid;
+wire                             axil_ctrl_rready;
 
 // DMA connections
 wire [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0]       dma_ram_wr_cmd_sel;
@@ -434,9 +434,9 @@ pcie_axil_master #(
     .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
     .TLP_SEG_STRB_WIDTH(TLP_SEG_STRB_WIDTH),
     .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH),
-    .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
-    .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
+    .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+    .AXIL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
     .TLP_FORCE_64_BIT_ADDR(TLP_FORCE_64_BIT_ADDR)
 )
 pcie_axil_master_inst (
@@ -467,25 +467,25 @@ pcie_axil_master_inst (
     /*
      * AXI Lite Master output
      */
-    .m_axil_awaddr(axil_pcie_awaddr),
-    .m_axil_awprot(axil_pcie_awprot),
-    .m_axil_awvalid(axil_pcie_awvalid),
-    .m_axil_awready(axil_pcie_awready),
-    .m_axil_wdata(axil_pcie_wdata),
-    .m_axil_wstrb(axil_pcie_wstrb),
-    .m_axil_wvalid(axil_pcie_wvalid),
-    .m_axil_wready(axil_pcie_wready),
-    .m_axil_bresp(axil_pcie_bresp),
-    .m_axil_bvalid(axil_pcie_bvalid),
-    .m_axil_bready(axil_pcie_bready),
-    .m_axil_araddr(axil_pcie_araddr),
-    .m_axil_arprot(axil_pcie_arprot),
-    .m_axil_arvalid(axil_pcie_arvalid),
-    .m_axil_arready(axil_pcie_arready),
-    .m_axil_rdata(axil_pcie_rdata),
-    .m_axil_rresp(axil_pcie_rresp),
-    .m_axil_rvalid(axil_pcie_rvalid),
-    .m_axil_rready(axil_pcie_rready),
+    .m_axil_awaddr(axil_ctrl_awaddr),
+    .m_axil_awprot(axil_ctrl_awprot),
+    .m_axil_awvalid(axil_ctrl_awvalid),
+    .m_axil_awready(axil_ctrl_awready),
+    .m_axil_wdata(axil_ctrl_wdata),
+    .m_axil_wstrb(axil_ctrl_wstrb),
+    .m_axil_wvalid(axil_ctrl_wvalid),
+    .m_axil_wready(axil_ctrl_wready),
+    .m_axil_bresp(axil_ctrl_bresp),
+    .m_axil_bvalid(axil_ctrl_bvalid),
+    .m_axil_bready(axil_ctrl_bready),
+    .m_axil_araddr(axil_ctrl_araddr),
+    .m_axil_arprot(axil_ctrl_arprot),
+    .m_axil_arvalid(axil_ctrl_arvalid),
+    .m_axil_arready(axil_ctrl_arready),
+    .m_axil_rdata(axil_ctrl_rdata),
+    .m_axil_rresp(axil_ctrl_rresp),
+    .m_axil_rvalid(axil_ctrl_rvalid),
+    .m_axil_rready(axil_ctrl_rready),
 
     /*
      * Configuration
@@ -1055,10 +1055,10 @@ mqnic_core #(
     .MSI_COUNT(MSI_COUNT),
 
     // AXI lite interface configuration (control)
-    .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
-    .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
-    .IF_AXIL_ADDR_WIDTH(IF_AXIL_ADDR_WIDTH),
+    .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .AXIL_CTRL_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+    .AXIL_CTRL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .AXIL_IF_CTRL_ADDR_WIDTH(AXIL_IF_CTRL_ADDR_WIDTH),
     .AXIL_CSR_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .AXIL_CSR_PASSTHROUGH_ENABLE(AXIL_CSR_PASSTHROUGH_ENABLE),
 
@@ -1121,27 +1121,27 @@ core_inst (
     .s_axis_dma_write_desc_status_valid(dma_write_desc_status_valid),
 
     /*
-     * AXI-Lite slave interface
+     * AXI-Lite slave interface (control)
      */
-    .s_axil_awaddr(axil_pcie_awaddr),
-    .s_axil_awprot(axil_pcie_awprot),
-    .s_axil_awvalid(axil_pcie_awvalid),
-    .s_axil_awready(axil_pcie_awready),
-    .s_axil_wdata(axil_pcie_wdata),
-    .s_axil_wstrb(axil_pcie_wstrb),
-    .s_axil_wvalid(axil_pcie_wvalid),
-    .s_axil_wready(axil_pcie_wready),
-    .s_axil_bresp(axil_pcie_bresp),
-    .s_axil_bvalid(axil_pcie_bvalid),
-    .s_axil_bready(axil_pcie_bready),
-    .s_axil_araddr(axil_pcie_araddr),
-    .s_axil_arprot(axil_pcie_arprot),
-    .s_axil_arvalid(axil_pcie_arvalid),
-    .s_axil_arready(axil_pcie_arready),
-    .s_axil_rdata(axil_pcie_rdata),
-    .s_axil_rresp(axil_pcie_rresp),
-    .s_axil_rvalid(axil_pcie_rvalid),
-    .s_axil_rready(axil_pcie_rready),
+    .s_axil_ctrl_awaddr(axil_ctrl_awaddr),
+    .s_axil_ctrl_awprot(axil_ctrl_awprot),
+    .s_axil_ctrl_awvalid(axil_ctrl_awvalid),
+    .s_axil_ctrl_awready(axil_ctrl_awready),
+    .s_axil_ctrl_wdata(axil_ctrl_wdata),
+    .s_axil_ctrl_wstrb(axil_ctrl_wstrb),
+    .s_axil_ctrl_wvalid(axil_ctrl_wvalid),
+    .s_axil_ctrl_wready(axil_ctrl_wready),
+    .s_axil_ctrl_bresp(axil_ctrl_bresp),
+    .s_axil_ctrl_bvalid(axil_ctrl_bvalid),
+    .s_axil_ctrl_bready(axil_ctrl_bready),
+    .s_axil_ctrl_araddr(axil_ctrl_araddr),
+    .s_axil_ctrl_arprot(axil_ctrl_arprot),
+    .s_axil_ctrl_arvalid(axil_ctrl_arvalid),
+    .s_axil_ctrl_arready(axil_ctrl_arready),
+    .s_axil_ctrl_rdata(axil_ctrl_rdata),
+    .s_axil_ctrl_rresp(axil_ctrl_rresp),
+    .s_axil_ctrl_rvalid(axil_ctrl_rvalid),
+    .s_axil_ctrl_rready(axil_ctrl_rready),
 
     /*
      * AXI-Lite master interface (passthrough for NIC control and status)

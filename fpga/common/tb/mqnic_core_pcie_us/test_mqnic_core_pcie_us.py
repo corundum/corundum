@@ -275,15 +275,15 @@ class TB(object):
         clock_period = 3.102
         speed = 10e9
 
-        if int(os.getenv("PARAM_AXIS_ETH_INT_DATA_WIDTH")) == 64:
+        if int(os.getenv("PARAM_AXIS_ETH_SYNC_DATA_WIDTH")) == 64:
             # 10G
             clock_period = 6.4
             speed = 10e9
-        elif int(os.getenv("PARAM_AXIS_ETH_INT_DATA_WIDTH")) == 128:
+        elif int(os.getenv("PARAM_AXIS_ETH_SYNC_DATA_WIDTH")) == 128:
             # 25G
             clock_period = 2.56
             speed = 25e9
-        elif int(os.getenv("PARAM_AXIS_ETH_INT_DATA_WIDTH")) == 512:
+        elif int(os.getenv("PARAM_AXIS_ETH_SYNC_DATA_WIDTH")) == 512:
             # 100G
             clock_period = 3.102
             speed = 100e9
@@ -510,9 +510,9 @@ eth_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'eth', 'rtl'))
 pcie_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'pcie', 'rtl'))
 
 
-@pytest.mark.parametrize(("axis_pcie_data_width", "axis_eth_data_width", "axis_eth_int_data_width"),
+@pytest.mark.parametrize(("axis_pcie_data_width", "axis_eth_data_width", "axis_eth_sync_data_width"),
     [(256, 64, 64), (256, 64, 128), (512, 64, 64), (512, 64, 128), (512, 512, 512)])
-def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, axis_eth_int_data_width):
+def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, axis_eth_sync_data_width):
     dut = "mqnic_core_pcie_us"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -666,7 +666,7 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
 
     # Ethernet interface configuration
     parameters['AXIS_ETH_DATA_WIDTH'] = axis_eth_data_width
-    parameters['AXIS_ETH_INT_DATA_WIDTH'] = axis_eth_int_data_width
+    parameters['AXIS_ETH_SYNC_DATA_WIDTH'] = axis_eth_sync_data_width
     parameters['AXIS_ETH_RX_USE_READY'] = 0
     parameters['AXIS_ETH_TX_PIPELINE'] = 0
     parameters['AXIS_ETH_TX_FIFO_PIPELINE'] = 2

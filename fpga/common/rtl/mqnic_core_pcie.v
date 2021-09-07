@@ -143,7 +143,7 @@ module mqnic_core_pcie #
     // Ethernet interface configuration
     parameter AXIS_DATA_WIDTH = 512,
     parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
-    parameter AXIS_INT_DATA_WIDTH = AXIS_DATA_WIDTH,
+    parameter AXIS_SYNC_DATA_WIDTH = AXIS_DATA_WIDTH,
     parameter AXIS_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
     parameter AXIS_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1,
     parameter AXIS_RX_USE_READY = 0,
@@ -1065,7 +1065,7 @@ mqnic_core #(
     // Ethernet interface configuration
     .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
     .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),
-    .AXIS_INT_DATA_WIDTH(AXIS_INT_DATA_WIDTH),
+    .AXIS_SYNC_DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
     .AXIS_TX_USER_WIDTH(AXIS_TX_USER_WIDTH),
     .AXIS_RX_USER_WIDTH(AXIS_RX_USER_WIDTH),
     .AXIS_RX_USE_READY(AXIS_RX_USE_READY),

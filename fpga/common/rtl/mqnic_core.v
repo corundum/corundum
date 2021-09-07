@@ -132,7 +132,7 @@ module mqnic_core #
     // Ethernet interface configuration
     parameter AXIS_DATA_WIDTH = 512,
     parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
-    parameter AXIS_INT_DATA_WIDTH = AXIS_DATA_WIDTH,
+    parameter AXIS_SYNC_DATA_WIDTH = AXIS_DATA_WIDTH,
     parameter AXIS_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
     parameter AXIS_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1,
     parameter AXIS_RX_USE_READY = 0,
@@ -327,7 +327,7 @@ module mqnic_core #
 
 parameter IF_DMA_TAG_WIDTH = DMA_TAG_WIDTH-$clog2(IF_COUNT)-1;
 
-parameter AXIS_INT_KEEP_WIDTH = AXIS_INT_DATA_WIDTH/(AXIS_DATA_WIDTH/AXIS_KEEP_WIDTH);
+parameter AXIS_SYNC_KEEP_WIDTH = AXIS_SYNC_DATA_WIDTH/(AXIS_DATA_WIDTH/AXIS_KEEP_WIDTH);
 
 // parameter sizing helpers
 function [31:0] w_32(input [31:0] val);
@@ -1487,8 +1487,8 @@ generate
 
     for (n = 0; n < IF_COUNT; n = n + 1) begin : iface
 
-        wire [PORTS_PER_IF*AXIS_INT_DATA_WIDTH-1:0] if_tx_axis_tdata;
-        wire [PORTS_PER_IF*AXIS_INT_KEEP_WIDTH-1:0] if_tx_axis_tkeep;
+        wire [PORTS_PER_IF*AXIS_SYNC_DATA_WIDTH-1:0] if_tx_axis_tdata;
+        wire [PORTS_PER_IF*AXIS_SYNC_KEEP_WIDTH-1:0] if_tx_axis_tkeep;
         wire [PORTS_PER_IF-1:0] if_tx_axis_tvalid;
         wire [PORTS_PER_IF-1:0] if_tx_axis_tready;
         wire [PORTS_PER_IF-1:0] if_tx_axis_tlast;
@@ -1500,8 +1500,8 @@ generate
         wire [PORTS_PER_IF-1:0] if_tx_ptp_ts_valid;
         wire [PORTS_PER_IF-1:0] if_tx_ptp_ts_ready;
 
-        wire [PORTS_PER_IF*AXIS_INT_DATA_WIDTH-1:0] if_rx_axis_tdata;
-        wire [PORTS_PER_IF*AXIS_INT_KEEP_WIDTH-1:0] if_rx_axis_tkeep;
+        wire [PORTS_PER_IF*AXIS_SYNC_DATA_WIDTH-1:0] if_rx_axis_tdata;
+        wire [PORTS_PER_IF*AXIS_SYNC_KEEP_WIDTH-1:0] if_rx_axis_tkeep;
         wire [PORTS_PER_IF-1:0] if_rx_axis_tvalid;
         wire [PORTS_PER_IF-1:0] if_rx_axis_tready;
         wire [PORTS_PER_IF-1:0] if_rx_axis_tlast;
@@ -1556,8 +1556,8 @@ generate
             .RAM_SEL_WIDTH(IF_RAM_SEL_WIDTH),
             .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
             .RAM_PIPELINE(RAM_PIPELINE),
-            .AXIS_DATA_WIDTH(AXIS_INT_DATA_WIDTH),
-            .AXIS_KEEP_WIDTH(AXIS_INT_KEEP_WIDTH),
+            .AXIS_DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
+            .AXIS_KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
             .MAX_TX_SIZE(MAX_TX_SIZE),
             .MAX_RX_SIZE(MAX_RX_SIZE),
             .TX_RAM_SIZE(TX_RAM_SIZE),
@@ -1979,15 +1979,15 @@ generate
             end
 
             // TX FIFOs
-            wire [AXIS_INT_DATA_WIDTH-1:0] axis_tx_fifo_tdata;
-            wire [AXIS_INT_KEEP_WIDTH-1:0] axis_tx_fifo_tkeep;
+            wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_tx_fifo_tdata;
+            wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_tx_fifo_tkeep;
             wire axis_tx_fifo_tvalid;
             wire axis_tx_fifo_tready;
             wire axis_tx_fifo_tlast;
             wire [AXIS_TX_USER_WIDTH-1:0] axis_tx_fifo_tuser;
 
-            wire [AXIS_INT_DATA_WIDTH-1:0] axis_tx_pipe_tdata;
-            wire [AXIS_INT_KEEP_WIDTH-1:0] axis_tx_pipe_tkeep;
+            wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_tx_pipe_tdata;
+            wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_tx_pipe_tkeep;
             wire axis_tx_pipe_tvalid;
             wire axis_tx_pipe_tready;
             wire axis_tx_pipe_tlast;
@@ -1995,9 +1995,9 @@ generate
 
             axis_fifo #(
                 .DEPTH(TX_FIFO_DEPTH),
-                .DATA_WIDTH(AXIS_INT_DATA_WIDTH),
-                .KEEP_ENABLE(AXIS_INT_KEEP_WIDTH > 1),
-                .KEEP_WIDTH(AXIS_INT_KEEP_WIDTH),
+                .DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
+                .KEEP_ENABLE(AXIS_SYNC_KEEP_WIDTH > 1),
+                .KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
                 .LAST_ENABLE(1),
                 .ID_ENABLE(0),
                 .DEST_ENABLE(0),
@@ -2015,8 +2015,8 @@ generate
                 .rst(rst),
 
                 // AXI input
-                .s_axis_tdata(if_tx_axis_tdata[m*AXIS_INT_DATA_WIDTH +: AXIS_INT_DATA_WIDTH]),
-                .s_axis_tkeep(if_tx_axis_tkeep[m*AXIS_INT_KEEP_WIDTH +: AXIS_INT_KEEP_WIDTH]),
+                .s_axis_tdata(if_tx_axis_tdata[m*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH]),
+                .s_axis_tkeep(if_tx_axis_tkeep[m*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH]),
                 .s_axis_tvalid(if_tx_axis_tvalid[m +: 1]),
                 .s_axis_tready(if_tx_axis_tready[m +: 1]),
                 .s_axis_tlast(if_tx_axis_tlast[m +: 1]),
@@ -2042,9 +2042,9 @@ generate
             );
 
             axis_pipeline_fifo #(
-                .DATA_WIDTH(AXIS_INT_DATA_WIDTH),
-                .KEEP_ENABLE(AXIS_INT_KEEP_WIDTH > 1),
-                .KEEP_WIDTH(AXIS_INT_KEEP_WIDTH),
+                .DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
+                .KEEP_ENABLE(AXIS_SYNC_KEEP_WIDTH > 1),
+                .KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
                 .LAST_ENABLE(1),
                 .ID_ENABLE(0),
                 .DEST_ENABLE(0),
@@ -2079,9 +2079,9 @@ generate
 
             axis_async_fifo_adapter #(
                 .DEPTH(MAX_TX_SIZE),
-                .S_DATA_WIDTH(AXIS_INT_DATA_WIDTH),
-                .S_KEEP_ENABLE(AXIS_INT_KEEP_WIDTH > 1),
-                .S_KEEP_WIDTH(AXIS_INT_KEEP_WIDTH),
+                .S_DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
+                .S_KEEP_ENABLE(AXIS_SYNC_KEEP_WIDTH > 1),
+                .S_KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
                 .M_DATA_WIDTH(AXIS_DATA_WIDTH),
                 .M_KEEP_ENABLE(AXIS_KEEP_WIDTH > 1),
                 .M_KEEP_WIDTH(AXIS_KEEP_WIDTH),
@@ -2130,15 +2130,15 @@ generate
             );
 
             // RX FIFOs
-            wire [AXIS_INT_DATA_WIDTH-1:0] axis_rx_fifo_tdata;
-            wire [AXIS_INT_KEEP_WIDTH-1:0] axis_rx_fifo_tkeep;
+            wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_rx_fifo_tdata;
+            wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_rx_fifo_tkeep;
             wire axis_rx_fifo_tvalid;
             wire axis_rx_fifo_tready;
             wire axis_rx_fifo_tlast;
             wire [AXIS_RX_USER_WIDTH-1:0] axis_rx_fifo_tuser;
 
-            wire [AXIS_INT_DATA_WIDTH-1:0] axis_rx_pipe_tdata;
-            wire [AXIS_INT_KEEP_WIDTH-1:0] axis_rx_pipe_tkeep;
+            wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_rx_pipe_tdata;
+            wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_rx_pipe_tkeep;
             wire axis_rx_pipe_tvalid;
             wire axis_rx_pipe_tready;
             wire axis_rx_pipe_tlast;
@@ -2149,9 +2149,9 @@ generate
                 .S_DATA_WIDTH(AXIS_DATA_WIDTH),
                 .S_KEEP_ENABLE(AXIS_KEEP_WIDTH > 1),
                 .S_KEEP_WIDTH(AXIS_KEEP_WIDTH),
-                .M_DATA_WIDTH(AXIS_INT_DATA_WIDTH),
-                .M_KEEP_ENABLE(AXIS_INT_KEEP_WIDTH > 1),
-                .M_KEEP_WIDTH(AXIS_INT_KEEP_WIDTH),
+                .M_DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
+                .M_KEEP_ENABLE(AXIS_SYNC_KEEP_WIDTH > 1),
+                .M_KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
                 .ID_ENABLE(0),
                 .DEST_ENABLE(0),
                 .USER_ENABLE(1),
@@ -2197,9 +2197,9 @@ generate
             );
 
             axis_pipeline_fifo #(
-                .DATA_WIDTH(AXIS_INT_DATA_WIDTH),
-                .KEEP_ENABLE(AXIS_INT_KEEP_WIDTH > 1),
-                .KEEP_WIDTH(AXIS_INT_KEEP_WIDTH),
+                .DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
+                .KEEP_ENABLE(AXIS_SYNC_KEEP_WIDTH > 1),
+                .KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
                 .LAST_ENABLE(1),
                 .ID_ENABLE(0),
                 .DEST_ENABLE(0),
@@ -2234,9 +2234,9 @@ generate
 
             axis_fifo #(
                 .DEPTH(RX_FIFO_DEPTH),
-                .DATA_WIDTH(AXIS_INT_DATA_WIDTH),
-                .KEEP_ENABLE(AXIS_INT_KEEP_WIDTH > 1),
-                .KEEP_WIDTH(AXIS_INT_KEEP_WIDTH),
+                .DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
+                .KEEP_ENABLE(AXIS_SYNC_KEEP_WIDTH > 1),
+                .KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
                 .LAST_ENABLE(1),
                 .ID_ENABLE(0),
                 .DEST_ENABLE(0),
@@ -2264,8 +2264,8 @@ generate
                 .s_axis_tuser(axis_rx_pipe_tuser),
 
                 // AXI output
-                .m_axis_tdata(if_rx_axis_tdata[m*AXIS_INT_DATA_WIDTH +: AXIS_INT_DATA_WIDTH]),
-                .m_axis_tkeep(if_rx_axis_tkeep[m*AXIS_INT_KEEP_WIDTH +: AXIS_INT_KEEP_WIDTH]),
+                .m_axis_tdata(if_rx_axis_tdata[m*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH]),
+                .m_axis_tkeep(if_rx_axis_tkeep[m*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH]),
                 .m_axis_tvalid(if_rx_axis_tvalid[m +: 1]),
                 .m_axis_tready(if_rx_axis_tready[m +: 1]),
                 .m_axis_tlast(if_rx_axis_tlast[m +: 1]),

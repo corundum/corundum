@@ -119,7 +119,6 @@ module mqnic_core_pcie_us #
     parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
     parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
     parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
-    parameter BAR0_APERTURE = 24,
     parameter PF_COUNT = 1,
     parameter VF_COUNT = 0,
     parameter F_COUNT = PF_COUNT+VF_COUNT,
@@ -134,7 +133,7 @@ module mqnic_core_pcie_us #
 
     // AXI lite interface configuration (control)
     parameter AXIL_CTRL_DATA_WIDTH = 32,
-    parameter AXIL_CTRL_ADDR_WIDTH = BAR0_APERTURE,
+    parameter AXIL_CTRL_ADDR_WIDTH = 24,
     parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8),
     parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT),
     parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
@@ -710,7 +709,6 @@ mqnic_core_pcie #(
     .TX_SEQ_NUM_COUNT(TX_SEQ_NUM_COUNT),
     .TX_SEQ_NUM_WIDTH(TX_SEQ_NUM_WIDTH),
     .TX_SEQ_NUM_ENABLE(1),
-    .BAR0_APERTURE(BAR0_APERTURE),
     .PF_COUNT(PF_COUNT),
     .VF_COUNT(VF_COUNT),
     .F_COUNT(F_COUNT),

@@ -67,7 +67,7 @@ class TB(object):
     def __init__(self, dut):
         self.dut = dut
 
-        self.BAR0_APERTURE = int(os.getenv("PARAM_BAR0_APERTURE"))
+        self.BAR0_APERTURE = int(os.getenv("PARAM_AXIL_CTRL_ADDR_WIDTH"))
 
         self.log = SimLog("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
@@ -651,7 +651,6 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
 
     # PCIe interface configuration
     parameters['AXIS_PCIE_DATA_WIDTH'] = axis_pcie_data_width
-    parameters['BAR0_APERTURE'] = 24
     parameters['PF_COUNT'] = 1
     parameters['VF_COUNT'] = 0
     parameters['PCIE_TAG_COUNT'] = 64
@@ -664,6 +663,8 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
     parameters['MSI_COUNT'] = 32
 
     # AXI lite interface configuration (control)
+    parameters['AXIL_CTRL_DATA_WIDTH'] = 32
+    parameters['AXIL_CTRL_ADDR_WIDTH'] = 24
     parameters['AXIL_CSR_PASSTHROUGH_ENABLE'] = 0
 
     # Ethernet interface configuration

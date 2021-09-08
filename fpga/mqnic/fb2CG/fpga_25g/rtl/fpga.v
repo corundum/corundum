@@ -110,7 +110,6 @@ module fpga #
     parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
     parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
     parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
-    parameter BAR0_APERTURE = 24,
     parameter PF_COUNT = 1,
     parameter VF_COUNT = 0,
     parameter PCIE_TAG_COUNT = 64,
@@ -120,6 +119,10 @@ module fpga #
     parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 16,
     parameter PCIE_DMA_WRITE_TX_LIMIT = 3,
     parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 1,
+
+    // AXI lite interface configuration (control)
+    parameter AXIL_CTRL_DATA_WIDTH = 32,
+    parameter AXIL_CTRL_ADDR_WIDTH = 24,
 
     // Ethernet interface configuration
     parameter AXIS_ETH_TX_PIPELINE = 0,
@@ -1648,7 +1651,6 @@ fpga_core #(
     .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
     .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
     .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
-    .BAR0_APERTURE(BAR0_APERTURE),
     .PF_COUNT(PF_COUNT),
     .VF_COUNT(VF_COUNT),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
@@ -1659,6 +1661,10 @@ fpga_core #(
     .PCIE_DMA_WRITE_TX_LIMIT(PCIE_DMA_WRITE_TX_LIMIT),
     .PCIE_DMA_WRITE_TX_FC_ENABLE(PCIE_DMA_WRITE_TX_FC_ENABLE),
     .MSI_COUNT(MSI_COUNT),
+
+    // AXI lite interface configuration (control)
+    .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .AXIL_CTRL_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
 
     // Ethernet interface configuration
     .XGMII_DATA_WIDTH(XGMII_DATA_WIDTH),

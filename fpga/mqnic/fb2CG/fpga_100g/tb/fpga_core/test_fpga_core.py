@@ -66,7 +66,7 @@ class TB(object):
     def __init__(self, dut):
         self.dut = dut
 
-        self.BAR0_APERTURE = int(os.getenv("PARAM_BAR0_APERTURE"))
+        self.BAR0_APERTURE = int(os.getenv("PARAM_AXIL_CTRL_ADDR_WIDTH"))
 
         self.log = SimLog("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
@@ -654,7 +654,6 @@ def test_fpga_core(request):
 
     # PCIe interface configuration
     parameters['AXIS_PCIE_DATA_WIDTH'] = 512
-    parameters['BAR0_APERTURE'] = 24
     parameters['PF_COUNT'] = 1
     parameters['VF_COUNT'] = 0
     parameters['PCIE_TAG_COUNT'] = 64
@@ -664,6 +663,10 @@ def test_fpga_core(request):
     parameters['PCIE_DMA_WRITE_OP_TABLE_SIZE'] = 16
     parameters['PCIE_DMA_WRITE_TX_LIMIT'] = 3
     parameters['PCIE_DMA_WRITE_TX_FC_ENABLE'] = 1
+
+    # AXI lite interface configuration (control)
+    parameters['AXIL_CTRL_DATA_WIDTH'] = 32
+    parameters['AXIL_CTRL_ADDR_WIDTH'] = 24
 
     # Ethernet interface configuration
     parameters['AXIS_ETH_TX_PIPELINE'] = 0

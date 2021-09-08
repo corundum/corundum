@@ -116,7 +116,6 @@ dict set params DMA_TAG_WIDTH "16"
 dict set params RAM_PIPELINE "2"
 
 # PCIe interface configuration
-dict set params BAR0_APERTURE "24"
 dict set params PCIE_TAG_COUNT "64"
 dict set params PCIE_DMA_READ_OP_TABLE_SIZE [dict get $params PCIE_TAG_COUNT]
 dict set params PCIE_DMA_READ_TX_LIMIT "16"
@@ -124,6 +123,10 @@ dict set params PCIE_DMA_READ_TX_FC_ENABLE "1"
 dict set params PCIE_DMA_WRITE_OP_TABLE_SIZE "16"
 dict set params PCIE_DMA_WRITE_TX_LIMIT "3"
 dict set params PCIE_DMA_WRITE_TX_FC_ENABLE "1"
+
+# AXI lite interface configuration (control)
+dict set params AXIL_CTRL_DATA_WIDTH "32"
+dict set params AXIL_CTRL_ADDR_WIDTH "24"
 
 # Ethernet interface configuration
 dict set params AXIS_ETH_TX_PIPELINE "0"
@@ -184,7 +187,8 @@ proc configure_bar {pcie pf bar aperture} {
     set_property "CONFIG.pf${pf}_bar${bar}_enabled" {false} $pcie
 }
 
-configure_bar $pcie 0 0 [dict get $params BAR0_APERTURE]
+# Control BAR (BAR 0)
+configure_bar $pcie 0 0 [dict get $params AXIL_CTRL_ADDR_WIDTH]
 
 # apply parameters to top-level
 set param_list {}

@@ -123,7 +123,6 @@ module fpga_core #
     parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
     parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
     parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
-    parameter BAR0_APERTURE = 24,
     parameter PF_COUNT = 1,
     parameter VF_COUNT = 0,
     parameter PCIE_TAG_COUNT = 64,
@@ -134,6 +133,10 @@ module fpga_core #
     parameter PCIE_DMA_WRITE_TX_LIMIT = 3,
     parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 1,
     parameter MSI_COUNT = 32,
+
+    // AXI lite interface configuration (control)
+    parameter AXIL_CTRL_DATA_WIDTH = 32,
+    parameter AXIL_CTRL_ADDR_WIDTH = 24,
 
     // Ethernet interface configuration
     parameter XGMII_DATA_WIDTH = 64,
@@ -394,8 +397,6 @@ parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF;
 
 parameter F_COUNT = PF_COUNT+VF_COUNT;
 
-parameter AXIL_CTRL_DATA_WIDTH = 32;
-parameter AXIL_CTRL_ADDR_WIDTH = BAR0_APERTURE;
 parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8);
 parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT);
 parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8);
@@ -1096,7 +1097,6 @@ mqnic_core_pcie_us #(
     .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
     .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
     .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
-    .BAR0_APERTURE(BAR0_APERTURE),
     .PF_COUNT(PF_COUNT),
     .VF_COUNT(VF_COUNT),
     .F_COUNT(F_COUNT),

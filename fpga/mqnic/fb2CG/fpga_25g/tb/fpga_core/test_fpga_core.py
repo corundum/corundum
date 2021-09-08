@@ -66,8 +66,6 @@ class TB(object):
     def __init__(self, dut):
         self.dut = dut
 
-        self.BAR0_APERTURE = int(os.getenv("PARAM_AXIL_CTRL_ADDR_WIDTH"))
-
         self.log = SimLog("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
@@ -266,7 +264,7 @@ class TB(object):
 
         self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
 
-        self.dev.functions[0].configure_bar(0, 2**self.BAR0_APERTURE, ext=True, prefetch=True)
+        self.dev.functions[0].configure_bar(0, 2**len(dut.core_inst.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
 
         # Ethernet
         cocotb.fork(Clock(dut.qsfp_0_rx_clk_0, 2.56, units="ns").start())

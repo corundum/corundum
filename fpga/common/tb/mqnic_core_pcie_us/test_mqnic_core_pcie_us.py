@@ -67,8 +67,6 @@ class TB(object):
     def __init__(self, dut):
         self.dut = dut
 
-        self.BAR0_APERTURE = int(os.getenv("PARAM_AXIL_CTRL_ADDR_WIDTH"))
-
         self.log = SimLog("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
@@ -267,7 +265,7 @@ class TB(object):
 
         self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
 
-        self.dev.functions[0].configure_bar(0, 2**self.BAR0_APERTURE, ext=True, prefetch=True)
+        self.dev.functions[0].configure_bar(0, 2**len(dut.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
 
         # Ethernet
         self.port_mac = []
@@ -275,15 +273,15 @@ class TB(object):
         clock_period = 3.102
         speed = 10e9
 
-        if int(os.getenv("PARAM_AXIS_ETH_SYNC_DATA_WIDTH")) == 64:
+        if len(dut.core_pcie_inst.core_inst.iface[0].port[0].rx_fifo_inst.m_axis_tdata) == 64:
             # 10G
             clock_period = 6.4
             speed = 10e9
-        elif int(os.getenv("PARAM_AXIS_ETH_SYNC_DATA_WIDTH")) == 128:
+        elif len(dut.core_pcie_inst.core_inst.iface[0].port[0].rx_fifo_inst.m_axis_tdata) == 128:
             # 25G
             clock_period = 2.56
             speed = 25e9
-        elif int(os.getenv("PARAM_AXIS_ETH_SYNC_DATA_WIDTH")) == 512:
+        elif len(dut.core_pcie_inst.core_inst.iface[0].port[0].rx_fifo_inst.m_axis_tdata) == 512:
             # 100G
             clock_period = 3.102
             speed = 100e9

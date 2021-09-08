@@ -107,6 +107,8 @@ module mqnic_core_pcie_us #
     parameter RX_RAM_SIZE = 32768,
 
     // DMA interface configuration
+    parameter DMA_LEN_WIDTH = 16,
+    parameter DMA_TAG_WIDTH = 16,
     parameter RAM_PIPELINE = 2,
 
     // PCIe interface configuration
@@ -696,6 +698,8 @@ mqnic_core_pcie #(
     .RX_RAM_SIZE(RX_RAM_SIZE),
 
     // DMA interface configuration
+    .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
+    .DMA_TAG_WIDTH(DMA_TAG_WIDTH),
     .RAM_PIPELINE(RAM_PIPELINE),
 
     // PCIe interface configuration

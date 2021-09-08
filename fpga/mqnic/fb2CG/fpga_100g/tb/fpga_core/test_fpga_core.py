@@ -648,6 +648,8 @@ def test_fpga_core(request):
     parameters['RX_RAM_SIZE'] = 131072
 
     # DMA interface configuration
+    parameters['DMA_LEN_WIDTH'] = 16
+    parameters['DMA_TAG_WIDTH'] = 16
     parameters['RAM_PIPELINE'] = 2
 
     # PCIe interface configuration

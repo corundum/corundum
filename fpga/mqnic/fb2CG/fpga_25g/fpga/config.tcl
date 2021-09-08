@@ -111,6 +111,8 @@ dict set params TX_RAM_SIZE "32768"
 dict set params RX_RAM_SIZE "32768"
 
 # DMA interface configuration
+dict set params DMA_LEN_WIDTH "16"
+dict set params DMA_TAG_WIDTH "16"
 dict set params RAM_PIPELINE "2"
 
 # PCIe interface configuration

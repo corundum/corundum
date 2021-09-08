@@ -98,6 +98,8 @@ module fpga #
     parameter RX_RAM_SIZE = 131072,
 
     // DMA interface configuration
+    parameter DMA_LEN_WIDTH = 16,
+    parameter DMA_TAG_WIDTH = 16,
     parameter RAM_PIPELINE = 2,
 
     // PCIe interface configuration
@@ -1698,6 +1700,8 @@ fpga_core #(
     .RX_RAM_SIZE(RX_RAM_SIZE),
 
     // DMA interface configuration
+    .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
+    .DMA_TAG_WIDTH(DMA_TAG_WIDTH),
     .RAM_PIPELINE(RAM_PIPELINE),
 
     // PCIe interface configuration

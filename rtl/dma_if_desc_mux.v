@@ -280,29 +280,22 @@ always @(posedge clk) begin
 end
 
 // descriptor status demux
-reg [S_TAG_WIDTH-1:0] m_axis_desc_status_tag_reg = {S_TAG_WIDTH{1'b0}}, m_axis_desc_status_tag_next;
-reg [5:0] m_axis_desc_status_error_reg = 6'd0, m_axis_desc_status_error_next;
-reg [PORTS-1:0] m_axis_desc_status_valid_reg = {PORTS{1'b0}}, m_axis_desc_status_valid_next;
+reg [S_TAG_WIDTH-1:0] m_axis_desc_status_tag_reg = {S_TAG_WIDTH{1'b0}};
+reg [3:0] m_axis_desc_status_error_reg = 4'd0;
+reg [PORTS-1:0] m_axis_desc_status_valid_reg = {PORTS{1'b0}};
 
 assign m_axis_desc_status_tag = {PORTS{m_axis_desc_status_tag_reg}};
 assign m_axis_desc_status_error = {PORTS{m_axis_desc_status_error_reg}};
 assign m_axis_desc_status_valid = m_axis_desc_status_valid_reg;
 
-always @* begin
-    m_axis_desc_status_tag_next = s_axis_desc_status_tag;
-    m_axis_desc_status_error_next = s_axis_desc_status_error;
-    m_axis_desc_status_valid_next = s_axis_desc_status_valid << (PORTS > 1 ? s_axis_desc_status_tag[S_TAG_WIDTH+CL_PORTS-1:S_TAG_WIDTH] : 0);
-end
-
 always @(posedge clk) begin
+    m_axis_desc_status_tag_reg <= s_axis_desc_status_tag;
+    m_axis_desc_status_error_reg <= s_axis_desc_status_error;
+    m_axis_desc_status_valid_reg <= s_axis_desc_status_valid << (PORTS > 1 ? s_axis_desc_status_tag[S_TAG_WIDTH+CL_PORTS-1:S_TAG_WIDTH] : 0);
+
     if (rst) begin
         m_axis_desc_status_valid_reg <= {PORTS{1'b0}};
-    end else begin
-        m_axis_desc_status_valid_reg <= m_axis_desc_status_valid_next;
     end
-
-    m_axis_desc_status_tag_reg <= m_axis_desc_status_tag_next;
-    m_axis_desc_status_error_reg <= m_axis_desc_status_error_next;
 end
 
 endmodule

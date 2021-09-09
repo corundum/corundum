@@ -52,6 +52,7 @@ VERILOG_SOURCES += ../../rtl/common/cpl_write.v
 VERILOG_SOURCES += ../../rtl/common/cpl_op_mux.v
 VERILOG_SOURCES += ../../rtl/common/desc_fetch.v
 VERILOG_SOURCES += ../../rtl/common/desc_op_mux.v
+VERILOG_SOURCES += ../../rtl/common/event_mux.v
 VERILOG_SOURCES += ../../rtl/common/queue_manager.v
 VERILOG_SOURCES += ../../rtl/common/cpl_queue_manager.v
 VERILOG_SOURCES += ../../rtl/common/tx_engine.v
@@ -59,15 +60,14 @@ VERILOG_SOURCES += ../../rtl/common/rx_engine.v
 VERILOG_SOURCES += ../../rtl/common/tx_checksum.v
 VERILOG_SOURCES += ../../rtl/common/rx_hash.v
 VERILOG_SOURCES += ../../rtl/common/rx_checksum.v
-VERILOG_SOURCES += ../../rtl/common/mqnic_tx_scheduler_block_rr.v
-VERILOG_SOURCES += ../../rtl/common/tx_scheduler_rr.v
-VERILOG_SOURCES += ../../rtl/common/event_mux.v
 VERILOG_SOURCES += ../../rtl/common/stats_counter.v
 VERILOG_SOURCES += ../../rtl/common/stats_collect.v
 VERILOG_SOURCES += ../../rtl/common/stats_pcie_if.v
 VERILOG_SOURCES += ../../rtl/common/stats_pcie_tlp.v
 VERILOG_SOURCES += ../../rtl/common/stats_dma_if_pcie.v
 VERILOG_SOURCES += ../../rtl/common/stats_dma_latency.v
+VERILOG_SOURCES += ../../rtl/common/mqnic_tx_scheduler_block_rr.v
+VERILOG_SOURCES += ../../rtl/common/tx_scheduler_rr.v
 VERILOG_SOURCES += ../../rtl/common/tdma_scheduler.v
 VERILOG_SOURCES += ../../rtl/common/tdma_ber.v
 VERILOG_SOURCES += ../../rtl/common/tdma_ber_ch.v
@@ -98,12 +98,10 @@ VERILOG_SOURCES += ../../lib/axis/rtl/axis_async_fifo_adapter.v
 VERILOG_SOURCES += ../../lib/axis/rtl/axis_fifo.v
 VERILOG_SOURCES += ../../lib/axis/rtl/axis_pipeline_fifo.v
 VERILOG_SOURCES += ../../lib/axis/rtl/axis_register.v
-VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_if.v
-VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_if_rc.v
-VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_if_rq.v
-VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_if_cc.v
-VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_if_cq.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_axil_master.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_demux.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_demux_bar.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_mux.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie_rd.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie_wr.v
@@ -116,6 +114,11 @@ VERILOG_SOURCES += ../../lib/pcie/rtl/dma_ram_demux_wr.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_psdpram.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_client_axis_sink.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_client_axis_source.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_if.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_if_rc.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_if_rq.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_if_cc.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_if_cq.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_cfg.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_us_msi.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pulse_merge.v
@@ -172,6 +175,15 @@ export PARAM_MAX_RX_SIZE ?= 9214
 export PARAM_TX_RAM_SIZE ?= 32768
 export PARAM_RX_RAM_SIZE ?= 32768
 
+# Application block configuration
+export PARAM_APP_ENABLE ?= 0
+export PARAM_APP_CTRL_ENABLE ?= 1
+export PARAM_APP_DMA_ENABLE ?= 1
+export PARAM_APP_AXIS_DIRECT_ENABLE ?= 1
+export PARAM_APP_AXIS_SYNC_ENABLE ?= 1
+export PARAM_APP_AXIS_IF_ENABLE ?= 1
+export PARAM_APP_STAT_ENABLE ?= 1
+
 # DMA interface configuration
 export PARAM_DMA_LEN_WIDTH ?= 16
 export PARAM_DMA_TAG_WIDTH ?= 16
@@ -192,6 +204,10 @@ export PARAM_PCIE_DMA_WRITE_TX_FC_ENABLE ?= 1
 # AXI lite interface configuration (control)
 export PARAM_AXIL_CTRL_DATA_WIDTH ?= 32
 export PARAM_AXIL_CTRL_ADDR_WIDTH ?= 24
+
+# AXI lite interface configuration (application control)
+export PARAM_AXIL_APP_CTRL_DATA_WIDTH ?= $(PARAM_AXIL_CTRL_DATA_WIDTH)
+export PARAM_AXIL_APP_CTRL_ADDR_WIDTH ?= 24
 
 # Ethernet interface configuration
 export PARAM_AXIS_ETH_TX_PIPELINE ?= 0
@@ -246,6 +262,13 @@ ifeq ($(SIM), icarus)
 	COMPILE_ARGS += -P $(TOPLEVEL).MAX_RX_SIZE=$(PARAM_MAX_RX_SIZE)
 	COMPILE_ARGS += -P $(TOPLEVEL).TX_RAM_SIZE=$(PARAM_TX_RAM_SIZE)
 	COMPILE_ARGS += -P $(TOPLEVEL).RX_RAM_SIZE=$(PARAM_RX_RAM_SIZE)
+	COMPILE_ARGS += -P $(TOPLEVEL).APP_ENABLE=$(PARAM_APP_ENABLE)
+	COMPILE_ARGS += -P $(TOPLEVEL).APP_CTRL_ENABLE=$(PARAM_APP_CTRL_ENABLE)
+	COMPILE_ARGS += -P $(TOPLEVEL).APP_DMA_ENABLE=$(PARAM_APP_DMA_ENABLE)
+	COMPILE_ARGS += -P $(TOPLEVEL).APP_AXIS_DIRECT_ENABLE=$(PARAM_APP_AXIS_DIRECT_ENABLE)
+	COMPILE_ARGS += -P $(TOPLEVEL).APP_AXIS_SYNC_ENABLE=$(PARAM_APP_AXIS_SYNC_ENABLE)
+	COMPILE_ARGS += -P $(TOPLEVEL).APP_AXIS_IF_ENABLE=$(PARAM_APP_AXIS_IF_ENABLE)
+	COMPILE_ARGS += -P $(TOPLEVEL).APP_STAT_ENABLE=$(PARAM_APP_STAT_ENABLE)
 	COMPILE_ARGS += -P $(TOPLEVEL).DMA_LEN_WIDTH=$(PARAM_DMA_LEN_WIDTH)
 	COMPILE_ARGS += -P $(TOPLEVEL).DMA_TAG_WIDTH=$(PARAM_DMA_TAG_WIDTH)
 	COMPILE_ARGS += -P $(TOPLEVEL).RAM_PIPELINE=$(PARAM_RAM_PIPELINE)
@@ -261,6 +284,8 @@ ifeq ($(SIM), icarus)
 	COMPILE_ARGS += -P $(TOPLEVEL).PCIE_DMA_WRITE_TX_FC_ENABLE=$(PARAM_PCIE_DMA_WRITE_TX_FC_ENABLE)
 	COMPILE_ARGS += -P $(TOPLEVEL).AXIL_CTRL_DATA_WIDTH=$(PARAM_AXIL_CTRL_DATA_WIDTH)
 	COMPILE_ARGS += -P $(TOPLEVEL).AXIL_CTRL_ADDR_WIDTH=$(PARAM_AXIL_CTRL_ADDR_WIDTH)
+	COMPILE_ARGS += -P $(TOPLEVEL).AXIL_APP_CTRL_DATA_WIDTH=$(PARAM_AXIL_APP_CTRL_DATA_WIDTH)
+	COMPILE_ARGS += -P $(TOPLEVEL).AXIL_APP_CTRL_ADDR_WIDTH=$(PARAM_AXIL_APP_CTRL_ADDR_WIDTH)
 	COMPILE_ARGS += -P $(TOPLEVEL).AXIS_ETH_TX_PIPELINE=$(PARAM_AXIS_ETH_TX_PIPELINE)
 	COMPILE_ARGS += -P $(TOPLEVEL).AXIS_ETH_TX_FIFO_PIPELINE=$(PARAM_AXIS_ETH_TX_FIFO_PIPELINE)
 	COMPILE_ARGS += -P $(TOPLEVEL).AXIS_ETH_TX_TS_PIPELINE=$(PARAM_AXIS_ETH_TX_TS_PIPELINE)
@@ -315,6 +340,13 @@ else ifeq ($(SIM), verilator)
 	COMPILE_ARGS += -GMAX_RX_SIZE=$(PARAM_MAX_RX_SIZE)
 	COMPILE_ARGS += -GTX_RAM_SIZE=$(PARAM_TX_RAM_SIZE)
 	COMPILE_ARGS += -GRX_RAM_SIZE=$(PARAM_RX_RAM_SIZE)
+	COMPILE_ARGS += -GAPP_ENABLE=$(PARAM_APP_ENABLE)
+	COMPILE_ARGS += -GAPP_CTRL_ENABLE=$(PARAM_APP_CTRL_ENABLE)
+	COMPILE_ARGS += -GAPP_DMA_ENABLE=$(PARAM_APP_DMA_ENABLE)
+	COMPILE_ARGS += -GAPP_AXIS_DIRECT_ENABLE=$(PARAM_APP_AXIS_DIRECT_ENABLE)
+	COMPILE_ARGS += -GAPP_AXIS_SYNC_ENABLE=$(PARAM_APP_AXIS_SYNC_ENABLE)
+	COMPILE_ARGS += -GAPP_AXIS_IF_ENABLE=$(PARAM_APP_AXIS_IF_ENABLE)
+	COMPILE_ARGS += -GAPP_STAT_ENABLE=$(PARAM_APP_STAT_ENABLE)
 	COMPILE_ARGS += -GDMA_LEN_WIDTH=$(PARAM_DMA_LEN_WIDTH)
 	COMPILE_ARGS += -GDMA_TAG_WIDTH=$(PARAM_DMA_TAG_WIDTH)
 	COMPILE_ARGS += -GRAM_PIPELINE=$(PARAM_RAM_PIPELINE)
@@ -330,6 +362,8 @@ else ifeq ($(SIM), verilator)
 	COMPILE_ARGS += -GPCIE_DMA_WRITE_TX_FC_ENABLE=$(PARAM_PCIE_DMA_WRITE_TX_FC_ENABLE)
 	COMPILE_ARGS += -GAXIL_CTRL_DATA_WIDTH=$(PARAM_AXIL_CTRL_DATA_WIDTH)
 	COMPILE_ARGS += -GAXIL_CTRL_ADDR_WIDTH=$(PARAM_AXIL_CTRL_ADDR_WIDTH)
+	COMPILE_ARGS += -GAXIL_APP_CTRL_DATA_WIDTH=$(PARAM_AXIL_APP_CTRL_DATA_WIDTH)
+	COMPILE_ARGS += -GAXIL_APP_CTRL_ADDR_WIDTH=$(PARAM_AXIL_APP_CTRL_ADDR_WIDTH)
 	COMPILE_ARGS += -GAXIS_ETH_TX_PIPELINE=$(PARAM_AXIS_ETH_TX_PIPELINE)
 	COMPILE_ARGS += -GAXIS_ETH_TX_FIFO_PIPELINE=$(PARAM_AXIS_ETH_TX_FIFO_PIPELINE)
 	COMPILE_ARGS += -GAXIS_ETH_TX_TS_PIPELINE=$(PARAM_AXIS_ETH_TX_TS_PIPELINE)

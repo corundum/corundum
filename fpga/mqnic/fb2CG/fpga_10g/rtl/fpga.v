@@ -97,6 +97,15 @@ module fpga #
     parameter TX_RAM_SIZE = 32768,
     parameter RX_RAM_SIZE = 32768,
 
+    // Application block configuration
+    parameter APP_ENABLE = 0,
+    parameter APP_CTRL_ENABLE = 1,
+    parameter APP_DMA_ENABLE = 1,
+    parameter APP_AXIS_DIRECT_ENABLE = 1,
+    parameter APP_AXIS_SYNC_ENABLE = 1,
+    parameter APP_AXIS_IF_ENABLE = 1,
+    parameter APP_STAT_ENABLE = 1,
+
     // DMA interface configuration
     parameter DMA_LEN_WIDTH = 16,
     parameter DMA_TAG_WIDTH = 16,
@@ -123,6 +132,10 @@ module fpga #
     // AXI lite interface configuration (control)
     parameter AXIL_CTRL_DATA_WIDTH = 32,
     parameter AXIL_CTRL_ADDR_WIDTH = 24,
+
+    // AXI lite interface configuration (application control)
+    parameter AXIL_APP_CTRL_DATA_WIDTH = AXIL_CTRL_DATA_WIDTH,
+    parameter AXIL_APP_CTRL_ADDR_WIDTH = 24,
 
     // Ethernet interface configuration
     parameter AXIS_ETH_TX_PIPELINE = 0,
@@ -1622,6 +1635,15 @@ fpga_core #(
     .TX_RAM_SIZE(TX_RAM_SIZE),
     .RX_RAM_SIZE(RX_RAM_SIZE),
 
+    // Application block configuration
+    .APP_ENABLE(APP_ENABLE),
+    .APP_CTRL_ENABLE(APP_CTRL_ENABLE),
+    .APP_DMA_ENABLE(APP_DMA_ENABLE),
+    .APP_AXIS_DIRECT_ENABLE(APP_AXIS_DIRECT_ENABLE),
+    .APP_AXIS_SYNC_ENABLE(APP_AXIS_SYNC_ENABLE),
+    .APP_AXIS_IF_ENABLE(APP_AXIS_IF_ENABLE),
+    .APP_STAT_ENABLE(APP_STAT_ENABLE),
+
     // DMA interface configuration
     .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
     .DMA_TAG_WIDTH(DMA_TAG_WIDTH),
@@ -1649,6 +1671,10 @@ fpga_core #(
     // AXI lite interface configuration (control)
     .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .AXIL_CTRL_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+
+    // AXI lite interface configuration (application control)
+    .AXIL_APP_CTRL_DATA_WIDTH(AXIL_APP_CTRL_DATA_WIDTH),
+    .AXIL_APP_CTRL_ADDR_WIDTH(AXIL_APP_CTRL_ADDR_WIDTH),
 
     // Ethernet interface configuration
     .XGMII_DATA_WIDTH(XGMII_DATA_WIDTH),

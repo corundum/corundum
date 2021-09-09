@@ -106,6 +106,15 @@ module mqnic_core_pcie #
     parameter TX_RAM_SIZE = 32768,
     parameter RX_RAM_SIZE = 32768,
 
+    // Application block configuration
+    parameter APP_ENABLE = 0,
+    parameter APP_CTRL_ENABLE = 1,
+    parameter APP_DMA_ENABLE = 1,
+    parameter APP_AXIS_DIRECT_ENABLE = 1,
+    parameter APP_AXIS_SYNC_ENABLE = 1,
+    parameter APP_AXIS_IF_ENABLE = 1,
+    parameter APP_STAT_ENABLE = 1,
+
     // DMA interface configuration
     parameter DMA_LEN_WIDTH = 16,
     parameter DMA_TAG_WIDTH = 16,
@@ -140,6 +149,10 @@ module mqnic_core_pcie #
     parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT),
     parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
     parameter AXIL_CSR_PASSTHROUGH_ENABLE = 0,
+
+    // AXI lite interface configuration (application control)
+    parameter AXIL_APP_CTRL_DATA_WIDTH = AXIL_CTRL_DATA_WIDTH,
+    parameter AXIL_APP_CTRL_ADDR_WIDTH = 24,
 
     // Ethernet interface configuration
     parameter AXIS_DATA_WIDTH = 512,
@@ -357,8 +370,45 @@ parameter RAM_SEG_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH*2/RAM_SEG_COUNT;
 parameter RAM_SEG_ADDR_WIDTH = 12;
 parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8;
 parameter IF_RAM_SEL_WIDTH = PORTS_PER_IF > 1 ? $clog2(PORTS_PER_IF) : 1;
-parameter RAM_SEL_WIDTH = $clog2(IF_COUNT)+IF_RAM_SEL_WIDTH+1;
+parameter RAM_SEL_WIDTH = $clog2(IF_COUNT+(APP_ENABLE && APP_DMA_ENABLE ? 1 : 0))+IF_RAM_SEL_WIDTH+1;
 parameter RAM_ADDR_WIDTH = RAM_SEG_ADDR_WIDTH+$clog2(RAM_SEG_COUNT)+$clog2(RAM_SEG_BE_WIDTH);
+
+parameter AXIL_APP_CTRL_STRB_WIDTH = (AXIL_APP_CTRL_DATA_WIDTH/8);
+
+// PCIe connections
+wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  pcie_ctrl_rx_req_tlp_data;
+wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   pcie_ctrl_rx_req_tlp_hdr;
+wire [TLP_SEG_COUNT*3-1:0]                   pcie_ctrl_rx_req_tlp_bar_id;
+wire [TLP_SEG_COUNT*8-1:0]                   pcie_ctrl_rx_req_tlp_func_num;
+wire [TLP_SEG_COUNT-1:0]                     pcie_ctrl_rx_req_tlp_valid;
+wire [TLP_SEG_COUNT-1:0]                     pcie_ctrl_rx_req_tlp_sop;
+wire [TLP_SEG_COUNT-1:0]                     pcie_ctrl_rx_req_tlp_eop;
+wire                                         pcie_ctrl_rx_req_tlp_ready;
+
+wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  pcie_ctrl_tx_cpl_tlp_data;
+wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  pcie_ctrl_tx_cpl_tlp_strb;
+wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   pcie_ctrl_tx_cpl_tlp_hdr;
+wire [TLP_SEG_COUNT-1:0]                     pcie_ctrl_tx_cpl_tlp_valid;
+wire [TLP_SEG_COUNT-1:0]                     pcie_ctrl_tx_cpl_tlp_sop;
+wire [TLP_SEG_COUNT-1:0]                     pcie_ctrl_tx_cpl_tlp_eop;
+wire                                         pcie_ctrl_tx_cpl_tlp_ready;
+
+wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  pcie_app_ctrl_rx_req_tlp_data;
+wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   pcie_app_ctrl_rx_req_tlp_hdr;
+wire [TLP_SEG_COUNT*3-1:0]                   pcie_app_ctrl_rx_req_tlp_bar_id;
+wire [TLP_SEG_COUNT*8-1:0]                   pcie_app_ctrl_rx_req_tlp_func_num;
+wire [TLP_SEG_COUNT-1:0]                     pcie_app_ctrl_rx_req_tlp_valid;
+wire [TLP_SEG_COUNT-1:0]                     pcie_app_ctrl_rx_req_tlp_sop;
+wire [TLP_SEG_COUNT-1:0]                     pcie_app_ctrl_rx_req_tlp_eop;
+wire                                         pcie_app_ctrl_rx_req_tlp_ready;
+
+wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  pcie_app_ctrl_tx_cpl_tlp_data;
+wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  pcie_app_ctrl_tx_cpl_tlp_strb;
+wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   pcie_app_ctrl_tx_cpl_tlp_hdr;
+wire [TLP_SEG_COUNT-1:0]                     pcie_app_ctrl_tx_cpl_tlp_valid;
+wire [TLP_SEG_COUNT-1:0]                     pcie_app_ctrl_tx_cpl_tlp_sop;
+wire [TLP_SEG_COUNT-1:0]                     pcie_app_ctrl_tx_cpl_tlp_eop;
+wire                                         pcie_app_ctrl_tx_cpl_tlp_ready;
 
 // AXI lite connections
 wire [AXIL_CTRL_ADDR_WIDTH-1:0]  axil_ctrl_awaddr;
@@ -381,6 +431,26 @@ wire [1:0]                       axil_ctrl_rresp;
 wire                             axil_ctrl_rvalid;
 wire                             axil_ctrl_rready;
 
+wire [AXIL_APP_CTRL_ADDR_WIDTH-1:0]  axil_app_ctrl_awaddr;
+wire [2:0]                           axil_app_ctrl_awprot;
+wire                                 axil_app_ctrl_awvalid;
+wire                                 axil_app_ctrl_awready;
+wire [AXIL_APP_CTRL_DATA_WIDTH-1:0]  axil_app_ctrl_wdata;
+wire [AXIL_APP_CTRL_STRB_WIDTH-1:0]  axil_app_ctrl_wstrb;
+wire                                 axil_app_ctrl_wvalid;
+wire                                 axil_app_ctrl_wready;
+wire [1:0]                           axil_app_ctrl_bresp;
+wire                                 axil_app_ctrl_bvalid;
+wire                                 axil_app_ctrl_bready;
+wire [AXIL_APP_CTRL_ADDR_WIDTH-1:0]  axil_app_ctrl_araddr;
+wire [2:0]                           axil_app_ctrl_arprot;
+wire                                 axil_app_ctrl_arvalid;
+wire                                 axil_app_ctrl_arready;
+wire [AXIL_APP_CTRL_DATA_WIDTH-1:0]  axil_app_ctrl_rdata;
+wire [1:0]                           axil_app_ctrl_rresp;
+wire                                 axil_app_ctrl_rvalid;
+wire                                 axil_app_ctrl_rready;
+
 // DMA connections
 wire [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0]       dma_ram_wr_cmd_sel;
 wire [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]    dma_ram_wr_cmd_be;
@@ -398,8 +468,8 @@ wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_resp_valid;
 wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_resp_ready;
 
 // Error handling
-wire [1:0] pcie_error_uncor_int;
-wire [1:0] pcie_error_cor_int;
+wire [2:0] pcie_error_uncor_int;
+wire [2:0] pcie_error_cor_int;
 
 // DMA control
 wire [DMA_ADDR_WIDTH-1:0]  dma_read_desc_dma_addr;
@@ -428,6 +498,246 @@ wire                       dma_write_desc_status_valid;
 
 wire                       dma_enable = 1;
 
+generate
+
+if (APP_ENABLE) begin : pcie_tlp_mux
+
+    pcie_tlp_demux_bar #(
+        .PORTS(2),
+        .TLP_SEG_COUNT(TLP_SEG_COUNT),
+        .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
+        .TLP_SEG_STRB_WIDTH(TLP_SEG_STRB_WIDTH),
+        .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH),
+        .BAR_BASE(0),
+        .BAR_STRIDE(2),
+        .BAR_IDS(0)
+    )
+    pcie_tlp_demux_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * TLP input
+         */
+        .in_tlp_data(pcie_rx_req_tlp_data),
+        .in_tlp_strb(0),
+        .in_tlp_hdr(pcie_rx_req_tlp_hdr),
+        .in_tlp_bar_id(pcie_rx_req_tlp_bar_id),
+        .in_tlp_func_num(pcie_rx_req_tlp_func_num),
+        .in_tlp_error(0),
+        .in_tlp_valid(pcie_rx_req_tlp_valid),
+        .in_tlp_sop(pcie_rx_req_tlp_sop),
+        .in_tlp_eop(pcie_rx_req_tlp_eop),
+        .in_tlp_ready(pcie_rx_req_tlp_ready),
+
+        /*
+         * TLP output
+         */
+        .out_tlp_data(    {pcie_app_ctrl_rx_req_tlp_data,     pcie_ctrl_rx_req_tlp_data    }),
+        .out_tlp_strb(),
+        .out_tlp_hdr(     {pcie_app_ctrl_rx_req_tlp_hdr,      pcie_ctrl_rx_req_tlp_hdr     }),
+        .out_tlp_bar_id(  {pcie_app_ctrl_rx_req_tlp_bar_id,   pcie_ctrl_rx_req_tlp_bar_id  }),
+        .out_tlp_func_num({pcie_app_ctrl_rx_req_tlp_func_num, pcie_ctrl_rx_req_tlp_func_num}),
+        .out_tlp_error(),
+        .out_tlp_valid(   {pcie_app_ctrl_rx_req_tlp_valid,    pcie_ctrl_rx_req_tlp_valid   }),
+        .out_tlp_sop(     {pcie_app_ctrl_rx_req_tlp_sop,      pcie_ctrl_rx_req_tlp_sop     }),
+        .out_tlp_eop(     {pcie_app_ctrl_rx_req_tlp_eop,      pcie_ctrl_rx_req_tlp_eop     }),
+        .out_tlp_ready(   {pcie_app_ctrl_rx_req_tlp_ready,    pcie_ctrl_rx_req_tlp_ready   }),
+
+        /*
+         * Control
+         */
+        .enable(1'b1)
+    );
+
+    pcie_tlp_mux #(
+        .PORTS(2),
+        .TLP_SEG_COUNT(TLP_SEG_COUNT),
+        .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
+        .TLP_SEG_STRB_WIDTH(TLP_SEG_STRB_WIDTH),
+        .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH),
+        .ARB_TYPE_ROUND_ROBIN(1),
+        .ARB_LSB_HIGH_PRIORITY(1)
+    )
+    pcie_tlp_mux_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * TLP input
+         */
+        .in_tlp_data( {pcie_app_ctrl_tx_cpl_tlp_data,  pcie_ctrl_tx_cpl_tlp_data }),
+        .in_tlp_strb( {pcie_app_ctrl_tx_cpl_tlp_strb,  pcie_ctrl_tx_cpl_tlp_strb }),
+        .in_tlp_hdr(  {pcie_app_ctrl_tx_cpl_tlp_hdr,   pcie_ctrl_tx_cpl_tlp_hdr  }),
+        .in_tlp_bar_id(0),
+        .in_tlp_func_num(0),
+        .in_tlp_error(0),
+        .in_tlp_valid({pcie_app_ctrl_tx_cpl_tlp_valid, pcie_ctrl_tx_cpl_tlp_valid}),
+        .in_tlp_sop(  {pcie_app_ctrl_tx_cpl_tlp_sop,   pcie_ctrl_tx_cpl_tlp_sop  }),
+        .in_tlp_eop(  {pcie_app_ctrl_tx_cpl_tlp_eop,   pcie_ctrl_tx_cpl_tlp_eop  }),
+        .in_tlp_ready({pcie_app_ctrl_tx_cpl_tlp_ready, pcie_ctrl_tx_cpl_tlp_ready}),
+
+        /*
+         * TLP output
+         */
+        .out_tlp_data(pcie_tx_cpl_tlp_data),
+        .out_tlp_strb(pcie_tx_cpl_tlp_strb),
+        .out_tlp_hdr(pcie_tx_cpl_tlp_hdr),
+        .out_tlp_bar_id(),
+        .out_tlp_func_num(),
+        .out_tlp_error(),
+        .out_tlp_valid(pcie_tx_cpl_tlp_valid),
+        .out_tlp_sop(pcie_tx_cpl_tlp_sop),
+        .out_tlp_eop(pcie_tx_cpl_tlp_eop),
+        .out_tlp_ready(pcie_tx_cpl_tlp_ready)
+    );
+
+end else begin
+
+    assign pcie_ctrl_rx_req_tlp_data = pcie_rx_req_tlp_data;
+    assign pcie_ctrl_rx_req_tlp_hdr = pcie_rx_req_tlp_hdr;
+    assign pcie_ctrl_rx_req_tlp_bar_id = pcie_rx_req_tlp_bar_id;
+    assign pcie_ctrl_rx_req_tlp_func_num = pcie_rx_req_tlp_func_num;
+    assign pcie_ctrl_rx_req_tlp_valid = pcie_rx_req_tlp_valid;
+    assign pcie_ctrl_rx_req_tlp_sop = pcie_rx_req_tlp_sop;
+    assign pcie_ctrl_rx_req_tlp_eop = pcie_rx_req_tlp_eop;
+    assign pcie_rx_req_tlp_ready = pcie_ctrl_rx_req_tlp_ready;
+
+    assign pcie_tx_cpl_tlp_data = pcie_ctrl_tx_cpl_tlp_data;
+    assign pcie_tx_cpl_tlp_strb = pcie_ctrl_tx_cpl_tlp_strb;
+    assign pcie_tx_cpl_tlp_hdr = pcie_ctrl_tx_cpl_tlp_hdr;
+    assign pcie_tx_cpl_tlp_valid = pcie_ctrl_tx_cpl_tlp_valid;
+    assign pcie_tx_cpl_tlp_sop = pcie_ctrl_tx_cpl_tlp_sop;
+    assign pcie_tx_cpl_tlp_eop = pcie_ctrl_tx_cpl_tlp_eop;
+    assign pcie_ctrl_tx_cpl_tlp_ready = pcie_tx_cpl_tlp_ready;
+
+    assign pcie_app_ctrl_rx_req_tlp_data = 0;
+    assign pcie_app_ctrl_rx_req_tlp_hdr = 0;
+    assign pcie_app_ctrl_rx_req_tlp_valid = 0;
+    assign pcie_app_ctrl_rx_req_tlp_sop = 0;
+    assign pcie_app_ctrl_rx_req_tlp_eop = 0;
+
+    assign pcie_app_ctrl_tx_cpl_tlp_ready = 1'b1;
+
+    assign axil_app_ctrl_awaddr = 0;
+    assign axil_app_ctrl_awprot = 0;
+    assign axil_app_ctrl_awvalid = 1'b0;
+    assign axil_app_ctrl_wdata = 0;
+    assign axil_app_ctrl_wstrb = 0;
+    assign axil_app_ctrl_wvalid = 1'b0;
+    assign axil_app_ctrl_bready = 1'b1;
+    assign axil_app_ctrl_araddr = 0;
+    assign axil_app_ctrl_arprot = 0;
+    assign axil_app_ctrl_arvalid = 1'b0;
+    assign axil_app_ctrl_rready = 1'b1;
+
+    assign pcie_error_cor_int[1] = 1'b0;
+    assign pcie_error_uncor_int[1] = 1'b0;
+
+end
+
+if (APP_ENABLE) begin : pcie_app_ctrl
+
+    pcie_axil_master #(
+        .TLP_SEG_COUNT(TLP_SEG_COUNT),
+        .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
+        .TLP_SEG_STRB_WIDTH(TLP_SEG_STRB_WIDTH),
+        .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH),
+        .AXIL_DATA_WIDTH(AXIL_APP_CTRL_DATA_WIDTH),
+        .AXIL_ADDR_WIDTH(AXIL_APP_CTRL_ADDR_WIDTH),
+        .AXIL_STRB_WIDTH(AXIL_APP_CTRL_STRB_WIDTH),
+        .TLP_FORCE_64_BIT_ADDR(TLP_FORCE_64_BIT_ADDR)
+    )
+    pcie_axil_master_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * TLP input (request)
+         */
+        .rx_req_tlp_data(pcie_app_ctrl_rx_req_tlp_data),
+        .rx_req_tlp_hdr(pcie_app_ctrl_rx_req_tlp_hdr),
+        .rx_req_tlp_valid(pcie_app_ctrl_rx_req_tlp_valid),
+        .rx_req_tlp_sop(pcie_app_ctrl_rx_req_tlp_sop),
+        .rx_req_tlp_eop(pcie_app_ctrl_rx_req_tlp_eop),
+        .rx_req_tlp_ready(pcie_app_ctrl_rx_req_tlp_ready),
+
+        /*
+         * TLP output (completion)
+         */
+        .tx_cpl_tlp_data(pcie_app_ctrl_tx_cpl_tlp_data),
+        .tx_cpl_tlp_strb(pcie_app_ctrl_tx_cpl_tlp_strb),
+        .tx_cpl_tlp_hdr(pcie_app_ctrl_tx_cpl_tlp_hdr),
+        .tx_cpl_tlp_valid(pcie_app_ctrl_tx_cpl_tlp_valid),
+        .tx_cpl_tlp_sop(pcie_app_ctrl_tx_cpl_tlp_sop),
+        .tx_cpl_tlp_eop(pcie_app_ctrl_tx_cpl_tlp_eop),
+        .tx_cpl_tlp_ready(pcie_app_ctrl_tx_cpl_tlp_ready),
+
+        /*
+         * AXI Lite Master output
+         */
+        .m_axil_awaddr(axil_app_ctrl_awaddr),
+        .m_axil_awprot(axil_app_ctrl_awprot),
+        .m_axil_awvalid(axil_app_ctrl_awvalid),
+        .m_axil_awready(axil_app_ctrl_awready),
+        .m_axil_wdata(axil_app_ctrl_wdata),
+        .m_axil_wstrb(axil_app_ctrl_wstrb),
+        .m_axil_wvalid(axil_app_ctrl_wvalid),
+        .m_axil_wready(axil_app_ctrl_wready),
+        .m_axil_bresp(axil_app_ctrl_bresp),
+        .m_axil_bvalid(axil_app_ctrl_bvalid),
+        .m_axil_bready(axil_app_ctrl_bready),
+        .m_axil_araddr(axil_app_ctrl_araddr),
+        .m_axil_arprot(axil_app_ctrl_arprot),
+        .m_axil_arvalid(axil_app_ctrl_arvalid),
+        .m_axil_arready(axil_app_ctrl_arready),
+        .m_axil_rdata(axil_app_ctrl_rdata),
+        .m_axil_rresp(axil_app_ctrl_rresp),
+        .m_axil_rvalid(axil_app_ctrl_rvalid),
+        .m_axil_rready(axil_app_ctrl_rready),
+
+        /*
+         * Configuration
+         */
+        .completer_id({8'd0, 5'd0, 3'd0}),
+
+        /*
+         * Status
+         */
+        .status_error_cor(pcie_error_cor_int[1]),
+        .status_error_uncor(pcie_error_uncor_int[1])
+    );
+
+end else begin
+
+    assign pcie_app_ctrl_rx_req_tlp_ready = 1'b1;
+
+    assign pcie_app_ctrl_tx_cpl_tlp_data = 0;
+    assign pcie_app_ctrl_tx_cpl_tlp_strb = 0;
+    assign pcie_app_ctrl_tx_cpl_tlp_hdr = 0;
+    assign pcie_app_ctrl_tx_cpl_tlp_valid = 0;
+    assign pcie_app_ctrl_tx_cpl_tlp_sop = 0;
+    assign pcie_app_ctrl_tx_cpl_tlp_eop = 0;
+
+    assign axil_app_ctrl_awaddr = 0;
+    assign axil_app_ctrl_awprot = 0;
+    assign axil_app_ctrl_awvalid = 1'b0;
+    assign axil_app_ctrl_wdata = 0;
+    assign axil_app_ctrl_wstrb = 0;
+    assign axil_app_ctrl_wvalid = 1'b0;
+    assign axil_app_ctrl_bready = 1'b1;
+    assign axil_app_ctrl_araddr = 0;
+    assign axil_app_ctrl_arprot = 0;
+    assign axil_app_ctrl_arvalid = 1'b0;
+    assign axil_app_ctrl_rready = 1'b1;
+
+    assign pcie_error_cor_int[1] = 1'b0;
+    assign pcie_error_uncor_int[1] = 1'b0;
+
+end
+
+endgenerate
+
 pcie_axil_master #(
     .TLP_SEG_COUNT(TLP_SEG_COUNT),
     .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
@@ -445,23 +755,23 @@ pcie_axil_master_inst (
     /*
      * TLP input (request)
      */
-    .rx_req_tlp_data(pcie_rx_req_tlp_data),
-    .rx_req_tlp_hdr(pcie_rx_req_tlp_hdr),
-    .rx_req_tlp_valid(pcie_rx_req_tlp_valid),
-    .rx_req_tlp_sop(pcie_rx_req_tlp_sop),
-    .rx_req_tlp_eop(pcie_rx_req_tlp_eop),
-    .rx_req_tlp_ready(pcie_rx_req_tlp_ready),
+    .rx_req_tlp_data(pcie_ctrl_rx_req_tlp_data),
+    .rx_req_tlp_hdr(pcie_ctrl_rx_req_tlp_hdr),
+    .rx_req_tlp_valid(pcie_ctrl_rx_req_tlp_valid),
+    .rx_req_tlp_sop(pcie_ctrl_rx_req_tlp_sop),
+    .rx_req_tlp_eop(pcie_ctrl_rx_req_tlp_eop),
+    .rx_req_tlp_ready(pcie_ctrl_rx_req_tlp_ready),
 
     /*
      * TLP output (completion)
      */
-    .tx_cpl_tlp_data(pcie_tx_cpl_tlp_data),
-    .tx_cpl_tlp_strb(pcie_tx_cpl_tlp_strb),
-    .tx_cpl_tlp_hdr(pcie_tx_cpl_tlp_hdr),
-    .tx_cpl_tlp_valid(pcie_tx_cpl_tlp_valid),
-    .tx_cpl_tlp_sop(pcie_tx_cpl_tlp_sop),
-    .tx_cpl_tlp_eop(pcie_tx_cpl_tlp_eop),
-    .tx_cpl_tlp_ready(pcie_tx_cpl_tlp_ready),
+    .tx_cpl_tlp_data(pcie_ctrl_tx_cpl_tlp_data),
+    .tx_cpl_tlp_strb(pcie_ctrl_tx_cpl_tlp_strb),
+    .tx_cpl_tlp_hdr(pcie_ctrl_tx_cpl_tlp_hdr),
+    .tx_cpl_tlp_valid(pcie_ctrl_tx_cpl_tlp_valid),
+    .tx_cpl_tlp_sop(pcie_ctrl_tx_cpl_tlp_sop),
+    .tx_cpl_tlp_eop(pcie_ctrl_tx_cpl_tlp_eop),
+    .tx_cpl_tlp_ready(pcie_ctrl_tx_cpl_tlp_ready),
 
     /*
      * AXI Lite Master output
@@ -678,8 +988,8 @@ dma_if_pcie_inst (
     /*
      * Status
      */
-    .status_error_cor(pcie_error_cor_int[1]),
-    .status_error_uncor(pcie_error_uncor_int[1]),
+    .status_error_cor(pcie_error_cor_int[2]),
+    .status_error_uncor(pcie_error_uncor_int[2]),
 
     /*
      * Statistics
@@ -721,7 +1031,7 @@ dma_if_pcie_inst (
 );
 
 pulse_merge #(
-    .INPUT_WIDTH(2),
+    .INPUT_WIDTH(3),
     .COUNT_WIDTH(4)
 )
 pcie_error_cor_pm_inst (
@@ -734,7 +1044,7 @@ pcie_error_cor_pm_inst (
 );
 
 pulse_merge #(
-    .INPUT_WIDTH(2),
+    .INPUT_WIDTH(3),
     .COUNT_WIDTH(4)
 )
 pcie_error_uncor_pm_inst (
@@ -1038,6 +1348,15 @@ mqnic_core #(
     .TX_RAM_SIZE(TX_RAM_SIZE),
     .RX_RAM_SIZE(RX_RAM_SIZE),
 
+    // Application block configuration
+    .APP_ENABLE(APP_ENABLE),
+    .APP_CTRL_ENABLE(APP_CTRL_ENABLE),
+    .APP_DMA_ENABLE(APP_DMA_ENABLE),
+    .APP_AXIS_DIRECT_ENABLE(APP_AXIS_DIRECT_ENABLE),
+    .APP_AXIS_SYNC_ENABLE(APP_AXIS_SYNC_ENABLE),
+    .APP_AXIS_IF_ENABLE(APP_AXIS_IF_ENABLE),
+    .APP_STAT_ENABLE(APP_STAT_ENABLE),
+
     // DMA interface configuration
     .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
     .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
@@ -1060,6 +1379,11 @@ mqnic_core #(
     .AXIL_IF_CTRL_ADDR_WIDTH(AXIL_IF_CTRL_ADDR_WIDTH),
     .AXIL_CSR_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .AXIL_CSR_PASSTHROUGH_ENABLE(AXIL_CSR_PASSTHROUGH_ENABLE),
+
+    // AXI lite interface configuration (application control)
+    .AXIL_APP_CTRL_DATA_WIDTH(AXIL_APP_CTRL_DATA_WIDTH),
+    .AXIL_APP_CTRL_ADDR_WIDTH(AXIL_APP_CTRL_ADDR_WIDTH),
+    .AXIL_APP_CTRL_STRB_WIDTH(AXIL_APP_CTRL_STRB_WIDTH),
 
     // Ethernet interface configuration
     .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
@@ -1141,6 +1465,29 @@ core_inst (
     .s_axil_ctrl_rresp(axil_ctrl_rresp),
     .s_axil_ctrl_rvalid(axil_ctrl_rvalid),
     .s_axil_ctrl_rready(axil_ctrl_rready),
+
+    /*
+     * AXI-Lite slave interface (application control)
+     */
+    .s_axil_app_ctrl_awaddr(axil_app_ctrl_awaddr),
+    .s_axil_app_ctrl_awprot(axil_app_ctrl_awprot),
+    .s_axil_app_ctrl_awvalid(axil_app_ctrl_awvalid),
+    .s_axil_app_ctrl_awready(axil_app_ctrl_awready),
+    .s_axil_app_ctrl_wdata(axil_app_ctrl_wdata),
+    .s_axil_app_ctrl_wstrb(axil_app_ctrl_wstrb),
+    .s_axil_app_ctrl_wvalid(axil_app_ctrl_wvalid),
+    .s_axil_app_ctrl_wready(axil_app_ctrl_wready),
+    .s_axil_app_ctrl_bresp(axil_app_ctrl_bresp),
+    .s_axil_app_ctrl_bvalid(axil_app_ctrl_bvalid),
+    .s_axil_app_ctrl_bready(axil_app_ctrl_bready),
+    .s_axil_app_ctrl_araddr(axil_app_ctrl_araddr),
+    .s_axil_app_ctrl_arprot(axil_app_ctrl_arprot),
+    .s_axil_app_ctrl_arvalid(axil_app_ctrl_arvalid),
+    .s_axil_app_ctrl_arready(axil_app_ctrl_arready),
+    .s_axil_app_ctrl_rdata(axil_app_ctrl_rdata),
+    .s_axil_app_ctrl_rresp(axil_app_ctrl_rresp),
+    .s_axil_app_ctrl_rvalid(axil_app_ctrl_rvalid),
+    .s_axil_app_ctrl_rready(axil_app_ctrl_rready),
 
     /*
      * AXI-Lite master interface (passthrough for NIC control and status)

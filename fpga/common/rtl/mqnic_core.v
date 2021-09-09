@@ -106,6 +106,15 @@ module mqnic_core #
     parameter TX_RAM_SIZE = 32768,
     parameter RX_RAM_SIZE = 32768,
 
+    // Application block configuration
+    parameter APP_ENABLE = 0,
+    parameter APP_CTRL_ENABLE = 1,
+    parameter APP_DMA_ENABLE = 1,
+    parameter APP_AXIS_DIRECT_ENABLE = 1,
+    parameter APP_AXIS_SYNC_ENABLE = 1,
+    parameter APP_AXIS_IF_ENABLE = 1,
+    parameter APP_STAT_ENABLE = 1,
+
     // DMA interface configuration
     parameter DMA_ADDR_WIDTH = 64,
     parameter DMA_LEN_WIDTH = 16,
@@ -115,7 +124,7 @@ module mqnic_core #
     parameter RAM_SEG_ADDR_WIDTH = 12,
     parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
     parameter IF_RAM_SEL_WIDTH = PORTS_PER_IF > 1 ? $clog2(PORTS_PER_IF) : 1,
-    parameter RAM_SEL_WIDTH = $clog2(IF_COUNT)+IF_RAM_SEL_WIDTH+1,
+    parameter RAM_SEL_WIDTH = $clog2(IF_COUNT+(APP_ENABLE && APP_DMA_ENABLE ? 1 : 0))+IF_RAM_SEL_WIDTH+1,
     parameter RAM_ADDR_WIDTH = RAM_SEG_ADDR_WIDTH+$clog2(RAM_SEG_COUNT)+$clog2(RAM_SEG_BE_WIDTH),
     parameter RAM_PIPELINE = 2,
 
@@ -128,6 +137,11 @@ module mqnic_core #
     parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT),
     parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
     parameter AXIL_CSR_PASSTHROUGH_ENABLE = 0,
+
+    // AXI lite interface configuration (application control)
+    parameter AXIL_APP_CTRL_DATA_WIDTH = AXIL_CTRL_DATA_WIDTH,
+    parameter AXIL_APP_CTRL_ADDR_WIDTH = 16,
+    parameter AXIL_APP_CTRL_STRB_WIDTH = (AXIL_APP_CTRL_DATA_WIDTH/8),
 
     // Ethernet interface configuration
     parameter AXIS_DATA_WIDTH = 512,
@@ -173,6 +187,29 @@ module mqnic_core #
     output wire [1:0]                                   s_axil_ctrl_rresp,
     output wire                                         s_axil_ctrl_rvalid,
     input  wire                                         s_axil_ctrl_rready,
+
+    /*
+     * AXI-Lite slave interface (application control)
+     */
+    input  wire [AXIL_APP_CTRL_ADDR_WIDTH-1:0]          s_axil_app_ctrl_awaddr,
+    input  wire [2:0]                                   s_axil_app_ctrl_awprot,
+    input  wire                                         s_axil_app_ctrl_awvalid,
+    output wire                                         s_axil_app_ctrl_awready,
+    input  wire [AXIL_APP_CTRL_DATA_WIDTH-1:0]          s_axil_app_ctrl_wdata,
+    input  wire [AXIL_APP_CTRL_STRB_WIDTH-1:0]          s_axil_app_ctrl_wstrb,
+    input  wire                                         s_axil_app_ctrl_wvalid,
+    output wire                                         s_axil_app_ctrl_wready,
+    output wire [1:0]                                   s_axil_app_ctrl_bresp,
+    output wire                                         s_axil_app_ctrl_bvalid,
+    input  wire                                         s_axil_app_ctrl_bready,
+    input  wire [AXIL_APP_CTRL_ADDR_WIDTH-1:0]          s_axil_app_ctrl_araddr,
+    input  wire [2:0]                                   s_axil_app_ctrl_arprot,
+    input  wire                                         s_axil_app_ctrl_arvalid,
+    output wire                                         s_axil_app_ctrl_arready,
+    output wire [AXIL_APP_CTRL_DATA_WIDTH-1:0]          s_axil_app_ctrl_rdata,
+    output wire [1:0]                                   s_axil_app_ctrl_rresp,
+    output wire                                         s_axil_app_ctrl_rvalid,
+    input  wire                                         s_axil_app_ctrl_rready,
 
     /*
      * AXI-Lite master interface (passthrough for NIC control and status)
@@ -325,9 +362,16 @@ module mqnic_core #
     output wire                                         s_axis_stat_tready
 );
 
-parameter IF_DMA_TAG_WIDTH = DMA_TAG_WIDTH-$clog2(IF_COUNT)-1;
+parameter IF_COUNT_INT = IF_COUNT+(APP_ENABLE && APP_DMA_ENABLE ? 1 : 0);
+
+parameter IF_DMA_TAG_WIDTH = DMA_TAG_WIDTH-$clog2(IF_COUNT_INT)-1;
 
 parameter AXIS_SYNC_KEEP_WIDTH = AXIS_SYNC_DATA_WIDTH/(AXIS_DATA_WIDTH/AXIS_KEEP_WIDTH);
+
+parameter AXIS_IF_DATA_WIDTH = AXIS_SYNC_DATA_WIDTH;
+parameter AXIS_IF_KEEP_WIDTH = AXIS_SYNC_KEEP_WIDTH;
+parameter AXIS_IF_TX_USER_WIDTH = AXIS_TX_USER_WIDTH;
+parameter AXIS_IF_RX_USER_WIDTH = AXIS_RX_USER_WIDTH;
 
 // parameter sizing helpers
 function [31:0] w_32(input [31:0] val);
@@ -374,6 +418,26 @@ wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_stats_rdata;
 wire [1:0]                       axil_stats_rresp;
 wire                             axil_stats_rvalid;
 wire                             axil_stats_rready;
+
+wire [AXIL_CTRL_ADDR_WIDTH-1:0]  axil_ctrl_app_awaddr;
+wire [2:0]                       axil_ctrl_app_awprot;
+wire                             axil_ctrl_app_awvalid;
+wire                             axil_ctrl_app_awready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_ctrl_app_wdata;
+wire [AXIL_CTRL_STRB_WIDTH-1:0]  axil_ctrl_app_wstrb;
+wire                             axil_ctrl_app_wvalid;
+wire                             axil_ctrl_app_wready;
+wire [1:0]                       axil_ctrl_app_bresp;
+wire                             axil_ctrl_app_bvalid;
+wire                             axil_ctrl_app_bready;
+wire [AXIL_CTRL_ADDR_WIDTH-1:0]  axil_ctrl_app_araddr;
+wire [2:0]                       axil_ctrl_app_arprot;
+wire                             axil_ctrl_app_arvalid;
+wire                             axil_ctrl_app_arready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_ctrl_app_rdata;
+wire [1:0]                       axil_ctrl_app_rresp;
+wire                             axil_ctrl_app_rvalid;
+wire                             axil_ctrl_app_rready;
 
 // control registers
 wire ctrl_reg_wr_wait_int;
@@ -526,6 +590,89 @@ mqnic_ptp_inst (
     .ptp_perout_pulse(ptp_perout_pulse)
 );
 
+localparam CTRL_XBAR_MAIN_OFFSET = 0;
+localparam CTRL_XBAR_APP_OFFSET = CTRL_XBAR_MAIN_OFFSET + 1;
+localparam CTRL_XBAR_S_COUNT = CTRL_XBAR_APP_OFFSET + (APP_ENABLE && APP_CTRL_ENABLE ? 1 : 0);
+
+wire [CTRL_XBAR_S_COUNT*AXIL_CTRL_ADDR_WIDTH-1:0]  axil_ctrl_xbar_awaddr;
+wire [CTRL_XBAR_S_COUNT*3-1:0]                     axil_ctrl_xbar_awprot;
+wire [CTRL_XBAR_S_COUNT-1:0]                       axil_ctrl_xbar_awvalid;
+wire [CTRL_XBAR_S_COUNT-1:0]                       axil_ctrl_xbar_awready;
+wire [CTRL_XBAR_S_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_ctrl_xbar_wdata;
+wire [CTRL_XBAR_S_COUNT*AXIL_CTRL_STRB_WIDTH-1:0]  axil_ctrl_xbar_wstrb;
+wire [CTRL_XBAR_S_COUNT-1:0]                       axil_ctrl_xbar_wvalid;
+wire [CTRL_XBAR_S_COUNT-1:0]                       axil_ctrl_xbar_wready;
+wire [CTRL_XBAR_S_COUNT*2-1:0]                     axil_ctrl_xbar_bresp;
+wire [CTRL_XBAR_S_COUNT-1:0]                       axil_ctrl_xbar_bvalid;
+wire [CTRL_XBAR_S_COUNT-1:0]                       axil_ctrl_xbar_bready;
+wire [CTRL_XBAR_S_COUNT*AXIL_CTRL_ADDR_WIDTH-1:0]  axil_ctrl_xbar_araddr;
+wire [CTRL_XBAR_S_COUNT*3-1:0]                     axil_ctrl_xbar_arprot;
+wire [CTRL_XBAR_S_COUNT-1:0]                       axil_ctrl_xbar_arvalid;
+wire [CTRL_XBAR_S_COUNT-1:0]                       axil_ctrl_xbar_arready;
+wire [CTRL_XBAR_S_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_ctrl_xbar_rdata;
+wire [CTRL_XBAR_S_COUNT*2-1:0]                     axil_ctrl_xbar_rresp;
+wire [CTRL_XBAR_S_COUNT-1:0]                       axil_ctrl_xbar_rvalid;
+wire [CTRL_XBAR_S_COUNT-1:0]                       axil_ctrl_xbar_rready;
+
+generate
+
+assign axil_ctrl_xbar_awaddr[CTRL_XBAR_MAIN_OFFSET*AXIL_CTRL_ADDR_WIDTH +: AXIL_CTRL_ADDR_WIDTH] = s_axil_ctrl_awaddr;
+assign axil_ctrl_xbar_awprot[CTRL_XBAR_MAIN_OFFSET*3 +: 3] = s_axil_ctrl_awprot;
+assign axil_ctrl_xbar_awvalid[CTRL_XBAR_MAIN_OFFSET +: 1] = s_axil_ctrl_awvalid;
+assign s_axil_ctrl_awready = axil_ctrl_xbar_awready[CTRL_XBAR_MAIN_OFFSET +: 1];
+assign axil_ctrl_xbar_wdata[CTRL_XBAR_MAIN_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH] = s_axil_ctrl_wdata;
+assign axil_ctrl_xbar_wstrb[CTRL_XBAR_MAIN_OFFSET*AXIL_CTRL_STRB_WIDTH +: AXIL_CTRL_STRB_WIDTH] = s_axil_ctrl_wstrb;
+assign axil_ctrl_xbar_wvalid[CTRL_XBAR_MAIN_OFFSET +: 1] = s_axil_ctrl_wvalid;
+assign s_axil_ctrl_wready = axil_ctrl_xbar_wready[CTRL_XBAR_MAIN_OFFSET +: 1];
+assign s_axil_ctrl_bresp = axil_ctrl_xbar_bresp[CTRL_XBAR_MAIN_OFFSET*2 +: 2];
+assign s_axil_ctrl_bvalid = axil_ctrl_xbar_bvalid[CTRL_XBAR_MAIN_OFFSET +: 1];
+assign axil_ctrl_xbar_bready[CTRL_XBAR_MAIN_OFFSET +: 1] = s_axil_ctrl_bready;
+assign axil_ctrl_xbar_araddr[CTRL_XBAR_MAIN_OFFSET*AXIL_CTRL_ADDR_WIDTH +: AXIL_CTRL_ADDR_WIDTH] = s_axil_ctrl_araddr;
+assign axil_ctrl_xbar_arprot[CTRL_XBAR_MAIN_OFFSET*3 +: 3] = s_axil_ctrl_arprot;
+assign axil_ctrl_xbar_arvalid[CTRL_XBAR_MAIN_OFFSET +: 1] = s_axil_ctrl_arvalid;
+assign s_axil_ctrl_arready = axil_ctrl_xbar_arready[CTRL_XBAR_MAIN_OFFSET +: 1];
+assign s_axil_ctrl_rdata = axil_ctrl_xbar_rdata[CTRL_XBAR_MAIN_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH];
+assign s_axil_ctrl_rresp = axil_ctrl_xbar_rresp[CTRL_XBAR_MAIN_OFFSET*2 +: 2];
+assign s_axil_ctrl_rvalid = axil_ctrl_xbar_rvalid[CTRL_XBAR_MAIN_OFFSET +: 1];
+assign axil_ctrl_xbar_rready[CTRL_XBAR_MAIN_OFFSET +: 1] = s_axil_ctrl_rready;
+
+if (APP_ENABLE && APP_CTRL_ENABLE) begin
+
+    assign axil_ctrl_xbar_awaddr[CTRL_XBAR_APP_OFFSET*AXIL_CTRL_ADDR_WIDTH +: AXIL_CTRL_ADDR_WIDTH] = axil_ctrl_app_awaddr;
+    assign axil_ctrl_xbar_awprot[CTRL_XBAR_APP_OFFSET*3 +: 3] = axil_ctrl_app_awprot;
+    assign axil_ctrl_xbar_awvalid[CTRL_XBAR_APP_OFFSET +: 1] = axil_ctrl_app_awvalid;
+    assign axil_ctrl_app_awready = axil_ctrl_xbar_awready[CTRL_XBAR_APP_OFFSET +: 1];
+    assign axil_ctrl_xbar_wdata[CTRL_XBAR_APP_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH] = axil_ctrl_app_wdata;
+    assign axil_ctrl_xbar_wstrb[CTRL_XBAR_APP_OFFSET*AXIL_CTRL_STRB_WIDTH +: AXIL_CTRL_STRB_WIDTH] = axil_ctrl_app_wstrb;
+    assign axil_ctrl_xbar_wvalid[CTRL_XBAR_APP_OFFSET +: 1] = axil_ctrl_app_wvalid;
+    assign axil_ctrl_app_wready = axil_ctrl_xbar_wready[CTRL_XBAR_APP_OFFSET +: 1];
+    assign axil_ctrl_app_bresp = axil_ctrl_xbar_bresp[CTRL_XBAR_APP_OFFSET*2 +: 2];
+    assign axil_ctrl_app_bvalid = axil_ctrl_xbar_bvalid[CTRL_XBAR_APP_OFFSET +: 1];
+    assign axil_ctrl_xbar_bready[CTRL_XBAR_APP_OFFSET +: 1] = axil_ctrl_app_bready;
+    assign axil_ctrl_xbar_araddr[CTRL_XBAR_APP_OFFSET*AXIL_CTRL_ADDR_WIDTH +: AXIL_CTRL_ADDR_WIDTH] = axil_ctrl_app_araddr;
+    assign axil_ctrl_xbar_arprot[CTRL_XBAR_APP_OFFSET*3 +: 3] = axil_ctrl_app_arprot;
+    assign axil_ctrl_xbar_arvalid[CTRL_XBAR_APP_OFFSET +: 1] = axil_ctrl_app_arvalid;
+    assign axil_ctrl_app_arready = axil_ctrl_xbar_arready[CTRL_XBAR_APP_OFFSET +: 1];
+    assign axil_ctrl_app_rdata = axil_ctrl_xbar_rdata[CTRL_XBAR_APP_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH];
+    assign axil_ctrl_app_rresp = axil_ctrl_xbar_rresp[CTRL_XBAR_APP_OFFSET*2 +: 2];
+    assign axil_ctrl_app_rvalid = axil_ctrl_xbar_rvalid[CTRL_XBAR_APP_OFFSET +: 1];
+    assign axil_ctrl_xbar_rready[CTRL_XBAR_APP_OFFSET +: 1] = axil_ctrl_app_rready;
+
+end else begin
+
+    assign axil_ctrl_app_awready = 0;
+    assign axil_ctrl_app_wready = 0;
+    assign axil_ctrl_app_bresp = 0;
+    assign axil_ctrl_app_bvalid = 0;
+    assign axil_ctrl_app_arready = 0;
+    assign axil_ctrl_app_rdata = 0;
+    assign axil_ctrl_app_rresp = 0;
+    assign axil_ctrl_app_rvalid = 0;
+
+end
+
+endgenerate
+
 wire [IF_COUNT*AXIL_CTRL_ADDR_WIDTH-1:0]  axil_if_ctrl_awaddr;
 wire [IF_COUNT*3-1:0]                     axil_if_ctrl_awprot;
 wire [IF_COUNT-1:0]                       axil_if_ctrl_awvalid;
@@ -546,58 +693,38 @@ wire [IF_COUNT*2-1:0]                     axil_if_ctrl_rresp;
 wire [IF_COUNT-1:0]                       axil_if_ctrl_rvalid;
 wire [IF_COUNT-1:0]                       axil_if_ctrl_rready;
 
-wire [IF_COUNT*AXIL_CSR_ADDR_WIDTH-1:0]   axil_if_csr_awaddr;
-wire [IF_COUNT*3-1:0]                     axil_if_csr_awprot;
-wire [IF_COUNT-1:0]                       axil_if_csr_awvalid;
-wire [IF_COUNT-1:0]                       axil_if_csr_awready;
-wire [IF_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_if_csr_wdata;
-wire [IF_COUNT*AXIL_CTRL_STRB_WIDTH-1:0]  axil_if_csr_wstrb;
-wire [IF_COUNT-1:0]                       axil_if_csr_wvalid;
-wire [IF_COUNT-1:0]                       axil_if_csr_wready;
-wire [IF_COUNT*2-1:0]                     axil_if_csr_bresp;
-wire [IF_COUNT-1:0]                       axil_if_csr_bvalid;
-wire [IF_COUNT-1:0]                       axil_if_csr_bready;
-wire [IF_COUNT*AXIL_CSR_ADDR_WIDTH-1:0]   axil_if_csr_araddr;
-wire [IF_COUNT*3-1:0]                     axil_if_csr_arprot;
-wire [IF_COUNT-1:0]                       axil_if_csr_arvalid;
-wire [IF_COUNT-1:0]                       axil_if_csr_arready;
-wire [IF_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_if_csr_rdata;
-wire [IF_COUNT*2-1:0]                     axil_if_csr_rresp;
-wire [IF_COUNT-1:0]                       axil_if_csr_rvalid;
-wire [IF_COUNT-1:0]                       axil_if_csr_rready;
-
 axil_crossbar #(
     .DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
-    .S_COUNT(1),
+    .S_COUNT(CTRL_XBAR_S_COUNT),
     .M_COUNT(IF_COUNT),
     .M_BASE_ADDR(0),
     .M_ADDR_WIDTH({IF_COUNT{w_32(AXIL_IF_CTRL_ADDR_WIDTH)}}),
-    .M_CONNECT_READ({IF_COUNT{1'b1}}),
-    .M_CONNECT_WRITE({IF_COUNT{1'b1}})
+    .M_CONNECT_READ({IF_COUNT{{CTRL_XBAR_S_COUNT{1'b1}}}}),
+    .M_CONNECT_WRITE({IF_COUNT{{CTRL_XBAR_S_COUNT{1'b1}}}})
 )
 axil_crossbar_inst (
     .clk(clk),
     .rst(rst),
-    .s_axil_awaddr(s_axil_ctrl_awaddr),
-    .s_axil_awprot(s_axil_ctrl_awprot),
-    .s_axil_awvalid(s_axil_ctrl_awvalid),
-    .s_axil_awready(s_axil_ctrl_awready),
-    .s_axil_wdata(s_axil_ctrl_wdata),
-    .s_axil_wstrb(s_axil_ctrl_wstrb),
-    .s_axil_wvalid(s_axil_ctrl_wvalid),
-    .s_axil_wready(s_axil_ctrl_wready),
-    .s_axil_bresp(s_axil_ctrl_bresp),
-    .s_axil_bvalid(s_axil_ctrl_bvalid),
-    .s_axil_bready(s_axil_ctrl_bready),
-    .s_axil_araddr(s_axil_ctrl_araddr),
-    .s_axil_arprot(s_axil_ctrl_arprot),
-    .s_axil_arvalid(s_axil_ctrl_arvalid),
-    .s_axil_arready(s_axil_ctrl_arready),
-    .s_axil_rdata(s_axil_ctrl_rdata),
-    .s_axil_rresp(s_axil_ctrl_rresp),
-    .s_axil_rvalid(s_axil_ctrl_rvalid),
-    .s_axil_rready(s_axil_ctrl_rready),
+    .s_axil_awaddr(axil_ctrl_xbar_awaddr),
+    .s_axil_awprot(axil_ctrl_xbar_awprot),
+    .s_axil_awvalid(axil_ctrl_xbar_awvalid),
+    .s_axil_awready(axil_ctrl_xbar_awready),
+    .s_axil_wdata(axil_ctrl_xbar_wdata),
+    .s_axil_wstrb(axil_ctrl_xbar_wstrb),
+    .s_axil_wvalid(axil_ctrl_xbar_wvalid),
+    .s_axil_wready(axil_ctrl_xbar_wready),
+    .s_axil_bresp(axil_ctrl_xbar_bresp),
+    .s_axil_bvalid(axil_ctrl_xbar_bvalid),
+    .s_axil_bready(axil_ctrl_xbar_bready),
+    .s_axil_araddr(axil_ctrl_xbar_araddr),
+    .s_axil_arprot(axil_ctrl_xbar_arprot),
+    .s_axil_arvalid(axil_ctrl_xbar_arvalid),
+    .s_axil_arready(axil_ctrl_xbar_arready),
+    .s_axil_rdata(axil_ctrl_xbar_rdata),
+    .s_axil_rresp(axil_ctrl_xbar_rresp),
+    .s_axil_rvalid(axil_ctrl_xbar_rvalid),
+    .s_axil_rready(axil_ctrl_xbar_rready),
     .m_axil_awaddr(axil_if_ctrl_awaddr),
     .m_axil_awprot(axil_if_ctrl_awprot),
     .m_axil_awvalid(axil_if_ctrl_awvalid),
@@ -618,6 +745,26 @@ axil_crossbar_inst (
     .m_axil_rvalid(axil_if_ctrl_rvalid),
     .m_axil_rready(axil_if_ctrl_rready)
 );
+
+wire [IF_COUNT*AXIL_CSR_ADDR_WIDTH-1:0]   axil_if_csr_awaddr;
+wire [IF_COUNT*3-1:0]                     axil_if_csr_awprot;
+wire [IF_COUNT-1:0]                       axil_if_csr_awvalid;
+wire [IF_COUNT-1:0]                       axil_if_csr_awready;
+wire [IF_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_if_csr_wdata;
+wire [IF_COUNT*AXIL_CTRL_STRB_WIDTH-1:0]  axil_if_csr_wstrb;
+wire [IF_COUNT-1:0]                       axil_if_csr_wvalid;
+wire [IF_COUNT-1:0]                       axil_if_csr_wready;
+wire [IF_COUNT*2-1:0]                     axil_if_csr_bresp;
+wire [IF_COUNT-1:0]                       axil_if_csr_bvalid;
+wire [IF_COUNT-1:0]                       axil_if_csr_bready;
+wire [IF_COUNT*AXIL_CSR_ADDR_WIDTH-1:0]   axil_if_csr_araddr;
+wire [IF_COUNT*3-1:0]                     axil_if_csr_arprot;
+wire [IF_COUNT-1:0]                       axil_if_csr_arvalid;
+wire [IF_COUNT-1:0]                       axil_if_csr_arready;
+wire [IF_COUNT*AXIL_CTRL_DATA_WIDTH-1:0]  axil_if_csr_rdata;
+wire [IF_COUNT*2-1:0]                     axil_if_csr_rresp;
+wire [IF_COUNT-1:0]                       axil_if_csr_rvalid;
+wire [IF_COUNT-1:0]                       axil_if_csr_rready;
 
 localparam CSR_XBAR_CSR_OFFSET = 0;
 localparam CSR_XBAR_STAT_OFFSET = CSR_XBAR_CSR_OFFSET + 1;
@@ -700,6 +847,20 @@ if (STAT_ENABLE) begin
     assign axil_csr_xbar_rvalid[CSR_XBAR_STAT_OFFSET +: 1] = axil_stats_rvalid;
     assign axil_stats_rready = axil_csr_xbar_rready[CSR_XBAR_STAT_OFFSET +: 1];
 
+end else begin
+
+    assign axil_stats_awaddr = 0;
+    assign axil_stats_awprot = 0;
+    assign axil_stats_awvalid = 0;
+    assign axil_stats_wdata = 0;
+    assign axil_stats_wstrb = 0;
+    assign axil_stats_wvalid = 0;
+    assign axil_stats_bready = 0;
+    assign axil_stats_araddr = 0;
+    assign axil_stats_arprot = 0;
+    assign axil_stats_arvalid = 0;
+    assign axil_stats_rready = 0;
+
 end
 
 if (AXIL_CSR_PASSTHROUGH_ENABLE) begin
@@ -723,6 +884,20 @@ if (AXIL_CSR_PASSTHROUGH_ENABLE) begin
     assign axil_csr_xbar_rresp[CSR_XBAR_PASSTHROUGH_OFFSET*2 +: 2] = m_axil_csr_rresp;
     assign axil_csr_xbar_rvalid[CSR_XBAR_PASSTHROUGH_OFFSET +: 1] = m_axil_csr_rvalid;
     assign m_axil_csr_rready = axil_csr_xbar_rready[CSR_XBAR_PASSTHROUGH_OFFSET +: 1];
+
+end else begin
+
+    assign m_axil_csr_awaddr = 0;
+    assign m_axil_csr_awprot = 0;
+    assign m_axil_csr_awvalid = 0;
+    assign m_axil_csr_wdata = 0;
+    assign m_axil_csr_wstrb = 0;
+    assign m_axil_csr_wvalid = 0;
+    assign m_axil_csr_bready = 0;
+    assign m_axil_csr_araddr = 0;
+    assign m_axil_csr_arprot = 0;
+    assign m_axil_csr_arvalid = 0;
+    assign m_axil_csr_rready = 0;
 
 end
 
@@ -781,7 +956,71 @@ axil_csr_crossbar_inst (
     .m_axil_rready(axil_csr_xbar_rready)
 );
 
+wire [STAT_INC_WIDTH-1:0]  axis_stat_tdata;
+wire [STAT_ID_WIDTH-1:0]   axis_stat_tid;
+wire                       axis_stat_tvalid;
+wire                       axis_stat_tready;
+
+wire [STAT_INC_WIDTH-1:0]  axis_app_stat_tdata;
+wire [STAT_ID_WIDTH-1:0]   axis_app_stat_tid;
+wire                       axis_app_stat_tvalid;
+wire                       axis_app_stat_tready;
+
 generate
+
+if (STAT_ENABLE && (APP_ENABLE && APP_STAT_ENABLE)) begin
+
+    axis_arb_mux #(
+        .S_COUNT(2),
+        .DATA_WIDTH(STAT_INC_WIDTH),
+        .KEEP_ENABLE(0),
+        .ID_ENABLE(1),
+        .ID_WIDTH(STAT_ID_WIDTH),
+        .DEST_ENABLE(0),
+        .USER_ENABLE(0),
+        .LAST_ENABLE(0),
+        .ARB_TYPE_ROUND_ROBIN(1),
+        .ARB_LSB_HIGH_PRIORITY(1)
+    )
+    axis_stat_mux_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * AXI Stream inputs
+         */
+        .s_axis_tdata({axis_app_stat_tdata, s_axis_stat_tdata}),
+        .s_axis_tkeep(0),
+        .s_axis_tvalid({axis_app_stat_tvalid, s_axis_stat_tvalid}),
+        .s_axis_tready({axis_app_stat_tready, s_axis_stat_tready}),
+        .s_axis_tlast(0),
+        .s_axis_tid({axis_app_stat_tid, s_axis_stat_tid}),
+        .s_axis_tdest(0),
+        .s_axis_tuser(0),
+
+        /*
+         * AXI Stream output
+         */
+        .m_axis_tdata(axis_stat_tdata),
+        .m_axis_tkeep(),
+        .m_axis_tvalid(axis_stat_tvalid),
+        .m_axis_tready(axis_stat_tready),
+        .m_axis_tlast(),
+        .m_axis_tid(axis_stat_tid),
+        .m_axis_tdest(),
+        .m_axis_tuser()
+    );
+
+end else begin
+
+    assign axis_stat_tdata = s_axis_stat_tdata;
+    assign axis_stat_tid = s_axis_stat_tid;
+    assign axis_stat_tvalid = s_axis_stat_tvalid;
+    assign s_axis_stat_tready = axis_stat_tready;
+
+    assign axis_app_stat_tready = 1'b1;
+
+end
 
 if (STAT_ENABLE) begin
 
@@ -800,10 +1039,10 @@ if (STAT_ENABLE) begin
         /*
          * Statistics increment input
          */
-        .s_axis_stat_tdata(s_axis_stat_tdata),
-        .s_axis_stat_tid(s_axis_stat_tid),
-        .s_axis_stat_tvalid(s_axis_stat_tvalid),
-        .s_axis_stat_tready(s_axis_stat_tready),
+        .s_axis_stat_tdata(axis_stat_tdata),
+        .s_axis_stat_tid(axis_stat_tid),
+        .s_axis_stat_tvalid(axis_stat_tvalid),
+        .s_axis_stat_tready(axis_stat_tready),
 
         /*
          * AXI Lite register interface
@@ -837,6 +1076,7 @@ end
 
 endgenerate
 
+// data/control DMA mux (priority)
 wire [DMA_ADDR_WIDTH-1:0]  ctrl_dma_read_desc_dma_addr;
 wire [RAM_SEL_WIDTH-2:0]   ctrl_dma_read_desc_ram_sel;
 wire [RAM_ADDR_WIDTH-1:0]  ctrl_dma_read_desc_ram_addr;
@@ -1044,90 +1284,91 @@ dma_if_mux_inst (
     .ram_rd_resp_ready({data_dma_ram_rd_resp_ready, ctrl_dma_ram_rd_resp_ready})
 );
 
-wire [IF_COUNT*DMA_ADDR_WIDTH-1:0]    if_ctrl_dma_read_desc_dma_addr;
-wire [IF_COUNT*IF_RAM_SEL_WIDTH-1:0]  if_ctrl_dma_read_desc_ram_sel;
-wire [IF_COUNT*RAM_ADDR_WIDTH-1:0]    if_ctrl_dma_read_desc_ram_addr;
-wire [IF_COUNT*DMA_LEN_WIDTH-1:0]     if_ctrl_dma_read_desc_len;
-wire [IF_COUNT*IF_DMA_TAG_WIDTH-1:0]  if_ctrl_dma_read_desc_tag;
-wire [IF_COUNT-1:0]                   if_ctrl_dma_read_desc_valid;
-wire [IF_COUNT-1:0]                   if_ctrl_dma_read_desc_ready;
+// interface DMA mux (round-robin)
+wire [IF_COUNT_INT*DMA_ADDR_WIDTH-1:0]    if_ctrl_dma_read_desc_dma_addr;
+wire [IF_COUNT_INT*IF_RAM_SEL_WIDTH-1:0]  if_ctrl_dma_read_desc_ram_sel;
+wire [IF_COUNT_INT*RAM_ADDR_WIDTH-1:0]    if_ctrl_dma_read_desc_ram_addr;
+wire [IF_COUNT_INT*DMA_LEN_WIDTH-1:0]     if_ctrl_dma_read_desc_len;
+wire [IF_COUNT_INT*IF_DMA_TAG_WIDTH-1:0]  if_ctrl_dma_read_desc_tag;
+wire [IF_COUNT_INT-1:0]                   if_ctrl_dma_read_desc_valid;
+wire [IF_COUNT_INT-1:0]                   if_ctrl_dma_read_desc_ready;
 
-wire [IF_COUNT*IF_DMA_TAG_WIDTH-1:0]  if_ctrl_dma_read_desc_status_tag;
-wire [IF_COUNT*4-1:0]                 if_ctrl_dma_read_desc_status_error;
-wire [IF_COUNT-1:0]                   if_ctrl_dma_read_desc_status_valid;
+wire [IF_COUNT_INT*IF_DMA_TAG_WIDTH-1:0]  if_ctrl_dma_read_desc_status_tag;
+wire [IF_COUNT_INT*4-1:0]                 if_ctrl_dma_read_desc_status_error;
+wire [IF_COUNT_INT-1:0]                   if_ctrl_dma_read_desc_status_valid;
 
-wire [IF_COUNT*DMA_ADDR_WIDTH-1:0]    if_ctrl_dma_write_desc_dma_addr;
-wire [IF_COUNT*IF_RAM_SEL_WIDTH-1:0]  if_ctrl_dma_write_desc_ram_sel;
-wire [IF_COUNT*RAM_ADDR_WIDTH-1:0]    if_ctrl_dma_write_desc_ram_addr;
-wire [IF_COUNT*DMA_LEN_WIDTH-1:0]     if_ctrl_dma_write_desc_len;
-wire [IF_COUNT*IF_DMA_TAG_WIDTH-1:0]  if_ctrl_dma_write_desc_tag;
-wire [IF_COUNT-1:0]                   if_ctrl_dma_write_desc_valid;
-wire [IF_COUNT-1:0]                   if_ctrl_dma_write_desc_ready;
+wire [IF_COUNT_INT*DMA_ADDR_WIDTH-1:0]    if_ctrl_dma_write_desc_dma_addr;
+wire [IF_COUNT_INT*IF_RAM_SEL_WIDTH-1:0]  if_ctrl_dma_write_desc_ram_sel;
+wire [IF_COUNT_INT*RAM_ADDR_WIDTH-1:0]    if_ctrl_dma_write_desc_ram_addr;
+wire [IF_COUNT_INT*DMA_LEN_WIDTH-1:0]     if_ctrl_dma_write_desc_len;
+wire [IF_COUNT_INT*IF_DMA_TAG_WIDTH-1:0]  if_ctrl_dma_write_desc_tag;
+wire [IF_COUNT_INT-1:0]                   if_ctrl_dma_write_desc_valid;
+wire [IF_COUNT_INT-1:0]                   if_ctrl_dma_write_desc_ready;
 
-wire [IF_COUNT*IF_DMA_TAG_WIDTH-1:0]  if_ctrl_dma_write_desc_status_tag;
-wire [IF_COUNT*4-1:0]                 if_ctrl_dma_write_desc_status_error;
-wire [IF_COUNT-1:0]                   if_ctrl_dma_write_desc_status_valid;
+wire [IF_COUNT_INT*IF_DMA_TAG_WIDTH-1:0]  if_ctrl_dma_write_desc_status_tag;
+wire [IF_COUNT_INT*4-1:0]                 if_ctrl_dma_write_desc_status_error;
+wire [IF_COUNT_INT-1:0]                   if_ctrl_dma_write_desc_status_valid;
 
-wire [IF_COUNT*DMA_ADDR_WIDTH-1:0]    if_data_dma_read_desc_dma_addr;
-wire [IF_COUNT*IF_RAM_SEL_WIDTH-1:0]  if_data_dma_read_desc_ram_sel;
-wire [IF_COUNT*RAM_ADDR_WIDTH-1:0]    if_data_dma_read_desc_ram_addr;
-wire [IF_COUNT*DMA_LEN_WIDTH-1:0]     if_data_dma_read_desc_len;
-wire [IF_COUNT*IF_DMA_TAG_WIDTH-1:0]  if_data_dma_read_desc_tag;
-wire [IF_COUNT-1:0]                   if_data_dma_read_desc_valid;
-wire [IF_COUNT-1:0]                   if_data_dma_read_desc_ready;
+wire [IF_COUNT_INT*DMA_ADDR_WIDTH-1:0]    if_data_dma_read_desc_dma_addr;
+wire [IF_COUNT_INT*IF_RAM_SEL_WIDTH-1:0]  if_data_dma_read_desc_ram_sel;
+wire [IF_COUNT_INT*RAM_ADDR_WIDTH-1:0]    if_data_dma_read_desc_ram_addr;
+wire [IF_COUNT_INT*DMA_LEN_WIDTH-1:0]     if_data_dma_read_desc_len;
+wire [IF_COUNT_INT*IF_DMA_TAG_WIDTH-1:0]  if_data_dma_read_desc_tag;
+wire [IF_COUNT_INT-1:0]                   if_data_dma_read_desc_valid;
+wire [IF_COUNT_INT-1:0]                   if_data_dma_read_desc_ready;
 
-wire [IF_COUNT*IF_DMA_TAG_WIDTH-1:0]  if_data_dma_read_desc_status_tag;
-wire [IF_COUNT*4-1:0]                 if_data_dma_read_desc_status_error;
-wire [IF_COUNT-1:0]                   if_data_dma_read_desc_status_valid;
+wire [IF_COUNT_INT*IF_DMA_TAG_WIDTH-1:0]  if_data_dma_read_desc_status_tag;
+wire [IF_COUNT_INT*4-1:0]                 if_data_dma_read_desc_status_error;
+wire [IF_COUNT_INT-1:0]                   if_data_dma_read_desc_status_valid;
 
-wire [IF_COUNT*DMA_ADDR_WIDTH-1:0]    if_data_dma_write_desc_dma_addr;
-wire [IF_COUNT*IF_RAM_SEL_WIDTH-1:0]  if_data_dma_write_desc_ram_sel;
-wire [IF_COUNT*RAM_ADDR_WIDTH-1:0]    if_data_dma_write_desc_ram_addr;
-wire [IF_COUNT*DMA_LEN_WIDTH-1:0]     if_data_dma_write_desc_len;
-wire [IF_COUNT*IF_DMA_TAG_WIDTH-1:0]  if_data_dma_write_desc_tag;
-wire [IF_COUNT-1:0]                   if_data_dma_write_desc_valid;
-wire [IF_COUNT-1:0]                   if_data_dma_write_desc_ready;
+wire [IF_COUNT_INT*DMA_ADDR_WIDTH-1:0]    if_data_dma_write_desc_dma_addr;
+wire [IF_COUNT_INT*IF_RAM_SEL_WIDTH-1:0]  if_data_dma_write_desc_ram_sel;
+wire [IF_COUNT_INT*RAM_ADDR_WIDTH-1:0]    if_data_dma_write_desc_ram_addr;
+wire [IF_COUNT_INT*DMA_LEN_WIDTH-1:0]     if_data_dma_write_desc_len;
+wire [IF_COUNT_INT*IF_DMA_TAG_WIDTH-1:0]  if_data_dma_write_desc_tag;
+wire [IF_COUNT_INT-1:0]                   if_data_dma_write_desc_valid;
+wire [IF_COUNT_INT-1:0]                   if_data_dma_write_desc_ready;
 
-wire [IF_COUNT*IF_DMA_TAG_WIDTH-1:0]  if_data_dma_write_desc_status_tag;
-wire [IF_COUNT*4-1:0]                 if_data_dma_write_desc_status_error;
-wire [IF_COUNT-1:0]                   if_data_dma_write_desc_status_valid;
+wire [IF_COUNT_INT*IF_DMA_TAG_WIDTH-1:0]  if_data_dma_write_desc_status_tag;
+wire [IF_COUNT_INT*4-1:0]                 if_data_dma_write_desc_status_error;
+wire [IF_COUNT_INT-1:0]                   if_data_dma_write_desc_status_valid;
 
-wire [IF_COUNT*RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    if_ctrl_dma_ram_wr_cmd_sel;
-wire [IF_COUNT*RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]    if_ctrl_dma_ram_wr_cmd_be;
-wire [IF_COUNT*RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  if_ctrl_dma_ram_wr_cmd_addr;
-wire [IF_COUNT*RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  if_ctrl_dma_ram_wr_cmd_data;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_wr_cmd_valid;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_wr_cmd_ready;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_wr_done;
-wire [IF_COUNT*RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    if_ctrl_dma_ram_rd_cmd_sel;
-wire [IF_COUNT*RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  if_ctrl_dma_ram_rd_cmd_addr;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_rd_cmd_valid;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_rd_cmd_ready;
-wire [IF_COUNT*RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  if_ctrl_dma_ram_rd_resp_data;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_rd_resp_valid;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_rd_resp_ready;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    if_ctrl_dma_ram_wr_cmd_sel;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]    if_ctrl_dma_ram_wr_cmd_be;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  if_ctrl_dma_ram_wr_cmd_addr;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  if_ctrl_dma_ram_wr_cmd_data;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_wr_cmd_valid;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_wr_cmd_ready;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_wr_done;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    if_ctrl_dma_ram_rd_cmd_sel;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  if_ctrl_dma_ram_rd_cmd_addr;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_rd_cmd_valid;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_rd_cmd_ready;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  if_ctrl_dma_ram_rd_resp_data;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_rd_resp_valid;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_ctrl_dma_ram_rd_resp_ready;
 
-wire [IF_COUNT*RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    if_data_dma_ram_wr_cmd_sel;
-wire [IF_COUNT*RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]    if_data_dma_ram_wr_cmd_be;
-wire [IF_COUNT*RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  if_data_dma_ram_wr_cmd_addr;
-wire [IF_COUNT*RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  if_data_dma_ram_wr_cmd_data;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_wr_cmd_valid;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_wr_cmd_ready;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_wr_done;
-wire [IF_COUNT*RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    if_data_dma_ram_rd_cmd_sel;
-wire [IF_COUNT*RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  if_data_dma_ram_rd_cmd_addr;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_rd_cmd_valid;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_rd_cmd_ready;
-wire [IF_COUNT*RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  if_data_dma_ram_rd_resp_data;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_rd_resp_valid;
-wire [IF_COUNT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_rd_resp_ready;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    if_data_dma_ram_wr_cmd_sel;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]    if_data_dma_ram_wr_cmd_be;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  if_data_dma_ram_wr_cmd_addr;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  if_data_dma_ram_wr_cmd_data;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_wr_cmd_valid;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_wr_cmd_ready;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_wr_done;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    if_data_dma_ram_rd_cmd_sel;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  if_data_dma_ram_rd_cmd_addr;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_rd_cmd_valid;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_rd_cmd_ready;
+wire [IF_COUNT_INT*RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  if_data_dma_ram_rd_resp_data;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_rd_resp_valid;
+wire [IF_COUNT_INT*RAM_SEG_COUNT-1:0]                     if_data_dma_ram_rd_resp_ready;
 
 generate
 
-if (IF_COUNT > 1) begin : dma_if_mux
+if (IF_COUNT_INT > 1) begin : dma_if_mux
 
     dma_if_mux #(
-        .PORTS(IF_COUNT),
+        .PORTS(IF_COUNT_INT),
         .SEG_COUNT(RAM_SEG_COUNT),
         .SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
         .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
@@ -1256,7 +1497,7 @@ if (IF_COUNT > 1) begin : dma_if_mux
     );
 
     dma_if_mux #(
-        .PORTS(IF_COUNT),
+        .PORTS(IF_COUNT_INT),
         .SEG_COUNT(RAM_SEG_COUNT),
         .SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
         .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
@@ -1468,6 +1709,216 @@ end
 
 endgenerate
 
+wire [DMA_ADDR_WIDTH-1:0]    app_ctrl_dma_read_desc_dma_addr;
+wire [IF_RAM_SEL_WIDTH-1:0]  app_ctrl_dma_read_desc_ram_sel;
+wire [RAM_ADDR_WIDTH-1:0]    app_ctrl_dma_read_desc_ram_addr;
+wire [DMA_LEN_WIDTH-1:0]     app_ctrl_dma_read_desc_len;
+wire [IF_DMA_TAG_WIDTH-1:0]  app_ctrl_dma_read_desc_tag;
+wire                         app_ctrl_dma_read_desc_valid;
+wire                         app_ctrl_dma_read_desc_ready;
+
+wire [IF_DMA_TAG_WIDTH-1:0]  app_ctrl_dma_read_desc_status_tag;
+wire [3:0]                   app_ctrl_dma_read_desc_status_error;
+wire                         app_ctrl_dma_read_desc_status_valid;
+
+wire [DMA_ADDR_WIDTH-1:0]    app_ctrl_dma_write_desc_dma_addr;
+wire [IF_RAM_SEL_WIDTH-1:0]  app_ctrl_dma_write_desc_ram_sel;
+wire [RAM_ADDR_WIDTH-1:0]    app_ctrl_dma_write_desc_ram_addr;
+wire [DMA_LEN_WIDTH-1:0]     app_ctrl_dma_write_desc_len;
+wire [IF_DMA_TAG_WIDTH-1:0]  app_ctrl_dma_write_desc_tag;
+wire                         app_ctrl_dma_write_desc_valid;
+wire                         app_ctrl_dma_write_desc_ready;
+
+wire [IF_DMA_TAG_WIDTH-1:0]  app_ctrl_dma_write_desc_status_tag;
+wire [3:0]                   app_ctrl_dma_write_desc_status_error;
+wire                         app_ctrl_dma_write_desc_status_valid;
+
+wire [DMA_ADDR_WIDTH-1:0]    app_data_dma_read_desc_dma_addr;
+wire [IF_RAM_SEL_WIDTH-1:0]  app_data_dma_read_desc_ram_sel;
+wire [RAM_ADDR_WIDTH-1:0]    app_data_dma_read_desc_ram_addr;
+wire [DMA_LEN_WIDTH-1:0]     app_data_dma_read_desc_len;
+wire [IF_DMA_TAG_WIDTH-1:0]  app_data_dma_read_desc_tag;
+wire                         app_data_dma_read_desc_valid;
+wire                         app_data_dma_read_desc_ready;
+
+wire [IF_DMA_TAG_WIDTH-1:0]  app_data_dma_read_desc_status_tag;
+wire [3:0]                   app_data_dma_read_desc_status_error;
+wire                         app_data_dma_read_desc_status_valid;
+
+wire [DMA_ADDR_WIDTH-1:0]    app_data_dma_write_desc_dma_addr;
+wire [IF_RAM_SEL_WIDTH-1:0]  app_data_dma_write_desc_ram_sel;
+wire [RAM_ADDR_WIDTH-1:0]    app_data_dma_write_desc_ram_addr;
+wire [DMA_LEN_WIDTH-1:0]     app_data_dma_write_desc_len;
+wire [IF_DMA_TAG_WIDTH-1:0]  app_data_dma_write_desc_tag;
+wire                         app_data_dma_write_desc_valid;
+wire                         app_data_dma_write_desc_ready;
+
+wire [IF_DMA_TAG_WIDTH-1:0]  app_data_dma_write_desc_status_tag;
+wire [3:0]                   app_data_dma_write_desc_status_error;
+wire                         app_data_dma_write_desc_status_valid;
+
+wire [RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    app_ctrl_dma_ram_wr_cmd_sel;
+wire [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]    app_ctrl_dma_ram_wr_cmd_be;
+wire [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  app_ctrl_dma_ram_wr_cmd_addr;
+wire [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  app_ctrl_dma_ram_wr_cmd_data;
+wire [RAM_SEG_COUNT-1:0]                     app_ctrl_dma_ram_wr_cmd_valid;
+wire [RAM_SEG_COUNT-1:0]                     app_ctrl_dma_ram_wr_cmd_ready;
+wire [RAM_SEG_COUNT-1:0]                     app_ctrl_dma_ram_wr_done;
+wire [RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    app_ctrl_dma_ram_rd_cmd_sel;
+wire [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  app_ctrl_dma_ram_rd_cmd_addr;
+wire [RAM_SEG_COUNT-1:0]                     app_ctrl_dma_ram_rd_cmd_valid;
+wire [RAM_SEG_COUNT-1:0]                     app_ctrl_dma_ram_rd_cmd_ready;
+wire [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  app_ctrl_dma_ram_rd_resp_data;
+wire [RAM_SEG_COUNT-1:0]                     app_ctrl_dma_ram_rd_resp_valid;
+wire [RAM_SEG_COUNT-1:0]                     app_ctrl_dma_ram_rd_resp_ready;
+
+wire [RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    app_data_dma_ram_wr_cmd_sel;
+wire [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]    app_data_dma_ram_wr_cmd_be;
+wire [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  app_data_dma_ram_wr_cmd_addr;
+wire [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  app_data_dma_ram_wr_cmd_data;
+wire [RAM_SEG_COUNT-1:0]                     app_data_dma_ram_wr_cmd_valid;
+wire [RAM_SEG_COUNT-1:0]                     app_data_dma_ram_wr_cmd_ready;
+wire [RAM_SEG_COUNT-1:0]                     app_data_dma_ram_wr_done;
+wire [RAM_SEG_COUNT*IF_RAM_SEL_WIDTH-1:0]    app_data_dma_ram_rd_cmd_sel;
+wire [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  app_data_dma_ram_rd_cmd_addr;
+wire [RAM_SEG_COUNT-1:0]                     app_data_dma_ram_rd_cmd_valid;
+wire [RAM_SEG_COUNT-1:0]                     app_data_dma_ram_rd_cmd_ready;
+wire [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  app_data_dma_ram_rd_resp_data;
+wire [RAM_SEG_COUNT-1:0]                     app_data_dma_ram_rd_resp_valid;
+wire [RAM_SEG_COUNT-1:0]                     app_data_dma_ram_rd_resp_ready;
+
+generate
+
+if (APP_ENABLE && APP_DMA_ENABLE) begin
+
+    assign if_ctrl_dma_read_desc_dma_addr[IF_COUNT*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH] = app_ctrl_dma_read_desc_dma_addr;
+    assign if_ctrl_dma_read_desc_ram_sel[IF_COUNT*IF_RAM_SEL_WIDTH +: IF_RAM_SEL_WIDTH] = app_ctrl_dma_read_desc_ram_sel;
+    assign if_ctrl_dma_read_desc_ram_addr[IF_COUNT*RAM_ADDR_WIDTH +: RAM_ADDR_WIDTH] = app_ctrl_dma_read_desc_ram_addr;
+    assign if_ctrl_dma_read_desc_len[IF_COUNT*DMA_LEN_WIDTH +: DMA_LEN_WIDTH] = app_ctrl_dma_read_desc_len;
+    assign if_ctrl_dma_read_desc_tag[IF_COUNT*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH] = app_ctrl_dma_read_desc_tag;
+    assign if_ctrl_dma_read_desc_valid[IF_COUNT] = app_ctrl_dma_read_desc_valid;
+    assign app_ctrl_dma_read_desc_ready = if_ctrl_dma_read_desc_ready[IF_COUNT];
+
+    assign app_ctrl_dma_read_desc_status_tag = if_ctrl_dma_read_desc_status_tag[IF_COUNT*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH];
+    assign app_ctrl_dma_read_desc_status_error = if_ctrl_dma_read_desc_status_error[IF_COUNT*4 +: 4];
+    assign app_ctrl_dma_read_desc_status_valid = if_ctrl_dma_read_desc_status_valid[IF_COUNT];
+
+    assign if_ctrl_dma_write_desc_dma_addr[IF_COUNT*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH] = app_ctrl_dma_write_desc_dma_addr;
+    assign if_ctrl_dma_write_desc_ram_sel[IF_COUNT*IF_RAM_SEL_WIDTH +: IF_RAM_SEL_WIDTH] = app_ctrl_dma_write_desc_ram_sel;
+    assign if_ctrl_dma_write_desc_ram_addr[IF_COUNT*RAM_ADDR_WIDTH +: RAM_ADDR_WIDTH] = app_ctrl_dma_write_desc_ram_addr;
+    assign if_ctrl_dma_write_desc_len[IF_COUNT*DMA_LEN_WIDTH +: DMA_LEN_WIDTH] = app_ctrl_dma_write_desc_len;
+    assign if_ctrl_dma_write_desc_tag[IF_COUNT*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH] = app_ctrl_dma_write_desc_tag;
+    assign if_ctrl_dma_write_desc_valid[IF_COUNT] = app_ctrl_dma_write_desc_valid;
+    assign app_ctrl_dma_write_desc_ready = if_ctrl_dma_write_desc_ready[IF_COUNT];
+
+    assign app_ctrl_dma_write_desc_status_tag = if_ctrl_dma_write_desc_status_tag[IF_COUNT*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH];
+    assign app_ctrl_dma_write_desc_status_error = if_ctrl_dma_write_desc_status_error[IF_COUNT*4 +: 4];
+    assign app_ctrl_dma_write_desc_status_valid = if_ctrl_dma_write_desc_status_valid[IF_COUNT];
+
+    assign if_data_dma_read_desc_dma_addr[IF_COUNT*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH] = app_data_dma_read_desc_dma_addr;
+    assign if_data_dma_read_desc_ram_sel[IF_COUNT*IF_RAM_SEL_WIDTH +: IF_RAM_SEL_WIDTH] = app_data_dma_read_desc_ram_sel;
+    assign if_data_dma_read_desc_ram_addr[IF_COUNT*RAM_ADDR_WIDTH +: RAM_ADDR_WIDTH] = app_data_dma_read_desc_ram_addr;
+    assign if_data_dma_read_desc_len[IF_COUNT*DMA_LEN_WIDTH +: DMA_LEN_WIDTH] = app_data_dma_read_desc_len;
+    assign if_data_dma_read_desc_tag[IF_COUNT*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH] = app_data_dma_read_desc_tag;
+    assign if_data_dma_read_desc_valid[IF_COUNT] = app_data_dma_read_desc_valid;
+    assign app_data_dma_read_desc_ready = if_data_dma_read_desc_ready[IF_COUNT];
+
+    assign app_data_dma_read_desc_status_tag = if_data_dma_read_desc_status_tag[IF_COUNT*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH];
+    assign app_data_dma_read_desc_status_error = if_data_dma_read_desc_status_error[IF_COUNT*4 +: 4];
+    assign app_data_dma_read_desc_status_valid = if_data_dma_read_desc_status_valid[IF_COUNT];
+
+    assign if_data_dma_write_desc_dma_addr[IF_COUNT*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH] = app_data_dma_write_desc_dma_addr;
+    assign if_data_dma_write_desc_ram_sel[IF_COUNT*IF_RAM_SEL_WIDTH +: IF_RAM_SEL_WIDTH] = app_data_dma_write_desc_ram_sel;
+    assign if_data_dma_write_desc_ram_addr[IF_COUNT*RAM_ADDR_WIDTH +: RAM_ADDR_WIDTH] = app_data_dma_write_desc_ram_addr;
+    assign if_data_dma_write_desc_len[IF_COUNT*DMA_LEN_WIDTH +: DMA_LEN_WIDTH] = app_data_dma_write_desc_len;
+    assign if_data_dma_write_desc_tag[IF_COUNT*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH] = app_data_dma_write_desc_tag;
+    assign if_data_dma_write_desc_valid[IF_COUNT] = app_data_dma_write_desc_valid;
+    assign app_data_dma_write_desc_ready = if_data_dma_write_desc_ready[IF_COUNT];
+
+    assign app_data_dma_write_desc_status_tag = if_data_dma_write_desc_status_tag[IF_COUNT*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH];
+    assign app_data_dma_write_desc_status_error = if_data_dma_write_desc_status_error[IF_COUNT*4 +: 4];
+    assign app_data_dma_write_desc_status_valid = if_data_dma_write_desc_status_valid[IF_COUNT];
+
+    assign app_ctrl_dma_ram_wr_cmd_sel = if_ctrl_dma_ram_wr_cmd_sel[RAM_SEG_COUNT*IF_RAM_SEL_WIDTH*IF_COUNT +: RAM_SEG_COUNT*IF_RAM_SEL_WIDTH];
+    assign app_ctrl_dma_ram_wr_cmd_be = if_ctrl_dma_ram_wr_cmd_be[RAM_SEG_COUNT*RAM_SEG_BE_WIDTH*IF_COUNT +: RAM_SEG_COUNT*RAM_SEG_BE_WIDTH];
+    assign app_ctrl_dma_ram_wr_cmd_addr = if_ctrl_dma_ram_wr_cmd_addr[RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH*IF_COUNT +: RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH];
+    assign app_ctrl_dma_ram_wr_cmd_data = if_ctrl_dma_ram_wr_cmd_data[RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH*IF_COUNT +: RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH];
+    assign app_ctrl_dma_ram_wr_cmd_valid = if_ctrl_dma_ram_wr_cmd_valid[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT];
+    assign if_ctrl_dma_ram_wr_cmd_ready[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT] = app_ctrl_dma_ram_wr_cmd_ready;
+    assign if_ctrl_dma_ram_wr_done[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT] = app_ctrl_dma_ram_wr_done;
+    assign app_ctrl_dma_ram_rd_cmd_sel = if_ctrl_dma_ram_rd_cmd_sel[RAM_SEG_COUNT*IF_RAM_SEL_WIDTH*IF_COUNT +: RAM_SEG_COUNT*IF_RAM_SEL_WIDTH];
+    assign app_ctrl_dma_ram_rd_cmd_addr = if_ctrl_dma_ram_rd_cmd_addr[RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH*IF_COUNT +: RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH];
+    assign app_ctrl_dma_ram_rd_cmd_valid = if_ctrl_dma_ram_rd_cmd_valid[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT];
+    assign if_ctrl_dma_ram_rd_cmd_ready[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT] = app_ctrl_dma_ram_rd_cmd_ready;
+    assign if_ctrl_dma_ram_rd_resp_data[RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH*IF_COUNT +: RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH] = app_ctrl_dma_ram_rd_resp_data;
+    assign if_ctrl_dma_ram_rd_resp_valid[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT] = app_ctrl_dma_ram_rd_resp_valid;
+    assign app_ctrl_dma_ram_rd_resp_ready = if_ctrl_dma_ram_rd_resp_ready[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT];
+
+    assign app_data_dma_ram_wr_cmd_sel = if_data_dma_ram_wr_cmd_sel[RAM_SEG_COUNT*IF_RAM_SEL_WIDTH*IF_COUNT +: RAM_SEG_COUNT*IF_RAM_SEL_WIDTH];
+    assign app_data_dma_ram_wr_cmd_be = if_data_dma_ram_wr_cmd_be[RAM_SEG_COUNT*RAM_SEG_BE_WIDTH*IF_COUNT +: RAM_SEG_COUNT*RAM_SEG_BE_WIDTH];
+    assign app_data_dma_ram_wr_cmd_addr = if_data_dma_ram_wr_cmd_addr[RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH*IF_COUNT +: RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH];
+    assign app_data_dma_ram_wr_cmd_data = if_data_dma_ram_wr_cmd_data[RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH*IF_COUNT +: RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH];
+    assign app_data_dma_ram_wr_cmd_valid = if_data_dma_ram_wr_cmd_valid[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT];
+    assign if_data_dma_ram_wr_cmd_ready[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT] = app_data_dma_ram_wr_cmd_ready;
+    assign if_data_dma_ram_wr_done[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT] = app_data_dma_ram_wr_done;
+    assign app_data_dma_ram_rd_cmd_sel = if_data_dma_ram_rd_cmd_sel[RAM_SEG_COUNT*IF_RAM_SEL_WIDTH*IF_COUNT +: RAM_SEG_COUNT*IF_RAM_SEL_WIDTH];
+    assign app_data_dma_ram_rd_cmd_addr = if_data_dma_ram_rd_cmd_addr[RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH*IF_COUNT +: RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH];
+    assign app_data_dma_ram_rd_cmd_valid = if_data_dma_ram_rd_cmd_valid[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT];
+    assign if_data_dma_ram_rd_cmd_ready[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT] = app_data_dma_ram_rd_cmd_ready;
+    assign if_data_dma_ram_rd_resp_data[RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH*IF_COUNT +: RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH] = app_data_dma_ram_rd_resp_data;
+    assign if_data_dma_ram_rd_resp_valid[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT] = app_data_dma_ram_rd_resp_valid;
+    assign app_data_dma_ram_rd_resp_ready = if_data_dma_ram_rd_resp_ready[RAM_SEG_COUNT*IF_COUNT +: RAM_SEG_COUNT];
+
+end else begin
+
+    assign app_ctrl_dma_read_desc_ready = 0;
+
+    assign app_ctrl_dma_read_desc_status_tag = 0;
+    assign app_ctrl_dma_read_desc_status_error = 0;
+    assign app_ctrl_dma_read_desc_status_valid = 0;
+
+    assign app_ctrl_dma_write_desc_ready = 0;
+
+    assign app_ctrl_dma_write_desc_status_tag = 0;
+    assign app_ctrl_dma_write_desc_status_error = 0;
+    assign app_ctrl_dma_write_desc_status_valid = 0;
+
+    assign app_data_dma_read_desc_ready = 0;
+
+    assign app_data_dma_read_desc_status_tag = 0;
+    assign app_data_dma_read_desc_status_error = 0;
+    assign app_data_dma_read_desc_status_valid = 0;
+
+    assign app_data_dma_write_desc_ready = 0;
+
+    assign app_data_dma_write_desc_status_tag = 0;
+    assign app_data_dma_write_desc_status_error = 0;
+    assign app_data_dma_write_desc_status_valid = 0;
+
+    assign app_ctrl_dma_ram_wr_cmd_sel = 0;
+    assign app_ctrl_dma_ram_wr_cmd_be = 0;
+    assign app_ctrl_dma_ram_wr_cmd_addr = 0;
+    assign app_ctrl_dma_ram_wr_cmd_data = 0;
+    assign app_ctrl_dma_ram_wr_cmd_valid = 0;
+    assign app_ctrl_dma_ram_rd_cmd_sel = 0;
+    assign app_ctrl_dma_ram_rd_cmd_addr = 0;
+    assign app_ctrl_dma_ram_rd_cmd_valid = 0;
+    assign app_ctrl_dma_ram_rd_resp_ready = 0;
+
+    assign app_data_dma_ram_wr_cmd_sel = 0;
+    assign app_data_dma_ram_wr_cmd_be = 0;
+    assign app_data_dma_ram_wr_cmd_addr = 0;
+    assign app_data_dma_ram_wr_cmd_data = 0;
+    assign app_data_dma_ram_wr_cmd_valid = 0;
+    assign app_data_dma_ram_rd_cmd_sel = 0;
+    assign app_data_dma_ram_rd_cmd_addr = 0;
+    assign app_data_dma_ram_rd_cmd_valid = 0;
+    assign app_data_dma_ram_rd_resp_ready = 0;
+
+end
+
+endgenerate
+
 wire [MSI_COUNT-1:0] if_msi_irq[IF_COUNT-1:0];
 reg [MSI_COUNT-1:0] msi_irq_cmb = 0;
 
@@ -1481,6 +1932,127 @@ always @* begin
         msi_irq_cmb = msi_irq_cmb | if_msi_irq[k];
     end
 end
+
+// streaming connections to application
+wire [PORT_COUNT-1:0]                        app_direct_tx_clk = tx_clk;
+wire [PORT_COUNT-1:0]                        app_direct_tx_rst = tx_rst;
+
+wire [PORT_COUNT*AXIS_DATA_WIDTH-1:0]        app_s_axis_direct_tx_tdata;
+wire [PORT_COUNT*AXIS_KEEP_WIDTH-1:0]        app_s_axis_direct_tx_tkeep;
+wire [PORT_COUNT-1:0]                        app_s_axis_direct_tx_tvalid;
+wire [PORT_COUNT-1:0]                        app_s_axis_direct_tx_tready;
+wire [PORT_COUNT-1:0]                        app_s_axis_direct_tx_tlast;
+wire [PORT_COUNT*AXIS_TX_USER_WIDTH-1:0]     app_s_axis_direct_tx_tuser;
+
+wire [PORT_COUNT*AXIS_DATA_WIDTH-1:0]        app_m_axis_direct_tx_tdata;
+wire [PORT_COUNT*AXIS_KEEP_WIDTH-1:0]        app_m_axis_direct_tx_tkeep;
+wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_tvalid;
+wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_tready;
+wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_tlast;
+wire [PORT_COUNT*AXIS_TX_USER_WIDTH-1:0]     app_m_axis_direct_tx_tuser;
+
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_s_axis_direct_tx_ptp_ts;
+wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_s_axis_direct_tx_ptp_ts_tag;
+wire [PORT_COUNT-1:0]                        app_s_axis_direct_tx_ptp_ts_valid;
+wire [PORT_COUNT-1:0]                        app_s_axis_direct_tx_ptp_ts_ready;
+
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_m_axis_direct_tx_ptp_ts;
+wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_m_axis_direct_tx_ptp_ts_tag;
+wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_ptp_ts_valid;
+wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_ptp_ts_ready;
+
+wire [PORT_COUNT-1:0]                        app_direct_rx_clk = rx_clk;
+wire [PORT_COUNT-1:0]                        app_direct_rx_rst = rx_rst;
+
+wire [PORT_COUNT*AXIS_DATA_WIDTH-1:0]        app_s_axis_direct_rx_tdata;
+wire [PORT_COUNT*AXIS_KEEP_WIDTH-1:0]        app_s_axis_direct_rx_tkeep;
+wire [PORT_COUNT-1:0]                        app_s_axis_direct_rx_tvalid;
+wire [PORT_COUNT-1:0]                        app_s_axis_direct_rx_tready;
+wire [PORT_COUNT-1:0]                        app_s_axis_direct_rx_tlast;
+wire [PORT_COUNT*AXIS_RX_USER_WIDTH-1:0]     app_s_axis_direct_rx_tuser;
+
+wire [PORT_COUNT*AXIS_DATA_WIDTH-1:0]        app_m_axis_direct_rx_tdata;
+wire [PORT_COUNT*AXIS_KEEP_WIDTH-1:0]        app_m_axis_direct_rx_tkeep;
+wire [PORT_COUNT-1:0]                        app_m_axis_direct_rx_tvalid;
+wire [PORT_COUNT-1:0]                        app_m_axis_direct_rx_tready;
+wire [PORT_COUNT-1:0]                        app_m_axis_direct_rx_tlast;
+wire [PORT_COUNT*AXIS_RX_USER_WIDTH-1:0]     app_m_axis_direct_rx_tuser;
+
+wire [PORT_COUNT*AXIS_SYNC_DATA_WIDTH-1:0]   app_s_axis_sync_tx_tdata;
+wire [PORT_COUNT*AXIS_SYNC_KEEP_WIDTH-1:0]   app_s_axis_sync_tx_tkeep;
+wire [PORT_COUNT-1:0]                        app_s_axis_sync_tx_tvalid;
+wire [PORT_COUNT-1:0]                        app_s_axis_sync_tx_tready;
+wire [PORT_COUNT-1:0]                        app_s_axis_sync_tx_tlast;
+wire [PORT_COUNT*AXIS_TX_USER_WIDTH-1:0]     app_s_axis_sync_tx_tuser;
+
+wire [PORT_COUNT*AXIS_SYNC_DATA_WIDTH-1:0]   app_m_axis_sync_tx_tdata;
+wire [PORT_COUNT*AXIS_SYNC_KEEP_WIDTH-1:0]   app_m_axis_sync_tx_tkeep;
+wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_tvalid;
+wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_tready;
+wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_tlast;
+wire [PORT_COUNT*AXIS_TX_USER_WIDTH-1:0]     app_m_axis_sync_tx_tuser;
+
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_s_axis_sync_tx_ptp_ts;
+wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_s_axis_sync_tx_ptp_ts_tag;
+wire [PORT_COUNT-1:0]                        app_s_axis_sync_tx_ptp_ts_valid;
+wire [PORT_COUNT-1:0]                        app_s_axis_sync_tx_ptp_ts_ready;
+
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_m_axis_sync_tx_ptp_ts;
+wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_m_axis_sync_tx_ptp_ts_tag;
+wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_ptp_ts_valid;
+wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_ptp_ts_ready;
+
+wire [PORT_COUNT*AXIS_SYNC_DATA_WIDTH-1:0]   app_s_axis_sync_rx_tdata;
+wire [PORT_COUNT*AXIS_SYNC_KEEP_WIDTH-1:0]   app_s_axis_sync_rx_tkeep;
+wire [PORT_COUNT-1:0]                        app_s_axis_sync_rx_tvalid;
+wire [PORT_COUNT-1:0]                        app_s_axis_sync_rx_tready;
+wire [PORT_COUNT-1:0]                        app_s_axis_sync_rx_tlast;
+wire [PORT_COUNT*AXIS_RX_USER_WIDTH-1:0]     app_s_axis_sync_rx_tuser;
+
+wire [PORT_COUNT*AXIS_SYNC_DATA_WIDTH-1:0]   app_m_axis_sync_rx_tdata;
+wire [PORT_COUNT*AXIS_SYNC_KEEP_WIDTH-1:0]   app_m_axis_sync_rx_tkeep;
+wire [PORT_COUNT-1:0]                        app_m_axis_sync_rx_tvalid;
+wire [PORT_COUNT-1:0]                        app_m_axis_sync_rx_tready;
+wire [PORT_COUNT-1:0]                        app_m_axis_sync_rx_tlast;
+wire [PORT_COUNT*AXIS_RX_USER_WIDTH-1:0]     app_m_axis_sync_rx_tuser;
+
+wire [PORT_COUNT*AXIS_IF_DATA_WIDTH-1:0]     app_s_axis_if_tx_tdata;
+wire [PORT_COUNT*AXIS_IF_KEEP_WIDTH-1:0]     app_s_axis_if_tx_tkeep;
+wire [PORT_COUNT-1:0]                        app_s_axis_if_tx_tvalid;
+wire [PORT_COUNT-1:0]                        app_s_axis_if_tx_tready;
+wire [PORT_COUNT-1:0]                        app_s_axis_if_tx_tlast;
+wire [PORT_COUNT*AXIS_IF_TX_USER_WIDTH-1:0]  app_s_axis_if_tx_tuser;
+
+wire [PORT_COUNT*AXIS_IF_DATA_WIDTH-1:0]     app_m_axis_if_tx_tdata;
+wire [PORT_COUNT*AXIS_IF_KEEP_WIDTH-1:0]     app_m_axis_if_tx_tkeep;
+wire [PORT_COUNT-1:0]                        app_m_axis_if_tx_tvalid;
+wire [PORT_COUNT-1:0]                        app_m_axis_if_tx_tready;
+wire [PORT_COUNT-1:0]                        app_m_axis_if_tx_tlast;
+wire [PORT_COUNT*AXIS_IF_TX_USER_WIDTH-1:0]  app_m_axis_if_tx_tuser;
+
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_s_axis_if_tx_ptp_ts;
+wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_s_axis_if_tx_ptp_ts_tag;
+wire [PORT_COUNT-1:0]                        app_s_axis_if_tx_ptp_ts_valid;
+wire [PORT_COUNT-1:0]                        app_s_axis_if_tx_ptp_ts_ready;
+
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_m_axis_if_tx_ptp_ts;
+wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_m_axis_if_tx_ptp_ts_tag;
+wire [PORT_COUNT-1:0]                        app_m_axis_if_tx_ptp_ts_valid;
+wire [PORT_COUNT-1:0]                        app_m_axis_if_tx_ptp_ts_ready;
+
+wire [PORT_COUNT*AXIS_IF_DATA_WIDTH-1:0]     app_s_axis_if_rx_tdata;
+wire [PORT_COUNT*AXIS_IF_KEEP_WIDTH-1:0]     app_s_axis_if_rx_tkeep;
+wire [PORT_COUNT-1:0]                        app_s_axis_if_rx_tvalid;
+wire [PORT_COUNT-1:0]                        app_s_axis_if_rx_tready;
+wire [PORT_COUNT-1:0]                        app_s_axis_if_rx_tlast;
+wire [PORT_COUNT*AXIS_IF_RX_USER_WIDTH-1:0]  app_s_axis_if_rx_tuser;
+
+wire [PORT_COUNT*AXIS_IF_DATA_WIDTH-1:0]     app_m_axis_if_rx_tdata;
+wire [PORT_COUNT*AXIS_IF_KEEP_WIDTH-1:0]     app_m_axis_if_rx_tkeep;
+wire [PORT_COUNT-1:0]                        app_m_axis_if_rx_tvalid;
+wire [PORT_COUNT-1:0]                        app_m_axis_if_rx_tready;
+wire [PORT_COUNT-1:0]                        app_m_axis_if_rx_tlast;
+wire [PORT_COUNT*AXIS_IF_RX_USER_WIDTH-1:0]  app_m_axis_if_rx_tuser;
 
 generate
     genvar m, n;
@@ -1813,10 +2385,62 @@ generate
                 );
 
                 // PTP TS FIFO (TX)
-                wire [PTP_TS_WIDTH-1:0] tx_pipe_ptp_ts;
-                wire [PTP_TAG_WIDTH-1:0] tx_pipe_ptp_ts_tag;
-                wire tx_pipe_ptp_ts_valid;
-                wire tx_pipe_ptp_ts_ready;
+                wire [PTP_TS_WIDTH-1:0] axis_tx_ptp_ts;
+                wire [PTP_TAG_WIDTH-1:0] axis_tx_ptp_ts_tag;
+                wire axis_tx_ptp_ts_valid;
+                wire axis_tx_ptp_ts_ready;
+
+                wire [PTP_TS_WIDTH-1:0] axis_tx_in_ptp_ts;
+                wire [PTP_TAG_WIDTH-1:0] axis_tx_in_ptp_ts_tag;
+                wire axis_tx_in_ptp_ts_valid;
+                wire axis_tx_in_ptp_ts_ready;
+
+                wire [PTP_TS_WIDTH-1:0] axis_tx_fifo_ptp_ts;
+                wire [PTP_TAG_WIDTH-1:0] axis_tx_fifo_ptp_ts_tag;
+                wire axis_tx_fifo_ptp_ts_valid;
+                wire axis_tx_fifo_ptp_ts_ready;
+
+                wire [PTP_TS_WIDTH-1:0] axis_tx_pipe_ptp_ts;
+                wire [PTP_TAG_WIDTH-1:0] axis_tx_pipe_ptp_ts_tag;
+                wire axis_tx_pipe_ptp_ts_valid;
+                wire axis_tx_pipe_ptp_ts_ready;
+
+                wire [PTP_TS_WIDTH-1:0] axis_tx_pipe_2_ptp_ts;
+                wire [PTP_TAG_WIDTH-1:0] axis_tx_pipe_2_ptp_ts_tag;
+                wire axis_tx_pipe_2_ptp_ts_valid;
+                wire axis_tx_pipe_2_ptp_ts_ready;
+
+                assign axis_tx_ptp_ts = s_axis_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH];
+                assign axis_tx_ptp_ts_tag = s_axis_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH];
+                assign axis_tx_ptp_ts_valid = s_axis_tx_ptp_ts_valid[n*PORTS_PER_IF+m +: 1];
+                assign s_axis_tx_ptp_ts_ready[n*PORTS_PER_IF+m +: 1] = axis_tx_ptp_ts_ready;
+
+                if (APP_ENABLE && APP_AXIS_DIRECT_ENABLE) begin
+
+                    assign app_s_axis_direct_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = axis_tx_ptp_ts;
+                    assign app_s_axis_direct_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = axis_tx_ptp_ts_tag;
+                    assign app_s_axis_direct_tx_ptp_ts_valid[n*PORTS_PER_IF+m] = axis_tx_ptp_ts_valid;
+                    assign axis_tx_ptp_ts_ready = app_s_axis_direct_tx_ptp_ts_ready[n*PORTS_PER_IF+m];
+
+                    assign axis_tx_in_ptp_ts = app_m_axis_direct_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH];
+                    assign axis_tx_in_ptp_ts_tag = app_m_axis_direct_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH];
+                    assign axis_tx_in_ptp_ts_valid = app_m_axis_direct_tx_ptp_ts_valid[n*PORTS_PER_IF+m];
+                    assign app_m_axis_direct_tx_ptp_ts_ready[n*PORTS_PER_IF+m] = axis_tx_in_ptp_ts_ready;
+
+                end else begin
+
+                    assign app_s_axis_direct_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = 0;
+                    assign app_s_axis_direct_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = 0;
+                    assign app_s_axis_direct_tx_ptp_ts_valid[n*PORTS_PER_IF+m] = 0;
+
+                    assign app_m_axis_direct_tx_ptp_ts_ready[n*PORTS_PER_IF+m] = 0;
+
+                    assign axis_tx_in_ptp_ts = axis_tx_ptp_ts;
+                    assign axis_tx_in_ptp_ts_tag = axis_tx_ptp_ts_tag;
+                    assign axis_tx_in_ptp_ts_valid = axis_tx_ptp_ts_valid;
+                    assign axis_tx_ptp_ts_ready = axis_tx_in_ptp_ts_ready;
+
+                end
 
                 axis_async_fifo #(
                     .DEPTH(TX_PTP_TS_FIFO_DEPTH),
@@ -1834,23 +2458,23 @@ generate
 
                     // AXI input
                     .s_clk(tx_clk[n*PORTS_PER_IF+m]),
-                    .s_axis_tdata(s_axis_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
+                    .s_axis_tdata(axis_tx_in_ptp_ts),
                     .s_axis_tkeep(0),
-                    .s_axis_tvalid(s_axis_tx_ptp_ts_valid[n*PORTS_PER_IF+m +: 1]),
-                    .s_axis_tready(s_axis_tx_ptp_ts_ready[n*PORTS_PER_IF+m +: 1]),
+                    .s_axis_tvalid(axis_tx_in_ptp_ts_valid),
+                    .s_axis_tready(axis_tx_in_ptp_ts_ready),
                     .s_axis_tlast(0),
-                    .s_axis_tid(s_axis_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH]),
+                    .s_axis_tid(axis_tx_in_ptp_ts_tag),
                     .s_axis_tdest(0),
                     .s_axis_tuser(0),
 
                     // AXI output
                     .m_clk(clk),
-                    .m_axis_tdata(tx_pipe_ptp_ts),
+                    .m_axis_tdata(axis_tx_fifo_ptp_ts),
                     .m_axis_tkeep(),
-                    .m_axis_tvalid(tx_pipe_ptp_ts_valid),
-                    .m_axis_tready(tx_pipe_ptp_ts_ready),
+                    .m_axis_tvalid(axis_tx_fifo_ptp_ts_valid),
+                    .m_axis_tready(axis_tx_fifo_ptp_ts_ready),
                     .m_axis_tlast(),
-                    .m_axis_tid(tx_pipe_ptp_ts_tag),
+                    .m_axis_tid(axis_tx_fifo_ptp_ts_tag),
                     .m_axis_tdest(),
                     .m_axis_tuser(),
 
@@ -1878,25 +2502,79 @@ generate
                     .rst(rst),
 
                     // AXI input
-                    .s_axis_tdata(tx_pipe_ptp_ts),
+                    .s_axis_tdata(axis_tx_fifo_ptp_ts),
                     .s_axis_tkeep(0),
-                    .s_axis_tvalid(tx_pipe_ptp_ts_valid),
-                    .s_axis_tready(tx_pipe_ptp_ts_ready),
+                    .s_axis_tvalid(axis_tx_fifo_ptp_ts_valid),
+                    .s_axis_tready(axis_tx_fifo_ptp_ts_ready),
                     .s_axis_tlast(0),
-                    .s_axis_tid(tx_pipe_ptp_ts_tag),
+                    .s_axis_tid(axis_tx_fifo_ptp_ts_tag),
                     .s_axis_tdest(0),
                     .s_axis_tuser(0),
 
                     // AXI output
-                    .m_axis_tdata(if_tx_ptp_ts_96[m*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
+                    .m_axis_tdata(axis_tx_pipe_ptp_ts),
                     .m_axis_tkeep(),
-                    .m_axis_tvalid(if_tx_ptp_ts_valid[m +: 1]),
-                    .m_axis_tready(if_tx_ptp_ts_ready[m +: 1]),
+                    .m_axis_tvalid(axis_tx_pipe_ptp_ts_valid),
+                    .m_axis_tready(axis_tx_pipe_ptp_ts_ready),
                     .m_axis_tlast(),
-                    .m_axis_tid(if_tx_ptp_ts_tag[m*PTP_TAG_WIDTH +: PTP_TAG_WIDTH]),
+                    .m_axis_tid(axis_tx_pipe_ptp_ts_tag),
                     .m_axis_tdest(),
                     .m_axis_tuser()
                 );
+
+                if (APP_ENABLE && APP_AXIS_SYNC_ENABLE) begin
+
+                    assign app_s_axis_sync_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = axis_tx_pipe_ptp_ts;
+                    assign app_s_axis_sync_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = axis_tx_pipe_ptp_ts_tag;
+                    assign app_s_axis_sync_tx_ptp_ts_valid[n*PORTS_PER_IF+m] = axis_tx_pipe_ptp_ts_valid;
+                    assign axis_tx_pipe_ptp_ts_ready = app_s_axis_sync_tx_ptp_ts_ready[n*PORTS_PER_IF+m];
+
+                    assign axis_tx_pipe_2_ptp_ts = app_m_axis_sync_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH];
+                    assign axis_tx_pipe_2_ptp_ts_tag = app_m_axis_sync_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH];
+                    assign axis_tx_pipe_2_ptp_ts_valid = app_m_axis_sync_tx_ptp_ts_valid[n*PORTS_PER_IF+m];
+                    assign app_m_axis_sync_tx_ptp_ts_ready[n*PORTS_PER_IF+m] = axis_tx_pipe_2_ptp_ts_ready;
+
+                end else begin
+
+                    assign app_s_axis_sync_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = 0;
+                    assign app_s_axis_sync_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = 0;
+                    assign app_s_axis_sync_tx_ptp_ts_valid[n*PORTS_PER_IF+m] = 0;
+
+                    assign app_m_axis_sync_tx_ptp_ts_ready[n*PORTS_PER_IF+m] = 0;
+
+                    assign axis_tx_pipe_2_ptp_ts = axis_tx_pipe_ptp_ts;
+                    assign axis_tx_pipe_2_ptp_ts_tag = axis_tx_pipe_ptp_ts_tag;
+                    assign axis_tx_pipe_2_ptp_ts_valid = axis_tx_pipe_ptp_ts_valid;
+                    assign axis_tx_pipe_ptp_ts_ready = axis_tx_pipe_2_ptp_ts_ready;
+
+                end
+
+                if (APP_ENABLE && APP_AXIS_IF_ENABLE) begin
+
+                    assign app_s_axis_if_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = axis_tx_pipe_2_ptp_ts;
+                    assign app_s_axis_if_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = axis_tx_pipe_2_ptp_ts_tag;
+                    assign app_s_axis_if_tx_ptp_ts_valid[n*PORTS_PER_IF+m] = axis_tx_pipe_2_ptp_ts_valid;
+                    assign axis_tx_pipe_2_ptp_ts_ready = app_s_axis_if_tx_ptp_ts_ready[n*PORTS_PER_IF+m];
+
+                    assign if_tx_ptp_ts_96[m*PTP_TS_WIDTH +: PTP_TS_WIDTH] = app_m_axis_if_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH];
+                    assign if_tx_ptp_ts_tag[m*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = app_m_axis_if_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH];
+                    assign if_tx_ptp_ts_valid[m +: 1] = app_m_axis_if_tx_ptp_ts_valid[n*PORTS_PER_IF+m];
+                    assign app_m_axis_if_tx_ptp_ts_ready[n*PORTS_PER_IF+m] = if_tx_ptp_ts_ready[m +: 1];
+
+                end else begin
+
+                    assign app_s_axis_if_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = 0;
+                    assign app_s_axis_if_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = 0;
+                    assign app_s_axis_if_tx_ptp_ts_valid[n*PORTS_PER_IF+m] = 0;
+
+                    assign app_m_axis_if_tx_ptp_ts_ready[n*PORTS_PER_IF+m] = 0;
+
+                    assign if_tx_ptp_ts_96[m*PTP_TS_WIDTH +: PTP_TS_WIDTH] = axis_tx_pipe_2_ptp_ts;
+                    assign if_tx_ptp_ts_tag[m*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = axis_tx_pipe_2_ptp_ts_tag;
+                    assign if_tx_ptp_ts_valid[m +: 1] = axis_tx_pipe_2_ptp_ts_valid;
+                    assign axis_tx_pipe_2_ptp_ts_ready = if_tx_ptp_ts_ready[m +: 1];
+
+                end
 
                 wire [PTP_TS_WIDTH-1:0] rx_ts;
                 wire rx_ts_valid;
@@ -1976,9 +2654,34 @@ generate
                 assign if_rx_ptp_ts_96[m*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {PTP_TS_WIDTH{1'b0}};
                 assign if_rx_ptp_ts_valid[m +: 1] = 1'b0;
 
+                assign app_s_axis_direct_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = 0;
+                assign app_s_axis_direct_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = 0;
+                assign app_s_axis_direct_tx_ptp_ts_valid[n*PORTS_PER_IF+m] = 0;
+
+                assign app_m_axis_direct_tx_ptp_ts_ready[n*PORTS_PER_IF+m] = 0;
+
+                assign app_s_axis_sync_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = 0;
+                assign app_s_axis_sync_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = 0;
+                assign app_s_axis_sync_tx_ptp_ts_valid[n*PORTS_PER_IF+m] = 0;
+
+                assign app_m_axis_sync_tx_ptp_ts_ready[n*PORTS_PER_IF+m] = 0;
+
+                assign app_s_axis_if_tx_ptp_ts[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = 0;
+                assign app_s_axis_if_tx_ptp_ts_tag[(n*PORTS_PER_IF+m)*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = 0;
+                assign app_s_axis_if_tx_ptp_ts_valid[n*PORTS_PER_IF+m] = 0;
+
+                assign app_m_axis_if_tx_ptp_ts_ready[n*PORTS_PER_IF+m] = 0;
+
             end
 
             // TX FIFOs
+            wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_if_tx_tdata;
+            wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_if_tx_tkeep;
+            wire axis_if_tx_tvalid;
+            wire axis_if_tx_tready;
+            wire axis_if_tx_tlast;
+            wire [AXIS_TX_USER_WIDTH-1:0] axis_if_tx_tuser;
+
             wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_tx_fifo_tdata;
             wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_tx_fifo_tkeep;
             wire axis_tx_fifo_tvalid;
@@ -1992,6 +2695,64 @@ generate
             wire axis_tx_pipe_tready;
             wire axis_tx_pipe_tlast;
             wire [AXIS_TX_USER_WIDTH-1:0] axis_tx_pipe_tuser;
+
+            wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_tx_async_fifo_tdata;
+            wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_tx_async_fifo_tkeep;
+            wire axis_tx_async_fifo_tvalid;
+            wire axis_tx_async_fifo_tready;
+            wire axis_tx_async_fifo_tlast;
+            wire [AXIS_TX_USER_WIDTH-1:0] axis_tx_async_fifo_tuser;
+
+            wire [AXIS_DATA_WIDTH-1:0] axis_tx_out_tdata;
+            wire [AXIS_KEEP_WIDTH-1:0] axis_tx_out_tkeep;
+            wire axis_tx_out_tvalid;
+            wire axis_tx_out_tready;
+            wire axis_tx_out_tlast;
+            wire [AXIS_TX_USER_WIDTH-1:0] axis_tx_out_tuser;
+
+            wire [AXIS_DATA_WIDTH-1:0] axis_tx_tdata;
+            wire [AXIS_KEEP_WIDTH-1:0] axis_tx_tkeep;
+            wire axis_tx_tvalid;
+            wire axis_tx_tready;
+            wire axis_tx_tlast;
+            wire [AXIS_TX_USER_WIDTH-1:0] axis_tx_tuser;
+
+            if (APP_ENABLE && APP_AXIS_IF_ENABLE) begin
+
+                assign app_s_axis_if_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_IF_DATA_WIDTH +: AXIS_IF_DATA_WIDTH] = if_tx_axis_tdata[m*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH];
+                assign app_s_axis_if_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_IF_KEEP_WIDTH +: AXIS_IF_KEEP_WIDTH] = if_tx_axis_tkeep[m*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH];
+                assign app_s_axis_if_tx_tvalid[n*PORTS_PER_IF+m +: 1] = if_tx_axis_tvalid[m +: 1];
+                assign if_tx_axis_tready[m +: 1] = app_s_axis_if_tx_tready[n*PORTS_PER_IF+m +: 1];
+                assign app_s_axis_if_tx_tlast[n*PORTS_PER_IF+m +: 1] = if_tx_axis_tlast[m +: 1];
+                // assign app_s_axis_if_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_IF_TX_USER_WIDTH +: AXIS_IF_TX_USER_WIDTH] = if_tx_axis_tuser[m*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH];
+                assign app_s_axis_if_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_IF_TX_USER_WIDTH +: AXIS_IF_TX_USER_WIDTH] = {{PTP_TAG_WIDTH{1'b0}}, if_tx_axis_tuser[m +: 1]};
+
+                assign axis_if_tx_tdata = app_m_axis_if_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_IF_DATA_WIDTH +: AXIS_IF_DATA_WIDTH];
+                assign axis_if_tx_tkeep = app_m_axis_if_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_IF_KEEP_WIDTH +: AXIS_IF_KEEP_WIDTH];
+                assign axis_if_tx_tvalid = app_m_axis_if_tx_tvalid[n*PORTS_PER_IF+m];
+                assign app_m_axis_if_tx_tready[n*PORTS_PER_IF+m +: 1] = axis_if_tx_tready;
+                assign axis_if_tx_tlast = app_m_axis_if_tx_tlast[n*PORTS_PER_IF+m];
+                assign axis_if_tx_tuser = app_m_axis_if_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_IF_TX_USER_WIDTH +: AXIS_IF_TX_USER_WIDTH];
+
+            end else begin
+
+                assign app_s_axis_if_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_IF_DATA_WIDTH +: AXIS_IF_DATA_WIDTH] = 0;
+                assign app_s_axis_if_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_IF_KEEP_WIDTH +: AXIS_IF_KEEP_WIDTH] = 0;
+                assign app_s_axis_if_tx_tvalid[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_if_tx_tlast[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_if_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_IF_TX_USER_WIDTH +: AXIS_IF_TX_USER_WIDTH] = 0;
+
+                assign app_m_axis_if_tx_tready[n*PORTS_PER_IF+m +: 1] = 0;
+
+                assign axis_if_tx_tdata = if_tx_axis_tdata[m*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH];
+                assign axis_if_tx_tkeep = if_tx_axis_tkeep[m*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH];
+                assign axis_if_tx_tvalid = if_tx_axis_tvalid[m +: 1];
+                assign if_tx_axis_tready[m +: 1] = axis_if_tx_tready;
+                assign axis_if_tx_tlast = if_tx_axis_tlast[m +: 1];
+                // assign axis_if_tx_tuser = if_tx_axis_tuser[m*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH];
+                assign axis_if_tx_tuser = {{PTP_TAG_WIDTH{1'b0}}, if_tx_axis_tuser[m +: 1]};
+
+            end
 
             axis_fifo #(
                 .DEPTH(TX_FIFO_DEPTH),
@@ -2015,15 +2776,14 @@ generate
                 .rst(rst),
 
                 // AXI input
-                .s_axis_tdata(if_tx_axis_tdata[m*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH]),
-                .s_axis_tkeep(if_tx_axis_tkeep[m*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH]),
-                .s_axis_tvalid(if_tx_axis_tvalid[m +: 1]),
-                .s_axis_tready(if_tx_axis_tready[m +: 1]),
-                .s_axis_tlast(if_tx_axis_tlast[m +: 1]),
+                .s_axis_tdata(axis_if_tx_tdata),
+                .s_axis_tkeep(axis_if_tx_tkeep),
+                .s_axis_tvalid(axis_if_tx_tvalid),
+                .s_axis_tready(axis_if_tx_tready),
+                .s_axis_tlast(axis_if_tx_tlast),
                 .s_axis_tid(0),
                 .s_axis_tdest(0),
-                // .s_axis_tuser(if_tx_axis_tuser[m*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH]),
-                .s_axis_tuser({{PTP_TAG_WIDTH{1'b0}}, if_tx_axis_tuser[m +: 1]}),
+                .s_axis_tuser(axis_if_tx_tuser),
 
                 // AXI output
                 .m_axis_tdata(axis_tx_fifo_tdata),
@@ -2041,6 +2801,41 @@ generate
                 .status_good_frame()
             );
 
+            if (APP_ENABLE && APP_AXIS_SYNC_ENABLE) begin
+
+                assign app_s_axis_sync_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH] = axis_tx_fifo_tdata;
+                assign app_s_axis_sync_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH] = axis_tx_fifo_tkeep;
+                assign app_s_axis_sync_tx_tvalid[n*PORTS_PER_IF+m] = axis_tx_fifo_tvalid;
+                assign axis_tx_fifo_tready = app_s_axis_sync_tx_tready[n*PORTS_PER_IF+m +: 1];
+                assign app_s_axis_sync_tx_tlast[n*PORTS_PER_IF+m] = axis_tx_fifo_tlast;
+                assign app_s_axis_sync_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH] = axis_tx_fifo_tuser;
+
+                assign axis_tx_pipe_tdata = app_m_axis_sync_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH];
+                assign axis_tx_pipe_tkeep = app_m_axis_sync_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH];
+                assign axis_tx_pipe_tvalid = app_m_axis_sync_tx_tvalid[n*PORTS_PER_IF+m +: 1];
+                assign app_m_axis_sync_tx_tready[n*PORTS_PER_IF+m +: 1] = axis_tx_pipe_tready;
+                assign axis_tx_pipe_tlast = app_m_axis_sync_tx_tlast[n*PORTS_PER_IF+m +: 1];
+                assign axis_tx_pipe_tuser = app_m_axis_sync_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH];
+
+            end else begin
+
+                assign app_s_axis_sync_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH] = 0;
+                assign app_s_axis_sync_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH] = 0;
+                assign app_s_axis_sync_tx_tvalid[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_sync_tx_tlast[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_sync_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH] = 0;
+
+                assign app_m_axis_sync_tx_tready[n*PORTS_PER_IF+m +: 1] = 0;
+
+                assign axis_tx_pipe_tdata = axis_tx_fifo_tdata;
+                assign axis_tx_pipe_tkeep = axis_tx_fifo_tkeep;
+                assign axis_tx_pipe_tvalid = axis_tx_fifo_tvalid;
+                assign axis_tx_fifo_tready = axis_tx_pipe_tready;
+                assign axis_tx_pipe_tlast = axis_tx_fifo_tlast;
+                assign axis_tx_pipe_tuser = axis_tx_fifo_tuser;
+
+            end
+
             axis_pipeline_fifo #(
                 .DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
                 .KEEP_ENABLE(AXIS_SYNC_KEEP_WIDTH > 1),
@@ -2057,24 +2852,24 @@ generate
                 .rst(rst),
 
                 // AXI input
-                .s_axis_tdata(axis_tx_fifo_tdata),
-                .s_axis_tkeep(axis_tx_fifo_tkeep),
-                .s_axis_tvalid(axis_tx_fifo_tvalid),
-                .s_axis_tready(axis_tx_fifo_tready),
-                .s_axis_tlast(axis_tx_fifo_tlast),
+                .s_axis_tdata(axis_tx_pipe_tdata),
+                .s_axis_tkeep(axis_tx_pipe_tkeep),
+                .s_axis_tvalid(axis_tx_pipe_tvalid),
+                .s_axis_tready(axis_tx_pipe_tready),
+                .s_axis_tlast(axis_tx_pipe_tlast),
                 .s_axis_tid(0),
                 .s_axis_tdest(0),
-                .s_axis_tuser(axis_tx_fifo_tuser),
+                .s_axis_tuser(axis_tx_pipe_tuser),
 
                 // AXI output
-                .m_axis_tdata(axis_tx_pipe_tdata),
-                .m_axis_tkeep(axis_tx_pipe_tkeep),
-                .m_axis_tvalid(axis_tx_pipe_tvalid),
-                .m_axis_tready(axis_tx_pipe_tready),
-                .m_axis_tlast(axis_tx_pipe_tlast),
+                .m_axis_tdata(axis_tx_async_fifo_tdata),
+                .m_axis_tkeep(axis_tx_async_fifo_tkeep),
+                .m_axis_tvalid(axis_tx_async_fifo_tvalid),
+                .m_axis_tready(axis_tx_async_fifo_tready),
+                .m_axis_tlast(axis_tx_async_fifo_tlast),
                 .m_axis_tid(),
                 .m_axis_tdest(),
-                .m_axis_tuser(axis_tx_pipe_tuser)
+                .m_axis_tuser(axis_tx_async_fifo_tuser)
             );
 
             axis_async_fifo_adapter #(
@@ -2099,26 +2894,26 @@ generate
                 // AXI input
                 .s_clk(clk),
                 .s_rst(rst),
-                .s_axis_tdata(axis_tx_pipe_tdata),
-                .s_axis_tkeep(axis_tx_pipe_tkeep),
-                .s_axis_tvalid(axis_tx_pipe_tvalid),
-                .s_axis_tready(axis_tx_pipe_tready),
-                .s_axis_tlast(axis_tx_pipe_tlast),
+                .s_axis_tdata(axis_tx_async_fifo_tdata),
+                .s_axis_tkeep(axis_tx_async_fifo_tkeep),
+                .s_axis_tvalid(axis_tx_async_fifo_tvalid),
+                .s_axis_tready(axis_tx_async_fifo_tready),
+                .s_axis_tlast(axis_tx_async_fifo_tlast),
                 .s_axis_tid(0),
                 .s_axis_tdest(0),
-                .s_axis_tuser(axis_tx_pipe_tuser),
+                .s_axis_tuser(axis_tx_async_fifo_tuser),
 
                 // AXI output
                 .m_clk(tx_clk[n*PORTS_PER_IF+m]),
                 .m_rst(tx_rst[n*PORTS_PER_IF+m]),
-                .m_axis_tdata(m_axis_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
-                .m_axis_tkeep(m_axis_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
-                .m_axis_tvalid(m_axis_tx_tvalid[n*PORTS_PER_IF+m]),
-                .m_axis_tready(m_axis_tx_tready[n*PORTS_PER_IF+m]),
-                .m_axis_tlast(m_axis_tx_tlast[n*PORTS_PER_IF+m]),
+                .m_axis_tdata(axis_tx_out_tdata),
+                .m_axis_tkeep(axis_tx_out_tkeep),
+                .m_axis_tvalid(axis_tx_out_tvalid),
+                .m_axis_tready(axis_tx_out_tready),
+                .m_axis_tlast(axis_tx_out_tlast),
                 .m_axis_tid(),
                 .m_axis_tdest(),
-                .m_axis_tuser(m_axis_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH]),
+                .m_axis_tuser(axis_tx_out_tuser),
 
                 // Status
                 .s_status_overflow(),
@@ -2129,13 +2924,69 @@ generate
                 .m_status_good_frame()
             );
 
+            if (APP_ENABLE && APP_AXIS_DIRECT_ENABLE) begin
+
+                assign app_s_axis_direct_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH] = axis_tx_out_tdata;
+                assign app_s_axis_direct_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH] = axis_tx_out_tkeep;
+                assign app_s_axis_direct_tx_tvalid[n*PORTS_PER_IF+m +: 1] = axis_tx_out_tvalid;
+                assign axis_tx_out_tready = app_s_axis_direct_tx_tready[n*PORTS_PER_IF+m +: 1];
+                assign app_s_axis_direct_tx_tlast[n*PORTS_PER_IF+m +: 1] = axis_tx_out_tlast;
+                assign app_s_axis_direct_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH] = axis_tx_out_tuser;
+
+                assign axis_tx_tdata = app_m_axis_direct_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH];
+                assign axis_tx_tkeep = app_m_axis_direct_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH];
+                assign axis_tx_tvalid = app_m_axis_direct_tx_tvalid[n*PORTS_PER_IF+m +: 1];
+                assign app_m_axis_direct_tx_tready[n*PORTS_PER_IF+m +: 1] = axis_tx_tready;
+                assign axis_tx_tlast = app_m_axis_direct_tx_tlast[n*PORTS_PER_IF+m +: 1];
+                assign axis_tx_tuser = app_m_axis_direct_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH];
+
+            end else begin
+
+                assign app_s_axis_direct_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH] = 0;
+                assign app_s_axis_direct_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH] = 0;
+                assign app_s_axis_direct_tx_tvalid[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_direct_tx_tlast[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_direct_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH] = 0;
+
+                assign app_m_axis_direct_tx_tready[n*PORTS_PER_IF+m +: 1] = 0;
+
+                assign axis_tx_tdata = axis_tx_out_tdata;
+                assign axis_tx_tkeep = axis_tx_out_tkeep;
+                assign axis_tx_tvalid = axis_tx_out_tvalid;
+                assign axis_tx_out_tready = axis_tx_tready;
+                assign axis_tx_tlast = axis_tx_out_tlast;
+                assign axis_tx_tuser = axis_tx_out_tuser;
+
+            end
+
+            assign m_axis_tx_tdata[(n*PORTS_PER_IF+m)*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH] = axis_tx_tdata;
+            assign m_axis_tx_tkeep[(n*PORTS_PER_IF+m)*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH] = axis_tx_tkeep;
+            assign m_axis_tx_tvalid[n*PORTS_PER_IF+m +: 1] = axis_tx_tvalid;
+            assign axis_tx_tready = m_axis_tx_tready[n*PORTS_PER_IF+m +: 1];
+            assign m_axis_tx_tlast[n*PORTS_PER_IF+m +: 1] = axis_tx_tlast;
+            assign m_axis_tx_tuser[(n*PORTS_PER_IF+m)*AXIS_TX_USER_WIDTH +: AXIS_TX_USER_WIDTH] = axis_tx_tuser;
+
             // RX FIFOs
-            wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_rx_fifo_tdata;
-            wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_rx_fifo_tkeep;
-            wire axis_rx_fifo_tvalid;
-            wire axis_rx_fifo_tready;
-            wire axis_rx_fifo_tlast;
-            wire [AXIS_RX_USER_WIDTH-1:0] axis_rx_fifo_tuser;
+            wire [AXIS_DATA_WIDTH-1:0] axis_rx_tdata;
+            wire [AXIS_KEEP_WIDTH-1:0] axis_rx_tkeep;
+            wire axis_rx_tvalid;
+            wire axis_rx_tready;
+            wire axis_rx_tlast;
+            wire [AXIS_RX_USER_WIDTH-1:0] axis_rx_tuser;
+
+            wire [AXIS_DATA_WIDTH-1:0] axis_rx_in_tdata;
+            wire [AXIS_KEEP_WIDTH-1:0] axis_rx_in_tkeep;
+            wire axis_rx_in_tvalid;
+            wire axis_rx_in_tready;
+            wire axis_rx_in_tlast;
+            wire [AXIS_RX_USER_WIDTH-1:0] axis_rx_in_tuser;
+
+            wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_rx_async_fifo_tdata;
+            wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_rx_async_fifo_tkeep;
+            wire axis_rx_async_fifo_tvalid;
+            wire axis_rx_async_fifo_tready;
+            wire axis_rx_async_fifo_tlast;
+            wire [AXIS_RX_USER_WIDTH-1:0] axis_rx_async_fifo_tuser;
 
             wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_rx_pipe_tdata;
             wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_rx_pipe_tkeep;
@@ -2143,6 +2994,62 @@ generate
             wire axis_rx_pipe_tready;
             wire axis_rx_pipe_tlast;
             wire [AXIS_RX_USER_WIDTH-1:0] axis_rx_pipe_tuser;
+
+            wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_rx_fifo_tdata;
+            wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_rx_fifo_tkeep;
+            wire axis_rx_fifo_tvalid;
+            wire axis_rx_fifo_tready;
+            wire axis_rx_fifo_tlast;
+            wire [AXIS_RX_USER_WIDTH-1:0] axis_rx_fifo_tuser;
+
+            wire [AXIS_SYNC_DATA_WIDTH-1:0] axis_if_rx_tdata;
+            wire [AXIS_SYNC_KEEP_WIDTH-1:0] axis_if_rx_tkeep;
+            wire axis_if_rx_tvalid;
+            wire axis_if_rx_tready;
+            wire axis_if_rx_tlast;
+            wire [AXIS_RX_USER_WIDTH-1:0] axis_if_rx_tuser;
+
+            assign axis_rx_tdata = s_axis_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH];
+            assign axis_rx_tkeep = s_axis_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH];
+            assign axis_rx_tvalid = s_axis_rx_tvalid[n*PORTS_PER_IF+m +: 1];
+            assign s_axis_rx_tready[n*PORTS_PER_IF+m +: 1] = axis_rx_tready;
+            assign axis_rx_tlast = s_axis_rx_tlast[n*PORTS_PER_IF+m +: 1];
+            assign axis_rx_tuser = s_axis_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH];
+
+            if (APP_ENABLE && APP_AXIS_DIRECT_ENABLE) begin
+
+                assign app_s_axis_direct_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH] = axis_rx_tdata;
+                assign app_s_axis_direct_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH] = axis_rx_tkeep;
+                assign app_s_axis_direct_rx_tvalid[n*PORTS_PER_IF+m +: 1] = axis_rx_tvalid;
+                assign axis_rx_tready = app_s_axis_direct_rx_tready[n*PORTS_PER_IF+m +: 1];
+                assign app_s_axis_direct_rx_tlast[n*PORTS_PER_IF+m +: 1] = axis_rx_tlast;
+                assign app_s_axis_direct_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH] = axis_rx_tuser;
+
+                assign axis_rx_in_tdata = app_m_axis_direct_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH];
+                assign axis_rx_in_tkeep = app_m_axis_direct_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH];
+                assign axis_rx_in_tvalid = app_m_axis_direct_rx_tvalid[n*PORTS_PER_IF+m +: 1];
+                assign app_m_axis_direct_rx_tready[n*PORTS_PER_IF+m +: 1] = axis_rx_in_tready;
+                assign axis_rx_in_tlast = app_m_axis_direct_rx_tlast[n*PORTS_PER_IF+m +: 1];
+                assign axis_rx_in_tuser = app_m_axis_direct_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH];
+
+            end else begin
+
+                assign app_s_axis_direct_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH] = 0;
+                assign app_s_axis_direct_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH] = 0;
+                assign app_s_axis_direct_rx_tvalid[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_direct_rx_tlast[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_direct_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH] = 0;
+
+                assign app_m_axis_direct_rx_tready[n*PORTS_PER_IF+m +: 1] = 0;
+
+                assign axis_rx_in_tdata = axis_rx_tdata;
+                assign axis_rx_in_tkeep = axis_rx_tkeep;
+                assign axis_rx_in_tvalid = axis_rx_tvalid;
+                assign axis_rx_tready = axis_rx_in_tready;
+                assign axis_rx_in_tlast = axis_rx_tlast;
+                assign axis_rx_in_tuser = axis_rx_tuser;
+
+            end
 
             axis_async_fifo_adapter #(
                 .DEPTH(MAX_RX_SIZE),
@@ -2166,26 +3073,26 @@ generate
                 // AXI input
                 .s_clk(rx_clk[n*PORTS_PER_IF+m]),
                 .s_rst(rx_rst[n*PORTS_PER_IF+m]),
-                .s_axis_tdata(s_axis_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
-                .s_axis_tkeep(s_axis_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
-                .s_axis_tvalid(s_axis_rx_tvalid[n*PORTS_PER_IF+m]),
-                .s_axis_tready(s_axis_rx_tready[n*PORTS_PER_IF+m]),
-                .s_axis_tlast(s_axis_rx_tlast[n*PORTS_PER_IF+m]),
+                .s_axis_tdata(axis_rx_in_tdata),
+                .s_axis_tkeep(axis_rx_in_tkeep),
+                .s_axis_tvalid(axis_rx_in_tvalid),
+                .s_axis_tready(axis_rx_in_tready),
+                .s_axis_tlast(axis_rx_in_tlast),
                 .s_axis_tid(0),
                 .s_axis_tdest(0),
-                .s_axis_tuser(s_axis_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH]),
+                .s_axis_tuser(axis_rx_in_tuser),
 
                 // AXI output
                 .m_clk(clk),
                 .m_rst(rst),
-                .m_axis_tdata(axis_rx_fifo_tdata),
-                .m_axis_tkeep(axis_rx_fifo_tkeep),
-                .m_axis_tvalid(axis_rx_fifo_tvalid),
-                .m_axis_tready(axis_rx_fifo_tready),
-                .m_axis_tlast(axis_rx_fifo_tlast),
+                .m_axis_tdata(axis_rx_async_fifo_tdata),
+                .m_axis_tkeep(axis_rx_async_fifo_tkeep),
+                .m_axis_tvalid(axis_rx_async_fifo_tvalid),
+                .m_axis_tready(axis_rx_async_fifo_tready),
+                .m_axis_tlast(axis_rx_async_fifo_tlast),
                 .m_axis_tid(),
                 .m_axis_tdest(),
-                .m_axis_tuser(axis_rx_fifo_tuser),
+                .m_axis_tuser(axis_rx_async_fifo_tuser),
 
                 // Status
                 .s_status_overflow(),
@@ -2212,14 +3119,14 @@ generate
                 .rst(rst),
 
                 // AXI input
-                .s_axis_tdata(axis_rx_fifo_tdata),
-                .s_axis_tkeep(axis_rx_fifo_tkeep),
-                .s_axis_tvalid(axis_rx_fifo_tvalid),
-                .s_axis_tready(axis_rx_fifo_tready),
-                .s_axis_tlast(axis_rx_fifo_tlast),
+                .s_axis_tdata(axis_rx_async_fifo_tdata),
+                .s_axis_tkeep(axis_rx_async_fifo_tkeep),
+                .s_axis_tvalid(axis_rx_async_fifo_tvalid),
+                .s_axis_tready(axis_rx_async_fifo_tready),
+                .s_axis_tlast(axis_rx_async_fifo_tlast),
                 .s_axis_tid(0),
                 .s_axis_tdest(0),
-                .s_axis_tuser(axis_rx_fifo_tuser),
+                .s_axis_tuser(axis_rx_async_fifo_tuser),
 
                 // AXI output
                 .m_axis_tdata(axis_rx_pipe_tdata),
@@ -2231,6 +3138,41 @@ generate
                 .m_axis_tdest(),
                 .m_axis_tuser(axis_rx_pipe_tuser)
             );
+
+            if (APP_ENABLE && APP_AXIS_SYNC_ENABLE) begin
+
+                assign app_s_axis_sync_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH] = axis_rx_pipe_tdata;
+                assign app_s_axis_sync_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH] = axis_rx_pipe_tkeep;
+                assign app_s_axis_sync_rx_tvalid[n*PORTS_PER_IF+m] = axis_rx_pipe_tvalid;
+                assign axis_rx_pipe_tready = app_s_axis_sync_rx_tready[n*PORTS_PER_IF+m +: 1];
+                assign app_s_axis_sync_rx_tlast[n*PORTS_PER_IF+m] = axis_rx_pipe_tlast;
+                assign app_s_axis_sync_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH] = axis_rx_pipe_tuser;
+
+                assign axis_rx_fifo_tdata = app_m_axis_sync_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH];
+                assign axis_rx_fifo_tkeep = app_m_axis_sync_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH];
+                assign axis_rx_fifo_tvalid = app_m_axis_sync_rx_tvalid[n*PORTS_PER_IF+m +: 1];
+                assign app_m_axis_sync_rx_tready[n*PORTS_PER_IF+m +: 1] = axis_rx_fifo_tready;
+                assign axis_rx_fifo_tlast = app_m_axis_sync_rx_tlast[n*PORTS_PER_IF+m +: 1];
+                assign axis_rx_fifo_tuser = app_m_axis_sync_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH];
+
+            end else begin
+
+                assign app_s_axis_sync_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH] = 0;
+                assign app_s_axis_sync_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH] = 0;
+                assign app_s_axis_sync_rx_tvalid[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_sync_rx_tlast[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_sync_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH] = 0;
+
+                assign app_m_axis_sync_rx_tready[n*PORTS_PER_IF+m +: 1] = 0;
+
+                assign axis_rx_fifo_tdata = axis_rx_pipe_tdata;
+                assign axis_rx_fifo_tkeep = axis_rx_pipe_tkeep;
+                assign axis_rx_fifo_tvalid = axis_rx_pipe_tvalid;
+                assign axis_rx_pipe_tready = axis_rx_fifo_tready;
+                assign axis_rx_fifo_tlast = axis_rx_pipe_tlast;
+                assign axis_rx_fifo_tuser = axis_rx_pipe_tuser;
+
+            end
 
             axis_fifo #(
                 .DEPTH(RX_FIFO_DEPTH),
@@ -2254,25 +3196,24 @@ generate
                 .rst(rst),
 
                 // AXI input
-                .s_axis_tdata(axis_rx_pipe_tdata),
-                .s_axis_tkeep(axis_rx_pipe_tkeep),
-                .s_axis_tvalid(axis_rx_pipe_tvalid),
-                .s_axis_tready(axis_rx_pipe_tready),
-                .s_axis_tlast(axis_rx_pipe_tlast),
+                .s_axis_tdata(axis_rx_fifo_tdata),
+                .s_axis_tkeep(axis_rx_fifo_tkeep),
+                .s_axis_tvalid(axis_rx_fifo_tvalid),
+                .s_axis_tready(axis_rx_fifo_tready),
+                .s_axis_tlast(axis_rx_fifo_tlast),
                 .s_axis_tid(0),
                 .s_axis_tdest(0),
-                .s_axis_tuser(axis_rx_pipe_tuser),
+                .s_axis_tuser(axis_rx_fifo_tuser),
 
                 // AXI output
-                .m_axis_tdata(if_rx_axis_tdata[m*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH]),
-                .m_axis_tkeep(if_rx_axis_tkeep[m*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH]),
-                .m_axis_tvalid(if_rx_axis_tvalid[m +: 1]),
-                .m_axis_tready(if_rx_axis_tready[m +: 1]),
-                .m_axis_tlast(if_rx_axis_tlast[m +: 1]),
+                .m_axis_tdata(axis_if_rx_tdata),
+                .m_axis_tkeep(axis_if_rx_tkeep),
+                .m_axis_tvalid(axis_if_rx_tvalid),
+                .m_axis_tready(axis_if_rx_tready),
+                .m_axis_tlast(axis_if_rx_tlast),
                 .m_axis_tid(),
                 .m_axis_tdest(),
-                // .m_axis_tuser(if_rx_axis_tuser[m*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH]),
-                .m_axis_tuser(if_rx_axis_tuser_int[m*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH]),
+                .m_axis_tuser(axis_if_rx_tuser),
 
                 // Status
                 .status_overflow(),
@@ -2280,11 +3221,570 @@ generate
                 .status_good_frame()
             );
 
+            if (APP_ENABLE && APP_AXIS_IF_ENABLE) begin
+
+                assign app_s_axis_if_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_IF_DATA_WIDTH +: AXIS_IF_DATA_WIDTH] = axis_if_rx_tdata;
+                assign app_s_axis_if_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_IF_KEEP_WIDTH +: AXIS_IF_KEEP_WIDTH] = axis_if_rx_tkeep;
+                assign app_s_axis_if_rx_tvalid[n*PORTS_PER_IF+m +: 1] = axis_if_rx_tvalid;
+                assign axis_if_rx_tready = app_s_axis_if_rx_tready[n*PORTS_PER_IF+m +: 1];
+                assign app_s_axis_if_rx_tlast[n*PORTS_PER_IF+m +: 1] = axis_if_rx_tlast;
+                assign app_s_axis_if_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_IF_RX_USER_WIDTH +: AXIS_IF_RX_USER_WIDTH] = axis_if_rx_tuser;
+
+                assign if_rx_axis_tdata[m*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH] = app_m_axis_if_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_IF_DATA_WIDTH +: AXIS_IF_DATA_WIDTH];
+                assign if_rx_axis_tkeep[m*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH] = app_m_axis_if_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_IF_KEEP_WIDTH +: AXIS_IF_KEEP_WIDTH];
+                assign if_rx_axis_tvalid[m +: 1] = app_m_axis_if_rx_tvalid[n*PORTS_PER_IF+m +: 1];
+                assign app_m_axis_if_rx_tready[n*PORTS_PER_IF+m +: 1] = if_rx_axis_tready[m +: 1];
+                assign if_rx_axis_tlast[m +: 1] = app_m_axis_if_rx_tlast[n*PORTS_PER_IF+m +: 1];
+                // assign if_rx_axis_tuser[m*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH] = app_m_axis_if_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_IF_RX_USER_WIDTH +: AXIS_IF_RX_USER_WIDTH];
+                assign if_rx_axis_tuser_int[m*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH] = app_m_axis_if_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_IF_RX_USER_WIDTH +: AXIS_IF_RX_USER_WIDTH];
+
+            end else begin
+
+                assign app_s_axis_if_rx_tdata[(n*PORTS_PER_IF+m)*AXIS_IF_DATA_WIDTH +: AXIS_IF_DATA_WIDTH] = 0;
+                assign app_s_axis_if_rx_tkeep[(n*PORTS_PER_IF+m)*AXIS_IF_KEEP_WIDTH +: AXIS_IF_KEEP_WIDTH] = 0;
+                assign app_s_axis_if_rx_tvalid[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_if_rx_tlast[n*PORTS_PER_IF+m +: 1] = 0;
+                assign app_s_axis_if_rx_tuser[(n*PORTS_PER_IF+m)*AXIS_IF_RX_USER_WIDTH +: AXIS_IF_RX_USER_WIDTH] = 0;
+
+                assign app_m_axis_if_rx_tready[n*PORTS_PER_IF+m +: 1] = 0;
+
+                assign if_rx_axis_tdata[m*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH] = axis_if_rx_tdata;
+                assign if_rx_axis_tkeep[m*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH] = axis_if_rx_tkeep;
+                assign if_rx_axis_tvalid[m +: 1] = axis_if_rx_tvalid;
+                assign axis_if_rx_tready = if_rx_axis_tready[m +: 1];
+                assign if_rx_axis_tlast[m +: 1] = axis_if_rx_tlast;
+                // assign if_rx_axis_tuser[m*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH] = axis_if_rx_tuser;
+                assign if_rx_axis_tuser_int[m*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH] = axis_if_rx_tuser;
+
+            end
+
             assign if_rx_axis_tuser[m +: 1] = if_rx_axis_tuser_int[m*AXIS_RX_USER_WIDTH +: 1];
 
         end
 
     end
+
+endgenerate
+
+generate
+
+if (APP_ENABLE) begin : app
+
+    mqnic_app_block #(
+        // Structural configuration
+        .IF_COUNT(IF_COUNT),
+        .PORTS_PER_IF(PORTS_PER_IF),
+
+        .PORT_COUNT(PORT_COUNT),
+
+        // PTP configuration
+        .PTP_TS_WIDTH(PTP_TS_WIDTH),
+        .PTP_TAG_WIDTH(PTP_TAG_WIDTH),
+        .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
+        .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
+        .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
+        .PTP_PERIOD_NS(PTP_PERIOD_NS),
+        .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
+        .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+        .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
+        .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
+        .PTP_TS_ENABLE(PTP_TS_ENABLE),
+
+        // Application configuration
+        .APP_CTRL_ENABLE(APP_CTRL_ENABLE),
+        .APP_DMA_ENABLE(APP_DMA_ENABLE),
+        .APP_AXIS_DIRECT_ENABLE(APP_AXIS_DIRECT_ENABLE),
+        .APP_AXIS_SYNC_ENABLE(APP_AXIS_SYNC_ENABLE),
+        .APP_AXIS_IF_ENABLE(APP_AXIS_IF_ENABLE),
+        .APP_STAT_ENABLE(APP_STAT_ENABLE && STAT_ENABLE),
+
+        // DMA interface configuration
+        .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+        .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
+        .DMA_TAG_WIDTH(IF_DMA_TAG_WIDTH),
+        .RAM_SEG_COUNT(RAM_SEG_COUNT),
+        .RAM_SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
+        .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
+        .RAM_SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
+        .RAM_SEL_WIDTH(IF_RAM_SEL_WIDTH),
+        .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+        .RAM_PIPELINE(RAM_PIPELINE),
+
+        // AXI lite interface (application control from host)
+        .AXIL_APP_CTRL_DATA_WIDTH(AXIL_APP_CTRL_DATA_WIDTH),
+        .AXIL_APP_CTRL_ADDR_WIDTH(AXIL_APP_CTRL_ADDR_WIDTH),
+        .AXIL_APP_CTRL_STRB_WIDTH(AXIL_APP_CTRL_STRB_WIDTH),
+
+        // AXI lite interface (control to NIC)
+        .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+        .AXIL_CTRL_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+        .AXIL_CTRL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+
+        // Ethernet interface configuration (direct, async)
+        .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
+        .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),
+        .AXIS_TX_USER_WIDTH(AXIS_TX_USER_WIDTH),
+        .AXIS_RX_USER_WIDTH(AXIS_RX_USER_WIDTH),
+        .AXIS_RX_USE_READY(AXIS_RX_USE_READY),
+
+        // Ethernet interface configuration (direct, sync)
+        .AXIS_SYNC_DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
+        .AXIS_SYNC_KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
+        .AXIS_SYNC_TX_USER_WIDTH(AXIS_TX_USER_WIDTH),
+        .AXIS_SYNC_RX_USER_WIDTH(AXIS_RX_USER_WIDTH),
+
+        // Ethernet interface configuration (interface)
+        .AXIS_IF_DATA_WIDTH(AXIS_IF_DATA_WIDTH),
+        .AXIS_IF_KEEP_WIDTH(AXIS_IF_KEEP_WIDTH),
+        .AXIS_IF_TX_USER_WIDTH(AXIS_IF_TX_USER_WIDTH),
+        .AXIS_IF_RX_USER_WIDTH(AXIS_IF_RX_USER_WIDTH),
+
+        // Statistics counter subsystem
+        .STAT_ENABLE(STAT_ENABLE),
+        .STAT_INC_WIDTH(STAT_INC_WIDTH),
+        .STAT_ID_WIDTH(STAT_ID_WIDTH)
+    )
+    app_block_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * AXI-Lite slave interface (control from host)
+         */
+        .s_axil_app_ctrl_awaddr(s_axil_app_ctrl_awaddr),
+        .s_axil_app_ctrl_awprot(s_axil_app_ctrl_awprot),
+        .s_axil_app_ctrl_awvalid(s_axil_app_ctrl_awvalid),
+        .s_axil_app_ctrl_awready(s_axil_app_ctrl_awready),
+        .s_axil_app_ctrl_wdata(s_axil_app_ctrl_wdata),
+        .s_axil_app_ctrl_wstrb(s_axil_app_ctrl_wstrb),
+        .s_axil_app_ctrl_wvalid(s_axil_app_ctrl_wvalid),
+        .s_axil_app_ctrl_wready(s_axil_app_ctrl_wready),
+        .s_axil_app_ctrl_bresp(s_axil_app_ctrl_bresp),
+        .s_axil_app_ctrl_bvalid(s_axil_app_ctrl_bvalid),
+        .s_axil_app_ctrl_bready(s_axil_app_ctrl_bready),
+        .s_axil_app_ctrl_araddr(s_axil_app_ctrl_araddr),
+        .s_axil_app_ctrl_arprot(s_axil_app_ctrl_arprot),
+        .s_axil_app_ctrl_arvalid(s_axil_app_ctrl_arvalid),
+        .s_axil_app_ctrl_arready(s_axil_app_ctrl_arready),
+        .s_axil_app_ctrl_rdata(s_axil_app_ctrl_rdata),
+        .s_axil_app_ctrl_rresp(s_axil_app_ctrl_rresp),
+        .s_axil_app_ctrl_rvalid(s_axil_app_ctrl_rvalid),
+        .s_axil_app_ctrl_rready(s_axil_app_ctrl_rready),
+
+        /*
+         * AXI-Lite master interface (control to NIC)
+         */
+        .m_axil_ctrl_awaddr(axil_ctrl_app_awaddr),
+        .m_axil_ctrl_awprot(axil_ctrl_app_awprot),
+        .m_axil_ctrl_awvalid(axil_ctrl_app_awvalid),
+        .m_axil_ctrl_awready(axil_ctrl_app_awready),
+        .m_axil_ctrl_wdata(axil_ctrl_app_wdata),
+        .m_axil_ctrl_wstrb(axil_ctrl_app_wstrb),
+        .m_axil_ctrl_wvalid(axil_ctrl_app_wvalid),
+        .m_axil_ctrl_wready(axil_ctrl_app_wready),
+        .m_axil_ctrl_bresp(axil_ctrl_app_bresp),
+        .m_axil_ctrl_bvalid(axil_ctrl_app_bvalid),
+        .m_axil_ctrl_bready(axil_ctrl_app_bready),
+        .m_axil_ctrl_araddr(axil_ctrl_app_araddr),
+        .m_axil_ctrl_arprot(axil_ctrl_app_arprot),
+        .m_axil_ctrl_arvalid(axil_ctrl_app_arvalid),
+        .m_axil_ctrl_arready(axil_ctrl_app_arready),
+        .m_axil_ctrl_rdata(axil_ctrl_app_rdata),
+        .m_axil_ctrl_rresp(axil_ctrl_app_rresp),
+        .m_axil_ctrl_rvalid(axil_ctrl_app_rvalid),
+        .m_axil_ctrl_rready(axil_ctrl_app_rready),
+
+        /*
+         * DMA read descriptor output (control)
+         */
+        .m_axis_ctrl_dma_read_desc_dma_addr(app_ctrl_dma_read_desc_dma_addr),
+        .m_axis_ctrl_dma_read_desc_ram_sel(app_ctrl_dma_read_desc_ram_sel),
+        .m_axis_ctrl_dma_read_desc_ram_addr(app_ctrl_dma_read_desc_ram_addr),
+        .m_axis_ctrl_dma_read_desc_len(app_ctrl_dma_read_desc_len),
+        .m_axis_ctrl_dma_read_desc_tag(app_ctrl_dma_read_desc_tag),
+        .m_axis_ctrl_dma_read_desc_valid(app_ctrl_dma_read_desc_valid),
+        .m_axis_ctrl_dma_read_desc_ready(app_ctrl_dma_read_desc_ready),
+
+        /*
+         * DMA read descriptor status input (control)
+         */
+        .s_axis_ctrl_dma_read_desc_status_tag(app_ctrl_dma_read_desc_status_tag),
+        .s_axis_ctrl_dma_read_desc_status_error(app_ctrl_dma_read_desc_status_error),
+        .s_axis_ctrl_dma_read_desc_status_valid(app_ctrl_dma_read_desc_status_valid),
+
+        /*
+         * DMA write descriptor output (control)
+         */
+        .m_axis_ctrl_dma_write_desc_dma_addr(app_ctrl_dma_write_desc_dma_addr),
+        .m_axis_ctrl_dma_write_desc_ram_sel(app_ctrl_dma_write_desc_ram_sel),
+        .m_axis_ctrl_dma_write_desc_ram_addr(app_ctrl_dma_write_desc_ram_addr),
+        .m_axis_ctrl_dma_write_desc_len(app_ctrl_dma_write_desc_len),
+        .m_axis_ctrl_dma_write_desc_tag(app_ctrl_dma_write_desc_tag),
+        .m_axis_ctrl_dma_write_desc_valid(app_ctrl_dma_write_desc_valid),
+        .m_axis_ctrl_dma_write_desc_ready(app_ctrl_dma_write_desc_ready),
+
+        /*
+         * DMA write descriptor status input (control)
+         */
+        .s_axis_ctrl_dma_write_desc_status_tag(app_ctrl_dma_write_desc_status_tag),
+        .s_axis_ctrl_dma_write_desc_status_error(app_ctrl_dma_write_desc_status_error),
+        .s_axis_ctrl_dma_write_desc_status_valid(app_ctrl_dma_write_desc_status_valid),
+
+        /*
+         * DMA read descriptor output (data)
+         */
+        .m_axis_data_dma_read_desc_dma_addr(app_data_dma_read_desc_dma_addr),
+        .m_axis_data_dma_read_desc_ram_sel(app_data_dma_read_desc_ram_sel),
+        .m_axis_data_dma_read_desc_ram_addr(app_data_dma_read_desc_ram_addr),
+        .m_axis_data_dma_read_desc_len(app_data_dma_read_desc_len),
+        .m_axis_data_dma_read_desc_tag(app_data_dma_read_desc_tag),
+        .m_axis_data_dma_read_desc_valid(app_data_dma_read_desc_valid),
+        .m_axis_data_dma_read_desc_ready(app_data_dma_read_desc_ready),
+
+        /*
+         * DMA read descriptor status input (data)
+         */
+        .s_axis_data_dma_read_desc_status_tag(app_data_dma_read_desc_status_tag),
+        .s_axis_data_dma_read_desc_status_error(app_data_dma_read_desc_status_error),
+        .s_axis_data_dma_read_desc_status_valid(app_data_dma_read_desc_status_valid),
+
+        /*
+         * DMA write descriptor output (data)
+         */
+        .m_axis_data_dma_write_desc_dma_addr(app_data_dma_write_desc_dma_addr),
+        .m_axis_data_dma_write_desc_ram_sel(app_data_dma_write_desc_ram_sel),
+        .m_axis_data_dma_write_desc_ram_addr(app_data_dma_write_desc_ram_addr),
+        .m_axis_data_dma_write_desc_len(app_data_dma_write_desc_len),
+        .m_axis_data_dma_write_desc_tag(app_data_dma_write_desc_tag),
+        .m_axis_data_dma_write_desc_valid(app_data_dma_write_desc_valid),
+        .m_axis_data_dma_write_desc_ready(app_data_dma_write_desc_ready),
+
+        /*
+         * DMA write descriptor status input (data)
+         */
+        .s_axis_data_dma_write_desc_status_tag(app_data_dma_write_desc_status_tag),
+        .s_axis_data_dma_write_desc_status_error(app_data_dma_write_desc_status_error),
+        .s_axis_data_dma_write_desc_status_valid(app_data_dma_write_desc_status_valid),
+
+        /*
+         * RAM interface (control)
+         */
+        .ctrl_dma_ram_wr_cmd_sel(app_ctrl_dma_ram_wr_cmd_sel),
+        .ctrl_dma_ram_wr_cmd_be(app_ctrl_dma_ram_wr_cmd_be),
+        .ctrl_dma_ram_wr_cmd_addr(app_ctrl_dma_ram_wr_cmd_addr),
+        .ctrl_dma_ram_wr_cmd_data(app_ctrl_dma_ram_wr_cmd_data),
+        .ctrl_dma_ram_wr_cmd_valid(app_ctrl_dma_ram_wr_cmd_valid),
+        .ctrl_dma_ram_wr_cmd_ready(app_ctrl_dma_ram_wr_cmd_ready),
+        .ctrl_dma_ram_wr_done(app_ctrl_dma_ram_wr_done),
+        .ctrl_dma_ram_rd_cmd_sel(app_ctrl_dma_ram_rd_cmd_sel),
+        .ctrl_dma_ram_rd_cmd_addr(app_ctrl_dma_ram_rd_cmd_addr),
+        .ctrl_dma_ram_rd_cmd_valid(app_ctrl_dma_ram_rd_cmd_valid),
+        .ctrl_dma_ram_rd_cmd_ready(app_ctrl_dma_ram_rd_cmd_ready),
+        .ctrl_dma_ram_rd_resp_data(app_ctrl_dma_ram_rd_resp_data),
+        .ctrl_dma_ram_rd_resp_valid(app_ctrl_dma_ram_rd_resp_valid),
+        .ctrl_dma_ram_rd_resp_ready(app_ctrl_dma_ram_rd_resp_ready),
+
+        /*
+         * RAM interface (data)
+         */
+        .data_dma_ram_wr_cmd_sel(app_data_dma_ram_wr_cmd_sel),
+        .data_dma_ram_wr_cmd_be(app_data_dma_ram_wr_cmd_be),
+        .data_dma_ram_wr_cmd_addr(app_data_dma_ram_wr_cmd_addr),
+        .data_dma_ram_wr_cmd_data(app_data_dma_ram_wr_cmd_data),
+        .data_dma_ram_wr_cmd_valid(app_data_dma_ram_wr_cmd_valid),
+        .data_dma_ram_wr_cmd_ready(app_data_dma_ram_wr_cmd_ready),
+        .data_dma_ram_wr_done(app_data_dma_ram_wr_done),
+        .data_dma_ram_rd_cmd_sel(app_data_dma_ram_rd_cmd_sel),
+        .data_dma_ram_rd_cmd_addr(app_data_dma_ram_rd_cmd_addr),
+        .data_dma_ram_rd_cmd_valid(app_data_dma_ram_rd_cmd_valid),
+        .data_dma_ram_rd_cmd_ready(app_data_dma_ram_rd_cmd_ready),
+        .data_dma_ram_rd_resp_data(app_data_dma_ram_rd_resp_data),
+        .data_dma_ram_rd_resp_valid(app_data_dma_ram_rd_resp_valid),
+        .data_dma_ram_rd_resp_ready(app_data_dma_ram_rd_resp_ready),
+
+        /*
+         * PTP clock
+         */
+        .ptp_sample_clk(ptp_sample_clk),
+        .ptp_pps(ptp_pps),
+        .ptp_ts_96(ptp_ts_96),
+        .ptp_ts_step(ptp_ts_step),
+        .ptp_perout_locked(ptp_perout_locked),
+        .ptp_perout_error(ptp_perout_error),
+        .ptp_perout_pulse(ptp_perout_pulse),
+
+        /*
+         * Ethernet (direct MAC interface - lowest latency raw traffic)
+         */
+        .direct_tx_clk(app_direct_tx_clk),
+        .direct_tx_rst(app_direct_tx_rst),
+
+        .s_axis_direct_tx_tdata(app_s_axis_direct_tx_tdata),
+        .s_axis_direct_tx_tkeep(app_s_axis_direct_tx_tkeep),
+        .s_axis_direct_tx_tvalid(app_s_axis_direct_tx_tvalid),
+        .s_axis_direct_tx_tready(app_s_axis_direct_tx_tready),
+        .s_axis_direct_tx_tlast(app_s_axis_direct_tx_tlast),
+        .s_axis_direct_tx_tuser(app_s_axis_direct_tx_tuser),
+
+        .m_axis_direct_tx_tdata(app_m_axis_direct_tx_tdata),
+        .m_axis_direct_tx_tkeep(app_m_axis_direct_tx_tkeep),
+        .m_axis_direct_tx_tvalid(app_m_axis_direct_tx_tvalid),
+        .m_axis_direct_tx_tready(app_m_axis_direct_tx_tready),
+        .m_axis_direct_tx_tlast(app_m_axis_direct_tx_tlast),
+        .m_axis_direct_tx_tuser(app_m_axis_direct_tx_tuser),
+
+        .s_axis_direct_tx_ptp_ts(app_s_axis_direct_tx_ptp_ts),
+        .s_axis_direct_tx_ptp_ts_tag(app_s_axis_direct_tx_ptp_ts_tag),
+        .s_axis_direct_tx_ptp_ts_valid(app_s_axis_direct_tx_ptp_ts_valid),
+        .s_axis_direct_tx_ptp_ts_ready(app_s_axis_direct_tx_ptp_ts_ready),
+
+        .m_axis_direct_tx_ptp_ts(app_m_axis_direct_tx_ptp_ts),
+        .m_axis_direct_tx_ptp_ts_tag(app_m_axis_direct_tx_ptp_ts_tag),
+        .m_axis_direct_tx_ptp_ts_valid(app_m_axis_direct_tx_ptp_ts_valid),
+        .m_axis_direct_tx_ptp_ts_ready(app_m_axis_direct_tx_ptp_ts_ready),
+
+        .direct_rx_clk(app_direct_rx_clk),
+        .direct_rx_rst(app_direct_rx_rst),
+
+        .s_axis_direct_rx_tdata(app_s_axis_direct_rx_tdata),
+        .s_axis_direct_rx_tkeep(app_s_axis_direct_rx_tkeep),
+        .s_axis_direct_rx_tvalid(app_s_axis_direct_rx_tvalid),
+        .s_axis_direct_rx_tready(app_s_axis_direct_rx_tready),
+        .s_axis_direct_rx_tlast(app_s_axis_direct_rx_tlast),
+        .s_axis_direct_rx_tuser(app_s_axis_direct_rx_tuser),
+
+        .m_axis_direct_rx_tdata(app_m_axis_direct_rx_tdata),
+        .m_axis_direct_rx_tkeep(app_m_axis_direct_rx_tkeep),
+        .m_axis_direct_rx_tvalid(app_m_axis_direct_rx_tvalid),
+        .m_axis_direct_rx_tready(app_m_axis_direct_rx_tready),
+        .m_axis_direct_rx_tlast(app_m_axis_direct_rx_tlast),
+        .m_axis_direct_rx_tuser(app_m_axis_direct_rx_tuser),
+
+        /*
+         * Ethernet (synchronous MAC interface - low latency raw traffic)
+         */
+        .s_axis_sync_tx_tdata(app_s_axis_sync_tx_tdata),
+        .s_axis_sync_tx_tkeep(app_s_axis_sync_tx_tkeep),
+        .s_axis_sync_tx_tvalid(app_s_axis_sync_tx_tvalid),
+        .s_axis_sync_tx_tready(app_s_axis_sync_tx_tready),
+        .s_axis_sync_tx_tlast(app_s_axis_sync_tx_tlast),
+        .s_axis_sync_tx_tuser(app_s_axis_sync_tx_tuser),
+
+        .m_axis_sync_tx_tdata(app_m_axis_sync_tx_tdata),
+        .m_axis_sync_tx_tkeep(app_m_axis_sync_tx_tkeep),
+        .m_axis_sync_tx_tvalid(app_m_axis_sync_tx_tvalid),
+        .m_axis_sync_tx_tready(app_m_axis_sync_tx_tready),
+        .m_axis_sync_tx_tlast(app_m_axis_sync_tx_tlast),
+        .m_axis_sync_tx_tuser(app_m_axis_sync_tx_tuser),
+
+        .s_axis_sync_tx_ptp_ts(app_s_axis_sync_tx_ptp_ts),
+        .s_axis_sync_tx_ptp_ts_tag(app_s_axis_sync_tx_ptp_ts_tag),
+        .s_axis_sync_tx_ptp_ts_valid(app_s_axis_sync_tx_ptp_ts_valid),
+        .s_axis_sync_tx_ptp_ts_ready(app_s_axis_sync_tx_ptp_ts_ready),
+
+        .m_axis_sync_tx_ptp_ts(app_m_axis_sync_tx_ptp_ts),
+        .m_axis_sync_tx_ptp_ts_tag(app_m_axis_sync_tx_ptp_ts_tag),
+        .m_axis_sync_tx_ptp_ts_valid(app_m_axis_sync_tx_ptp_ts_valid),
+        .m_axis_sync_tx_ptp_ts_ready(app_m_axis_sync_tx_ptp_ts_ready),
+
+        .s_axis_sync_rx_tdata(app_s_axis_sync_rx_tdata),
+        .s_axis_sync_rx_tkeep(app_s_axis_sync_rx_tkeep),
+        .s_axis_sync_rx_tvalid(app_s_axis_sync_rx_tvalid),
+        .s_axis_sync_rx_tready(app_s_axis_sync_rx_tready),
+        .s_axis_sync_rx_tlast(app_s_axis_sync_rx_tlast),
+        .s_axis_sync_rx_tuser(app_s_axis_sync_rx_tuser),
+
+        .m_axis_sync_rx_tdata(app_m_axis_sync_rx_tdata),
+        .m_axis_sync_rx_tkeep(app_m_axis_sync_rx_tkeep),
+        .m_axis_sync_rx_tvalid(app_m_axis_sync_rx_tvalid),
+        .m_axis_sync_rx_tready(app_m_axis_sync_rx_tready),
+        .m_axis_sync_rx_tlast(app_m_axis_sync_rx_tlast),
+        .m_axis_sync_rx_tuser(app_m_axis_sync_rx_tuser),
+
+        /*
+         * Ethernet (internal at interface module)
+         */
+        .s_axis_if_tx_tdata(app_s_axis_if_tx_tdata),
+        .s_axis_if_tx_tkeep(app_s_axis_if_tx_tkeep),
+        .s_axis_if_tx_tvalid(app_s_axis_if_tx_tvalid),
+        .s_axis_if_tx_tready(app_s_axis_if_tx_tready),
+        .s_axis_if_tx_tlast(app_s_axis_if_tx_tlast),
+        .s_axis_if_tx_tuser(app_s_axis_if_tx_tuser),
+
+        .m_axis_if_tx_tdata(app_m_axis_if_tx_tdata),
+        .m_axis_if_tx_tkeep(app_m_axis_if_tx_tkeep),
+        .m_axis_if_tx_tvalid(app_m_axis_if_tx_tvalid),
+        .m_axis_if_tx_tready(app_m_axis_if_tx_tready),
+        .m_axis_if_tx_tlast(app_m_axis_if_tx_tlast),
+        .m_axis_if_tx_tuser(app_m_axis_if_tx_tuser),
+
+        .s_axis_if_tx_ptp_ts(app_s_axis_if_tx_ptp_ts),
+        .s_axis_if_tx_ptp_ts_tag(app_s_axis_if_tx_ptp_ts_tag),
+        .s_axis_if_tx_ptp_ts_valid(app_s_axis_if_tx_ptp_ts_valid),
+        .s_axis_if_tx_ptp_ts_ready(app_s_axis_if_tx_ptp_ts_ready),
+
+        .m_axis_if_tx_ptp_ts(app_m_axis_if_tx_ptp_ts),
+        .m_axis_if_tx_ptp_ts_tag(app_m_axis_if_tx_ptp_ts_tag),
+        .m_axis_if_tx_ptp_ts_valid(app_m_axis_if_tx_ptp_ts_valid),
+        .m_axis_if_tx_ptp_ts_ready(app_m_axis_if_tx_ptp_ts_ready),
+
+        .s_axis_if_rx_tdata(app_s_axis_if_rx_tdata),
+        .s_axis_if_rx_tkeep(app_s_axis_if_rx_tkeep),
+        .s_axis_if_rx_tvalid(app_s_axis_if_rx_tvalid),
+        .s_axis_if_rx_tready(app_s_axis_if_rx_tready),
+        .s_axis_if_rx_tlast(app_s_axis_if_rx_tlast),
+        .s_axis_if_rx_tuser(app_s_axis_if_rx_tuser),
+
+        .m_axis_if_rx_tdata(app_m_axis_if_rx_tdata),
+        .m_axis_if_rx_tkeep(app_m_axis_if_rx_tkeep),
+        .m_axis_if_rx_tvalid(app_m_axis_if_rx_tvalid),
+        .m_axis_if_rx_tready(app_m_axis_if_rx_tready),
+        .m_axis_if_rx_tlast(app_m_axis_if_rx_tlast),
+        .m_axis_if_rx_tuser(app_m_axis_if_rx_tuser),
+
+        /*
+         * Statistics increment output
+         */
+        .m_axis_stat_tdata(axis_app_stat_tdata),
+        .m_axis_stat_tid(axis_app_stat_tid),
+        .m_axis_stat_tvalid(axis_app_stat_tvalid),
+        .m_axis_stat_tready(axis_app_stat_tready)
+    );
+
+end else begin
+
+    assign s_axil_app_ctrl_awready = 1'b0;
+    assign s_axil_app_ctrl_wready = 1'b0;
+    assign s_axil_app_ctrl_bresp = 0;
+    assign s_axil_app_ctrl_bvalid = 1'b0;
+    assign s_axil_app_ctrl_arready = 1'b0;
+    assign s_axil_app_ctrl_rdata = 0;
+    assign s_axil_app_ctrl_rresp = 0;
+    assign s_axil_app_ctrl_rvalid = 1'b0;
+
+    assign axil_ctrl_app_awaddr = 0;
+    assign axil_ctrl_app_awprot = 0;
+    assign axil_ctrl_app_awvalid = 1'b0;
+    assign axil_ctrl_app_wdata = 0;
+    assign axil_ctrl_app_wstrb = 0;
+    assign axil_ctrl_app_wvalid = 1'b0;
+    assign axil_ctrl_app_bready = 1'b0;
+    assign axil_ctrl_app_araddr = 0;
+    assign axil_ctrl_app_arprot = 0;
+    assign axil_ctrl_app_arvalid = 1'b0;
+    assign axil_ctrl_app_rready = 1'b0;
+
+    assign app_ctrl_dma_read_desc_dma_addr = 0;
+    assign app_ctrl_dma_read_desc_ram_sel = 0;
+    assign app_ctrl_dma_read_desc_ram_addr = 0;
+    assign app_ctrl_dma_read_desc_len = 0;
+    assign app_ctrl_dma_read_desc_tag = 0;
+    assign app_ctrl_dma_read_desc_valid = 0;
+
+    assign app_ctrl_dma_write_desc_dma_addr = 0;
+    assign app_ctrl_dma_write_desc_ram_sel = 0;
+    assign app_ctrl_dma_write_desc_ram_addr = 0;
+    assign app_ctrl_dma_write_desc_len = 0;
+    assign app_ctrl_dma_write_desc_tag = 0;
+    assign app_ctrl_dma_write_desc_valid = 0;
+
+    assign app_data_dma_read_desc_dma_addr = 0;
+    assign app_data_dma_read_desc_ram_sel = 0;
+    assign app_data_dma_read_desc_ram_addr = 0;
+    assign app_data_dma_read_desc_len = 0;
+    assign app_data_dma_read_desc_tag = 0;
+    assign app_data_dma_read_desc_valid = 0;
+
+    assign app_data_dma_write_desc_dma_addr = 0;
+    assign app_data_dma_write_desc_ram_sel = 0;
+    assign app_data_dma_write_desc_ram_addr = 0;
+    assign app_data_dma_write_desc_len = 0;
+    assign app_data_dma_write_desc_tag = 0;
+    assign app_data_dma_write_desc_valid = 0;
+
+    assign app_ctrl_dma_ram_wr_cmd_ready = 0;
+    assign app_ctrl_dma_ram_wr_done = 0;
+    assign app_ctrl_dma_ram_rd_cmd_ready = 0;
+    assign app_ctrl_dma_ram_rd_resp_data = 0;
+    assign app_ctrl_dma_ram_rd_resp_valid = 0;
+
+    assign app_data_dma_ram_wr_cmd_ready = 0;
+    assign app_data_dma_ram_wr_done = 0;
+    assign app_data_dma_ram_rd_cmd_ready = 0;
+    assign app_data_dma_ram_rd_resp_data = 0;
+    assign app_data_dma_ram_rd_resp_valid = 0;
+
+    assign app_s_axis_direct_tx_tready = 0;
+
+    assign app_m_axis_direct_tx_tdata = 0;
+    assign app_m_axis_direct_tx_tkeep = 0;
+    assign app_m_axis_direct_tx_tvalid = 0;
+    assign app_m_axis_direct_tx_tlast = 0;
+    assign app_m_axis_direct_tx_tuser = 0;
+
+    assign app_s_axis_direct_tx_ptp_ts_ready = 0;
+
+    assign app_m_axis_direct_tx_ptp_ts = 0;
+    assign app_m_axis_direct_tx_ptp_ts_tag = 0;
+    assign app_m_axis_direct_tx_ptp_ts_valid = 0;
+
+    assign app_s_axis_direct_rx_tready = 0;
+
+    assign app_m_axis_direct_rx_tdata = 0;
+    assign app_m_axis_direct_rx_tkeep = 0;
+    assign app_m_axis_direct_rx_tvalid = 0;
+    assign app_m_axis_direct_rx_tlast = 0;
+    assign app_m_axis_direct_rx_tuser = 0;
+
+    assign app_s_axis_sync_tx_tready = 0;
+
+    assign app_m_axis_sync_tx_tdata = 0;
+    assign app_m_axis_sync_tx_tkeep = 0;
+    assign app_m_axis_sync_tx_tvalid = 0;
+    assign app_m_axis_sync_tx_tlast = 0;
+    assign app_m_axis_sync_tx_tuser = 0;
+
+    assign app_s_axis_sync_tx_ptp_ts_ready = 0;
+
+    assign app_m_axis_sync_tx_ptp_ts = 0;
+    assign app_m_axis_sync_tx_ptp_ts_tag = 0;
+    assign app_m_axis_sync_tx_ptp_ts_valid = 0;
+
+    assign app_s_axis_sync_rx_tready = 0;
+
+    assign app_m_axis_sync_rx_tdata = 0;
+    assign app_m_axis_sync_rx_tkeep = 0;
+    assign app_m_axis_sync_rx_tvalid = 0;
+    assign app_m_axis_sync_rx_tlast = 0;
+    assign app_m_axis_sync_rx_tuser = 0;
+
+    assign app_s_axis_if_tx_tready = 0;
+
+    assign app_m_axis_if_tx_tdata = 0;
+    assign app_m_axis_if_tx_tkeep = 0;
+    assign app_m_axis_if_tx_tvalid = 0;
+    assign app_m_axis_if_tx_tlast = 0;
+    assign app_m_axis_if_tx_tuser = 0;
+
+    assign app_s_axis_if_tx_ptp_ts_ready = 0;
+
+    assign app_m_axis_if_tx_ptp_ts = 0;
+    assign app_m_axis_if_tx_ptp_ts_tag = 0;
+    assign app_m_axis_if_tx_ptp_ts_valid = 0;
+
+    assign app_s_axis_if_rx_tready = 0;
+
+    assign app_m_axis_if_rx_tdata = 0;
+    assign app_m_axis_if_rx_tkeep = 0;
+    assign app_m_axis_if_rx_tvalid = 0;
+    assign app_m_axis_if_rx_tlast = 0;
+    assign app_m_axis_if_rx_tuser = 0;
+
+    assign axis_app_stat_tdata = 0;
+    assign axis_app_stat_tid = 0;
+    assign axis_app_stat_tvalid = 1'b0;
+
+end
 
 endgenerate
 

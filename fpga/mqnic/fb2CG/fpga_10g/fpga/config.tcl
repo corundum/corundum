@@ -110,6 +110,15 @@ dict set params MAX_RX_SIZE "9214"
 dict set params TX_RAM_SIZE "32768"
 dict set params RX_RAM_SIZE "32768"
 
+# Application block configuration
+dict set params APP_ENABLE "0"
+dict set params APP_CTRL_ENABLE "1"
+dict set params APP_DMA_ENABLE "1"
+dict set params APP_AXIS_DIRECT_ENABLE "1"
+dict set params APP_AXIS_SYNC_ENABLE "1"
+dict set params APP_AXIS_IF_ENABLE "1"
+dict set params APP_STAT_ENABLE "1"
+
 # DMA interface configuration
 dict set params DMA_LEN_WIDTH "16"
 dict set params DMA_TAG_WIDTH "16"
@@ -127,6 +136,10 @@ dict set params PCIE_DMA_WRITE_TX_FC_ENABLE "1"
 # AXI lite interface configuration (control)
 dict set params AXIL_CTRL_DATA_WIDTH "32"
 dict set params AXIL_CTRL_ADDR_WIDTH "24"
+
+# AXI lite interface configuration (application control)
+dict set params AXIL_APP_CTRL_DATA_WIDTH [dict get $params AXIL_CTRL_DATA_WIDTH]
+dict set params AXIL_APP_CTRL_ADDR_WIDTH "24"
 
 # Ethernet interface configuration
 dict set params AXIS_ETH_TX_PIPELINE "0"
@@ -189,6 +202,9 @@ proc configure_bar {pcie pf bar aperture} {
 
 # Control BAR (BAR 0)
 configure_bar $pcie 0 0 [dict get $params AXIL_CTRL_ADDR_WIDTH]
+
+# Application BAR (BAR 2)
+configure_bar $pcie 0 2 [expr [dict get $params APP_ENABLE] ? [dict get $params AXIL_APP_CTRL_ADDR_WIDTH] : 0]
 
 # apply parameters to top-level
 set param_list {}

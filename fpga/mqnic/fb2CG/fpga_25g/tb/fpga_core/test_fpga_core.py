@@ -265,6 +265,8 @@ class TB(object):
         self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
 
         self.dev.functions[0].configure_bar(0, 2**len(dut.core_inst.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
+        if hasattr(dut.core_inst.core_pcie_inst, 'pcie_app_ctrl'):
+            self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
         # Ethernet
         cocotb.fork(Clock(dut.qsfp_0_rx_clk_0, 2.56, units="ns").start())
@@ -547,6 +549,7 @@ async def run_test_nic(dut):
 tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 lib_dir = os.path.abspath(os.path.join(rtl_dir, '..', 'lib'))
+app_dir = os.path.abspath(os.path.join(rtl_dir, '..', 'app'))
 axi_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'axi', 'rtl'))
 axis_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'axis', 'rtl'))
 eth_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'eth', 'rtl'))
@@ -573,6 +576,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "cpl_op_mux.v"),
         os.path.join(rtl_dir, "common", "desc_fetch.v"),
         os.path.join(rtl_dir, "common", "desc_op_mux.v"),
+        os.path.join(rtl_dir, "common", "event_mux.v"),
         os.path.join(rtl_dir, "common", "queue_manager.v"),
         os.path.join(rtl_dir, "common", "cpl_queue_manager.v"),
         os.path.join(rtl_dir, "common", "tx_engine.v"),
@@ -580,15 +584,14 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "tx_checksum.v"),
         os.path.join(rtl_dir, "common", "rx_hash.v"),
         os.path.join(rtl_dir, "common", "rx_checksum.v"),
-        os.path.join(rtl_dir, "common", "mqnic_tx_scheduler_block_rr.v"),
-        os.path.join(rtl_dir, "common", "tx_scheduler_rr.v"),
-        os.path.join(rtl_dir, "common", "event_mux.v"),
         os.path.join(rtl_dir, "common", "stats_counter.v"),
         os.path.join(rtl_dir, "common", "stats_collect.v"),
         os.path.join(rtl_dir, "common", "stats_pcie_if.v"),
         os.path.join(rtl_dir, "common", "stats_pcie_tlp.v"),
         os.path.join(rtl_dir, "common", "stats_dma_if_pcie.v"),
         os.path.join(rtl_dir, "common", "stats_dma_latency.v"),
+        os.path.join(rtl_dir, "common", "mqnic_tx_scheduler_block_rr.v"),
+        os.path.join(rtl_dir, "common", "tx_scheduler_rr.v"),
         os.path.join(rtl_dir, "common", "tdma_scheduler.v"),
         os.path.join(rtl_dir, "common", "tdma_ber.v"),
         os.path.join(rtl_dir, "common", "tdma_ber_ch.v"),
@@ -619,12 +622,10 @@ def test_fpga_core(request):
         os.path.join(axis_rtl_dir, "axis_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_pipeline_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_register.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_rc.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_rq.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_cc.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_cq.v"),
         os.path.join(pcie_rtl_dir, "pcie_axil_master.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_demux.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_demux_bar.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_mux.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_rd.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_wr.v"),
@@ -637,6 +638,11 @@ def test_fpga_core(request):
         os.path.join(pcie_rtl_dir, "dma_psdpram.v"),
         os.path.join(pcie_rtl_dir, "dma_client_axis_sink.v"),
         os.path.join(pcie_rtl_dir, "dma_client_axis_source.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_rc.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_rq.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_cc.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_cq.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_cfg.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_msi.v"),
         os.path.join(pcie_rtl_dir, "pulse_merge.v"),
@@ -694,6 +700,15 @@ def test_fpga_core(request):
     parameters['TX_RAM_SIZE'] = 32768
     parameters['RX_RAM_SIZE'] = 32768
 
+    # Application block configuration
+    parameters['APP_ENABLE'] = 0
+    parameters['APP_CTRL_ENABLE'] = 1
+    parameters['APP_DMA_ENABLE'] = 1
+    parameters['APP_AXIS_DIRECT_ENABLE'] = 1
+    parameters['APP_AXIS_SYNC_ENABLE'] = 1
+    parameters['APP_AXIS_IF_ENABLE'] = 1
+    parameters['APP_STAT_ENABLE'] = 1
+
     # DMA interface configuration
     parameters['DMA_LEN_WIDTH'] = 16
     parameters['DMA_TAG_WIDTH'] = 16
@@ -714,6 +729,10 @@ def test_fpga_core(request):
     # AXI lite interface configuration (control)
     parameters['AXIL_CTRL_DATA_WIDTH'] = 32
     parameters['AXIL_CTRL_ADDR_WIDTH'] = 24
+
+    # AXI lite interface configuration (application control)
+    parameters['AXIL_APP_CTRL_DATA_WIDTH'] = parameters['AXIL_CTRL_DATA_WIDTH']
+    parameters['AXIL_APP_CTRL_ADDR_WIDTH'] = 24
 
     # Ethernet interface configuration
     parameters['AXIS_ETH_TX_PIPELINE'] = 0

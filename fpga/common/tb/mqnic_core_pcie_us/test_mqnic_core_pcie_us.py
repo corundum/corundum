@@ -266,6 +266,8 @@ class TB(object):
         self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
 
         self.dev.functions[0].configure_bar(0, 2**len(dut.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
+        if hasattr(dut.core_pcie_inst, 'pcie_app_ctrl'):
+            self.dev.functions[0].configure_bar(2, 2**len(dut.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
         # Ethernet
         self.port_mac = []
@@ -297,14 +299,14 @@ class TB(object):
                 mac = EthMac(
                     tx_clk=port.tx_async_fifo_inst.m_clk,
                     tx_rst=port.tx_async_fifo_inst.m_rst,
-                    tx_bus=AxiStreamBus.from_prefix(port.tx_async_fifo_inst, "m_axis"),
+                    tx_bus=AxiStreamBus.from_prefix(port, "axis_tx"),
                     tx_ptp_time=port.ptp.tx_ptp_cdc_inst.output_ts,
-                    tx_ptp_ts=port.ptp.tx_ptp_ts_fifo_inst.s_axis_tdata,
-                    tx_ptp_ts_tag=port.ptp.tx_ptp_ts_fifo_inst.s_axis_tid,
-                    tx_ptp_ts_valid=port.ptp.tx_ptp_ts_fifo_inst.s_axis_tvalid,
+                    tx_ptp_ts=port.ptp.axis_tx_ptp_ts,
+                    tx_ptp_ts_tag=port.ptp.axis_tx_ptp_ts_tag,
+                    tx_ptp_ts_valid=port.ptp.axis_tx_ptp_ts_valid,
                     rx_clk=port.rx_async_fifo_inst.s_clk,
                     rx_rst=port.rx_async_fifo_inst.s_rst,
-                    rx_bus=AxiStreamBus.from_prefix(port.rx_async_fifo_inst, "s_axis"),
+                    rx_bus=AxiStreamBus.from_prefix(port, "axis_rx"),
                     rx_ptp_time=port.ptp.rx_ptp_cdc_inst.output_ts,
                     ifg=12, speed=speed
                 )
@@ -528,6 +530,7 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
         os.path.join(rtl_dir, "cpl_op_mux.v"),
         os.path.join(rtl_dir, "desc_fetch.v"),
         os.path.join(rtl_dir, "desc_op_mux.v"),
+        os.path.join(rtl_dir, "event_mux.v"),
         os.path.join(rtl_dir, "queue_manager.v"),
         os.path.join(rtl_dir, "cpl_queue_manager.v"),
         os.path.join(rtl_dir, "tx_engine.v"),
@@ -535,15 +538,14 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
         os.path.join(rtl_dir, "tx_checksum.v"),
         os.path.join(rtl_dir, "rx_hash.v"),
         os.path.join(rtl_dir, "rx_checksum.v"),
-        os.path.join(rtl_dir, "mqnic_tx_scheduler_block_rr.v"),
-        os.path.join(rtl_dir, "tx_scheduler_rr.v"),
-        os.path.join(rtl_dir, "event_mux.v"),
         os.path.join(rtl_dir, "stats_counter.v"),
         os.path.join(rtl_dir, "stats_collect.v"),
         os.path.join(rtl_dir, "stats_pcie_if.v"),
         os.path.join(rtl_dir, "stats_pcie_tlp.v"),
         os.path.join(rtl_dir, "stats_dma_if_pcie.v"),
         os.path.join(rtl_dir, "stats_dma_latency.v"),
+        os.path.join(rtl_dir, "mqnic_tx_scheduler_block_rr.v"),
+        os.path.join(rtl_dir, "tx_scheduler_rr.v"),
         os.path.join(eth_rtl_dir, "ptp_clock.v"),
         os.path.join(eth_rtl_dir, "ptp_clock_cdc.v"),
         os.path.join(eth_rtl_dir, "ptp_perout.v"),
@@ -566,12 +568,10 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
         os.path.join(axis_rtl_dir, "axis_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_pipeline_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_register.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_rc.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_rq.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_cc.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_cq.v"),
         os.path.join(pcie_rtl_dir, "pcie_axil_master.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_demux.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_demux_bar.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_mux.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_rd.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_wr.v"),
@@ -584,6 +584,11 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
         os.path.join(pcie_rtl_dir, "dma_psdpram.v"),
         os.path.join(pcie_rtl_dir, "dma_client_axis_sink.v"),
         os.path.join(pcie_rtl_dir, "dma_client_axis_source.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_rc.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_rq.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_cc.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_cq.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_cfg.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_msi.v"),
         os.path.join(pcie_rtl_dir, "pulse_merge.v"),
@@ -642,6 +647,15 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
     parameters['TX_RAM_SIZE'] = 131072
     parameters['RX_RAM_SIZE'] = 131072
 
+    # Application block configuration
+    parameters['APP_ENABLE'] = 0
+    parameters['APP_CTRL_ENABLE'] = 1
+    parameters['APP_DMA_ENABLE'] = 1
+    parameters['APP_AXIS_DIRECT_ENABLE'] = 1
+    parameters['APP_AXIS_SYNC_ENABLE'] = 1
+    parameters['APP_AXIS_IF_ENABLE'] = 1
+    parameters['APP_STAT_ENABLE'] = 1
+
     # DMA interface configuration
     parameters['DMA_LEN_WIDTH'] = 16
     parameters['DMA_TAG_WIDTH'] = 16
@@ -664,6 +678,10 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
     parameters['AXIL_CTRL_DATA_WIDTH'] = 32
     parameters['AXIL_CTRL_ADDR_WIDTH'] = 24
     parameters['AXIL_CSR_PASSTHROUGH_ENABLE'] = 0
+
+    # AXI lite interface configuration (application control)
+    parameters['AXIL_APP_CTRL_DATA_WIDTH'] = parameters['AXIL_CTRL_DATA_WIDTH']
+    parameters['AXIL_APP_CTRL_ADDR_WIDTH'] = 24
 
     # Ethernet interface configuration
     parameters['AXIS_ETH_DATA_WIDTH'] = axis_eth_data_width

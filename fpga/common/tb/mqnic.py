@@ -1044,6 +1044,8 @@ class Driver(object):
         self.dev_id = None
         self.rc_tree_ent = None
         self.hw_addr = None
+        self.app_hw_addr = None
+        self.ram_hw_addr = None
 
         self.fw_id = None
         self.fw_ver = None
@@ -1073,6 +1075,17 @@ class Driver(object):
         self.dev_id = dev_id
         self.rc_tree_ent = self.rc.tree.find_child_dev(dev_id)
         self.hw_addr = self.rc_tree_ent.bar_addr[0]
+        self.hw_regs_size = self.rc_tree_ent.bar_size[0]
+        self.app_hw_addr = self.rc_tree_ent.bar_addr[2]
+        self.app_hw_regs_size = self.rc_tree_ent.bar_size[2]
+        self.ram_hw_addr = self.rc_tree_ent.bar_addr[4]
+        self.ram_hw_regs_size = self.rc_tree_ent.bar_size[4]
+
+        self.log.info("Control BAR size: %d", self.hw_regs_size)
+        if self.app_hw_regs_size:
+            self.log.info("Application BAR size: %d", self.app_hw_regs_size)
+        if self.ram_hw_regs_size:
+            self.log.info("RAM BAR size: %d", self.ram_hw_regs_size)
 
         # Read ID registers
         self.fw_id = await self.rc.mem_read_dword(self.hw_addr+MQNIC_REG_FW_ID)

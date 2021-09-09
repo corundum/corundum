@@ -763,7 +763,7 @@ wire                       axis_stat_dma_tready;
 
 generate
 
-if (STAT_ENABLE && STAT_PCIE_ENABLE) begin
+if (STAT_ENABLE && STAT_PCIE_ENABLE) begin : stats_pcie_if
 
     stats_pcie_if #(
         .TLP_SEG_COUNT(TLP_SEG_COUNT),
@@ -840,7 +840,7 @@ end else begin
 
 end
 
-if (STAT_ENABLE && STAT_DMA_ENABLE) begin
+if (STAT_ENABLE && STAT_DMA_ENABLE) begin : stats_dma_if_pcie
 
     stats_dma_if_pcie #(
         .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
@@ -917,7 +917,7 @@ end else begin
 
 end
 
-if (STAT_ENABLE && (STAT_DMA_ENABLE || STAT_PCIE_ENABLE)) begin
+if (STAT_ENABLE && (STAT_DMA_ENABLE || STAT_PCIE_ENABLE)) begin : stats_mux
 
     axis_arb_mux #(
         .S_COUNT(3),

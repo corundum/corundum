@@ -368,17 +368,17 @@ wire [PTP_PEROUT_COUNT-1:0] ptp_perout_error;
 wire [PTP_PEROUT_COUNT-1:0] ptp_perout_pulse;
 
 // control registers
-wire [AXIL_CSR_ADDR_WIDTH-1:0]  ctrl_reg_wr_addr;
-wire [AXIL_CTRL_DATA_WIDTH-1:0]      ctrl_reg_wr_data;
-wire [AXIL_CTRL_STRB_WIDTH-1:0]      ctrl_reg_wr_strb;
-wire                            ctrl_reg_wr_en;
-wire                            ctrl_reg_wr_wait;
-wire                            ctrl_reg_wr_ack;
-wire [AXIL_CSR_ADDR_WIDTH-1:0]  ctrl_reg_rd_addr;
-wire                            ctrl_reg_rd_en;
-wire [AXIL_CTRL_DATA_WIDTH-1:0]      ctrl_reg_rd_data;
-wire                            ctrl_reg_rd_wait;
-wire                            ctrl_reg_rd_ack;
+wire [AXIL_CSR_ADDR_WIDTH-1:0]   ctrl_reg_wr_addr;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  ctrl_reg_wr_data;
+wire [AXIL_CTRL_STRB_WIDTH-1:0]  ctrl_reg_wr_strb;
+wire                             ctrl_reg_wr_en;
+wire                             ctrl_reg_wr_wait;
+wire                             ctrl_reg_wr_ack;
+wire [AXIL_CSR_ADDR_WIDTH-1:0]   ctrl_reg_rd_addr;
+wire                             ctrl_reg_rd_en;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  ctrl_reg_rd_data;
+wire                             ctrl_reg_rd_wait;
+wire                             ctrl_reg_rd_ack;
 
 reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};

@@ -762,6 +762,13 @@ tdma_ber_inst (
     .ptp_ts_step(ptp_ts_step)
 );
 
+assign led_red = 8'd0;
+assign led_green = 8'd0;
+assign led_bmc[0] = pps_led_reg;
+assign led_bmc[1] = 0;
+assign led_exp[0] = !pps_led_reg;
+assign led_exp[1] = 1'b1;
+
 wire [PORT_COUNT-1:0]                         eth_tx_clk;
 wire [PORT_COUNT-1:0]                         eth_tx_rst;
 
@@ -802,13 +809,6 @@ wire [PORT_COUNT-1:0]                   port_xgmii_rx_clk;
 wire [PORT_COUNT-1:0]                   port_xgmii_rx_rst;
 wire [PORT_COUNT*XGMII_DATA_WIDTH-1:0]  port_xgmii_rxd;
 wire [PORT_COUNT*XGMII_CTRL_WIDTH-1:0]  port_xgmii_rxc;
-
-assign led_red = 8'd0;
-assign led_green = 8'd0;
-assign led_bmc[0] = pps_led_reg;
-assign led_bmc[1] = 0;
-assign led_exp[0] = !pps_led_reg;
-assign led_exp[1] = 1'b1;
 
 //  counts    QSFP 0                                QSFP 1
 // IF  PORT   0_0      0_1      0_2      0_3        1_0      1_1      1_2      1_3  

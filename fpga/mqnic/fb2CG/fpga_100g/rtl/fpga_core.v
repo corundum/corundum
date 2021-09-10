@@ -648,6 +648,13 @@ always @(posedge clk_250mhz) begin
     pps_led_reg <= pps_led_counter_reg > 0;
 end
 
+assign led_red = 8'd0;
+assign led_green = 8'd0;
+assign led_bmc[0] = pps_led_reg;
+assign led_bmc[1] = 0;
+assign led_exp[0] = !pps_led_reg;
+assign led_exp[1] = 1'b1;
+
 wire [PORT_COUNT-1:0]                         eth_tx_clk;
 wire [PORT_COUNT-1:0]                         eth_tx_rst;
 
@@ -678,13 +685,6 @@ wire [PORT_COUNT-1:0]                         axis_eth_rx_tvalid;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tready;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tlast;
 wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  axis_eth_rx_tuser;
-
-assign led_red = 8'd0;
-assign led_green = 8'd0;
-assign led_bmc[0] = pps_led_reg;
-assign led_bmc[1] = 0;
-assign led_exp[0] = !pps_led_reg;
-assign led_exp[1] = 1'b1;
 
 //  counts    QSFP 0   QSFP 1
 // IF  PORT   0_0123   1_0123

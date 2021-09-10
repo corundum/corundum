@@ -32,9 +32,9 @@ set params [dict create]
 # FW and board IDs
 dict set params FW_ID "32'd0"
 dict set params FW_VER "32'h00000001"
-dict set params BOARD_ID "32'h1c2ca00e"
+dict set params BOARD_ID "32'h10ee9118"
 dict set params BOARD_VER "32'h00000001"
-dict set params FPGA_ID "32'h4A56093"
+dict set params FPGA_ID "32'h4B7D093"
 
 # Structural configuration
 

@@ -249,7 +249,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
     if (mqnic->if_count*mqnic->if_stride > mqnic->hw_regs_size)
     {
         ret = -EIO;
-        dev_err(dev, "Invalid BAR configuration (%d IF * 0x%x > 0x%lx)", mqnic->if_count, mqnic->if_stride, mqnic->hw_regs_size);
+        dev_err(dev, "Invalid BAR configuration (%d IF * 0x%x > 0x%llx)", mqnic->if_count, mqnic->if_stride, mqnic->hw_regs_size);
         goto fail_map_bars;
     }
 

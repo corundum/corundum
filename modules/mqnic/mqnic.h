@@ -81,7 +81,7 @@ struct mqnic_dev {
     struct device *dev;
     struct pci_dev *pdev;
 
-    size_t hw_regs_size;
+    resource_size_t hw_regs_size;
     phys_addr_t hw_regs_phys;
     u8 __iomem *hw_addr;
     u8 __iomem *phc_hw_addr;

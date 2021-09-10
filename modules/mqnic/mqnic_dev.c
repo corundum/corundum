@@ -59,7 +59,7 @@ static int mqnic_map_registers(struct mqnic_dev *mqnic, struct vm_area_struct *v
 
     if (map_size > mqnic->hw_regs_size)
     {
-        dev_err(mqnic->dev, "mqnic_map_registers: Tried to map registers region with wrong size %lu (expected <=%zu)", vma->vm_end - vma->vm_start, mqnic->hw_regs_size);
+        dev_err(mqnic->dev, "mqnic_map_registers: Tried to map registers region with wrong size %lu (expected <= %llu)", vma->vm_end - vma->vm_start, mqnic->hw_regs_size);
         return -EINVAL;
     }
 

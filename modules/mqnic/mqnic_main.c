@@ -202,21 +202,50 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 
     mqnic->hw_regs_size = pci_resource_len(pdev, 0);
     mqnic->hw_regs_phys = pci_resource_start(pdev, 0);
+    mqnic->app_hw_regs_size = pci_resource_len(pdev, 2);
+    mqnic->app_hw_regs_phys = pci_resource_start(pdev, 2);
+    mqnic->ram_hw_regs_size = pci_resource_len(pdev, 4);
+    mqnic->ram_hw_regs_phys = pci_resource_start(pdev, 4);
 
-    // Map BAR
+    // Map BARs
+    dev_info(dev, "Control BAR size: %llu", mqnic->hw_regs_size);
     mqnic->hw_addr = pci_ioremap_bar(pdev, 0);
     if (!mqnic->hw_addr)
     {
         ret = -ENOMEM;
-        dev_err(dev, "Failed to map BARs");
+        dev_err(dev, "Failed to map control BAR");
         goto fail_map_bars;
+    }
+
+    if (mqnic->app_hw_regs_size)
+    {
+        dev_info(dev, "Application BAR size: %llu", mqnic->app_hw_regs_size);
+        mqnic->app_hw_addr = pci_ioremap_bar(pdev, 2);
+        if (!mqnic->app_hw_addr)
+        {
+            ret = -ENOMEM;
+            dev_err(dev, "Failed to map application BAR");
+            goto fail_map_bars;
+        }
+    }
+
+    if (mqnic->ram_hw_regs_size)
+    {
+        dev_info(dev, "RAM BAR size: %llu", mqnic->ram_hw_regs_size);
+        mqnic->ram_hw_addr = pci_ioremap_bar(pdev, 4);
+        if (!mqnic->ram_hw_addr)
+        {
+            ret = -ENOMEM;
+            dev_err(dev, "Failed to map RAM BAR");
+            goto fail_map_bars;
+        }
     }
 
     // Check if device needs to be reset
     if (ioread32(mqnic->hw_addr) == 0xffffffff)
     {
         ret = -EIO;
-        dev_err(dev, "Deivce needs to be reset");
+        dev_err(dev, "Device needs to be reset");
         goto fail_map_bars;
     }
 
@@ -356,7 +385,12 @@ fail_board:
 fail_irq:
     pci_free_irq_vectors(pdev);
 fail_map_bars:
-    pci_iounmap(pdev, mqnic->hw_addr);
+    if (mqnic->hw_addr)
+        pci_iounmap(pdev, mqnic->hw_addr);
+    if (mqnic->app_hw_addr)
+        pci_iounmap(pdev, mqnic->app_hw_addr);
+    if (mqnic->ram_hw_addr)
+        pci_iounmap(pdev, mqnic->ram_hw_addr);
     pci_release_regions(pdev);
 fail_regions:
     pci_disable_device(pdev);
@@ -398,7 +432,12 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
         pci_free_irq(pdev, k, mqnic);
     }
     pci_free_irq_vectors(pdev);
-    pci_iounmap(pdev, mqnic->hw_addr);
+    if (mqnic->hw_addr)
+        pci_iounmap(pdev, mqnic->hw_addr);
+    if (mqnic->app_hw_addr)
+        pci_iounmap(pdev, mqnic->app_hw_addr);
+    if (mqnic->ram_hw_addr)
+        pci_iounmap(pdev, mqnic->ram_hw_addr);
     pci_release_regions(pdev);
     pci_disable_device(pdev);
 }

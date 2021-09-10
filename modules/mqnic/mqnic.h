@@ -86,6 +86,14 @@ struct mqnic_dev {
     u8 __iomem *hw_addr;
     u8 __iomem *phc_hw_addr;
 
+    resource_size_t app_hw_regs_size;
+    phys_addr_t app_hw_regs_phys;
+    u8 __iomem *app_hw_addr;
+
+    resource_size_t ram_hw_regs_size;
+    phys_addr_t ram_hw_regs_phys;
+    u8 __iomem *ram_hw_addr;
+
     struct mutex state_lock;
 
     int mac_count;

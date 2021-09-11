@@ -894,7 +894,6 @@ generate
 
 endgenerate
 
-
 mqnic_core_pcie_us #(
     // FW and board IDs
     .FW_ID(FW_ID),

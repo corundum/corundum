@@ -574,7 +574,7 @@ mqnic_ptp_inst (
     .reg_wr_wait(ptp_ctrl_reg_wr_wait),
     .reg_wr_ack(ptp_ctrl_reg_wr_ack),
     .reg_rd_addr(ctrl_reg_rd_addr),
-    .reg_rd_en(ctrl_reg_rd_en && (ctrl_reg_wr_addr >> 8 == 2)),
+    .reg_rd_en(ctrl_reg_rd_en && (ctrl_reg_rd_addr >> 8 == 2)),
     .reg_rd_data(ptp_ctrl_reg_rd_data),
     .reg_rd_wait(ptp_ctrl_reg_rd_wait),
     .reg_rd_ack(ptp_ctrl_reg_rd_ack),

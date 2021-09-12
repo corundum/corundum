@@ -91,11 +91,11 @@ module fpga #
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
     parameter TX_FIFO_DEPTH = 32768,
-    parameter RX_FIFO_DEPTH = 131072,
+    parameter RX_FIFO_DEPTH = 32768,
     parameter MAX_TX_SIZE = 9214,
     parameter MAX_RX_SIZE = 9214,
-    parameter TX_RAM_SIZE = 131072,
-    parameter RX_RAM_SIZE = 131072,
+    parameter TX_RAM_SIZE = 32768,
+    parameter RX_RAM_SIZE = 32768,
 
     // Application block configuration
     parameter APP_ENABLE = 0,

@@ -1,6 +1,6 @@
 """
 
-Copyright 2020, The Regents of the University of California.
+Copyright 2020-2021, The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -65,8 +65,6 @@ except ImportError:
 class TB(object):
     def __init__(self, dut):
         self.dut = dut
-
-        self.BAR0_APERTURE = int(os.getenv("PARAM_BAR0_APERTURE"))
 
         self.log = SimLog("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
@@ -266,7 +264,9 @@ class TB(object):
 
         self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
 
-        self.dev.functions[0].configure_bar(0, 2**self.BAR0_APERTURE, ext=True, prefetch=True)
+        self.dev.functions[0].configure_bar(0, 2**len(dut.core_inst.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
+        if hasattr(dut.core_inst.core_pcie_inst, 'pcie_app_ctrl'):
+            self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
         # Ethernet
         cocotb.fork(Clock(dut.qsfp_0_rx_clk_0, 6.4, units="ns").start())
@@ -547,6 +547,7 @@ async def run_test_nic(dut):
 tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 lib_dir = os.path.abspath(os.path.join(rtl_dir, '..', 'lib'))
+app_dir = os.path.abspath(os.path.join(rtl_dir, '..', 'app'))
 axi_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'axi', 'rtl'))
 axis_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'axis', 'rtl'))
 eth_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'eth', 'rtl'))
@@ -560,12 +561,19 @@ def test_fpga_core(request):
 
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
+        os.path.join(rtl_dir, "common", "mqnic_core_pcie_us.v"),
+        os.path.join(rtl_dir, "common", "mqnic_core_pcie.v"),
+        os.path.join(rtl_dir, "common", "mqnic_core.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface.v"),
         os.path.join(rtl_dir, "common", "mqnic_port.v"),
+        os.path.join(rtl_dir, "common", "mqnic_ptp.v"),
+        os.path.join(rtl_dir, "common", "mqnic_ptp_clock.v"),
+        os.path.join(rtl_dir, "common", "mqnic_ptp_perout.v"),
         os.path.join(rtl_dir, "common", "cpl_write.v"),
         os.path.join(rtl_dir, "common", "cpl_op_mux.v"),
         os.path.join(rtl_dir, "common", "desc_fetch.v"),
         os.path.join(rtl_dir, "common", "desc_op_mux.v"),
+        os.path.join(rtl_dir, "common", "event_mux.v"),
         os.path.join(rtl_dir, "common", "queue_manager.v"),
         os.path.join(rtl_dir, "common", "cpl_queue_manager.v"),
         os.path.join(rtl_dir, "common", "tx_engine.v"),
@@ -573,13 +581,17 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "tx_checksum.v"),
         os.path.join(rtl_dir, "common", "rx_hash.v"),
         os.path.join(rtl_dir, "common", "rx_checksum.v"),
+        os.path.join(rtl_dir, "common", "stats_counter.v"),
+        os.path.join(rtl_dir, "common", "stats_collect.v"),
+        os.path.join(rtl_dir, "common", "stats_pcie_if.v"),
+        os.path.join(rtl_dir, "common", "stats_pcie_tlp.v"),
+        os.path.join(rtl_dir, "common", "stats_dma_if_pcie.v"),
+        os.path.join(rtl_dir, "common", "stats_dma_latency.v"),
         os.path.join(rtl_dir, "common", "mqnic_tx_scheduler_block_rr.v"),
         os.path.join(rtl_dir, "common", "tx_scheduler_rr.v"),
-        os.path.join(rtl_dir, "common", "event_mux.v"),
         os.path.join(rtl_dir, "common", "tdma_scheduler.v"),
         os.path.join(rtl_dir, "common", "tdma_ber.v"),
         os.path.join(rtl_dir, "common", "tdma_ber_ch.v"),
-        os.path.join(eth_rtl_dir, "eth_mac_10g_fifo.v"),
         os.path.join(eth_rtl_dir, "eth_mac_10g.v"),
         os.path.join(eth_rtl_dir, "axis_xgmii_rx_64.v"),
         os.path.join(eth_rtl_dir, "axis_xgmii_tx_64.v"),
@@ -605,13 +617,12 @@ def test_fpga_core(request):
         os.path.join(axis_rtl_dir, "axis_async_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_async_fifo_adapter.v"),
         os.path.join(axis_rtl_dir, "axis_fifo.v"),
+        os.path.join(axis_rtl_dir, "axis_pipeline_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_register.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_rc.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_rq.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_cc.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_if_cq.v"),
         os.path.join(pcie_rtl_dir, "pcie_axil_master.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_demux.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_demux_bar.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_mux.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_rd.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_wr.v"),
@@ -624,6 +635,11 @@ def test_fpga_core(request):
         os.path.join(pcie_rtl_dir, "dma_psdpram.v"),
         os.path.join(pcie_rtl_dir, "dma_client_axis_sink.v"),
         os.path.join(pcie_rtl_dir, "dma_client_axis_source.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_rc.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_rq.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_cc.v"),
+        os.path.join(pcie_rtl_dir, "pcie_us_if_cq.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_cfg.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_msi.v"),
         os.path.join(pcie_rtl_dir, "pulse_merge.v"),
@@ -631,14 +647,103 @@ def test_fpga_core(request):
 
     parameters = {}
 
+    # Structural configuration
+    parameters['IF_COUNT'] = 2
+    parameters['PORTS_PER_IF'] = 1
+
+    # PTP configuration
+    parameters['PTP_PEROUT_ENABLE'] = 0
+    parameters['PTP_PEROUT_COUNT'] = 1
+
+    # Queue manager configuration (interface)
+    parameters['EVENT_QUEUE_OP_TABLE_SIZE'] = 32
+    parameters['TX_QUEUE_OP_TABLE_SIZE'] = 32
+    parameters['RX_QUEUE_OP_TABLE_SIZE'] = 32
+    parameters['TX_CPL_QUEUE_OP_TABLE_SIZE'] = parameters['TX_QUEUE_OP_TABLE_SIZE']
+    parameters['RX_CPL_QUEUE_OP_TABLE_SIZE'] = parameters['RX_QUEUE_OP_TABLE_SIZE']
+    parameters['TX_QUEUE_INDEX_WIDTH'] = 13
+    parameters['RX_QUEUE_INDEX_WIDTH'] = 8
+    parameters['TX_CPL_QUEUE_INDEX_WIDTH'] = parameters['TX_QUEUE_INDEX_WIDTH']
+    parameters['RX_CPL_QUEUE_INDEX_WIDTH'] = parameters['RX_QUEUE_INDEX_WIDTH']
+    parameters['EVENT_QUEUE_PIPELINE'] = 3
+    parameters['TX_QUEUE_PIPELINE'] = 3 + max(parameters['TX_QUEUE_INDEX_WIDTH']-12, 0)
+    parameters['RX_QUEUE_PIPELINE'] = 3 + max(parameters['RX_QUEUE_INDEX_WIDTH']-12, 0)
+    parameters['TX_CPL_QUEUE_PIPELINE'] = parameters['TX_QUEUE_PIPELINE']
+    parameters['RX_CPL_QUEUE_PIPELINE'] = parameters['RX_QUEUE_PIPELINE']
+
+    # TX and RX engine configuration (port)
+    parameters['TX_DESC_TABLE_SIZE'] = 32
+    parameters['RX_DESC_TABLE_SIZE'] = 32
+
+    # Scheduler configuration (port)
+    parameters['TX_SCHEDULER_OP_TABLE_SIZE'] = parameters['TX_DESC_TABLE_SIZE']
+    parameters['TX_SCHEDULER_PIPELINE'] = parameters['TX_QUEUE_PIPELINE']
+    parameters['TDMA_INDEX_WIDTH'] = 6
+
+    # Timestamping configuration (port)
+    parameters['PTP_TS_ENABLE'] = 1
+    parameters['TX_PTP_TS_FIFO_DEPTH'] = 32
+    parameters['RX_PTP_TS_FIFO_DEPTH'] = 32
+
+    # Interface configuration (port)
+    parameters['TX_CHECKSUM_ENABLE'] = 1
+    parameters['RX_RSS_ENABLE'] = 1
+    parameters['RX_HASH_ENABLE'] = 1
+    parameters['RX_CHECKSUM_ENABLE'] = 1
+    parameters['TX_FIFO_DEPTH'] = 32768
+    parameters['RX_FIFO_DEPTH'] = 32768
+    parameters['MAX_TX_SIZE'] = 9214
+    parameters['MAX_RX_SIZE'] = 9214
+    parameters['TX_RAM_SIZE'] = 32768
+    parameters['RX_RAM_SIZE'] = 32768
+
+    # Application block configuration
+    parameters['APP_ENABLE'] = 0
+    parameters['APP_CTRL_ENABLE'] = 1
+    parameters['APP_DMA_ENABLE'] = 1
+    parameters['APP_AXIS_DIRECT_ENABLE'] = 1
+    parameters['APP_AXIS_SYNC_ENABLE'] = 1
+    parameters['APP_AXIS_IF_ENABLE'] = 1
+    parameters['APP_STAT_ENABLE'] = 1
+
+    # DMA interface configuration
+    parameters['DMA_LEN_WIDTH'] = 16
+    parameters['DMA_TAG_WIDTH'] = 16
+    parameters['RAM_PIPELINE'] = 2
+
+    # PCIe interface configuration
     parameters['AXIS_PCIE_DATA_WIDTH'] = 512
-    parameters['AXIS_PCIE_KEEP_WIDTH'] = int(parameters['AXIS_PCIE_DATA_WIDTH']/32)
-    parameters['AXIS_PCIE_RQ_USER_WIDTH'] = 62 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 137
-    parameters['AXIS_PCIE_RC_USER_WIDTH'] = 75 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 161
-    parameters['AXIS_PCIE_CQ_USER_WIDTH'] = 88 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 183
-    parameters['AXIS_PCIE_CC_USER_WIDTH'] = 33 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 81
-    parameters['RQ_SEQ_NUM_WIDTH'] = 6
-    parameters['BAR0_APERTURE'] = 24
+    parameters['PF_COUNT'] = 1
+    parameters['VF_COUNT'] = 0
+    parameters['PCIE_TAG_COUNT'] = 64
+    parameters['PCIE_DMA_READ_OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
+    parameters['PCIE_DMA_READ_TX_LIMIT'] = 16
+    parameters['PCIE_DMA_READ_TX_FC_ENABLE'] = 1
+    parameters['PCIE_DMA_WRITE_OP_TABLE_SIZE'] = 16
+    parameters['PCIE_DMA_WRITE_TX_LIMIT'] = 3
+    parameters['PCIE_DMA_WRITE_TX_FC_ENABLE'] = 1
+
+    # AXI lite interface configuration (control)
+    parameters['AXIL_CTRL_DATA_WIDTH'] = 32
+    parameters['AXIL_CTRL_ADDR_WIDTH'] = 24
+
+    # AXI lite interface configuration (application control)
+    parameters['AXIL_APP_CTRL_DATA_WIDTH'] = parameters['AXIL_CTRL_DATA_WIDTH']
+    parameters['AXIL_APP_CTRL_ADDR_WIDTH'] = 24
+
+    # Ethernet interface configuration
+    parameters['AXIS_ETH_TX_PIPELINE'] = 0
+    parameters['AXIS_ETH_TX_FIFO_PIPELINE'] = 2
+    parameters['AXIS_ETH_TX_TS_PIPELINE'] = 0
+    parameters['AXIS_ETH_RX_PIPELINE'] = 0
+    parameters['AXIS_ETH_RX_FIFO_PIPELINE'] = 2
+
+    # Statistics counter subsystem
+    parameters['STAT_ENABLE'] = 1
+    parameters['STAT_DMA_ENABLE'] = 1
+    parameters['STAT_PCIE_ENABLE'] = 1
+    parameters['STAT_INC_WIDTH'] = 24
+    parameters['STAT_ID_WIDTH'] = 12
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

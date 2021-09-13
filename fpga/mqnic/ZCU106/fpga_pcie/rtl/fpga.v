@@ -1,6 +1,6 @@
 /*
 
-Copyright 2019, The Regents of the University of California.
+Copyright 2019-2021, The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -38,7 +38,120 @@ either expressed or implied, of The Regents of the University of California.
 /*
  * FPGA top-level module
  */
-module fpga (
+module fpga #
+(
+    // FW and board IDs
+    parameter FW_ID = 32'd0,
+    parameter FW_VER = {16'd0, 16'd1},
+    parameter BOARD_ID = {16'h10ee, 16'h906a},
+    parameter BOARD_VER = {16'd0, 16'd1},
+    parameter FPGA_ID = 32'h4730093,
+
+    // Structural configuration
+    parameter IF_COUNT = 2,
+    parameter PORTS_PER_IF = 1,
+
+    // PTP configuration
+    parameter PTP_PEROUT_ENABLE = 1,
+    parameter PTP_PEROUT_COUNT = 1,
+
+    // Queue manager configuration (interface)
+    parameter EVENT_QUEUE_OP_TABLE_SIZE = 32,
+    parameter TX_QUEUE_OP_TABLE_SIZE = 32,
+    parameter RX_QUEUE_OP_TABLE_SIZE = 32,
+    parameter TX_CPL_QUEUE_OP_TABLE_SIZE = TX_QUEUE_OP_TABLE_SIZE,
+    parameter RX_CPL_QUEUE_OP_TABLE_SIZE = RX_QUEUE_OP_TABLE_SIZE,
+    parameter TX_QUEUE_INDEX_WIDTH = 13,
+    parameter RX_QUEUE_INDEX_WIDTH = 8,
+    parameter TX_CPL_QUEUE_INDEX_WIDTH = TX_QUEUE_INDEX_WIDTH,
+    parameter RX_CPL_QUEUE_INDEX_WIDTH = RX_QUEUE_INDEX_WIDTH,
+    parameter EVENT_QUEUE_PIPELINE = 3,
+    parameter TX_QUEUE_PIPELINE = 3+(TX_QUEUE_INDEX_WIDTH > 12 ? TX_QUEUE_INDEX_WIDTH-12 : 0),
+    parameter RX_QUEUE_PIPELINE = 3+(RX_QUEUE_INDEX_WIDTH > 12 ? RX_QUEUE_INDEX_WIDTH-12 : 0),
+    parameter TX_CPL_QUEUE_PIPELINE = TX_QUEUE_PIPELINE,
+    parameter RX_CPL_QUEUE_PIPELINE = RX_QUEUE_PIPELINE,
+
+    // TX and RX engine configuration (port)
+    parameter TX_DESC_TABLE_SIZE = 32,
+    parameter RX_DESC_TABLE_SIZE = 32,
+
+    // Scheduler configuration (port)
+    parameter TX_SCHEDULER_OP_TABLE_SIZE = TX_DESC_TABLE_SIZE,
+    parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE,
+    parameter TDMA_INDEX_WIDTH = 6,
+
+    // Timestamping configuration (port)
+    parameter PTP_TS_ENABLE = 1,
+    parameter TX_PTP_TS_FIFO_DEPTH = 32,
+    parameter RX_PTP_TS_FIFO_DEPTH = 32,
+
+    // Interface configuration (port)
+    parameter TX_CHECKSUM_ENABLE = 1,
+    parameter RX_RSS_ENABLE = 1,
+    parameter RX_HASH_ENABLE = 1,
+    parameter RX_CHECKSUM_ENABLE = 1,
+    parameter TX_FIFO_DEPTH = 32768,
+    parameter RX_FIFO_DEPTH = 32768,
+    parameter MAX_TX_SIZE = 9214,
+    parameter MAX_RX_SIZE = 9214,
+    parameter TX_RAM_SIZE = 32768,
+    parameter RX_RAM_SIZE = 32768,
+
+    // Application block configuration
+    parameter APP_ENABLE = 0,
+    parameter APP_CTRL_ENABLE = 1,
+    parameter APP_DMA_ENABLE = 1,
+    parameter APP_AXIS_DIRECT_ENABLE = 1,
+    parameter APP_AXIS_SYNC_ENABLE = 1,
+    parameter APP_AXIS_IF_ENABLE = 1,
+    parameter APP_STAT_ENABLE = 1,
+
+    // DMA interface configuration
+    parameter DMA_LEN_WIDTH = 16,
+    parameter DMA_TAG_WIDTH = 16,
+    parameter RAM_PIPELINE = 2,
+
+    // PCIe interface configuration
+    parameter AXIS_PCIE_DATA_WIDTH = 128,
+    parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    parameter AXIS_PCIE_RC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 75 : 161,
+    parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 62 : 137,
+    parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
+    parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
+    parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
+    parameter PF_COUNT = 1,
+    parameter VF_COUNT = 0,
+    parameter PCIE_TAG_COUNT = 64,
+    parameter PCIE_DMA_READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
+    parameter PCIE_DMA_READ_TX_LIMIT = 16,
+    parameter PCIE_DMA_READ_TX_FC_ENABLE = 1,
+    parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 16,
+    parameter PCIE_DMA_WRITE_TX_LIMIT = 3,
+    parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 1,
+
+    // AXI lite interface configuration (control)
+    parameter AXIL_CTRL_DATA_WIDTH = 32,
+    parameter AXIL_CTRL_ADDR_WIDTH = 24,
+
+    // AXI lite interface configuration (application control)
+    parameter AXIL_APP_CTRL_DATA_WIDTH = AXIL_CTRL_DATA_WIDTH,
+    parameter AXIL_APP_CTRL_ADDR_WIDTH = 24,
+
+    // Ethernet interface configuration
+    parameter AXIS_ETH_TX_PIPELINE = 0,
+    parameter AXIS_ETH_TX_FIFO_PIPELINE = 2,
+    parameter AXIS_ETH_TX_TS_PIPELINE = 0,
+    parameter AXIS_ETH_RX_PIPELINE = 0,
+    parameter AXIS_ETH_RX_FIFO_PIPELINE = 2,
+
+    // Statistics counter subsystem
+    parameter STAT_ENABLE = 1,
+    parameter STAT_DMA_ENABLE = 1,
+    parameter STAT_PCIE_ENABLE = 1,
+    parameter STAT_INC_WIDTH = 24,
+    parameter STAT_ID_WIDTH = 12
+)
+(
     /*
      * Clock: 125MHz LVDS
      */
@@ -90,14 +203,29 @@ module fpga (
     output wire         sfp1_tx_disable_b
 );
 
-parameter AXIS_PCIE_DATA_WIDTH = 128;
-parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
-parameter AXIS_PCIE_RC_USER_WIDTH = 75;
-parameter AXIS_PCIE_RQ_USER_WIDTH = 62;
-parameter AXIS_PCIE_CQ_USER_WIDTH = 88;
-parameter AXIS_PCIE_CC_USER_WIDTH = 33;
-parameter RQ_SEQ_NUM_WIDTH = 6;
-parameter BAR0_APERTURE = 24;
+// PTP configuration
+parameter PTP_TS_WIDTH = 96;
+parameter PTP_TAG_WIDTH = 16;
+parameter PTP_PERIOD_NS_WIDTH = 4;
+parameter PTP_OFFSET_NS_WIDTH = 32;
+parameter PTP_FNS_WIDTH = 32;
+parameter PTP_PERIOD_NS = 4'd4;
+parameter PTP_PERIOD_FNS = 32'd0;
+parameter PTP_USE_SAMPLE_CLOCK = 0;
+parameter IF_PTP_PERIOD_NS = 6'h6;
+parameter IF_PTP_PERIOD_FNS = 16'h6666;
+
+// PCIe interface configuration
+parameter MSI_COUNT = 32;
+
+// Ethernet interface configuration
+parameter XGMII_DATA_WIDTH = 64;
+parameter XGMII_CTRL_WIDTH = XGMII_DATA_WIDTH/8;
+parameter AXIS_ETH_DATA_WIDTH = XGMII_DATA_WIDTH;
+parameter AXIS_ETH_KEEP_WIDTH = AXIS_ETH_DATA_WIDTH/8;
+parameter AXIS_ETH_SYNC_DATA_WIDTH = AXIS_ETH_DATA_WIDTH;
+parameter AXIS_ETH_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1;
+parameter AXIS_ETH_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1;
 
 // Clock and reset
 wire pcie_user_clk;
@@ -535,23 +663,29 @@ pcie4_uscale_plus_inst (
 );
 
 // XGMII 10G PHY
-wire        sfp0_tx_clk_int;
-wire        sfp0_tx_rst_int;
-wire [63:0] sfp0_txd_int;
-wire [7:0]  sfp0_txc_int;
-wire        sfp0_rx_clk_int;
-wire        sfp0_rx_rst_int;
-wire [63:0] sfp0_rxd_int;
-wire [7:0]  sfp0_rxc_int;
+wire                         sfp0_tx_clk_int;
+wire                         sfp0_tx_rst_int;
+wire [XGMII_DATA_WIDTH-1:0]  sfp0_txd_int;
+wire [XGMII_CTRL_WIDTH-1:0]  sfp0_txc_int;
+wire                         sfp0_tx_prbs31_enable_int;
+wire                         sfp0_rx_clk_int;
+wire                         sfp0_rx_rst_int;
+wire [XGMII_DATA_WIDTH-1:0]  sfp0_rxd_int;
+wire [XGMII_CTRL_WIDTH-1:0]  sfp0_rxc_int;
+wire                         sfp0_rx_prbs31_enable_int;
+wire [6:0]                   sfp0_rx_error_count_int;
 
-wire        sfp1_tx_clk_int;
-wire        sfp1_tx_rst_int;
-wire [63:0] sfp1_txd_int;
-wire [7:0]  sfp1_txc_int;
-wire        sfp1_rx_clk_int;
-wire        sfp1_rx_rst_int;
-wire [63:0] sfp1_rxd_int;
-wire [7:0]  sfp1_rxc_int;
+wire                         sfp1_tx_clk_int;
+wire                         sfp1_tx_rst_int;
+wire [XGMII_DATA_WIDTH-1:0]  sfp1_txd_int;
+wire [XGMII_CTRL_WIDTH-1:0]  sfp1_txc_int;
+wire                         sfp1_tx_prbs31_enable_int;
+wire                         sfp1_rx_clk_int;
+wire                         sfp1_rx_rst_int;
+wire [XGMII_DATA_WIDTH-1:0]  sfp1_rxd_int;
+wire [XGMII_CTRL_WIDTH-1:0]  sfp1_rxc_int;
+wire                         sfp1_rx_prbs31_enable_int;
+wire [6:0]                   sfp1_rx_error_count_int;
 
 wire sfp0_rx_block_lock;
 wire sfp1_rx_block_lock;
@@ -753,7 +887,8 @@ sfp0_rx_rst_reset_sync_inst (
 );
 
 eth_phy_10g #(
-    .BIT_REVERSE(1)
+    .BIT_REVERSE(1),
+    .PRBS31_ENABLE(1)
 )
 sfp0_phy_inst (
     .tx_clk(sfp0_tx_clk_int),
@@ -769,8 +904,11 @@ sfp0_phy_inst (
     .serdes_rx_data(sfp0_gt_rxdata),
     .serdes_rx_hdr(sfp0_gt_rxheader),
     .serdes_rx_bitslip(sfp0_gt_rxgearboxslip),
+    .rx_error_count(sfp0_rx_error_count_int),
     .rx_block_lock(sfp0_rx_block_lock),
-    .rx_high_ber()
+    .rx_high_ber(),
+    .tx_prbs31_enable(sfp0_tx_prbs31_enable_int),
+    .rx_prbs31_enable(sfp0_rx_prbs31_enable_int)
 );
 
 assign sfp1_tx_clk_int = clk_156mhz_int;
@@ -788,7 +926,8 @@ sfp1_rx_rst_reset_sync_inst (
 );
 
 eth_phy_10g #(
-    .BIT_REVERSE(1)
+    .BIT_REVERSE(1),
+    .PRBS31_ENABLE(1)
 )
 sfp1_phy_inst (
     .tx_clk(sfp1_tx_clk_int),
@@ -804,11 +943,94 @@ sfp1_phy_inst (
     .serdes_rx_data(sfp1_gt_rxdata),
     .serdes_rx_hdr(sfp1_gt_rxheader),
     .serdes_rx_bitslip(sfp1_gt_rxgearboxslip),
+    .rx_error_count(sfp1_rx_error_count_int),
     .rx_block_lock(sfp1_rx_block_lock),
-    .rx_high_ber()
+    .rx_high_ber(),
+    .tx_prbs31_enable(sfp1_tx_prbs31_enable_int),
+    .rx_prbs31_enable(sfp1_rx_prbs31_enable_int)
 );
 
 fpga_core #(
+    // FW and board IDs
+    .FW_ID(FW_ID),
+    .FW_VER(FW_VER),
+    .BOARD_ID(BOARD_ID),
+    .BOARD_VER(BOARD_VER),
+    .FPGA_ID(FPGA_ID),
+
+    // Structural configuration
+    .IF_COUNT(IF_COUNT),
+    .PORTS_PER_IF(PORTS_PER_IF),
+
+    // PTP configuration
+    .PTP_TS_WIDTH(PTP_TS_WIDTH),
+    .PTP_TAG_WIDTH(PTP_TAG_WIDTH),
+    .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
+    .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
+    .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
+    .PTP_PERIOD_NS(PTP_PERIOD_NS),
+    .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
+    .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
+    .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
+
+    // Queue manager configuration (interface)
+    .EVENT_QUEUE_OP_TABLE_SIZE(EVENT_QUEUE_OP_TABLE_SIZE),
+    .TX_QUEUE_OP_TABLE_SIZE(TX_QUEUE_OP_TABLE_SIZE),
+    .RX_QUEUE_OP_TABLE_SIZE(RX_QUEUE_OP_TABLE_SIZE),
+    .TX_CPL_QUEUE_OP_TABLE_SIZE(TX_CPL_QUEUE_OP_TABLE_SIZE),
+    .RX_CPL_QUEUE_OP_TABLE_SIZE(RX_CPL_QUEUE_OP_TABLE_SIZE),
+    .TX_QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
+    .RX_QUEUE_INDEX_WIDTH(RX_QUEUE_INDEX_WIDTH),
+    .TX_CPL_QUEUE_INDEX_WIDTH(TX_CPL_QUEUE_INDEX_WIDTH),
+    .RX_CPL_QUEUE_INDEX_WIDTH(RX_CPL_QUEUE_INDEX_WIDTH),
+    .EVENT_QUEUE_PIPELINE(EVENT_QUEUE_PIPELINE),
+    .TX_QUEUE_PIPELINE(TX_QUEUE_PIPELINE),
+    .RX_QUEUE_PIPELINE(RX_QUEUE_PIPELINE),
+    .TX_CPL_QUEUE_PIPELINE(TX_CPL_QUEUE_PIPELINE),
+    .RX_CPL_QUEUE_PIPELINE(RX_CPL_QUEUE_PIPELINE),
+
+    // TX and RX engine configuration (port)
+    .TX_DESC_TABLE_SIZE(TX_DESC_TABLE_SIZE),
+    .RX_DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
+
+    // Scheduler configuration (port)
+    .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
+    .TX_SCHEDULER_PIPELINE(TX_SCHEDULER_PIPELINE),
+    .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
+
+    // Timestamping configuration (port)
+    .PTP_TS_ENABLE(PTP_TS_ENABLE),
+    .TX_PTP_TS_FIFO_DEPTH(TX_PTP_TS_FIFO_DEPTH),
+    .RX_PTP_TS_FIFO_DEPTH(RX_PTP_TS_FIFO_DEPTH),
+
+    // Interface configuration (port)
+    .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
+    .RX_RSS_ENABLE(RX_RSS_ENABLE),
+    .RX_HASH_ENABLE(RX_HASH_ENABLE),
+    .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
+    .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
+    .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
+    .MAX_TX_SIZE(MAX_TX_SIZE),
+    .MAX_RX_SIZE(MAX_RX_SIZE),
+    .TX_RAM_SIZE(TX_RAM_SIZE),
+    .RX_RAM_SIZE(RX_RAM_SIZE),
+
+    // Application block configuration
+    .APP_ENABLE(APP_ENABLE),
+    .APP_CTRL_ENABLE(APP_CTRL_ENABLE),
+    .APP_DMA_ENABLE(APP_DMA_ENABLE),
+    .APP_AXIS_DIRECT_ENABLE(APP_AXIS_DIRECT_ENABLE),
+    .APP_AXIS_SYNC_ENABLE(APP_AXIS_SYNC_ENABLE),
+    .APP_AXIS_IF_ENABLE(APP_AXIS_IF_ENABLE),
+    .APP_STAT_ENABLE(APP_STAT_ENABLE),
+
+    // DMA interface configuration
+    .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
+    .DMA_TAG_WIDTH(DMA_TAG_WIDTH),
+    .RAM_PIPELINE(RAM_PIPELINE),
+
+    // PCIe interface configuration
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
     .AXIS_PCIE_RC_USER_WIDTH(AXIS_PCIE_RC_USER_WIDTH),
@@ -816,7 +1038,43 @@ fpga_core #(
     .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
     .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
     .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
-    .BAR0_APERTURE(BAR0_APERTURE)
+    .PF_COUNT(PF_COUNT),
+    .VF_COUNT(VF_COUNT),
+    .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
+    .PCIE_DMA_READ_OP_TABLE_SIZE(PCIE_DMA_READ_OP_TABLE_SIZE),
+    .PCIE_DMA_READ_TX_LIMIT(PCIE_DMA_READ_TX_LIMIT),
+    .PCIE_DMA_READ_TX_FC_ENABLE(PCIE_DMA_READ_TX_FC_ENABLE),
+    .PCIE_DMA_WRITE_OP_TABLE_SIZE(PCIE_DMA_WRITE_OP_TABLE_SIZE),
+    .PCIE_DMA_WRITE_TX_LIMIT(PCIE_DMA_WRITE_TX_LIMIT),
+    .PCIE_DMA_WRITE_TX_FC_ENABLE(PCIE_DMA_WRITE_TX_FC_ENABLE),
+    .MSI_COUNT(MSI_COUNT),
+
+    // AXI lite interface configuration (control)
+    .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .AXIL_CTRL_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+
+    // AXI lite interface configuration (application control)
+    .AXIL_APP_CTRL_DATA_WIDTH(AXIL_APP_CTRL_DATA_WIDTH),
+    .AXIL_APP_CTRL_ADDR_WIDTH(AXIL_APP_CTRL_ADDR_WIDTH),
+
+    // Ethernet interface configuration
+    .AXIS_ETH_DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
+    .AXIS_ETH_KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
+    .AXIS_ETH_SYNC_DATA_WIDTH(AXIS_ETH_SYNC_DATA_WIDTH),
+    .AXIS_ETH_TX_USER_WIDTH(AXIS_ETH_TX_USER_WIDTH),
+    .AXIS_ETH_RX_USER_WIDTH(AXIS_ETH_RX_USER_WIDTH),
+    .AXIS_ETH_TX_PIPELINE(AXIS_ETH_TX_PIPELINE),
+    .AXIS_ETH_TX_FIFO_PIPELINE(AXIS_ETH_TX_FIFO_PIPELINE),
+    .AXIS_ETH_TX_TS_PIPELINE(AXIS_ETH_TX_TS_PIPELINE),
+    .AXIS_ETH_RX_PIPELINE(AXIS_ETH_RX_PIPELINE),
+    .AXIS_ETH_RX_FIFO_PIPELINE(AXIS_ETH_RX_FIFO_PIPELINE),
+
+    // Statistics counter subsystem
+    .STAT_ENABLE(STAT_ENABLE),
+    .STAT_DMA_ENABLE(STAT_DMA_ENABLE),
+    .STAT_PCIE_ENABLE(STAT_PCIE_ENABLE),
+    .STAT_INC_WIDTH(STAT_INC_WIDTH),
+    .STAT_ID_WIDTH(STAT_ID_WIDTH)
 )
 core_inst (
     /*
@@ -933,19 +1191,26 @@ core_inst (
     .sfp0_tx_rst(sfp0_tx_rst_int),
     .sfp0_txd(sfp0_txd_int),
     .sfp0_txc(sfp0_txc_int),
+    .sfp0_tx_prbs31_enable(sfp0_tx_prbs31_enable_int),
     .sfp0_rx_clk(sfp0_rx_clk_int),
     .sfp0_rx_rst(sfp0_rx_rst_int),
     .sfp0_rxd(sfp0_rxd_int),
     .sfp0_rxc(sfp0_rxc_int),
+    .sfp0_rx_prbs31_enable(sfp0_rx_prbs31_enable_int),
+    .sfp0_rx_error_count(sfp0_rx_error_count_int),
     .sfp0_tx_disable_b(sfp0_tx_disable_b),
+
     .sfp1_tx_clk(sfp1_tx_clk_int),
     .sfp1_tx_rst(sfp1_tx_rst_int),
     .sfp1_txd(sfp1_txd_int),
     .sfp1_txc(sfp1_txc_int),
+    .sfp1_tx_prbs31_enable(sfp1_tx_prbs31_enable_int),
     .sfp1_rx_clk(sfp1_rx_clk_int),
     .sfp1_rx_rst(sfp1_rx_rst_int),
     .sfp1_rxd(sfp1_rxd_int),
     .sfp1_rxc(sfp1_rxc_int),
+    .sfp1_rx_prbs31_enable(sfp1_rx_prbs31_enable_int),
+    .sfp1_rx_error_count(sfp1_rx_error_count_int),
     .sfp1_tx_disable_b(sfp1_tx_disable_b)
 );
 

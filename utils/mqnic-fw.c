@@ -985,6 +985,25 @@ int main(int argc, char *argv[])
             if (memcmp(pri_buf, pri_check_buf, len_int) || memcmp(sec_buf, sec_check_buf, len_int))
             {
                 fprintf(stderr, "Verify failed!\n");
+
+                for (size_t k = 0; k < len; k++)
+                {
+                    if (pri_buf[k] != pri_check_buf[k])
+                    {
+                        fprintf(stderr, "primary flash offset 0x%08lx: expected 0x%02x, read 0x%02x\n",
+                            k, pri_buf[k] & 0xff, pri_check_buf[k] & 0xff);
+                    }
+                }
+
+                for (size_t k = 0; k < len; k++)
+                {
+                    if (sec_buf[k] != sec_check_buf[k])
+                    {
+                        fprintf(stderr, "secondary flash offset 0x%08lx: expected 0x%02x, read 0x%02x\n",
+                            k, sec_buf[k] & 0xff, sec_check_buf[k] & 0xff);
+                    }
+                }
+
                 ret = -1;
             }
             else
@@ -1035,6 +1054,16 @@ int main(int argc, char *argv[])
             if (memcmp(segment, check_buf, len))
             {
                 fprintf(stderr, "Verify failed!\n");
+
+                for (size_t k = 0; k < len; k++)
+                {
+                    if (segment[k] != check_buf[k])
+                    {
+                        fprintf(stderr, "flash offset 0x%08lx: expected 0x%02x, read 0x%02x\n",
+                            k, segment[k] & 0xff, check_buf[k] & 0xff);
+                    }
+                }
+
                 ret = -1;
             }
             else

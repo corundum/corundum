@@ -1250,35 +1250,47 @@ int main(int argc, char *argv[])
 
         sleep(1);
 
-        printf("Performing hot reset on upstream port...\n");
-        pcie_hot_reset(port_path);
-
-        sleep(2);
-
-        printf("Rescanning on upstream port...\n");
-
-        snprintf(path, sizeof(path), "%s/rescan", port_path);
-
-        if (write_1_to_file(path))
+        for (int tries = 5; tries > 0; tries--)
         {
-            fprintf(stderr, "Rescan failed!\n");
-            ret = -1;
-            goto err;
+            printf("Performing hot reset on upstream port...\n");
+            pcie_hot_reset(port_path);
+
+            sleep(2);
+
+            printf("Rescanning on upstream port...\n");
+
+            snprintf(path, sizeof(path), "%s/rescan", port_path);
+
+            if (write_1_to_file(path))
+            {
+                fprintf(stderr, "Rescan failed!\n");
+                ret = -1;
+                goto err;
+            }
+
+            // PCIe device will have a config space, so check for that
+            snprintf(path, sizeof(path), "%s/config", device_path);
+
+            if (access(path, F_OK) == 0)
+            {
+                printf("Success, device is online!\n");
+                break;
+            }
+            else
+            {
+                if (tries > 0)
+                {
+                    printf("Rescan failed, attempting another reset (up to %d more)\n", tries);
+                }
+                else
+                {
+                    fprintf(stderr, "Rescan failed, device is offline!\n");
+                    ret = -1;
+                    goto err;
+                }
+            }
         }
 
-        // PCIe device will have a config space, so check for that
-        snprintf(path, sizeof(path), "%s/config", device_path);
-
-        if (access(path, F_OK) != -1)
-        {
-            printf("Success, device is online!\n");
-        }
-        else
-        {
-            fprintf(stderr, "Rescan failed, device is offline!\n");
-            ret = -1;
-            goto err;
-        }
     }
 
 err:

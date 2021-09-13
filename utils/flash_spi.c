@@ -149,6 +149,7 @@ uint8_t spi_flash_read_byte(struct flash_device *fdev, int protocol)
             reg_write32(fdev->ctrl_reg, 0);
             val |= ((reg_read32(fdev->ctrl_reg) & FLASH_D_1) != 0) << i;
             reg_write32(fdev->ctrl_reg, FLASH_CLK);
+            reg_read32(fdev->ctrl_reg); // dummy read
         }
         break;
     case SPI_PROTO_DTR:
@@ -159,6 +160,7 @@ uint8_t spi_flash_read_byte(struct flash_device *fdev, int protocol)
             reg_write32(fdev->ctrl_reg, 0);
             val |= (reg_read32(fdev->ctrl_reg) & FLASH_D_01) << i;
             reg_write32(fdev->ctrl_reg, FLASH_CLK);
+            reg_read32(fdev->ctrl_reg); // dummy read
         }
         break;
     case SPI_PROTO_DUAL_DTR:
@@ -169,6 +171,7 @@ uint8_t spi_flash_read_byte(struct flash_device *fdev, int protocol)
             reg_write32(fdev->ctrl_reg, 0);
             val |= (reg_read32(fdev->ctrl_reg) & FLASH_D_0123) << i;
             reg_write32(fdev->ctrl_reg, FLASH_CLK);
+            reg_read32(fdev->ctrl_reg); // dummy read
         }
         break;
     case SPI_PROTO_QUAD_DTR:
@@ -191,7 +194,9 @@ void spi_flash_write_byte(struct flash_device *fdev, uint8_t val, int protocol)
         {
             bit = (val >> i) & 0x1;
             reg_write32(fdev->ctrl_reg, bit | FLASH_OE_0);
+            reg_read32(fdev->ctrl_reg); // dummy read
             reg_write32(fdev->ctrl_reg, bit | FLASH_OE_0 | FLASH_CLK);
+            reg_read32(fdev->ctrl_reg); // dummy read
         }
         break;
     case SPI_PROTO_DTR:
@@ -201,7 +206,9 @@ void spi_flash_write_byte(struct flash_device *fdev, uint8_t val, int protocol)
         {
             bit = (val >> i) & 0x3;
             reg_write32(fdev->ctrl_reg, bit | FLASH_OE_01);
+            reg_read32(fdev->ctrl_reg); // dummy read
             reg_write32(fdev->ctrl_reg, bit | FLASH_OE_01 | FLASH_CLK);
+            reg_read32(fdev->ctrl_reg); // dummy read
         }
         break;
     case SPI_PROTO_DUAL_DTR:
@@ -211,7 +218,9 @@ void spi_flash_write_byte(struct flash_device *fdev, uint8_t val, int protocol)
         {
             bit = (val >> i) & 0xf;
             reg_write32(fdev->ctrl_reg, bit | FLASH_OE_0123);
+            reg_read32(fdev->ctrl_reg); // dummy read
             reg_write32(fdev->ctrl_reg, bit | FLASH_OE_0123 | FLASH_CLK);
+            reg_read32(fdev->ctrl_reg); // dummy read
         }
         break;
     case SPI_PROTO_QUAD_DTR:
@@ -557,6 +566,7 @@ int spi_flash_erase(struct flash_device *fdev, size_t addr, size_t len)
                 spi_flash_write_addr(fdev, addr, SPI_PROTO_STR);
             }
         }
+
         spi_flash_deselect(fdev);
 
         // wait for operation to complete

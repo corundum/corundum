@@ -1168,6 +1168,9 @@ int main(int argc, char *argv[])
         free(segment);
     }
 
+    if (ret)
+        goto err;
+
     flash_release(pri_flash);
     pri_flash = NULL;
     flash_release(sec_flash);

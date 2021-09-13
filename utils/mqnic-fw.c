@@ -563,6 +563,9 @@ int main(int argc, char *argv[])
     if (ptr)
         *ptr = 0;
 
+    printf("PCIe ID (device): %s\n", strrchr(device_path, '/')+1);
+    printf("PCIe ID (upstream port): %s\n", strrchr(port_path, '/')+1);
+
     printf("FW ID: 0x%08x\n", dev->fw_id);
     printf("FW version: %d.%d\n", dev->fw_ver >> 16, dev->fw_ver & 0xffff);
     printf("Board ID: 0x%08x\n", dev->board_id);
@@ -605,7 +608,7 @@ int main(int argc, char *argv[])
 
     if (flash_type == 0 || flash_type == 2)
     {
-        printf("SPI flash\n");
+        printf("Flash type: SPI\n");
         printf("Data width: %d\n", flash_data_width);
 
         if (flash_data_width > 4)
@@ -640,7 +643,7 @@ int main(int argc, char *argv[])
     }
     else if (flash_type == 1)
     {
-        printf("BPI flash\n");
+        printf("Flash type: BPI\n");
         printf("Data width: %d\n", flash_data_width);
         printf("Address width: %d\n", flash_addr_width);
 
@@ -718,12 +721,12 @@ int main(int argc, char *argv[])
         default:
             fprintf(stderr, "Unknown flash configuration (0x%02x)\n", flash_configuration);
             ret = -1;
-            goto err;
+            goto skip_flash;
     }
 
     for (int k = 0; k < flash_segment_count; k++)
     {
-        printf("Flash segment %d start 0x%08lx length 0x%08lx\n", k, flash_segment_start[k], flash_segment_length[k]);
+        printf("Flash segment %d: start 0x%08lx length 0x%08lx\n", k, flash_segment_start[k], flash_segment_length[k]);
     }
 
     if (slot < 0)
@@ -748,7 +751,7 @@ int main(int argc, char *argv[])
     segment_offset = flash_segment_start[slot];
     segment_size = flash_segment_length[slot];
 
-    printf("Selected segment %d start 0x%08lx length 0x%08lx\n", slot, segment_offset, segment_size);
+    printf("Selected: segment %d start 0x%08lx length 0x%08lx\n", slot, segment_offset, segment_size);
 
     if (action_write)
     {

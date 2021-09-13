@@ -585,14 +585,14 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr, "Invalid flash ID\n");
         ret = -1;
-        goto err;
+        goto skip_flash;
     }
 
     if (fpga_id == 0 || fpga_id == 0xffffffff)
     {
         fprintf(stderr, "Invalid FPGA ID\n");
         ret = -1;
-        goto err;
+        goto skip_flash;
     }
 
     int bitswap = 0;
@@ -618,7 +618,7 @@ int main(int argc, char *argv[])
             {
                 fprintf(stderr, "Failed to connect to flash device\n");
                 ret = -1;
-                goto err;
+                goto skip_flash;
             }
 
             flash_size = pri_flash->size+sec_flash->size;
@@ -632,7 +632,7 @@ int main(int argc, char *argv[])
             {
                 fprintf(stderr, "Failed to connect to flash device\n");
                 ret = -1;
-                goto err;
+                goto skip_flash;
             }
 
             flash_size = pri_flash->size;
@@ -660,7 +660,7 @@ int main(int argc, char *argv[])
         {
             fprintf(stderr, "Failed to connect to flash device\n");
             ret = -1;
-            goto err;
+            goto skip_flash;
         }
 
         flash_size = pri_flash->size;
@@ -669,7 +669,7 @@ int main(int argc, char *argv[])
     {
         fprintf(stderr, "Unknown flash type: %d\n", flash_type);
         ret = -1;
-        goto err;
+        goto skip_flash;
     }
 
     switch (flash_configuration)
@@ -738,7 +738,7 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (slot < 0 || slot >= flash_segment_count)
+    if ((action_read || action_write) && (slot < 0 || slot >= flash_segment_count))
     {
         fprintf(stderr, "Requested slot is not valid (%d)\n", slot);
         ret = -1;
@@ -1168,8 +1168,15 @@ int main(int argc, char *argv[])
         free(segment);
     }
 
-    if (ret)
+skip_flash:
+    if (ret && (action_read || action_write))
+    {
         goto err;
+    }
+    else
+    {
+        ret = 0;
+    }
 
     flash_release(pri_flash);
     pri_flash = NULL;

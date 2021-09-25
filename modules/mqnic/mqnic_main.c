@@ -146,7 +146,9 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 #ifdef CONFIG_NUMA
     dev_info(dev, " NUMA node: %d", pdev->dev.numa_node);
 #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,17,0)
     pcie_print_link_status(pdev);
+#endif
 
     if (!(mqnic = devm_kzalloc(dev, sizeof(*mqnic), GFP_KERNEL)))
     {

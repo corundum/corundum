@@ -165,10 +165,10 @@ reg [0:0] req_state_reg = REQ_STATE_IDLE, req_state_next;
 localparam [1:0]
     RESP_STATE_IDLE = 2'd0,
     RESP_STATE_READ = 2'd1,
-    RESP_STATE_CPL = 2'd2;
+    RESP_STATE_WRITE = 2'd2,
+    RESP_STATE_CPL = 2'd3;
 
 reg [1:0] resp_state_reg = RESP_STATE_IDLE, resp_state_next;
-
 
 reg [2:0] cpl_status_reg = 3'b000, cpl_status_next;
 reg cpl_data_reg = 1'b0, cpl_data_next;
@@ -202,6 +202,8 @@ reg [127:0] cpl_tlp_hdr;
 reg [RESP_FIFO_ADDR_WIDTH+1-1:0] resp_fifo_wr_ptr_reg = 0;
 reg [RESP_FIFO_ADDR_WIDTH+1-1:0] resp_fifo_rd_ptr_reg = 0, resp_fifo_rd_ptr_next;
 
+reg resp_fifo_op_read[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+reg resp_fifo_op_write[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [2:0] resp_fifo_cpl_status[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg resp_fifo_cpl_data[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [9:0] resp_fifo_length[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
@@ -211,6 +213,8 @@ reg [15:0] resp_fifo_requester_id[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [9:0] resp_fifo_tag[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [2:0] resp_fifo_tc[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [2:0] resp_fifo_attr[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+reg resp_fifo_wr_op_read;
+reg resp_fifo_wr_op_write;
 reg [2:0] resp_fifo_wr_cpl_status;
 reg resp_fifo_wr_cpl_data;
 reg [9:0] resp_fifo_wr_length;
@@ -235,6 +239,7 @@ reg m_axil_awvalid_reg = 1'b0, m_axil_awvalid_next;
 reg [AXIL_DATA_WIDTH-1:0] m_axil_wdata_reg = {AXIL_DATA_WIDTH{1'b0}}, m_axil_wdata_next;
 reg [AXIL_STRB_WIDTH-1:0] m_axil_wstrb_reg = {AXIL_STRB_WIDTH{1'b0}}, m_axil_wstrb_next;
 reg m_axil_wvalid_reg = 1'b0, m_axil_wvalid_next;
+reg m_axil_bready_reg = 1'b0, m_axil_bready_next;
 reg m_axil_arvalid_reg = 1'b0, m_axil_arvalid_next;
 reg m_axil_rready_reg = 1'b0, m_axil_rready_next;
 
@@ -256,7 +261,7 @@ assign m_axil_awvalid = m_axil_awvalid_reg;
 assign m_axil_wdata = m_axil_wdata_reg;
 assign m_axil_wstrb = m_axil_wstrb_reg;
 assign m_axil_wvalid = m_axil_wvalid_reg;
-assign m_axil_bready = 1'b1;
+assign m_axil_bready = m_axil_bready_reg;
 assign m_axil_araddr = m_axil_addr_reg;
 assign m_axil_arprot = 3'b010;
 assign m_axil_arvalid = m_axil_arvalid_reg;
@@ -312,6 +317,8 @@ always @* begin
         rx_req_tlp_hdr_ph = rx_req_tlp_hdr[33:32]; // PH
     end
 
+    resp_fifo_wr_op_read = 1'b0;
+    resp_fifo_wr_op_write = 1'b0;
     resp_fifo_wr_cpl_status = CPL_STATUS_SC;
     resp_fifo_wr_cpl_data = 1'b0;
     resp_fifo_wr_length = 10'd0;
@@ -345,6 +352,7 @@ always @* begin
                         rx_req_tlp_ready_next = 1'b0;
 
                         // perform read and return completion
+                        resp_fifo_wr_op_read = 1'b1;
                         resp_fifo_wr_cpl_status = CPL_STATUS_SC;
                         resp_fifo_wr_cpl_data = 1'b1;
                         resp_fifo_wr_length = 10'd1;
@@ -403,6 +411,10 @@ always @* begin
                         m_axil_awvalid_next = 1'b1;
                         m_axil_wvalid_next = 1'b1;
                         rx_req_tlp_ready_next = 1'b0;
+
+                        // entry in FIFO for proper response ordering
+                        resp_fifo_wr_op_write = 1'b1;
+                        resp_fifo_we = 1'b1;
                     end else begin
                         // bad length
                         // report uncorrectable error
@@ -498,6 +510,7 @@ always @* begin
     tx_cpl_tlp_hdr_next = tx_cpl_tlp_hdr_reg;
     tx_cpl_tlp_valid_next = tx_cpl_tlp_valid_reg && !tx_cpl_tlp_ready;
 
+    m_axil_bready_next = 1'b0;
     m_axil_rready_next = 1'b0;
 
     // TLP header
@@ -543,9 +556,16 @@ always @* begin
                 attr_next = resp_fifo_attr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
                 resp_fifo_rd_ptr_next = resp_fifo_rd_ptr_reg + 1;
 
-                if (cpl_data_next) begin
-                    m_axil_rready_next = !tx_cpl_tlp_valid_reg || tx_cpl_tlp_ready;
-                    resp_state_next = RESP_STATE_READ;
+                if (resp_fifo_op_read[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
+                    if (cpl_data_next) begin
+                        m_axil_rready_next = !tx_cpl_tlp_valid_reg || tx_cpl_tlp_ready;
+                        resp_state_next = RESP_STATE_READ;
+                    end else begin
+                        resp_state_next = RESP_STATE_CPL;
+                    end
+                end else if (resp_fifo_op_write[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
+                    m_axil_bready_next = 1'b1;
+                    resp_state_next = RESP_STATE_WRITE;
                 end else begin
                     resp_state_next = RESP_STATE_CPL;
                 end
@@ -576,8 +596,16 @@ always @* begin
                     attr_next = resp_fifo_attr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
                     resp_fifo_rd_ptr_next = resp_fifo_rd_ptr_reg + 1;
 
-                    if (cpl_data_next) begin
-                        resp_state_next = RESP_STATE_READ;
+                    if (resp_fifo_op_read[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
+                        if (cpl_data_next) begin
+                            m_axil_rready_next = !tx_cpl_tlp_valid_reg || tx_cpl_tlp_ready;
+                            resp_state_next = RESP_STATE_READ;
+                        end else begin
+                            resp_state_next = RESP_STATE_CPL;
+                        end
+                    end else if (resp_fifo_op_write[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
+                        m_axil_bready_next = 1'b1;
+                        resp_state_next = RESP_STATE_WRITE;
                     end else begin
                         resp_state_next = RESP_STATE_CPL;
                     end
@@ -586,6 +614,45 @@ always @* begin
                 end
             end else begin
                 resp_state_next = RESP_STATE_READ;
+            end
+        end
+        RESP_STATE_WRITE: begin
+            // write state - wait for write response
+            m_axil_bready_next = 1'b1;
+
+            if (m_axil_bready && m_axil_bvalid) begin
+                m_axil_bready_next = 1'b0;
+
+                if (resp_fifo_rd_ptr_reg != resp_fifo_wr_ptr_reg) begin
+                    cpl_status_next = resp_fifo_cpl_status[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+                    cpl_data_next = resp_fifo_cpl_data[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+                    dword_count_next = resp_fifo_length[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+                    byte_count_next = resp_fifo_byte_count[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+                    lower_addr_next = resp_fifo_lower_addr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+                    requester_id_next = resp_fifo_requester_id[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+                    tag_next = resp_fifo_tag[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+                    tc_next = resp_fifo_tc[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+                    attr_next = resp_fifo_attr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+                    resp_fifo_rd_ptr_next = resp_fifo_rd_ptr_reg + 1;
+
+                    if (resp_fifo_op_read[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
+                        if (cpl_data_next) begin
+                            m_axil_rready_next = !tx_cpl_tlp_valid_reg || tx_cpl_tlp_ready;
+                            resp_state_next = RESP_STATE_READ;
+                        end else begin
+                            resp_state_next = RESP_STATE_CPL;
+                        end
+                    end else if (resp_fifo_op_write[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
+                        m_axil_bready_next = 1'b1;
+                        resp_state_next = RESP_STATE_WRITE;
+                    end else begin
+                        resp_state_next = RESP_STATE_CPL;
+                    end
+                end else begin
+                    resp_state_next = RESP_STATE_IDLE;
+                end
+            end else begin
+                resp_state_next = RESP_STATE_WRITE;
             end
         end
         RESP_STATE_CPL: begin
@@ -609,8 +676,16 @@ always @* begin
                     attr_next = resp_fifo_attr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
                     resp_fifo_rd_ptr_next = resp_fifo_rd_ptr_reg + 1;
 
-                    if (cpl_data_next) begin
-                        resp_state_next = RESP_STATE_READ;
+                    if (resp_fifo_op_read[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
+                        if (cpl_data_next) begin
+                            m_axil_rready_next = !tx_cpl_tlp_valid_reg || tx_cpl_tlp_ready;
+                            resp_state_next = RESP_STATE_READ;
+                        end else begin
+                            resp_state_next = RESP_STATE_CPL;
+                        end
+                    end else if (resp_fifo_op_write[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
+                        m_axil_bready_next = 1'b1;
+                        resp_state_next = RESP_STATE_WRITE;
                     end else begin
                         resp_state_next = RESP_STATE_CPL;
                     end
@@ -650,6 +725,7 @@ always @(posedge clk) begin
     m_axil_wdata_reg <= m_axil_wdata_next;
     m_axil_wstrb_reg <= m_axil_wstrb_next;
     m_axil_wvalid_reg <= m_axil_wvalid_next;
+    m_axil_bready_reg <= m_axil_bready_next;
     m_axil_arvalid_reg <= m_axil_arvalid_next;
     m_axil_rready_reg <= m_axil_rready_next;
 
@@ -657,6 +733,8 @@ always @(posedge clk) begin
     status_error_uncor_reg <= status_error_uncor_next;
 
     if (resp_fifo_we) begin
+        resp_fifo_op_read[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_op_read;
+        resp_fifo_op_write[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_op_write;
         resp_fifo_cpl_status[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_cpl_status;
         resp_fifo_cpl_data[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_cpl_data;
         resp_fifo_length[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_length;
@@ -682,6 +760,7 @@ always @(posedge clk) begin
 
         m_axil_awvalid_reg <= 1'b0;
         m_axil_wvalid_reg <= 1'b0;
+        m_axil_bready_reg <= 1'b0;
         m_axil_arvalid_reg <= 1'b0;
         m_axil_rready_reg <= 1'b0;
 

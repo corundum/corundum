@@ -166,7 +166,8 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
             await tb.rc.mem_write(dev_bar0+pcie_addr, test_data)
 
-            await Timer(100, 'ns')
+            # wait for write to complete
+            val = await tb.rc.mem_read(dev_bar0+pcie_addr, len(test_data), 1000, 'ns')
 
             tb.log.debug("%s", tb.axil_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48))
 

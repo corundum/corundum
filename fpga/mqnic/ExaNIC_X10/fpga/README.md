@@ -1,8 +1,8 @@
-# Corundum mqnic for ExaNIC X10
+# Corundum mqnic for ExaNIC X10/Cisco Nexus K35-S
 
 ## Introduction
 
-This design targets the Exablaze ExaNIC X10 FPGA board.
+This design targets the Exablaze ExaNIC X10/Cisco Nexus K35-S FPGA board.
 
 FPGA: xcku035-fbva676-2-e
 PHY: 10G BASE-R PHY IP core and internal GTH transceiver

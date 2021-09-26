@@ -21,8 +21,8 @@ Corundum also provides an application section for implementing custom logic.  Th
 Corundum currently supports Xilinx Virtex 7, UltraScale, and UltraScale+ series devices.  Designs are included for the following FPGA boards:
 
 *  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex UltraScale+ XCVU3P)
-*  Exablaze ExaNIC X10 (Xilinx Kintex UltraScale XCKU035)
-*  Exablaze ExaNIC X25 (Xilinx Kintex UltraScale+ XCKU3P)
+*  Exablaze ExaNIC X10/Cisco Nexus K35-S (Xilinx Kintex UltraScale XCKU035)
+*  Exablaze ExaNIC X25/Cisco Nexus K3P-S (Xilinx Kintex UltraScale+ XCKU3P)
 *  Silicom fb2CG@KU15P (Xilinx Kintex UltraScale+ XCKU15P)
 *  NetFPGA SUME (Xilinx Virtex 7 XC7V690T)
 *  Xilinx Alveo U50 (Xilinx Virtex UltraScale+ XCU50)

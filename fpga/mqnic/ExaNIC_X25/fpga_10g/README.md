@@ -1,8 +1,8 @@
-# Corundum mqnic for ExaNIC X25
+# Corundum mqnic for ExaNIC X25/Cisco Nexus K3P-S
 
 ## Introduction
 
-This design targets the Exablaze ExaNIC X25 FPGA board.
+This design targets the Exablaze ExaNIC X25/Cisco Nexus K3P-S FPGA board.
 
 FPGA: xcku3p-ffvb676-2-e
 PHY: 10G BASE-R PHY IP core and internal GTY transceiver

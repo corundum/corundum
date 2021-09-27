@@ -7,7 +7,6 @@ FPGA_ARCH = kintexu
 # Files for synthesis
 SYN_FILES = rtl/fpga.v
 SYN_FILES += rtl/fpga_core.v
-SYN_FILES += rtl/debounce_switch.v
 SYN_FILES += rtl/sync_signal.v
 SYN_FILES += rtl/common/mqnic_core_pcie_us.v
 SYN_FILES += rtl/common/mqnic_core_pcie.v

@@ -33,32 +33,32 @@ module fpga (
     /*
      * GPIO
      */
-    input  wire       btnu,
-    input  wire       btnl,
-    input  wire       btnd,
-    input  wire       btnr,
-    input  wire       btnc,
-    input  wire [3:0] sw,
-    output wire [7:0] led,
+    input  wire        btnu,
+    input  wire        btnl,
+    input  wire        btnd,
+    input  wire        btnr,
+    input  wire        btnc,
+    input  wire [3:0]  sw,
+    output wire [7:0]  led,
 
     /*
      * PCI express
      */
-    input  wire [7:0] pcie_rx_p,
-    input  wire [7:0] pcie_rx_n,
-    output wire [7:0] pcie_tx_p,
-    output wire [7:0] pcie_tx_n,
-    input  wire       pcie_refclk_1_p,
-    input  wire       pcie_refclk_1_n,
-    input  wire       pcie_reset_n
+    input  wire [15:0] pcie_rx_p,
+    input  wire [15:0] pcie_rx_n,
+    output wire [15:0] pcie_tx_p,
+    output wire [15:0] pcie_tx_n,
+    input  wire        pcie_refclk_2_p,
+    input  wire        pcie_refclk_2_n,
+    input  wire        pcie_reset_n
 );
 
-parameter AXIS_PCIE_DATA_WIDTH = 256;
+parameter AXIS_PCIE_DATA_WIDTH = 512;
 parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
-parameter AXIS_PCIE_RC_USER_WIDTH = 75;
-parameter AXIS_PCIE_RQ_USER_WIDTH = 62;
-parameter AXIS_PCIE_CQ_USER_WIDTH = 88;
-parameter AXIS_PCIE_CC_USER_WIDTH = 33;
+parameter AXIS_PCIE_RC_USER_WIDTH = 161;
+parameter AXIS_PCIE_RQ_USER_WIDTH = 137;
+parameter AXIS_PCIE_CQ_USER_WIDTH = 183;
+parameter AXIS_PCIE_CC_USER_WIDTH = 81;
 
 // Clock and reset
 wire pcie_user_clk;
@@ -102,8 +102,8 @@ IBUFDS_GTE4 #(
     .REFCLK_HROW_CK_SEL(2'b00)
 )
 ibufds_gte4_pcie_mgt_refclk_inst (
-    .I             (pcie_refclk_1_p),
-    .IB            (pcie_refclk_1_n),
+    .I             (pcie_refclk_2_p),
+    .IB            (pcie_refclk_2_n),
     .CEB           (1'b0),
     .O             (pcie_sys_clk_gt),
     .ODIV2         (pcie_sys_clk)

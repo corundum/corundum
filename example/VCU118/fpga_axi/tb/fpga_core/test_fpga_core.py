@@ -50,7 +50,7 @@ class TB(object):
         self.dev = UltraScalePlusPcieDevice(
             # configuration options
             pcie_generation=3,
-            pcie_link_width=8,
+            pcie_link_width=16,
             user_clk_frequency=250e6,
             alignment="dword",
             cq_cc_straddle=False,
@@ -357,7 +357,7 @@ def test_fpga_core(request):
 
     parameters = {}
 
-    parameters['AXIS_PCIE_DATA_WIDTH'] = 256
+    parameters['AXIS_PCIE_DATA_WIDTH'] = 512
     parameters['AXIS_PCIE_KEEP_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH'] // 32
     parameters['AXIS_PCIE_RQ_USER_WIDTH'] = 62 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 137
     parameters['AXIS_PCIE_RC_USER_WIDTH'] = 75 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 161

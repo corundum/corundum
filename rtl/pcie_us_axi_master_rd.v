@@ -504,10 +504,18 @@ always @* begin
                     // packet smaller than max payload size
                     // assumed to not cross 4k boundary, send one TLP
                     tlp_dword_count_next = op_dword_count_reg;
+                    tlp_cmd_last_next = 1'b1;
+                    // always last TLP, so next address is irrelevant
+                    pcie_addr_next[AXI_ADDR_WIDTH-1:12] = pcie_addr_reg[AXI_ADDR_WIDTH-1:12];
+                    pcie_addr_next[11:0] = 12'd0;
                 end else begin
                     // packet larger than max payload size
                     // assumed to not cross 4k boundary, send one TLP, align to 128 byte RCB
                     tlp_dword_count_next = max_payload_size_dw_reg - pcie_addr_reg[6:2];
+                    tlp_cmd_last_next = 1'b0;
+                    // optimized pcie_addr_next = pcie_addr_reg + tlp_dword_count_next;
+                    pcie_addr_next[AXI_ADDR_WIDTH-1:12] = pcie_addr_reg[AXI_ADDR_WIDTH-1:12];
+                    pcie_addr_next[11:0] = {{pcie_addr_reg[11:7], 5'd0} + max_payload_size_dw_reg, 2'b00};
                 end
 
                 // read completion TLP will transfer DWORD count minus offset into first DWORD
@@ -535,19 +543,13 @@ always @* begin
                     tlp_cmd_offset_next = 3-pcie_addr_reg[OFFSET_WIDTH+2-1:2];
                     tlp_cmd_bubble_cycle_next = pcie_addr_reg[OFFSET_WIDTH+2-1:2] > 3;
                 end
-                tlp_cmd_last_next = op_dword_count_next == 0;
                 tlp_cmd_valid_next = 1'b1;
 
                 m_axi_araddr_next = pcie_addr_reg;
                 m_axi_arlen_next = (tlp_dword_count_next + pcie_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
                 m_axi_arvalid_next = 1;
 
-                // increment address by transfer size
-                pcie_addr_next = pcie_addr_reg + (tlp_dword_count_next << 2);
-                // first transfer will end on DWORD boundary, so subsequent transfers will be DWORD aligned
-                pcie_addr_next[1:0] = 2'b0;
-
-                if (op_dword_count_next > 0) begin
+                if (!tlp_cmd_last_next) begin
                     axi_state_next = AXI_STATE_START;
                 end else begin
                     axi_state_next = AXI_STATE_IDLE;

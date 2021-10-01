@@ -115,6 +115,8 @@ parameter AXI_WORD_SIZE = AXI_DATA_WIDTH/AXI_WORD_WIDTH;
 parameter AXI_BURST_SIZE = $clog2(AXI_STRB_WIDTH);
 parameter AXI_MAX_BURST_SIZE = AXI_MAX_BURST_LEN*AXI_WORD_WIDTH;
 
+parameter PAYLOAD_MAX = AXI_MAX_BURST_SIZE < 4096 ? $clog2(AXI_MAX_BURST_SIZE/128) : 5;
+
 parameter AXIS_PCIE_WORD_WIDTH = AXIS_PCIE_KEEP_WIDTH;
 parameter AXIS_PCIE_WORD_SIZE = AXIS_PCIE_DATA_WIDTH/AXIS_PCIE_WORD_WIDTH;
 
@@ -168,6 +170,11 @@ initial begin
         $error("Error: AXI_MAX_BURST_LEN must be between 1 and 256 (instance %m)");
         $finish;
     end
+
+    if (AXI_MAX_BURST_SIZE < 128) begin
+        $error("Error: AXI max burst size must be at least 128 bytes (instance %m)");
+        $finish;
+    end
 end
 
 localparam [3:0]
@@ -193,14 +200,13 @@ localparam [2:0]
     CPL_STATUS_CRS = 3'b010, // configuration request retry status
     CPL_STATUS_CA  = 3'b100; // completer abort
 
-localparam [2:0]
-    AXI_STATE_IDLE = 3'd0,
-    AXI_STATE_HEADER = 3'd1,
-    AXI_STATE_START = 3'd2,
-    AXI_STATE_REQ = 3'd3,
-    AXI_STATE_WAIT_END = 3'd4;
+localparam [1:0]
+    AXI_STATE_IDLE = 2'd0,
+    AXI_STATE_HEADER = 2'd1,
+    AXI_STATE_START = 2'd2,
+    AXI_STATE_WAIT_END = 2'd3;
 
-reg [2:0] axi_state_reg = AXI_STATE_IDLE, axi_state_next;
+reg [1:0] axi_state_reg = AXI_STATE_IDLE, axi_state_next;
 
 localparam [2:0]
     TLP_STATE_IDLE = 3'd0,
@@ -222,10 +228,8 @@ reg [1:0] last_be_offset;
 reg [2:0] single_dword_len;
 
 reg [PCIE_ADDR_WIDTH-1:0] pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, pcie_addr_next;
-reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
 reg [10:0] op_dword_count_reg = 11'd0, op_dword_count_next;
-reg [10:0] tr_dword_count_reg = 11'd0, tr_dword_count_next;
 reg [10:0] tlp_dword_count_reg = 11'd0, tlp_dword_count_next;
 reg [3:0] first_be_reg = 4'd0, first_be_next;
 reg [3:0] last_be_reg = 4'd0, last_be_next;
@@ -344,10 +348,8 @@ always @* begin
     m_axi_arvalid_next = m_axi_arvalid_reg && !m_axi_arready;
 
     pcie_addr_next = pcie_addr_reg;
-    axi_addr_next = axi_addr_reg;
     op_count_next = op_count_reg;
     op_dword_count_next = op_dword_count_reg;
-    tr_dword_count_next = tr_dword_count_reg;
     tlp_dword_count_next = tlp_dword_count_reg;
     first_be_next = first_be_reg;
     last_be_next = last_be_reg;
@@ -497,7 +499,7 @@ always @* begin
         end
         AXI_STATE_START: begin
             // start state, compute TLP length
-            if (!tlp_cmd_valid_reg) begin
+            if (!tlp_cmd_valid_reg && !m_axi_arvalid) begin
                 if (op_dword_count_reg <= max_payload_size_dw_reg) begin
                     // packet smaller than max payload size
                     // assumed to not cross 4k boundary, send one TLP
@@ -536,44 +538,22 @@ always @* begin
                 tlp_cmd_last_next = op_dword_count_next == 0;
                 tlp_cmd_valid_next = 1'b1;
 
-                axi_state_next = AXI_STATE_REQ;
-            end else begin
-                axi_state_next = AXI_STATE_START;
-            end
-        end
-        AXI_STATE_REQ: begin
-            // request state, generate AXI read requests
-            if (!m_axi_arvalid) begin
-                if (tlp_dword_count_reg <= AXI_MAX_BURST_SIZE/4) begin
-                    // packet smaller than max burst size
-                    // assumed to not cross 4k boundary, send one request
-                    tr_dword_count_next = tlp_dword_count_reg;
-                end else begin
-                    // packet larger than max burst size
-                    // assumed to not cross 4k boundary, send one request
-                    tr_dword_count_next = AXI_MAX_BURST_SIZE/4 - pcie_addr_reg[OFFSET_WIDTH+2-1:2];
-                end
-
                 m_axi_araddr_next = pcie_addr_reg;
-                m_axi_arlen_next = (tr_dword_count_next + pcie_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
+                m_axi_arlen_next = (tlp_dword_count_next + pcie_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
                 m_axi_arvalid_next = 1;
 
                 // increment address by transfer size
-                pcie_addr_next = pcie_addr_reg + (tr_dword_count_next << 2);
+                pcie_addr_next = pcie_addr_reg + (tlp_dword_count_next << 2);
                 // first transfer will end on DWORD boundary, so subsequent transfers will be DWORD aligned
                 pcie_addr_next[1:0] = 2'b0;
-                // keep track of how much more needs to be read to fill the TLP
-                tlp_dword_count_next = tlp_dword_count_reg - tr_dword_count_next;
 
-                if (tlp_dword_count_next > 0) begin
-                    axi_state_next = AXI_STATE_REQ;
-                end else if (op_dword_count_next > 0) begin
+                if (op_dword_count_next > 0) begin
                     axi_state_next = AXI_STATE_START;
                 end else begin
                     axi_state_next = AXI_STATE_IDLE;
                 end
             end else begin
-                axi_state_next = AXI_STATE_REQ;
+                axi_state_next = AXI_STATE_START;
             end
         end
         AXI_STATE_WAIT_END: begin
@@ -1072,10 +1052,8 @@ always @(posedge clk) begin
     end
 
     pcie_addr_reg <= pcie_addr_next;
-    axi_addr_reg <= axi_addr_next;
     op_count_reg <= op_count_next;
     op_dword_count_reg <= op_dword_count_next;
-    tr_dword_count_reg <= tr_dword_count_next;
     tlp_dword_count_reg <= tlp_dword_count_next;
     first_be_reg <= first_be_next;
     last_be_reg <= last_be_next;
@@ -1113,7 +1091,7 @@ always @(posedge clk) begin
     m_axi_araddr_reg <= m_axi_araddr_next;
     m_axi_arlen_reg <= m_axi_arlen_next;
 
-    max_payload_size_dw_reg <= 11'd32 << (max_payload_size > 5 ? 5 : max_payload_size);
+    max_payload_size_dw_reg <= 11'd32 << (max_payload_size > PAYLOAD_MAX ? PAYLOAD_MAX : max_payload_size);
 
     if (transfer_in_save) begin
         save_axi_rdata_reg <= m_axi_rdata;

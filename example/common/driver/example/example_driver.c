@@ -171,26 +171,12 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
         goto fail_irq;
     }
 
-    // Dump counters
-    dev_info(dev, "TLP counters");
-    dev_info(dev, "RQ: %d", ioread32(edev->bar[0]+0x000400));
-    dev_info(dev, "RC: %d", ioread32(edev->bar[0]+0x000404));
-    dev_info(dev, "CQ: %d", ioread32(edev->bar[0]+0x000408));
-    dev_info(dev, "CC: %d", ioread32(edev->bar[0]+0x00040C));
-
     // Read/write test
     dev_info(dev, "write to BAR2");
     iowrite32(0x11223344, edev->bar[2]);
 
     dev_info(dev, "read from BAR2");
     dev_info(dev, "%08x", ioread32(edev->bar[2]));
-
-    // Dump counters
-    dev_info(dev, "TLP counters");
-    dev_info(dev, "RQ: %d", ioread32(edev->bar[0]+0x000400));
-    dev_info(dev, "RC: %d", ioread32(edev->bar[0]+0x000404));
-    dev_info(dev, "CQ: %d", ioread32(edev->bar[0]+0x000408));
-    dev_info(dev, "CC: %d", ioread32(edev->bar[0]+0x00040C));
 
     // PCIe DMA test
     dev_info(dev, "write test data");
@@ -239,13 +225,6 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
     dev_info(dev, "read test data");
     print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 16, 1, edev->dma_region+0x0200, 256, true);
-
-    // Dump counters
-    dev_info(dev, "TLP counters");
-    dev_info(dev, "RQ: %d", ioread32(edev->bar[0]+0x000400));
-    dev_info(dev, "RC: %d", ioread32(edev->bar[0]+0x000404));
-    dev_info(dev, "CQ: %d", ioread32(edev->bar[0]+0x000408));
-    dev_info(dev, "CC: %d", ioread32(edev->bar[0]+0x00040C));
 
     // probe complete
     return 0;

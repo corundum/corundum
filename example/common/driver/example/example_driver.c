@@ -72,7 +72,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
     int k;
 
-    dev_info(dev, "edev probe");
+    dev_info(dev, DRIVER_NAME " probe");
     dev_info(dev, " Vendor: 0x%04x", pdev->vendor);
     dev_info(dev, " Device: 0x%04x", pdev->device);
     dev_info(dev, " Class: 0x%06x", pdev->class);
@@ -164,7 +164,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
     }
 
     // Set up interrupt
-    ret = pci_request_irq(pdev, 0, edev_intr, 0, edev, "edev");
+    ret = pci_request_irq(pdev, 0, edev_intr, 0, edev, DRIVER_NAME);
     if (ret < 0)
     {
         dev_err(dev, "Failed to request IRQ");
@@ -249,7 +249,7 @@ static void edev_remove(struct pci_dev *pdev)
     struct example_dev *edev;
     struct device *dev = &pdev->dev;
 
-    dev_info(dev, "edev remove");
+    dev_info(dev, DRIVER_NAME " remove");
 
     if (!(edev = pci_get_drvdata(pdev))) {
         return;
@@ -266,7 +266,7 @@ static void edev_remove(struct pci_dev *pdev)
 
 static void edev_shutdown(struct pci_dev *pdev)
 {
-    dev_info(&pdev->dev, "edev shutdown");
+    dev_info(&pdev->dev, DRIVER_NAME " shutdown");
 
     edev_remove(pdev);
 }

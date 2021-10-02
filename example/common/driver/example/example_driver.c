@@ -36,7 +36,6 @@ MODULE_DESCRIPTION("verilog-pcie example driver");
 MODULE_AUTHOR("Alex Forencich");
 MODULE_LICENSE("Dual MIT/GPL");
 MODULE_VERSION(DRIVER_VERSION);
-MODULE_SUPPORTED_DEVICE(DRIVER_NAME);
 
 static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent);
 static void edev_remove(struct pci_dev *pdev);

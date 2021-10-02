@@ -108,8 +108,6 @@ module pcie_us_axi_master_rd #
     output wire                               status_error_uncor
 );
 
-parameter PCIE_ADDR_WIDTH = 64;
-
 parameter AXI_WORD_WIDTH = AXI_STRB_WIDTH;
 parameter AXI_WORD_SIZE = AXI_DATA_WIDTH/AXI_WORD_WIDTH;
 parameter AXI_BURST_SIZE = $clog2(AXI_STRB_WIDTH);
@@ -227,14 +225,14 @@ reg [1:0] first_be_offset;
 reg [1:0] last_be_offset;
 reg [2:0] single_dword_len;
 
-reg [PCIE_ADDR_WIDTH-1:0] pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, pcie_addr_next;
+reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
 reg [10:0] op_dword_count_reg = 11'd0, op_dword_count_next;
 reg [10:0] tlp_dword_count_reg = 11'd0, tlp_dword_count_next;
 reg [3:0] first_be_reg = 4'd0, first_be_next;
 reg [3:0] last_be_reg = 4'd0, last_be_next;
 
-reg [PCIE_ADDR_WIDTH-1:0] tlp_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, tlp_addr_next;
+reg [6:0] tlp_lower_addr_reg = 7'd0, tlp_lower_addr_next;
 reg [12:0] tlp_len_reg = 13'd0, tlp_len_next;
 reg [OFFSET_WIDTH-1:0] offset_reg = {OFFSET_WIDTH{1'b0}}, offset_next;
 reg [10:0] dword_count_reg = 11'd0, dword_count_next;
@@ -250,7 +248,7 @@ reg [7:0] tag_reg = 8'd0, tag_next;
 reg [2:0] tc_reg = 3'd0, tc_next;
 reg [2:0] attr_reg = 3'd0, attr_next;
 
-reg [PCIE_ADDR_WIDTH-1:0] tlp_cmd_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, tlp_cmd_addr_next;
+reg [6:0] tlp_cmd_lower_addr_reg = 7'd0, tlp_cmd_lower_addr_next;
 reg [12:0] tlp_cmd_byte_len_reg = 13'd0, tlp_cmd_byte_len_next;
 reg [10:0] tlp_cmd_dword_len_reg = 11'd0, tlp_cmd_dword_len_next;
 reg [9:0] tlp_cmd_input_cycle_len_reg = 10'd0, tlp_cmd_input_cycle_len_next;
@@ -347,14 +345,14 @@ always @* begin
     m_axi_arlen_next = m_axi_arlen_reg;
     m_axi_arvalid_next = m_axi_arvalid_reg && !m_axi_arready;
 
-    pcie_addr_next = pcie_addr_reg;
+    axi_addr_next = axi_addr_reg;
     op_count_next = op_count_reg;
     op_dword_count_next = op_dword_count_reg;
     tlp_dword_count_next = tlp_dword_count_reg;
     first_be_next = first_be_reg;
     last_be_next = last_be_reg;
 
-    tlp_cmd_addr_next = tlp_cmd_addr_reg;
+    tlp_cmd_lower_addr_next = tlp_cmd_lower_addr_reg;
     tlp_cmd_byte_len_next = tlp_cmd_byte_len_reg;
     tlp_cmd_dword_len_next = tlp_cmd_dword_len_reg;
     tlp_cmd_input_cycle_len_next = tlp_cmd_input_cycle_len_reg;
@@ -380,7 +378,7 @@ always @* begin
 
             if (s_axis_cq_tready & s_axis_cq_tvalid) begin
                 // header fields
-                pcie_addr_next = {s_axis_cq_tdata[63:2], first_be_offset};
+                axi_addr_next = {s_axis_cq_tdata[63:2], first_be_offset};
                 tlp_cmd_status_next = CPL_STATUS_SC; // successful completion
                 if (AXIS_PCIE_DATA_WIDTH > 64) begin
                     op_dword_count_next = s_axis_cq_tdata[74:64];
@@ -506,24 +504,24 @@ always @* begin
                     tlp_dword_count_next = op_dword_count_reg;
                     tlp_cmd_last_next = 1'b1;
                     // always last TLP, so next address is irrelevant
-                    pcie_addr_next[AXI_ADDR_WIDTH-1:12] = pcie_addr_reg[AXI_ADDR_WIDTH-1:12];
-                    pcie_addr_next[11:0] = 12'd0;
+                    axi_addr_next[AXI_ADDR_WIDTH-1:12] = axi_addr_reg[AXI_ADDR_WIDTH-1:12];
+                    axi_addr_next[11:0] = 12'd0;
                 end else begin
                     // packet larger than max payload size
                     // assumed to not cross 4k boundary, send one TLP, align to 128 byte RCB
-                    tlp_dword_count_next = max_payload_size_dw_reg - pcie_addr_reg[6:2];
+                    tlp_dword_count_next = max_payload_size_dw_reg - axi_addr_reg[6:2];
                     tlp_cmd_last_next = 1'b0;
-                    // optimized pcie_addr_next = pcie_addr_reg + tlp_dword_count_next;
-                    pcie_addr_next[AXI_ADDR_WIDTH-1:12] = pcie_addr_reg[AXI_ADDR_WIDTH-1:12];
-                    pcie_addr_next[11:0] = {{pcie_addr_reg[11:7], 5'd0} + max_payload_size_dw_reg, 2'b00};
+                    // optimized axi_addr_next = axi_addr_reg + tlp_dword_count_next;
+                    axi_addr_next[AXI_ADDR_WIDTH-1:12] = axi_addr_reg[AXI_ADDR_WIDTH-1:12];
+                    axi_addr_next[11:0] = {{axi_addr_reg[11:7], 5'd0} + max_payload_size_dw_reg, 2'b00};
                 end
 
                 // read completion TLP will transfer DWORD count minus offset into first DWORD
-                op_count_next = op_count_reg - (tlp_dword_count_next << 2) + pcie_addr_reg[1:0];
+                op_count_next = op_count_reg - (tlp_dword_count_next << 2) + axi_addr_reg[1:0];
                 op_dword_count_next = op_dword_count_reg - tlp_dword_count_next;
 
                 // number of bus transfers from AXI, DWORD count plus DWORD offset, divided by bus width in DWORDS
-                tlp_cmd_input_cycle_len_next = (tlp_dword_count_next + pcie_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
+                tlp_cmd_input_cycle_len_next = (tlp_dword_count_next + axi_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
                 // number of bus transfers in TLP, DOWRD count plus payload start DWORD offset, divided by bus width in DWORDS
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
                     tlp_cmd_output_cycle_len_next = (tlp_dword_count_next + 1 - 1) >> (AXI_BURST_SIZE-2);
@@ -531,22 +529,22 @@ always @* begin
                     tlp_cmd_output_cycle_len_next = (tlp_dword_count_next + 3 - 1) >> (AXI_BURST_SIZE-2);
                 end
 
-                tlp_cmd_addr_next = pcie_addr_reg;
+                tlp_cmd_lower_addr_next = axi_addr_reg;
                 tlp_cmd_byte_len_next = op_count_reg;
                 tlp_cmd_dword_len_next = tlp_dword_count_next;
                 // required DWORD shift to place first DWORD read from AXI into proper position in payload
                 // bubble cycle required if first AXI transfer does not fill first payload transfer
                 if (AXIS_PCIE_DATA_WIDTH == 64) begin
-                    tlp_cmd_offset_next = 1-pcie_addr_reg[OFFSET_WIDTH+2-1:2];
+                    tlp_cmd_offset_next = 1-axi_addr_reg[OFFSET_WIDTH+2-1:2];
                     tlp_cmd_bubble_cycle_next = 1'b0;
                 end else begin
-                    tlp_cmd_offset_next = 3-pcie_addr_reg[OFFSET_WIDTH+2-1:2];
-                    tlp_cmd_bubble_cycle_next = pcie_addr_reg[OFFSET_WIDTH+2-1:2] > 3;
+                    tlp_cmd_offset_next = 3-axi_addr_reg[OFFSET_WIDTH+2-1:2];
+                    tlp_cmd_bubble_cycle_next = axi_addr_reg[OFFSET_WIDTH+2-1:2] > 3;
                 end
                 tlp_cmd_valid_next = 1'b1;
 
-                m_axi_araddr_next = pcie_addr_reg;
-                m_axi_arlen_next = (tlp_dword_count_next + pcie_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
+                m_axi_araddr_next = axi_addr_reg;
+                m_axi_arlen_next = (tlp_dword_count_next + axi_addr_reg[OFFSET_WIDTH+2-1:2] - 1) >> (AXI_BURST_SIZE-2);
                 m_axi_arvalid_next = 1;
 
                 if (!tlp_cmd_last_next) begin
@@ -585,7 +583,7 @@ always @* begin
 
     m_axi_rready_next = 1'b0;
 
-    tlp_addr_next = tlp_addr_reg;
+    tlp_lower_addr_next = tlp_lower_addr_reg;
     tlp_len_next = tlp_len_reg;
     dword_count_next = dword_count_reg;
     offset_next = offset_reg;
@@ -607,7 +605,7 @@ always @* begin
     m_axis_cc_tlast_int = 1'b0;
     m_axis_cc_tuser_int = {AXIS_PCIE_CC_USER_WIDTH{1'b0}};
 
-    m_axis_cc_tdata_int[6:0] = tlp_addr_reg; // lower address
+    m_axis_cc_tdata_int[6:0] = tlp_lower_addr_reg; // lower address
     m_axis_cc_tdata_int[9:8] = 2'b00; // AT
     m_axis_cc_tdata_int[28:16] = tlp_len_reg; // byte count
     m_axis_cc_tdata_int[42:32] = dword_count_reg;
@@ -658,7 +656,7 @@ always @* begin
             m_axi_rready_next = 1'b0;
 
             // store TLP fields and transfer parameters
-            tlp_addr_next = tlp_cmd_addr_reg;
+            tlp_lower_addr_next = tlp_cmd_lower_addr_reg;
             tlp_len_next = tlp_cmd_byte_len_reg;
             dword_count_next = tlp_cmd_dword_len_reg;
             offset_next = tlp_cmd_offset_reg;
@@ -748,7 +746,7 @@ always @* begin
                             m_axis_cc_tlast_int = 1'b1;
 
                             // skip idle state if possible
-                            tlp_addr_next = tlp_cmd_addr_reg;
+                            tlp_lower_addr_next = tlp_cmd_lower_addr_reg;
                             tlp_len_next = tlp_cmd_byte_len_reg;
                             dword_count_next = tlp_cmd_dword_len_reg;
                             offset_next = tlp_cmd_offset_reg;
@@ -819,7 +817,7 @@ always @* begin
                     m_axis_cc_tlast_int = 1'b1;
 
                     // skip idle state if possible
-                    tlp_addr_next = tlp_cmd_addr_reg;
+                    tlp_lower_addr_next = tlp_cmd_lower_addr_reg;
                     tlp_len_next = tlp_cmd_byte_len_reg;
                     dword_count_next = tlp_cmd_dword_len_reg;
                     offset_next = tlp_cmd_offset_reg;
@@ -891,7 +889,7 @@ always @* begin
                         m_axis_cc_tlast_int = 1'b1;
 
                         // skip idle state if possible
-                        tlp_addr_next = tlp_cmd_addr_reg;
+                        tlp_lower_addr_next = tlp_cmd_lower_addr_reg;
                         tlp_len_next = tlp_cmd_byte_len_reg;
                         dword_count_next = tlp_cmd_dword_len_reg;
                         offset_next = tlp_cmd_offset_reg;
@@ -955,7 +953,7 @@ always @* begin
                     tlp_state_next = TLP_STATE_CPL_2;
                 end else begin
                     // skip idle state if possible
-                    tlp_addr_next = tlp_cmd_addr_reg;
+                    tlp_lower_addr_next = tlp_cmd_lower_addr_reg;
                     tlp_len_next = tlp_cmd_byte_len_reg;
                     dword_count_next = tlp_cmd_dword_len_reg;
                     offset_next = tlp_cmd_offset_reg;
@@ -999,7 +997,7 @@ always @* begin
 
             if (m_axis_cc_tready_int_reg) begin
                 // skip idle state if possible
-                tlp_addr_next = tlp_cmd_addr_reg;
+                tlp_lower_addr_next = tlp_cmd_lower_addr_reg;
                 tlp_len_next = tlp_cmd_byte_len_reg;
                 dword_count_next = tlp_cmd_dword_len_reg;
                 offset_next = tlp_cmd_offset_reg;
@@ -1053,14 +1051,14 @@ always @(posedge clk) begin
         status_error_uncor_reg <= status_error_uncor_next;
     end
 
-    pcie_addr_reg <= pcie_addr_next;
+    axi_addr_reg <= axi_addr_next;
     op_count_reg <= op_count_next;
     op_dword_count_reg <= op_dword_count_next;
     tlp_dword_count_reg <= tlp_dword_count_next;
     first_be_reg <= first_be_next;
     last_be_reg <= last_be_next;
 
-    tlp_addr_reg <= tlp_addr_next;
+    tlp_lower_addr_reg <= tlp_lower_addr_next;
     tlp_len_reg <= tlp_len_next;
     dword_count_reg <= dword_count_next;
     offset_reg <= offset_next;
@@ -1076,7 +1074,7 @@ always @(posedge clk) begin
     tc_reg <= tc_next;
     attr_reg <= attr_next;
 
-    tlp_cmd_addr_reg <= tlp_cmd_addr_next;
+    tlp_cmd_lower_addr_reg <= tlp_cmd_lower_addr_next;
     tlp_cmd_byte_len_reg <= tlp_cmd_byte_len_next;
     tlp_cmd_dword_len_reg <= tlp_cmd_dword_len_next;
     tlp_cmd_input_cycle_len_reg <= tlp_cmd_input_cycle_len_next;

@@ -266,17 +266,9 @@ static void edev_remove(struct pci_dev *pdev)
 
 static void edev_shutdown(struct pci_dev *pdev)
 {
-    struct example_dev *edev = pci_get_drvdata(pdev);
-    struct device *dev = &pdev->dev;
+    dev_info(&pdev->dev, "edev shutdown");
 
-    dev_info(dev, "edev shutdown");
-
-    if (!edev) {
-        return;
-    }
-
-    // ensure DMA is disabled on shutdown
-    pci_clear_master(pdev);
+    edev_remove(pdev);
 }
 
 static int enumerate_bars(struct example_dev *edev, struct pci_dev *pdev)

@@ -120,7 +120,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 
     int k = 0;
 
-    dev_info(dev, "mqnic PCI probe");
+    dev_info(dev, DRIVER_NAME " PCI probe");
     dev_info(dev, " Vendor: 0x%04x", pdev->vendor);
     dev_info(dev, " Device: 0x%04x", pdev->device);
     dev_info(dev, " Class: 0x%06x", pdev->class);
@@ -295,7 +295,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
     // Set up interrupts
     for (k = 0; k < mqnic->irq_count; k++)
     {
-        ret = pci_request_irq(pdev, k, mqnic_interrupt, NULL, mqnic, "mqnic%d-%d", mqnic->id, k);
+        ret = pci_request_irq(pdev, k, mqnic_interrupt, NULL, mqnic, "%s-%d", mqnic->name, k);
         if (ret < 0)
         {
             dev_err(dev, "Failed to request IRQ");
@@ -408,7 +408,7 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
 
     int k = 0;
 
-    dev_info(&pdev->dev, "mqnic PCI remove");
+    dev_info(&pdev->dev, DRIVER_NAME " PCI remove");
 
     misc_deregister(&mqnic->misc_dev);
 
@@ -445,7 +445,7 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
 
 static void mqnic_pci_shutdown(struct pci_dev *pdev)
 {
-    dev_info(&pdev->dev, "mqnic PCI shutdown");
+    dev_info(&pdev->dev, DRIVER_NAME " PCI shutdown");
 
     mqnic_pci_remove(pdev);
 }

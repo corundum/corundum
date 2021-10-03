@@ -375,6 +375,7 @@ always @* begin
         4'b01z1: rx_req_single_dword_len = 3'd3;
         4'b1z10: rx_req_single_dword_len = 3'd3;
         4'b1zz1: rx_req_single_dword_len = 3'd4;
+        default: rx_req_single_dword_len = 3'd1;
     endcase
 
     casez (rx_req_tlp_hdr_first_be)
@@ -383,6 +384,7 @@ always @* begin
         4'bzz10: rx_req_first_be_offset = 2'b01;
         4'bz100: rx_req_first_be_offset = 2'b10;
         4'b1000: rx_req_first_be_offset = 2'b11;
+        default: rx_req_first_be_offset = 2'b00;
     endcase
 
     casez (rx_req_tlp_hdr_last_be)
@@ -391,6 +393,7 @@ always @* begin
         4'b01zz: rx_req_last_be_offset = 2'b01;
         4'b001z: rx_req_last_be_offset = 2'b10;
         4'b0001: rx_req_last_be_offset = 2'b11;
+        default: rx_req_last_be_offset = 2'b00;
     endcase
 
     // TLP segmentation and AXI read request generation

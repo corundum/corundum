@@ -170,16 +170,6 @@ localparam [1:0]
 
 reg [1:0] resp_state_reg = RESP_STATE_IDLE, resp_state_next;
 
-reg [2:0] cpl_status_reg = 3'b000, cpl_status_next;
-reg cpl_data_reg = 1'b0, cpl_data_next;
-reg [9:0] dword_count_reg = 10'd0, dword_count_next;
-reg [11:0] byte_count_reg = 12'd0, byte_count_next;
-reg [6:0] lower_addr_reg = 7'd0, lower_addr_next;
-reg [15:0] requester_id_reg = 16'd0, requester_id_next;
-reg [9:0] tag_reg = 10'd0, tag_next;
-reg [2:0] tc_reg = 3'd0, tc_next;
-reg [2:0] attr_reg = 3'd0, attr_next;
-
 reg [2:0] rx_req_tlp_hdr_fmt;
 reg [4:0] rx_req_tlp_hdr_type;
 reg [2:0] rx_req_tlp_hdr_tc;
@@ -205,27 +195,38 @@ reg [RESP_FIFO_ADDR_WIDTH+1-1:0] resp_fifo_rd_ptr_reg = 0, resp_fifo_rd_ptr_next
 reg resp_fifo_op_read[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg resp_fifo_op_write[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [2:0] resp_fifo_cpl_status[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
-reg resp_fifo_cpl_data[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
-reg [9:0] resp_fifo_length[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+reg [9:0] resp_fifo_dword_count[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [11:0] resp_fifo_byte_count[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [6:0] resp_fifo_lower_addr[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [15:0] resp_fifo_requester_id[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [9:0] resp_fifo_tag[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [2:0] resp_fifo_tc[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [2:0] resp_fifo_attr[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+
 reg resp_fifo_wr_op_read;
 reg resp_fifo_wr_op_write;
 reg [2:0] resp_fifo_wr_cpl_status;
-reg resp_fifo_wr_cpl_data;
-reg [9:0] resp_fifo_wr_length;
+reg [9:0] resp_fifo_wr_dword_count;
 reg [11:0] resp_fifo_wr_byte_count;
-reg [7:0] resp_fifo_wr_lower_addr;
+reg [6:0] resp_fifo_wr_lower_addr;
 reg [15:0] resp_fifo_wr_requester_id;
 reg [9:0] resp_fifo_wr_tag;
 reg [2:0] resp_fifo_wr_tc;
 reg [2:0] resp_fifo_wr_attr;
 reg resp_fifo_we;
 reg resp_fifo_half_full_reg = 1'b0;
+
+reg resp_fifo_rd_op_read_reg = 1'b0, resp_fifo_rd_op_read_next;
+reg resp_fifo_rd_op_write_reg = 1'b0, resp_fifo_rd_op_write_next;
+reg [2:0] resp_fifo_rd_cpl_status_reg = CPL_STATUS_SC, resp_fifo_rd_cpl_status_next;
+reg [9:0] resp_fifo_rd_dword_count_reg = 10'd0, resp_fifo_rd_dword_count_next;
+reg [11:0] resp_fifo_rd_byte_count_reg = 12'd0, resp_fifo_rd_byte_count_next;
+reg [6:0] resp_fifo_rd_lower_addr_reg = 7'd0, resp_fifo_rd_lower_addr_next;
+reg [15:0] resp_fifo_rd_requester_id_reg = 16'd0, resp_fifo_rd_requester_id_next;
+reg [9:0] resp_fifo_rd_tag_reg = 10'd0, resp_fifo_rd_tag_next;
+reg [2:0] resp_fifo_rd_tc_reg = 3'd0, resp_fifo_rd_tc_next;
+reg [2:0] resp_fifo_rd_attr_reg = 3'd0, resp_fifo_rd_attr_next;
+reg resp_fifo_rd_valid_reg = 1'b0, resp_fifo_rd_valid_next;
 
 reg rx_req_tlp_ready_reg = 1'b0, rx_req_tlp_ready_next;
 
@@ -320,8 +321,7 @@ always @* begin
     resp_fifo_wr_op_read = 1'b0;
     resp_fifo_wr_op_write = 1'b0;
     resp_fifo_wr_cpl_status = CPL_STATUS_SC;
-    resp_fifo_wr_cpl_data = 1'b0;
-    resp_fifo_wr_length = 10'd0;
+    resp_fifo_wr_dword_count = 10'd0;
     resp_fifo_wr_byte_count = 10'd0;
     resp_fifo_wr_lower_addr = 7'd0;
     resp_fifo_wr_requester_id = rx_req_tlp_hdr_requester_id;
@@ -348,14 +348,15 @@ always @* begin
                     // read request
                     if (rx_req_tlp_hdr_length == 11'd1) begin
                         // length OK
-                        m_axil_arvalid_next = 1'b1;
-                        rx_req_tlp_ready_next = 1'b0;
 
-                        // perform read and return completion
+                        // perform read
+                        m_axil_arvalid_next = 1'b1;
+
+                        // finish read and return completion
                         resp_fifo_wr_op_read = 1'b1;
+                        resp_fifo_wr_op_write = 1'b0;
                         resp_fifo_wr_cpl_status = CPL_STATUS_SC;
-                        resp_fifo_wr_cpl_data = 1'b1;
-                        resp_fifo_wr_length = 10'd1;
+                        resp_fifo_wr_dword_count = 10'd1;
 
                         casez (rx_req_tlp_hdr_first_be)
                             4'b0000: resp_fifo_wr_byte_count = 12'd1;
@@ -379,15 +380,17 @@ always @* begin
                             4'b1000: resp_fifo_wr_lower_addr = {rx_req_tlp_hdr_addr[6:2], 2'b11};
                         endcase
 
+                        rx_req_tlp_ready_next = 1'b0;
                     end else begin
                         // bad length
                         // report correctable error
                         status_error_cor_next = 1'b1;
 
                         // return CA completion
+                        resp_fifo_wr_op_read = 1'b0;
+                        resp_fifo_wr_op_write = 1'b0;
                         resp_fifo_wr_cpl_status = CPL_STATUS_CA;
-                        resp_fifo_wr_cpl_data = 1'b0;
-                        resp_fifo_wr_length = 10'd0;
+                        resp_fifo_wr_dword_count = 10'd0;
                         resp_fifo_wr_byte_count = 10'd0;
                         resp_fifo_wr_lower_addr = 7'd0;
                     end
@@ -408,13 +411,17 @@ always @* begin
                     // write request
                     if (rx_req_tlp_hdr_length == 11'd1) begin
                         // length OK
+
+                        // perform write
                         m_axil_awvalid_next = 1'b1;
                         m_axil_wvalid_next = 1'b1;
-                        rx_req_tlp_ready_next = 1'b0;
 
                         // entry in FIFO for proper response ordering
+                        resp_fifo_wr_op_read = 1'b0;
                         resp_fifo_wr_op_write = 1'b1;
                         resp_fifo_we = 1'b1;
+
+                        rx_req_tlp_ready_next = 1'b0;
                     end else begin
                         // bad length
                         // report uncorrectable error
@@ -444,9 +451,10 @@ always @* begin
                         status_error_cor_next = 1'b1;
 
                         // UR completion
+                        resp_fifo_wr_op_read = 1'b0;
+                        resp_fifo_wr_op_write = 1'b0;
                         resp_fifo_wr_cpl_status = CPL_STATUS_UR;
-                        resp_fifo_wr_cpl_data = 1'b0;
-                        resp_fifo_wr_length = 10'd0;
+                        resp_fifo_wr_dword_count = 10'd0;
                         resp_fifo_wr_byte_count = 10'd0;
                         resp_fifo_wr_lower_addr = 7'd0;
                         resp_fifo_wr_requester_id = rx_req_tlp_hdr_requester_id;
@@ -493,17 +501,19 @@ end
 always @* begin
     resp_state_next = RESP_STATE_IDLE;
 
-    cpl_status_next = cpl_status_reg;
-    cpl_data_next = cpl_data_reg;
-    dword_count_next = dword_count_reg;
-    byte_count_next = byte_count_reg;
-    lower_addr_next = lower_addr_reg;
-    requester_id_next = requester_id_reg;
-    tag_next = tag_reg;
-    tc_next = tc_reg;
-    attr_next = attr_reg;
-
     resp_fifo_rd_ptr_next = resp_fifo_rd_ptr_reg;
+
+    resp_fifo_rd_op_read_next = resp_fifo_rd_op_read_reg;
+    resp_fifo_rd_op_write_next = resp_fifo_rd_op_write_reg;
+    resp_fifo_rd_cpl_status_next = resp_fifo_rd_cpl_status_reg;
+    resp_fifo_rd_dword_count_next = resp_fifo_rd_dword_count_reg;
+    resp_fifo_rd_byte_count_next = resp_fifo_rd_byte_count_reg;
+    resp_fifo_rd_lower_addr_next = resp_fifo_rd_lower_addr_reg;
+    resp_fifo_rd_requester_id_next = resp_fifo_rd_requester_id_reg;
+    resp_fifo_rd_tag_next = resp_fifo_rd_tag_reg;
+    resp_fifo_rd_tc_next = resp_fifo_rd_tc_reg;
+    resp_fifo_rd_attr_next = resp_fifo_rd_attr_reg;
+    resp_fifo_rd_valid_next = resp_fifo_rd_valid_reg;
 
     tx_cpl_tlp_data_next = tx_cpl_tlp_data_reg;
     tx_cpl_tlp_strb_next = tx_cpl_tlp_strb_reg;
@@ -515,55 +525,40 @@ always @* begin
 
     // TLP header
     // DW 0
-    cpl_tlp_hdr[127:125] = cpl_data_reg ? TLP_FMT_3DW_DATA : TLP_FMT_3DW; // fmt
+    cpl_tlp_hdr[127:125] = resp_fifo_rd_op_read_reg ? TLP_FMT_3DW_DATA : TLP_FMT_3DW; // fmt
     cpl_tlp_hdr[124:120] = 5'b01010; // type
-    cpl_tlp_hdr[119] = tag_reg[9]; // T9
-    cpl_tlp_hdr[118:116] = tc_reg; // TC
-    cpl_tlp_hdr[115] = tag_reg[8]; // T8
-    cpl_tlp_hdr[114] = attr_reg[2]; // attr
+    cpl_tlp_hdr[119] = resp_fifo_rd_tag_reg[9]; // T9
+    cpl_tlp_hdr[118:116] = resp_fifo_rd_tc_reg; // TC
+    cpl_tlp_hdr[115] = resp_fifo_rd_tag_reg[8]; // T8
+    cpl_tlp_hdr[114] = resp_fifo_rd_attr_reg[2]; // attr
     cpl_tlp_hdr[113] = 1'b0; // LN
     cpl_tlp_hdr[112] = 1'b0; // TH
     cpl_tlp_hdr[111] = 1'b0; // TD
     cpl_tlp_hdr[110] = 1'b0; // EP
-    cpl_tlp_hdr[109:108] = attr_reg[1:0]; // attr
+    cpl_tlp_hdr[109:108] = resp_fifo_rd_attr_reg[1:0]; // attr
     cpl_tlp_hdr[107:106] = 2'b00; // AT
-    cpl_tlp_hdr[105:96] = dword_count_reg; // length
+    cpl_tlp_hdr[105:96] = resp_fifo_rd_dword_count_reg; // length
     // DW 1
     cpl_tlp_hdr[95:80] = completer_id; // completer ID
-    cpl_tlp_hdr[79:77] = cpl_status_reg; // completion status
+    cpl_tlp_hdr[79:77] = resp_fifo_rd_cpl_status_reg; // completion status
     cpl_tlp_hdr[76] = 1'b0; // BCM
-    cpl_tlp_hdr[75:64] = byte_count_reg; // byte count
+    cpl_tlp_hdr[75:64] = resp_fifo_rd_byte_count_reg; // byte count
     // DW 2
-    cpl_tlp_hdr[63:48] = requester_id_reg; // requester ID
-    cpl_tlp_hdr[47:40] = tag_reg[7:0]; // tag
+    cpl_tlp_hdr[63:48] = resp_fifo_rd_requester_id_reg; // requester ID
+    cpl_tlp_hdr[47:40] = resp_fifo_rd_tag_reg[7:0]; // tag
     cpl_tlp_hdr[39] = 1'b0;
-    cpl_tlp_hdr[38:32] = lower_addr_reg; // lower address
+    cpl_tlp_hdr[38:32] = resp_fifo_rd_lower_addr_reg; // lower address
     cpl_tlp_hdr[31:0] = 32'd0;
 
     case (resp_state_reg)
         RESP_STATE_IDLE: begin
             // idle state - wait for operation
 
-            if (resp_fifo_rd_ptr_reg != resp_fifo_wr_ptr_reg) begin
-                cpl_status_next = resp_fifo_cpl_status[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                cpl_data_next = resp_fifo_cpl_data[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                dword_count_next = resp_fifo_length[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                byte_count_next = resp_fifo_byte_count[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                lower_addr_next = resp_fifo_lower_addr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                requester_id_next = resp_fifo_requester_id[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                tag_next = resp_fifo_tag[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                tc_next = resp_fifo_tc[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                attr_next = resp_fifo_attr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                resp_fifo_rd_ptr_next = resp_fifo_rd_ptr_reg + 1;
-
-                if (resp_fifo_op_read[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
-                    if (cpl_data_next) begin
-                        m_axil_rready_next = !tx_cpl_tlp_valid_reg || tx_cpl_tlp_ready;
-                        resp_state_next = RESP_STATE_READ;
-                    end else begin
-                        resp_state_next = RESP_STATE_CPL;
-                    end
-                end else if (resp_fifo_op_write[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
+            if (resp_fifo_rd_valid_reg) begin
+                if (resp_fifo_rd_op_read_reg) begin
+                    m_axil_rready_next = !tx_cpl_tlp_valid_reg || tx_cpl_tlp_ready;
+                    resp_state_next = RESP_STATE_READ;
+                end else if (resp_fifo_rd_op_write_reg) begin
                     m_axil_bready_next = 1'b1;
                     resp_state_next = RESP_STATE_WRITE;
                 end else begin
@@ -584,34 +579,8 @@ always @* begin
                 tx_cpl_tlp_strb_next = 1;
                 tx_cpl_tlp_valid_next = 1'b1;
 
-                if (resp_fifo_rd_ptr_reg != resp_fifo_wr_ptr_reg) begin
-                    cpl_status_next = resp_fifo_cpl_status[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    cpl_data_next = resp_fifo_cpl_data[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    dword_count_next = resp_fifo_length[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    byte_count_next = resp_fifo_byte_count[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    lower_addr_next = resp_fifo_lower_addr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    requester_id_next = resp_fifo_requester_id[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    tag_next = resp_fifo_tag[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    tc_next = resp_fifo_tc[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    attr_next = resp_fifo_attr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    resp_fifo_rd_ptr_next = resp_fifo_rd_ptr_reg + 1;
-
-                    if (resp_fifo_op_read[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
-                        if (cpl_data_next) begin
-                            m_axil_rready_next = !tx_cpl_tlp_valid_reg || tx_cpl_tlp_ready;
-                            resp_state_next = RESP_STATE_READ;
-                        end else begin
-                            resp_state_next = RESP_STATE_CPL;
-                        end
-                    end else if (resp_fifo_op_write[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
-                        m_axil_bready_next = 1'b1;
-                        resp_state_next = RESP_STATE_WRITE;
-                    end else begin
-                        resp_state_next = RESP_STATE_CPL;
-                    end
-                end else begin
-                    resp_state_next = RESP_STATE_IDLE;
-                end
+                resp_fifo_rd_valid_next = 1'b0;
+                resp_state_next = RESP_STATE_IDLE;
             end else begin
                 resp_state_next = RESP_STATE_READ;
             end
@@ -623,34 +592,8 @@ always @* begin
             if (m_axil_bready && m_axil_bvalid) begin
                 m_axil_bready_next = 1'b0;
 
-                if (resp_fifo_rd_ptr_reg != resp_fifo_wr_ptr_reg) begin
-                    cpl_status_next = resp_fifo_cpl_status[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    cpl_data_next = resp_fifo_cpl_data[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    dword_count_next = resp_fifo_length[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    byte_count_next = resp_fifo_byte_count[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    lower_addr_next = resp_fifo_lower_addr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    requester_id_next = resp_fifo_requester_id[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    tag_next = resp_fifo_tag[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    tc_next = resp_fifo_tc[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    attr_next = resp_fifo_attr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    resp_fifo_rd_ptr_next = resp_fifo_rd_ptr_reg + 1;
-
-                    if (resp_fifo_op_read[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
-                        if (cpl_data_next) begin
-                            m_axil_rready_next = !tx_cpl_tlp_valid_reg || tx_cpl_tlp_ready;
-                            resp_state_next = RESP_STATE_READ;
-                        end else begin
-                            resp_state_next = RESP_STATE_CPL;
-                        end
-                    end else if (resp_fifo_op_write[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
-                        m_axil_bready_next = 1'b1;
-                        resp_state_next = RESP_STATE_WRITE;
-                    end else begin
-                        resp_state_next = RESP_STATE_CPL;
-                    end
-                end else begin
-                    resp_state_next = RESP_STATE_IDLE;
-                end
+                resp_fifo_rd_valid_next = 1'b0;
+                resp_state_next = RESP_STATE_IDLE;
             end else begin
                 resp_state_next = RESP_STATE_WRITE;
             end
@@ -664,54 +607,33 @@ always @* begin
                 tx_cpl_tlp_strb_next = 0;
                 tx_cpl_tlp_valid_next = 1'b1;
 
-                if (resp_fifo_rd_ptr_reg != resp_fifo_wr_ptr_reg) begin
-                    cpl_status_next = resp_fifo_cpl_status[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    cpl_data_next = resp_fifo_cpl_data[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    dword_count_next = resp_fifo_length[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    byte_count_next = resp_fifo_byte_count[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    lower_addr_next = resp_fifo_lower_addr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    requester_id_next = resp_fifo_requester_id[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    tag_next = resp_fifo_tag[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    tc_next = resp_fifo_tc[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    attr_next = resp_fifo_attr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
-                    resp_fifo_rd_ptr_next = resp_fifo_rd_ptr_reg + 1;
-
-                    if (resp_fifo_op_read[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
-                        if (cpl_data_next) begin
-                            m_axil_rready_next = !tx_cpl_tlp_valid_reg || tx_cpl_tlp_ready;
-                            resp_state_next = RESP_STATE_READ;
-                        end else begin
-                            resp_state_next = RESP_STATE_CPL;
-                        end
-                    end else if (resp_fifo_op_write[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]]) begin
-                        m_axil_bready_next = 1'b1;
-                        resp_state_next = RESP_STATE_WRITE;
-                    end else begin
-                        resp_state_next = RESP_STATE_CPL;
-                    end
-                end else begin
-                    resp_state_next = RESP_STATE_IDLE;
-                end
+                resp_fifo_rd_valid_next = 1'b0;
+                resp_state_next = RESP_STATE_IDLE;
             end else begin
                 resp_state_next = RESP_STATE_CPL;
             end
         end
     endcase
+
+    if (!resp_fifo_rd_valid_next && resp_fifo_rd_ptr_reg != resp_fifo_wr_ptr_reg) begin
+        resp_fifo_rd_op_read_next = resp_fifo_op_read[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+        resp_fifo_rd_op_write_next = resp_fifo_op_write[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+        resp_fifo_rd_cpl_status_next = resp_fifo_cpl_status[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+        resp_fifo_rd_dword_count_next = resp_fifo_dword_count[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+        resp_fifo_rd_byte_count_next = resp_fifo_byte_count[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+        resp_fifo_rd_lower_addr_next = resp_fifo_lower_addr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+        resp_fifo_rd_requester_id_next = resp_fifo_requester_id[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+        resp_fifo_rd_tag_next = resp_fifo_tag[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+        resp_fifo_rd_tc_next = resp_fifo_tc[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+        resp_fifo_rd_attr_next = resp_fifo_attr[resp_fifo_rd_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]];
+        resp_fifo_rd_ptr_next = resp_fifo_rd_ptr_reg + 1;
+        resp_fifo_rd_valid_next = 1'b1;
+    end
 end
 
 always @(posedge clk) begin
     req_state_reg <= req_state_next;
     resp_state_reg <= resp_state_next;
-
-    cpl_status_reg <= cpl_status_next;
-    cpl_data_reg <= cpl_data_next;
-    dword_count_reg <= dword_count_next;
-    byte_count_reg <= byte_count_next;
-    lower_addr_reg <= lower_addr_next;
-    requester_id_reg <= requester_id_next;
-    tag_reg <= tag_next;
-    tc_reg <= tc_next;
-    attr_reg <= attr_next;
 
     rx_req_tlp_ready_reg <= rx_req_tlp_ready_next;
 
@@ -736,8 +658,7 @@ always @(posedge clk) begin
         resp_fifo_op_read[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_op_read;
         resp_fifo_op_write[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_op_write;
         resp_fifo_cpl_status[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_cpl_status;
-        resp_fifo_cpl_data[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_cpl_data;
-        resp_fifo_length[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_length;
+        resp_fifo_dword_count[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_dword_count;
         resp_fifo_byte_count[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_byte_count;
         resp_fifo_lower_addr[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_lower_addr;
         resp_fifo_requester_id[resp_fifo_wr_ptr_reg[RESP_FIFO_ADDR_WIDTH-1:0]] <= resp_fifo_wr_requester_id;
@@ -747,6 +668,18 @@ always @(posedge clk) begin
         resp_fifo_wr_ptr_reg <= resp_fifo_wr_ptr_reg + 1;
     end
     resp_fifo_rd_ptr_reg <= resp_fifo_rd_ptr_next;
+
+    resp_fifo_rd_op_read_reg <= resp_fifo_rd_op_read_next;
+    resp_fifo_rd_op_write_reg <= resp_fifo_rd_op_write_next;
+    resp_fifo_rd_cpl_status_reg <= resp_fifo_rd_cpl_status_next;
+    resp_fifo_rd_dword_count_reg <= resp_fifo_rd_dword_count_next;
+    resp_fifo_rd_byte_count_reg <= resp_fifo_rd_byte_count_next;
+    resp_fifo_rd_lower_addr_reg <= resp_fifo_rd_lower_addr_next;
+    resp_fifo_rd_requester_id_reg <= resp_fifo_rd_requester_id_next;
+    resp_fifo_rd_tag_reg <= resp_fifo_rd_tag_next;
+    resp_fifo_rd_tc_reg <= resp_fifo_rd_tc_next;
+    resp_fifo_rd_attr_reg <= resp_fifo_rd_attr_next;
+    resp_fifo_rd_valid_reg <= resp_fifo_rd_valid_next;
 
     resp_fifo_half_full_reg <= $unsigned(resp_fifo_wr_ptr_reg - resp_fifo_rd_ptr_reg) >= 2**(RESP_FIFO_ADDR_WIDTH-1);
 
@@ -769,6 +702,7 @@ always @(posedge clk) begin
 
         resp_fifo_wr_ptr_reg <= 0;
         resp_fifo_rd_ptr_reg <= 0;
+        resp_fifo_rd_valid_reg <= 1'b0;
     end
 end
 

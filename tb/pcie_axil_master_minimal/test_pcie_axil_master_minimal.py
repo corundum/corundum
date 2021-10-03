@@ -90,6 +90,7 @@ class TB(object):
         self.dev.log.setLevel(logging.DEBUG)
 
         self.dev.functions[0].configure_bar(0, 16*1024*1024)
+        self.dev.functions[0].configure_bar(1, 16*1024, io=True)
 
         self.rc.make_port().connect(self.dev)
 
@@ -231,8 +232,52 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     await tb.rc.enumerate()
 
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
+    dev_bar1 = tb.rc.tree[0][0].bar_addr[1]
 
     tb.dut.completer_id <= int(tb.dev.functions[0].pcie_id)
+
+    tb.log.info("Test IO write")
+
+    length = 4
+    pcie_addr = 0x1000
+    test_data = bytearray([x % 256 for x in range(length)])
+
+    tb.axil_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
+
+    with assert_raises(Exception, "Unsuccessful completion"):
+        await tb.rc.io_write(dev_bar1+pcie_addr, test_data, 1000, 'ns')
+
+    await Timer(100, 'ns')
+
+    tb.log.debug("%s", tb.axil_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
+
+    assert tb.axil_ram.read(pcie_addr-1, len(test_data)+2) == b'\x55'*(len(test_data)+2)
+
+    assert tb.status_error_cor_asserted
+    assert not tb.status_error_uncor_asserted
+
+    tb.status_error_cor_asserted = False
+    tb.status_error_uncor_asserted = False
+
+    tb.log.info("Test IO read")
+
+    length = 4
+    pcie_addr = 0x1000
+    test_data = bytearray([x % 256 for x in range(length)])
+
+    tb.axil_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
+    tb.axil_ram.write(pcie_addr, test_data)
+
+    tb.log.debug("%s", tb.axil_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
+
+    with assert_raises(Exception, "Unsuccessful completion"):
+        val = await tb.rc.io_read(dev_bar1+pcie_addr, len(test_data), 1000, 'ns')
+
+    assert tb.status_error_cor_asserted
+    assert not tb.status_error_uncor_asserted
+
+    tb.status_error_cor_asserted = False
+    tb.status_error_uncor_asserted = False
 
     tb.log.info("Test bad write")
 

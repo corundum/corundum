@@ -258,6 +258,7 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     assert tb.status_error_cor_asserted
     assert not tb.status_error_uncor_asserted
 
+    tb.status_error_cor_asserted = False
     tb.status_error_uncor_asserted = False
 
     tb.log.info("Test IO read")

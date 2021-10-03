@@ -39,16 +39,16 @@ from cocotb.triggers import RisingEdge, Timer
 from cocotb.regression import TestFactory
 
 from cocotbext.pcie.core import RootComplex
-from cocotbext.axi import AxiLiteBus, AxiLiteRam
+from cocotbext.axi import AxiWriteBus, AxiRamWrite
 
 
 try:
-    from pcie_if import PcieIfDevice, PcieIfRxBus, PcieIfTxBus
+    from pcie_if import PcieIfDevice, PcieIfRxBus
 except ImportError:
     # attempt import from current directory
     sys.path.insert(0, os.path.join(os.path.dirname(__file__)))
     try:
-        from pcie_if import PcieIfDevice, PcieIfRxBus, PcieIfTxBus
+        from pcie_if import PcieIfDevice, PcieIfRxBus
     finally:
         del sys.path[0]
 
@@ -82,9 +82,7 @@ class TB(object):
             clk=dut.clk,
             rst=dut.rst,
 
-            rx_req_tlp_bus=PcieIfRxBus.from_prefix(dut, "rx_req_tlp"),
-
-            tx_cpl_tlp_bus=PcieIfTxBus.from_prefix(dut, "tx_cpl_tlp")
+            rx_req_tlp_bus=PcieIfRxBus.from_prefix(dut, "rx_req_tlp")
         )
 
         self.dev.log.setLevel(logging.DEBUG)
@@ -95,34 +93,21 @@ class TB(object):
         self.rc.make_port().connect(self.dev)
 
         # AXI
-        self.axil_ram = AxiLiteRam(AxiLiteBus.from_prefix(dut, "m_axil"), dut.clk, dut.rst, size=2**16)
-
-        dut.completer_id.setimmediatevalue(0)
+        self.axi_ram = AxiRamWrite(AxiWriteBus.from_prefix(dut, "m_axi"), dut.clk, dut.rst, size=2**16)
 
         # monitor error outputs
-        self.status_error_cor_asserted = False
         self.status_error_uncor_asserted = False
-        cocotb.fork(self._run_monitor_status_error_cor())
         cocotb.fork(self._run_monitor_status_error_uncor())
 
     def set_idle_generator(self, generator=None):
         if generator:
             self.dev.rx_req_tlp_source.set_pause_generator(generator())
-            self.axil_ram.write_if.b_channel.set_pause_generator(generator())
-            self.axil_ram.read_if.r_channel.set_pause_generator(generator())
+            self.axi_ram.b_channel.set_pause_generator(generator())
 
     def set_backpressure_generator(self, generator=None):
         if generator:
-            self.dev.tx_cpl_tlp_sink.set_pause_generator(generator())
-            self.axil_ram.write_if.aw_channel.set_pause_generator(generator())
-            self.axil_ram.write_if.w_channel.set_pause_generator(generator())
-            self.axil_ram.read_if.ar_channel.set_pause_generator(generator())
-
-    async def _run_monitor_status_error_cor(self):
-        while True:
-            await RisingEdge(self.dut.status_error_cor)
-            self.log.info("status_error_cor (correctable error) was asserted")
-            self.status_error_cor_asserted = True
+            self.axi_ram.aw_channel.set_pause_generator(generator())
+            self.axi_ram.w_channel.set_pause_generator(generator())
 
     async def _run_monitor_status_error_uncor(self):
         while True:
@@ -146,8 +131,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb = TB(dut)
 
-    pcie_byte_lanes = tb.dev.rx_req_tlp_source.byte_lanes*4
-    axil_byte_lanes = tb.axil_ram.write_if.byte_lanes
+    byte_lanes = tb.axi_ram.byte_lanes
 
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
@@ -158,68 +142,22 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
 
-    tb.dut.completer_id <= int(tb.dev.functions[0].pcie_id)
-
-    for length in list(range(0, pcie_byte_lanes*2))+[1024]:
-        for pcie_offset in list(range(axil_byte_lanes))+list(range(4096-axil_byte_lanes, 4096)):
+    for length in list(range(0, byte_lanes*2))+[1024]:
+        for pcie_offset in list(range(byte_lanes))+list(range(4096-byte_lanes, 4096)):
             tb.log.info("length %d, pcie_offset %d", length, pcie_offset)
             pcie_addr = pcie_offset+0x1000
             test_data = bytearray([x % 256 for x in range(length)])
 
-            tb.axil_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
+            tb.axi_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
 
             await tb.rc.mem_write(dev_bar0+pcie_addr, test_data)
 
-            # wait for write to complete
-            val = await tb.rc.mem_read(dev_bar0, 4, 10000, 'ns')
+            await Timer(length*4+150, 'ns')
 
-            tb.log.debug("%s", tb.axil_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48))
+            tb.log.debug("%s", tb.axi_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
 
-            assert tb.axil_ram.read(pcie_addr-1, len(test_data)+2) == b'\x55'+test_data+b'\x55'
+            assert tb.axi_ram.read(pcie_addr-1, len(test_data)+2) == b'\x55'+test_data+b'\x55'
 
-            assert not tb.status_error_cor_asserted
-            assert not tb.status_error_uncor_asserted
-
-    await RisingEdge(dut.clk)
-    await RisingEdge(dut.clk)
-
-
-async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
-
-    tb = TB(dut)
-
-    pcie_byte_lanes = tb.dev.rx_req_tlp_source.byte_lanes*4
-    axil_byte_lanes = tb.axil_ram.read_if.byte_lanes
-
-    tb.set_idle_generator(idle_inserter)
-    tb.set_backpressure_generator(backpressure_inserter)
-
-    await tb.cycle_reset()
-
-    await tb.rc.enumerate()
-
-    dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
-
-    tb.dut.completer_id <= int(tb.dev.functions[0].pcie_id)
-
-    for length in list(range(0, pcie_byte_lanes*2))+[1024]:
-        for pcie_offset in list(range(axil_byte_lanes))+list(range(4096-axil_byte_lanes, 4096)):
-            tb.log.info("length %d, pcie_offset %d", length, pcie_offset)
-            pcie_addr = pcie_offset+0x1000
-            test_data = bytearray([x % 256 for x in range(length)])
-
-            tb.axil_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
-            tb.axil_ram.write(pcie_addr, test_data)
-
-            tb.log.debug("%s", tb.axil_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48))
-
-            val = await tb.rc.mem_read(dev_bar0+pcie_addr, len(test_data), 10000, 'ns')
-
-            tb.log.debug("read data: %s", val)
-
-            assert val == test_data
-
-            assert not tb.status_error_cor_asserted
             assert not tb.status_error_uncor_asserted
 
     await RisingEdge(dut.clk)
@@ -240,7 +178,23 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
     dev_bar1 = tb.rc.tree[0][0].bar_addr[1]
 
-    tb.dut.completer_id <= int(tb.dev.functions[0].pcie_id)
+    tb.log.info("Test read")
+
+    length = 4
+    pcie_addr = 0x1000
+    test_data = bytearray([x % 256 for x in range(length)])
+
+    tb.axi_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
+    tb.axi_ram.write(pcie_addr, test_data)
+
+    tb.log.debug("%s", tb.axi_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
+
+    with assert_raises(Exception, "Timeout"):
+        val = await tb.rc.mem_read(dev_bar0+pcie_addr, len(test_data), 1000, 'ns')
+
+    assert tb.status_error_uncor_asserted
+
+    tb.status_error_uncor_asserted = False
 
     tb.log.info("Test IO write")
 
@@ -248,21 +202,19 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     pcie_addr = 0x1000
     test_data = bytearray([x % 256 for x in range(length)])
 
-    tb.axil_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
+    tb.axi_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
 
-    with assert_raises(Exception, "Unsuccessful completion"):
+    with assert_raises(Exception, "Timeout"):
         await tb.rc.io_write(dev_bar1+pcie_addr, test_data, 1000, 'ns')
 
     await Timer(100, 'ns')
 
-    tb.log.debug("%s", tb.axil_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
+    tb.log.debug("%s", tb.axi_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
 
-    assert tb.axil_ram.read(pcie_addr-1, len(test_data)+2) == b'\x55'*(len(test_data)+2)
+    assert tb.axi_ram.read(pcie_addr-1, len(test_data)+2) == b'\x55'*(len(test_data)+2)
 
-    assert tb.status_error_cor_asserted
-    assert not tb.status_error_uncor_asserted
+    assert tb.status_error_uncor_asserted
 
-    tb.status_error_cor_asserted = False
     tb.status_error_uncor_asserted = False
 
     tb.log.info("Test IO read")
@@ -271,16 +223,15 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     pcie_addr = 0x1000
     test_data = bytearray([x % 256 for x in range(length)])
 
-    tb.axil_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
-    tb.axil_ram.write(pcie_addr, test_data)
+    tb.axi_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
+    tb.axi_ram.write(pcie_addr, test_data)
 
-    tb.log.debug("%s", tb.axil_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
+    tb.log.debug("%s", tb.axi_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
 
-    with assert_raises(Exception, "Unsuccessful completion"):
+    with assert_raises(Exception, "Timeout"):
         val = await tb.rc.io_read(dev_bar1+pcie_addr, len(test_data), 1000, 'ns')
 
-    assert tb.status_error_cor_asserted
-    assert not tb.status_error_uncor_asserted
+    assert tb.status_error_uncor_asserted
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
@@ -294,13 +245,11 @@ if cocotb.SIM_NAME:
 
     for test in [
                 run_test_write,
-                run_test_read,
                 run_test_bad_ops
             ]:
 
         factory = TestFactory(test)
-        factory.add_option("idle_inserter", [None, cycle_pause])
-        factory.add_option("backpressure_inserter", [None, cycle_pause])
+        factory.add_option(("idle_inserter", "backpressure_inserter"), [(None, None), (cycle_pause, cycle_pause)])
         factory.generate_tests()
 
 
@@ -310,10 +259,9 @@ tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
-@pytest.mark.parametrize("axil_data_width", [32])
-@pytest.mark.parametrize("pcie_data_width", [64, 128, 256, 512])
-def test_pcie_axil_master(request, pcie_data_width, axil_data_width):
-    dut = "pcie_axil_master"
+@pytest.mark.parametrize("pcie_data_width", [64, 128])
+def test_pcie_axi_master_wr(request, pcie_data_width):
+    dut = "pcie_axi_master_wr"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
 
@@ -326,15 +274,15 @@ def test_pcie_axil_master(request, pcie_data_width, axil_data_width):
     # segmented interface parameters
     tlp_seg_count = 1
     tlp_seg_data_width = pcie_data_width // tlp_seg_count
-    tlp_seg_strb_width = tlp_seg_data_width // 32
 
     parameters['TLP_SEG_COUNT'] = tlp_seg_count
     parameters['TLP_SEG_DATA_WIDTH'] = tlp_seg_data_width
-    parameters['TLP_SEG_STRB_WIDTH'] = tlp_seg_strb_width
     parameters['TLP_SEG_HDR_WIDTH'] = 128
-    parameters['AXIL_DATA_WIDTH'] = axil_data_width
-    parameters['AXIL_ADDR_WIDTH'] = 64
-    parameters['AXIL_STRB_WIDTH'] = (axil_data_width // 8)
+    parameters['AXI_DATA_WIDTH'] = parameters['TLP_SEG_COUNT'] * parameters['TLP_SEG_DATA_WIDTH']
+    parameters['AXI_ADDR_WIDTH'] = 64
+    parameters['AXI_STRB_WIDTH'] = parameters['AXI_DATA_WIDTH'] // 8
+    parameters['AXI_ID_WIDTH'] = 8
+    parameters['AXI_MAX_BURST_LEN'] = 256
     parameters['TLP_FORCE_64_BIT_ADDR'] = 0
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}

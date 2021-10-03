@@ -51,8 +51,8 @@ module pcie_us_axi_master #
     parameter AXI_MAX_BURST_LEN = 256
 )
 (
-    input  wire                            clk,
-    input  wire                            rst,
+    input  wire                               clk,
+    input  wire                               rst,
 
     /*
      * AXI input (CQ)
@@ -77,54 +77,54 @@ module pcie_us_axi_master #
     /*
      * AXI Master output
      */
-    output wire [AXI_ID_WIDTH-1:0]         m_axi_awid,
-    output wire [AXI_ADDR_WIDTH-1:0]       m_axi_awaddr,
-    output wire [7:0]                      m_axi_awlen,
-    output wire [2:0]                      m_axi_awsize,
-    output wire [1:0]                      m_axi_awburst,
-    output wire                            m_axi_awlock,
-    output wire [3:0]                      m_axi_awcache,
-    output wire [2:0]                      m_axi_awprot,
-    output wire                            m_axi_awvalid,
-    input  wire                            m_axi_awready,
-    output wire [AXI_DATA_WIDTH-1:0]       m_axi_wdata,
-    output wire [AXI_STRB_WIDTH-1:0]       m_axi_wstrb,
-    output wire                            m_axi_wlast,
-    output wire                            m_axi_wvalid,
-    input  wire                            m_axi_wready,
-    input  wire [AXI_ID_WIDTH-1:0]         m_axi_bid,
-    input  wire [1:0]                      m_axi_bresp,
-    input  wire                            m_axi_bvalid,
-    output wire                            m_axi_bready,
-    output wire [AXI_ID_WIDTH-1:0]         m_axi_arid,
-    output wire [AXI_ADDR_WIDTH-1:0]       m_axi_araddr,
-    output wire [7:0]                      m_axi_arlen,
-    output wire [2:0]                      m_axi_arsize,
-    output wire [1:0]                      m_axi_arburst,
-    output wire                            m_axi_arlock,
-    output wire [3:0]                      m_axi_arcache,
-    output wire [2:0]                      m_axi_arprot,
-    output wire                            m_axi_arvalid,
-    input  wire                            m_axi_arready,
-    input  wire [AXI_ID_WIDTH-1:0]         m_axi_rid,
-    input  wire [AXI_DATA_WIDTH-1:0]       m_axi_rdata,
-    input  wire [1:0]                      m_axi_rresp,
-    input  wire                            m_axi_rlast,
-    input  wire                            m_axi_rvalid,
-    output wire                            m_axi_rready,
+    output wire [AXI_ID_WIDTH-1:0]            m_axi_awid,
+    output wire [AXI_ADDR_WIDTH-1:0]          m_axi_awaddr,
+    output wire [7:0]                         m_axi_awlen,
+    output wire [2:0]                         m_axi_awsize,
+    output wire [1:0]                         m_axi_awburst,
+    output wire                               m_axi_awlock,
+    output wire [3:0]                         m_axi_awcache,
+    output wire [2:0]                         m_axi_awprot,
+    output wire                               m_axi_awvalid,
+    input  wire                               m_axi_awready,
+    output wire [AXI_DATA_WIDTH-1:0]          m_axi_wdata,
+    output wire [AXI_STRB_WIDTH-1:0]          m_axi_wstrb,
+    output wire                               m_axi_wlast,
+    output wire                               m_axi_wvalid,
+    input  wire                               m_axi_wready,
+    input  wire [AXI_ID_WIDTH-1:0]            m_axi_bid,
+    input  wire [1:0]                         m_axi_bresp,
+    input  wire                               m_axi_bvalid,
+    output wire                               m_axi_bready,
+    output wire [AXI_ID_WIDTH-1:0]            m_axi_arid,
+    output wire [AXI_ADDR_WIDTH-1:0]          m_axi_araddr,
+    output wire [7:0]                         m_axi_arlen,
+    output wire [2:0]                         m_axi_arsize,
+    output wire [1:0]                         m_axi_arburst,
+    output wire                               m_axi_arlock,
+    output wire [3:0]                         m_axi_arcache,
+    output wire [2:0]                         m_axi_arprot,
+    output wire                               m_axi_arvalid,
+    input  wire                               m_axi_arready,
+    input  wire [AXI_ID_WIDTH-1:0]            m_axi_rid,
+    input  wire [AXI_DATA_WIDTH-1:0]          m_axi_rdata,
+    input  wire [1:0]                         m_axi_rresp,
+    input  wire                               m_axi_rlast,
+    input  wire                               m_axi_rvalid,
+    output wire                               m_axi_rready,
 
     /*
      * Configuration
      */
-    input  wire [15:0]                     completer_id,
-    input  wire                            completer_id_enable,
-    input  wire [2:0]                      max_payload_size,
+    input  wire [15:0]                        completer_id,
+    input  wire                               completer_id_enable,
+    input  wire [2:0]                         max_payload_size,
 
     /*
      * Status
      */
-    output wire                            status_error_cor,
-    output wire                            status_error_uncor
+    output wire                               status_error_cor,
+    output wire                               status_error_uncor
 );
 
 wire [AXIS_PCIE_DATA_WIDTH-1:0]    axis_cq_tdata_read;

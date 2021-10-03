@@ -260,7 +260,7 @@ class PcieIfBase:
         else:
             self.width = 64
         self.byte_size = 32
-        self.byte_width = self.width // self.byte_size
+        self.byte_lanes = self.width // self.byte_size
         self.byte_mask = 2**self.byte_size-1
 
         self.seg_count = len(self.bus.valid)
@@ -268,8 +268,8 @@ class PcieIfBase:
         self.seg_mask = 2**self.seg_width-1
         self.seg_par_width = self.seg_width // 8
         self.seg_par_mask = 2**self.seg_par_width-1
-        self.seg_byte_width = self.byte_width // self.seg_count
-        self.seg_strb_width = self.seg_byte_width
+        self.seg_byte_lanes = self.byte_lanes // self.seg_count
+        self.seg_strb_width = self.seg_byte_lanes
 
         if hasattr(self.bus, "seq"):
             self.seq_width = len(self.bus.seq) // self.seg_count
@@ -512,10 +512,10 @@ class PcieIfSource(PcieIfBase):
                     if frame.data:
                         transaction.valid |= 1 << seg
 
-                        for k in range(min(self.seg_byte_width, len(frame.data)-frame_offset)):
-                            transaction.data |= frame.data[frame_offset] << 32*(k+seg*self.seg_byte_width)
-                            transaction.data_par |= frame.parity[frame_offset] << 4*(k+seg*self.seg_byte_width)
-                            transaction.strb |= 1 << (k+seg*self.seg_byte_width)
+                        for k in range(min(self.seg_byte_lanes, len(frame.data)-frame_offset)):
+                            transaction.data |= frame.data[frame_offset] << 32*(k+seg*self.seg_byte_lanes)
+                            transaction.data_par |= frame.parity[frame_offset] << 4*(k+seg*self.seg_byte_lanes)
+                            transaction.strb |= 1 << (k+seg*self.seg_byte_lanes)
                             frame_offset += 1
 
                     if frame_offset >= len(frame.data):
@@ -662,7 +662,7 @@ class PcieIfSink(PcieIfBase):
                 if dword_count > 0:
                     data = (sample.data >> (seg*self.seg_width)) & self.seg_mask
                     data_par = (sample.data_par >> (seg*self.seg_par_width)) & self.seg_par_mask
-                    for k in range(min(self.seg_byte_width, dword_count)):
+                    for k in range(min(self.seg_byte_lanes, dword_count)):
                         frame.data.append((data >> 32*k) & 0xffffffff)
                         frame.parity.append((data_par >> 4*k) & 0xf)
                         dword_count -= 1

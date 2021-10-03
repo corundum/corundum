@@ -195,7 +195,7 @@ reg [RESP_FIFO_ADDR_WIDTH+1-1:0] resp_fifo_rd_ptr_reg = 0, resp_fifo_rd_ptr_next
 reg resp_fifo_op_read[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg resp_fifo_op_write[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [2:0] resp_fifo_cpl_status[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
-reg [11:0] resp_fifo_byte_count[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+reg [2:0] resp_fifo_byte_count[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [6:0] resp_fifo_lower_addr[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [15:0] resp_fifo_requester_id[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg [9:0] resp_fifo_tag[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
@@ -205,7 +205,7 @@ reg [2:0] resp_fifo_attr[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 reg resp_fifo_wr_op_read;
 reg resp_fifo_wr_op_write;
 reg [2:0] resp_fifo_wr_cpl_status;
-reg [11:0] resp_fifo_wr_byte_count;
+reg [2:0] resp_fifo_wr_byte_count;
 reg [6:0] resp_fifo_wr_lower_addr;
 reg [15:0] resp_fifo_wr_requester_id;
 reg [9:0] resp_fifo_wr_tag;
@@ -217,7 +217,7 @@ reg resp_fifo_half_full_reg = 1'b0;
 reg resp_fifo_rd_op_read_reg = 1'b0, resp_fifo_rd_op_read_next;
 reg resp_fifo_rd_op_write_reg = 1'b0, resp_fifo_rd_op_write_next;
 reg [2:0] resp_fifo_rd_cpl_status_reg = CPL_STATUS_SC, resp_fifo_rd_cpl_status_next;
-reg [11:0] resp_fifo_rd_byte_count_reg = 12'd0, resp_fifo_rd_byte_count_next;
+reg [2:0] resp_fifo_rd_byte_count_reg = 3'd0, resp_fifo_rd_byte_count_next;
 reg [6:0] resp_fifo_rd_lower_addr_reg = 7'd0, resp_fifo_rd_lower_addr_next;
 reg [15:0] resp_fifo_rd_requester_id_reg = 16'd0, resp_fifo_rd_requester_id_next;
 reg [9:0] resp_fifo_rd_tag_reg = 10'd0, resp_fifo_rd_tag_next;
@@ -318,7 +318,7 @@ always @* begin
     resp_fifo_wr_op_read = 1'b0;
     resp_fifo_wr_op_write = 1'b0;
     resp_fifo_wr_cpl_status = CPL_STATUS_SC;
-    resp_fifo_wr_byte_count = 10'd0;
+    resp_fifo_wr_byte_count = 3'd0;
     resp_fifo_wr_lower_addr = 7'd0;
     resp_fifo_wr_requester_id = rx_req_tlp_hdr_requester_id;
     resp_fifo_wr_tag = rx_req_tlp_hdr_tag;
@@ -354,17 +354,17 @@ always @* begin
                         resp_fifo_wr_cpl_status = CPL_STATUS_SC;
 
                         casez (rx_req_tlp_hdr_first_be)
-                            4'b0000: resp_fifo_wr_byte_count = 12'd1;
-                            4'b0001: resp_fifo_wr_byte_count = 12'd1;
-                            4'b0010: resp_fifo_wr_byte_count = 12'd1;
-                            4'b0100: resp_fifo_wr_byte_count = 12'd1;
-                            4'b1000: resp_fifo_wr_byte_count = 12'd1;
-                            4'b0011: resp_fifo_wr_byte_count = 12'd2;
-                            4'b0110: resp_fifo_wr_byte_count = 12'd2;
-                            4'b1100: resp_fifo_wr_byte_count = 12'd2;
-                            4'b01z1: resp_fifo_wr_byte_count = 12'd3;
-                            4'b1z10: resp_fifo_wr_byte_count = 12'd3;
-                            4'b1zz1: resp_fifo_wr_byte_count = 12'd4;
+                            4'b0000: resp_fifo_wr_byte_count = 3'd1;
+                            4'b0001: resp_fifo_wr_byte_count = 3'd1;
+                            4'b0010: resp_fifo_wr_byte_count = 3'd1;
+                            4'b0100: resp_fifo_wr_byte_count = 3'd1;
+                            4'b1000: resp_fifo_wr_byte_count = 3'd1;
+                            4'b0011: resp_fifo_wr_byte_count = 3'd2;
+                            4'b0110: resp_fifo_wr_byte_count = 3'd2;
+                            4'b1100: resp_fifo_wr_byte_count = 3'd2;
+                            4'b01z1: resp_fifo_wr_byte_count = 3'd3;
+                            4'b1z10: resp_fifo_wr_byte_count = 3'd3;
+                            4'b1zz1: resp_fifo_wr_byte_count = 3'd4;
                         endcase
 
                         casez (rx_req_tlp_hdr_first_be)
@@ -385,7 +385,7 @@ always @* begin
                         resp_fifo_wr_op_read = 1'b0;
                         resp_fifo_wr_op_write = 1'b0;
                         resp_fifo_wr_cpl_status = CPL_STATUS_CA;
-                        resp_fifo_wr_byte_count = 10'd0;
+                        resp_fifo_wr_byte_count = 3'd0;
                         resp_fifo_wr_lower_addr = 7'd0;
                     end
 
@@ -448,7 +448,7 @@ always @* begin
                         resp_fifo_wr_op_read = 1'b0;
                         resp_fifo_wr_op_write = 1'b0;
                         resp_fifo_wr_cpl_status = CPL_STATUS_UR;
-                        resp_fifo_wr_byte_count = 10'd0;
+                        resp_fifo_wr_byte_count = 3'd0;
                         resp_fifo_wr_lower_addr = 7'd0;
                         resp_fifo_wr_requester_id = rx_req_tlp_hdr_requester_id;
                         resp_fifo_wr_tag = rx_req_tlp_hdr_tag;

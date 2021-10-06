@@ -46,6 +46,9 @@ static struct i2c_client *create_i2c_client(struct i2c_adapter *adapter, const c
 {
     struct i2c_client *client;
     struct i2c_board_info board_info;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)
+    struct software_node sw_node;
+#endif
     int err;
 
     if (!adapter)
@@ -54,7 +57,16 @@ static struct i2c_client *create_i2c_client(struct i2c_adapter *adapter, const c
     memset(&board_info, 0, sizeof(board_info));
     strscpy(board_info.type, type, I2C_NAME_SIZE);
     board_info.addr = addr;
-    board_info.properties = props;
+    if (props)
+    {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5,13,0)
+        memset(&sw_node, 0, sizeof(sw_node));
+        sw_node.properties = props;
+        board_info.swnode = &sw_node;
+#else
+        board_info.properties = props;
+#endif
+    }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5,2,0)
     client = i2c_new_client_device(adapter, &board_info);

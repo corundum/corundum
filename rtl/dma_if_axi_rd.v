@@ -280,7 +280,7 @@ reg  [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]   ram_wr_cmd_be_int;
 reg  [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0] ram_wr_cmd_addr_int;
 reg  [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0] ram_wr_cmd_data_int;
 reg  [RAM_SEG_COUNT-1:0]                ram_wr_cmd_valid_int;
-reg  [RAM_SEG_COUNT-1:0]                ram_wr_cmd_ready_int;
+wire [RAM_SEG_COUNT-1:0]                ram_wr_cmd_ready_int;
 
 wire [RAM_SEG_COUNT-1:0] out_done;
 reg [RAM_SEG_COUNT-1:0] out_done_ack;

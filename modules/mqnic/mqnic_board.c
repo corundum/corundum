@@ -599,9 +599,9 @@ static int mqnic_gecko_bmc_read(struct mqnic_dev *mqnic)
     while (1)
     {
         val = ioread32(mqnic->hw_addr+0x188);
-        if (val & (1 << 19))
+        if (val & BIT(19))
         {
-            if (val & (1 << 18))
+            if (val & BIT(18))
             {
                 // timed out
                 dev_warn(mqnic->dev, "Timed out waiting for Gecko BMC response");

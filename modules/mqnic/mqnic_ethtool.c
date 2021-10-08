@@ -68,12 +68,12 @@ static int mqnic_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *in
         SOF_TIMESTAMPING_RAW_HARDWARE;
 
     info->tx_types =
-        (1 << HWTSTAMP_TX_OFF) |
-        (1 << HWTSTAMP_TX_ON);
+        BIT(HWTSTAMP_TX_OFF) |
+        BIT(HWTSTAMP_TX_ON);
 
     info->rx_filters =
-        (1 << HWTSTAMP_FILTER_NONE) |
-        (1 << HWTSTAMP_FILTER_ALL);
+        BIT(HWTSTAMP_FILTER_NONE) |
+        BIT(HWTSTAMP_FILTER_ALL);
 
     if (mdev->ptp_clock)
         info->phc_index = ptp_clock_index(mdev->ptp_clock);

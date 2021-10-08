@@ -35,6 +35,7 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_HW_H
 
 #include <linux/types.h>
+#include <linux/bits.h>
 
 #define MQNIC_MAX_IF 8
 #define MQNIC_MAX_PORTS 8
@@ -169,11 +170,11 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_IF_REG_PORT_OFFSET          0x0044
 #define MQNIC_IF_REG_PORT_STRIDE          0x0048
 
-#define MQNIC_IF_FEATURE_RSS              (1 << 0)
-#define MQNIC_IF_FEATURE_PTP_TS           (1 << 4)
-#define MQNIC_IF_FEATURE_TX_CSUM          (1 << 8)
-#define MQNIC_IF_FEATURE_RX_CSUM          (1 << 9)
-#define MQNIC_IF_FEATURE_RX_HASH          (1 << 10)
+#define MQNIC_IF_FEATURE_RSS              BIT(0)
+#define MQNIC_IF_FEATURE_PTP_TS           BIT(4)
+#define MQNIC_IF_FEATURE_TX_CSUM          BIT(8)
+#define MQNIC_IF_FEATURE_RX_CSUM          BIT(9)
+#define MQNIC_IF_FEATURE_RX_HASH          BIT(10)
 
 // Port CSRs
 #define MQNIC_PORT_REG_PORT_ID                    0x0000
@@ -211,11 +212,11 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L   0x1048
 #define MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H   0x104C
 
-#define MQNIC_PORT_FEATURE_RSS                    (1 << 0)
-#define MQNIC_PORT_FEATURE_PTP_TS                 (1 << 4)
-#define MQNIC_PORT_FEATURE_TX_CSUM                (1 << 8)
-#define MQNIC_PORT_FEATURE_RX_CSUM                (1 << 9)
-#define MQNIC_PORT_FEATURE_RX_HASH                (1 << 10)
+#define MQNIC_PORT_FEATURE_RSS                    BIT(0)
+#define MQNIC_PORT_FEATURE_PTP_TS                 BIT(4)
+#define MQNIC_PORT_FEATURE_TX_CSUM                BIT(8)
+#define MQNIC_PORT_FEATURE_RX_CSUM                BIT(9)
+#define MQNIC_PORT_FEATURE_RX_HASH                BIT(10)
 
 #define MQNIC_QUEUE_STRIDE        0x00000020
 #define MQNIC_CPL_QUEUE_STRIDE    0x00000020

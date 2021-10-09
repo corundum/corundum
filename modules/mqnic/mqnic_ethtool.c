@@ -56,13 +56,16 @@ static int mqnic_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *in
 {
     struct mqnic_priv *priv = netdev_priv(ndev);
     struct mqnic_dev *mdev = priv->mdev;
-    int ret;
 
-    ret = ethtool_op_get_ts_info(ndev, info);
-    if (ret)
-        return ret;
+    ethtool_op_get_ts_info(ndev, info);
 
-    info->so_timestamping |=
+    if (mdev->ptp_clock)
+        info->phc_index = ptp_clock_index(mdev->ptp_clock);
+
+    if (!(priv->if_features & MQNIC_IF_FEATURE_PTP_TS) || !mdev->ptp_clock)
+        return 0;
+
+    info->so_timestamping =
         SOF_TIMESTAMPING_TX_HARDWARE |
         SOF_TIMESTAMPING_RX_HARDWARE |
         SOF_TIMESTAMPING_RAW_HARDWARE;
@@ -75,10 +78,7 @@ static int mqnic_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *in
         BIT(HWTSTAMP_FILTER_NONE) |
         BIT(HWTSTAMP_FILTER_ALL);
 
-    if (mdev->ptp_clock)
-        info->phc_index = ptp_clock_index(mdev->ptp_clock);
-
-    return ret;
+    return 0;
 }
 
 static int mqnic_read_module_eeprom(struct net_device *ndev, u16 offset, u16 len, u8 *data)

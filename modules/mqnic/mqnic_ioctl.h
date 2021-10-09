@@ -1,6 +1,6 @@
 /*
 
-Copyright 2019, The Regents of the University of California.
+Copyright 2019-2021, The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -41,11 +41,11 @@ either expressed or implied, of The Regents of the University of California.
 #define MQNIC_IOCTL_INFO _IOR(MQNIC_IOCTL_TYPE, 0xf0, struct mqnic_ioctl_info)
 
 struct mqnic_ioctl_info {
-    __u32 fw_id;
-    __u32 fw_ver;
-    __u32 board_id;
-    __u32 board_ver;
-    size_t regs_size;
+	__u32 fw_id;
+	__u32 fw_ver;
+	__u32 board_id;
+	__u32 board_ver;
+	size_t regs_size;
 };
 
 #endif /* MQNIC_IOCTL_H */

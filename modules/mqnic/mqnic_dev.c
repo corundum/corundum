@@ -1,6 +1,6 @@
 /*
 
-Copyright 2019, The Regents of the University of California.
+Copyright 2019-2021, The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -38,100 +38,89 @@ either expressed or implied, of The Regents of the University of California.
 
 static int mqnic_open(struct inode *inode, struct file *file)
 {
-    // struct miscdevice *miscdev = file->private_data;
-    // struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
+	// struct miscdevice *miscdev = file->private_data;
+	// struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 
-    return 0;
+	return 0;
 }
 
 static int mqnic_release(struct inode *inode, struct file *file)
 {
-    // struct miscdevice *miscdev = file->private_data;
-    // struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
+	// struct miscdevice *miscdev = file->private_data;
+	// struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 
-    return 0;
+	return 0;
 }
 
 static int mqnic_map_registers(struct mqnic_dev *mqnic, struct vm_area_struct *vma)
 {
-    size_t map_size = vma->vm_end - vma->vm_start;
-    int ret;
+	size_t map_size = vma->vm_end - vma->vm_start;
+	int ret;
 
-    if (map_size > mqnic->hw_regs_size)
-    {
-        dev_err(mqnic->dev, "mqnic_map_registers: Tried to map registers region with wrong size %lu (expected <= %llu)", vma->vm_end - vma->vm_start, mqnic->hw_regs_size);
-        return -EINVAL;
-    }
+	if (map_size > mqnic->hw_regs_size) {
+		dev_err(mqnic->dev, "mqnic_map_registers: Tried to map registers region with wrong size %lu (expected <= %llu)",
+		        vma->vm_end - vma->vm_start, mqnic->hw_regs_size);
+		return -EINVAL;
+	}
 
-    ret = remap_pfn_range(vma, vma->vm_start, mqnic->hw_regs_phys >> PAGE_SHIFT, map_size, pgprot_noncached(vma->vm_page_prot));
+	ret = remap_pfn_range(vma, vma->vm_start, mqnic->hw_regs_phys >> PAGE_SHIFT,
+	                      map_size, pgprot_noncached(vma->vm_page_prot));
 
-    if (ret)
-    {
-        dev_err(mqnic->dev, "mqnic_map_registers: remap_pfn_range failed for registers region");
-    }
-    else
-    {
-        dev_dbg(mqnic->dev, "mqnic_map_registers: Mapped registers region at phys: 0x%pap, virt: 0x%p", &mqnic->hw_regs_phys, (void *)vma->vm_start);
-    }
+	if (ret)
+		dev_err(mqnic->dev, "mqnic_map_registers: remap_pfn_range failed for registers region");
+	else
+		dev_dbg(mqnic->dev, "mqnic_map_registers: Mapped registers region at phys: 0x%pap, virt: 0x%p",
+		        &mqnic->hw_regs_phys, (void *)vma->vm_start);
 
-    return ret;    
+	return ret;
 }
 
 static int mqnic_mmap(struct file *file, struct vm_area_struct *vma)
 {
-    struct miscdevice *miscdev = file->private_data;
-    struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
-    int ret;
+	struct miscdevice *miscdev = file->private_data;
+	struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 
-    if (vma->vm_pgoff == 0)
-    {
-        ret = mqnic_map_registers(mqnic, vma);
-    }
-    else
-    {
-        goto fail_invalid_offset;
-    }
+	if (vma->vm_pgoff == 0)
+		return mqnic_map_registers(mqnic, vma);
 
-    return ret;
-
-fail_invalid_offset:
-    dev_err(mqnic->dev, "mqnic_mmap: Tried to map an unknown region at page offset %lu", vma->vm_pgoff);
-    return -EINVAL;
+	dev_err(mqnic->dev, "mqnic_mmap: Tried to map an unknown region at page offset %lu",
+	        vma->vm_pgoff);
+	return -EINVAL;
 }
 
 static long mqnic_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 {
-    struct miscdevice *miscdev = file->private_data;
-    struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
+	struct miscdevice *miscdev = file->private_data;
+	struct mqnic_dev *mqnic = container_of(miscdev, struct mqnic_dev, misc_dev);
 
-    if (_IOC_TYPE(cmd) != MQNIC_IOCTL_TYPE)
-        return -ENOTTY;
+	if (_IOC_TYPE(cmd) != MQNIC_IOCTL_TYPE)
+		return -ENOTTY;
 
-    switch (cmd) {
-    case MQNIC_IOCTL_INFO:
-        {
-            struct mqnic_ioctl_info ctl;
+	switch (cmd) {
+	case MQNIC_IOCTL_INFO:
+		{
+			struct mqnic_ioctl_info ctl;
 
-            ctl.fw_id = mqnic->fw_id;
-            ctl.fw_ver = mqnic->fw_ver;
-            ctl.board_id = mqnic->board_id;
-            ctl.board_ver = mqnic->board_ver;
-            ctl.regs_size = mqnic->hw_regs_size;
+			ctl.fw_id = mqnic->fw_id;
+			ctl.fw_ver = mqnic->fw_ver;
+			ctl.board_id = mqnic->board_id;
+			ctl.board_ver = mqnic->board_ver;
+			ctl.regs_size = mqnic->hw_regs_size;
 
-            if (copy_to_user((void __user *)arg, &ctl, sizeof(ctl)) != 0)
-                return -EFAULT;
+			if (copy_to_user((void __user *)arg, &ctl, sizeof(ctl)) != 0)
+				return -EFAULT;
 
-            return 0;
-        }
-    default:
-        return -ENOTTY;
-    }
+			return 0;
+		}
+	default:
+		return -ENOTTY;
+	}
 }
 
 const struct file_operations mqnic_fops = {
-    .owner          = THIS_MODULE,
-    .open           = mqnic_open,
-    .release        = mqnic_release,
-    .mmap           = mqnic_mmap,
-    .unlocked_ioctl = mqnic_ioctl,
+	.owner = THIS_MODULE,
+	.open = mqnic_open,
+	.release = mqnic_release,
+	.mmap = mqnic_mmap,
+	.unlocked_ioctl = mqnic_ioctl,
 };

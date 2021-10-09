@@ -1,6 +1,6 @@
 /*
 
-Copyright 2019, The Regents of the University of California.
+Copyright 2019-2021, The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <linux/version.h>
 #include <linux/delay.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
 #include <linux/pci-aspm.h>
 #endif
 
@@ -46,9 +46,9 @@ MODULE_LICENSE("Dual MIT/GPL");
 MODULE_VERSION(DRIVER_VERSION);
 
 static const struct pci_device_id mqnic_pci_id_table[] = {
-    { PCI_DEVICE(0x1234, 0x1001) },
-    { PCI_DEVICE(0x5543, 0x1001) },
-    { 0 /* end */ }
+	{PCI_DEVICE(0x1234, 0x1001)},
+	{PCI_DEVICE(0x5543, 0x1001)},
+	{0 /* end */ }
 };
 
 MODULE_DEVICE_TABLE(pci, mqnic_pci_id_table);
@@ -58,416 +58,388 @@ static DEFINE_SPINLOCK(mqnic_devices_lock);
 
 static unsigned int mqnic_get_free_id(void)
 {
-    struct mqnic_dev *mqnic;
-    unsigned int id = 0;
-    bool available = false;
+	struct mqnic_dev *mqnic;
+	unsigned int id = 0;
+	bool available = false;
 
-    while (!available)
-    {
-        available = true;
-        list_for_each_entry(mqnic, &mqnic_devices, dev_list_node)
-        {
-            if (mqnic->id == id)
-            {
-                available = false;
-                id++;
-                break;
-            }
-        }
-    }
+	while (!available) {
+		available = true;
+		list_for_each_entry(mqnic, &mqnic_devices, dev_list_node) {
+			if (mqnic->id == id) {
+				available = false;
+				id++;
+				break;
+			}
+		}
+	}
 
-    return id;
+	return id;
 }
 
 static irqreturn_t mqnic_interrupt(int irq, void *data)
 {
-    struct mqnic_dev *mqnic = data;
-    struct mqnic_priv *priv;
+	struct mqnic_dev *mqnic = data;
+	struct mqnic_priv *priv;
 
-    int k, l;
+	int k, l;
 
-    for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
-    {
-        if (unlikely(!mqnic->ndev[k]))
-            continue;
+	for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++) {
+		if (unlikely(!mqnic->ndev[k]))
+			continue;
 
-        priv = netdev_priv(mqnic->ndev[k]);
+		priv = netdev_priv(mqnic->ndev[k]);
 
-        if (unlikely(!priv->port_up))
-            continue;
+		if (unlikely(!priv->port_up))
+			continue;
 
-        for (l = 0; l < priv->event_queue_count; l++)
-        {
-            if (unlikely(!priv->event_ring[l]))
-                continue;
+		for (l = 0; l < priv->event_queue_count; l++) {
+			if (unlikely(!priv->event_ring[l]))
+				continue;
 
-            if (priv->event_ring[l]->irq == irq)
-            {
-                mqnic_process_eq(priv->ndev, priv->event_ring[l]);
-                mqnic_arm_eq(priv->event_ring[l]);
-            }
-        }
-    }
+			if (priv->event_ring[l]->irq == irq) {
+				mqnic_process_eq(priv->ndev, priv->event_ring[l]);
+				mqnic_arm_eq(priv->event_ring[l]);
+			}
+		}
+	}
 
-    return IRQ_HANDLED;
+	return IRQ_HANDLED;
 }
 
 static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
-    int ret = 0;
-    struct mqnic_dev *mqnic;
-    struct device *dev = &pdev->dev;
+	int ret = 0;
+	struct mqnic_dev *mqnic;
+	struct device *dev = &pdev->dev;
 
-    int k = 0;
+	int k = 0;
 
-    dev_info(dev, DRIVER_NAME " PCI probe");
-    dev_info(dev, " Vendor: 0x%04x", pdev->vendor);
-    dev_info(dev, " Device: 0x%04x", pdev->device);
-    dev_info(dev, " Class: 0x%06x", pdev->class);
-    dev_info(dev, " PCI ID: %04x:%02x:%02x.%d", pci_domain_nr(pdev->bus),
-        pdev->bus->number, PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));
-    if (pdev->pcie_cap) {
-        u16 devctl;
-        u32 lnkcap;
-        u16 lnksta;
-        pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_DEVCTL, &devctl);
-        pci_read_config_dword(pdev, pdev->pcie_cap + PCI_EXP_LNKCAP, &lnkcap);
-        pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_LNKSTA, &lnksta);
-        dev_info(dev, " Max payload size: %d bytes", 128 << ((devctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
-        dev_info(dev, " Max read request size: %d bytes", 128 << ((devctl & PCI_EXP_DEVCTL_READRQ) >> 12));
-        dev_info(dev, " Link capability: gen %d x%d", lnkcap & PCI_EXP_LNKCAP_SLS, (lnkcap & PCI_EXP_LNKCAP_MLW) >> 4);
-        dev_info(dev, " Link status: gen %d x%d", lnksta & PCI_EXP_LNKSTA_CLS, (lnksta & PCI_EXP_LNKSTA_NLW) >> 4);
-        dev_info(dev, " Relaxed ordering: %s", devctl & PCI_EXP_DEVCTL_RELAX_EN ? "enabled" : "disabled");
-        dev_info(dev, " Phantom functions: %s", devctl & PCI_EXP_DEVCTL_PHANTOM ? "enabled" : "disabled");
-        dev_info(dev, " Extended tags: %s", devctl & PCI_EXP_DEVCTL_EXT_TAG ? "enabled" : "disabled");
-        dev_info(dev, " No snoop: %s", devctl & PCI_EXP_DEVCTL_NOSNOOP_EN ? "enabled" : "disabled");
-    }
+	dev_info(dev, DRIVER_NAME " PCI probe");
+	dev_info(dev, " Vendor: 0x%04x", pdev->vendor);
+	dev_info(dev, " Device: 0x%04x", pdev->device);
+	dev_info(dev, " Class: 0x%06x", pdev->class);
+	dev_info(dev, " PCI ID: %04x:%02x:%02x.%d", pci_domain_nr(pdev->bus),
+	         pdev->bus->number, PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));
+	if (pdev->pcie_cap) {
+		u16 devctl;
+		u32 lnkcap;
+		u16 lnksta;
+		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_DEVCTL, &devctl);
+		pci_read_config_dword(pdev, pdev->pcie_cap + PCI_EXP_LNKCAP, &lnkcap);
+		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_LNKSTA, &lnksta);
+		dev_info(dev, " Max payload size: %d bytes",
+		         128 << ((devctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
+		dev_info(dev, " Max read request size: %d bytes",
+		         128 << ((devctl & PCI_EXP_DEVCTL_READRQ) >> 12));
+		dev_info(dev, " Link capability: gen %d x%d",
+		         lnkcap & PCI_EXP_LNKCAP_SLS, (lnkcap & PCI_EXP_LNKCAP_MLW) >> 4);
+		dev_info(dev, " Link status: gen %d x%d",
+		         lnksta & PCI_EXP_LNKSTA_CLS, (lnksta & PCI_EXP_LNKSTA_NLW) >> 4);
+		dev_info(dev, " Relaxed ordering: %s",
+		         devctl & PCI_EXP_DEVCTL_RELAX_EN ? "enabled" : "disabled");
+		dev_info(dev, " Phantom functions: %s",
+		         devctl & PCI_EXP_DEVCTL_PHANTOM ? "enabled" : "disabled");
+		dev_info(dev, " Extended tags: %s",
+		         devctl & PCI_EXP_DEVCTL_EXT_TAG ? "enabled" : "disabled");
+		dev_info(dev, " No snoop: %s",
+		         devctl & PCI_EXP_DEVCTL_NOSNOOP_EN ? "enabled" : "disabled");
+	}
 #ifdef CONFIG_NUMA
-    dev_info(dev, " NUMA node: %d", pdev->dev.numa_node);
+	dev_info(dev, " NUMA node: %d", pdev->dev.numa_node);
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,17,0)
-    pcie_print_link_status(pdev);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
+	pcie_print_link_status(pdev);
 #endif
 
-    if (!(mqnic = devm_kzalloc(dev, sizeof(*mqnic), GFP_KERNEL)))
-    {
-        return -ENOMEM;
-    }
+	mqnic = devm_kzalloc(dev, sizeof(*mqnic), GFP_KERNEL);
+	if (!mqnic) {
+		dev_err(dev, "Failed to allocate memory");
+		return -ENOMEM;
+	}
 
-    mqnic->dev = dev;
-    mqnic->pdev = pdev;
-    pci_set_drvdata(pdev, mqnic);
+	mqnic->dev = dev;
+	mqnic->pdev = pdev;
+	pci_set_drvdata(pdev, mqnic);
 
-    // assign ID and add to list
-    spin_lock(&mqnic_devices_lock);
-    mqnic->id = mqnic_get_free_id();
-    list_add_tail(&mqnic->dev_list_node, &mqnic_devices);
-    spin_unlock(&mqnic_devices_lock);
+	// assign ID and add to list
+	spin_lock(&mqnic_devices_lock);
+	mqnic->id = mqnic_get_free_id();
+	list_add_tail(&mqnic->dev_list_node, &mqnic_devices);
+	spin_unlock(&mqnic_devices_lock);
 
-    snprintf(mqnic->name, sizeof(mqnic->name), DRIVER_NAME "%d", mqnic->id);
+	snprintf(mqnic->name, sizeof(mqnic->name), DRIVER_NAME "%d", mqnic->id);
 
-    // Disable ASPM
-    pci_disable_link_state(pdev, PCIE_LINK_STATE_L0S | PCIE_LINK_STATE_L1 | PCIE_LINK_STATE_CLKPM);
+	// Disable ASPM
+	pci_disable_link_state(pdev, PCIE_LINK_STATE_L0S |
+	                       PCIE_LINK_STATE_L1 | PCIE_LINK_STATE_CLKPM);
 
-    // Enable device
-    ret = pci_enable_device_mem(pdev);
-    if (ret)
-    {
-        dev_err(dev, "Failed to enable PCI device");
-        goto fail_enable_device;
-    }
+	// Enable device
+	ret = pci_enable_device_mem(pdev);
+	if (ret) {
+		dev_err(dev, "Failed to enable PCI device");
+		goto fail_enable_device;
+	}
 
-    // Set mask
-    ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(64));
-    if (ret)
-    {
-        dev_warn(dev, "Warning: failed to set 64 bit PCI DMA mask");
-        ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
-        if (ret)
-        {
-            dev_err(dev, "Failed to set PCI DMA mask");
-            goto fail_regions;
-        }
-    }
+	// Set mask
+	ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(64));
+	if (ret) {
+		dev_warn(dev, "Warning: failed to set 64 bit PCI DMA mask");
+		ret = dma_set_mask_and_coherent(dev, DMA_BIT_MASK(32));
+		if (ret) {
+			dev_err(dev, "Failed to set PCI DMA mask");
+			goto fail_regions;
+		}
+	}
 
-    // Set max segment size
-    dma_set_max_seg_size(dev, DMA_BIT_MASK(32));
+	// Set max segment size
+	dma_set_max_seg_size(dev, DMA_BIT_MASK(32));
 
-    // Reserve regions
-    ret = pci_request_regions(pdev, DRIVER_NAME);
-    if (ret)
-    {
-        dev_err(dev, "Failed to reserve regions");
-        goto fail_regions;
-    }
+	// Reserve regions
+	ret = pci_request_regions(pdev, DRIVER_NAME);
+	if (ret) {
+		dev_err(dev, "Failed to reserve regions");
+		goto fail_regions;
+	}
 
-    mqnic->hw_regs_size = pci_resource_len(pdev, 0);
-    mqnic->hw_regs_phys = pci_resource_start(pdev, 0);
-    mqnic->app_hw_regs_size = pci_resource_len(pdev, 2);
-    mqnic->app_hw_regs_phys = pci_resource_start(pdev, 2);
-    mqnic->ram_hw_regs_size = pci_resource_len(pdev, 4);
-    mqnic->ram_hw_regs_phys = pci_resource_start(pdev, 4);
+	mqnic->hw_regs_size = pci_resource_len(pdev, 0);
+	mqnic->hw_regs_phys = pci_resource_start(pdev, 0);
+	mqnic->app_hw_regs_size = pci_resource_len(pdev, 2);
+	mqnic->app_hw_regs_phys = pci_resource_start(pdev, 2);
+	mqnic->ram_hw_regs_size = pci_resource_len(pdev, 4);
+	mqnic->ram_hw_regs_phys = pci_resource_start(pdev, 4);
 
-    // Map BARs
-    dev_info(dev, "Control BAR size: %llu", mqnic->hw_regs_size);
-    mqnic->hw_addr = pci_ioremap_bar(pdev, 0);
-    if (!mqnic->hw_addr)
-    {
-        ret = -ENOMEM;
-        dev_err(dev, "Failed to map control BAR");
-        goto fail_map_bars;
-    }
+	// Map BARs
+	dev_info(dev, "Control BAR size: %llu", mqnic->hw_regs_size);
+	mqnic->hw_addr = pci_ioremap_bar(pdev, 0);
+	if (!mqnic->hw_addr) {
+		ret = -ENOMEM;
+		dev_err(dev, "Failed to map control BAR");
+		goto fail_map_bars;
+	}
 
-    if (mqnic->app_hw_regs_size)
-    {
-        dev_info(dev, "Application BAR size: %llu", mqnic->app_hw_regs_size);
-        mqnic->app_hw_addr = pci_ioremap_bar(pdev, 2);
-        if (!mqnic->app_hw_addr)
-        {
-            ret = -ENOMEM;
-            dev_err(dev, "Failed to map application BAR");
-            goto fail_map_bars;
-        }
-    }
+	if (mqnic->app_hw_regs_size) {
+		dev_info(dev, "Application BAR size: %llu", mqnic->app_hw_regs_size);
+		mqnic->app_hw_addr = pci_ioremap_bar(pdev, 2);
+		if (!mqnic->app_hw_addr) {
+			ret = -ENOMEM;
+			dev_err(dev, "Failed to map application BAR");
+			goto fail_map_bars;
+		}
+	}
 
-    if (mqnic->ram_hw_regs_size)
-    {
-        dev_info(dev, "RAM BAR size: %llu", mqnic->ram_hw_regs_size);
-        mqnic->ram_hw_addr = pci_ioremap_bar(pdev, 4);
-        if (!mqnic->ram_hw_addr)
-        {
-            ret = -ENOMEM;
-            dev_err(dev, "Failed to map RAM BAR");
-            goto fail_map_bars;
-        }
-    }
+	if (mqnic->ram_hw_regs_size) {
+		dev_info(dev, "RAM BAR size: %llu", mqnic->ram_hw_regs_size);
+		mqnic->ram_hw_addr = pci_ioremap_bar(pdev, 4);
+		if (!mqnic->ram_hw_addr) {
+			ret = -ENOMEM;
+			dev_err(dev, "Failed to map RAM BAR");
+			goto fail_map_bars;
+		}
+	}
 
-    // Check if device needs to be reset
-    if (ioread32(mqnic->hw_addr) == 0xffffffff)
-    {
-        ret = -EIO;
-        dev_err(dev, "Device needs to be reset");
-        goto fail_map_bars;
-    }
+	// Check if device needs to be reset
+	if (ioread32(mqnic->hw_addr) == 0xffffffff) {
+		ret = -EIO;
+		dev_err(dev, "Device needs to be reset");
+		goto fail_map_bars;
+	}
 
-    // Read ID registers
-    mqnic->fw_id = ioread32(mqnic->hw_addr+MQNIC_REG_FW_ID);
-    dev_info(dev, "FW ID: 0x%08x", mqnic->fw_id);
-    mqnic->fw_ver = ioread32(mqnic->hw_addr+MQNIC_REG_FW_VER);
-    dev_info(dev, "FW version: %d.%d", mqnic->fw_ver >> 16, mqnic->fw_ver & 0xffff);
-    mqnic->board_id = ioread32(mqnic->hw_addr+MQNIC_REG_BOARD_ID);
-    dev_info(dev, "Board ID: 0x%08x", mqnic->board_id);
-    mqnic->board_ver = ioread32(mqnic->hw_addr+MQNIC_REG_BOARD_VER);
-    dev_info(dev, "Board version: %d.%d", mqnic->board_ver >> 16, mqnic->board_ver & 0xffff);
+	// Read ID registers
+	mqnic->fw_id = ioread32(mqnic->hw_addr + MQNIC_REG_FW_ID);
+	dev_info(dev, "FW ID: 0x%08x", mqnic->fw_id);
+	mqnic->fw_ver = ioread32(mqnic->hw_addr + MQNIC_REG_FW_VER);
+	dev_info(dev, "FW version: %d.%d", mqnic->fw_ver >> 16, mqnic->fw_ver & 0xffff);
+	mqnic->board_id = ioread32(mqnic->hw_addr + MQNIC_REG_BOARD_ID);
+	dev_info(dev, "Board ID: 0x%08x", mqnic->board_id);
+	mqnic->board_ver = ioread32(mqnic->hw_addr + MQNIC_REG_BOARD_VER);
+	dev_info(dev, "Board version: %d.%d", mqnic->board_ver >> 16, mqnic->board_ver & 0xffff);
 
-    mqnic->phc_count = ioread32(mqnic->hw_addr+MQNIC_REG_PHC_COUNT);
-    dev_info(dev, "PHC count: %d", mqnic->phc_count);
-    mqnic->phc_offset = ioread32(mqnic->hw_addr+MQNIC_REG_PHC_OFFSET);
-    dev_info(dev, "PHC offset: 0x%08x", mqnic->phc_offset);
+	mqnic->phc_count = ioread32(mqnic->hw_addr + MQNIC_REG_PHC_COUNT);
+	dev_info(dev, "PHC count: %d", mqnic->phc_count);
+	mqnic->phc_offset = ioread32(mqnic->hw_addr + MQNIC_REG_PHC_OFFSET);
+	dev_info(dev, "PHC offset: 0x%08x", mqnic->phc_offset);
 
-    if (mqnic->phc_count)
-        mqnic->phc_hw_addr = mqnic->hw_addr+mqnic->phc_offset;
+	if (mqnic->phc_count)
+		mqnic->phc_hw_addr = mqnic->hw_addr + mqnic->phc_offset;
 
-    mqnic->if_count = ioread32(mqnic->hw_addr+MQNIC_REG_IF_COUNT);
-    dev_info(dev, "IF count: %d", mqnic->if_count);
-    mqnic->if_stride = ioread32(mqnic->hw_addr+MQNIC_REG_IF_STRIDE);
-    dev_info(dev, "IF stride: 0x%08x", mqnic->if_stride);
-    mqnic->if_csr_offset = ioread32(mqnic->hw_addr+MQNIC_REG_IF_CSR_OFFSET);
-    dev_info(dev, "IF CSR offset: 0x%08x", mqnic->if_csr_offset);
+	mqnic->if_count = ioread32(mqnic->hw_addr + MQNIC_REG_IF_COUNT);
+	dev_info(dev, "IF count: %d", mqnic->if_count);
+	mqnic->if_stride = ioread32(mqnic->hw_addr + MQNIC_REG_IF_STRIDE);
+	dev_info(dev, "IF stride: 0x%08x", mqnic->if_stride);
+	mqnic->if_csr_offset = ioread32(mqnic->hw_addr + MQNIC_REG_IF_CSR_OFFSET);
+	dev_info(dev, "IF CSR offset: 0x%08x", mqnic->if_csr_offset);
 
-    // check BAR size
-    if (mqnic->if_count*mqnic->if_stride > mqnic->hw_regs_size)
-    {
-        ret = -EIO;
-        dev_err(dev, "Invalid BAR configuration (%d IF * 0x%x > 0x%llx)", mqnic->if_count, mqnic->if_stride, mqnic->hw_regs_size);
-        goto fail_map_bars;
-    }
+	// check BAR size
+	if (mqnic->if_count * mqnic->if_stride > mqnic->hw_regs_size) {
+		ret = -EIO;
+		dev_err(dev, "Invalid BAR configuration (%d IF * 0x%x > 0x%llx)",
+		        mqnic->if_count, mqnic->if_stride, mqnic->hw_regs_size);
+		goto fail_map_bars;
+	}
 
-    // Allocate MSI IRQs
-    mqnic->irq_count = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI);
-    if (mqnic->irq_count < 0)
-    {
-        ret = -ENOMEM;
-        dev_err(dev, "Failed to allocate IRQs");
-        goto fail_map_bars;
-    }
+	// Allocate MSI IRQs
+	mqnic->irq_count = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI);
+	if (mqnic->irq_count < 0) {
+		ret = -ENOMEM;
+		dev_err(dev, "Failed to allocate IRQs");
+		goto fail_map_bars;
+	}
 
-    // Set up interrupts
-    for (k = 0; k < mqnic->irq_count; k++)
-    {
-        ret = pci_request_irq(pdev, k, mqnic_interrupt, NULL, mqnic, "%s-%d", mqnic->name, k);
-        if (ret < 0)
-        {
-            dev_err(dev, "Failed to request IRQ");
-            goto fail_irq;
-        }
+	// Set up interrupts
+	for (k = 0; k < mqnic->irq_count; k++) {
+		ret = pci_request_irq(pdev, k, mqnic_interrupt, NULL,
+		                      mqnic, "%s-%d", mqnic->name, k);
+		if (ret < 0) {
+			dev_err(dev, "Failed to request IRQ");
+			goto fail_irq;
+		}
 
-        mqnic->irq_map[k] = pci_irq_vector(pdev, k);
-    }
+		mqnic->irq_map[k] = pci_irq_vector(pdev, k);
+	}
 
-    // Board-specific init
-    ret = mqnic_board_init(mqnic);
-    if (ret)
-    {
-        dev_err(dev, "Failed to initialize board");
-        goto fail_board;
-    }
+	// Board-specific init
+	ret = mqnic_board_init(mqnic);
+	if (ret) {
+		dev_err(dev, "Failed to initialize board");
+		goto fail_board;
+	}
 
-    // Enable bus mastering for DMA
-    pci_set_master(pdev);
+	// Enable bus mastering for DMA
+	pci_set_master(pdev);
 
-    // register PHC
-    if (mqnic->phc_count)
-    {
-        mqnic_register_phc(mqnic);
-    }
+	// register PHC
+	if (mqnic->phc_count)
+		mqnic_register_phc(mqnic);
 
-    // Set up interfaces
-    if (mqnic->if_count > MQNIC_MAX_IF)
-        mqnic->if_count = MQNIC_MAX_IF;
+	// Set up interfaces
+	if (mqnic->if_count > MQNIC_MAX_IF)
+		mqnic->if_count = MQNIC_MAX_IF;
 
-    for (k = 0; k < mqnic->if_count; k++)
-    {
-        dev_info(dev, "Creating interface %d", k);
-        ret = mqnic_init_netdev(mqnic, k, mqnic->hw_addr + k*mqnic->if_stride);
-        if (ret)
-        {
-            dev_err(dev, "Failed to create net_device");
-            goto fail_init_netdev;
-        }
-    }
+	for (k = 0; k < mqnic->if_count; k++) {
+		dev_info(dev, "Creating interface %d", k);
+		ret = mqnic_init_netdev(mqnic, k, mqnic->hw_addr + k * mqnic->if_stride);
+		if (ret) {
+			dev_err(dev, "Failed to create net_device");
+			goto fail_init_netdev;
+		}
+	}
 
-    // pass module I2C clients to net_device instances
-    for (k = 0; k < mqnic->if_count; k++)
-    {
-        struct mqnic_priv *priv = netdev_priv(mqnic->ndev[k]);
-        priv->mod_i2c_client = mqnic->mod_i2c_client[k];
-    }
+	// pass module I2C clients to net_device instances
+	for (k = 0; k < mqnic->if_count; k++) {
+		struct mqnic_priv *priv = netdev_priv(mqnic->ndev[k]);
+		priv->mod_i2c_client = mqnic->mod_i2c_client[k];
+	}
 
-    mqnic->misc_dev.minor = MISC_DYNAMIC_MINOR;
-    mqnic->misc_dev.name = mqnic->name;
-    mqnic->misc_dev.fops = &mqnic_fops;
-    mqnic->misc_dev.parent = dev;
+	mqnic->misc_dev.minor = MISC_DYNAMIC_MINOR;
+	mqnic->misc_dev.name = mqnic->name;
+	mqnic->misc_dev.fops = &mqnic_fops;
+	mqnic->misc_dev.parent = dev;
 
-    ret = misc_register(&mqnic->misc_dev);
-    if (ret)
-    {
-        dev_err(dev, "misc_register failed: %d\n", ret);
-        goto fail_miscdev;
-    }
+	ret = misc_register(&mqnic->misc_dev);
+	if (ret) {
+		dev_err(dev, "misc_register failed: %d\n", ret);
+		goto fail_miscdev;
+	}
 
-    dev_info(dev, "Registered device %s", mqnic->name);
+	dev_info(dev, "Registered device %s", mqnic->name);
 
-    pci_save_state(pdev);
+	pci_save_state(pdev);
 
-    mutex_init(&mqnic->state_lock);
+	mutex_init(&mqnic->state_lock);
 
-    // probe complete
-    return 0;
+	// probe complete
+	return 0;
 
-    // error handling
+	// error handling
 fail_miscdev:
 fail_init_netdev:
-    for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
-    {
-        if (mqnic->ndev[k])
-        {
-            mqnic_destroy_netdev(mqnic->ndev[k]);
-        }
-    }
-    mqnic_unregister_phc(mqnic);
-    pci_clear_master(pdev);
+	for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
+		if (mqnic->ndev[k])
+			mqnic_destroy_netdev(mqnic->ndev[k]);
+	mqnic_unregister_phc(mqnic);
+	pci_clear_master(pdev);
 fail_board:
-    mqnic_board_deinit(mqnic);
-    for (k = 0; k < mqnic->irq_count; k++)
-    {
-        pci_free_irq(pdev, k, mqnic);
-    }
+	mqnic_board_deinit(mqnic);
+	for (k = 0; k < mqnic->irq_count; k++)
+		pci_free_irq(pdev, k, mqnic);
 fail_irq:
-    pci_free_irq_vectors(pdev);
+	pci_free_irq_vectors(pdev);
 fail_map_bars:
-    if (mqnic->hw_addr)
-        pci_iounmap(pdev, mqnic->hw_addr);
-    if (mqnic->app_hw_addr)
-        pci_iounmap(pdev, mqnic->app_hw_addr);
-    if (mqnic->ram_hw_addr)
-        pci_iounmap(pdev, mqnic->ram_hw_addr);
-    pci_release_regions(pdev);
+	if (mqnic->hw_addr)
+		pci_iounmap(pdev, mqnic->hw_addr);
+	if (mqnic->app_hw_addr)
+		pci_iounmap(pdev, mqnic->app_hw_addr);
+	if (mqnic->ram_hw_addr)
+		pci_iounmap(pdev, mqnic->ram_hw_addr);
+	pci_release_regions(pdev);
 fail_regions:
-    pci_disable_device(pdev);
+	pci_disable_device(pdev);
 fail_enable_device:
-    spin_lock(&mqnic_devices_lock);
-    list_del(&mqnic->dev_list_node);
-    spin_unlock(&mqnic_devices_lock);
-    return ret;
+	spin_lock(&mqnic_devices_lock);
+	list_del(&mqnic->dev_list_node);
+	spin_unlock(&mqnic_devices_lock);
+	return ret;
 }
 
 static void mqnic_pci_remove(struct pci_dev *pdev)
 {
-    struct mqnic_dev *mqnic = pci_get_drvdata(pdev);
+	struct mqnic_dev *mqnic = pci_get_drvdata(pdev);
 
-    int k = 0;
+	int k = 0;
 
-    dev_info(&pdev->dev, DRIVER_NAME " PCI remove");
+	dev_info(&pdev->dev, DRIVER_NAME " PCI remove");
 
-    misc_deregister(&mqnic->misc_dev);
+	misc_deregister(&mqnic->misc_dev);
 
-    spin_lock(&mqnic_devices_lock);
-    list_del(&mqnic->dev_list_node);
-    spin_unlock(&mqnic_devices_lock);
+	spin_lock(&mqnic_devices_lock);
+	list_del(&mqnic->dev_list_node);
+	spin_unlock(&mqnic_devices_lock);
 
-    for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
-    {
-        if (mqnic->ndev[k])
-        {
-            mqnic_destroy_netdev(mqnic->ndev[k]);
-        }
-    }
+	for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
+		if (mqnic->ndev[k])
+			mqnic_destroy_netdev(mqnic->ndev[k]);
 
-    mqnic_unregister_phc(mqnic);
+	mqnic_unregister_phc(mqnic);
 
-    pci_clear_master(pdev);
-    mqnic_board_deinit(mqnic);
-    for (k = 0; k < mqnic->irq_count; k++)
-    {
-        pci_free_irq(pdev, k, mqnic);
-    }
-    pci_free_irq_vectors(pdev);
-    if (mqnic->hw_addr)
-        pci_iounmap(pdev, mqnic->hw_addr);
-    if (mqnic->app_hw_addr)
-        pci_iounmap(pdev, mqnic->app_hw_addr);
-    if (mqnic->ram_hw_addr)
-        pci_iounmap(pdev, mqnic->ram_hw_addr);
-    pci_release_regions(pdev);
-    pci_disable_device(pdev);
+	pci_clear_master(pdev);
+	mqnic_board_deinit(mqnic);
+	for (k = 0; k < mqnic->irq_count; k++)
+		pci_free_irq(pdev, k, mqnic);
+	pci_free_irq_vectors(pdev);
+	if (mqnic->hw_addr)
+		pci_iounmap(pdev, mqnic->hw_addr);
+	if (mqnic->app_hw_addr)
+		pci_iounmap(pdev, mqnic->app_hw_addr);
+	if (mqnic->ram_hw_addr)
+		pci_iounmap(pdev, mqnic->ram_hw_addr);
+	pci_release_regions(pdev);
+	pci_disable_device(pdev);
 }
 
 static void mqnic_pci_shutdown(struct pci_dev *pdev)
 {
-    dev_info(&pdev->dev, DRIVER_NAME " PCI shutdown");
+	dev_info(&pdev->dev, DRIVER_NAME " PCI shutdown");
 
-    mqnic_pci_remove(pdev);
+	mqnic_pci_remove(pdev);
 }
 
 static struct pci_driver mqnic_pci_driver = {
-    .name = DRIVER_NAME,
-    .id_table = mqnic_pci_id_table,
-    .probe = mqnic_pci_probe,
-    .remove = mqnic_pci_remove,
-    .shutdown = mqnic_pci_shutdown
+	.name = DRIVER_NAME,
+	.id_table = mqnic_pci_id_table,
+	.probe = mqnic_pci_probe,
+	.remove = mqnic_pci_remove,
+	.shutdown = mqnic_pci_shutdown
 };
 
 static int __init mqnic_init(void)
 {
-    return pci_register_driver(&mqnic_pci_driver);
+	return pci_register_driver(&mqnic_pci_driver);
 }
 
 static void __exit mqnic_exit(void)
 {
-    pci_unregister_driver(&mqnic_pci_driver);
+	pci_unregister_driver(&mqnic_pci_driver);
 }
 
 module_init(mqnic_init);
 module_exit(mqnic_exit);
-

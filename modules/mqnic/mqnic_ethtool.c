@@ -1,6 +1,6 @@
 /*
 
-Copyright 2019, The Regents of the University of California.
+Copyright 2019-2021, The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -40,143 +40,136 @@ either expressed or implied, of The Regents of the University of California.
 #define SFF_MODULE_ID_QSFP_PLUS  0x0d
 #define SFF_MODULE_ID_QSFP28     0x11
 
-static void mqnic_get_drvinfo(struct net_device *ndev, struct ethtool_drvinfo *drvinfo)
+static void mqnic_get_drvinfo(struct net_device *ndev,
+		struct ethtool_drvinfo *drvinfo)
 {
-    struct mqnic_priv *priv = netdev_priv(ndev);
-    struct mqnic_dev *mdev = priv->mdev;
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	struct mqnic_dev *mdev = priv->mdev;
 
-    strlcpy(drvinfo->driver, DRIVER_NAME, sizeof(drvinfo->driver));
-    strlcpy(drvinfo->version, DRIVER_VERSION, sizeof(drvinfo->version));
+	strlcpy(drvinfo->driver, DRIVER_NAME, sizeof(drvinfo->driver));
+	strlcpy(drvinfo->version, DRIVER_VERSION, sizeof(drvinfo->version));
 
-    snprintf(drvinfo->fw_version, sizeof(drvinfo->fw_version), "%d.%d", mdev->fw_ver >> 16, mdev->fw_ver & 0xffff);
-    strlcpy(drvinfo->bus_info, dev_name(mdev->dev), sizeof(drvinfo->bus_info));
+	snprintf(drvinfo->fw_version, sizeof(drvinfo->fw_version), "%d.%d",
+	         mdev->fw_ver >> 16, mdev->fw_ver & 0xffff);
+	strlcpy(drvinfo->bus_info, dev_name(mdev->dev), sizeof(drvinfo->bus_info));
 }
 
-static int mqnic_get_ts_info(struct net_device *ndev, struct ethtool_ts_info *info)
+static int mqnic_get_ts_info(struct net_device *ndev,
+		struct ethtool_ts_info *info)
 {
-    struct mqnic_priv *priv = netdev_priv(ndev);
-    struct mqnic_dev *mdev = priv->mdev;
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	struct mqnic_dev *mdev = priv->mdev;
 
-    ethtool_op_get_ts_info(ndev, info);
+	ethtool_op_get_ts_info(ndev, info);
 
-    if (mdev->ptp_clock)
-        info->phc_index = ptp_clock_index(mdev->ptp_clock);
+	if (mdev->ptp_clock)
+		info->phc_index = ptp_clock_index(mdev->ptp_clock);
 
-    if (!(priv->if_features & MQNIC_IF_FEATURE_PTP_TS) || !mdev->ptp_clock)
-        return 0;
+	if (!(priv->if_features & MQNIC_IF_FEATURE_PTP_TS) || !mdev->ptp_clock)
+		return 0;
 
-    info->so_timestamping =
-        SOF_TIMESTAMPING_TX_HARDWARE |
-        SOF_TIMESTAMPING_RX_HARDWARE |
-        SOF_TIMESTAMPING_RAW_HARDWARE;
+	info->so_timestamping |= SOF_TIMESTAMPING_TX_HARDWARE |
+		SOF_TIMESTAMPING_RX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE;
 
-    info->tx_types =
-        BIT(HWTSTAMP_TX_OFF) |
-        BIT(HWTSTAMP_TX_ON);
+	info->tx_types = BIT(HWTSTAMP_TX_OFF) | BIT(HWTSTAMP_TX_ON);
 
-    info->rx_filters =
-        BIT(HWTSTAMP_FILTER_NONE) |
-        BIT(HWTSTAMP_FILTER_ALL);
+	info->rx_filters = BIT(HWTSTAMP_FILTER_NONE) | BIT(HWTSTAMP_FILTER_ALL);
 
-    return 0;
+	return 0;
 }
 
-static int mqnic_read_module_eeprom(struct net_device *ndev, u16 offset, u16 len, u8 *data)
+static int mqnic_read_module_eeprom(struct net_device *ndev,
+		u16 offset, u16 len, u8 * data)
 {
-    struct mqnic_priv *priv = netdev_priv(ndev);
+	struct mqnic_priv *priv = netdev_priv(ndev);
 
-    if (!priv->mod_i2c_client)
-    {
-        return -1;
-    }
+	if (!priv->mod_i2c_client)
+		return -1;
 
-    if (len > I2C_SMBUS_BLOCK_MAX)
-        len = I2C_SMBUS_BLOCK_MAX;
+	if (len > I2C_SMBUS_BLOCK_MAX)
+		len = I2C_SMBUS_BLOCK_MAX;
 
-    return i2c_smbus_read_i2c_block_data(priv->mod_i2c_client, offset, len, data);
+	return i2c_smbus_read_i2c_block_data(priv->mod_i2c_client, offset, len, data);
 }
 
-static int mqnic_get_module_info(struct net_device *ndev, struct ethtool_modinfo *modinfo)
+static int mqnic_get_module_info(struct net_device *ndev,
+		struct ethtool_modinfo *modinfo)
 {
-    struct mqnic_priv *priv = netdev_priv(ndev);
-    int read_len = 0;
-    u8 data[16];
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	int read_len = 0;
+	u8 data[16];
 
-    // read module ID and revision
-    read_len = mqnic_read_module_eeprom(ndev, 0, 2, data);
+	// read module ID and revision
+	read_len = mqnic_read_module_eeprom(ndev, 0, 2, data);
 
-    if (read_len < 2)
-        return -EIO;
+	if (read_len < 2)
+		return -EIO;
 
-    // check identifier byte at address 0
-    switch (data[0]) {
-    case SFF_MODULE_ID_SFP:
-        modinfo->type       = ETH_MODULE_SFF_8472;
-        modinfo->eeprom_len = ETH_MODULE_SFF_8472_LEN;
-        break;
-    case SFF_MODULE_ID_QSFP:
-        modinfo->type       = ETH_MODULE_SFF_8436;
-        modinfo->eeprom_len = ETH_MODULE_SFF_8436_LEN;
-        break;
-    case SFF_MODULE_ID_QSFP_PLUS:
-        // check revision at address 1
-        if (data[1] >= 0x03)
-        {
-            modinfo->type       = ETH_MODULE_SFF_8636;
-            modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
-        }
-        else
-        {
-            modinfo->type       = ETH_MODULE_SFF_8436;
-            modinfo->eeprom_len = ETH_MODULE_SFF_8436_LEN;
-        }
-        break;
-    case SFF_MODULE_ID_QSFP28:
-        modinfo->type       = ETH_MODULE_SFF_8636;
-        modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
-        break;
-    default:
-        dev_err(priv->dev, "Unknown module ID");
-        return -EINVAL;
-    }
+	// check identifier byte at address 0
+	switch (data[0]) {
+	case SFF_MODULE_ID_SFP:
+		modinfo->type = ETH_MODULE_SFF_8472;
+		modinfo->eeprom_len = ETH_MODULE_SFF_8472_LEN;
+		break;
+	case SFF_MODULE_ID_QSFP:
+		modinfo->type = ETH_MODULE_SFF_8436;
+		modinfo->eeprom_len = ETH_MODULE_SFF_8436_LEN;
+		break;
+	case SFF_MODULE_ID_QSFP_PLUS:
+		// check revision at address 1
+		if (data[1] >= 0x03) {
+			modinfo->type = ETH_MODULE_SFF_8636;
+			modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
+		} else {
+			modinfo->type = ETH_MODULE_SFF_8436;
+			modinfo->eeprom_len = ETH_MODULE_SFF_8436_LEN;
+		}
+		break;
+	case SFF_MODULE_ID_QSFP28:
+		modinfo->type = ETH_MODULE_SFF_8636;
+		modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
+		break;
+	default:
+		dev_err(priv->dev, "Unknown module ID");
+		return -EINVAL;
+	}
 
-    return 0;
+	return 0;
 }
 
-static int mqnic_get_module_eeprom(struct net_device *ndev, struct ethtool_eeprom *eeprom, u8 *data)
+static int mqnic_get_module_eeprom(struct net_device *ndev,
+		struct ethtool_eeprom *eeprom, u8 * data)
 {
-    struct mqnic_priv *priv = netdev_priv(ndev);
-    int i = 0;
-    int read_len;
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	int i = 0;
+	int read_len;
 
-    if (eeprom->len == 0)
-        return -EINVAL;
+	if (eeprom->len == 0)
+		return -EINVAL;
 
-    memset(data, 0, eeprom->len);
+	memset(data, 0, eeprom->len);
 
-    while (i < eeprom->len)
-    {
-        read_len = mqnic_read_module_eeprom(ndev, eeprom->offset+i, eeprom->len-i, data+i);
+	while (i < eeprom->len) {
+		read_len = mqnic_read_module_eeprom(ndev, eeprom->offset + i,
+		                                    eeprom->len - i, data + i);
 
-        if (read_len == 0)
-            return -EIO;
+		if (read_len == 0)
+			return -EIO;
 
-        if (read_len < 0)
-        {
-            dev_err(priv->dev, "Failed to read module EEPROM");
-            return 0;
-        }
+		if (read_len < 0) {
+			dev_err(priv->dev, "Failed to read module EEPROM");
+			return 0;
+		}
 
-        i += read_len;
-    }
+		i += read_len;
+	}
 
-    return 0;
+	return 0;
 }
 
 const struct ethtool_ops mqnic_ethtool_ops = {
-    .get_drvinfo       = mqnic_get_drvinfo,
-    .get_ts_info       = mqnic_get_ts_info,
-    .get_module_info   = mqnic_get_module_info,
-    .get_module_eeprom = mqnic_get_module_eeprom,
+	.get_drvinfo = mqnic_get_drvinfo,
+	.get_ts_info = mqnic_get_ts_info,
+	.get_module_info = mqnic_get_module_info,
+	.get_module_eeprom = mqnic_get_module_eeprom,
 };
-

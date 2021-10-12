@@ -1,0 +1,48 @@
+* Corundum mqnic Ethernet controller
+
+Required properties:
+- compatible: Should be "corundum,mqnic"
+- reg: Address and length of the "control" register set. Optionally a second and
+	third range, the "app" and "ram" register sets may be added.
+- interrupts: Should contain mqnic interrupt(s)
+
+Optional properties:
+- nvmem-cells: Phandle of nvmem cell containing the base MAC address
+- nvmem-cell-names: Should be "mac-address"
+- mac-address-increment-byte:
+	Index of base MAC address byte to increment (default: 0x5)
+- mac-address-increment:
+	Number to add to the chosen base MAC address byte (default: 0x0)
+- mac-address-local:
+	Boolean, mark derived MAC addresses as "locally administrated"
+	(default: false)
+- module-eeproms: Array of phandles to SFP module EEPROM node(s)
+
+Examples:
+
+	mqnic0: ethernet@a0000000 {
+		compatible = "corundum,mqnic";
+		reg = <0x0 0xa0000000 0x0 0x1000000>,
+		      <0x0 0xb0000000 0x0 0x1000000>;
+		reg-names = "csr", "app";
+		interrupt-parent = <&gic>;
+		interrupts = <0x0 0x59 0x1>, <0x0 0x5a 0x1>, <0x0 0x5b 0x1>,
+			     <0x0 0x5c 0x1>;
+
+		nvmem-cells = <&macaddress>;
+		nvmem-cell-names = "mac-address";
+
+		mac-address-increment = <0x1>;
+		mac-address-local;
+
+		module-eeproms = <&module_eeprom_sfp0>, <&module_eeprom_sfp1>;
+	};
+
+	&eeprom {
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		macaddress: macaddress@20 {
+			reg = <0x20 0x06>;
+		};
+	};

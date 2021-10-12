@@ -38,6 +38,14 @@
 
 #include <linux/types.h>
 
+#ifdef CONFIG_OF
+/* platform driver OF-related definitions */
+#define MQNIC_PROP_MAC_ADDR_INC_BYTE "mac-address-increment-byte"
+#define MQNIC_PROP_MAC_ADDR_INC "mac-address-increment"
+#define MQNIC_PROP_MAC_ADDR_LOCAL "mac-address-local"
+#define MQNIC_PROP_MODULE_EEPROM "module-eeproms"
+#endif
+
 #define MQNIC_MAX_IRQ 32
 
 #define MQNIC_MAX_IF 8

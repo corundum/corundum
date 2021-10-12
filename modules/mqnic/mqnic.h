@@ -37,7 +37,10 @@
 #define MQNIC_H
 
 #include <linux/kernel.h>
+#ifdef CONFIG_PCI
 #include <linux/pci.h>
+#endif
+#include <linux/platform_device.h>
 #include <linux/miscdevice.h>
 #include <linux/netdevice.h>
 #include <linux/etherdevice.h>
@@ -93,12 +96,16 @@ struct mqnic_i2c_bus {
 struct mqnic_irq {
 	int index;
 	int irqn;
+	char name[16 + 3];
 	struct atomic_notifier_head nh;
 };
 
 struct mqnic_dev {
 	struct device *dev;
+#ifdef CONFIG_PCI
 	struct pci_dev *pdev;
+#endif
+	struct platform_device *pfdev;
 
 	resource_size_t hw_regs_size;
 	phys_addr_t hw_regs_phys;
@@ -446,6 +453,7 @@ void free_reg_block_list(struct reg_block *list);
 // mqnic_irq.c
 int mqnic_irq_init_pcie(struct mqnic_dev *mdev);
 void mqnic_irq_deinit_pcie(struct mqnic_dev *mdev);
+int mqnic_irq_init_platform(struct mqnic_dev *mdev);
 
 // mqnic_dev.c
 extern const struct file_operations mqnic_fops;

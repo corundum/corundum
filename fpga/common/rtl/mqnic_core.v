@@ -2454,10 +2454,9 @@ generate
                     .FRAME_FIFO(0)
                 )
                 tx_ptp_ts_fifo_inst (
-                    .async_rst(rst | tx_rst[n*PORTS_PER_IF+m]),
-
                     // AXI input
                     .s_clk(tx_clk[n*PORTS_PER_IF+m]),
+                    .s_rst(tx_rst[n*PORTS_PER_IF+m]),
                     .s_axis_tdata(axis_tx_in_ptp_ts),
                     .s_axis_tkeep(0),
                     .s_axis_tvalid(axis_tx_in_ptp_ts_valid),
@@ -2469,6 +2468,7 @@ generate
 
                     // AXI output
                     .m_clk(clk),
+                    .m_rst(rst),
                     .m_axis_tdata(axis_tx_fifo_ptp_ts),
                     .m_axis_tkeep(),
                     .m_axis_tvalid(axis_tx_fifo_ptp_ts_valid),

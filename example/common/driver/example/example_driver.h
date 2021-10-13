@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2018 Alex Forencich
+Copyright (c) 2018-2021 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -31,18 +31,18 @@ THE SOFTWARE.
 #define DRIVER_VERSION "0.1"
 
 struct example_dev {
-    struct pci_dev *pdev;
+	struct pci_dev *pdev;
 
-    // BAR pointers
-    void * __iomem bar[6];
-    resource_size_t bar_len[6];
+	// BAR pointers
+	void __iomem *bar[6];
+	resource_size_t bar_len[6];
 
-    // DMA buffer
-    size_t dma_region_len;
-    void *dma_region;
-    dma_addr_t dma_region_addr;
+	// DMA buffer
+	size_t dma_region_len;
+	void *dma_region;
+	dma_addr_t dma_region_addr;
 
-    int irqcount;
+	int irqcount;
 };
 
 #endif /* EXAMPLE_DRIVER_H */

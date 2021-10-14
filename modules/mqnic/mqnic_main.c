@@ -272,6 +272,8 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	if (mqnic->phc_count)
 		mqnic_register_phc(mqnic);
 
+	mutex_init(&mqnic->state_lock);
+
 	// Set up interfaces
 	mqnic->if_count = min_t(u32, mqnic->if_count, MQNIC_MAX_IF);
 
@@ -303,8 +305,6 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	dev_info(dev, "Registered device %s", mqnic->name);
 
 	pci_save_state(pdev);
-
-	mutex_init(&mqnic->state_lock);
 
 	// probe complete
 	return 0;

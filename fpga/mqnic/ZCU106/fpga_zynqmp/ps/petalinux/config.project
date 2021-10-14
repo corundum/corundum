@@ -1,0 +1,11 @@
+#
+# Automatically generated file; DO NOT EDIT.
+# PetaLinux SDK Project Configuration
+#
+CONFIG_PROJECT_ADDITIONAL_COMPONENTS_SEARCH_PATH=""
+
+#
+# Subsystems of the project
+#
+CONFIG_PROJECT_SUBSYSTEM_LINUX_INSTANCE_LINUX=y
+CONFIG_PROJECT_SUBSYSTEMS=y

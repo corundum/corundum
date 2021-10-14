@@ -1,0 +1,1 @@
+../../../../../lib/psmake/petalinux.mk

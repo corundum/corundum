@@ -1,0 +1,25 @@
+*/*/config.old
+*/*/rootfs_config.old
+build/
+images/linux/
+pre-built/linux/
+.petalinux/*
+# NOTE: At least since v2020.2 .petalinux/metadata may contain an absolute path
+# of the last imported .xsa file! Plus various MD5 sums. Not good for VCS!
+# Apparently, the file is NOT needed anymore (re-created on each build instead).
+# However the directory .petalinux/ has to exists.
+#!.petalinux/metadata
+!.petalinux/.gitkeep
+*.o
+*.jou
+*.log
+/components/plnx_workspace
+/components/yocto
+
+
+# skip any generated .xsa-related files
+/project-spec/hw-description/*
+!/project-spec/hw-description/metadata
+
+# Xilinx toolchain intermediate files
+/.Xil/

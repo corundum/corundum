@@ -297,4 +297,5 @@ CONFIG_YOCTO_NETWORK_SSTATE_FEEDS_URL="http://petalinux.xilinx.com/sswreleases/r
 #
 # User Layers
 #
-CONFIG_USER_LAYER_0=""
+CONFIG_USER_LAYER_0="${PROOT}/../../../../../../meta-corundum"
+CONFIG_USER_LAYER_1=""

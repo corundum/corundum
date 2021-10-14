@@ -6,3 +6,6 @@ CONFIG_peekpoke
 
 CONFIG_iputils-ping
 CONFIG_iperf2
+
+CONFIG_kernel-module-mqnic
+CONFIG_mqnic-tools

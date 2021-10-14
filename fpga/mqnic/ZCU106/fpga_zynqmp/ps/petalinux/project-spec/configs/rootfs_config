@@ -4178,6 +4178,8 @@ CONFIG_auto-login=y
 #
 CONFIG_iperf2=y
 CONFIG_iputils-ping=y
+CONFIG_kernel-module-mqnic=y
+CONFIG_mqnic-tools=y
 
 #
 # PetaLinux RootFS Settings

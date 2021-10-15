@@ -25,6 +25,7 @@ THE SOFTWARE.
 // Language: Verilog 2001
 
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * LED shift register driver
@@ -133,3 +134,4 @@ always @(posedge clk) begin
 end
 
 endmodule
+`resetall

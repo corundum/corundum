@@ -34,6 +34,7 @@ either expressed or implied, of The Regents of the University of California.
 // Language: Verilog 2001
 
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * Application block
@@ -587,3 +588,4 @@ assign m_axis_stat_tid = 0;
 assign m_axis_stat_tvalid = 1'b0;
 
 endmodule
+`resetall

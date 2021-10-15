@@ -25,6 +25,7 @@ THE SOFTWARE.
 // Language: Verilog 2001
 
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * si5324_i2c_init
@@ -492,3 +493,4 @@ always @(posedge clk) begin
 end
 
 endmodule
+`resetall

@@ -34,6 +34,7 @@ either expressed or implied, of The Regents of the University of California.
 // Language: Verilog 2001
 
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * TDMA Transmit scheduler control module
@@ -575,3 +576,4 @@ always @(posedge clk) begin
 end
 
 endmodule
+`resetall

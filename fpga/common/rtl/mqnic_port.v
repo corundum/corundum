@@ -34,6 +34,7 @@ either expressed or implied, of The Regents of the University of California.
 // Language: Verilog 2001
 
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * NIC Port
@@ -1784,3 +1785,4 @@ dma_client_axis_sink_inst (
 );
 
 endmodule
+`resetall

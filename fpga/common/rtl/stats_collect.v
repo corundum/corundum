@@ -25,6 +25,7 @@ THE SOFTWARE.
 // Language: Verilog 2001
 
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * Statistics collector
@@ -228,3 +229,4 @@ always @(posedge clk) begin
 end
 
 endmodule
+`resetall

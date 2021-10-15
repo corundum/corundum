@@ -1884,7 +1884,7 @@ core_inst (
     .qsfp1_modsell(qsfp1_modsell),
     .qsfp1_resetl(qsfp1_resetl),
     .qsfp1_intl(qsfp1_intl_int),
-    .qsfp1_lpmode(qsfp1_lpmode_int),
+    .qsfp1_lpmode(qsfp1_lpmode),
 
     .qsfp2_tx_clk(qsfp2_tx_clk_int),
     .qsfp2_tx_rst(qsfp2_tx_rst_int),
@@ -1910,7 +1910,7 @@ core_inst (
     .qsfp2_modsell(qsfp2_modsell),
     .qsfp2_resetl(qsfp2_resetl),
     .qsfp2_intl(qsfp2_intl_int),
-    .qsfp2_lpmode(qsfp2_lpmode_int),
+    .qsfp2_lpmode(qsfp2_lpmode),
 
     /*
      * QSPI flash

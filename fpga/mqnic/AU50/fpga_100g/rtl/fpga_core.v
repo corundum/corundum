@@ -241,6 +241,7 @@ module fpga_core #
     output wire [2:0]                         cfg_fc_sel,
 
     input  wire [3:0]                         cfg_interrupt_msi_enable,
+    input  wire [7:0]                         cfg_interrupt_msi_vf_enable,
     input  wire [11:0]                        cfg_interrupt_msi_mmenable,
     input  wire                               cfg_interrupt_msi_mask_update,
     input  wire [31:0]                        cfg_interrupt_msi_data,

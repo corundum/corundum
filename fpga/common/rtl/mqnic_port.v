@@ -1268,7 +1268,7 @@ if (RX_HASH_ENABLE) begin
 end else begin
 
     assign rx_fifo_hash = 32'd0;
-    assign rx_fifo_type = 4'd0;
+    assign rx_fifo_hash_type = 4'd0;
     assign rx_fifo_hash_valid = 1'b0;
 
 end

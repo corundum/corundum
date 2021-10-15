@@ -3,3 +3,6 @@
 
 CONFIG_gpio-demo
 CONFIG_peekpoke
+
+CONFIG_iputils-ping
+CONFIG_iperf2

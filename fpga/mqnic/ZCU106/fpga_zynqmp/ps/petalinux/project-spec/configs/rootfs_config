@@ -190,7 +190,7 @@ CONFIG_haveged=y
 #
 # iproute2 
 #
-# CONFIG_iproute2 is not set
+CONFIG_iproute2=y
 # CONFIG_iproute2-ss is not set
 # CONFIG_iproute2-dev is not set
 # CONFIG_iproute2-dbg is not set
@@ -205,7 +205,7 @@ CONFIG_haveged=y
 #
 # kmod 
 #
-# CONFIG_kmod is not set
+CONFIG_kmod=y
 # CONFIG_kmod-bash-completion is not set
 # CONFIG_libkmod is not set
 # CONFIG_kmod-dbg is not set
@@ -506,7 +506,7 @@ CONFIG_can-utils=y
 #
 # ethtool 
 #
-# CONFIG_ethtool is not set
+CONFIG_ethtool=y
 # CONFIG_ethtool-dev is not set
 # CONFIG_ethtool-dbg is not set
 
@@ -2614,7 +2614,7 @@ CONFIG_udev-extraconf=y
 #
 # net-tools 
 #
-# CONFIG_net-tools is not set
+CONFIG_net-tools=y
 # CONFIG_net-tools-dbg is not set
 # CONFIG_net-tools-dev is not set
 
@@ -3556,7 +3556,7 @@ CONFIG_bridge-utils=y
 #
 # tcpdump 
 #
-# CONFIG_tcpdump is not set
+CONFIG_tcpdump=y
 # CONFIG_tcpdump-dev is not set
 # CONFIG_tcpdump-dbg is not set
 
@@ -4176,6 +4176,8 @@ CONFIG_auto-login=y
 #
 # user packages 
 #
+CONFIG_iperf2=y
+CONFIG_iputils-ping=y
 
 #
 # PetaLinux RootFS Settings

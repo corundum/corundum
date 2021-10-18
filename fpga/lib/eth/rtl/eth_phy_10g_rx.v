@@ -58,12 +58,14 @@ module eth_phy_10g_rx #
     input  wire [DATA_WIDTH-1:0] serdes_rx_data,
     input  wire [HDR_WIDTH-1:0]  serdes_rx_hdr,
     output wire                  serdes_rx_bitslip,
+    output wire                  serdes_rx_reset_req,
 
     /*
      * Status
      */
     output wire [6:0]            rx_error_count,
     output wire                  rx_bad_block,
+    output wire                  rx_sequence_error,
     output wire                  rx_block_lock,
     output wire                  rx_high_ber,
 
@@ -113,6 +115,9 @@ eth_phy_10g_rx_if_inst (
     .serdes_rx_data(serdes_rx_data),
     .serdes_rx_hdr(serdes_rx_hdr),
     .serdes_rx_bitslip(serdes_rx_bitslip),
+    .serdes_rx_reset_req(serdes_rx_reset_req),
+    .rx_bad_block(rx_bad_block),
+    .rx_sequence_error(rx_sequence_error),
     .rx_error_count(rx_error_count),
     .rx_block_lock(rx_block_lock),
     .rx_high_ber(rx_high_ber),
@@ -131,7 +136,8 @@ xgmii_baser_dec_inst (
     .encoded_rx_hdr(encoded_rx_hdr),
     .xgmii_rxd(xgmii_rxd),
     .xgmii_rxc(xgmii_rxc),
-    .rx_bad_block(rx_bad_block)
+    .rx_bad_block(rx_bad_block),
+    .rx_sequence_error(rx_sequence_error)
 );
 
 endmodule

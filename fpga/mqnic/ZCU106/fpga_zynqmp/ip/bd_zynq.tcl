@@ -125,7 +125,8 @@ if { $bCheckIPs == 1 } {
    set list_check_ips "\ 
 xilinx.com:ip:axi_protocol_converter:2.1\
 xilinx.com:ip:proc_sys_reset:5.0\
-xilinx.com:ip:xlslice:1.0\
+xilinx.com:ip:xlconcat:2.1\
+xilinx.com:ip:xlconstant:1.1\
 xilinx.com:ip:zynq_ultra_ps_e:3.3\
 "
 
@@ -255,9 +256,9 @@ proc create_root_design { parentCell } {
    CONFIG.ASSOCIATED_BUSIF {s_axi_mm:m_axil_0:m_axil_1} \
    CONFIG.FREQ_HZ {249975021} \
  ] $clk
-  set irq [ create_bd_port -dir I -from 15 -to 0 -type intr irq ]
+  set irq [ create_bd_port -dir I -from 3 -to 0 -type intr irq ]
   set_property -dict [ list \
-   CONFIG.PortWidth {16} \
+   CONFIG.PortWidth {4} \
  ] $irq
   set rst [ create_bd_port -dir O -from 0 -to 0 -type rst rst ]
   set_property -dict [ list \
@@ -281,23 +282,15 @@ proc create_root_design { parentCell } {
   # Create instance: proc_sys_reset, and set properties
   set proc_sys_reset [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset:5.0 proc_sys_reset ]
 
-  # Create instance: xlslice_15downto8, and set properties
-  set xlslice_15downto8 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_15downto8 ]
-  set_property -dict [ list \
-   CONFIG.DIN_FROM {15} \
-   CONFIG.DIN_TO {8} \
-   CONFIG.DIN_WIDTH {16} \
-   CONFIG.DOUT_WIDTH {8} \
- ] $xlslice_15downto8
+  # Create instance: xlconcat_0, and set properties
+  set xlconcat_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconcat:2.1 xlconcat_0 ]
 
-  # Create instance: xlslice_7downto0, and set properties
-  set xlslice_7downto0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice:1.0 xlslice_7downto0 ]
+  # Create instance: xlconstant_0, and set properties
+  set xlconstant_0 [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlconstant:1.1 xlconstant_0 ]
   set_property -dict [ list \
-   CONFIG.DIN_FROM {7} \
-   CONFIG.DIN_TO {0} \
-   CONFIG.DIN_WIDTH {16} \
-   CONFIG.DOUT_WIDTH {8} \
- ] $xlslice_7downto0
+   CONFIG.CONST_VAL {0} \
+   CONFIG.CONST_WIDTH {4} \
+ ] $xlconstant_0
 
   # Create instance: zynq_ultra_ps, and set properties
   set zynq_ultra_ps [ create_bd_cell -type ip -vlnv xilinx.com:ip:zynq_ultra_ps_e:3.3 zynq_ultra_ps ]
@@ -982,7 +975,7 @@ Port;FD4A0000;FD4AFFFF;0|FPD;DPDMA;FD4C0000;FD4CFFFF;0|FPD;DDR_XMPU5_CFG;FD05000
    CONFIG.PSU__USB__RESET__MODE {<Select>} \
    CONFIG.PSU__USB__RESET__POLARITY {<Select>} \
    CONFIG.PSU__USE__IRQ0 {1} \
-   CONFIG.PSU__USE__IRQ1 {1} \
+   CONFIG.PSU__USE__IRQ1 {0} \
    CONFIG.PSU__USE__M_AXI_GP0 {1} \
    CONFIG.PSU__USE__M_AXI_GP1 {1} \
    CONFIG.PSU__USE__M_AXI_GP2 {0} \
@@ -997,11 +990,11 @@ Port;FD4A0000;FD4AFFFF;0|FPD;DPDMA;FD4C0000;FD4CFFFF;0|FPD;DDR_XMPU5_CFG;FD05000
   connect_bd_intf_net -intf_net zynq_ultra_ps_M_AXI_HPM1_FPD [get_bd_intf_pins axi_protocol_convert_1/S_AXI] [get_bd_intf_pins zynq_ultra_ps/M_AXI_HPM1_FPD]
 
   # Create port connections
-  connect_bd_net -net irq_1 [get_bd_ports irq] [get_bd_pins xlslice_15downto8/Din] [get_bd_pins xlslice_7downto0/Din]
+  connect_bd_net -net irq_1 [get_bd_ports irq] [get_bd_pins xlconcat_0/In0]
   connect_bd_net -net proc_sys_reset_peripheral_aresetn [get_bd_pins axi_protocol_convert_0/aresetn] [get_bd_pins axi_protocol_convert_1/aresetn] [get_bd_pins proc_sys_reset/peripheral_aresetn]
   connect_bd_net -net proc_sys_reset_peripheral_reset [get_bd_ports rst] [get_bd_pins proc_sys_reset/peripheral_reset]
-  connect_bd_net -net xlslice_15to8_Dout [get_bd_pins xlslice_15downto8/Dout] [get_bd_pins zynq_ultra_ps/pl_ps_irq1]
-  connect_bd_net -net xlslice_7to0_Dout [get_bd_pins xlslice_7downto0/Dout] [get_bd_pins zynq_ultra_ps/pl_ps_irq0]
+  connect_bd_net -net xlconcat_0_dout [get_bd_pins xlconcat_0/dout] [get_bd_pins zynq_ultra_ps/pl_ps_irq0]
+  connect_bd_net -net xlconstant_0_dout [get_bd_pins xlconcat_0/In1] [get_bd_pins xlconstant_0/dout]
   connect_bd_net -net zynq_ultra_ps_pl_clk1 [get_bd_ports clk] [get_bd_pins axi_protocol_convert_0/aclk] [get_bd_pins axi_protocol_convert_1/aclk] [get_bd_pins proc_sys_reset/slowest_sync_clk] [get_bd_pins zynq_ultra_ps/maxihpm0_fpd_aclk] [get_bd_pins zynq_ultra_ps/maxihpm1_fpd_aclk] [get_bd_pins zynq_ultra_ps/pl_clk0] [get_bd_pins zynq_ultra_ps/saxihpc0_fpd_aclk]
   connect_bd_net -net zynq_ultra_ps_pl_resetn0 [get_bd_pins proc_sys_reset/ext_reset_in] [get_bd_pins zynq_ultra_ps/pl_resetn0]
 

@@ -67,7 +67,9 @@ THE SOFTWARE.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * AXI4 lite {{m}}x{{n}} interconnect (wrapper)
@@ -217,6 +219,8 @@ axil_interconnect_inst (
 );
 
 endmodule
+
+`resetall
 
 """)
 

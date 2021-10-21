@@ -33,7 +33,9 @@ either expressed or implied, of The Regents of the University of California.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * TX scheduler block (round-robin)
@@ -275,3 +277,5 @@ tx_scheduler_inst (
 );
 
 endmodule
+
+`resetall

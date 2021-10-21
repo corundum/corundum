@@ -155,10 +155,8 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 #endif
 
 	mqnic = devm_kzalloc(dev, sizeof(*mqnic), GFP_KERNEL);
-	if (!mqnic) {
-		dev_err(dev, "Failed to allocate memory");
+	if (!mqnic)
 		return -ENOMEM;
-	}
 
 	mqnic->dev = dev;
 	mqnic->pdev = pdev;

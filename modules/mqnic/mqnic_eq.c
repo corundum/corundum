@@ -41,10 +41,8 @@ int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_pt
 	int ret;
 
 	ring = kzalloc(sizeof(*ring), GFP_KERNEL);
-	if (!ring) {
-		dev_err(dev, "Failed to allocate EQ ring");
+	if (!ring)
 		return -ENOMEM;
-	}
 
 	ring->ndev = priv->ndev;
 
@@ -56,7 +54,6 @@ int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_pt
 	ring->buf = dma_alloc_coherent(dev, ring->buf_size,
 			&ring->buf_dma_addr, GFP_KERNEL);
 	if (!ring->buf) {
-		dev_err(dev, "Failed to allocate EQ ring DMA buffer");
 		ret = -ENOMEM;
 		goto fail_ring;
 	}

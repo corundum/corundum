@@ -41,10 +41,8 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	int ret;
 
 	ring = kzalloc(sizeof(*ring), GFP_KERNEL);
-	if (!ring) {
-		dev_err(dev, "Failed to allocate RX ring");
+	if (!ring)
 		return -ENOMEM;
-	}
 
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
@@ -56,7 +54,6 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 
 	ring->rx_info = kvzalloc(sizeof(*ring->rx_info) * ring->size, GFP_KERNEL);
 	if (!ring->rx_info) {
-		dev_err(dev, "Failed to allocate rx_info");
 		ret = -ENOMEM;
 		goto fail_ring;
 	}
@@ -65,7 +62,6 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	ring->buf = dma_alloc_coherent(dev, ring->buf_size,
 			&ring->buf_dma_addr, GFP_KERNEL);
 	if (!ring->buf) {
-		dev_err(dev, "Failed to allocate RX ring DMA buffer");
 		ret = -ENOMEM;
 		goto fail_info;
 	}

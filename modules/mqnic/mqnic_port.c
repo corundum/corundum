@@ -40,10 +40,8 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr,
 	struct mqnic_port *port;
 
 	port = kzalloc(sizeof(*port), GFP_KERNEL);
-	if (!port) {
-		dev_err(dev, "Failed to allocate port");
+	if (!port)
 		return -ENOMEM;
-	}
 
 	*port_ptr = port;
 

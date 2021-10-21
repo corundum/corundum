@@ -7,6 +7,7 @@ FPGA_ARCH = kintexuplus
 # Files for synthesis
 SYN_FILES = rtl/fpga.v
 SYN_FILES += rtl/fpga_core.v
+SYN_FILES += rtl/eth_xcvr_phy_wrapper.v
 SYN_FILES += rtl/bmc_spi.v
 SYN_FILES += rtl/led_sreg_driver.v
 SYN_FILES += rtl/sync_signal.v
@@ -118,7 +119,7 @@ XDC_FILES += ../../../common/syn/vivado/tdma_ber_ch.tcl
 
 # IP
 IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl
-IP_TCL_FILES += ip/gtwizard_ultrascale_0.tcl
+IP_TCL_FILES += ip/eth_xcvr_gt.tcl
 
 # Configuration
 CONFIG_TCL_FILES = ./config.tcl

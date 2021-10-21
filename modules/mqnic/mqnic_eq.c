@@ -34,7 +34,7 @@ either expressed or implied, of The Regents of the University of California.
 #include "mqnic.h"
 
 int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_ptr,
-                         int size, int stride, int index, u8 __iomem *hw_addr)
+		int size, int stride, int index, u8 __iomem *hw_addr)
 {
 	struct device *dev = priv->dev;
 	struct mqnic_eq_ring *ring;
@@ -54,7 +54,7 @@ int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_pt
 
 	ring->buf_size = ring->size * ring->stride;
 	ring->buf = dma_alloc_coherent(dev, ring->buf_size,
-	                               &ring->buf_dma_addr, GFP_KERNEL);
+			&ring->buf_dma_addr, GFP_KERNEL);
 	if (!ring->buf) {
 		dev_err(dev, "Failed to allocate EQ ring DMA buffer");
 		ret = -ENOMEM;
@@ -78,9 +78,9 @@ int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_pt
 	iowrite32(0, ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
 	// set pointers
 	iowrite32(ring->head_ptr & ring->hw_ptr_mask,
-	          ring->hw_addr + MQNIC_EVENT_QUEUE_HEAD_PTR_REG);
+			ring->hw_addr + MQNIC_EVENT_QUEUE_HEAD_PTR_REG);
 	iowrite32(ring->tail_ptr & ring->hw_ptr_mask,
-	          ring->hw_addr + MQNIC_EVENT_QUEUE_TAIL_PTR_REG);
+			ring->hw_addr + MQNIC_EVENT_QUEUE_TAIL_PTR_REG);
 	// set size
 	iowrite32(ilog2(ring->size), ring->hw_addr + MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG);
 
@@ -106,7 +106,7 @@ void mqnic_destroy_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_
 }
 
 int mqnic_activate_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring *ring,
-                           int int_index)
+		int int_index)
 {
 	ring->int_index = int_index;
 
@@ -119,12 +119,12 @@ int mqnic_activate_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring *ring,
 	iowrite32(int_index, ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
 	// set pointers
 	iowrite32(ring->head_ptr & ring->hw_ptr_mask,
-	          ring->hw_addr + MQNIC_EVENT_QUEUE_HEAD_PTR_REG);
+			ring->hw_addr + MQNIC_EVENT_QUEUE_HEAD_PTR_REG);
 	iowrite32(ring->tail_ptr & ring->hw_ptr_mask,
-	          ring->hw_addr + MQNIC_EVENT_QUEUE_TAIL_PTR_REG);
+			ring->hw_addr + MQNIC_EVENT_QUEUE_TAIL_PTR_REG);
 	// set size and activate queue
 	iowrite32(ilog2(ring->size) | MQNIC_EVENT_QUEUE_ACTIVE_MASK,
-	          ring->hw_addr + MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG);
+			ring->hw_addr + MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG);
 
 	return 0;
 }
@@ -160,13 +160,14 @@ void mqnic_eq_write_tail_ptr(struct mqnic_eq_ring *ring)
 void mqnic_arm_eq(struct mqnic_eq_ring *ring)
 {
 	iowrite32(ring->int_index | MQNIC_EVENT_QUEUE_ARM_MASK,
-	          ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
+			ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
 }
 
 void mqnic_process_eq(struct net_device *ndev, struct mqnic_eq_ring *eq_ring)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	struct mqnic_event *event;
+	struct mqnic_cq_ring *cq_ring;
 	u32 eq_index;
 	u32 eq_tail_ptr;
 	int done = 0;
@@ -187,13 +188,12 @@ void mqnic_process_eq(struct net_device *ndev, struct mqnic_eq_ring *eq_ring)
 			// transmit completion event
 			if (unlikely(le16_to_cpu(event->source) > priv->tx_cpl_queue_count)) {
 				dev_err(priv->dev, "mqnic_process_eq on port %d: unknown event source %d (index %d, type %d)",
-				        priv->port, le16_to_cpu(event->source), eq_index,
-				        le16_to_cpu(event->type));
+						priv->port, le16_to_cpu(event->source), eq_index,
+						le16_to_cpu(event->type));
 				print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
-				               event, MQNIC_EVENT_SIZE, true);
+						event, MQNIC_EVENT_SIZE, true);
 			} else {
-				struct mqnic_cq_ring *cq_ring =
-				    priv->tx_cpl_ring[le16_to_cpu(event->source)];
+				cq_ring = priv->tx_cpl_ring[le16_to_cpu(event->source)];
 				if (likely(cq_ring && cq_ring->handler))
 					cq_ring->handler(cq_ring);
 			}
@@ -201,22 +201,21 @@ void mqnic_process_eq(struct net_device *ndev, struct mqnic_eq_ring *eq_ring)
 			// receive completion event
 			if (unlikely(le16_to_cpu(event->source) > priv->rx_cpl_queue_count)) {
 				dev_err(priv->dev, "mqnic_process_eq on port %d: unknown event source %d (index %d, type %d)",
-				        priv->port, le16_to_cpu(event->source), eq_index,
-				        le16_to_cpu(event->type));
+						priv->port, le16_to_cpu(event->source), eq_index,
+						le16_to_cpu(event->type));
 				print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
-				               event, MQNIC_EVENT_SIZE, true);
+						event, MQNIC_EVENT_SIZE, true);
 			} else {
-				struct mqnic_cq_ring *cq_ring =
-				    priv->rx_cpl_ring[le16_to_cpu(event->source)];
+				cq_ring = priv->rx_cpl_ring[le16_to_cpu(event->source)];
 				if (likely(cq_ring && cq_ring->handler))
 					cq_ring->handler(cq_ring);
 			}
 		} else {
 			dev_err(priv->dev, "mqnic_process_eq on port %d: unknown event type %d (index %d, source %d)",
-			        priv->port, le16_to_cpu(event->type), eq_index,
-			        le16_to_cpu(event->source));
+					priv->port, le16_to_cpu(event->type), eq_index,
+					le16_to_cpu(event->source));
 			print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
-			               event, MQNIC_EVENT_SIZE, true);
+					event, MQNIC_EVENT_SIZE, true);
 		}
 
 		done++;

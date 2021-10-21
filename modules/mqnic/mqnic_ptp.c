@@ -35,7 +35,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <linux/version.h>
 
 ktime_t mqnic_read_cpl_ts(struct mqnic_dev *mdev, struct mqnic_ring *ring,
-                          const struct mqnic_cpl *cpl)
+		const struct mqnic_cpl *cpl)
 {
 	u64 ts_s = le16_to_cpu(cpl->ts_s);
 	u32 ts_ns = le32_to_cpu(cpl->ts_ns);
@@ -101,7 +101,7 @@ static int mqnic_phc_gettime(struct ptp_clock_info *ptp, struct timespec64 *ts)
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
 static int mqnic_phc_gettimex(struct ptp_clock_info *ptp, struct timespec64 *ts,
-                              struct ptp_system_timestamp *sts)
+		struct ptp_system_timestamp *sts)
 {
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
 

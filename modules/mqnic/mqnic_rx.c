@@ -34,7 +34,7 @@ either expressed or implied, of The Regents of the University of California.
 #include "mqnic.h"
 
 int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
-                         int size, int stride, int index, u8 __iomem *hw_addr)
+		int size, int stride, int index, u8 __iomem *hw_addr)
 {
 	struct device *dev = priv->dev;
 	struct mqnic_ring *ring;
@@ -63,7 +63,7 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 
 	ring->buf_size = ring->size * ring->stride;
 	ring->buf = dma_alloc_coherent(dev, ring->buf_size,
-	                               &ring->buf_dma_addr, GFP_KERNEL);
+			&ring->buf_dma_addr, GFP_KERNEL);
 	if (!ring->buf) {
 		dev_err(dev, "Failed to allocate RX ring DMA buffer");
 		ret = -ENOMEM;
@@ -91,7 +91,7 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_QUEUE_TAIL_PTR_REG);
 	// set size
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
-	          ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
 	*ring_ptr = ring;
 	return 0;
@@ -122,7 +122,7 @@ void mqnic_destroy_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr
 }
 
 int mqnic_activate_rx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring,
-                           int cpl_index)
+		int cpl_index)
 {
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -136,7 +136,7 @@ int mqnic_activate_rx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_QUEUE_TAIL_PTR_REG);
 	// set size and activate queue
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK,
-	          ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
 	mqnic_refill_rx_buffers(priv, ring);
 
@@ -147,7 +147,7 @@ void mqnic_deactivate_rx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring)
 {
 	// deactivate queue
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
-	          ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 }
 
 bool mqnic_is_rx_ring_empty(const struct mqnic_ring *ring)
@@ -171,13 +171,13 @@ void mqnic_rx_write_head_ptr(struct mqnic_ring *ring)
 }
 
 void mqnic_free_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
-                        int index)
+		int index)
 {
 	struct mqnic_rx_info *rx_info = &ring->rx_info[index];
 	struct page *page = rx_info->page;
 
 	dma_unmap_page(priv->dev, dma_unmap_addr(rx_info, dma_addr),
-	               dma_unmap_len(rx_info, len), PCI_DMA_FROMDEVICE);
+			dma_unmap_len(rx_info, len), PCI_DMA_FROMDEVICE);
 	rx_info->dma_addr = 0;
 	__free_pages(page, rx_info->page_order);
 	rx_info->page = NULL;
@@ -203,7 +203,7 @@ int mqnic_free_rx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring)
 }
 
 int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
-                          int index)
+		int index)
 {
 	struct mqnic_rx_info *rx_info = &ring->rx_info[index];
 	struct mqnic_desc *rx_desc = (struct mqnic_desc *)(ring->buf + index * ring->stride);
@@ -214,14 +214,14 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
 
 	if (unlikely(page)) {
 		dev_err(priv->dev, "mqnic_prepare_rx_desc skb not yet processed on port %d",
-		        priv->port);
+				priv->port);
 		return -1;
 	}
 
 	page = dev_alloc_pages(page_order);
 	if (unlikely(!page)) {
 		dev_err(priv->dev, "mqnic_prepare_rx_desc failed to allocate memory on port %d",
-		        priv->port);
+				priv->port);
 		return -1;
 	}
 
@@ -230,7 +230,7 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
 
 	if (unlikely(dma_mapping_error(priv->dev, dma_addr))) {
 		dev_err(priv->dev, "mqnic_prepare_rx_desc DMA mapping failed on port %d",
-		        priv->port);
+				priv->port);
 		__free_pages(page, page_order);
 		return -1;
 	}
@@ -268,7 +268,7 @@ void mqnic_refill_rx_buffers(struct mqnic_priv *priv, struct mqnic_ring *ring)
 }
 
 int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
-                        int napi_budget)
+		int napi_budget)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	struct mqnic_ring *ring = priv->rx_ring[cq_ring->ring_index];
@@ -304,16 +304,16 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 
 		if (unlikely(!page)) {
 			dev_err(priv->dev, "mqnic_process_rx_cq ring %d null page at index %d",
-			        cq_ring->ring_index, ring_index);
+					cq_ring->ring_index, ring_index);
 			print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
-			               cpl, MQNIC_CPL_SIZE, true);
+					cpl, MQNIC_CPL_SIZE, true);
 			break;
 		}
 
 		skb = napi_get_frags(&cq_ring->napi);
 		if (unlikely(!skb)) {
 			dev_err(priv->dev, "mqnic_process_rx_cq ring %d failed to allocate skb",
-			        cq_ring->ring_index);
+					cq_ring->ring_index);
 			break;
 		}
 
@@ -331,13 +331,13 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 
 		// unmap
 		dma_unmap_page(priv->dev, dma_unmap_addr(rx_info, dma_addr),
-		               dma_unmap_len(rx_info, len), PCI_DMA_FROMDEVICE);
+				dma_unmap_len(rx_info, len), PCI_DMA_FROMDEVICE);
 		rx_info->dma_addr = 0;
 
 		len = min_t(u32, le16_to_cpu(cpl->len), rx_info->len);
 
 		dma_sync_single_range_for_cpu(priv->dev, rx_info->dma_addr, rx_info->page_offset,
-		                              rx_info->len, PCI_DMA_FROMDEVICE);
+				rx_info->len, PCI_DMA_FROMDEVICE);
 
 		__skb_fill_page_desc(skb, 0, page, rx_info->page_offset, len);
 		rx_info->page = NULL;

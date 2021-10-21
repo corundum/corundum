@@ -50,7 +50,7 @@ static void mqnic_get_drvinfo(struct net_device *ndev,
 	strlcpy(drvinfo->version, DRIVER_VERSION, sizeof(drvinfo->version));
 
 	snprintf(drvinfo->fw_version, sizeof(drvinfo->fw_version), "%d.%d",
-	         mdev->fw_ver >> 16, mdev->fw_ver & 0xffff);
+			mdev->fw_ver >> 16, mdev->fw_ver & 0xffff);
 	strlcpy(drvinfo->bus_info, dev_name(mdev->dev), sizeof(drvinfo->bus_info));
 }
 
@@ -79,7 +79,7 @@ static int mqnic_get_ts_info(struct net_device *ndev,
 }
 
 static int mqnic_read_module_eeprom(struct net_device *ndev,
-		u16 offset, u16 len, u8 * data)
+		u16 offset, u16 len, u8 *data)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 
@@ -138,7 +138,7 @@ static int mqnic_get_module_info(struct net_device *ndev,
 }
 
 static int mqnic_get_module_eeprom(struct net_device *ndev,
-		struct ethtool_eeprom *eeprom, u8 * data)
+		struct ethtool_eeprom *eeprom, u8 *data)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	int i = 0;
@@ -151,7 +151,7 @@ static int mqnic_get_module_eeprom(struct net_device *ndev,
 
 	while (i < eeprom->len) {
 		read_len = mqnic_read_module_eeprom(ndev, eeprom->offset + i,
-		                                    eeprom->len - i, data + i);
+				eeprom->len - i, data + i);
 
 		if (read_len == 0)
 			return -EIO;

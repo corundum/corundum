@@ -95,7 +95,7 @@ struct mqnic_i2c_bus *mqnic_i2c_bus_create(struct mqnic_dev *mqnic, u8 __iomem *
 	// bit-bang algorithm setup
 	algo = &bus->algo;
 	algo->udelay = 5;
-	algo->timeout = usecs_to_jiffies(2000);;
+	algo->timeout = usecs_to_jiffies(2000);
 	algo->setsda = mqnic_i2c_set_sda;
 	algo->setscl = mqnic_i2c_set_scl;
 	algo->getsda = mqnic_i2c_get_sda;
@@ -108,7 +108,7 @@ struct mqnic_i2c_bus *mqnic_i2c_bus_create(struct mqnic_dev *mqnic, u8 __iomem *
 	adapter->algo_data = algo;
 	adapter->dev.parent = mqnic->dev;
 	snprintf(adapter->name, sizeof(adapter->name), "%s I2C%d", mqnic->name,
-	         mqnic->i2c_adapter_count);
+			mqnic->i2c_adapter_count);
 
 	if (i2c_bit_add_bus(adapter)) {
 		dev_err(mqnic->dev, "Failed to register I2C adapter");

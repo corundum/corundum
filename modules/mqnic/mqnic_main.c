@@ -110,6 +110,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 {
 	int ret = 0;
 	struct mqnic_dev *mqnic;
+	struct mqnic_priv *priv;
 	struct device *dev = &pdev->dev;
 
 	int k = 0;
@@ -119,30 +120,32 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	dev_info(dev, " Device: 0x%04x", pdev->device);
 	dev_info(dev, " Class: 0x%06x", pdev->class);
 	dev_info(dev, " PCI ID: %04x:%02x:%02x.%d", pci_domain_nr(pdev->bus),
-	         pdev->bus->number, PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));
+			pdev->bus->number, PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));
 	if (pdev->pcie_cap) {
 		u16 devctl;
 		u32 lnkcap;
 		u16 lnksta;
+
 		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_DEVCTL, &devctl);
 		pci_read_config_dword(pdev, pdev->pcie_cap + PCI_EXP_LNKCAP, &lnkcap);
 		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_LNKSTA, &lnksta);
+
 		dev_info(dev, " Max payload size: %d bytes",
-		         128 << ((devctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
+				128 << ((devctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
 		dev_info(dev, " Max read request size: %d bytes",
-		         128 << ((devctl & PCI_EXP_DEVCTL_READRQ) >> 12));
+				128 << ((devctl & PCI_EXP_DEVCTL_READRQ) >> 12));
 		dev_info(dev, " Link capability: gen %d x%d",
-		         lnkcap & PCI_EXP_LNKCAP_SLS, (lnkcap & PCI_EXP_LNKCAP_MLW) >> 4);
+				lnkcap & PCI_EXP_LNKCAP_SLS, (lnkcap & PCI_EXP_LNKCAP_MLW) >> 4);
 		dev_info(dev, " Link status: gen %d x%d",
-		         lnksta & PCI_EXP_LNKSTA_CLS, (lnksta & PCI_EXP_LNKSTA_NLW) >> 4);
+				lnksta & PCI_EXP_LNKSTA_CLS, (lnksta & PCI_EXP_LNKSTA_NLW) >> 4);
 		dev_info(dev, " Relaxed ordering: %s",
-		         devctl & PCI_EXP_DEVCTL_RELAX_EN ? "enabled" : "disabled");
+				devctl & PCI_EXP_DEVCTL_RELAX_EN ? "enabled" : "disabled");
 		dev_info(dev, " Phantom functions: %s",
-		         devctl & PCI_EXP_DEVCTL_PHANTOM ? "enabled" : "disabled");
+				devctl & PCI_EXP_DEVCTL_PHANTOM ? "enabled" : "disabled");
 		dev_info(dev, " Extended tags: %s",
-		         devctl & PCI_EXP_DEVCTL_EXT_TAG ? "enabled" : "disabled");
+				devctl & PCI_EXP_DEVCTL_EXT_TAG ? "enabled" : "disabled");
 		dev_info(dev, " No snoop: %s",
-		         devctl & PCI_EXP_DEVCTL_NOSNOOP_EN ? "enabled" : "disabled");
+				devctl & PCI_EXP_DEVCTL_NOSNOOP_EN ? "enabled" : "disabled");
 	}
 #ifdef CONFIG_NUMA
 	dev_info(dev, " NUMA node: %d", pdev->dev.numa_node);
@@ -171,7 +174,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 
 	// Disable ASPM
 	pci_disable_link_state(pdev, PCIE_LINK_STATE_L0S |
-	                       PCIE_LINK_STATE_L1 | PCIE_LINK_STATE_CLKPM);
+			PCIE_LINK_STATE_L1 | PCIE_LINK_STATE_CLKPM);
 
 	// Enable device
 	ret = pci_enable_device_mem(pdev);
@@ -273,7 +276,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	if (mqnic->if_count * mqnic->if_stride > mqnic->hw_regs_size) {
 		ret = -EIO;
 		dev_err(dev, "Invalid BAR configuration (%d IF * 0x%x > 0x%llx)",
-		        mqnic->if_count, mqnic->if_stride, mqnic->hw_regs_size);
+				mqnic->if_count, mqnic->if_stride, mqnic->hw_regs_size);
 		goto fail_map_bars;
 	}
 
@@ -288,7 +291,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	// Set up interrupts
 	for (k = 0; k < mqnic->irq_count; k++) {
 		ret = pci_request_irq(pdev, k, mqnic_interrupt, NULL,
-		                      mqnic, "%s-%d", mqnic->name, k);
+				mqnic, "%s-%d", mqnic->name, k);
 		if (ret < 0) {
 			dev_err(dev, "Failed to request IRQ");
 			goto fail_irq;
@@ -326,7 +329,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 
 	// pass module I2C clients to net_device instances
 	for (k = 0; k < mqnic->if_count; k++) {
-		struct mqnic_priv *priv = netdev_priv(mqnic->ndev[k]);
+		priv = netdev_priv(mqnic->ndev[k]);
 		priv->mod_i2c_client = mqnic->mod_i2c_client[k];
 	}
 

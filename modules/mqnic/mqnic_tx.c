@@ -35,7 +35,7 @@ either expressed or implied, of The Regents of the University of California.
 #include "mqnic.h"
 
 int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
-                         int size, int stride, int index, u8 __iomem *hw_addr)
+		int size, int stride, int index, u8 __iomem *hw_addr)
 {
 	struct device *dev = priv->dev;
 	struct mqnic_ring *ring;
@@ -65,7 +65,7 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 
 	ring->buf_size = ring->size * ring->stride;
 	ring->buf = dma_alloc_coherent(dev, ring->buf_size,
-	                               &ring->buf_dma_addr, GFP_KERNEL);
+			&ring->buf_dma_addr, GFP_KERNEL);
 	if (!ring->buf) {
 		dev_err(dev, "Failed to allocate TX ring DMA buffer");
 		ret = -ENOMEM;
@@ -93,7 +93,7 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_QUEUE_TAIL_PTR_REG);
 	// set size
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
-	          ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
 	*ring_ptr = ring;
 	return 0;
@@ -124,7 +124,7 @@ void mqnic_destroy_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr
 }
 
 int mqnic_activate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring,
-                           int cpl_index)
+		int cpl_index)
 {
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -138,7 +138,7 @@ int mqnic_activate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_QUEUE_TAIL_PTR_REG);
 	// set size and activate queue
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK,
-	          ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
 	return 0;
 }
@@ -147,7 +147,7 @@ void mqnic_deactivate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring)
 {
 	// deactivate queue
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
-	          ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 }
 
 bool mqnic_is_tx_ring_empty(const struct mqnic_ring *ring)
@@ -171,7 +171,7 @@ void mqnic_tx_write_head_ptr(struct mqnic_ring *ring)
 }
 
 void mqnic_free_tx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
-                        int index, int napi_budget)
+		int index, int napi_budget)
 {
 	struct mqnic_tx_info *tx_info = &ring->tx_info[index];
 	struct sk_buff *skb = tx_info->skb;
@@ -180,13 +180,13 @@ void mqnic_free_tx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	prefetchw(&skb->users);
 
 	dma_unmap_single(priv->dev, dma_unmap_addr(tx_info, dma_addr),
-	                 dma_unmap_len(tx_info, len), PCI_DMA_TODEVICE);
+			dma_unmap_len(tx_info, len), PCI_DMA_TODEVICE);
 	dma_unmap_addr_set(tx_info, dma_addr, 0);
 
 	// unmap frags
 	for (i = 0; i < tx_info->frag_count; i++)
 		dma_unmap_page(priv->dev, tx_info->frags[i].dma_addr,
-		               tx_info->frags[i].len, PCI_DMA_TODEVICE);
+				tx_info->frags[i].len, PCI_DMA_TODEVICE);
 
 	napi_consume_skb(skb, napi_budget);
 	tx_info->skb = NULL;
@@ -212,12 +212,13 @@ int mqnic_free_tx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring)
 }
 
 int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
-                        int napi_budget)
+		int napi_budget)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	struct mqnic_ring *ring = priv->tx_ring[cq_ring->ring_index];
 	struct mqnic_tx_info *tx_info;
 	struct mqnic_cpl *cpl;
+	struct skb_shared_hwtstamps hwts;
 	u32 cq_index;
 	u32 cq_tail_ptr;
 	u32 ring_index;
@@ -247,7 +248,6 @@ int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 
 		// TX hardware timestamp
 		if (unlikely(tx_info->ts_requested)) {
-			struct skb_shared_hwtstamps hwts;
 			dev_info(priv->dev, "mqnic_process_tx_cq TX TS requested");
 			hwts.hwtstamp = mqnic_read_cpl_ts(priv->mdev, ring, cpl);
 			skb_tstamp_tx(tx_info->skb, &hwts);
@@ -327,10 +327,11 @@ int mqnic_poll_tx_cq(struct napi_struct *napi, int budget)
 }
 
 static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring,
-                          struct mqnic_tx_info *tx_info,
-                          struct mqnic_desc *tx_desc, struct sk_buff *skb)
+		struct mqnic_tx_info *tx_info, struct mqnic_desc *tx_desc,
+		struct sk_buff *skb)
 {
 	struct skb_shared_info *shinfo = skb_shinfo(skb);
+	const skb_frag_t *frag;
 	u32 i;
 	u32 len;
 	dma_addr_t dma_addr;
@@ -340,7 +341,7 @@ static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	tx_info->frag_count = 0;
 
 	for (i = 0; i < shinfo->nr_frags; i++) {
-		const skb_frag_t *frag = &shinfo->frags[i];
+		frag = &shinfo->frags[i];
 		len = skb_frag_size(frag);
 		dma_addr = skb_frag_dma_map(priv->dev, frag, 0, len, DMA_TO_DEVICE);
 		if (unlikely(dma_mapping_error(priv->dev, dma_addr)))
@@ -386,7 +387,7 @@ map_error:
 	// unmap frags
 	for (i = 0; i < tx_info->frag_count; i++)
 		dma_unmap_page(priv->dev, tx_info->frags[i].dma_addr,
-		               tx_info->frags[i].len, PCI_DMA_TODEVICE);
+				tx_info->frags[i].len, PCI_DMA_TODEVICE);
 
 	// update tx_info
 	tx_info->skb = NULL;
@@ -444,7 +445,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 		if (csum_start > 255 || csum_offset > 127) {
 			dev_info(priv->dev, "mqnic_start_xmit Hardware checksum fallback start %d offset %d",
-			         csum_start, csum_offset);
+					csum_start, csum_offset);
 
 			// offset out of range, fall back on software checksum
 			if (skb_checksum_help(skb)) {
@@ -482,7 +483,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	stop_queue = mqnic_is_tx_ring_full(ring);
 	if (unlikely(stop_queue)) {
 		dev_info(priv->dev, "mqnic_start_xmit TX ring %d full on port %d",
-		         ring_index, priv->port);
+				ring_index, priv->port);
 		netif_tx_stop_queue(ring->tx_queue);
 	}
 

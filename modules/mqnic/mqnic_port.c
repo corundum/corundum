@@ -34,7 +34,7 @@ either expressed or implied, of The Regents of the University of California.
 #include "mqnic.h"
 
 int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr,
-                      int index, u8 __iomem *hw_addr)
+		int index, u8 __iomem *hw_addr)
 {
 	struct device *dev = priv->dev;
 	struct mqnic_port *port;

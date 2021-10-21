@@ -55,7 +55,7 @@ static int mqnic_start_port(struct net_device *ndev)
 		priv->rx_cpl_ring[k]->handler = mqnic_rx_irq;
 
 		netif_napi_add(ndev, &priv->rx_cpl_ring[k]->napi,
-		               mqnic_poll_rx_cq, NAPI_POLL_WEIGHT);
+				mqnic_poll_rx_cq, NAPI_POLL_WEIGHT);
 		napi_enable(&priv->rx_cpl_ring[k]->napi);
 
 		mqnic_arm_cq(priv->rx_cpl_ring[k]);
@@ -78,7 +78,7 @@ static int mqnic_start_port(struct net_device *ndev)
 		priv->tx_cpl_ring[k]->handler = mqnic_tx_irq;
 
 		netif_tx_napi_add(ndev, &priv->tx_cpl_ring[k]->napi,
-		                  mqnic_poll_tx_cq, NAPI_POLL_WEIGHT);
+				mqnic_poll_tx_cq, NAPI_POLL_WEIGHT);
 		napi_enable(&priv->tx_cpl_ring[k]->napi);
 
 		mqnic_arm_cq(priv->tx_cpl_ring[k]);
@@ -164,7 +164,7 @@ static int mqnic_stop_port(struct net_device *ndev)
 	for (k = 0; k < priv->event_queue_count; k++)
 		mqnic_deactivate_eq_ring(priv, priv->event_ring[k]);
 
-	msleep(10);
+	msleep(20);
 
 	// free descriptors in TX queues
 	for (k = 0; k < priv->tx_queue_count; k++)
@@ -245,7 +245,7 @@ void mqnic_update_stats(struct net_device *ndev)
 }
 
 static void mqnic_get_stats64(struct net_device *ndev,
-                              struct rtnl_link_stats64 *stats)
+		struct rtnl_link_stats64 *stats)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 
@@ -302,7 +302,7 @@ static int mqnic_hwtstamp_set(struct net_device *ndev, struct ifreq *ifr)
 
 	if (copy_to_user(ifr->ifr_data, &hwts_config, sizeof(hwts_config)))
 		return -EFAULT;
-	
+
 	return 0;
 }
 
@@ -480,42 +480,42 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 	// allocate rings
 	for (k = 0; k < priv->event_queue_count; k++) {
 		ret = mqnic_create_eq_ring(priv, &priv->event_ring[k], 1024, MQNIC_EVENT_SIZE, k,
-		                           hw_addr + priv->event_queue_offset + k * MQNIC_EVENT_QUEUE_STRIDE); // TODO configure/constant
+				hw_addr + priv->event_queue_offset + k * MQNIC_EVENT_QUEUE_STRIDE); // TODO configure/constant
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->tx_queue_count; k++) {
 		ret = mqnic_create_tx_ring(priv, &priv->tx_ring[k], 1024, MQNIC_DESC_SIZE * desc_block_size, k,
-		                           hw_addr + priv->tx_queue_offset + k * MQNIC_QUEUE_STRIDE); // TODO configure/constant
+				hw_addr + priv->tx_queue_offset + k * MQNIC_QUEUE_STRIDE); // TODO configure/constant
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->tx_cpl_queue_count; k++) {
 		ret = mqnic_create_cq_ring(priv, &priv->tx_cpl_ring[k], 1024, MQNIC_CPL_SIZE, k,
-		                           hw_addr + priv->tx_cpl_queue_offset + k * MQNIC_CPL_QUEUE_STRIDE); // TODO configure/constant
+				hw_addr + priv->tx_cpl_queue_offset + k * MQNIC_CPL_QUEUE_STRIDE); // TODO configure/constant
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->rx_queue_count; k++) {
 		ret = mqnic_create_rx_ring(priv, &priv->rx_ring[k], 1024, MQNIC_DESC_SIZE, k,
-		                           hw_addr + priv->rx_queue_offset + k * MQNIC_QUEUE_STRIDE); // TODO configure/constant
+				hw_addr + priv->rx_queue_offset + k * MQNIC_QUEUE_STRIDE); // TODO configure/constant
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->rx_cpl_queue_count; k++) {
 		ret = mqnic_create_cq_ring(priv, &priv->rx_cpl_ring[k], 1024, MQNIC_CPL_SIZE, k,
-		                           hw_addr + priv->rx_cpl_queue_offset + k * MQNIC_CPL_QUEUE_STRIDE); // TODO configure/constant
+				hw_addr + priv->rx_cpl_queue_offset + k * MQNIC_CPL_QUEUE_STRIDE); // TODO configure/constant
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->port_count; k++) {
 		ret = mqnic_create_port(priv, &priv->ports[k], k,
-		                        hw_addr + priv->port_offset + k * priv->port_stride);
+				hw_addr + priv->port_offset + k * priv->port_stride);
 		if (ret)
 			goto fail;
 

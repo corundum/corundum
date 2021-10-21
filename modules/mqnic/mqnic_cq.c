@@ -34,7 +34,7 @@ either expressed or implied, of The Regents of the University of California.
 #include "mqnic.h"
 
 int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_ptr,
-                         int size, int stride, int index, u8 __iomem *hw_addr)
+		int size, int stride, int index, u8 __iomem *hw_addr)
 {
 	struct device *dev = priv->dev;
 	struct mqnic_cq_ring *ring;
@@ -54,7 +54,7 @@ int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_pt
 
 	ring->buf_size = ring->size * ring->stride;
 	ring->buf = dma_alloc_coherent(dev, ring->buf_size,
-	                               &ring->buf_dma_addr, GFP_KERNEL);
+			&ring->buf_dma_addr, GFP_KERNEL);
 	if (!ring->buf) {
 		dev_err(dev, "Failed to allocate CQ ring DMA buffer");
 		ret = -ENOMEM;
@@ -119,7 +119,7 @@ int mqnic_activate_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring *ring, 
 	iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_CPL_QUEUE_TAIL_PTR_REG);
 	// set size and activate queue
 	iowrite32(ilog2(ring->size) | MQNIC_CPL_QUEUE_ACTIVE_MASK,
-	          ring->hw_addr + MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG);
+			ring->hw_addr + MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG);
 
 	return 0;
 }
@@ -155,5 +155,5 @@ void mqnic_cq_write_tail_ptr(struct mqnic_cq_ring *ring)
 void mqnic_arm_cq(struct mqnic_cq_ring *ring)
 {
 	iowrite32(ring->eq_index | MQNIC_CPL_QUEUE_ARM_MASK,
-	          ring->hw_addr + MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG);
+			ring->hw_addr + MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG);
 }

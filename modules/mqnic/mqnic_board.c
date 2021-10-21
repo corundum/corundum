@@ -453,9 +453,12 @@ static void mqnic_alveo_bmc_reg_write(struct mqnic_dev *mqnic, u32 reg, u32 val)
 static int mqnic_alveo_bmc_read_mac(struct mqnic_dev *mqnic, int index, char *mac)
 {
 	uint32_t reg = 0x0281a0 + index * 8;
-	uint32_t val = mqnic_alveo_bmc_reg_read(mqnic, reg);
+	uint32_t val;
+
+	val = mqnic_alveo_bmc_reg_read(mqnic, reg);
 	mac[0] = (val >> 8) & 0xff;
 	mac[1] = val & 0xff;
+
 	val = mqnic_alveo_bmc_reg_read(mqnic, reg + 4);
 	mac[2] = (val >> 24) & 0xff;
 	mac[3] = (val >> 16) & 0xff;
@@ -581,18 +584,18 @@ static int mqnic_gecko_bmc_read(struct mqnic_dev *mqnic)
 			if (val & BIT(18)) {
 				// timed out
 				dev_warn(mqnic->dev, "Timed out waiting for Gecko BMC response");
-				msleep(10);
+				msleep(20);
 				return -2;
 			}
 			return val & 0xffff;
-		} else {
-			timeout--;
-			if (timeout == 0) {
-				dev_warn(mqnic->dev, "Timed out waiting for Gecko BMC interface");
-				return -1;
-			}
-			msleep(1);
 		}
+
+		timeout--;
+		if (timeout == 0) {
+			dev_warn(mqnic->dev, "Timed out waiting for Gecko BMC interface");
+			return -1;
+		}
+		usleep_range(1000, 100000);
 	}
 
 	return -1;
@@ -601,6 +604,7 @@ static int mqnic_gecko_bmc_read(struct mqnic_dev *mqnic)
 static int mqnic_gecko_bmc_write(struct mqnic_dev *mqnic, u16 cmd, u32 data)
 {
 	int ret;
+
 	ret = mqnic_gecko_bmc_read(mqnic);
 
 	if (ret == -1)
@@ -627,9 +631,10 @@ static int mqnic_gecko_bmc_query(struct mqnic_dev *mqnic, u16 cmd, u32 data)
 static int mqnic_gecko_bmc_read_mac(struct mqnic_dev *mqnic, int index, char *mac)
 {
 	int i;
+	u16 val;
 
 	for (i = 0; i < ETH_ALEN; i += 2) {
-		u16 val = mqnic_gecko_bmc_query(mqnic, 0x2003, 0 + index * ETH_ALEN + i);
+		val = mqnic_gecko_bmc_query(mqnic, 0x2003, 0 + index * ETH_ALEN + i);
 		if (val < 0)
 			return val;
 		mac[i] = val & 0xff;
@@ -711,7 +716,7 @@ static int mqnic_gecko_board_init(struct mqnic_dev *mqnic)
 			uint16_t v_h = mqnic_gecko_bmc_query(mqnic, 0x7006, 0);
 
 			dev_info(mqnic->dev, "Gecko BMC version %d.%d.%d.%d",
-			         (v_h >> 8) & 0xff, v_h & 0xff, (v_l >> 8) & 0xff, v_l & 0xff);
+					(v_h >> 8) & 0xff, v_h & 0xff, (v_l >> 8) & 0xff, v_l & 0xff);
 
 			mqnic_gecko_bmc_read_mac_list(mqnic, 8);
 		}

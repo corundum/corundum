@@ -184,8 +184,8 @@ void mqnic_process_eq(struct net_device *ndev, struct mqnic_eq_ring *eq_ring)
 		if (event->type == MQNIC_EVENT_TYPE_TX_CPL) {
 			// transmit completion event
 			if (unlikely(le16_to_cpu(event->source) > priv->tx_cpl_queue_count)) {
-				dev_err(priv->dev, "mqnic_process_eq on port %d: unknown event source %d (index %d, type %d)",
-						priv->port, le16_to_cpu(event->source), eq_index,
+				dev_err(priv->dev, "%s on port %d: unknown event source %d (index %d, type %d)",
+						__func__, priv->port, le16_to_cpu(event->source), eq_index,
 						le16_to_cpu(event->type));
 				print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 						event, MQNIC_EVENT_SIZE, true);
@@ -197,8 +197,8 @@ void mqnic_process_eq(struct net_device *ndev, struct mqnic_eq_ring *eq_ring)
 		} else if (le16_to_cpu(event->type) == MQNIC_EVENT_TYPE_RX_CPL) {
 			// receive completion event
 			if (unlikely(le16_to_cpu(event->source) > priv->rx_cpl_queue_count)) {
-				dev_err(priv->dev, "mqnic_process_eq on port %d: unknown event source %d (index %d, type %d)",
-						priv->port, le16_to_cpu(event->source), eq_index,
+				dev_err(priv->dev, "%s on port %d: unknown event source %d (index %d, type %d)",
+						__func__, priv->port, le16_to_cpu(event->source), eq_index,
 						le16_to_cpu(event->type));
 				print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 						event, MQNIC_EVENT_SIZE, true);
@@ -208,8 +208,8 @@ void mqnic_process_eq(struct net_device *ndev, struct mqnic_eq_ring *eq_ring)
 					cq_ring->handler(cq_ring);
 			}
 		} else {
-			dev_err(priv->dev, "mqnic_process_eq on port %d: unknown event type %d (index %d, source %d)",
-					priv->port, le16_to_cpu(event->type), eq_index,
+			dev_err(priv->dev, "%s on port %d: unknown event type %d (index %d, source %d)",
+					__func__, priv->port, le16_to_cpu(event->type), eq_index,
 					le16_to_cpu(event->source));
 			print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 					event, MQNIC_EVENT_SIZE, true);

@@ -39,7 +39,7 @@ static int mqnic_start_port(struct net_device *ndev)
 	struct mqnic_dev *mdev = priv->mdev;
 	int k;
 
-	dev_info(mdev->dev, "mqnic_start_port on port %d", priv->port);
+	dev_info(mdev->dev, "%s on port %d", __func__, priv->port);
 
 	// set up event queues
 	for (k = 0; k < priv->event_queue_count; k++) {
@@ -117,7 +117,7 @@ static int mqnic_stop_port(struct net_device *ndev)
 	struct mqnic_dev *mdev = priv->mdev;
 	int k;
 
-	dev_info(mdev->dev, "mqnic_stop_port on port %d", priv->port);
+	dev_info(mdev->dev, "%s on port %d", __func__, priv->port);
 
 	netif_tx_lock_bh(ndev);
 //	if (detach)

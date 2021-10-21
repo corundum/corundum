@@ -59,7 +59,7 @@ static int mqnic_phc_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	bool neg = false;
 	u64 nom_per_fns, adj;
 
-	dev_info(mdev->dev, "mqnic_phc_adjfine scaled_ppm: %ld", scaled_ppm);
+	dev_info(mdev->dev, "%s: scaled_ppm: %ld", __func__, scaled_ppm);
 
 	if (scaled_ppm < 0) {
 		neg = true;
@@ -82,7 +82,7 @@ static int mqnic_phc_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	iowrite32(adj & 0xffffffff, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_PERIOD_FNS);
 	iowrite32(adj >> 32, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_PERIOD_NS);
 
-	dev_info(mdev->dev, "mqnic_phc_adjfine adj: 0x%llx", adj);
+	dev_info(mdev->dev, "%s adj: 0x%llx", __func__, adj);
 
 	return 0;
 }
@@ -133,7 +133,7 @@ static int mqnic_phc_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
 	struct timespec64 ts;
 
-	dev_info(mdev->dev, "mqnic_phc_adjtime delta: %lld", delta);
+	dev_info(mdev->dev, "%s: delta: %lld", __func__, delta);
 
 	if (delta > 1000000000 || delta < -1000000000) {
 		mqnic_phc_gettime(ptp, &ts);
@@ -181,9 +181,9 @@ static int mqnic_phc_perout(struct ptp_clock_info *ptp, int on, struct ptp_perou
 	width_sec = period_sec >> 1;
 	width_nsec = (period_nsec + (period_sec & 1 ? NSEC_PER_SEC : 0)) >> 1;
 
-	dev_info(mdev->dev, "mqnic_phc_perout start: %lld.%09d", start_sec, start_nsec);
-	dev_info(mdev->dev, "mqnic_phc_perout period: %lld.%09d", period_sec, period_nsec);
-	dev_info(mdev->dev, "mqnic_phc_perout width: %lld.%09d", width_sec, width_nsec);
+	dev_info(mdev->dev, "%s: start: %lld.%09d", __func__, start_sec, start_nsec);
+	dev_info(mdev->dev, "%s: period: %lld.%09d", __func__, period_sec, period_nsec);
+	dev_info(mdev->dev, "%s: width: %lld.%09d", __func__, width_sec, width_nsec);
 
 	iowrite32(0, hw_addr + MQNIC_PHC_REG_PEROUT_START_FNS);
 	iowrite32(start_nsec, hw_addr + MQNIC_PHC_REG_PEROUT_START_NS);
@@ -265,7 +265,7 @@ void mqnic_register_phc(struct mqnic_dev *mdev)
 
 	if (IS_ERR(mdev->ptp_clock)) {
 		mdev->ptp_clock = NULL;
-		dev_err(mdev->dev, "ptp_clock_register failed");
+		dev_err(mdev->dev, "%s: failed", __func__);
 	} else {
 		dev_info(mdev->dev, "registered PHC (index %d)", ptp_clock_index(mdev->ptp_clock));
 

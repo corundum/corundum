@@ -209,15 +209,15 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	dma_addr_t dma_addr;
 
 	if (unlikely(page)) {
-		dev_err(priv->dev, "mqnic_prepare_rx_desc skb not yet processed on port %d",
-				priv->port);
+		dev_err(priv->dev, "%s: skb not yet processed on port %d",
+				__func__, priv->port);
 		return -1;
 	}
 
 	page = dev_alloc_pages(page_order);
 	if (unlikely(!page)) {
-		dev_err(priv->dev, "mqnic_prepare_rx_desc failed to allocate memory on port %d",
-				priv->port);
+		dev_err(priv->dev, "%s: failed to allocate memory on port %d",
+				__func__, priv->port);
 		return -1;
 	}
 
@@ -225,8 +225,8 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	dma_addr = dma_map_page(priv->dev, page, 0, len, PCI_DMA_FROMDEVICE);
 
 	if (unlikely(dma_mapping_error(priv->dev, dma_addr))) {
-		dev_err(priv->dev, "mqnic_prepare_rx_desc DMA mapping failed on port %d",
-				priv->port);
+		dev_err(priv->dev, "%s: DMA mapping failed on port %d",
+				__func__, priv->port);
 		__free_pages(page, page_order);
 		return -1;
 	}
@@ -299,8 +299,8 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 		page = rx_info->page;
 
 		if (unlikely(!page)) {
-			dev_err(priv->dev, "mqnic_process_rx_cq ring %d null page at index %d",
-					cq_ring->ring_index, ring_index);
+			dev_err(priv->dev, "%s: ring %d null page at index %d",
+					__func__, cq_ring->ring_index, ring_index);
 			print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 					cpl, MQNIC_CPL_SIZE, true);
 			break;
@@ -308,8 +308,8 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 
 		skb = napi_get_frags(&cq_ring->napi);
 		if (unlikely(!skb)) {
-			dev_err(priv->dev, "mqnic_process_rx_cq ring %d failed to allocate skb",
-					cq_ring->ring_index);
+			dev_err(priv->dev, "%s: ring %d failed to allocate skb",
+					__func__, cq_ring->ring_index);
 			break;
 		}
 

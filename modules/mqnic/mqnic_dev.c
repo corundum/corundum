@@ -58,8 +58,8 @@ static int mqnic_map_registers(struct mqnic_dev *mqnic, struct vm_area_struct *v
 	int ret;
 
 	if (map_size > mqnic->hw_regs_size) {
-		dev_err(mqnic->dev, "mqnic_map_registers: Tried to map registers region with wrong size %lu (expected <= %llu)",
-				vma->vm_end - vma->vm_start, mqnic->hw_regs_size);
+		dev_err(mqnic->dev, "%s: Tried to map registers region with wrong size %lu (expected <= %llu)",
+				__func__, vma->vm_end - vma->vm_start, mqnic->hw_regs_size);
 		return -EINVAL;
 	}
 
@@ -67,10 +67,10 @@ static int mqnic_map_registers(struct mqnic_dev *mqnic, struct vm_area_struct *v
 			map_size, pgprot_noncached(vma->vm_page_prot));
 
 	if (ret)
-		dev_err(mqnic->dev, "mqnic_map_registers: remap_pfn_range failed for registers region");
+		dev_err(mqnic->dev, "%s: remap_pfn_range failed for registers region", __func__);
 	else
-		dev_dbg(mqnic->dev, "mqnic_map_registers: Mapped registers region at phys: 0x%pap, virt: 0x%p",
-				&mqnic->hw_regs_phys, (void *)vma->vm_start);
+		dev_dbg(mqnic->dev, "%s: Mapped registers region at phys: 0x%pap, virt: 0x%p",
+				__func__, &mqnic->hw_regs_phys, (void *)vma->vm_start);
 
 	return ret;
 }
@@ -83,8 +83,8 @@ static int mqnic_mmap(struct file *file, struct vm_area_struct *vma)
 	if (vma->vm_pgoff == 0)
 		return mqnic_map_registers(mqnic, vma);
 
-	dev_err(mqnic->dev, "mqnic_mmap: Tried to map an unknown region at page offset %lu",
-			vma->vm_pgoff);
+	dev_err(mqnic->dev, "%s: Tried to map an unknown region at page offset %lu",
+			__func__, vma->vm_pgoff);
 	return -EINVAL;
 }
 

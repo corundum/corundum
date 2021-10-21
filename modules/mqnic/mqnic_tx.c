@@ -244,7 +244,7 @@ int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 
 		// TX hardware timestamp
 		if (unlikely(tx_info->ts_requested)) {
-			dev_info(priv->dev, "mqnic_process_tx_cq TX TS requested");
+			dev_info(priv->dev, "%s: TX TS requested", __func__);
 			hwts.hwtstamp = mqnic_read_cpl_ts(priv->mdev, ring, cpl);
 			skb_tstamp_tx(tx_info->skb, &hwts);
 		}
@@ -378,7 +378,7 @@ static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	return true;
 
 map_error:
-	dev_err(priv->dev, "mqnic_map_skb DMA mapping failed");
+	dev_err(priv->dev, "%s: DMA mapping failed", __func__);
 
 	// unmap frags
 	for (i = 0; i < tx_info->frag_count; i++)
@@ -429,7 +429,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	// TX hardware timestamp
 	tx_info->ts_requested = 0;
 	if (unlikely(priv->if_features & MQNIC_IF_FEATURE_PTP_TS && shinfo->tx_flags & SKBTX_HW_TSTAMP)) {
-		dev_info(priv->dev, "mqnic_start_xmit TX TS requested");
+		dev_info(priv->dev, "%s: TX TS requested", __func__);
 		shinfo->tx_flags |= SKBTX_IN_PROGRESS;
 		tx_info->ts_requested = 1;
 	}
@@ -440,8 +440,8 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		unsigned int csum_offset = skb->csum_offset;
 
 		if (csum_start > 255 || csum_offset > 127) {
-			dev_info(priv->dev, "mqnic_start_xmit Hardware checksum fallback start %d offset %d",
-					csum_start, csum_offset);
+			dev_info(priv->dev, "%s: Hardware checksum fallback start %d offset %d",
+					__func__, csum_start, csum_offset);
 
 			// offset out of range, fall back on software checksum
 			if (skb_checksum_help(skb)) {
@@ -478,8 +478,8 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	stop_queue = mqnic_is_tx_ring_full(ring);
 	if (unlikely(stop_queue)) {
-		dev_info(priv->dev, "mqnic_start_xmit TX ring %d full on port %d",
-				ring_index, priv->port);
+		dev_info(priv->dev, "%s: TX ring %d full on port %d",
+				__func__, ring_index, priv->port);
 		netif_tx_stop_queue(ring->tx_queue);
 	}
 

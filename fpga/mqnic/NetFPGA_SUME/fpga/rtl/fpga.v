@@ -411,6 +411,21 @@ always @(posedge pcie_user_clk) begin
     i2c_sda_t_reg <= i2c_sda_t_int;
 end
 
+wire sfp_1_mod_detect_int;
+wire sfp_2_mod_detect_int;
+wire sfp_3_mod_detect_int;
+wire sfp_4_mod_detect_int;
+
+wire sfp_1_los_int;
+wire sfp_2_los_int;
+wire sfp_3_los_int;
+wire sfp_4_los_int;
+
+wire sfp_1_tx_fault_int;
+wire sfp_2_tx_fault_int;
+wire sfp_3_tx_fault_int;
+wire sfp_4_tx_fault_int;
+
 sync_signal #(
     .WIDTH(14),
     .N(2)

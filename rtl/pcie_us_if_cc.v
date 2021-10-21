@@ -24,7 +24,9 @@ THE SOFTWARE.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * Xilinx UltraScale PCIe interface adapter (Completer Completion)
@@ -447,3 +449,5 @@ always @(posedge clk) begin
 end
 
 endmodule
+
+`resetall

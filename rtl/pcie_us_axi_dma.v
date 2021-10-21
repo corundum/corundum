@@ -24,7 +24,9 @@ THE SOFTWARE.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * Ultrascale PCIe AXI DMA
@@ -440,3 +442,5 @@ pcie_us_axi_dma_wr_inst (
 );
 
 endmodule
+
+`resetall

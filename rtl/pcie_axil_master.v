@@ -24,7 +24,9 @@ THE SOFTWARE.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * PCIe AXI Lite Master
@@ -1026,3 +1028,5 @@ always @(posedge clk) begin
 end
 
 endmodule
+
+`resetall

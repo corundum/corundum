@@ -24,7 +24,9 @@ THE SOFTWARE.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * Ultrascale PCIe AXI DMA Write
@@ -1270,3 +1272,5 @@ always @(posedge clk) begin
 end
 
 endmodule
+
+`resetall

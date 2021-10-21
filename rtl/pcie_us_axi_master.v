@@ -24,7 +24,9 @@ THE SOFTWARE.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * Ultrascale PCIe AXI Master
@@ -320,3 +322,5 @@ status_error_uncor_pm_inst (
 );
 
 endmodule
+
+`resetall

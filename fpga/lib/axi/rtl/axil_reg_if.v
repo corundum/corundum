@@ -24,7 +24,9 @@ THE SOFTWARE.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * AXI lite register interface module
@@ -152,3 +154,5 @@ axil_reg_if_rd_inst (
 );
 
 endmodule
+
+`resetall

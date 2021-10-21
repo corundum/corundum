@@ -24,7 +24,9 @@ THE SOFTWARE.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * AXI4 RAM read/write interface
@@ -153,6 +155,9 @@ wire [2:0]               ram_wr_cmd_prot;
 wire [3:0]               ram_wr_cmd_qos;
 wire [3:0]               ram_wr_cmd_region;
 wire [AWUSER_WIDTH-1:0]  ram_wr_cmd_auser;
+wire                     ram_wr_cmd_en;
+wire                     ram_wr_cmd_last;
+wire                     ram_wr_cmd_ready;
 
 wire [ID_WIDTH-1:0]      ram_rd_cmd_id;
 wire [ADDR_WIDTH-1:0]    ram_rd_cmd_addr;
@@ -162,6 +167,9 @@ wire [2:0]               ram_rd_cmd_prot;
 wire [3:0]               ram_rd_cmd_qos;
 wire [3:0]               ram_rd_cmd_region;
 wire [AWUSER_WIDTH-1:0]  ram_rd_cmd_auser;
+wire                     ram_rd_cmd_en;
+wire                     ram_rd_cmd_last;
+wire                     ram_rd_cmd_ready;
 
 axi_ram_wr_if #(
     .DATA_WIDTH(DATA_WIDTH),
@@ -331,3 +339,5 @@ always @(posedge clk) begin
 end
 
 endmodule
+
+`resetall

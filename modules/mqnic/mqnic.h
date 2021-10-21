@@ -52,6 +52,10 @@
 
 #include "mqnic_hw.h"
 
+extern unsigned int mqnic_num_ev_queue_entries;
+extern unsigned int mqnic_num_tx_queue_entries;
+extern unsigned int mqnic_num_rx_queue_entries;
+
 struct mqnic_dev;
 struct mqnic_if;
 

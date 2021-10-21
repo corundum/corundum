@@ -127,7 +127,8 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 		if (ret)
 			goto fail;
 
-		ret = mqnic_alloc_eq_ring(interface->event_ring[k], 1024, MQNIC_EVENT_SIZE); // TODO configure/constant
+		ret = mqnic_alloc_eq_ring(interface->event_ring[k], mqnic_num_ev_queue_entries,
+				MQNIC_EVENT_SIZE);
 		if (ret)
 			goto fail;
 

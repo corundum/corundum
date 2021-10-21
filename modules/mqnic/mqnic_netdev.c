@@ -435,25 +435,30 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 
 	// allocate ring buffers
 	for (k = 0; k < priv->tx_queue_count; k++) {
-		ret = mqnic_alloc_tx_ring(priv->tx_ring[k], 1024, MQNIC_DESC_SIZE * desc_block_size); // TODO configure/constant
+		ret = mqnic_alloc_tx_ring(priv->tx_ring[k], mqnic_num_tx_queue_entries,
+				MQNIC_DESC_SIZE * desc_block_size);
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->tx_cpl_queue_count; k++) {
-		ret = mqnic_alloc_cq_ring(priv->tx_cpl_ring[k], 1024, MQNIC_CPL_SIZE); // TODO configure/constant
+		ret = mqnic_alloc_cq_ring(priv->tx_cpl_ring[k], mqnic_num_tx_queue_entries,
+				MQNIC_CPL_SIZE);
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->rx_queue_count; k++) {
-		ret = mqnic_alloc_rx_ring(priv->rx_ring[k], 1024, MQNIC_DESC_SIZE); // TODO configure/constant
+		ret = mqnic_alloc_rx_ring(priv->rx_ring[k], mqnic_num_rx_queue_entries,
+				MQNIC_DESC_SIZE);
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->rx_cpl_queue_count; k++) {
-		ret = mqnic_alloc_cq_ring(priv->rx_cpl_ring[k], 1024, MQNIC_CPL_SIZE); // TODO configure/constant
+		ret = mqnic_alloc_cq_ring(priv->rx_cpl_ring[k], mqnic_num_rx_queue_entries,
+				MQNIC_CPL_SIZE);
+
 		if (ret)
 			goto fail;
 	}

@@ -24,7 +24,9 @@ THE SOFTWARE.
 
 // Language: Verilog-2001
 
+`resetall
 `timescale 1 ns / 1 ps
+`default_nettype none
 
 /*
  * Synchronizes an active-high asynchronous reset signal to a given clock by
@@ -50,3 +52,5 @@ always @(posedge clk or posedge rst) begin
 end
 
 endmodule
+
+`resetall

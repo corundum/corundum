@@ -24,7 +24,9 @@ THE SOFTWARE.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * DMA interface mux (read)
@@ -216,3 +218,5 @@ dma_ram_demux_inst (
 );
 
 endmodule
+
+`resetall

@@ -24,7 +24,9 @@ THE SOFTWARE.
 
 // Language: Verilog 2001
 
+`resetall
 `timescale 1ns / 1ps
+`default_nettype none
 
 /*
  * Xilinx UltraScale PCIe interface adapter
@@ -552,3 +554,5 @@ end
 endgenerate
 
 endmodule
+
+`resetall

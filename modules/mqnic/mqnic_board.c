@@ -454,8 +454,8 @@ static void mqnic_alveo_bmc_reg_write(struct mqnic_dev *mqnic, u32 reg, u32 val)
 
 static int mqnic_alveo_bmc_read_mac(struct mqnic_dev *mqnic, int index, char *mac)
 {
-	uint32_t reg = 0x0281a0 + index * 8;
-	uint32_t val;
+	u32 reg = 0x0281a0 + index * 8;
+	u32 val;
 
 	val = mqnic_alveo_bmc_reg_read(mqnic, reg);
 	mac[0] = (val >> 8) & 0xff;
@@ -714,8 +714,8 @@ static int mqnic_gecko_board_init(struct mqnic_dev *mqnic)
 		if (mqnic_gecko_bmc_query(mqnic, 0x7006, 0) <= 0) {
 			dev_warn(mqnic->dev, "Gecko BMC not responding");
 		} else {
-			uint16_t v_l = mqnic_gecko_bmc_query(mqnic, 0x7005, 0);
-			uint16_t v_h = mqnic_gecko_bmc_query(mqnic, 0x7006, 0);
+			u16 v_l = mqnic_gecko_bmc_query(mqnic, 0x7005, 0);
+			u16 v_h = mqnic_gecko_bmc_query(mqnic, 0x7006, 0);
 
 			dev_info(mqnic->dev, "Gecko BMC version %d.%d.%d.%d",
 					(v_h >> 8) & 0xff, v_h & 0xff, (v_l >> 8) & 0xff, v_l & 0xff);

@@ -67,10 +67,10 @@ struct mqnic_i2c_bus {
 	u8 __iomem *sda_in_reg;
 	u8 __iomem *sda_out_reg;
 
-	uint32_t scl_in_mask;
-	uint32_t scl_out_mask;
-	uint32_t sda_in_mask;
-	uint32_t sda_out_mask;
+	u32 scl_in_mask;
+	u32 scl_out_mask;
+	u32 sda_in_mask;
+	u32 sda_out_mask;
 
 	struct list_head head;
 

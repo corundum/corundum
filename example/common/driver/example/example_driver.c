@@ -1,26 +1,25 @@
+// SPDX-License-Identifier: MIT
 /*
-
-Copyright (c) 2018-2021 Alex Forencich
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-*/
+ * Copyright (c) 2018-2021 Alex Forencich
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+ * THE SOFTWARE.
+ */
 
 #include "example_driver.h"
 #include <linux/module.h>
@@ -28,7 +27,7 @@ THE SOFTWARE.
 #include <linux/version.h>
 #include <linux/delay.h>
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(5,4,0)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
 #include <linux/pci-aspm.h>
 #endif
 
@@ -77,43 +76,43 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	dev_info(dev, " Device: 0x%04x", pdev->device);
 	dev_info(dev, " Class: 0x%06x", pdev->class);
 	dev_info(dev, " PCI ID: %04x:%02x:%02x.%d", pci_domain_nr(pdev->bus),
-	         pdev->bus->number, PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));
+			pdev->bus->number, PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));
 	if (pdev->pcie_cap) {
 		u16 devctl;
 		u32 lnkcap;
 		u16 lnksta;
+
 		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_DEVCTL, &devctl);
 		pci_read_config_dword(pdev, pdev->pcie_cap + PCI_EXP_LNKCAP, &lnkcap);
 		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_LNKSTA, &lnksta);
+
 		dev_info(dev, " Max payload size: %d bytes",
-		         128 << ((devctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
+				128 << ((devctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
 		dev_info(dev, " Max read request size: %d bytes",
-		         128 << ((devctl & PCI_EXP_DEVCTL_READRQ) >> 12));
+				128 << ((devctl & PCI_EXP_DEVCTL_READRQ) >> 12));
 		dev_info(dev, " Link capability: gen %d x%d",
-		         lnkcap & PCI_EXP_LNKCAP_SLS, (lnkcap & PCI_EXP_LNKCAP_MLW) >> 4);
+				lnkcap & PCI_EXP_LNKCAP_SLS, (lnkcap & PCI_EXP_LNKCAP_MLW) >> 4);
 		dev_info(dev, " Link status: gen %d x%d",
-		         lnksta & PCI_EXP_LNKSTA_CLS, (lnksta & PCI_EXP_LNKSTA_NLW) >> 4);
+				lnksta & PCI_EXP_LNKSTA_CLS, (lnksta & PCI_EXP_LNKSTA_NLW) >> 4);
 		dev_info(dev, " Relaxed ordering: %s",
-		         devctl & PCI_EXP_DEVCTL_RELAX_EN ? "enabled" : "disabled");
+				devctl & PCI_EXP_DEVCTL_RELAX_EN ? "enabled" : "disabled");
 		dev_info(dev, " Phantom functions: %s",
-		         devctl & PCI_EXP_DEVCTL_PHANTOM ? "enabled" : "disabled");
+				devctl & PCI_EXP_DEVCTL_PHANTOM ? "enabled" : "disabled");
 		dev_info(dev, " Extended tags: %s",
-		         devctl & PCI_EXP_DEVCTL_EXT_TAG ? "enabled" : "disabled");
+				devctl & PCI_EXP_DEVCTL_EXT_TAG ? "enabled" : "disabled");
 		dev_info(dev, " No snoop: %s",
-		         devctl & PCI_EXP_DEVCTL_NOSNOOP_EN ? "enabled" : "disabled");
+				devctl & PCI_EXP_DEVCTL_NOSNOOP_EN ? "enabled" : "disabled");
 	}
 #ifdef CONFIG_NUMA
 	dev_info(dev, " NUMA node: %d", pdev->dev.numa_node);
 #endif
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(4,17,0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
 	pcie_print_link_status(pdev);
 #endif
 
 	edev = devm_kzalloc(dev, sizeof(struct example_dev), GFP_KERNEL);
-	if (!edev) {
-		dev_err(dev, "Failed to allocate memory");
+	if (!edev)
 		return -ENOMEM;
-	}
 
 	edev->pdev = pdev;
 	pci_set_drvdata(pdev, edev);
@@ -121,20 +120,18 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	// Allocate DMA buffer
 	edev->dma_region_len = 16 * 1024;
 	edev->dma_region = dma_alloc_coherent(dev, edev->dma_region_len,
-	                                      &edev->dma_region_addr,
-	                                      GFP_KERNEL | __GFP_ZERO);
+			&edev->dma_region_addr, GFP_KERNEL | __GFP_ZERO);
 	if (!edev->dma_region) {
-		dev_err(dev, "Failed to allocate DMA buffer");
 		ret = -ENOMEM;
 		goto fail_dma_alloc;
 	}
 
 	dev_info(dev, "Allocated DMA region virt %p, phys %p",
-	         edev->dma_region, (void *)edev->dma_region_addr);
+			edev->dma_region, (void *)edev->dma_region_addr);
 
 	// Disable ASPM
 	pci_disable_link_state(pdev, PCIE_LINK_STATE_L0S |
-	                       PCIE_LINK_STATE_L1 | PCIE_LINK_STATE_CLKPM);
+			PCIE_LINK_STATE_L1 | PCIE_LINK_STATE_CLKPM);
 
 	// Enable device
 	ret = pci_enable_device_mem(pdev);
@@ -191,7 +188,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	dev_info(dev, "read test data");
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 16, 1,
-	               edev->dma_region, 256, true);
+			edev->dma_region, 256, true);
 
 	dev_info(dev, "check DMA enable");
 	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000000));
@@ -230,7 +227,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 
 	dev_info(dev, "read test data");
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 16, 1,
-	               edev->dma_region + 0x0200, 256, true);
+			edev->dma_region + 0x0200, 256, true);
 
 	// probe complete
 	return 0;
@@ -280,11 +277,13 @@ static int enumerate_bars(struct example_dev *edev, struct pci_dev *pdev)
 
 	for (i = 0; i < 6; i++) {
 		resource_size_t bar_start = pci_resource_start(pdev, i);
+
 		if (bar_start) {
 			resource_size_t bar_end = pci_resource_end(pdev, i);
 			unsigned long bar_flags = pci_resource_flags(pdev, i);
+
 			dev_info(dev, "BAR[%d] 0x%08llx-0x%08llx flags 0x%08lx",
-			         i, bar_start, bar_end, bar_flags);
+					i, bar_start, bar_end, bar_flags);
 		}
 	}
 
@@ -300,6 +299,7 @@ static int map_bars(struct example_dev *edev, struct pci_dev *pdev)
 		resource_size_t bar_start = pci_resource_start(pdev, i);
 		resource_size_t bar_end = pci_resource_end(pdev, i);
 		resource_size_t bar_len = bar_end - bar_start + 1;
+
 		edev->bar_len[i] = bar_len;
 
 		if (!bar_start || !bar_end) {

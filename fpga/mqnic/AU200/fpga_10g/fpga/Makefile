@@ -7,6 +7,7 @@ FPGA_ARCH = virtexuplus
 # Files for synthesis
 SYN_FILES = rtl/fpga.v
 SYN_FILES += rtl/fpga_core.v
+SYN_FILES += rtl/eth_xcvr_phy_wrapper.v
 SYN_FILES += rtl/debounce_switch.v
 SYN_FILES += rtl/sync_signal.v
 SYN_FILES += rtl/common/mqnic_core_pcie_us.v
@@ -119,7 +120,7 @@ XDC_FILES += ../../../common/syn/vivado/tdma_ber_ch.tcl
 
 # IP
 IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl
-IP_TCL_FILES += ip/gtwizard_ultrascale_0.tcl
+IP_TCL_FILES += ip/eth_xcvr_gt.tcl
 IP_TCL_FILES += ip/cms.tcl
 
 # Configuration

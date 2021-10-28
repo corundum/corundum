@@ -127,8 +127,9 @@ class PcieIfFrame:
         hdr = tlp.pack_header()
 
         # force 64-bit address
-        if tlp.fmt_type in {TlpType.MEM_READ, TlpType.MEM_READ_LOCKED, TlpType.MEM_WRITE,
-                TlpType.IO_READ, TlpType.IO_WRITE, TlpType.FETCH_ADD, TlpType.SWAP, TlpType.CAS}:
+        if force_64bit_addr and tlp.fmt_type in {TlpType.MEM_READ, TlpType.MEM_READ_LOCKED,
+                TlpType.MEM_WRITE, TlpType.IO_READ, TlpType.IO_WRITE, TlpType.FETCH_ADD,
+                TlpType.SWAP, TlpType.CAS}:
 
             hdr = bytes([hdr[0] | 0x20]) + hdr[1:8] + b'\x00'*4 + hdr[8:12]
 

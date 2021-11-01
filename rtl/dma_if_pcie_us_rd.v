@@ -352,6 +352,7 @@ reg [LEN_WIDTH-1:0] req_op_count_reg = {LEN_WIDTH{1'b0}}, req_op_count_next;
 reg [12:0] req_tlp_count_reg = 13'd0, req_tlp_count_next;
 reg req_zero_len_reg = 1'b0, req_zero_len_next;
 reg [OP_TAG_WIDTH-1:0] req_op_tag_reg = {OP_TAG_WIDTH{1'b0}}, req_op_tag_next;
+reg req_op_tag_valid_reg = 1'b0, req_op_tag_valid_next;
 reg [PCIE_TAG_WIDTH-1:0] req_pcie_tag_reg = {PCIE_TAG_WIDTH{1'b0}}, req_pcie_tag_next;
 reg req_pcie_tag_valid_reg = 1'b0, req_pcie_tag_valid_next;
 
@@ -549,20 +550,19 @@ always @* begin
     req_tlp_count_next = req_tlp_count_reg;
     req_zero_len_next = req_zero_len_reg;
     req_op_tag_next = req_op_tag_reg;
+    req_op_tag_valid_next = req_op_tag_valid_reg;
     req_pcie_tag_next = req_pcie_tag_reg;
     req_pcie_tag_valid_next = req_pcie_tag_valid_reg;
 
     inc_active_tx = 1'b0;
 
-    op_table_start_ptr = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
+    op_table_start_ptr = req_op_tag_reg;
     op_table_start_tag = s_axis_read_desc_tag;
     op_table_start_en = 1'b0;
 
     op_table_read_start_ptr = req_op_tag_reg;
     op_table_read_start_commit = 1'b0;
     op_table_read_start_en = 1'b0;
-
-    op_tag_fifo_rd_ptr_next = op_tag_fifo_rd_ptr_reg;
 
     // TLP size computation
     if (req_op_count_reg + req_pcie_addr_reg[1:0] <= {max_read_request_size_dw_reg, 2'b00}) begin
@@ -688,7 +688,7 @@ always @* begin
     // TLP segmentation and request generation
     case (req_state_reg)
         REQ_STATE_IDLE: begin
-            s_axis_read_desc_ready_next = init_done_reg && enable && (op_tag_fifo_rd_ptr_reg != op_tag_fifo_wr_ptr_reg);
+            s_axis_read_desc_ready_next = init_done_reg && enable && req_op_tag_valid_reg;
 
             if (s_axis_read_desc_ready && s_axis_read_desc_valid) begin
                 s_axis_read_desc_ready_next = 1'b0;
@@ -703,11 +703,9 @@ always @* begin
                     req_op_count_next = s_axis_read_desc_len;
                     req_zero_len_next = 1'b0;
                 end
-                req_op_tag_next = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
-                op_table_start_ptr = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
+                op_table_start_ptr = req_op_tag_reg;
                 op_table_start_tag = s_axis_read_desc_tag;
                 op_table_start_en = 1'b1;
-                op_tag_fifo_rd_ptr_next = op_tag_fifo_rd_ptr_reg+1;
                 req_state_next = REQ_STATE_START;
             end else begin
                 req_state_next = REQ_STATE_IDLE;
@@ -740,6 +738,7 @@ always @* begin
                     if (!req_last_tlp) begin
                         req_state_next = REQ_STATE_START;
                     end else begin
+                        req_op_tag_valid_next = 1'b0;
                         s_axis_read_desc_ready_next = init_done_reg && enable && (op_tag_fifo_rd_ptr_reg != op_tag_fifo_wr_ptr_reg);
                         req_state_next = REQ_STATE_IDLE;
                     end
@@ -779,6 +778,7 @@ always @* begin
                     if (!req_last_tlp) begin
                         req_state_next = REQ_STATE_START;
                     end else begin
+                        req_op_tag_valid_next = 1'b0;
                         s_axis_read_desc_ready_next = init_done_reg && enable && (op_tag_fifo_rd_ptr_reg != op_tag_fifo_wr_ptr_reg);
                         req_state_next = REQ_STATE_IDLE;
                     end
@@ -788,6 +788,16 @@ always @* begin
             end
         end
     endcase
+
+    op_tag_fifo_rd_ptr_next = op_tag_fifo_rd_ptr_reg;
+
+    if (!req_op_tag_valid_next) begin
+        if (op_tag_fifo_rd_ptr_reg != op_tag_fifo_wr_ptr_reg) begin
+            req_op_tag_next = op_tag_fifo_mem[op_tag_fifo_rd_ptr_reg[OP_TAG_WIDTH-1:0]];
+            req_op_tag_valid_next = 1'b1;
+            op_tag_fifo_rd_ptr_next = op_tag_fifo_rd_ptr_reg + 1;
+        end
+    end
 
     pcie_tag_fifo_1_rd_ptr_next = pcie_tag_fifo_1_rd_ptr_reg;
     pcie_tag_fifo_2_rd_ptr_next = pcie_tag_fifo_2_rd_ptr_reg;
@@ -1457,6 +1467,7 @@ always @(posedge clk) begin
     req_tlp_count_reg <= req_tlp_count_next;
     req_zero_len_reg <= req_zero_len_next;
     req_op_tag_reg <= req_op_tag_next;
+    req_op_tag_valid_reg <= req_op_tag_valid_next;
     req_pcie_tag_reg <= req_pcie_tag_next;
     req_pcie_tag_valid_reg <= req_pcie_tag_valid_next;
 
@@ -1622,6 +1633,7 @@ always @(posedge clk) begin
         init_pcie_tag_reg <= 1'b1;
         init_op_tag_reg <= 1'b1;
 
+        req_op_tag_valid_reg <= 1'b0;
         req_pcie_tag_valid_reg <= 1'b0;
 
         finish_tag_reg <= 1'b0;

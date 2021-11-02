@@ -120,6 +120,8 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	dev_info(dev, DRIVER_NAME " PCI probe");
 	dev_info(dev, " Vendor: 0x%04x", pdev->vendor);
 	dev_info(dev, " Device: 0x%04x", pdev->device);
+	dev_info(dev, " Subsystem vendor: 0x%04x", pdev->subsystem_vendor);
+	dev_info(dev, " Subsystem device: 0x%04x", pdev->subsystem_device);
 	dev_info(dev, " Class: 0x%06x", pdev->class);
 	dev_info(dev, " PCI ID: %04x:%02x:%02x.%d", pci_domain_nr(pdev->bus),
 			pdev->bus->number, PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));

@@ -15,13 +15,8 @@ set_property -dict [list \
     CONFIG.PF0_DEVICE_ID {1001} \
     CONFIG.PF0_MSI_CAP_MULTIMSGCAP {32_vectors} \
     CONFIG.pf0_dev_cap_max_payload {1024_bytes} \
-    CONFIG.PF0_SUBSYSTEM_ID {1001} \
-    CONFIG.PF0_SUBSYSTEM_VENDOR_ID {1234} \
-    CONFIG.PF0_Use_Class_Code_Lookup_Assistant {true} \
-    CONFIG.pf0_base_class_menu {Network_controller} \
-    CONFIG.pf0_sub_class_interface_menu {Ethernet_controller} \
-    CONFIG.pf0_class_code_base {02} \
-    CONFIG.pf0_class_code_sub {00} \
+    CONFIG.PF0_SUBSYSTEM_ID {7028} \
+    CONFIG.PF0_SUBSYSTEM_VENDOR_ID {10ee} \
     CONFIG.pf0_bar0_64bit {true} \
     CONFIG.pf0_bar0_prefetchable {true} \
     CONFIG.pf0_bar0_scale {Megabytes} \

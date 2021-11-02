@@ -151,8 +151,8 @@ set_property CONFIG.vendor_id {1234} $pcie
 set_property CONFIG.PF0_DEVICE_ID {1001} $pcie
 set_property CONFIG.PF0_CLASS_CODE {020000} $pcie
 set_property CONFIG.PF0_REVISION_ID {00} $pcie
-set_property CONFIG.PF0_SUBSYSTEM_VENDOR_ID {1234} $pcie
-set_property CONFIG.PF0_SUBSYSTEM_ID {1001} $pcie
+set_property CONFIG.PF0_SUBSYSTEM_VENDOR_ID {10ee} $pcie
+set_property CONFIG.PF0_SUBSYSTEM_ID {9032} $pcie
 
 # Internal interface settings
 dict set params AXIS_PCIE_DATA_WIDTH [regexp -all -inline -- {[0-9]+} [get_property CONFIG.axisten_if_width $pcie]]

@@ -201,6 +201,9 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	dev_info(dev, "check DMA enable");
 	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000000));
 
+	dev_info(dev, "enable interrupts");
+	iowrite32(0x3, edev->bar[0] + 0x000008);
+
 	dev_info(dev, "start copy to card");
 	iowrite32((edev->dma_region_addr + 0x0000) & 0xffffffff, edev->bar[0] + 0x000100);
 	iowrite32(((edev->dma_region_addr + 0x0000) >> 32) & 0xffffffff, edev->bar[0] + 0x000104);

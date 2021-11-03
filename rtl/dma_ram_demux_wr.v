@@ -99,6 +99,7 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     // FIFO to maintain response ordering
     reg [FIFO_ADDR_WIDTH+1-1:0] fifo_wr_ptr_reg = 0;
     reg [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_reg = 0;
+    (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
     reg [CL_PORTS-1:0] fifo_sel[(2**FIFO_ADDR_WIDTH)-1:0];
 
     wire fifo_empty = fifo_wr_ptr_reg == fifo_rd_ptr_reg;

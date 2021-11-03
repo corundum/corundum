@@ -392,9 +392,13 @@ reg have_credit_reg = 1'b0;
 
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_wr_ptr_reg = 0;
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0, status_fifo_rd_ptr_next;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [OP_TAG_WIDTH-1:0] status_fifo_op_tag[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [SEG_COUNT-1:0] status_fifo_mask[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg status_fifo_finish[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [3:0] status_fifo_error[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 reg [OP_TAG_WIDTH-1:0] status_fifo_wr_op_tag;
 reg [SEG_COUNT-1:0] status_fifo_wr_mask;
@@ -465,22 +469,30 @@ reg pcie_tag_table_start_en_reg = 1'b0, pcie_tag_table_start_en_next;
 reg [PCIE_TAG_WIDTH-1:0] pcie_tag_table_finish_ptr;
 reg pcie_tag_table_finish_en;
 
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [RAM_SEL_WIDTH-1:0] pcie_tag_table_ram_sel[(2**PCIE_TAG_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [RAM_ADDR_WIDTH-1:0] pcie_tag_table_ram_addr[(2**PCIE_TAG_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [OP_TAG_WIDTH-1:0] pcie_tag_table_op_tag[(2**PCIE_TAG_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg pcie_tag_table_zero_len[(2**PCIE_TAG_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg pcie_tag_table_active_a[(2**PCIE_TAG_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg pcie_tag_table_active_b[(2**PCIE_TAG_WIDTH)-1:0];
 
 reg [PCIE_TAG_WIDTH-1:0] pcie_tag_fifo_wr_tag;
 
 reg [PCIE_TAG_WIDTH_1+1-1:0] pcie_tag_fifo_1_wr_ptr_reg = 0;
 reg [PCIE_TAG_WIDTH_1+1-1:0] pcie_tag_fifo_1_rd_ptr_reg = 0, pcie_tag_fifo_1_rd_ptr_next;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [PCIE_TAG_WIDTH_1-1:0] pcie_tag_fifo_1_mem [2**PCIE_TAG_WIDTH_1-1:0];
 reg pcie_tag_fifo_1_we;
 
 reg [PCIE_TAG_WIDTH_2+1-1:0] pcie_tag_fifo_2_wr_ptr_reg = 0;
 reg [PCIE_TAG_WIDTH_2+1-1:0] pcie_tag_fifo_2_rd_ptr_reg = 0, pcie_tag_fifo_2_rd_ptr_next;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [PCIE_TAG_WIDTH-1:0] pcie_tag_fifo_2_mem [2**PCIE_TAG_WIDTH_2-1:0];
 reg pcie_tag_fifo_2_we;
 
@@ -497,18 +509,28 @@ reg op_table_update_status_en;
 reg [OP_TAG_WIDTH-1:0] op_table_read_finish_ptr;
 reg op_table_read_finish_en;
 
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [TAG_WIDTH-1:0] op_table_tag [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_read_init_a [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_read_init_b [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_read_commit [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [OP_TABLE_READ_COUNT_WIDTH-1:0] op_table_read_count_start [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [OP_TABLE_READ_COUNT_WIDTH-1:0] op_table_read_count_finish [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_error_a [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_error_b [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [3:0] op_table_error_code [2**OP_TAG_WIDTH-1:0];
 
 reg [OP_TAG_WIDTH+1-1:0] op_tag_fifo_wr_ptr_reg = 0;
 reg [OP_TAG_WIDTH+1-1:0] op_tag_fifo_rd_ptr_reg = 0, op_tag_fifo_rd_ptr_next;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [OP_TAG_WIDTH-1:0] op_tag_fifo_mem [2**OP_TAG_WIDTH-1:0];
 reg [OP_TAG_WIDTH-1:0] op_tag_fifo_wr_tag;
 reg op_tag_fifo_we;

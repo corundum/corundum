@@ -570,11 +570,11 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     wire out_fifo_full = out_fifo_wr_ptr_reg == (out_fifo_rd_ptr_reg ^ {1'b1, {OUTPUT_FIFO_ADDR_WIDTH{1'b0}}});
     wire out_fifo_empty = out_fifo_wr_ptr_reg == out_fifo_rd_ptr_reg;
 
-    (* ram_style = "distributed" *)
+    (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
     reg [SEG_BE_WIDTH-1:0]   out_fifo_wr_cmd_be[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-    (* ram_style = "distributed" *)
+    (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
     reg [SEG_ADDR_WIDTH-1:0] out_fifo_wr_cmd_addr[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-    (* ram_style = "distributed" *)
+    (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
     reg [SEG_DATA_WIDTH-1:0] out_fifo_wr_cmd_data[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 
     reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] done_count_reg = 0;

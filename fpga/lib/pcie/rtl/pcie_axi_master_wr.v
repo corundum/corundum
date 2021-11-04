@@ -498,11 +498,11 @@ reg out_fifo_half_full_reg = 1'b0;
 wire out_fifo_full = out_fifo_wr_ptr_reg == (out_fifo_rd_ptr_reg ^ {1'b1, {OUTPUT_FIFO_ADDR_WIDTH{1'b0}}});
 wire out_fifo_empty = out_fifo_wr_ptr_reg == out_fifo_rd_ptr_reg;
 
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXI_DATA_WIDTH-1:0] out_fifo_wdata[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXI_STRB_WIDTH-1:0] out_fifo_wstrb[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg                      out_fifo_wlast[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 
 assign m_axi_wready_int = !out_fifo_half_full_reg;

@@ -273,6 +273,7 @@ reg read_cmd_valid_reg = 1'b0, read_cmd_valid_next;
 
 reg [MASK_FIFO_ADDR_WIDTH+1-1:0] mask_fifo_wr_ptr_reg = 0;
 reg [MASK_FIFO_ADDR_WIDTH+1-1:0] mask_fifo_rd_ptr_reg = 0, mask_fifo_rd_ptr_next;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [RAM_SEG_COUNT-1:0] mask_fifo_mask[(2**MASK_FIFO_ADDR_WIDTH)-1:0];
 reg [RAM_SEG_COUNT-1:0] mask_fifo_wr_mask;
 
@@ -345,11 +346,17 @@ reg op_table_finish_en;
 
 reg [2**OP_TAG_WIDTH-1:0] op_table_active = 0;
 reg [2**OP_TAG_WIDTH-1:0] op_table_write_complete = 0;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXI_ADDR_WIDTH-1:0] op_table_axi_addr[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [11:0] op_table_len[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_cycle_count[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [RAM_OFFSET_WIDTH-1:0] op_table_offset[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [TAG_WIDTH-1:0] op_table_tag[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_last[2**OP_TAG_WIDTH-1:0];
 
 integer i;
@@ -926,11 +933,11 @@ reg out_fifo_half_full_reg = 1'b0;
 wire out_fifo_full = out_fifo_wr_ptr_reg == (out_fifo_rd_ptr_reg ^ {1'b1, {OUTPUT_FIFO_ADDR_WIDTH{1'b0}}});
 wire out_fifo_empty = out_fifo_wr_ptr_reg == out_fifo_rd_ptr_reg;
 
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXI_DATA_WIDTH-1:0] out_fifo_wdata[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXI_STRB_WIDTH-1:0] out_fifo_wstrb[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg                      out_fifo_wlast[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 
 assign m_axi_wready_int = !out_fifo_half_full_reg;

@@ -220,17 +220,29 @@ reg [127:0] cpl_tlp_hdr;
 reg [RESP_FIFO_ADDR_WIDTH+1-1:0] resp_fifo_wr_ptr_reg = 0;
 reg [RESP_FIFO_ADDR_WIDTH+1-1:0] resp_fifo_rd_ptr_reg = 0, resp_fifo_rd_ptr_next;
 
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg resp_fifo_op_read[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg resp_fifo_op_write[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg resp_fifo_first[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg resp_fifo_last[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [2:0] resp_fifo_cpl_status[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [5:0] resp_fifo_dword_count[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [11:0] resp_fifo_byte_count[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [6:0] resp_fifo_lower_addr[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [15:0] resp_fifo_requester_id[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [9:0] resp_fifo_tag[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [2:0] resp_fifo_tc[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [2:0] resp_fifo_attr[(2**RESP_FIFO_ADDR_WIDTH)-1:0];
 
 reg resp_fifo_wr_op_read;

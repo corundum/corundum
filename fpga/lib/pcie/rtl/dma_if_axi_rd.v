@@ -241,8 +241,11 @@ reg [OP_TAG_WIDTH-1:0] op_tag_reg = {OP_TAG_WIDTH{1'b0}}, op_tag_next;
 
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_wr_ptr_reg = 0;
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0, status_fifo_rd_ptr_next;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [OP_TAG_WIDTH-1:0] status_fifo_op_tag[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [RAM_SEG_COUNT-1:0] status_fifo_mask[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg status_fifo_finish[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 reg [OP_TAG_WIDTH-1:0] status_fifo_wr_op_tag;
 reg [RAM_SEG_COUNT-1:0] status_fifo_wr_mask;
@@ -315,13 +318,21 @@ reg [OP_TAG_WIDTH+1-1:0] op_table_finish_ptr_reg = 0;
 reg op_table_finish_en;
 
 reg [2**OP_TAG_WIDTH-1:0] op_table_active = 0;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXI_ADDR_WIDTH-1:0] op_table_axi_addr [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [RAM_SEL_WIDTH-1:0] op_table_ram_sel [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [RAM_ADDR_WIDTH-1:0] op_table_ram_addr [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [11:0] op_table_len[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_cycle_count[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [TAG_WIDTH-1:0] op_table_tag[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_last[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_write_complete[2**OP_TAG_WIDTH-1:0];
 
 integer i;
@@ -789,13 +800,13 @@ for (n = 0; n < RAM_SEG_COUNT; n = n + 1) begin
     wire out_fifo_full = out_fifo_wr_ptr_reg == (out_fifo_rd_ptr_reg ^ {1'b1, {OUTPUT_FIFO_ADDR_WIDTH{1'b0}}});
     wire out_fifo_empty = out_fifo_wr_ptr_reg == out_fifo_rd_ptr_reg;
 
-    (* ram_style = "distributed" *)
+    (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
     reg [RAM_SEL_WIDTH-1:0]  out_fifo_wr_cmd_sel[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-    (* ram_style = "distributed" *)
+    (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
     reg [RAM_SEG_BE_WIDTH-1:0]   out_fifo_wr_cmd_be[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-    (* ram_style = "distributed" *)
+    (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
     reg [RAM_SEG_ADDR_WIDTH-1:0] out_fifo_wr_cmd_addr[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-    (* ram_style = "distributed" *)
+    (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
     reg [RAM_SEG_DATA_WIDTH-1:0] out_fifo_wr_cmd_data[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 
     reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] done_count_reg = 0;

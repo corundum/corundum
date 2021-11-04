@@ -258,6 +258,7 @@ module mqnic_core_pcie #
     /*
      * Configuration inputs
      */
+    input  wire [7:0]                                    bus_num,
     input  wire [F_COUNT-1:0]                            ext_tag_enable,
     input  wire [F_COUNT*3-1:0]                          max_read_request_size,
     input  wire [F_COUNT*3-1:0]                          max_payload_size,
@@ -701,7 +702,7 @@ if (APP_ENABLE) begin : pcie_app_ctrl
         /*
          * Configuration
          */
-        .completer_id({8'd0, 5'd0, 3'd0}),
+        .completer_id({bus_num, 5'd0, 3'd0}),
 
         /*
          * Status
@@ -801,7 +802,7 @@ pcie_axil_master_inst (
     /*
      * Configuration
      */
-    .completer_id({8'd0, 5'd0, 3'd0}),
+    .completer_id({bus_num, 5'd0, 3'd0}),
 
     /*
      * Status
@@ -983,7 +984,7 @@ dma_if_pcie_inst (
     .read_enable(dma_enable),
     .write_enable(dma_enable),
     .ext_tag_enable(ext_tag_enable),
-    .requester_id({8'd0, 5'd0, 3'd0}),
+    .requester_id({bus_num, 5'd0, 3'd0}),
     .max_read_request_size(max_read_request_size),
     .max_payload_size(max_payload_size),
 

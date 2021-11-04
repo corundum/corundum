@@ -861,6 +861,7 @@ core_pcie_inst (
     /*
      * Configuration inputs
      */
+    .bus_num(8'd0),
     .ext_tag_enable(ext_tag_enable),
     .max_read_request_size(cfg_max_read_req),
     .max_payload_size(cfg_max_payload),

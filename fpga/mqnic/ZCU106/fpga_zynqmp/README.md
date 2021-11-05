@@ -10,5 +10,26 @@ PHY: 10G BASE-R PHY IP core and internal GTH transceiver
 
 ## How to build
 
-Run make to build.  Ensure that the Xilinx Vivado toolchain components are
-in PATH.
+Run make in this directory to build the bitstream and the .xsa
+file.  Ensure that the Xilinx Vivado toolchain components are in PATH.
+
+Then change into sub-directory ps/petalinux/ and build the PetaLinux project,
+while pointing at the .xsa file.  Ensure that the Xilinx PetaLinux toolchain
+components are in PATH.
+
+	cd ps/petalinux/
+	make HDF=../../fpga/fpga.xsa gethdf
+	make
+	make package-boot
+
+## How to test
+
+Copy the following, resulting files of building the PetaLinux project onto an
+SDcard suitable for then booting the ZCU106 in SDcard boot mode.
+
+	ps/petalinux/images/linux/:
+		BOOT.BIN
+		boot.scr
+		Image
+		system.dtb
+		rootfs.cpio.gz.u-boot

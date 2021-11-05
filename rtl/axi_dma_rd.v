@@ -631,17 +631,17 @@ reg out_fifo_half_full_reg = 1'b0;
 wire out_fifo_full = out_fifo_wr_ptr_reg == (out_fifo_rd_ptr_reg ^ {1'b1, {OUTPUT_FIFO_ADDR_WIDTH{1'b0}}});
 wire out_fifo_empty = out_fifo_wr_ptr_reg == out_fifo_rd_ptr_reg;
 
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXIS_DATA_WIDTH-1:0] out_fifo_tdata[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXIS_KEEP_WIDTH-1:0] out_fifo_tkeep[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg                       out_fifo_tlast[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXIS_ID_WIDTH-1:0]   out_fifo_tid[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXIS_DEST_WIDTH-1:0] out_fifo_tdest[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXIS_USER_WIDTH-1:0] out_fifo_tuser[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 
 assign m_axis_read_data_tready_int = !out_fifo_half_full_reg;

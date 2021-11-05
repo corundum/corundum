@@ -150,7 +150,9 @@ generate
         reg [FIFO_ADDR_WIDTH+1-1:0] fifo_wr_ptr_reg = 0;
         reg [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_reg = 0;
 
+        (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
         reg [CL_M_COUNT-1:0] fifo_select[(2**FIFO_ADDR_WIDTH)-1:0];
+        (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
         reg fifo_decerr[(2**FIFO_ADDR_WIDTH)-1:0];
         wire [CL_M_COUNT-1:0] fifo_wr_select;
         wire fifo_wr_decerr;
@@ -307,6 +309,7 @@ generate
         reg [FIFO_ADDR_WIDTH+1-1:0] fifo_wr_ptr_reg = 0;
         reg [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_reg = 0;
 
+        (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
         reg [CL_S_COUNT-1:0] fifo_select[(2**FIFO_ADDR_WIDTH)-1:0];
         wire [CL_S_COUNT-1:0] fifo_wr_select;
         wire fifo_wr_en;

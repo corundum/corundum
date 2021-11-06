@@ -122,6 +122,7 @@ reg [STAT_INC_WIDTH-1:0] inc_reg = {STAT_INC_WIDTH{1'b0}}, inc_next;
 reg rd_data_valid_reg = 1'b0, rd_data_valid_next;
 reg [WORD_SELECT_WIDTH-1:0] rd_data_shift_reg = 0, rd_data_shift_next;
 
+(* ramstyle = "no_rw_check" *)
 reg [STAT_COUNT_WIDTH-1:0] mem_reg[(2**STAT_ID_WIDTH)-1:0];
 
 reg [STAT_COUNT_WIDTH-1:0] mem_rd_data_reg = {STAT_COUNT_WIDTH{1'b0}};

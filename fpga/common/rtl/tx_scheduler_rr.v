@@ -195,6 +195,7 @@ reg s_axil_arready_reg = 0, s_axil_arready_next;
 reg [AXIL_DATA_WIDTH-1:0] s_axil_rdata_reg = 0, s_axil_rdata_next;
 reg s_axil_rvalid_reg = 0, s_axil_rvalid_next;
 
+(* ramstyle = "no_rw_check" *)
 reg [QUEUE_RAM_WIDTH-1:0] queue_ram[QUEUE_COUNT-1:0];
 reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_read_ptr;
 reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_write_ptr;
@@ -212,10 +213,15 @@ wire queue_ram_read_data_scheduled = queue_ram_read_data_pipeline_reg[PIPELINE-1
 wire [CL_OP_TABLE_SIZE-1:0] queue_ram_read_data_op_tail_index = queue_ram_read_data_pipeline_reg[PIPELINE-1][15:8];
 
 reg [OP_TABLE_SIZE-1:0] op_table_active = 0;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [QUEUE_INDEX_WIDTH-1:0] op_table_queue[OP_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_doorbell[OP_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_is_head[OP_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [CL_OP_TABLE_SIZE-1:0] op_table_next_index[OP_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [CL_OP_TABLE_SIZE-1:0] op_table_prev_index[OP_TABLE_SIZE-1:0];
 wire [CL_OP_TABLE_SIZE-1:0] op_table_start_ptr;
 wire op_table_start_ptr_valid;
@@ -235,7 +241,9 @@ reg op_table_update_prev_en;
 
 reg [CL_OP_TABLE_SIZE+1-1:0] finish_fifo_wr_ptr_reg = 0, finish_fifo_wr_ptr_next;
 reg [CL_OP_TABLE_SIZE+1-1:0] finish_fifo_rd_ptr_reg = 0, finish_fifo_rd_ptr_next;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [REQ_TAG_WIDTH-1:0] finish_fifo_tag[(2**CL_OP_TABLE_SIZE)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg finish_fifo_status[(2**CL_OP_TABLE_SIZE)-1:0];
 reg finish_fifo_we;
 reg [REQ_TAG_WIDTH-1:0] finish_fifo_wr_tag;

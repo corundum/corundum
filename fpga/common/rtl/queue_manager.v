@@ -224,6 +224,7 @@ reg s_axil_arready_reg = 0, s_axil_arready_next;
 reg [AXIL_DATA_WIDTH-1:0] s_axil_rdata_reg = 0, s_axil_rdata_next;
 reg s_axil_rvalid_reg = 0, s_axil_rvalid_next;
 
+(* ramstyle = "no_rw_check" *)
 reg [QUEUE_RAM_WIDTH-1:0] queue_ram[QUEUE_COUNT-1:0];
 reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_read_ptr;
 reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_write_ptr;
@@ -244,7 +245,9 @@ wire [ADDR_WIDTH-1:0] queue_ram_read_data_base_addr = queue_ram_read_data_pipeli
 
 reg [OP_TABLE_SIZE-1:0] op_table_active = 0;
 reg [OP_TABLE_SIZE-1:0] op_table_commit = 0;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [QUEUE_INDEX_WIDTH-1:0] op_table_queue[OP_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [QUEUE_PTR_WIDTH-1:0] op_table_queue_ptr[OP_TABLE_SIZE-1:0];
 reg [CL_OP_TABLE_SIZE-1:0] op_table_start_ptr_reg = 0;
 reg [QUEUE_INDEX_WIDTH-1:0] op_table_start_queue;

@@ -90,6 +90,7 @@ reg [COUNT-1:0] update_reg = {COUNT{1'b0}}, update_next;
 wire [ACC_WIDTH-1:0] acc_int[COUNT-1:0];
 reg [COUNT-1:0] acc_clear;
 
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [STAT_INC_WIDTH-1:0] mem_reg[COUNT-1:0];
 
 reg [STAT_INC_WIDTH-1:0] mem_rd_data_reg = 0;

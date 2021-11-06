@@ -80,7 +80,9 @@ assign out_status = out_status_reg;
 assign out_latency = out_latency_reg;
 assign out_valid = out_valid_reg;
 
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [LEN_WIDTH-1:0] len_mem_reg[2**TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [COUNT_WIDTH-1:0] count_mem_reg[2**TAG_WIDTH-1:0];
 
 integer i;

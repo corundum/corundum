@@ -317,18 +317,31 @@ reg [DESC_TABLE_SIZE-1:0] desc_table_desc_fetched = 0;
 reg [DESC_TABLE_SIZE-1:0] desc_table_data_fetched = 0;
 reg [DESC_TABLE_SIZE-1:0] desc_table_tx_done = 0;
 reg [DESC_TABLE_SIZE-1:0] desc_table_cpl_write_done = 0;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [REQ_TAG_WIDTH-1:0] desc_table_tag[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [QUEUE_INDEX_WIDTH-1:0] desc_table_queue[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [QUEUE_PTR_WIDTH-1:0] desc_table_queue_ptr[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [CPL_QUEUE_INDEX_WIDTH-1:0] desc_table_cpl_queue[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [6:0] desc_table_csum_start[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [7:0] desc_table_csum_offset[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg desc_table_csum_enable[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_len[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [CL_TX_BUFFER_SIZE+1-1:0] desc_table_buf_ptr[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [95:0] desc_table_ptp_ts[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg desc_table_read_commit[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [DESC_TABLE_DMA_OP_COUNT_WIDTH-1:0] desc_table_read_count_start[DESC_TABLE_SIZE-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [DESC_TABLE_DMA_OP_COUNT_WIDTH-1:0] desc_table_read_count_finish[DESC_TABLE_SIZE-1:0];
 
 reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_start_ptr_reg = 0;

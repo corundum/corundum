@@ -149,10 +149,6 @@ reg [7:0] sum_offset_reg[LEVELS-2:0];
 reg [15:0] sum_init_reg[LEVELS-2:0];
 reg [LEVELS-2:0] sum_init_valid_reg = 0;
 
-wire [DATA_WIDTH-1:0] sum_reg_0 = sum_reg[0];
-wire [DATA_WIDTH-1:0] sum_reg_1 = sum_reg[1];
-wire [DATA_WIDTH-1:0] sum_reg_2 = sum_reg[2];
-
 reg [16+LEVELS-1:0] sum_acc_temp = 0;
 reg [15:0] sum_acc_reg = 0;
 

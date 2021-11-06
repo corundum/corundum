@@ -120,6 +120,7 @@ reg [FIFO_ADDR_WIDTH:0] wr_addr_reg = {FIFO_ADDR_WIDTH+1{1'b0}};
 reg [FIFO_ADDR_WIDTH:0] rd_ptr_reg = {FIFO_ADDR_WIDTH+1{1'b0}}, rd_ptr_next;
 reg [FIFO_ADDR_WIDTH:0] rd_addr_reg = {FIFO_ADDR_WIDTH+1{1'b0}};
 
+(* ramstyle = "no_rw_check" *)
 reg [RWIDTH-1:0] mem[(2**FIFO_ADDR_WIDTH)-1:0];
 reg [RWIDTH-1:0] mem_read_data_reg;
 reg mem_read_data_valid_reg = 1'b0, mem_read_data_valid_next;

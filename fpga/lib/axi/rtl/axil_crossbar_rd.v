@@ -150,11 +150,18 @@ generate
         reg [FIFO_ADDR_WIDTH+1-1:0] fifo_wr_ptr_reg = 0;
         reg [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_reg = 0;
 
+        (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
         reg [CL_M_COUNT-1:0] fifo_select[(2**FIFO_ADDR_WIDTH)-1:0];
+        (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
         reg fifo_decerr[(2**FIFO_ADDR_WIDTH)-1:0];
+
         wire [CL_M_COUNT-1:0] fifo_wr_select;
         wire fifo_wr_decerr;
         wire fifo_wr_en;
+
+        reg [CL_M_COUNT-1:0] fifo_rd_select_reg = 0;
+        reg fifo_rd_decerr_reg = 0;
+        reg fifo_rd_valid_reg = 0;
         wire fifo_rd_en;
         reg fifo_half_full_reg = 1'b0;
 
@@ -175,7 +182,13 @@ generate
                 fifo_decerr[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= fifo_wr_decerr;
                 fifo_wr_ptr_reg <= fifo_wr_ptr_reg + 1;
             end
-            if (fifo_rd_en) begin
+
+            fifo_rd_valid_reg <= fifo_rd_valid_reg && !fifo_rd_en;
+
+            if ((fifo_rd_ptr_reg != fifo_wr_ptr_reg) && (!fifo_rd_valid_reg || fifo_rd_en)) begin
+                fifo_rd_select_reg <= fifo_select[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
+                fifo_rd_decerr_reg <= fifo_decerr[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
+                fifo_rd_valid_reg <= 1'b1;
                 fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
             end
 
@@ -184,6 +197,7 @@ generate
             if (rst) begin
                 fifo_wr_ptr_reg <= 0;
                 fifo_rd_ptr_reg <= 0;
+                fifo_rd_valid_reg <= 1'b0;
             end
         end
 
@@ -256,9 +270,9 @@ generate
         assign m_rc_ready = !fifo_half_full_reg;
 
         // write response handling
-        wire [CL_M_COUNT-1:0] r_select = M_COUNT > 1 ? fifo_select[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]] : 0;
-        wire r_decerr = fifo_decerr[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
-        wire r_valid = !fifo_empty;
+        wire [CL_M_COUNT-1:0] r_select = M_COUNT > 1 ? fifo_rd_select_reg : 0;
+        wire r_decerr = fifo_rd_decerr_reg;
+        wire r_valid = fifo_rd_valid_reg;
 
         // read response mux
         wire [DATA_WIDTH-1:0]  m_axil_rdata_mux  = r_decerr ? {DATA_WIDTH{1'b0}} : int_m_axil_rdata[r_select*DATA_WIDTH +: DATA_WIDTH];
@@ -307,6 +321,7 @@ generate
         reg [FIFO_ADDR_WIDTH+1-1:0] fifo_wr_ptr_reg = 0;
         reg [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_reg = 0;
 
+        (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
         reg [CL_S_COUNT-1:0] fifo_select[(2**FIFO_ADDR_WIDTH)-1:0];
         wire [CL_S_COUNT-1:0] fifo_wr_select;
         wire fifo_wr_en;

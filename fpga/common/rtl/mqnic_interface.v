@@ -2031,7 +2031,7 @@ assign event_cpl_req_valid = axis_event_valid;
 assign axis_event_ready = event_cpl_req_ready;
 
 axis_fifo #(
-    .DEPTH(16),
+    .DEPTH(128),
     .DATA_WIDTH(EVENT_SOURCE_WIDTH+EVENT_TYPE_WIDTH+EVENT_QUEUE_INDEX_WIDTH),
     .KEEP_ENABLE(0),
     .LAST_ENABLE(0),
@@ -2071,7 +2071,7 @@ tx_event_fifo (
 );
 
 axis_fifo #(
-    .DEPTH(16),
+    .DEPTH(128),
     .DATA_WIDTH(EVENT_SOURCE_WIDTH+EVENT_TYPE_WIDTH+EVENT_QUEUE_INDEX_WIDTH),
     .KEEP_ENABLE(0),
     .LAST_ENABLE(0),

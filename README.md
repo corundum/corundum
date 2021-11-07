@@ -25,6 +25,7 @@ Corundum currently supports Xilinx Virtex 7, UltraScale, and UltraScale+ series 
 *  Exablaze ExaNIC X25/Cisco Nexus K3P-S (Xilinx Kintex UltraScale+ XCKU3P)
 *  Silicom fb2CG@KU15P (Xilinx Kintex UltraScale+ XCKU15P)
 *  NetFPGA SUME (Xilinx Virtex 7 XC7V690T)
+*  Intel Stratix 10 MX dev kit (Intel Stratix 10 MX 1SM21CHU1F53E1VG)
 *  Xilinx Alveo U50 (Xilinx Virtex UltraScale+ XCU50)
 *  Xilinx Alveo U200 (Xilinx Virtex UltraScale+ XCU200)
 *  Xilinx Alveo U250 (Xilinx Virtex UltraScale+ XCU250)

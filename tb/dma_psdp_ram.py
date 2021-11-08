@@ -146,10 +146,12 @@ class PsdpRamWrite(Memory):
 
             wr_done = 0
 
-            cmd_be_sample = self.bus.wr_cmd_be.value
-            cmd_addr_sample = self.bus.wr_cmd_addr.value
-            cmd_data_sample = self.bus.wr_cmd_data.value
             cmd_valid_sample = self.bus.wr_cmd_valid.value
+
+            if cmd_valid_sample:
+                cmd_be_sample = self.bus.wr_cmd_be.value
+                cmd_addr_sample = self.bus.wr_cmd_addr.value
+                cmd_data_sample = self.bus.wr_cmd_data.value
 
             if self.reset is not None and self.reset.value:
                 self.bus.wr_cmd_ready.setimmediatevalue(0)
@@ -258,8 +260,10 @@ class PsdpRamRead(Memory):
         while True:
             await RisingEdge(self.clock)
 
-            cmd_addr_sample = self.bus.rd_cmd_addr.value
             cmd_valid_sample = self.bus.rd_cmd_valid.value
+
+            if cmd_valid_sample:
+                cmd_addr_sample = self.bus.rd_cmd_addr.value
 
             resp_ready_sample = self.bus.rd_resp_ready.value
 

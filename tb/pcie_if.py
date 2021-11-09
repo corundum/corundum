@@ -457,7 +457,7 @@ class PcieIfSource(PcieIfBase):
 
             if self.reset is not None and self.reset.value:
                 self.active = False
-                self.bus.valid <= 0
+                self.bus.valid.value = 0
                 continue
 
             if ready_sample or not valid_sample:
@@ -467,7 +467,7 @@ class PcieIfSource(PcieIfBase):
                     self.drive_sync.set()
                     self.active = True
                 else:
-                    self.bus.valid <= 0
+                    self.bus.valid.value = 0
                     self.active = bool(self.drive_obj)
                     if not self.drive_obj:
                         self.idle_event.set()
@@ -608,7 +608,7 @@ class PcieIfSink(PcieIfBase):
             valid_sample = self.bus.valid.value
 
             if self.reset is not None and self.reset.value:
-                self.bus.ready <= 0
+                self.bus.ready.value = 0
                 continue
 
             if ready_sample and valid_sample:
@@ -616,7 +616,7 @@ class PcieIfSink(PcieIfBase):
                 self.bus.sample(self.sample_obj)
                 self.sample_sync.set()
 
-            self.bus.ready <= (not self.full() and not self.pause)
+            self.bus.ready.value = (not self.full() and not self.pause)
 
     async def _run(self):
         self.active = False
@@ -991,8 +991,8 @@ class PcieIfDevice(Device):
                     if not self.rd_req_tx_seq_num_queue.empty():
                         data |= self.rd_req_tx_seq_num_queue.get_nowait() << (width*k)
                         valid |= 1 << k
-                self.rd_req_tx_seq_num <= data
-                self.rd_req_tx_seq_num_valid <= valid
+                self.rd_req_tx_seq_num.value = data
+                self.rd_req_tx_seq_num_valid.value = valid
             elif not self.rd_req_tx_seq_num_queue.empty():
                 self.rd_req_tx_seq_num_queue.get_nowait()
 
@@ -1017,8 +1017,8 @@ class PcieIfDevice(Device):
                     if not self.wr_req_tx_seq_num_queue.empty():
                         data |= self.wr_req_tx_seq_num_queue.get_nowait() << (width*k)
                         valid |= 1 << k
-                self.wr_req_tx_seq_num <= data
-                self.wr_req_tx_seq_num_valid <= valid
+                self.wr_req_tx_seq_num.value = data
+                self.wr_req_tx_seq_num_valid.value = valid
             elif not self.wr_req_tx_seq_num_queue.empty():
                 self.wr_req_tx_seq_num_queue.get_nowait()
 
@@ -1027,54 +1027,54 @@ class PcieIfDevice(Device):
             await RisingEdge(self.clk)
 
             if self.cfg_max_payload is not None:
-                self.cfg_max_payload <= self.functions[0].pcie_cap.max_payload_size
+                self.cfg_max_payload.value = self.functions[0].pcie_cap.max_payload_size
             if self.cfg_max_read_req is not None:
-                self.cfg_max_read_req <= self.functions[0].pcie_cap.max_read_request_size
+                self.cfg_max_read_req.value = self.functions[0].pcie_cap.max_read_request_size
             if self.cfg_ext_tag_enable is not None:
-                self.cfg_ext_tag_enable <= self.functions[0].pcie_cap.extended_tag_field_enable
+                self.cfg_ext_tag_enable.value = self.functions[0].pcie_cap.extended_tag_field_enable
 
     async def _run_fc_logic(self):
         while True:
             await RisingEdge(self.clk)
 
             if self.tx_fc_ph_av is not None:
-                self.tx_fc_ph_av <= self.upstream_port.fc_state[0].ph.tx_credits_available
+                self.tx_fc_ph_av.value = self.upstream_port.fc_state[0].ph.tx_credits_available
             if self.tx_fc_pd_av is not None:
-                self.tx_fc_pd_av <= self.upstream_port.fc_state[0].pd.tx_credits_available
+                self.tx_fc_pd_av.value = self.upstream_port.fc_state[0].pd.tx_credits_available
             if self.tx_fc_nph_av is not None:
-                self.tx_fc_nph_av <= self.upstream_port.fc_state[0].nph.tx_credits_available
+                self.tx_fc_nph_av.value = self.upstream_port.fc_state[0].nph.tx_credits_available
             if self.tx_fc_npd_av is not None:
-                self.tx_fc_npd_av <= self.upstream_port.fc_state[0].npd.tx_credits_available
+                self.tx_fc_npd_av.value = self.upstream_port.fc_state[0].npd.tx_credits_available
             if self.tx_fc_cplh_av is not None:
-                self.tx_fc_cplh_av <= self.upstream_port.fc_state[0].cplh.tx_credits_available
+                self.tx_fc_cplh_av.value = self.upstream_port.fc_state[0].cplh.tx_credits_available
             if self.tx_fc_cpld_av is not None:
-                self.tx_fc_cpld_av <= self.upstream_port.fc_state[0].cpld.tx_credits_available
+                self.tx_fc_cpld_av.value = self.upstream_port.fc_state[0].cpld.tx_credits_available
 
             if self.tx_fc_ph_lim is not None:
-                self.tx_fc_ph_lim <= self.upstream_port.fc_state[0].ph.tx_credit_limit
+                self.tx_fc_ph_lim.value = self.upstream_port.fc_state[0].ph.tx_credit_limit
             if self.tx_fc_pd_lim is not None:
-                self.tx_fc_pd_lim <= self.upstream_port.fc_state[0].pd.tx_credit_limit
+                self.tx_fc_pd_lim.value = self.upstream_port.fc_state[0].pd.tx_credit_limit
             if self.tx_fc_nph_lim is not None:
-                self.tx_fc_nph_lim <= self.upstream_port.fc_state[0].nph.tx_credit_limit
+                self.tx_fc_nph_lim.value = self.upstream_port.fc_state[0].nph.tx_credit_limit
             if self.tx_fc_npd_lim is not None:
-                self.tx_fc_npd_lim <= self.upstream_port.fc_state[0].npd.tx_credit_limit
+                self.tx_fc_npd_lim.value = self.upstream_port.fc_state[0].npd.tx_credit_limit
             if self.tx_fc_cplh_lim is not None:
-                self.tx_fc_cplh_lim <= self.upstream_port.fc_state[0].cplh.tx_credit_limit
+                self.tx_fc_cplh_lim.value = self.upstream_port.fc_state[0].cplh.tx_credit_limit
             if self.tx_fc_cpld_lim is not None:
-                self.tx_fc_cpld_lim <= self.upstream_port.fc_state[0].cpld.tx_credit_limit
+                self.tx_fc_cpld_lim.value = self.upstream_port.fc_state[0].cpld.tx_credit_limit
 
             if self.tx_fc_ph_cons is not None:
-                self.tx_fc_ph_cons <= self.upstream_port.fc_state[0].ph.tx_credits_consumed
+                self.tx_fc_ph_cons.value = self.upstream_port.fc_state[0].ph.tx_credits_consumed
             if self.tx_fc_pd_cons is not None:
-                self.tx_fc_pd_cons <= self.upstream_port.fc_state[0].pd.tx_credits_consumed
+                self.tx_fc_pd_cons.value = self.upstream_port.fc_state[0].pd.tx_credits_consumed
             if self.tx_fc_nph_cons is not None:
-                self.tx_fc_nph_cons <= self.upstream_port.fc_state[0].nph.tx_credits_consumed
+                self.tx_fc_nph_cons.value = self.upstream_port.fc_state[0].nph.tx_credits_consumed
             if self.tx_fc_npd_cons is not None:
-                self.tx_fc_npd_cons <= self.upstream_port.fc_state[0].npd.tx_credits_consumed
+                self.tx_fc_npd_cons.value = self.upstream_port.fc_state[0].npd.tx_credits_consumed
             if self.tx_fc_cplh_cons is not None:
-                self.tx_fc_cplh_cons <= self.upstream_port.fc_state[0].cplh.tx_credits_consumed
+                self.tx_fc_cplh_cons.value = self.upstream_port.fc_state[0].cplh.tx_credits_consumed
             if self.tx_fc_cpld_cons is not None:
-                self.tx_fc_cpld_cons <= self.upstream_port.fc_state[0].cpld.tx_credits_consumed
+                self.tx_fc_cpld_cons.value = self.upstream_port.fc_state[0].cpld.tx_credits_consumed
 
 
 class PcieIfTestDevice:

@@ -120,10 +120,10 @@ class TB(object):
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -142,7 +142,7 @@ async def run_test(dut):
     dev_pf0_bar0 = tb.rc.tree[0][0].bar_addr[0]
     dev_pf0_bar2 = tb.rc.tree[0][0].bar_addr[2]
 
-    tb.dut.bus_num <= tb.dev.bus_num
+    tb.dut.bus_num.value = tb.dev.bus_num
 
     tb.log.info("Test memory write to BAR 2")
 

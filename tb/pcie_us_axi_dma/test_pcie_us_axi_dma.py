@@ -173,7 +173,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
 
-    tb.dut.write_enable <= 1
+    tb.dut.write_enable.value = 1
 
     for length in list(range(0, byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
         for pcie_offset in list(range(4))+list(range(4096-4, 4096)):
@@ -229,7 +229,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
 
-    tb.dut.read_enable <= 1
+    tb.dut.read_enable.value = 1
 
     for length in list(range(0, byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
         for pcie_offset in list(range(4))+list(range(4096-4, 4096)):
@@ -283,7 +283,7 @@ async def run_test_read_errors(dut, idle_inserter=None, backpressure_inserter=No
 
     mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
 
-    tb.dut.read_enable <= 1
+    tb.dut.read_enable.value = 1
 
     tb.log.info("Test bad DMA read (UR) short")
 

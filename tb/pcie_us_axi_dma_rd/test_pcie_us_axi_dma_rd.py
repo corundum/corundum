@@ -168,7 +168,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
 
-    tb.dut.enable <= 1
+    tb.dut.enable.value = 1
 
     for length in list(range(0, byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
         for pcie_offset in pcie_offsets:
@@ -222,7 +222,7 @@ async def run_test_read_errors(dut, idle_inserter=None, backpressure_inserter=No
 
     mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
 
-    tb.dut.enable <= 1
+    tb.dut.enable.value = 1
 
     tb.log.info("Test bad DMA read (UR) short")
 

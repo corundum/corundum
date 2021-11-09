@@ -134,10 +134,10 @@ class TB(object):
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -155,7 +155,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
 
-    tb.dut.completer_id <= int(tb.dev.functions[0].pcie_id)
+    tb.dut.completer_id.value = int(tb.dev.functions[0].pcie_id)
 
     for length in range(0, 5):
         for pcie_offset in range(4-length+1):
@@ -194,7 +194,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
 
-    tb.dut.completer_id <= int(tb.dev.functions[0].pcie_id)
+    tb.dut.completer_id.value = int(tb.dev.functions[0].pcie_id)
 
     for length in range(0, 5):
         for pcie_offset in range(4-length+1):
@@ -234,7 +234,7 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
     dev_bar1 = tb.rc.tree[0][0].bar_addr[1]
 
-    tb.dut.completer_id <= int(tb.dev.functions[0].pcie_id)
+    tb.dut.completer_id.value = int(tb.dev.functions[0].pcie_id)
 
     tb.log.info("Test IO write")
 

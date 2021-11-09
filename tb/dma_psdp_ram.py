@@ -187,8 +187,8 @@ class PsdpRamWrite(Memory):
             if self.pause:
                 cmd_ready = 0
 
-            self.bus.wr_cmd_ready <= cmd_ready
-            self.bus.wr_done <= wr_done
+            self.bus.wr_cmd_ready.value = cmd_ready
+            self.bus.wr_done.value = wr_done
 
     async def _run_pause(self):
         for val in self._pause_generator:
@@ -313,10 +313,10 @@ class PsdpRamRead(Memory):
             if self.pause:
                 cmd_ready = 0
 
-            self.bus.rd_cmd_ready <= cmd_ready
+            self.bus.rd_cmd_ready.value = cmd_ready
 
-            self.bus.rd_resp_data <= resp_data
-            self.bus.rd_resp_valid <= resp_valid
+            self.bus.rd_resp_data.value = resp_data
+            self.bus.rd_resp_valid.value = resp_valid
 
     async def _run_pause(self):
         for val in self._pause_generator:

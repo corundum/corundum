@@ -76,10 +76,10 @@ class TB(object):
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -87,15 +87,15 @@ class TB(object):
         byte_lanes = len(self.dut.reg_wr_strb)
 
         while True:
-            self.dut.reg_rd_data <= 0
-            self.dut.reg_rd_wait <= 0
-            self.dut.reg_rd_ack <= 0
+            self.dut.reg_rd_data.value = 0
+            self.dut.reg_rd_wait.value = 0
+            self.dut.reg_rd_ack.value = 0
             await RisingEdge(self.dut.clk)
 
             addr = (self.dut.reg_rd_addr.value.integer // byte_lanes) * byte_lanes
 
             if self.dut.reg_rd_en.value.integer and addr < len(self.mem):
-                self.dut.reg_rd_wait <= 1
+                self.dut.reg_rd_wait.value = 1
 
                 for k in range(10):
                     await RisingEdge(self.dut.clk)
@@ -104,17 +104,17 @@ class TB(object):
 
                 data = self.mem.read(byte_lanes)
 
-                self.dut.reg_rd_data <= int.from_bytes(data, 'little')
-                self.dut.reg_rd_wait <= 0
-                self.dut.reg_rd_ack <= 1
+                self.dut.reg_rd_data.value = int.from_bytes(data, 'little')
+                self.dut.reg_rd_wait.value = 0
+                self.dut.reg_rd_ack.value = 1
                 await RisingEdge(self.dut.clk)
 
     async def run_reg_write(self):
         byte_lanes = len(self.dut.reg_wr_strb)
 
         while True:
-            self.dut.reg_wr_wait <= 0
-            self.dut.reg_wr_ack <= 0
+            self.dut.reg_wr_wait.value = 0
+            self.dut.reg_wr_ack.value = 0
             await RisingEdge(self.dut.clk)
 
             addr = (self.dut.reg_wr_addr.value.integer // byte_lanes) * byte_lanes
@@ -122,7 +122,7 @@ class TB(object):
             strb = self.dut.reg_wr_strb.value.integer
 
             if self.dut.reg_wr_en.value.integer and addr < len(self.mem):
-                self.dut.reg_wr_wait <= 1
+                self.dut.reg_wr_wait.value = 1
 
                 for k in range(10):
                     await RisingEdge(self.dut.clk)
@@ -137,8 +137,8 @@ class TB(object):
                     else:
                         self.mem.seek(1, 1)
 
-                self.dut.reg_wr_wait <= 0
-                self.dut.reg_wr_ack <= 1
+                self.dut.reg_wr_wait.value = 0
+                self.dut.reg_wr_ack.value = 1
                 await RisingEdge(self.dut.clk)
 
     def mem_read(self, address, length):

@@ -71,13 +71,13 @@ class TB(object):
         self.dut.b_rst.setimmediatevalue(0)
         await RisingEdge(self.dut.a_clk)
         await RisingEdge(self.dut.a_clk)
-        self.dut.a_rst <= 1
-        self.dut.b_rst <= 1
+        self.dut.a_rst.value = 1
+        self.dut.b_rst.value = 1
         await RisingEdge(self.dut.a_clk)
         await RisingEdge(self.dut.a_clk)
-        self.dut.a_rst <= 0
+        self.dut.a_rst.value = 0
         await RisingEdge(self.dut.b_clk)
-        self.dut.b_rst <= 0
+        self.dut.b_rst.value = 0
         await RisingEdge(self.dut.a_clk)
         await RisingEdge(self.dut.a_clk)
 

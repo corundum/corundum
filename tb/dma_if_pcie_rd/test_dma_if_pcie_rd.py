@@ -233,7 +233,7 @@ async def run_test_read_errors(dut, idle_inserter=None, backpressure_inserter=No
     tb.log.info("status: %s", status)
 
     assert int(status.tag) == cur_tag
-    assert int(status.error) == 10
+    assert int(status.error) in {10, 11}
 
     cur_tag = (cur_tag + 1) % tag_count
 
@@ -247,7 +247,7 @@ async def run_test_read_errors(dut, idle_inserter=None, backpressure_inserter=No
     tb.log.info("status: %s", status)
 
     assert int(status.tag) == cur_tag
-    assert int(status.error) == 10
+    assert int(status.error) in {10, 11}
 
     cur_tag = (cur_tag + 1) % tag_count
 
@@ -261,7 +261,7 @@ async def run_test_read_errors(dut, idle_inserter=None, backpressure_inserter=No
     tb.log.info("status: %s", status)
 
     assert int(status.tag) == cur_tag
-    assert int(status.error) == 10
+    assert int(status.error) in {10, 11}
 
     cur_tag = (cur_tag + 1) % tag_count
 

@@ -254,7 +254,7 @@ reg [RAM_OFFSET_WIDTH-1:0] start_offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, start_of
 reg [RAM_OFFSET_WIDTH-1:0] end_offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, end_offset_next;
 
 reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
-reg [11:0] axi_len_reg = 12'd0, axi_len_next;
+reg [12:0] axi_len_reg = 13'd0, axi_len_next;
 reg [RAM_OFFSET_WIDTH-1:0] offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, offset_next;
 reg [AXI_STRB_WIDTH-1:0] strb_offset_mask_reg = {AXI_STRB_WIDTH{1'b1}}, strb_offset_mask_next;
 reg [OFFSET_WIDTH-1:0] last_cycle_offset_reg = {OFFSET_WIDTH{1'b0}}, last_cycle_offset_next;
@@ -266,7 +266,7 @@ reg last_cycle_reg = 1'b0, last_cycle_next;
 reg [AXI_ADDR_WIDTH-1:0] read_cmd_axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, read_cmd_axi_addr_next;
 reg [RAM_SEL_WIDTH-1:0] read_cmd_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, read_cmd_ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] read_cmd_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, read_cmd_ram_addr_next;
-reg [11:0] read_cmd_len_reg = 12'd0, read_cmd_len_next;
+reg [12:0] read_cmd_len_reg = 13'd0, read_cmd_len_next;
 reg [CYCLE_COUNT_WIDTH-1:0] read_cmd_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, read_cmd_cycle_count_next;
 reg read_cmd_last_cycle_reg = 1'b0, read_cmd_last_cycle_next;
 reg read_cmd_valid_reg = 1'b0, read_cmd_valid_next;

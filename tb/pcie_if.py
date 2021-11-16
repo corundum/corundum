@@ -873,13 +873,13 @@ class PcieIfDevice(Device):
 
             tlp.release_fc()
 
-            self.log.info("Function not found: failed to route config type 0 TLP")
+            self.log.info("Function not found: failed to route config type 0 TLP: %r", tlp)
         elif tlp.fmt_type in {TlpType.CFG_READ_1, TlpType.CFG_WRITE_1}:
             # config type 1
 
             tlp.release_fc()
 
-            self.log.warning("Malformed TLP: endpoint received config type 1 TLP")
+            self.log.warning("Malformed TLP: endpoint received config type 1 TLP: %r", tlp)
         elif tlp.fmt_type in {TlpType.CPL, TlpType.CPL_DATA, TlpType.CPL_LOCKED, TlpType.CPL_LOCKED_DATA}:
             # Completion
 
@@ -898,7 +898,7 @@ class PcieIfDevice(Device):
 
             tlp.release_fc()
 
-            self.log.warning("Unexpected completion: failed to route completion to function")
+            self.log.warning("Unexpected completion: failed to route completion to function: %r", tlp)
             return  # no UR response for completion
         elif tlp.fmt_type in {TlpType.IO_READ, TlpType.IO_WRITE}:
             # IO read/write
@@ -920,7 +920,7 @@ class PcieIfDevice(Device):
 
             tlp.release_fc()
 
-            self.log.warning("No BAR match: IO request did not match any BARs")
+            self.log.warning("No BAR match: IO request did not match any BARs: %r", tlp)
         elif tlp.fmt_type in {TlpType.MEM_READ, TlpType.MEM_READ_64, TlpType.MEM_WRITE, TlpType.MEM_WRITE_64}:
             # Memory read/write
 
@@ -942,10 +942,10 @@ class PcieIfDevice(Device):
             tlp.release_fc()
 
             if tlp.fmt_type in {TlpType.MEM_WRITE, TlpType.MEM_WRITE_64}:
-                self.log.warning("No BAR match: memory write request did not match any BARs")
+                self.log.warning("No BAR match: memory write request did not match any BARs: %r", tlp)
                 return  # no UR response for write request
             else:
-                self.log.warning("No BAR match: memory read request did not match any BARs")
+                self.log.warning("No BAR match: memory read request did not match any BARs: %r", tlp)
         else:
             raise Exception("TODO")
 

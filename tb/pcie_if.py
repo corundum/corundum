@@ -1433,7 +1433,7 @@ class PcieIfTestDevice:
             elif tlp.fmt_type == TlpType.IO_READ:
                 self.log.info("IO read")
 
-                cpl = Tlp.create_completion_data_for_tlp(tlp, PcieId(0, 0, 0))
+                cpl = Tlp.create_completion_data_for_tlp(tlp, PcieId(self.dev_bus_num, self.dev_device_num, 0))
 
                 region = frame.bar_id
                 addr = tlp.address % self.regions[region][0]
@@ -1468,7 +1468,7 @@ class PcieIfTestDevice:
             elif tlp.fmt_type == TlpType.IO_WRITE:
                 self.log.info("IO write")
 
-                cpl = Tlp.create_completion_for_tlp(tlp, PcieId(0, 0, 0))
+                cpl = Tlp.create_completion_for_tlp(tlp, PcieId(self.dev_bus_num, self.dev_device_num, 0))
 
                 region = frame.bar_id
                 addr = tlp.address % self.regions[region][0]
@@ -1516,7 +1516,7 @@ class PcieIfTestDevice:
                 byte_length = tlp.get_be_byte_count()
 
                 while m < dw_length:
-                    cpl = Tlp.create_completion_data_for_tlp(tlp, PcieId(0, 0, 0))
+                    cpl = Tlp.create_completion_data_for_tlp(tlp, PcieId(self.dev_bus_num, self.dev_device_num, 0))
 
                     cpl_dw_length = dw_length - m
                     cpl_byte_length = byte_length - n

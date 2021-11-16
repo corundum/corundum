@@ -150,7 +150,11 @@ dict set params AXI_ID_WIDTH [get_property CONFIG.ID_WIDTH $s_axi_mm]
 dict set params DMA_LEN_WIDTH "16"
 dict set params DMA_TAG_WIDTH "16"
 dict set params RAM_PIPELINE "2"
-dict set params AXI_DMA_MAX_BURST_LEN [get_property CONFIG.MAX_BURST_LENGTH $s_axi_mm]
+# NOTE: Querying the BD top-level interface port (or even the ZynqMP's interface
+#       pin) yields 256 for the maximum burst length, instead of 16, which is
+#       the actually supported length (due to ZynqMP using AXI3 internally).
+#dict set params AXI_DMA_MAX_BURST_LEN [get_property CONFIG.MAX_BURST_LENGTH $s_axi_mm]
+dict set params AXI_DMA_MAX_BURST_LEN "16"
 
 # AXI lite interface configuration (control)
 set m_axil_0 [get_bd_intf_pins /axi_protocol_convert_0/M_AXI]

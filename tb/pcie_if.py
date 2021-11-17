@@ -905,11 +905,11 @@ class PcieIfDevice(Device):
 
             for f in self.functions:
                 bar = f.match_bar(tlp.address, True)
-                if len(bar) == 1:
+                if bar:
 
                     frame = PcieIfFrame.from_tlp(tlp, self.force_64bit_addr)
 
-                    frame.bar_id = bar[0][0]
+                    frame.bar_id = bar[0]
                     frame.func_num = tlp.requester_id.function
 
                     await self.rx_req_queue.put(frame)
@@ -926,11 +926,11 @@ class PcieIfDevice(Device):
 
             for f in self.functions:
                 bar = f.match_bar(tlp.address)
-                if len(bar) == 1:
+                if bar:
 
                     frame = PcieIfFrame.from_tlp(tlp, self.force_64bit_addr)
 
-                    frame.bar_id = bar[0][0]
+                    frame.bar_id = bar[0]
                     frame.func_num = tlp.requester_id.function
 
                     await self.rx_req_queue.put(frame)

@@ -261,7 +261,7 @@ class TB(object):
 
         self.rc.make_port().connect(self.dev)
 
-        self.driver = mqnic.Driver(self.rc)
+        self.driver = mqnic.Driver()
 
         self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
 
@@ -371,17 +371,17 @@ async def run_test_nic(dut):
     await tb.init()
 
     tb.log.info("Init driver")
-    await tb.driver.init_dev(tb.dev.functions[0].pcie_id)
+    await tb.driver.init_pcie_dev(tb.rc, tb.dev.functions[0].pcie_id)
     await tb.driver.interfaces[0].open()
 
     # enable queues
     tb.log.info("Enable queues")
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
     for k in range(tb.driver.interfaces[0].tx_queue_count):
-        await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].schedulers[0].hw_addr+4*k, 0x00000003)
+        await tb.driver.interfaces[0].ports[0].schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
 
     # wait for all writes to complete
-    await tb.rc.mem_read(tb.driver.hw_addr, 4)
+    await tb.driver.hw_regs.read_dword(0)
     tb.log.info("Init complete")
 
     tb.log.info("Send and receive single packet")
@@ -495,32 +495,33 @@ async def run_test_nic(dut):
     tb.loopback_enable = True
 
     # configure TDMA scheduler
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_FNS,   0)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_NS,    40000)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_L, 0)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_H, 0)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_FNS,   0)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_NS,    10000)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_L, 0)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_H, 0)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_FNS,   0)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_NS,    5000)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L, 0)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H, 0)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_TDMA_CTRL, 0x00000001)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_FNS,   0)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_NS,    40000)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_L, 0)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_H, 0)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_FNS,   0)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_NS,    10000)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_L, 0)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_H, 0)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_FNS,   0)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_NS,    5000)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L, 0)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H, 0)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_TDMA_CTRL, 0x00000001)
 
     # enable queues with global enable off
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
     for k in range(tb.driver.interfaces[0].tx_queue_count):
-        await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].schedulers[0].hw_addr+4*k, 0x00000001)
+        await tb.driver.interfaces[0].ports[0].schedulers[0].hw_regs.write_dword(4*k, 0x00000001)
 
     # configure slots
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].schedulers[1].hw_addr+8*0, 0x00000001)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].schedulers[1].hw_addr+8*1, 0x00000002)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].schedulers[1].hw_addr+8*2, 0x00000004)
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].schedulers[1].hw_addr+8*3, 0x00000008)
+    await tb.driver.interfaces[0].ports[0].schedulers[1].hw_regs.write_dword(8*0, 0x00000001)
+    await tb.driver.interfaces[0].ports[0].schedulers[1].hw_regs.write_dword(8*1, 0x00000002)
+    await tb.driver.interfaces[0].ports[0].schedulers[1].hw_regs.write_dword(8*2, 0x00000004)
+    await tb.driver.interfaces[0].ports[0].schedulers[1].hw_regs.write_dword(8*3, 0x00000008)
 
-    await tb.rc.mem_read(tb.driver.hw_addr, 4)  # wait for all writes to complete
+    # wait for all writes to complete
+    await tb.driver.hw_regs.read_dword(0)
 
     # send packets
     for k in range(count):
@@ -542,7 +543,7 @@ async def run_test_nic(dut):
     lst = []
 
     for k in range(64):
-        lst.append(await tb.rc.mem_read_dword(tb.driver.hw_addr+0x010000+k*8))
+        lst.append(await tb.driver.hw_regs.read_dword(0x010000+k*8))
 
     print(lst)
 

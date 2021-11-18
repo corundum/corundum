@@ -254,7 +254,7 @@ class TB(object):
 
         self.rc.make_port().connect(self.dev)
 
-        self.driver = mqnic.Driver(self.rc)
+        self.driver = mqnic.Driver()
 
         self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
 
@@ -354,18 +354,18 @@ async def run_test_nic(dut):
     await tb.init()
 
     tb.log.info("Init driver")
-    await tb.driver.init_dev(tb.dev.functions[0].pcie_id)
+    await tb.driver.init_pcie_dev(tb.rc, tb.dev.functions[0].pcie_id)
     await tb.driver.interfaces[0].open()
-    # await driver.interfaces[1].open()
+    # await tb.driver.interfaces[1].open()
 
     # enable queues
     tb.log.info("Enable queues")
-    await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].hw_addr+mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
+    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
     for k in range(tb.driver.interfaces[0].tx_queue_count):
-        await tb.rc.mem_write_dword(tb.driver.interfaces[0].ports[0].schedulers[0].hw_addr+4*k, 0x00000003)
+        await tb.driver.interfaces[0].ports[0].schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
 
     # wait for all writes to complete
-    await tb.rc.mem_read(tb.driver.hw_addr, 4)
+    await tb.driver.hw_regs.read_dword(0)
     tb.log.info("Init complete")
 
     tb.log.info("Send and receive single packet")

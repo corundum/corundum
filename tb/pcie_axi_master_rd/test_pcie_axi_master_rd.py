@@ -154,7 +154,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
+    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
 
     tb.dut.completer_id.value = int(tb.dev.functions[0].pcie_id)
 
@@ -169,7 +169,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
             tb.log.debug("%s", tb.axi_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
 
-            val = await tb.rc.mem_read(dev_bar0+pcie_addr, len(test_data), 1000, 'ns')
+            val = await dev_bar0.read(pcie_addr, len(test_data), timeout=1000, timeout_unit='ns')
 
             tb.log.debug("read data: %s", val)
 
@@ -193,8 +193,8 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
-    dev_bar1 = tb.rc.tree[0][0].bar_addr[1]
+    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
+    dev_bar1 = tb.rc.tree[0][0].bar_window[1]
 
     tb.dut.completer_id.value = int(tb.dev.functions[0].pcie_id)
 
@@ -206,7 +206,7 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb.axi_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
 
-    await tb.rc.mem_write(dev_bar0+pcie_addr, test_data)
+    await dev_bar0.write(pcie_addr, test_data)
 
     await Timer(100, 'ns')
 
@@ -229,7 +229,7 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     tb.axi_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
 
     with assert_raises(Exception, "Unsuccessful completion"):
-        await tb.rc.io_write(dev_bar1+pcie_addr, test_data, 1000, 'ns')
+        await dev_bar1.write(pcie_addr, test_data, timeout=1000, timeout_unit='ns')
 
     await Timer(100, 'ns')
 
@@ -255,7 +255,7 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     tb.log.debug("%s", tb.axi_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
 
     with assert_raises(Exception, "Unsuccessful completion"):
-        val = await tb.rc.io_read(dev_bar1+pcie_addr, len(test_data), 1000, 'ns')
+        val = await dev_bar1.read(pcie_addr, len(test_data), timeout=1000, timeout_unit='ns')
 
     assert tb.status_error_cor_asserted
     assert not tb.status_error_uncor_asserted

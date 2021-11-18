@@ -163,7 +163,8 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate(enable_bus_mastering=True)
 
-    mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
+    mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
+    mem_base = mem.get_absolute_address(0)
 
     tb.dut.enable.value = 1
 
@@ -176,7 +177,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
                 test_data = bytearray([x % 256 for x in range(length)])
 
                 tb.dma_ram.write(ram_addr & 0xffff80, b'\x55'*(len(test_data)+256))
-                mem_data[pcie_addr-128:pcie_addr-128+len(test_data)+256] = b'\xaa'*(len(test_data)+256)
+                mem[pcie_addr-128:pcie_addr-128+len(test_data)+256] = b'\xaa'*(len(test_data)+256)
                 tb.dma_ram.write(ram_addr, test_data)
 
                 tb.log.debug("%s", tb.dma_ram.hexdump_str((ram_addr & ~0xf)-16, (((ram_addr & 0xf)+length-1) & ~0xf)+48, prefix="RAM "))
@@ -192,9 +193,9 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
                 assert int(status.tag) == cur_tag
                 assert int(status.error) == 0
 
-                tb.log.debug("%s", hexdump_str(mem_data, (pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="PCIe "))
+                tb.log.debug("%s", hexdump_str(mem, (pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="PCIe "))
 
-                assert mem_data[pcie_addr-1:pcie_addr+len(test_data)+1] == b'\xaa'+test_data+b'\xaa'
+                assert mem[pcie_addr-1:pcie_addr+len(test_data)+1] == b'\xaa'+test_data+b'\xaa'
 
                 cur_tag = (cur_tag + 1) % tag_count
 

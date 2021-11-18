@@ -166,7 +166,8 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate(enable_bus_mastering=True)
 
-    mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
+    mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
+    mem_base = mem.get_absolute_address(0)
 
     tb.dut.enable.value = 1
 
@@ -178,9 +179,9 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
                 axi_addr = axi_offset+0x1000
                 test_data = bytearray([x % 256 for x in range(length)])
 
-                mem_data[pcie_addr:pcie_addr+len(test_data)] = test_data
+                mem[pcie_addr:pcie_addr+len(test_data)] = test_data
 
-                tb.log.debug("%s", hexdump_str(mem_data, (pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="PCIe "))
+                tb.log.debug("%s", hexdump_str(mem, (pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="PCIe "))
 
                 tb.axi_ram.write(axi_addr-256, b'\xaa'*(len(test_data)+512))
 
@@ -220,7 +221,8 @@ async def run_test_read_errors(dut, idle_inserter=None, backpressure_inserter=No
 
     await tb.rc.enumerate(enable_bus_mastering=True)
 
-    mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
+    mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
+    mem_base = mem.get_absolute_address(0)
 
     tb.dut.enable.value = 1
 

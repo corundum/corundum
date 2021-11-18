@@ -309,46 +309,43 @@ async def run_test_mem(dut, idle_inserter=None, backpressure_inserter=None):
     tb.test_dev.dev_max_read_req = tb.dev.functions[0].pcie_cap.max_read_request_size
     tb.test_dev.dev_bus_num = tb.dev.bus_num
 
-    dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
-    dev_bar1 = tb.rc.tree[0][0].bar_addr[1]
-    dev_bar3 = tb.rc.tree[0][0].bar_addr[3]
+    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
+    dev_bar1 = tb.rc.tree[0][0].bar_window[1]
+    dev_bar3 = tb.rc.tree[0][0].bar_window[3]
 
     for length in list(range(0, 8)):
         for offset in list(range(8)):
             tb.log.info("IO operation length: %d offset: %d", length, offset)
-            addr = dev_bar3+offset
             test_data = bytearray([x % 256 for x in range(length)])
 
-            await tb.rc.io_write(addr, test_data, 5000)
+            await dev_bar3.write(offset, test_data, timeout=5000)
             assert tb.test_dev.regions[3][1][offset:offset+length] == test_data
 
-            assert await tb.rc.io_read(addr, length, 5000) == test_data
+            assert await dev_bar3.read(offset, length, timeout=5000) == test_data
 
     for length in list(range(0, 32))+[1024]:
         for offset in list(range(8))+list(range(4096-8, 4096)):
             tb.log.info("Memory operation (32-bit BAR) length: %d offset: %d", length, offset)
-            addr = dev_bar0+offset
             test_data = bytearray([x % 256 for x in range(length)])
 
-            await tb.rc.mem_write(addr, test_data, 100)
+            await dev_bar0.write(offset, test_data, timeout=100)
             # wait for write to complete
-            await tb.rc.mem_read(addr, 1, 5000)
+            await dev_bar0.read(offset, 1, timeout=5000)
             assert tb.test_dev.regions[0][1][offset:offset+length] == test_data
 
-            assert await tb.rc.mem_read(addr, length, 5000) == test_data
+            assert await dev_bar0.read(offset, length, timeout=5000) == test_data
 
     for length in list(range(0, 32))+[1024]:
         for offset in list(range(8))+list(range(4096-8, 4096)):
             tb.log.info("Memory operation (64-bit BAR) length: %d offset: %d", length, offset)
-            addr = dev_bar1+offset
             test_data = bytearray([x % 256 for x in range(length)])
 
-            await tb.rc.mem_write(addr, test_data, 100)
+            await dev_bar1.write(offset, test_data, timeout=100)
             # wait for write to complete
-            await tb.rc.mem_read(addr, 1, 5000)
+            await dev_bar1.read(offset, 1, timeout=5000)
             assert tb.test_dev.regions[1][1][offset:offset+length] == test_data
 
-            assert await tb.rc.mem_read(addr, length, 5000) == test_data
+            assert await dev_bar1.read(offset, length, timeout=5000) == test_data
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
@@ -358,8 +355,11 @@ async def run_test_dma(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb = TB(dut)
 
-    mem_base, mem_data = tb.rc.alloc_region(1024*1024)
-    io_base, io_data = tb.rc.alloc_io_region(1024)
+    mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
+    mem_base = mem.get_absolute_address(0)
+
+    io = tb.rc.io_pool.alloc_region(1024)
+    io_base = io.get_absolute_address(0)
 
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
@@ -379,14 +379,14 @@ async def run_test_dma(dut, idle_inserter=None, backpressure_inserter=None):
             addr = mem_base+offset
             test_data = bytearray([x % 256 for x in range(length)])
 
-            await tb.test_dev.dma_mem_write(addr, test_data, 5000, 'ns')
+            await tb.test_dev.dma_mem_write(addr, test_data, timeout=5000, timeout_unit='ns')
             # wait for write to complete
             while not tb.test_dev.tx_wr_req_tlp_source.empty() or tb.test_dev.tx_wr_req_tlp_source.active:
                 await RisingEdge(dut.clk)
-            await tb.test_dev.dma_mem_read(addr, 1, 5000, 'ns')
-            assert mem_data[offset:offset+length] == test_data
+            await tb.test_dev.dma_mem_read(addr, 1, timeout=5000, timeout_unit='ns')
+            assert mem[offset:offset+length] == test_data
 
-            assert await tb.test_dev.dma_mem_read(addr, length, 5000, 'ns') == test_data
+            assert await tb.test_dev.dma_mem_read(addr, length, timeout=5000, timeout_unit='ns') == test_data
 
     for length in list(range(0, 8)):
         for offset in list(range(8)):
@@ -394,10 +394,10 @@ async def run_test_dma(dut, idle_inserter=None, backpressure_inserter=None):
             addr = io_base+offset
             test_data = bytearray([x % 256 for x in range(length)])
 
-            await tb.test_dev.dma_io_write(addr, test_data, 5000, 'ns')
-            assert io_data[offset:offset+length] == test_data
+            await tb.test_dev.dma_io_write(addr, test_data, timeout=5000, timeout_unit='ns')
+            assert io[offset:offset+length] == test_data
 
-            assert await tb.test_dev.dma_io_read(addr, length, 5000, 'ns') == test_data
+            assert await tb.test_dev.dma_io_read(addr, length, timeout=5000, timeout_unit='ns') == test_data
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)
@@ -415,7 +415,8 @@ async def run_test_dma_errors(dut, idle_inserter=None, backpressure_inserter=Non
 
     await tb.rc.enumerate(enable_bus_mastering=True, configure_msi=True)
 
-    mem_base, mem_data = tb.rc.alloc_region(1024*1024)
+    mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
+    mem_base = mem.get_absolute_address(0)
 
     tb.test_dev.dev_max_payload = tb.dev.functions[0].pcie_cap.max_payload_size
     tb.test_dev.dev_max_read_req = tb.dev.functions[0].pcie_cap.max_read_request_size
@@ -424,7 +425,7 @@ async def run_test_dma_errors(dut, idle_inserter=None, backpressure_inserter=Non
     tb.log.info("Memory operation (DMA) bad read (UR) short")
 
     try:
-        await tb.test_dev.dma_mem_read(mem_base - 1024, 8, 5000, 'ns')
+        await tb.test_dev.dma_mem_read(mem_base - 1024, 8, timeout=5000, timeout_unit='ns')
     except Exception:
         pass
     else:
@@ -433,7 +434,7 @@ async def run_test_dma_errors(dut, idle_inserter=None, backpressure_inserter=Non
     tb.log.info("Memory operation (DMA) bad read (UR) first")
 
     try:
-        await tb.test_dev.dma_mem_read(mem_base - 512, 1024, 5000, 'ns')
+        await tb.test_dev.dma_mem_read(mem_base - 512, 1024, timeout=5000, timeout_unit='ns')
     except Exception:
         pass
     else:
@@ -442,7 +443,7 @@ async def run_test_dma_errors(dut, idle_inserter=None, backpressure_inserter=Non
     tb.log.info("Memory operation (DMA) bad read (UR) last")
 
     try:
-        await tb.test_dev.dma_mem_read(mem_base + 1024*1024 - 512, 1024, 5000, 'ns')
+        await tb.test_dev.dma_mem_read(mem_base + mem.size - 512, 1024, timeout=5000, timeout_unit='ns')
     except Exception:
         pass
     else:

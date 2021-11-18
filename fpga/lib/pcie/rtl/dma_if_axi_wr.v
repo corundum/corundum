@@ -231,7 +231,7 @@ reg mask_fifo_we;
 
 reg read_cmd_ready;
 
-reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
+reg [AXI_ADDR_WIDTH-1:0] req_axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, req_axi_addr_next;
 reg [RAM_SEL_WIDTH-1:0] ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, ram_addr_next;
 reg [LEN_WIDTH-1:0] op_count_reg = {LEN_WIDTH{1'b0}}, op_count_next;
@@ -253,8 +253,8 @@ reg [OFFSET_WIDTH+1-1:0] cycle_byte_count_reg = {OFFSET_WIDTH+1{1'b0}}, cycle_by
 reg [RAM_OFFSET_WIDTH-1:0] start_offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, start_offset_next;
 reg [RAM_OFFSET_WIDTH-1:0] end_offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, end_offset_next;
 
-reg [AXI_ADDR_WIDTH-1:0] tlp_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, tlp_addr_next;
-reg [11:0] tlp_len_reg = 12'd0, tlp_len_next;
+reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
+reg [12:0] axi_len_reg = 13'd0, axi_len_next;
 reg [RAM_OFFSET_WIDTH-1:0] offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, offset_next;
 reg [AXI_STRB_WIDTH-1:0] strb_offset_mask_reg = {AXI_STRB_WIDTH{1'b1}}, strb_offset_mask_next;
 reg [OFFSET_WIDTH-1:0] last_cycle_offset_reg = {OFFSET_WIDTH{1'b0}}, last_cycle_offset_next;
@@ -266,7 +266,7 @@ reg last_cycle_reg = 1'b0, last_cycle_next;
 reg [AXI_ADDR_WIDTH-1:0] read_cmd_axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, read_cmd_axi_addr_next;
 reg [RAM_SEL_WIDTH-1:0] read_cmd_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, read_cmd_ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] read_cmd_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, read_cmd_ram_addr_next;
-reg [11:0] read_cmd_len_reg = 12'd0, read_cmd_len_next;
+reg [12:0] read_cmd_len_reg = 13'd0, read_cmd_len_next;
 reg [CYCLE_COUNT_WIDTH-1:0] read_cmd_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, read_cmd_cycle_count_next;
 reg read_cmd_last_cycle_reg = 1'b0, read_cmd_last_cycle_next;
 reg read_cmd_valid_reg = 1'b0, read_cmd_valid_next;
@@ -378,7 +378,7 @@ always @* begin
     s_axis_write_desc_ready_next = 1'b0;
 
     tag_next = tag_reg;
-    axi_addr_next = axi_addr_reg;
+    req_axi_addr_next = req_axi_addr_reg;
     ram_sel_next = ram_sel_reg;
     ram_addr_next = ram_addr_reg;
     op_count_next = op_count_reg;
@@ -393,10 +393,10 @@ always @* begin
     read_cmd_last_cycle_next = read_cmd_last_cycle_reg;
     read_cmd_valid_next = read_cmd_valid_reg && !read_cmd_ready;
 
-    op_table_start_axi_addr = axi_addr_reg;
+    op_table_start_axi_addr = req_axi_addr_reg;
     op_table_start_len = 0;
     op_table_start_cycle_count = 0;
-    op_table_start_offset = (axi_addr_reg & OFFSET_MASK)-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
+    op_table_start_offset = (req_axi_addr_reg & OFFSET_MASK)-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
     op_table_start_tag = tag_reg;
     op_table_start_last = 0;
     op_table_start_en = 1'b0;
@@ -407,34 +407,33 @@ always @* begin
             // idle state, wait for incoming descriptor
             s_axis_write_desc_ready_next = !op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] && ($unsigned(op_table_start_ptr_reg - op_table_finish_ptr_reg) < 2**OP_TAG_WIDTH) && enable;
 
-            axi_addr_next = s_axis_write_desc_axi_addr;
+            req_axi_addr_next = s_axis_write_desc_axi_addr;
             ram_sel_next = s_axis_write_desc_ram_sel;
             ram_addr_next = s_axis_write_desc_ram_addr;
             op_count_next = s_axis_write_desc_len;
             tag_next = s_axis_write_desc_tag;
 
-            if (op_count_next <= AXI_MAX_BURST_SIZE - (axi_addr_next & OFFSET_MASK) || AXI_MAX_BURST_SIZE >= 4096) begin
+            if (op_count_next <= AXI_MAX_BURST_SIZE - (req_axi_addr_next & OFFSET_MASK) || AXI_MAX_BURST_SIZE >= 4096) begin
                 // packet smaller than max burst size
-                if (((axi_addr_next & 12'hfff) + (op_count_next & 12'hfff)) >> 12 != 0 || op_count_next >> 12 != 0) begin
+                if (((req_axi_addr_next & 12'hfff) + (op_count_next & 12'hfff)) >> 12 != 0 || op_count_next >> 12 != 0) begin
                     // crosses 4k boundary
-                    tr_word_count_next = 13'h1000 - axi_addr_next[11:0];
+                    tr_word_count_next = 13'h1000 - req_axi_addr_next[11:0];
                 end else begin
                     // does not cross 4k boundary
                     tr_word_count_next = op_count_next;
                 end
             end else begin
                 // packet larger than max burst size
-                if (((axi_addr_next & 12'hfff) + AXI_MAX_BURST_SIZE) >> 12 != 0) begin
+                if (((req_axi_addr_next & 12'hfff) + AXI_MAX_BURST_SIZE) >> 12 != 0) begin
                     // crosses 4k boundary
-                    tr_word_count_next = 13'h1000 - axi_addr_next[11:0];
+                    tr_word_count_next = 13'h1000 - req_axi_addr_next[11:0];
                 end else begin
                     // does not cross 4k boundary
-                    tr_word_count_next = AXI_MAX_BURST_SIZE - (axi_addr_next & OFFSET_MASK);
+                    tr_word_count_next = AXI_MAX_BURST_SIZE - (req_axi_addr_next & OFFSET_MASK);
                 end
             end
 
             if (s_axis_write_desc_ready & s_axis_write_desc_valid) begin
-                $display("AXI DMA start write (AXI 0x%x, RAM 0x%x 0x%x, len %d, tag 0x%x)", s_axis_write_desc_axi_addr, s_axis_write_desc_ram_sel, s_axis_write_desc_ram_addr, s_axis_write_desc_len, s_axis_write_desc_tag);
                 s_axis_write_desc_ready_next = 1'b0;
                 req_state_next = REQ_STATE_START;
             end else begin
@@ -444,43 +443,43 @@ always @* begin
         REQ_STATE_START: begin
             // start state, compute length
             if (!op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] && ($unsigned(op_table_start_ptr_reg - op_table_finish_ptr_reg) < 2**OP_TAG_WIDTH) && (!ram_rd_cmd_valid_reg || ram_rd_cmd_ready) && (!read_cmd_valid_reg || read_cmd_ready)) begin
-                read_cmd_axi_addr_next = axi_addr_reg;
+                read_cmd_axi_addr_next = req_axi_addr_reg;
                 read_cmd_ram_sel_next = ram_sel_reg;
                 read_cmd_ram_addr_next = ram_addr_reg;
                 read_cmd_len_next = tr_word_count_next;
-                read_cmd_cycle_count_next = (tr_word_count_next + (axi_addr_reg & OFFSET_MASK) - 1) >> AXI_BURST_SIZE;
+                read_cmd_cycle_count_next = (tr_word_count_next + (req_axi_addr_reg & OFFSET_MASK) - 1) >> AXI_BURST_SIZE;
                 op_table_start_cycle_count = read_cmd_cycle_count_next;
                 read_cmd_last_cycle_next = read_cmd_cycle_count_next == 0;
                 read_cmd_valid_next = 1'b1;
 
-                axi_addr_next = axi_addr_reg + tr_word_count_next;
+                req_axi_addr_next = req_axi_addr_reg + tr_word_count_next;
                 ram_addr_next = ram_addr_reg + tr_word_count_next;
                 op_count_next = op_count_reg - tr_word_count_next;
 
-                op_table_start_axi_addr = axi_addr_reg;
+                op_table_start_axi_addr = req_axi_addr_reg;
                 op_table_start_len = tr_word_count_next;
-                op_table_start_offset = (axi_addr_reg & OFFSET_MASK)-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
+                op_table_start_offset = (req_axi_addr_reg & OFFSET_MASK)-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
                 op_table_start_tag = tag_reg;
                 op_table_start_last = op_count_reg == tr_word_count_next;
                 op_table_start_en = 1'b1;
 
-                if (op_count_next <= AXI_MAX_BURST_SIZE - (axi_addr_next & OFFSET_MASK) || AXI_MAX_BURST_SIZE >= 4096) begin
+                if (op_count_next <= AXI_MAX_BURST_SIZE - (req_axi_addr_next & OFFSET_MASK) || AXI_MAX_BURST_SIZE >= 4096) begin
                     // packet smaller than max burst size
-                    if (((axi_addr_next & 12'hfff) + (op_count_next & 12'hfff)) >> 12 != 0 || op_count_next >> 12 != 0) begin
+                    if (((req_axi_addr_next & 12'hfff) + (op_count_next & 12'hfff)) >> 12 != 0 || op_count_next >> 12 != 0) begin
                         // crosses 4k boundary
-                        tr_word_count_next = 13'h1000 - axi_addr_next[11:0];
+                        tr_word_count_next = 13'h1000 - req_axi_addr_next[11:0];
                     end else begin
                         // does not cross 4k boundary
                         tr_word_count_next = op_count_next;
                     end
                 end else begin
                     // packet larger than max burst size
-                    if (((axi_addr_next & 12'hfff) + AXI_MAX_BURST_SIZE) >> 12 != 0) begin
+                    if (((req_axi_addr_next & 12'hfff) + AXI_MAX_BURST_SIZE) >> 12 != 0) begin
                         // crosses 4k boundary
-                        tr_word_count_next = 13'h1000 - axi_addr_next[11:0];
+                        tr_word_count_next = 13'h1000 - req_axi_addr_next[11:0];
                     end else begin
                         // does not cross 4k boundary
-                        tr_word_count_next = AXI_MAX_BURST_SIZE - (axi_addr_next & OFFSET_MASK);
+                        tr_word_count_next = AXI_MAX_BURST_SIZE - (req_axi_addr_next & OFFSET_MASK);
                     end
                 end
 
@@ -655,8 +654,8 @@ always @* begin
 
     ram_rd_resp_ready_cmb = {RAM_SEG_COUNT{1'b0}};
 
-    tlp_addr_next = tlp_addr_reg;
-    tlp_len_next = tlp_len_reg;
+    axi_addr_next = axi_addr_reg;
+    axi_len_next = axi_len_reg;
     offset_next = offset_reg;
     strb_offset_mask_next = strb_offset_mask_reg;
     last_cycle_offset_next = last_cycle_offset_reg;
@@ -690,17 +689,17 @@ always @* begin
             // idle state, wait for command
             ram_rd_resp_ready_cmb = {RAM_SEG_COUNT{1'b0}};
 
-            tlp_addr_next = op_table_axi_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
-            tlp_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            axi_addr_next = op_table_axi_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            axi_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             offset_next = op_table_offset[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
-            strb_offset_mask_next = {AXI_STRB_WIDTH{1'b1}} << (tlp_addr_next & OFFSET_MASK);
-            last_cycle_offset_next = tlp_addr_next + (tlp_len_next & OFFSET_MASK);
+            strb_offset_mask_next = {AXI_STRB_WIDTH{1'b1}} << (axi_addr_next & OFFSET_MASK);
+            last_cycle_offset_next = axi_addr_next + (axi_len_next & OFFSET_MASK);
             cycle_count_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             last_cycle_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
 
             if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && (!m_axi_awvalid_reg || m_axi_awready)) begin
                 m_axi_awid_next = op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0];
-                m_axi_awaddr_next = tlp_addr_next;
+                m_axi_awaddr_next = axi_addr_next;
                 m_axi_awlen_next = cycle_count_next;
                 m_axi_awvalid_next = 1'b1;
                 op_table_tx_start_en = 1'b1;
@@ -738,17 +737,17 @@ always @* begin
                     end
 
                     // skip idle state if possible
-                    tlp_addr_next = op_table_axi_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
-                    tlp_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                    axi_addr_next = op_table_axi_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                    axi_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                     offset_next = op_table_offset[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
-                    strb_offset_mask_next = {AXI_STRB_WIDTH{1'b1}} << (tlp_addr_next & OFFSET_MASK);
-                    last_cycle_offset_next = tlp_addr_next + (tlp_len_next & OFFSET_MASK);
+                    strb_offset_mask_next = {AXI_STRB_WIDTH{1'b1}} << (axi_addr_next & OFFSET_MASK);
+                    last_cycle_offset_next = axi_addr_next + (axi_len_next & OFFSET_MASK);
                     cycle_count_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                     last_cycle_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
 
                     if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && (!m_axi_awvalid_reg || m_axi_awready)) begin
                         m_axi_awid_next = op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0];
-                        m_axi_awaddr_next = tlp_addr_next;
+                        m_axi_awaddr_next = axi_addr_next;
                         m_axi_awlen_next = cycle_count_next;
                         m_axi_awvalid_next = 1'b1;
                         op_table_tx_start_en = 1'b1;
@@ -801,7 +800,7 @@ always @(posedge clk) begin
     read_state_reg <= read_state_next;
     axi_state_reg <= axi_state_next;
 
-    axi_addr_reg <= axi_addr_next;
+    req_axi_addr_reg <= req_axi_addr_next;
     ram_sel_reg <= ram_sel_next;
     ram_addr_reg <= ram_addr_next;
     op_count_reg <= op_count_next;
@@ -823,8 +822,8 @@ always @(posedge clk) begin
     start_offset_reg <= start_offset_next;
     end_offset_reg <= end_offset_next;
 
-    tlp_addr_reg <= tlp_addr_next;
-    tlp_len_reg <= tlp_len_next;
+    axi_addr_reg <= axi_addr_next;
+    axi_len_reg <= axi_len_next;
     offset_reg <= offset_next;
     strb_offset_mask_reg <= strb_offset_mask_next;
     last_cycle_offset_reg <= last_cycle_offset_next;

@@ -408,7 +408,6 @@ always @* begin
             end
 
             if (s_axis_read_desc_ready && s_axis_read_desc_valid) begin
-                $display("AXI DMA start read (AXI 0x%x, RAM 0x%x 0x%x, len %d, tag 0x%x)", s_axis_read_desc_axi_addr, s_axis_read_desc_ram_sel, s_axis_read_desc_ram_addr, s_axis_read_desc_len, s_axis_read_desc_tag);
                 s_axis_read_desc_ready_next = 1'b0;
                 req_state_next = REQ_STATE_START;
             end else begin

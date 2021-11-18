@@ -93,10 +93,10 @@ class TB(object):
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -116,7 +116,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.cycle_reset()
 
-    tb.dut.enable <= 1
+    tb.dut.enable.value = 1
 
     for length in list(range(1, ram_byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
         # for axi_offset in axi_offsets:

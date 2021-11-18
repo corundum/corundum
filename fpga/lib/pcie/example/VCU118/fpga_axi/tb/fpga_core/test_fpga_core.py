@@ -259,64 +259,64 @@ async def run_test(dut):
 
     await tb.init()
 
-    mem_base, mem_data = tb.rc.alloc_region(16*1024*1024)
+    mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
+    mem_base = mem.get_absolute_address(0)
 
-    dev_pf0_bar0 = tb.rc.tree[0][0].bar_addr[0]
-    dev_pf0_bar2 = tb.rc.tree[0][0].bar_addr[2]
+    dev_pf0_bar0 = tb.rc.tree[0][0].bar_window[0]
+    dev_pf0_bar2 = tb.rc.tree[0][0].bar_window[2]
 
     tb.log.info("Test memory write to BAR 2")
 
-    await tb.rc.mem_write(dev_pf0_bar2, b'\x11\x22\x33\x44')
+    test_data = b'\x11\x22\x33\x44'
+    await dev_pf0_bar2.write(0, test_data)
 
     await Timer(100, 'ns')
 
     tb.log.info("Test memory read from BAR 2")
 
-    val = await tb.rc.mem_read(dev_pf0_bar2, 4, 1000)
+    val = await dev_pf0_bar2.read(0, len(test_data), timeout=1000)
     tb.log.info("Read data: %s", val)
-    assert val == b'\x11\x22\x33\x44'
+    assert val == test_data
 
     tb.log.info("Test DMA")
 
     # write packet data
-    mem_data[0:1024] = bytearray([x % 256 for x in range(1024)])
+    mem[0:1024] = bytearray([x % 256 for x in range(1024)])
 
     # enable DMA
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100000, 1)
+    await dev_pf0_bar0.write_dword(0x000000, 1)
 
     # write pcie read descriptor
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100100, (mem_base+0x0000) & 0xffffffff)
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100104, (mem_base+0x0000 >> 32) & 0xffffffff)
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100108, (0x100) & 0xffffffff)
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x10010C, (0x100 >> 32) & 0xffffffff)
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100110, 0x400)
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100114, 0xAA)
+    await dev_pf0_bar0.write_dword(0x000100, (mem_base+0x0000) & 0xffffffff)
+    await dev_pf0_bar0.write_dword(0x000104, (mem_base+0x0000 >> 32) & 0xffffffff)
+    await dev_pf0_bar0.write_dword(0x000108, 0x100)
+    await dev_pf0_bar0.write_dword(0x000110, 0x400)
+    await dev_pf0_bar0.write_dword(0x000114, 0xAA)
 
     await Timer(2000, 'ns')
 
     # read status
-    val = await tb.rc.mem_read_dword(dev_pf0_bar0+0x100118)
+    val = await dev_pf0_bar0.read_dword(0x000118)
     tb.log.info("Status: 0x%x", val)
     assert val == 0x800000AA
 
     # write pcie write descriptor
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100200, (mem_base+0x1000) & 0xffffffff)
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100204, (mem_base+0x1000 >> 32) & 0xffffffff)
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100208, (0x100) & 0xffffffff)
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x10020C, (0x100 >> 32) & 0xffffffff)
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100210, 0x400)
-    await tb.rc.mem_write_dword(dev_pf0_bar0+0x100214, 0x55)
+    await dev_pf0_bar0.write_dword(0x000200, (mem_base+0x1000) & 0xffffffff)
+    await dev_pf0_bar0.write_dword(0x000204, (mem_base+0x1000 >> 32) & 0xffffffff)
+    await dev_pf0_bar0.write_dword(0x000208, 0x100)
+    await dev_pf0_bar0.write_dword(0x000210, 0x400)
+    await dev_pf0_bar0.write_dword(0x000214, 0x55)
 
     await Timer(2000, 'ns')
 
     # read status
-    val = await tb.rc.mem_read_dword(dev_pf0_bar0+0x100218)
+    val = await dev_pf0_bar0.read_dword(0x000218)
     tb.log.info("Status: 0x%x", val)
     assert val == 0x80000055
 
-    tb.log.info("%s", hexdump_str(mem_data, 0x1000, 64))
+    tb.log.info("%s", mem.hexdump_str(0x1000, 64))
 
-    assert mem_data[0:1024] == mem_data[0x1000:0x1000+1024]
+    assert mem[0:1024] == mem[0x1000:0x1000+1024]
 
     await RisingEdge(dut.clk)
     await RisingEdge(dut.clk)

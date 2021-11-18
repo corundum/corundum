@@ -457,7 +457,7 @@ class PcieIfSource(PcieIfBase):
 
             if self.reset is not None and self.reset.value:
                 self.active = False
-                self.bus.valid <= 0
+                self.bus.valid.value = 0
                 continue
 
             if ready_sample or not valid_sample:
@@ -467,7 +467,7 @@ class PcieIfSource(PcieIfBase):
                     self.drive_sync.set()
                     self.active = True
                 else:
-                    self.bus.valid <= 0
+                    self.bus.valid.value = 0
                     self.active = bool(self.drive_obj)
                     if not self.drive_obj:
                         self.idle_event.set()
@@ -608,7 +608,7 @@ class PcieIfSink(PcieIfBase):
             valid_sample = self.bus.valid.value
 
             if self.reset is not None and self.reset.value:
-                self.bus.ready <= 0
+                self.bus.ready.value = 0
                 continue
 
             if ready_sample and valid_sample:
@@ -616,7 +616,7 @@ class PcieIfSink(PcieIfBase):
                 self.bus.sample(self.sample_obj)
                 self.sample_sync.set()
 
-            self.bus.ready <= (not self.full() and not self.pause)
+            self.bus.ready.value = (not self.full() and not self.pause)
 
     async def _run(self):
         self.active = False
@@ -873,13 +873,13 @@ class PcieIfDevice(Device):
 
             tlp.release_fc()
 
-            self.log.info("Function not found: failed to route config type 0 TLP")
+            self.log.info("Function not found: failed to route config type 0 TLP: %r", tlp)
         elif tlp.fmt_type in {TlpType.CFG_READ_1, TlpType.CFG_WRITE_1}:
             # config type 1
 
             tlp.release_fc()
 
-            self.log.warning("Malformed TLP: endpoint received config type 1 TLP")
+            self.log.warning("Malformed TLP: endpoint received config type 1 TLP: %r", tlp)
         elif tlp.fmt_type in {TlpType.CPL, TlpType.CPL_DATA, TlpType.CPL_LOCKED, TlpType.CPL_LOCKED_DATA}:
             # Completion
 
@@ -898,18 +898,18 @@ class PcieIfDevice(Device):
 
             tlp.release_fc()
 
-            self.log.warning("Unexpected completion: failed to route completion to function")
+            self.log.warning("Unexpected completion: failed to route completion to function: %r", tlp)
             return  # no UR response for completion
         elif tlp.fmt_type in {TlpType.IO_READ, TlpType.IO_WRITE}:
             # IO read/write
 
             for f in self.functions:
                 bar = f.match_bar(tlp.address, True)
-                if len(bar) == 1:
+                if bar:
 
                     frame = PcieIfFrame.from_tlp(tlp, self.force_64bit_addr)
 
-                    frame.bar_id = bar[0][0]
+                    frame.bar_id = bar[0]
                     frame.func_num = tlp.requester_id.function
 
                     await self.rx_req_queue.put(frame)
@@ -920,17 +920,17 @@ class PcieIfDevice(Device):
 
             tlp.release_fc()
 
-            self.log.warning("No BAR match: IO request did not match any BARs")
+            self.log.warning("No BAR match: IO request did not match any BARs: %r", tlp)
         elif tlp.fmt_type in {TlpType.MEM_READ, TlpType.MEM_READ_64, TlpType.MEM_WRITE, TlpType.MEM_WRITE_64}:
             # Memory read/write
 
             for f in self.functions:
                 bar = f.match_bar(tlp.address)
-                if len(bar) == 1:
+                if bar:
 
                     frame = PcieIfFrame.from_tlp(tlp, self.force_64bit_addr)
 
-                    frame.bar_id = bar[0][0]
+                    frame.bar_id = bar[0]
                     frame.func_num = tlp.requester_id.function
 
                     await self.rx_req_queue.put(frame)
@@ -942,10 +942,10 @@ class PcieIfDevice(Device):
             tlp.release_fc()
 
             if tlp.fmt_type in {TlpType.MEM_WRITE, TlpType.MEM_WRITE_64}:
-                self.log.warning("No BAR match: memory write request did not match any BARs")
+                self.log.warning("No BAR match: memory write request did not match any BARs: %r", tlp)
                 return  # no UR response for write request
             else:
-                self.log.warning("No BAR match: memory read request did not match any BARs")
+                self.log.warning("No BAR match: memory read request did not match any BARs: %r", tlp)
         else:
             raise Exception("TODO")
 
@@ -991,8 +991,8 @@ class PcieIfDevice(Device):
                     if not self.rd_req_tx_seq_num_queue.empty():
                         data |= self.rd_req_tx_seq_num_queue.get_nowait() << (width*k)
                         valid |= 1 << k
-                self.rd_req_tx_seq_num <= data
-                self.rd_req_tx_seq_num_valid <= valid
+                self.rd_req_tx_seq_num.value = data
+                self.rd_req_tx_seq_num_valid.value = valid
             elif not self.rd_req_tx_seq_num_queue.empty():
                 self.rd_req_tx_seq_num_queue.get_nowait()
 
@@ -1017,8 +1017,8 @@ class PcieIfDevice(Device):
                     if not self.wr_req_tx_seq_num_queue.empty():
                         data |= self.wr_req_tx_seq_num_queue.get_nowait() << (width*k)
                         valid |= 1 << k
-                self.wr_req_tx_seq_num <= data
-                self.wr_req_tx_seq_num_valid <= valid
+                self.wr_req_tx_seq_num.value = data
+                self.wr_req_tx_seq_num_valid.value = valid
             elif not self.wr_req_tx_seq_num_queue.empty():
                 self.wr_req_tx_seq_num_queue.get_nowait()
 
@@ -1027,54 +1027,54 @@ class PcieIfDevice(Device):
             await RisingEdge(self.clk)
 
             if self.cfg_max_payload is not None:
-                self.cfg_max_payload <= self.functions[0].pcie_cap.max_payload_size
+                self.cfg_max_payload.value = self.functions[0].pcie_cap.max_payload_size
             if self.cfg_max_read_req is not None:
-                self.cfg_max_read_req <= self.functions[0].pcie_cap.max_read_request_size
+                self.cfg_max_read_req.value = self.functions[0].pcie_cap.max_read_request_size
             if self.cfg_ext_tag_enable is not None:
-                self.cfg_ext_tag_enable <= self.functions[0].pcie_cap.extended_tag_field_enable
+                self.cfg_ext_tag_enable.value = self.functions[0].pcie_cap.extended_tag_field_enable
 
     async def _run_fc_logic(self):
         while True:
             await RisingEdge(self.clk)
 
             if self.tx_fc_ph_av is not None:
-                self.tx_fc_ph_av <= self.upstream_port.fc_state[0].ph.tx_credits_available
+                self.tx_fc_ph_av.value = self.upstream_port.fc_state[0].ph.tx_credits_available
             if self.tx_fc_pd_av is not None:
-                self.tx_fc_pd_av <= self.upstream_port.fc_state[0].pd.tx_credits_available
+                self.tx_fc_pd_av.value = self.upstream_port.fc_state[0].pd.tx_credits_available
             if self.tx_fc_nph_av is not None:
-                self.tx_fc_nph_av <= self.upstream_port.fc_state[0].nph.tx_credits_available
+                self.tx_fc_nph_av.value = self.upstream_port.fc_state[0].nph.tx_credits_available
             if self.tx_fc_npd_av is not None:
-                self.tx_fc_npd_av <= self.upstream_port.fc_state[0].npd.tx_credits_available
+                self.tx_fc_npd_av.value = self.upstream_port.fc_state[0].npd.tx_credits_available
             if self.tx_fc_cplh_av is not None:
-                self.tx_fc_cplh_av <= self.upstream_port.fc_state[0].cplh.tx_credits_available
+                self.tx_fc_cplh_av.value = self.upstream_port.fc_state[0].cplh.tx_credits_available
             if self.tx_fc_cpld_av is not None:
-                self.tx_fc_cpld_av <= self.upstream_port.fc_state[0].cpld.tx_credits_available
+                self.tx_fc_cpld_av.value = self.upstream_port.fc_state[0].cpld.tx_credits_available
 
             if self.tx_fc_ph_lim is not None:
-                self.tx_fc_ph_lim <= self.upstream_port.fc_state[0].ph.tx_credit_limit
+                self.tx_fc_ph_lim.value = self.upstream_port.fc_state[0].ph.tx_credit_limit
             if self.tx_fc_pd_lim is not None:
-                self.tx_fc_pd_lim <= self.upstream_port.fc_state[0].pd.tx_credit_limit
+                self.tx_fc_pd_lim.value = self.upstream_port.fc_state[0].pd.tx_credit_limit
             if self.tx_fc_nph_lim is not None:
-                self.tx_fc_nph_lim <= self.upstream_port.fc_state[0].nph.tx_credit_limit
+                self.tx_fc_nph_lim.value = self.upstream_port.fc_state[0].nph.tx_credit_limit
             if self.tx_fc_npd_lim is not None:
-                self.tx_fc_npd_lim <= self.upstream_port.fc_state[0].npd.tx_credit_limit
+                self.tx_fc_npd_lim.value = self.upstream_port.fc_state[0].npd.tx_credit_limit
             if self.tx_fc_cplh_lim is not None:
-                self.tx_fc_cplh_lim <= self.upstream_port.fc_state[0].cplh.tx_credit_limit
+                self.tx_fc_cplh_lim.value = self.upstream_port.fc_state[0].cplh.tx_credit_limit
             if self.tx_fc_cpld_lim is not None:
-                self.tx_fc_cpld_lim <= self.upstream_port.fc_state[0].cpld.tx_credit_limit
+                self.tx_fc_cpld_lim.value = self.upstream_port.fc_state[0].cpld.tx_credit_limit
 
             if self.tx_fc_ph_cons is not None:
-                self.tx_fc_ph_cons <= self.upstream_port.fc_state[0].ph.tx_credits_consumed
+                self.tx_fc_ph_cons.value = self.upstream_port.fc_state[0].ph.tx_credits_consumed
             if self.tx_fc_pd_cons is not None:
-                self.tx_fc_pd_cons <= self.upstream_port.fc_state[0].pd.tx_credits_consumed
+                self.tx_fc_pd_cons.value = self.upstream_port.fc_state[0].pd.tx_credits_consumed
             if self.tx_fc_nph_cons is not None:
-                self.tx_fc_nph_cons <= self.upstream_port.fc_state[0].nph.tx_credits_consumed
+                self.tx_fc_nph_cons.value = self.upstream_port.fc_state[0].nph.tx_credits_consumed
             if self.tx_fc_npd_cons is not None:
-                self.tx_fc_npd_cons <= self.upstream_port.fc_state[0].npd.tx_credits_consumed
+                self.tx_fc_npd_cons.value = self.upstream_port.fc_state[0].npd.tx_credits_consumed
             if self.tx_fc_cplh_cons is not None:
-                self.tx_fc_cplh_cons <= self.upstream_port.fc_state[0].cplh.tx_credits_consumed
+                self.tx_fc_cplh_cons.value = self.upstream_port.fc_state[0].cplh.tx_credits_consumed
             if self.tx_fc_cpld_cons is not None:
-                self.tx_fc_cpld_cons <= self.upstream_port.fc_state[0].cpld.tx_credits_consumed
+                self.tx_fc_cpld_cons.value = self.upstream_port.fc_state[0].cpld.tx_credits_consumed
 
 
 class PcieIfTestDevice:
@@ -1433,7 +1433,7 @@ class PcieIfTestDevice:
             elif tlp.fmt_type == TlpType.IO_READ:
                 self.log.info("IO read")
 
-                cpl = Tlp.create_completion_data_for_tlp(tlp, PcieId(0, 0, 0))
+                cpl = Tlp.create_completion_data_for_tlp(tlp, PcieId(self.dev_bus_num, self.dev_device_num, 0))
 
                 region = frame.bar_id
                 addr = tlp.address % self.regions[region][0]
@@ -1468,7 +1468,7 @@ class PcieIfTestDevice:
             elif tlp.fmt_type == TlpType.IO_WRITE:
                 self.log.info("IO write")
 
-                cpl = Tlp.create_completion_for_tlp(tlp, PcieId(0, 0, 0))
+                cpl = Tlp.create_completion_for_tlp(tlp, PcieId(self.dev_bus_num, self.dev_device_num, 0))
 
                 region = frame.bar_id
                 addr = tlp.address % self.regions[region][0]
@@ -1516,7 +1516,7 @@ class PcieIfTestDevice:
                 byte_length = tlp.get_be_byte_count()
 
                 while m < dw_length:
-                    cpl = Tlp.create_completion_data_for_tlp(tlp, PcieId(0, 0, 0))
+                    cpl = Tlp.create_completion_data_for_tlp(tlp, PcieId(self.dev_bus_num, self.dev_device_num, 0))
 
                     cpl_dw_length = dw_length - m
                     cpl_byte_length = byte_length - n

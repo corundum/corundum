@@ -119,10 +119,10 @@ class TB(object):
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -140,7 +140,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
+    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
 
     for length in list(range(0, byte_lanes*2))+[1024]:
         for pcie_offset in list(range(byte_lanes))+list(range(4096-byte_lanes, 4096)):
@@ -150,7 +150,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
             tb.axi_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
 
-            await tb.rc.mem_write(dev_bar0+pcie_addr, test_data)
+            await dev_bar0.write(pcie_addr, test_data)
 
             await Timer(length*4+150, 'ns')
 
@@ -175,8 +175,8 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_addr[0]
-    dev_bar1 = tb.rc.tree[0][0].bar_addr[1]
+    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
+    dev_bar1 = tb.rc.tree[0][0].bar_window[1]
 
     tb.log.info("Test read")
 
@@ -190,7 +190,7 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     tb.log.debug("%s", tb.axi_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
 
     with assert_raises(Exception, "Timeout"):
-        val = await tb.rc.mem_read(dev_bar0+pcie_addr, len(test_data), 1000, 'ns')
+        val = await dev_bar0.read(pcie_addr, len(test_data), timeout=1000, timeout_unit='ns')
 
     assert tb.status_error_uncor_asserted
 
@@ -205,7 +205,7 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     tb.axi_ram.write(pcie_addr-128, b'\x55'*(len(test_data)+256))
 
     with assert_raises(Exception, "Timeout"):
-        await tb.rc.io_write(dev_bar1+pcie_addr, test_data, 1000, 'ns')
+        await dev_bar1.write(pcie_addr, test_data, timeout=1000, timeout_unit='ns')
 
     await Timer(100, 'ns')
 
@@ -229,7 +229,7 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
     tb.log.debug("%s", tb.axi_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
 
     with assert_raises(Exception, "Timeout"):
-        val = await tb.rc.io_read(dev_bar1+pcie_addr, len(test_data), 1000, 'ns')
+        val = await dev_bar1.read(pcie_addr, len(test_data), timeout=1000, timeout_unit='ns')
 
     assert tb.status_error_uncor_asserted
 

@@ -525,6 +525,7 @@ def test_mqnic_core_pcie_s10(request, pcie_data_width, axis_eth_data_width, axis
 
     # PTP configuration
     parameters['PTP_USE_SAMPLE_CLOCK'] = 0
+    parameters['PTP_SEPARATE_RX_CLOCK'] = 0
     parameters['PTP_PEROUT_ENABLE'] = 0
     parameters['PTP_PEROUT_COUNT'] = 1
 

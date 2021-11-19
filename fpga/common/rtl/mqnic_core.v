@@ -63,6 +63,7 @@ module mqnic_core #
     parameter PTP_PERIOD_NS = 4'd4,
     parameter PTP_PERIOD_FNS = 32'd0,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
+    parameter PTP_SEPARATE_RX_CLOCK = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
 
@@ -345,6 +346,8 @@ module mqnic_core #
     input  wire [PORT_COUNT-1:0]                        rx_clk,
     input  wire [PORT_COUNT-1:0]                        rx_rst,
 
+    input  wire [PORT_COUNT-1:0]                        rx_ptp_clk,
+    input  wire [PORT_COUNT-1:0]                        rx_ptp_rst,
     output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           rx_ptp_ts_96,
     output wire [PORT_COUNT-1:0]                        rx_ptp_ts_step,
 
@@ -2375,8 +2378,8 @@ generate
                 rx_ptp_cdc_inst (
                     .input_clk(clk),
                     .input_rst(rst),
-                    .output_clk(rx_clk[n*PORTS_PER_IF+m]),
-                    .output_rst(rx_rst[n*PORTS_PER_IF+m]),
+                    .output_clk(PTP_SEPARATE_RX_CLOCK ? rx_ptp_clk[n*PORTS_PER_IF+m] : rx_clk[n*PORTS_PER_IF+m]),
+                    .output_rst(PTP_SEPARATE_RX_CLOCK ? rx_ptp_rst[n*PORTS_PER_IF+m] : rx_rst[n*PORTS_PER_IF+m]),
                     .sample_clk(ptp_sample_clk),
                     .input_ts(ptp_ts_96),
                     .input_ts_step(ptp_ts_step),

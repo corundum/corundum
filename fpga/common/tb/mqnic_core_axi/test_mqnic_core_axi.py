@@ -404,6 +404,7 @@ def test_mqnic_core_axi(request, axi_data_width, axis_data_width, axis_sync_data
 
     # PTP configuration
     parameters['PTP_USE_SAMPLE_CLOCK'] = 0
+    parameters['PTP_SEPARATE_RX_CLOCK'] = 0
     parameters['PTP_PEROUT_ENABLE'] = 0
     parameters['PTP_PEROUT_COUNT'] = 1
 

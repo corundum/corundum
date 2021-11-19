@@ -63,6 +63,7 @@ module mqnic_core_pcie_us #
     parameter PTP_PERIOD_NS = 4'd4,
     parameter PTP_PERIOD_FNS = 32'd0,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
+    parameter PTP_SEPARATE_RX_CLOCK = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
 
@@ -355,6 +356,8 @@ module mqnic_core_pcie_us #
     input  wire [PORT_COUNT-1:0]                         eth_rx_clk,
     input  wire [PORT_COUNT-1:0]                         eth_rx_rst,
 
+    input  wire [PORT_COUNT-1:0]                         eth_rx_ptp_clk,
+    input  wire [PORT_COUNT-1:0]                         eth_rx_ptp_rst,
     output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            eth_rx_ptp_ts_96,
     output wire [PORT_COUNT-1:0]                         eth_rx_ptp_ts_step,
 
@@ -666,6 +669,7 @@ mqnic_core_pcie #(
     .PTP_PERIOD_NS(PTP_PERIOD_NS),
     .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PTP_SEPARATE_RX_CLOCK(PTP_SEPARATE_RX_CLOCK),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
 
@@ -950,6 +954,8 @@ core_pcie_inst (
     .rx_clk(eth_rx_clk),
     .rx_rst(eth_rx_rst),
 
+    .rx_ptp_clk(eth_rx_ptp_clk),
+    .rx_ptp_rst(eth_rx_ptp_rst),
     .rx_ptp_ts_96(eth_rx_ptp_ts_96),
     .rx_ptp_ts_step(eth_rx_ptp_ts_step),
 

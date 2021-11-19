@@ -608,6 +608,7 @@ def test_fpga_core(request):
 
     # PTP configuration
     parameters['PTP_USE_SAMPLE_CLOCK'] = 0
+    parameters['PTP_SEPARATE_RX_CLOCK'] = 0
     parameters['PTP_PEROUT_ENABLE'] = 1
     parameters['PTP_PEROUT_COUNT'] = 1
 

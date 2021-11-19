@@ -261,6 +261,7 @@ parameter PTP_FNS_WIDTH = 32;
 parameter PTP_PERIOD_NS = 4'd4;
 parameter PTP_PERIOD_FNS = 32'd0;
 parameter PTP_USE_SAMPLE_CLOCK = 0;
+parameter PTP_SEPARATE_RX_CLOCK = 1;
 
 // PCIe interface configuration
 parameter MSI_COUNT = 32;
@@ -956,6 +957,8 @@ wire                           qsfp_0_rx_axis_tvalid_int;
 wire                           qsfp_0_rx_axis_tlast_int;
 wire [80+1-1:0]                qsfp_0_rx_axis_tuser_int;
 
+wire                           qsfp_0_rx_ptp_clk_int;
+wire                           qsfp_0_rx_ptp_rst_int;
 wire [79:0]                    qsfp_0_rx_ptp_time_int;
 
 wire                           qsfp_1_tx_clk_int;
@@ -989,20 +992,44 @@ wire                           qsfp_1_rx_axis_tvalid_int;
 wire                           qsfp_1_rx_axis_tlast_int;
 wire [80+1-1:0]                qsfp_1_rx_axis_tuser_int;
 
+wire                           qsfp_1_rx_ptp_clk_int;
+wire                           qsfp_1_rx_ptp_rst_int;
 wire [79:0]                    qsfp_1_rx_ptp_time_int;
 
 wire qsfp_0_rx_status;
 wire qsfp_1_rx_status;
 
 wire qsfp_0_txuserclk2;
+wire qsfp_0_rxuserclk2;
 
 assign qsfp_0_tx_clk_int = qsfp_0_txuserclk2;
 assign qsfp_0_rx_clk_int = qsfp_0_txuserclk2;
+assign qsfp_0_rx_ptp_clk_int = qsfp_0_rxuserclk2;
 
 wire qsfp_1_txuserclk2;
+wire qsfp_1_rxuserclk2;
 
 assign qsfp_1_tx_clk_int = qsfp_1_txuserclk2;
 assign qsfp_1_rx_clk_int = qsfp_1_txuserclk2;
+assign qsfp_1_rx_ptp_clk_int = qsfp_1_rxuserclk2;
+
+sync_reset #(
+    .N(4)
+)
+sync_reset_qsfp_0_rx_ptp_rst_inst (
+    .clk(qsfp_0_rx_ptp_clk_int),
+    .rst(qsfp_0_tx_rst_int),
+    .out(qsfp_0_rx_ptp_rst_int)
+);
+
+sync_reset #(
+    .N(4)
+)
+sync_reset_qsfp_1_rx_ptp_rst_inst (
+    .clk(qsfp_1_rx_ptp_clk_int),
+    .rst(qsfp_1_tx_rst_int),
+    .out(qsfp_1_rx_ptp_rst_int)
+);
 
 cmac_pad #(
     .DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
@@ -1067,7 +1094,7 @@ qsfp_0_cmac_inst (
     .rx_otn_vlmarker(), // output
     .rx_preambleout(), // output [55:0]
     .usr_rx_reset(qsfp_0_rx_rst_int), // output
-    .gt_rxusrclk2(), // output
+    .gt_rxusrclk2(qsfp_0_rxuserclk2), // output
 
     .rx_lane_aligner_fill_0(), // output [6:0]
     .rx_lane_aligner_fill_1(), // output [6:0]
@@ -1091,8 +1118,7 @@ qsfp_0_cmac_inst (
     .rx_lane_aligner_fill_9(), // output [6:0]
     .rx_ptp_tstamp_out(qsfp_0_rx_axis_tuser_int[80:1]), // output [79:0]
     .rx_ptp_pcslane_out(), // output [4:0]
-    // RX fed from TX clock, so use same PTP time source
-    .ctl_rx_systemtimerin(qsfp_0_tx_ptp_time_int), // input [79:0]
+    .ctl_rx_systemtimerin(qsfp_0_rx_ptp_time_int), // input [79:0]
 
     .stat_rx_aligned(), // output
     .stat_rx_aligned_err(), // output
@@ -1388,7 +1414,7 @@ qsfp_1_cmac_inst (
     .rx_otn_vlmarker(), // output
     .rx_preambleout(), // output [55:0]
     .usr_rx_reset(qsfp_1_rx_rst_int), // output
-    .gt_rxusrclk2(), // output
+    .gt_rxusrclk2(qsfp_1_rxuserclk2), // output
 
     .rx_lane_aligner_fill_0(), // output [6:0]
     .rx_lane_aligner_fill_1(), // output [6:0]
@@ -1412,8 +1438,7 @@ qsfp_1_cmac_inst (
     .rx_lane_aligner_fill_9(), // output [6:0]
     .rx_ptp_tstamp_out(qsfp_1_rx_axis_tuser_int[80:1]), // output [79:0]
     .rx_ptp_pcslane_out(), // output [4:0]
-    // RX fed from TX clock, so use same PTP time source
-    .ctl_rx_systemtimerin(qsfp_1_tx_ptp_time_int), // input [79:0]
+    .ctl_rx_systemtimerin(qsfp_1_rx_ptp_time_int), // input [79:0]
 
     .stat_rx_aligned(), // output
     .stat_rx_aligned_err(), // output
@@ -1672,6 +1697,7 @@ fpga_core #(
     .PTP_PERIOD_NS(PTP_PERIOD_NS),
     .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PTP_SEPARATE_RX_CLOCK(PTP_SEPARATE_RX_CLOCK),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
 
@@ -1907,6 +1933,8 @@ core_inst (
     .qsfp_0_rx_axis_tvalid(qsfp_0_rx_axis_tvalid_int),
     .qsfp_0_rx_axis_tlast(qsfp_0_rx_axis_tlast_int),
     .qsfp_0_rx_axis_tuser(qsfp_0_rx_axis_tuser_int),
+    .qsfp_0_rx_ptp_clk(qsfp_0_rx_ptp_clk_int),
+    .qsfp_0_rx_ptp_rst(qsfp_0_rx_ptp_rst_int),
     .qsfp_0_rx_ptp_time(qsfp_0_rx_ptp_time_int),
     .qsfp_0_mod_prsnt_n(qsfp_0_mod_prsnt_n_int),
     .qsfp_0_reset_n(qsfp_0_reset_n),
@@ -1937,6 +1965,8 @@ core_inst (
     .qsfp_1_rx_axis_tvalid(qsfp_1_rx_axis_tvalid_int),
     .qsfp_1_rx_axis_tlast(qsfp_1_rx_axis_tlast_int),
     .qsfp_1_rx_axis_tuser(qsfp_1_rx_axis_tuser_int),
+    .qsfp_1_rx_ptp_clk(qsfp_1_rx_ptp_clk_int),
+    .qsfp_1_rx_ptp_rst(qsfp_1_rx_ptp_rst_int),
     .qsfp_1_rx_ptp_time(qsfp_1_rx_ptp_time_int),
     .qsfp_1_mod_prsnt_n(qsfp_1_mod_prsnt_n_int),
     .qsfp_1_reset_n(qsfp_1_reset_n),

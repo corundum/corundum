@@ -210,6 +210,7 @@ parameter PTP_FNS_WIDTH = 32;
 parameter PTP_PERIOD_NS = 4'd4;
 parameter PTP_PERIOD_FNS = 32'd0;
 parameter PTP_USE_SAMPLE_CLOCK = 0;
+parameter PTP_SEPARATE_RX_CLOCK = 1;
 
 // PCIe interface configuration
 parameter MSI_COUNT = 32;
@@ -941,14 +942,27 @@ wire                           qsfp_rx_axis_tvalid_int;
 wire                           qsfp_rx_axis_tlast_int;
 wire [80+1-1:0]                qsfp_rx_axis_tuser_int;
 
+wire                           qsfp_rx_ptp_clk_int;
+wire                           qsfp_rx_ptp_rst_int;
 wire [79:0]                    qsfp_rx_ptp_time_int;
 
 wire qsfp_rx_status;
 
 wire qsfp_txuserclk2;
+wire qsfp_rxuserclk2;
 
 assign qsfp_tx_clk_int = qsfp_txuserclk2;
 assign qsfp_rx_clk_int = qsfp_txuserclk2;
+assign qsfp_rx_ptp_clk_int = qsfp_rxuserclk2;
+
+sync_reset #(
+    .N(4)
+)
+sync_reset_qsfp_rx_ptp_rst_inst (
+    .clk(qsfp_rx_ptp_clk_int),
+    .rst(qsfp_tx_rst_int),
+    .out(qsfp_rx_ptp_rst_int)
+);
 
 cmac_pad #(
     .DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
@@ -1013,7 +1027,7 @@ qsfp_cmac_inst (
     .rx_otn_vlmarker(), // output
     .rx_preambleout(), // output [55:0]
     .usr_rx_reset(qsfp_rx_rst_int), // output
-    .gt_rxusrclk2(), // output
+    .gt_rxusrclk2(qsfp_rxuserclk2), // output
 
     .rx_lane_aligner_fill_0(), // output [6:0]
     .rx_lane_aligner_fill_1(), // output [6:0]
@@ -1037,8 +1051,7 @@ qsfp_cmac_inst (
     .rx_lane_aligner_fill_9(), // output [6:0]
     .rx_ptp_tstamp_out(qsfp_rx_axis_tuser_int[80:1]), // output [79:0]
     .rx_ptp_pcslane_out(), // output [4:0]
-    // RX fed from TX clock, so use same PTP time source
-    .ctl_rx_systemtimerin(qsfp_tx_ptp_time_int), // input [79:0]
+    .ctl_rx_systemtimerin(qsfp_rx_ptp_time_int), // input [79:0]
 
     .stat_rx_aligned(), // output
     .stat_rx_aligned_err(), // output
@@ -1294,6 +1307,7 @@ fpga_core #(
     .PTP_PERIOD_NS(PTP_PERIOD_NS),
     .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PTP_SEPARATE_RX_CLOCK(PTP_SEPARATE_RX_CLOCK),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
 
@@ -1515,6 +1529,8 @@ core_inst (
     .qsfp_rx_axis_tvalid(qsfp_rx_axis_tvalid_int),
     .qsfp_rx_axis_tlast(qsfp_rx_axis_tlast_int),
     .qsfp_rx_axis_tuser(qsfp_rx_axis_tuser_int),
+    .qsfp_rx_ptp_clk(qsfp_rx_ptp_clk_int),
+    .qsfp_rx_ptp_rst(qsfp_rx_ptp_rst_int),
     .qsfp_rx_ptp_time(qsfp_rx_ptp_time_int),
 
     /*

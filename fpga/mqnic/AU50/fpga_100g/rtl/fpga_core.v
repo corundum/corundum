@@ -62,6 +62,7 @@ module fpga_core #
     parameter PTP_PERIOD_NS = 4'd4,
     parameter PTP_PERIOD_FNS = 32'd0,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
+    parameter PTP_SEPARATE_RX_CLOCK = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
 
@@ -288,6 +289,8 @@ module fpga_core #
     input  wire                               qsfp_rx_axis_tlast,
     input  wire [80+1-1:0]                    qsfp_rx_axis_tuser,
 
+    input  wire                               qsfp_rx_ptp_clk,
+    input  wire                               qsfp_rx_ptp_rst,
     output wire [79:0]                        qsfp_rx_ptp_time,
 
     /*
@@ -540,6 +543,8 @@ wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_ready;
 wire [PORT_COUNT-1:0]                         eth_rx_clk;
 wire [PORT_COUNT-1:0]                         eth_rx_rst;
 
+wire [PORT_COUNT-1:0]                         eth_rx_ptp_clk;
+wire [PORT_COUNT-1:0]                         eth_rx_ptp_rst;
 wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            eth_rx_ptp_ts_96;
 wire [PORT_COUNT-1:0]                         eth_rx_ptp_ts_step;
 
@@ -583,6 +588,8 @@ generate
         assign axis_eth_rx_tlast[QSFP_IND] = qsfp_rx_axis_tlast;
         assign axis_eth_rx_tuser[QSFP_IND*AXIS_ETH_RX_USER_WIDTH +: AXIS_ETH_RX_USER_WIDTH] = {qsfp_rx_axis_tuser[80:1], 16'd0, qsfp_rx_axis_tuser[0]};
 
+        assign eth_rx_ptp_clk[QSFP_IND] = qsfp_rx_ptp_clk;
+        assign eth_rx_ptp_rst[QSFP_IND] = qsfp_rx_ptp_rst;
         assign qsfp_tx_ptp_time = eth_tx_ptp_ts_96[QSFP_IND*PTP_TS_WIDTH+16 +: 80];
         assign qsfp_rx_ptp_time = eth_rx_ptp_ts_96[QSFP_IND*PTP_TS_WIDTH+16 +: 80];
     end else begin
@@ -619,6 +626,7 @@ mqnic_core_pcie_us #(
     .PTP_PERIOD_NS(PTP_PERIOD_NS),
     .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PTP_SEPARATE_RX_CLOCK(PTP_SEPARATE_RX_CLOCK),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
 
@@ -911,6 +919,8 @@ core_inst (
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),
 
+    .eth_rx_ptp_clk(eth_rx_ptp_clk),
+    .eth_rx_ptp_rst(eth_rx_ptp_rst),
     .eth_rx_ptp_ts_96(eth_rx_ptp_ts_96),
     .eth_rx_ptp_ts_step(eth_rx_ptp_ts_step),
 

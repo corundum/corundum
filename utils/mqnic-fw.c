@@ -712,6 +712,13 @@ int main(int argc, char *argv[])
             break;
         case 0x81:
             // Alveo boards
+            if (flash_size < 0x01002000)
+            {
+                fprintf(stderr, "Invalid flash size\n");
+                ret = -1;
+                goto skip_flash;
+            }
+
             flash_segment_count = 2;
             flash_segment_start[0] = 0;
             flash_segment_length[0] = 0x01002000;

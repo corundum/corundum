@@ -906,6 +906,7 @@ mqnic_core_pcie_s10 #(
     .PTP_PERIOD_NS(PTP_PERIOD_NS),
     .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PTP_SEPARATE_RX_CLOCK(0),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
 
@@ -1130,6 +1131,8 @@ core_inst (
     .s_axis_eth_tx_ptp_ts_valid(axis_eth_tx_ptp_ts_valid),
     .s_axis_eth_tx_ptp_ts_ready(axis_eth_tx_ptp_ts_ready),
 
+    .eth_rx_ptp_clk(0),
+    .eth_rx_ptp_rst(0),
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),
 

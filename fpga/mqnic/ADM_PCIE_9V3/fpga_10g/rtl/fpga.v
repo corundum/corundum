@@ -1697,6 +1697,7 @@ core_inst (
     .qsfp_0_rx_error_count_3(qsfp_0_rx_error_count_3_int),
     .qsfp_0_modprs_l(qsfp_0_modprs_l_int),
     .qsfp_0_sel_l(qsfp_0_sel_l),
+
     .qsfp_1_tx_clk_0(qsfp_1_tx_clk_0_int),
     .qsfp_1_tx_rst_0(qsfp_1_tx_rst_0_int),
     .qsfp_1_txd_0(qsfp_1_txd_0_int),
@@ -1743,14 +1744,17 @@ core_inst (
     .qsfp_1_rx_error_count_3(qsfp_1_rx_error_count_3_int),
     .qsfp_1_modprs_l(qsfp_1_modprs_l_int),
     .qsfp_1_sel_l(qsfp_1_sel_l),
+
     .qsfp_reset_l(qsfp_reset_l),
     .qsfp_int_l(qsfp_int_l_int),
+
     .qsfp_i2c_scl_i(qsfp_i2c_scl_i),
     .qsfp_i2c_scl_o(qsfp_i2c_scl_o),
     .qsfp_i2c_scl_t(qsfp_i2c_scl_t),
     .qsfp_i2c_sda_i(qsfp_i2c_sda_i),
     .qsfp_i2c_sda_o(qsfp_i2c_sda_o),
     .qsfp_i2c_sda_t(qsfp_i2c_sda_t),
+
     .eeprom_i2c_scl_i(eeprom_i2c_scl_i),
     .eeprom_i2c_scl_o(eeprom_i2c_scl_o),
     .eeprom_i2c_scl_t(eeprom_i2c_scl_t),

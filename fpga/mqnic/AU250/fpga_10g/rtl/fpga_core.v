@@ -1034,6 +1034,7 @@ mqnic_core_pcie_us #(
     .PTP_PERIOD_NS(PTP_PERIOD_NS),
     .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PTP_SEPARATE_RX_CLOCK(0),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
 
@@ -1326,6 +1327,8 @@ core_inst (
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),
 
+    .eth_rx_ptp_clk(0),
+    .eth_rx_ptp_rst(0),
     .eth_rx_ptp_ts_96(eth_rx_ptp_ts_96),
     .eth_rx_ptp_ts_step(eth_rx_ptp_ts_step),
 

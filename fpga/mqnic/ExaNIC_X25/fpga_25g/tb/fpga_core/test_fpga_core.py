@@ -568,6 +568,7 @@ def test_fpga_core(request):
     parameters['PORTS_PER_IF'] = 1
 
     # PTP configuration
+    parameters['PTP_USE_SAMPLE_CLOCK'] = 0
     parameters['PTP_PEROUT_ENABLE'] = 1
     parameters['PTP_PEROUT_COUNT'] = 1
 

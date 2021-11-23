@@ -272,26 +272,27 @@ class TB(object):
         # Ethernet
         self.port_mac = []
 
-        clock_period = 3.102
-        speed = 10e9
+        eth_int_if_width = len(dut.core_pcie_inst.core_inst.iface[0].port[0].rx_async_fifo_inst.m_axis_tdata)
+        eth_clock_period = 6.4
+        eth_speed = 10e9
 
-        if len(dut.core_pcie_inst.core_inst.iface[0].port[0].rx_fifo_inst.m_axis_tdata) == 64:
+        if eth_int_if_width == 64:
             # 10G
-            clock_period = 6.4
-            speed = 10e9
-        elif len(dut.core_pcie_inst.core_inst.iface[0].port[0].rx_fifo_inst.m_axis_tdata) == 128:
+            eth_clock_period = 6.4
+            eth_speed = 10e9
+        elif eth_int_if_width == 128:
             # 25G
-            clock_period = 2.56
-            speed = 25e9
-        elif len(dut.core_pcie_inst.core_inst.iface[0].port[0].rx_fifo_inst.m_axis_tdata) == 512:
+            eth_clock_period = 2.56
+            eth_speed = 25e9
+        elif eth_int_if_width == 512:
             # 100G
-            clock_period = 3.102
-            speed = 100e9
+            eth_clock_period = 3.102
+            eth_speed = 100e9
 
         for iface in dut.core_pcie_inst.core_inst.iface:
             for port in iface.port:
-                cocotb.fork(Clock(port.rx_async_fifo_inst.s_clk, clock_period, units="ns").start())
-                cocotb.fork(Clock(port.tx_async_fifo_inst.m_clk, clock_period, units="ns").start())
+                cocotb.fork(Clock(port.rx_async_fifo_inst.s_clk, eth_clock_period, units="ns").start())
+                cocotb.fork(Clock(port.tx_async_fifo_inst.m_clk, eth_clock_period, units="ns").start())
 
                 port.rx_async_fifo_inst.s_rst.setimmediatevalue(0)
                 port.tx_async_fifo_inst.m_rst.setimmediatevalue(0)
@@ -308,7 +309,7 @@ class TB(object):
                     rx_rst=port.rx_async_fifo_inst.s_rst,
                     rx_bus=AxiStreamBus.from_prefix(port, "axis_rx"),
                     rx_ptp_time=port.ptp.rx_ptp_cdc_inst.output_ts,
-                    ifg=12, speed=speed
+                    ifg=12, speed=eth_speed
                 )
 
                 self.port_mac.append(mac)

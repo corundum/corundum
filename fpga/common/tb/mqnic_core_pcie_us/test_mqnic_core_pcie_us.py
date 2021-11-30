@@ -509,6 +509,38 @@ async def run_test_nic(dut):
 
         tb.loopback_enable = False
 
+    if len(tb.driver.interfaces[0].ports) > 1:
+        tb.log.info("All interface 0 ports")
+
+        for port in tb.driver.interfaces[0].ports:
+            await port.hw_regs.write_dword(mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
+            for k in range(port.interface.tx_queue_count):
+                if k % len(tb.driver.interfaces[0].ports) == port.index:
+                    await port.schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
+                else:
+                    await port.schedulers[0].hw_regs.write_dword(4*k, 0x00000000)
+
+        count = 64
+
+        pkts = [bytearray([(x+k) % 256 for x in range(1514)]) for k in range(count)]
+
+        tb.loopback_enable = True
+
+        for k, p in enumerate(pkts):
+            await tb.driver.interfaces[0].start_xmit(p, k % len(tb.driver.interfaces[0].ports))
+
+        for k in range(count):
+            pkt = await tb.driver.interfaces[0].recv()
+
+            tb.log.info("Packet: %s", pkt)
+            # assert pkt.data == pkts[k]
+            assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
+
+        tb.loopback_enable = False
+
+        for port in tb.driver.interfaces[0].ports[1:]:
+            await port.hw_regs.write_dword(mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000000)
+
     tb.log.info("Read statistics counters")
 
     await Timer(2000, 'ns')

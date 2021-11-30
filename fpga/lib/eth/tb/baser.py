@@ -30,34 +30,9 @@ from cocotb.triggers import RisingEdge, Timer, First, Event
 from cocotb.utils import get_sim_time
 
 from cocotbext.eth.constants import (EthPre, XgmiiCtrl, BaseRCtrl, BaseRO,
-    BaseRSync, BaseRBlockType)
+    BaseRSync, BaseRBlockType, xgmii_ctrl_to_baser_mapping,
+    baser_ctrl_to_xgmii_mapping, block_type_term_lane_mapping)
 from cocotbext.eth import XgmiiFrame
-
-
-xgmii_ctrl_to_baser_mapping = {
-    XgmiiCtrl.IDLE:   BaseRCtrl.IDLE,
-    XgmiiCtrl.LPI:    BaseRCtrl.LPI,
-    XgmiiCtrl.ERROR:  BaseRCtrl.ERROR,
-}
-
-
-baser_ctrl_to_xgmii_mapping = {
-    BaseRCtrl.IDLE:   XgmiiCtrl.IDLE,
-    BaseRCtrl.LPI:    XgmiiCtrl.LPI,
-    BaseRCtrl.ERROR:  XgmiiCtrl.ERROR,
-}
-
-
-block_type_term_lane_mapping = {
-    BaseRBlockType.TERM_0:  0,
-    BaseRBlockType.TERM_1:  1,
-    BaseRBlockType.TERM_2:  2,
-    BaseRBlockType.TERM_3:  3,
-    BaseRBlockType.TERM_4:  4,
-    BaseRBlockType.TERM_5:  5,
-    BaseRBlockType.TERM_6:  6,
-    BaseRBlockType.TERM_7:  7,
-}
 
 
 class BaseRSerdesSource():
@@ -271,7 +246,7 @@ class BaseRSerdesSource():
                             if cl[0] and (dl[0] == XgmiiCtrl.SEQ_OS or dl[0] == XgmiiCtrl.SIG_OS) and not any(cl[1:4]):
                                 # ordered set in lane 0
                                 data = BaseRBlockType.OS_START
-                                for i in range(1,4):
+                                for i in range(1, 4):
                                     data |= dl[i] << i*8
                                 if dl[0] == XgmiiCtrl.SIG_OS:
                                     # signal ordered set
@@ -287,7 +262,7 @@ class BaseRSerdesSource():
                             if cl[4] and (dl[4] == XgmiiCtrl.SEQ_OS or dl[4] == XgmiiCtrl.SIG_OS) and not any(cl[5:8]):
                                 # ordered set in lane 4
                                 data = BaseRBlockType.OS_04
-                                for i in range(5,8):
+                                for i in range(5, 8):
                                     data |= dl[i] << i*8
                                 if dl[4] == XgmiiCtrl.SIG_OS:
                                     # signal ordered set

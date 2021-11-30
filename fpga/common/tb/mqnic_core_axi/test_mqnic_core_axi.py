@@ -107,22 +107,22 @@ class TB(object):
 
         for iface in dut.core_inst.iface:
             for port in iface.port:
-                cocotb.fork(Clock(port.rx_async_fifo_inst.s_clk, eth_clock_period, units="ns").start())
-                cocotb.fork(Clock(port.tx_async_fifo_inst.m_clk, eth_clock_period, units="ns").start())
+                cocotb.fork(Clock(port.port_rx_clk, eth_clock_period, units="ns").start())
+                cocotb.fork(Clock(port.port_tx_clk, eth_clock_period, units="ns").start())
 
-                port.rx_async_fifo_inst.s_rst.setimmediatevalue(0)
-                port.tx_async_fifo_inst.m_rst.setimmediatevalue(0)
+                port.port_rx_rst.setimmediatevalue(0)
+                port.port_tx_rst.setimmediatevalue(0)
 
                 mac = EthMac(
-                    tx_clk=port.tx_async_fifo_inst.m_clk,
-                    tx_rst=port.tx_async_fifo_inst.m_rst,
+                    tx_clk=port.port_tx_clk,
+                    tx_rst=port.port_tx_rst,
                     tx_bus=AxiStreamBus.from_prefix(port, "axis_tx"),
                     tx_ptp_time=port.ptp.tx_ptp_cdc_inst.output_ts,
                     tx_ptp_ts=port.ptp.axis_tx_ptp_ts,
                     tx_ptp_ts_tag=port.ptp.axis_tx_ptp_ts_tag,
                     tx_ptp_ts_valid=port.ptp.axis_tx_ptp_ts_valid,
-                    rx_clk=port.rx_async_fifo_inst.s_clk,
-                    rx_rst=port.rx_async_fifo_inst.s_rst,
+                    rx_clk=port.port_rx_clk,
+                    rx_rst=port.port_rx_rst,
                     rx_bus=AxiStreamBus.from_prefix(port, "axis_rx"),
                     rx_ptp_time=port.ptp.rx_ptp_cdc_inst.output_ts,
                     ifg=12, speed=eth_speed

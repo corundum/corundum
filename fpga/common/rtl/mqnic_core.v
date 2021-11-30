@@ -1939,8 +1939,8 @@ always @* begin
 end
 
 // streaming connections to application
-wire [PORT_COUNT-1:0]                        app_direct_tx_clk = tx_clk;
-wire [PORT_COUNT-1:0]                        app_direct_tx_rst = tx_rst;
+wire [PORT_COUNT-1:0]                        app_direct_tx_clk;
+wire [PORT_COUNT-1:0]                        app_direct_tx_rst;
 
 wire [PORT_COUNT*AXIS_DATA_WIDTH-1:0]        app_s_axis_direct_tx_tdata;
 wire [PORT_COUNT*AXIS_KEEP_WIDTH-1:0]        app_s_axis_direct_tx_tkeep;
@@ -1966,8 +1966,8 @@ wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_m_axis_direct_tx_ptp_ts_tag;
 wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_ptp_ts_valid;
 wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_ptp_ts_ready;
 
-wire [PORT_COUNT-1:0]                        app_direct_rx_clk = rx_clk;
-wire [PORT_COUNT-1:0]                        app_direct_rx_rst = rx_rst;
+wire [PORT_COUNT-1:0]                        app_direct_rx_clk;
+wire [PORT_COUNT-1:0]                        app_direct_rx_rst;
 
 wire [PORT_COUNT*AXIS_DATA_WIDTH-1:0]        app_s_axis_direct_rx_tdata;
 wire [PORT_COUNT*AXIS_KEEP_WIDTH-1:0]        app_s_axis_direct_rx_tkeep;
@@ -2346,6 +2346,21 @@ generate
 
         for (m = 0; m < PORTS_PER_IF; m = m + 1) begin : port
 
+            wire port_tx_clk = tx_clk[n*PORTS_PER_IF+m];
+            wire port_tx_rst = tx_rst[n*PORTS_PER_IF+m];
+
+            wire port_rx_clk = tx_clk[n*PORTS_PER_IF+m];
+            wire port_rx_rst = tx_rst[n*PORTS_PER_IF+m];
+
+            wire port_rx_ptp_clk = PTP_SEPARATE_RX_CLOCK ? rx_ptp_clk[n*PORTS_PER_IF+m] : rx_clk[n*PORTS_PER_IF+m];
+            wire port_rx_ptp_rst = PTP_SEPARATE_RX_CLOCK ? rx_ptp_rst[n*PORTS_PER_IF+m] : rx_rst[n*PORTS_PER_IF+m];
+
+            assign app_direct_tx_clk[n*PORTS_PER_IF+m] = port_tx_clk;
+            assign app_direct_tx_rst[n*PORTS_PER_IF+m] = port_tx_rst;
+
+            assign app_direct_rx_clk[n*PORTS_PER_IF+m] = port_rx_clk;
+            assign app_direct_rx_rst[n*PORTS_PER_IF+m] = port_rx_rst;
+
             if (PTP_TS_ENABLE) begin: ptp
 
                 // PTP CDC logic
@@ -2358,8 +2373,8 @@ generate
                 tx_ptp_cdc_inst (
                     .input_clk(clk),
                     .input_rst(rst),
-                    .output_clk(tx_clk[n*PORTS_PER_IF+m]),
-                    .output_rst(tx_rst[n*PORTS_PER_IF+m]),
+                    .output_clk(port_tx_clk),
+                    .output_rst(port_tx_rst),
                     .sample_clk(ptp_sample_clk),
                     .input_ts(ptp_ts_96),
                     .input_ts_step(ptp_ts_step),
@@ -2378,8 +2393,8 @@ generate
                 rx_ptp_cdc_inst (
                     .input_clk(clk),
                     .input_rst(rst),
-                    .output_clk(PTP_SEPARATE_RX_CLOCK ? rx_ptp_clk[n*PORTS_PER_IF+m] : rx_clk[n*PORTS_PER_IF+m]),
-                    .output_rst(PTP_SEPARATE_RX_CLOCK ? rx_ptp_rst[n*PORTS_PER_IF+m] : rx_rst[n*PORTS_PER_IF+m]),
+                    .output_clk(port_rx_ptp_clk),
+                    .output_rst(port_rx_ptp_rst),
                     .sample_clk(ptp_sample_clk),
                     .input_ts(ptp_ts_96),
                     .input_ts_step(ptp_ts_step),
@@ -2460,8 +2475,8 @@ generate
                 )
                 tx_ptp_ts_fifo_inst (
                     // AXI input
-                    .s_clk(tx_clk[n*PORTS_PER_IF+m]),
-                    .s_rst(tx_rst[n*PORTS_PER_IF+m]),
+                    .s_clk(port_tx_clk),
+                    .s_rst(port_tx_rst),
                     .s_axis_tdata(axis_tx_in_ptp_ts),
                     .s_axis_tkeep(0),
                     .s_axis_tvalid(axis_tx_in_ptp_ts_valid),
@@ -2909,8 +2924,8 @@ generate
                 .s_axis_tuser(axis_tx_async_fifo_tuser),
 
                 // AXI output
-                .m_clk(tx_clk[n*PORTS_PER_IF+m]),
-                .m_rst(tx_rst[n*PORTS_PER_IF+m]),
+                .m_clk(port_tx_clk),
+                .m_rst(port_tx_rst),
                 .m_axis_tdata(axis_tx_out_tdata),
                 .m_axis_tkeep(axis_tx_out_tkeep),
                 .m_axis_tvalid(axis_tx_out_tvalid),
@@ -3076,8 +3091,8 @@ generate
             )
             rx_async_fifo_inst (
                 // AXI input
-                .s_clk(rx_clk[n*PORTS_PER_IF+m]),
-                .s_rst(rx_rst[n*PORTS_PER_IF+m]),
+                .s_clk(port_rx_clk),
+                .s_rst(port_rx_rst),
                 .s_axis_tdata(axis_rx_in_tdata),
                 .s_axis_tkeep(axis_rx_in_tkeep),
                 .s_axis_tvalid(axis_rx_in_tvalid),

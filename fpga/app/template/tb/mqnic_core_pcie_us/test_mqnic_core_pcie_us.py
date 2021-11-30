@@ -291,22 +291,22 @@ class TB(object):
 
         for iface in dut.core_pcie_inst.core_inst.iface:
             for port in iface.port:
-                cocotb.fork(Clock(port.rx_async_fifo_inst.s_clk, eth_clock_period, units="ns").start())
-                cocotb.fork(Clock(port.tx_async_fifo_inst.m_clk, eth_clock_period, units="ns").start())
+                cocotb.fork(Clock(port.port_rx_clk, eth_clock_period, units="ns").start())
+                cocotb.fork(Clock(port.port_tx_clk, eth_clock_period, units="ns").start())
 
-                port.rx_async_fifo_inst.s_rst.setimmediatevalue(0)
-                port.tx_async_fifo_inst.m_rst.setimmediatevalue(0)
+                port.port_rx_rst.setimmediatevalue(0)
+                port.port_tx_rst.setimmediatevalue(0)
 
                 mac = EthMac(
-                    tx_clk=port.tx_async_fifo_inst.m_clk,
-                    tx_rst=port.tx_async_fifo_inst.m_rst,
+                    tx_clk=port.port_tx_clk,
+                    tx_rst=port.port_tx_rst,
                     tx_bus=AxiStreamBus.from_prefix(port, "axis_tx"),
                     tx_ptp_time=port.ptp.tx_ptp_cdc_inst.output_ts,
                     tx_ptp_ts=port.ptp.axis_tx_ptp_ts,
                     tx_ptp_ts_tag=port.ptp.axis_tx_ptp_ts_tag,
                     tx_ptp_ts_valid=port.ptp.axis_tx_ptp_ts_valid,
-                    rx_clk=port.rx_async_fifo_inst.s_clk,
-                    rx_rst=port.rx_async_fifo_inst.s_rst,
+                    rx_clk=port.port_rx_clk,
+                    rx_rst=port.port_rx_rst,
                     rx_bus=AxiStreamBus.from_prefix(port, "axis_rx"),
                     rx_ptp_time=port.ptp.rx_ptp_cdc_inst.output_ts,
                     ifg=12, speed=eth_speed
@@ -373,13 +373,15 @@ async def run_test_nic(dut):
 
     tb.log.info("Init driver")
     await tb.driver.init_pcie_dev(tb.rc, tb.dev.functions[0].pcie_id)
-    await tb.driver.interfaces[0].open()
+    for interface in tb.driver.interfaces:
+        await interface.open()
 
     # enable queues
     tb.log.info("Enable queues")
-    await tb.driver.interfaces[0].ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
-    for k in range(tb.driver.interfaces[0].tx_queue_count):
-        await tb.driver.interfaces[0].ports[0].schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
+    for interface in tb.driver.interfaces:
+        await interface.ports[0].hw_regs.write_dword(mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
+        for k in range(interface.tx_queue_count):
+            await interface.ports[0].schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
 
     # wait for all writes to complete
     await tb.driver.hw_regs.read_dword(0)
@@ -387,19 +389,20 @@ async def run_test_nic(dut):
 
     tb.log.info("Send and receive single packet")
 
-    data = bytearray([x % 256 for x in range(1024)])
+    for interface in tb.driver.interfaces:
+        data = bytearray([x % 256 for x in range(1024)])
 
-    await tb.driver.interfaces[0].start_xmit(data, 0)
+        await interface.start_xmit(data, 0)
 
-    pkt = await tb.port_mac[0].tx.recv()
-    tb.log.info("Packet: %s", pkt)
+        pkt = await tb.port_mac[interface.index*interface.port_count].tx.recv()
+        tb.log.info("Packet: %s", pkt)
 
-    await tb.port_mac[0].rx.send(pkt)
+        await tb.port_mac[interface.index*interface.port_count].rx.send(pkt)
 
-    pkt = await tb.driver.interfaces[0].recv()
+        pkt = await interface.recv()
 
-    tb.log.info("Packet: %s", pkt)
-    assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
+        tb.log.info("Packet: %s", pkt)
+        assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
 
     tb.log.info("RX and TX checksum tests")
 
@@ -485,6 +488,59 @@ async def run_test_nic(dut):
 
     tb.loopback_enable = False
 
+    if len(tb.driver.interfaces) > 1:
+        tb.log.info("All interfaces")
+
+        count = 64
+
+        pkts = [bytearray([(x+k) % 256 for x in range(1514)]) for k in range(count)]
+
+        tb.loopback_enable = True
+
+        for k, p in enumerate(pkts):
+            await tb.driver.interfaces[k % len(tb.driver.interfaces)].start_xmit(p, 0)
+
+        for k in range(count):
+            pkt = await tb.driver.interfaces[k % len(tb.driver.interfaces)].recv()
+
+            tb.log.info("Packet: %s", pkt)
+            assert pkt.data == pkts[k]
+            assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
+
+        tb.loopback_enable = False
+
+    if len(tb.driver.interfaces[0].ports) > 1:
+        tb.log.info("All interface 0 ports")
+
+        for port in tb.driver.interfaces[0].ports:
+            await port.hw_regs.write_dword(mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000001)
+            for k in range(port.interface.tx_queue_count):
+                if k % len(tb.driver.interfaces[0].ports) == port.index:
+                    await port.schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
+                else:
+                    await port.schedulers[0].hw_regs.write_dword(4*k, 0x00000000)
+
+        count = 64
+
+        pkts = [bytearray([(x+k) % 256 for x in range(1514)]) for k in range(count)]
+
+        tb.loopback_enable = True
+
+        for k, p in enumerate(pkts):
+            await tb.driver.interfaces[0].start_xmit(p, k % len(tb.driver.interfaces[0].ports))
+
+        for k in range(count):
+            pkt = await tb.driver.interfaces[0].recv()
+
+            tb.log.info("Packet: %s", pkt)
+            # assert pkt.data == pkts[k]
+            assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
+
+        tb.loopback_enable = False
+
+        for port in tb.driver.interfaces[0].ports[1:]:
+            await port.hw_regs.write_dword(mqnic.MQNIC_PORT_REG_SCHED_ENABLE, 0x00000000)
+
     tb.log.info("Read statistics counters")
 
     await Timer(2000, 'ns')
@@ -517,9 +573,18 @@ eth_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'eth', 'rtl'))
 pcie_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'pcie', 'rtl'))
 
 
-@pytest.mark.parametrize(("axis_pcie_data_width", "axis_eth_data_width", "axis_eth_sync_data_width"),
-    [(256, 64, 64), (256, 64, 128), (512, 64, 64), (512, 64, 128), (512, 512, 512)])
-def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, axis_eth_sync_data_width):
+@pytest.mark.parametrize(("if_count", "ports_per_if", "axis_pcie_data_width",
+        "axis_eth_data_width", "axis_eth_sync_data_width"), [
+            (1, 1, 256, 64, 64),
+            (2, 1, 256, 64, 64),
+            (1, 2, 256, 64, 64),
+            (1, 1, 256, 64, 128),
+            (1, 1, 512, 64, 64),
+            (1, 1, 512, 64, 128),
+            (1, 1, 512, 512, 512),
+        ])
+def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_width,
+        axis_eth_data_width, axis_eth_sync_data_width):
     dut = "mqnic_core_pcie_us"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -606,8 +671,8 @@ def test_mqnic_core_pcie_us(request, axis_pcie_data_width, axis_eth_data_width, 
     parameters = {}
 
     # Structural configuration
-    parameters['IF_COUNT'] = 1
-    parameters['PORTS_PER_IF'] = 1
+    parameters['IF_COUNT'] = if_count
+    parameters['PORTS_PER_IF'] = ports_per_if
 
     # PTP configuration
     parameters['PTP_USE_SAMPLE_CLOCK'] = 0

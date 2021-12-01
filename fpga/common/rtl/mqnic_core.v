@@ -2350,11 +2350,11 @@ generate
             wire port_tx_clk = tx_clk[n*PORTS_PER_IF+m];
             wire port_tx_rst = tx_rst[n*PORTS_PER_IF+m];
 
-            wire port_rx_clk = tx_clk[n*PORTS_PER_IF+m];
-            wire port_rx_rst = tx_rst[n*PORTS_PER_IF+m];
+            wire port_rx_clk = rx_clk[n*PORTS_PER_IF+m];
+            wire port_rx_rst = rx_rst[n*PORTS_PER_IF+m];
 
-            wire port_rx_ptp_clk = PTP_SEPARATE_RX_CLOCK ? rx_ptp_clk[n*PORTS_PER_IF+m] : rx_clk[n*PORTS_PER_IF+m];
-            wire port_rx_ptp_rst = PTP_SEPARATE_RX_CLOCK ? rx_ptp_rst[n*PORTS_PER_IF+m] : rx_rst[n*PORTS_PER_IF+m];
+            wire port_rx_ptp_clk = rx_ptp_clk[n*PORTS_PER_IF+m];
+            wire port_rx_ptp_rst = rx_ptp_rst[n*PORTS_PER_IF+m];
 
             assign app_direct_tx_clk[n*PORTS_PER_IF+m] = port_tx_clk;
             assign app_direct_tx_rst[n*PORTS_PER_IF+m] = port_tx_rst;
@@ -2394,8 +2394,8 @@ generate
                 rx_ptp_cdc_inst (
                     .input_clk(clk),
                     .input_rst(rst),
-                    .output_clk(port_rx_ptp_clk),
-                    .output_rst(port_rx_ptp_rst),
+                    .output_clk(PTP_SEPARATE_RX_CLOCK ? port_rx_ptp_clk : port_rx_clk),
+                    .output_rst(PTP_SEPARATE_RX_CLOCK ? port_rx_ptp_rst : port_rx_rst),
                     .sample_clk(ptp_sample_clk),
                     .input_ts(ptp_ts_96),
                     .input_ts_step(ptp_ts_step),

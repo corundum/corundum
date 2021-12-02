@@ -295,11 +295,14 @@ wire queue_full_active = ($unsigned(op_table_queue_ptr[queue_ram_read_data_op_in
 wire queue_full = queue_active ? queue_full_active : queue_full_idle;
 wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_active_head_ptr = queue_active ? op_table_queue_ptr[queue_ram_read_data_op_index] : queue_ram_read_data_head_ptr;
 
-integer i;
+integer i, j;
 
 initial begin
-    for (i = 0; i < QUEUE_COUNT; i = i + 1) begin
-        queue_ram[i] = 0;
+    // break up loop to work around iteration termination
+    for (i = 0; i < QUEUE_INDEX_WIDTH; i = i + 2**(QUEUE_INDEX_WIDTH/2)) begin
+        for (j = i; j < i + 2**(QUEUE_INDEX_WIDTH/2); j = j + 1) begin
+            queue_ram[j] = 0;
+        end
     end
 
     for (i = 0; i < PIPELINE; i = i + 1) begin
@@ -315,8 +318,6 @@ initial begin
         op_table_queue_ptr[i] = 0;
     end
 end
-
-integer j;
 
 always @* begin
     op_axil_write_pipe_next = {op_axil_write_pipe_reg, 1'b0};

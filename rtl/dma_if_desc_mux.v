@@ -177,10 +177,9 @@ assign acknowledge = grant & s_axis_desc_valid & s_axis_desc_ready;
 always @* begin
     // pass through selected packet data
     m_axis_desc_dma_addr_int  = current_s_desc_dma_addr;
-    if (S_RAM_SEL_WIDTH > 0) begin
-        m_axis_desc_ram_sel_int = {grant_encoded, current_s_desc_ram_sel};
-    end else begin
-        m_axis_desc_ram_sel_int = grant_encoded;
+    m_axis_desc_ram_sel_int   = current_s_desc_ram_sel;
+    if (PORTS > 1) begin
+        m_axis_desc_ram_sel_int[M_RAM_SEL_WIDTH-1:M_RAM_SEL_WIDTH-CL_PORTS] = grant_encoded;
     end
     m_axis_desc_ram_addr_int  = current_s_desc_ram_addr;
     m_axis_desc_len_int       = current_s_desc_len;
@@ -293,7 +292,7 @@ assign m_axis_desc_status_valid = m_axis_desc_status_valid_reg;
 always @(posedge clk) begin
     m_axis_desc_status_tag_reg <= s_axis_desc_status_tag;
     m_axis_desc_status_error_reg <= s_axis_desc_status_error;
-    m_axis_desc_status_valid_reg <= s_axis_desc_status_valid << (PORTS > 1 ? s_axis_desc_status_tag[S_TAG_WIDTH+CL_PORTS-1:S_TAG_WIDTH] : 0);
+    m_axis_desc_status_valid_reg <= s_axis_desc_status_valid << (PORTS > 1 ? s_axis_desc_status_tag[M_TAG_WIDTH-1:M_TAG_WIDTH-CL_PORTS] : 0);
 
     if (rst) begin
         m_axis_desc_status_valid_reg <= {PORTS{1'b0}};

@@ -152,7 +152,10 @@ always @* begin
     m_axis_desc_pcie_addr_int  = current_s_desc_pcie_addr;
     m_axis_desc_axi_addr_int   = current_s_desc_axi_addr;
     m_axis_desc_len_int        = current_s_desc_len;
-    m_axis_desc_tag_int        = {grant_encoded, current_s_desc_tag};
+    m_axis_desc_tag_int        = current_s_desc_tag;
+    if (PORTS > 1) begin
+        m_axis_desc_tag_int[M_TAG_WIDTH-1:M_TAG_WIDTH-CL_PORTS] = grant_encoded;
+    end
     m_axis_desc_valid_int      = current_s_desc_valid && m_axis_desc_ready_int_reg && grant_valid;
 end
 
@@ -255,7 +258,7 @@ assign m_axis_desc_status_valid = m_axis_desc_status_valid_reg;
 always @* begin
     m_axis_desc_status_tag_next = s_axis_desc_status_tag;
     m_axis_desc_status_error_next = s_axis_desc_status_error;
-    m_axis_desc_status_valid_next = s_axis_desc_status_valid << (PORTS > 1 ? s_axis_desc_status_tag[S_TAG_WIDTH+CL_PORTS-1:S_TAG_WIDTH] : 0);
+    m_axis_desc_status_valid_next = s_axis_desc_status_valid << (PORTS > 1 ? s_axis_desc_status_tag[M_TAG_WIDTH-1:M_TAG_WIDTH-CL_PORTS] : 0);
 end
 
 always @(posedge clk) begin

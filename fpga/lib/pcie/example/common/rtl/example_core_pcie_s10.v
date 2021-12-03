@@ -208,7 +208,7 @@ pcie_s10_if #(
     .MSI_ENABLE(1),
     .MSI_COUNT(MSI_COUNT)
 )
-pcie_us_if_inst (
+pcie_s10_if_inst (
     .clk(clk),
     .rst(rst),
 

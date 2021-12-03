@@ -12,10 +12,20 @@ Collection of PCI express related components.  Includes PCIe to AXI and AXI lite
 
 Example designs are included for the following FPGA boards:
 
+*  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex UltraScale+ XCVU3P)
 *  BittWare 520N-MX (Intel Stratix 10 MX 1SM21CHU2F53E2VG)
 *  Exablaze ExaNIC X10 (Xilinx Kintex UltraScale XCKU035)
+*  Exablaze ExaNIC X25 (Xilinx Kintex UltraScale+ XCKU3P)
 *  Silicom fb2CG@KU15P (Xilinx Kintex UltraScale+ XCKU15P)
 *  Intel Stratix 10 MX dev kit (Intel Stratix 10 MX 1SM21CHU1F53E1VG)
+*  Xilinx Alveo U50 (Xilinx Virtex UltraScale+ XCU50)
+*  Xilinx Alveo U200 (Xilinx Virtex UltraScale+ XCU200)
+*  Xilinx Alveo U250 (Xilinx Virtex UltraScale+ XCU250)
+*  Xilinx Alveo U280 (Xilinx Virtex UltraScale+ XCU280)
+*  Xilinx VCU108 (Xilinx Virtex UltraScale XCVU095)
+*  Xilinx VCU118 (Xilinx Virtex UltraScale+ XCVU9P)
+*  Xilinx VCU1525 (Xilinx Virtex UltraScale+ XCVU9P)
+*  Xilinx ZCU106 (Xilinx Zynq UltraScale+ XCZU7EV)
 
 ## Documentation
 

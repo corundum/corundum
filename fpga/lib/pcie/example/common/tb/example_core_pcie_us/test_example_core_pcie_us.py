@@ -35,7 +35,6 @@ from cocotb.triggers import RisingEdge, FallingEdge, Timer
 from cocotbext.axi import AxiStreamBus
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
-from cocotbext.axi.utils import hexdump_str
 
 
 class TB(object):
@@ -235,8 +234,8 @@ class TB(object):
 
         self.dev.functions[0].msi_multiple_message_capable = 5
 
-        self.dev.functions[0].configure_bar(0, 2**24)
-        self.dev.functions[0].configure_bar(2, 2**24)
+        self.dev.functions[0].configure_bar(0, 2**len(dut.core_pcie_inst.axil_ctrl_awaddr))
+        self.dev.functions[0].configure_bar(2, 2**len(dut.core_pcie_inst.axi_ram_awaddr))
 
         # monitor error outputs
         self.status_error_cor_asserted = False

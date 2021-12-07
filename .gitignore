@@ -3,4 +3,5 @@
 *.pyc
 *.vvp
 *.kate-swp
+/.tox/
 

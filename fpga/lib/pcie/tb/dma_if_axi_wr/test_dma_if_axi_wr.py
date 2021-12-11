@@ -65,7 +65,7 @@ class TB(object):
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.fork(Clock(dut.clk, 10, units="ns").start())
+        cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
 
         # AXI RAM
         self.axi_ram = AxiRamWrite(AxiWriteBus.from_prefix(dut, "m_axi"), dut.clk, dut.rst, size=2**16)

@@ -132,12 +132,18 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     wire [PORTS-1:0]                 seg_ram_wr_cmd_ready;
 
     for (p = 0; p < PORTS; p = p + 1) begin
-        assign ram_wr_cmd_sel[(p*SEG_COUNT+n)*S_RAM_SEL_WIDTH +: S_RAM_SEL_WIDTH_INT] = seg_ram_wr_cmd_sel[p*S_RAM_SEL_WIDTH +: S_RAM_SEL_WIDTH_INT];
+        if (S_RAM_SEL_WIDTH > 0) begin
+            assign ram_wr_cmd_sel[(p*SEG_COUNT+n)*S_RAM_SEL_WIDTH +: S_RAM_SEL_WIDTH_INT] = seg_ram_wr_cmd_sel[p*S_RAM_SEL_WIDTH +: S_RAM_SEL_WIDTH_INT];
+        end
         assign ram_wr_cmd_be[(p*SEG_COUNT+n)*SEG_BE_WIDTH +: SEG_BE_WIDTH] = seg_ram_wr_cmd_be[p*SEG_BE_WIDTH +: SEG_BE_WIDTH];
         assign ram_wr_cmd_addr[(p*SEG_COUNT+n)*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH] = seg_ram_wr_cmd_addr[p*SEG_ADDR_WIDTH +: SEG_ADDR_WIDTH];
         assign ram_wr_cmd_data[(p*SEG_COUNT+n)*SEG_DATA_WIDTH +: SEG_DATA_WIDTH] = seg_ram_wr_cmd_data[p*SEG_DATA_WIDTH +: SEG_DATA_WIDTH];
         assign ram_wr_cmd_valid[p*SEG_COUNT+n] = seg_ram_wr_cmd_valid[p];
         assign seg_ram_wr_cmd_ready[p] = ram_wr_cmd_ready[p*SEG_COUNT+n];
+    end
+
+    if (S_RAM_SEL_WIDTH == 0) begin
+        assign ram_wr_cmd_sel = 0;
     end
 
     // internal datapath

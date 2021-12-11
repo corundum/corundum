@@ -66,7 +66,7 @@ class TB(object):
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.fork(Clock(dut.clk, 4, units="ns").start())
+        cocotb.start_soon(Clock(dut.clk, 4, units="ns").start())
 
         # read interface
         self.read_desc_source = DescSource(DescBus.from_prefix(dut, "s_axis_read_desc"), dut.clk, dut.rst)

@@ -80,30 +80,9 @@ static unsigned int mqnic_get_free_id(void)
 
 static irqreturn_t mqnic_interrupt(int irq, void *data)
 {
-	struct mqnic_dev *mqnic = data;
-	struct mqnic_priv *priv;
+	struct atomic_notifier_head *nh = data;
 
-	int k, l;
-
-	for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++) {
-		if (unlikely(!mqnic->ndev[k]))
-			continue;
-
-		priv = netdev_priv(mqnic->ndev[k]);
-
-		if (unlikely(!priv->port_up))
-			continue;
-
-		for (l = 0; l < priv->event_queue_count; l++) {
-			if (unlikely(!priv->event_ring[l]))
-				continue;
-
-			if (priv->event_ring[l]->irq == irq) {
-				mqnic_process_eq(priv->event_ring[l]);
-				mqnic_arm_eq(priv->event_ring[l]);
-			}
-		}
-	}
+	atomic_notifier_call_chain(nh, 0, NULL);
 
 	return IRQ_HANDLED;
 }
@@ -291,9 +270,13 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	}
 
 	// Set up interrupts
+	for (k = 0; k < MQNIC_MAX_IRQ; k++) {
+		ATOMIC_INIT_NOTIFIER_HEAD(&mqnic->irq_nh[k]);
+	}
+
 	for (k = 0; k < mqnic->irq_count; k++) {
 		ret = pci_request_irq(pdev, k, mqnic_interrupt, NULL,
-				mqnic, "%s-%d", mqnic->name, k);
+				&mqnic->irq_nh[k], "%s-%d", mqnic->name, k);
 		if (ret < 0) {
 			dev_err(dev, "Failed to request IRQ");
 			goto fail_irq;
@@ -366,7 +349,7 @@ fail_init_netdev:
 fail_board:
 	mqnic_board_deinit(mqnic);
 	for (k = 0; k < mqnic->irq_count; k++)
-		pci_free_irq(pdev, k, mqnic);
+		pci_free_irq(pdev, k, &mqnic->irq_nh[k]);
 fail_irq:
 	pci_free_irq_vectors(pdev);
 fail_map_bars:
@@ -409,7 +392,7 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
 	pci_clear_master(pdev);
 	mqnic_board_deinit(mqnic);
 	for (k = 0; k < mqnic->irq_count; k++)
-		pci_free_irq(pdev, k, mqnic);
+		pci_free_irq(pdev, k, &mqnic->irq_nh[k]);
 	pci_free_irq_vectors(pdev);
 	if (mqnic->hw_addr)
 		pci_iounmap(pdev, mqnic->hw_addr);

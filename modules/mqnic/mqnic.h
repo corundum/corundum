@@ -104,6 +104,7 @@ struct mqnic_dev {
 
 	int irq_count;
 	int irq_map[32];
+	struct atomic_notifier_head irq_nh[MQNIC_MAX_IRQ];
 
 	unsigned int id;
 	struct list_head dev_list_node;
@@ -255,7 +256,7 @@ struct mqnic_eq_ring {
 	int int_index;
 	int active;
 
-	int irq;
+	struct notifier_block irq_nb;
 
 	void (*handler)(struct mqnic_eq_ring *ring);
 

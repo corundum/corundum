@@ -35,6 +35,16 @@
 
 #include "mqnic.h"
 
+static int mqnic_eq_int(struct notifier_block *nb, unsigned long action, void *data)
+{
+	struct mqnic_eq_ring *ring = container_of(nb, struct mqnic_eq_ring, irq_nb);
+
+	mqnic_process_eq(ring);
+	mqnic_arm_eq(ring);
+
+	return NOTIFY_DONE;
+}
+
 int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_ptr,
 		int size, int stride, int index, u8 __iomem *hw_addr)
 {
@@ -51,6 +61,8 @@ int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_pt
 
 	ring->ring_index = index;
 	ring->active = 0;
+
+	ring->irq_nb.notifier_call = mqnic_eq_int;
 
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
@@ -111,10 +123,20 @@ void mqnic_destroy_eq_ring(struct mqnic_eq_ring **ring_ptr)
 
 int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, int int_index)
 {
+	int ret = 0;
+
 	if (ring->active)
 		mqnic_deactivate_eq_ring(ring);
 
+	if (int_index < 0 || int_index >= ring->priv->mdev->irq_count)
+		return -EINVAL;
+
+	// register interrupt
 	ring->int_index = int_index;
+	ret = atomic_notifier_chain_register(&ring->priv->mdev->irq_nh[int_index], &ring->irq_nb);
+
+	if (ret)
+		return ret;
 
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -134,15 +156,21 @@ int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, int int_index)
 
 	ring->active = 1;
 
-	return 0;
+	return ret;
 }
 
 void mqnic_deactivate_eq_ring(struct mqnic_eq_ring *ring)
 {
+	int ret = 0;
+
 	// deactivate queue
 	iowrite32(ilog2(ring->size), ring->hw_addr + MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG);
 	// disarm queue
 	iowrite32(ring->int_index, ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
+
+	// unregister interrupt
+	if (ring->active)
+		ret = atomic_notifier_chain_unregister(&ring->priv->mdev->irq_nh[ring->int_index], &ring->irq_nb);
 
 	ring->active = 0;
 }

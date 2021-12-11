@@ -49,6 +49,7 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr,
 
 	port->dev = dev;
 	port->ndev = priv->ndev;
+	port->priv = priv;
 
 	port->index = index;
 
@@ -78,7 +79,7 @@ int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr,
 	return 0;
 }
 
-void mqnic_destroy_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr)
+void mqnic_destroy_port(struct mqnic_port **port_ptr)
 {
 	struct mqnic_port *port = *port_ptr;
 	*port_ptr = NULL;

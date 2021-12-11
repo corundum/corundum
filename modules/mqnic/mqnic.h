@@ -196,6 +196,10 @@ struct mqnic_ring {
 		struct mqnic_rx_info *rx_info;
 	};
 
+	struct device *dev;
+	struct net_device *ndev;
+	struct mqnic_priv *priv;
+
 	u32 hw_ptr_mask;
 	u8 __iomem *hw_addr;
 	u8 __iomem *hw_head_ptr;
@@ -216,6 +220,7 @@ struct mqnic_cq_ring {
 	dma_addr_t buf_dma_addr;
 
 	struct net_device *ndev;
+	struct mqnic_priv *priv;
 	struct napi_struct napi;
 	int ring_index;
 	int eq_index;
@@ -242,6 +247,7 @@ struct mqnic_eq_ring {
 	dma_addr_t buf_dma_addr;
 
 	struct net_device *ndev;
+	struct mqnic_priv *priv;
 	int int_index;
 
 	int irq;
@@ -257,6 +263,7 @@ struct mqnic_eq_ring {
 struct mqnic_port {
 	struct device *dev;
 	struct net_device *ndev;
+	struct mqnic_priv *priv;
 
 	int index;
 
@@ -330,7 +337,7 @@ void mqnic_destroy_netdev(struct net_device *ndev);
 // mqnic_port.c
 int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr,
 		int index, u8 __iomem *hw_addr);
-void mqnic_destroy_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr);
+void mqnic_destroy_port(struct mqnic_port **port_ptr);
 int mqnic_activate_port(struct mqnic_port *port);
 void mqnic_deactivate_port(struct mqnic_port *port);
 u32 mqnic_port_get_rss_mask(struct mqnic_port *port);
@@ -361,24 +368,22 @@ void mqnic_board_deinit(struct mqnic_dev *mqnic);
 // mqnic_eq.c
 int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_ptr,
 		int size, int stride, int index, u8 __iomem *hw_addr);
-void mqnic_destroy_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_ptr);
-int mqnic_activate_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring *ring,
-		int int_index);
-void mqnic_deactivate_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring *ring);
+void mqnic_destroy_eq_ring(struct mqnic_eq_ring **ring_ptr);
+int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, int int_index);
+void mqnic_deactivate_eq_ring(struct mqnic_eq_ring *ring);
 bool mqnic_is_eq_ring_empty(const struct mqnic_eq_ring *ring);
 bool mqnic_is_eq_ring_full(const struct mqnic_eq_ring *ring);
 void mqnic_eq_read_head_ptr(struct mqnic_eq_ring *ring);
 void mqnic_eq_write_tail_ptr(struct mqnic_eq_ring *ring);
 void mqnic_arm_eq(struct mqnic_eq_ring *ring);
-void mqnic_process_eq(struct net_device *ndev, struct mqnic_eq_ring *eq_ring);
+void mqnic_process_eq(struct mqnic_eq_ring *eq_ring);
 
 // mqnic_cq.c
 int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_ptr,
 		int size, int stride, int index, u8 __iomem *hw_addr);
-void mqnic_destroy_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_ptr);
-int mqnic_activate_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring *ring,
-		int eq_index);
-void mqnic_deactivate_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring *ring);
+void mqnic_destroy_cq_ring(struct mqnic_cq_ring **ring_ptr);
+int mqnic_activate_cq_ring(struct mqnic_cq_ring *ring, int eq_index);
+void mqnic_deactivate_cq_ring(struct mqnic_cq_ring *ring);
 bool mqnic_is_cq_ring_empty(const struct mqnic_cq_ring *ring);
 bool mqnic_is_cq_ring_full(const struct mqnic_cq_ring *ring);
 void mqnic_cq_read_head_ptr(struct mqnic_cq_ring *ring);
@@ -388,19 +393,16 @@ void mqnic_arm_cq(struct mqnic_cq_ring *ring);
 // mqnic_tx.c
 int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 		int size, int stride, int index, u8 __iomem *hw_addr);
-void mqnic_destroy_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr);
-int mqnic_activate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		int cpl_index);
-void mqnic_deactivate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring);
+void mqnic_destroy_tx_ring(struct mqnic_ring **ring_ptr);
+int mqnic_activate_tx_ring(struct mqnic_ring *ring, int cpl_index);
+void mqnic_deactivate_tx_ring(struct mqnic_ring *ring);
 bool mqnic_is_tx_ring_empty(const struct mqnic_ring *ring);
 bool mqnic_is_tx_ring_full(const struct mqnic_ring *ring);
 void mqnic_tx_read_tail_ptr(struct mqnic_ring *ring);
 void mqnic_tx_write_head_ptr(struct mqnic_ring *ring);
-void mqnic_free_tx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		int index, int napi_budget);
-int mqnic_free_tx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring);
-int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
-		int napi_budget);
+void mqnic_free_tx_desc(struct mqnic_ring *ring, int index, int napi_budget);
+int mqnic_free_tx_buf(struct mqnic_ring *ring);
+int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget);
 void mqnic_tx_irq(struct mqnic_cq_ring *cq);
 int mqnic_poll_tx_cq(struct napi_struct *napi, int budget);
 netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *dev);
@@ -408,22 +410,18 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *dev);
 // mqnic_rx.c
 int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 		int size, int stride, int index, u8 __iomem *hw_addr);
-void mqnic_destroy_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr);
-int mqnic_activate_rx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		int cpl_index);
-void mqnic_deactivate_rx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring);
+void mqnic_destroy_rx_ring(struct mqnic_ring **ring_ptr);
+int mqnic_activate_rx_ring(struct mqnic_ring *ring, int cpl_index);
+void mqnic_deactivate_rx_ring(struct mqnic_ring *ring);
 bool mqnic_is_rx_ring_empty(const struct mqnic_ring *ring);
 bool mqnic_is_rx_ring_full(const struct mqnic_ring *ring);
 void mqnic_rx_read_tail_ptr(struct mqnic_ring *ring);
 void mqnic_rx_write_head_ptr(struct mqnic_ring *ring);
-void mqnic_free_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		int index);
-int mqnic_free_rx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring);
-int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		int index);
-void mqnic_refill_rx_buffers(struct mqnic_priv *priv, struct mqnic_ring *ring);
-int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
-		int napi_budget);
+void mqnic_free_rx_desc(struct mqnic_ring *ring, int index);
+int mqnic_free_rx_buf(struct mqnic_ring *ring);
+int mqnic_prepare_rx_desc(struct mqnic_ring *ring, int index);
+void mqnic_refill_rx_buffers(struct mqnic_ring *ring);
+int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget);
 void mqnic_rx_irq(struct mqnic_cq_ring *cq);
 int mqnic_poll_rx_cq(struct napi_struct *napi, int budget);
 

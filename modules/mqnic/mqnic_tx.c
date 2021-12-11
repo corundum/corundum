@@ -47,6 +47,10 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	if (!ring)
 		return -ENOMEM;
 
+	ring->dev = priv->dev;
+	ring->ndev = priv->ndev;
+	ring->priv = priv;
+
 	ring->size = roundup_pow_of_two(size);
 	ring->full_size = ring->size >> 1;
 	ring->size_mask = ring->size - 1;
@@ -105,24 +109,22 @@ fail_ring:
 	return ret;
 }
 
-void mqnic_destroy_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr)
+void mqnic_destroy_tx_ring(struct mqnic_ring **ring_ptr)
 {
-	struct device *dev = priv->dev;
 	struct mqnic_ring *ring = *ring_ptr;
 	*ring_ptr = NULL;
 
-	mqnic_deactivate_tx_ring(priv, ring);
+	mqnic_deactivate_tx_ring(ring);
 
-	mqnic_free_tx_buf(priv, ring);
+	mqnic_free_tx_buf(ring);
 
-	dma_free_coherent(dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
+	dma_free_coherent(ring->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
 	kvfree(ring->tx_info);
 	ring->tx_info = NULL;
 	kfree(ring);
 }
 
-int mqnic_activate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		int cpl_index)
+int mqnic_activate_tx_ring(struct mqnic_ring *ring, int cpl_index)
 {
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -141,7 +143,7 @@ int mqnic_activate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	return 0;
 }
 
-void mqnic_deactivate_tx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring)
+void mqnic_deactivate_tx_ring(struct mqnic_ring *ring)
 {
 	// deactivate queue
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
@@ -168,8 +170,7 @@ void mqnic_tx_write_head_ptr(struct mqnic_ring *ring)
 	iowrite32(ring->head_ptr & ring->hw_ptr_mask, ring->hw_head_ptr);
 }
 
-void mqnic_free_tx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		int index, int napi_budget)
+void mqnic_free_tx_desc(struct mqnic_ring *ring, int index, int napi_budget)
 {
 	struct mqnic_tx_info *tx_info = &ring->tx_info[index];
 	struct sk_buff *skb = tx_info->skb;
@@ -177,27 +178,27 @@ void mqnic_free_tx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
 
 	prefetchw(&skb->users);
 
-	dma_unmap_single(priv->dev, dma_unmap_addr(tx_info, dma_addr),
+	dma_unmap_single(ring->dev, dma_unmap_addr(tx_info, dma_addr),
 			dma_unmap_len(tx_info, len), PCI_DMA_TODEVICE);
 	dma_unmap_addr_set(tx_info, dma_addr, 0);
 
 	// unmap frags
 	for (i = 0; i < tx_info->frag_count; i++)
-		dma_unmap_page(priv->dev, tx_info->frags[i].dma_addr,
+		dma_unmap_page(ring->dev, tx_info->frags[i].dma_addr,
 				tx_info->frags[i].len, PCI_DMA_TODEVICE);
 
 	napi_consume_skb(skb, napi_budget);
 	tx_info->skb = NULL;
 }
 
-int mqnic_free_tx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring)
+int mqnic_free_tx_buf(struct mqnic_ring *ring)
 {
 	u32 index;
 	int cnt = 0;
 
 	while (!mqnic_is_tx_ring_empty(ring)) {
 		index = ring->clean_tail_ptr & ring->size_mask;
-		mqnic_free_tx_desc(priv, ring, index, 0);
+		mqnic_free_tx_desc(ring, index, 0);
 		ring->clean_tail_ptr++;
 		cnt++;
 	}
@@ -209,10 +210,9 @@ int mqnic_free_tx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring)
 	return cnt;
 }
 
-int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
-		int napi_budget)
+int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 {
-	struct mqnic_priv *priv = netdev_priv(ndev);
+	struct mqnic_priv *priv = cq_ring->priv;
 	struct mqnic_ring *ring = priv->tx_ring[cq_ring->ring_index];
 	struct mqnic_tx_info *tx_info;
 	struct mqnic_cpl *cpl;
@@ -251,7 +251,7 @@ int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 			skb_tstamp_tx(tx_info->skb, &hwts);
 		}
 		// free TX descriptor
-		mqnic_free_tx_desc(priv, ring, ring_index, napi_budget);
+		mqnic_free_tx_desc(ring, ring_index, napi_budget);
 
 		packets++;
 		bytes += le16_to_cpu(cpl->len);
@@ -298,7 +298,7 @@ int mqnic_process_tx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 
 void mqnic_tx_irq(struct mqnic_cq_ring *cq)
 {
-	struct mqnic_priv *priv = netdev_priv(cq->ndev);
+	struct mqnic_priv *priv = cq->priv;
 
 	if (likely(priv->port_up))
 		napi_schedule_irqoff(&cq->napi);
@@ -309,10 +309,9 @@ void mqnic_tx_irq(struct mqnic_cq_ring *cq)
 int mqnic_poll_tx_cq(struct napi_struct *napi, int budget)
 {
 	struct mqnic_cq_ring *cq_ring = container_of(napi, struct mqnic_cq_ring, napi);
-	struct net_device *ndev = cq_ring->ndev;
 	int done;
 
-	done = mqnic_process_tx_cq(ndev, cq_ring, budget);
+	done = mqnic_process_tx_cq(cq_ring, budget);
 
 	if (done == budget)
 		return done;
@@ -324,9 +323,8 @@ int mqnic_poll_tx_cq(struct napi_struct *napi, int budget)
 	return done;
 }
 
-static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		struct mqnic_tx_info *tx_info, struct mqnic_desc *tx_desc,
-		struct sk_buff *skb)
+static bool mqnic_map_skb(struct mqnic_ring *ring, struct mqnic_tx_info *tx_info,
+		struct mqnic_desc *tx_desc, struct sk_buff *skb)
 {
 	struct skb_shared_info *shinfo = skb_shinfo(skb);
 	const skb_frag_t *frag;
@@ -341,8 +339,8 @@ static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	for (i = 0; i < shinfo->nr_frags; i++) {
 		frag = &shinfo->frags[i];
 		len = skb_frag_size(frag);
-		dma_addr = skb_frag_dma_map(priv->dev, frag, 0, len, DMA_TO_DEVICE);
-		if (unlikely(dma_mapping_error(priv->dev, dma_addr)))
+		dma_addr = skb_frag_dma_map(ring->dev, frag, 0, len, DMA_TO_DEVICE);
+		if (unlikely(dma_mapping_error(ring->dev, dma_addr)))
 			// mapping failed
 			goto map_error;
 
@@ -363,9 +361,9 @@ static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring,
 
 	// map skb
 	len = skb_headlen(skb);
-	dma_addr = dma_map_single(priv->dev, skb->data, len, PCI_DMA_TODEVICE);
+	dma_addr = dma_map_single(ring->dev, skb->data, len, PCI_DMA_TODEVICE);
 
-	if (unlikely(dma_mapping_error(priv->dev, dma_addr)))
+	if (unlikely(dma_mapping_error(ring->dev, dma_addr)))
 		// mapping failed
 		goto map_error;
 
@@ -380,11 +378,11 @@ static bool mqnic_map_skb(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	return true;
 
 map_error:
-	dev_err(priv->dev, "%s: DMA mapping failed", __func__);
+	dev_err(ring->dev, "%s: DMA mapping failed", __func__);
 
 	// unmap frags
 	for (i = 0; i < tx_info->frag_count; i++)
-		dma_unmap_page(priv->dev, tx_info->frags[i].dma_addr,
+		dma_unmap_page(ring->dev, tx_info->frags[i].dma_addr,
 				tx_info->frags[i].len, PCI_DMA_TODEVICE);
 
 	// update tx_info
@@ -465,7 +463,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	}
 
 	// map skb
-	if (!mqnic_map_skb(priv, ring, tx_info, tx_desc, skb))
+	if (!mqnic_map_skb(ring, tx_info, tx_desc, skb))
 		// map failed
 		goto tx_drop_count;
 

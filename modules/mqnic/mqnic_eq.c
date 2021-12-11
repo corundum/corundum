@@ -47,6 +47,7 @@ int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_pt
 		return -ENOMEM;
 
 	ring->ndev = priv->ndev;
+	ring->priv = priv;
 
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
@@ -92,20 +93,19 @@ fail_ring:
 	return ret;
 }
 
-void mqnic_destroy_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_ptr)
+void mqnic_destroy_eq_ring(struct mqnic_eq_ring **ring_ptr)
 {
-	struct device *dev = priv->dev;
 	struct mqnic_eq_ring *ring = *ring_ptr;
+	struct device *dev = ring->priv->dev;
 	*ring_ptr = NULL;
 
-	mqnic_deactivate_eq_ring(priv, ring);
+	mqnic_deactivate_eq_ring(ring);
 
 	dma_free_coherent(dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
 	kfree(ring);
 }
 
-int mqnic_activate_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring *ring,
-		int int_index)
+int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, int int_index)
 {
 	ring->int_index = int_index;
 
@@ -128,7 +128,7 @@ int mqnic_activate_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring *ring,
 	return 0;
 }
 
-void mqnic_deactivate_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring *ring)
+void mqnic_deactivate_eq_ring(struct mqnic_eq_ring *ring)
 {
 	// deactivate queue
 	iowrite32(ilog2(ring->size), ring->hw_addr + MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -162,9 +162,9 @@ void mqnic_arm_eq(struct mqnic_eq_ring *ring)
 			ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
 }
 
-void mqnic_process_eq(struct net_device *ndev, struct mqnic_eq_ring *eq_ring)
+void mqnic_process_eq(struct mqnic_eq_ring *eq_ring)
 {
-	struct mqnic_priv *priv = netdev_priv(ndev);
+	struct mqnic_priv *priv = eq_ring->priv;
 	struct mqnic_event *event;
 	struct mqnic_cq_ring *cq_ring;
 	u32 eq_index;

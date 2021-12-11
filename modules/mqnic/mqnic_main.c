@@ -99,7 +99,7 @@ static irqreturn_t mqnic_interrupt(int irq, void *data)
 				continue;
 
 			if (priv->event_ring[l]->irq == irq) {
-				mqnic_process_eq(priv->ndev, priv->event_ring[l]);
+				mqnic_process_eq(priv->event_ring[l]);
 				mqnic_arm_eq(priv->event_ring[l]);
 			}
 		}

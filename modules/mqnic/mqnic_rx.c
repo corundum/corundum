@@ -46,6 +46,10 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	if (!ring)
 		return -ENOMEM;
 
+	ring->dev = priv->dev;
+	ring->ndev = priv->ndev;
+	ring->priv = priv;
+
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
 	ring->stride = roundup_pow_of_two(stride);
@@ -103,24 +107,22 @@ fail_ring:
 	return ret;
 }
 
-void mqnic_destroy_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr)
+void mqnic_destroy_rx_ring(struct mqnic_ring **ring_ptr)
 {
-	struct device *dev = priv->dev;
 	struct mqnic_ring *ring = *ring_ptr;
 	*ring_ptr = NULL;
 
-	mqnic_deactivate_rx_ring(priv, ring);
+	mqnic_deactivate_rx_ring(ring);
 
-	mqnic_free_rx_buf(priv, ring);
+	mqnic_free_rx_buf(ring);
 
-	dma_free_coherent(dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
+	dma_free_coherent(ring->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
 	kvfree(ring->rx_info);
 	ring->rx_info = NULL;
 	kfree(ring);
 }
 
-int mqnic_activate_rx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		int cpl_index)
+int mqnic_activate_rx_ring(struct mqnic_ring *ring, int cpl_index)
 {
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -136,12 +138,12 @@ int mqnic_activate_rx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK,
 			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
-	mqnic_refill_rx_buffers(priv, ring);
+	mqnic_refill_rx_buffers(ring);
 
 	return 0;
 }
 
-void mqnic_deactivate_rx_ring(struct mqnic_priv *priv, struct mqnic_ring *ring)
+void mqnic_deactivate_rx_ring(struct mqnic_ring *ring)
 {
 	// deactivate queue
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
@@ -168,27 +170,26 @@ void mqnic_rx_write_head_ptr(struct mqnic_ring *ring)
 	iowrite32(ring->head_ptr & ring->hw_ptr_mask, ring->hw_head_ptr);
 }
 
-void mqnic_free_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		int index)
+void mqnic_free_rx_desc(struct mqnic_ring *ring, int index)
 {
 	struct mqnic_rx_info *rx_info = &ring->rx_info[index];
 	struct page *page = rx_info->page;
 
-	dma_unmap_page(priv->dev, dma_unmap_addr(rx_info, dma_addr),
+	dma_unmap_page(ring->dev, dma_unmap_addr(rx_info, dma_addr),
 			dma_unmap_len(rx_info, len), PCI_DMA_FROMDEVICE);
 	rx_info->dma_addr = 0;
 	__free_pages(page, rx_info->page_order);
 	rx_info->page = NULL;
 }
 
-int mqnic_free_rx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring)
+int mqnic_free_rx_buf(struct mqnic_ring *ring)
 {
 	u32 index;
 	int cnt = 0;
 
 	while (!mqnic_is_rx_ring_empty(ring)) {
 		index = ring->clean_tail_ptr & ring->size_mask;
-		mqnic_free_rx_desc(priv, ring, index);
+		mqnic_free_rx_desc(ring, index);
 		ring->clean_tail_ptr++;
 		cnt++;
 	}
@@ -200,8 +201,7 @@ int mqnic_free_rx_buf(struct mqnic_priv *priv, struct mqnic_ring *ring)
 	return cnt;
 }
 
-int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
-		int index)
+int mqnic_prepare_rx_desc(struct mqnic_ring *ring, int index)
 {
 	struct mqnic_rx_info *rx_info = &ring->rx_info[index];
 	struct mqnic_desc *rx_desc = (struct mqnic_desc *)(ring->buf + index * ring->stride);
@@ -211,24 +211,24 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	dma_addr_t dma_addr;
 
 	if (unlikely(page)) {
-		dev_err(priv->dev, "%s: skb not yet processed on port %d",
-				__func__, priv->port);
+		dev_err(ring->dev, "%s: skb not yet processed on port %d",
+				__func__, ring->priv->port);
 		return -1;
 	}
 
 	page = dev_alloc_pages(page_order);
 	if (unlikely(!page)) {
-		dev_err(priv->dev, "%s: failed to allocate memory on port %d",
-				__func__, priv->port);
+		dev_err(ring->dev, "%s: failed to allocate memory on port %d",
+				__func__, ring->priv->port);
 		return -1;
 	}
 
 	// map page
-	dma_addr = dma_map_page(priv->dev, page, 0, len, PCI_DMA_FROMDEVICE);
+	dma_addr = dma_map_page(ring->dev, page, 0, len, PCI_DMA_FROMDEVICE);
 
-	if (unlikely(dma_mapping_error(priv->dev, dma_addr))) {
-		dev_err(priv->dev, "%s: DMA mapping failed on port %d",
-				__func__, priv->port);
+	if (unlikely(dma_mapping_error(ring->dev, dma_addr))) {
+		dev_err(ring->dev, "%s: DMA mapping failed on port %d",
+				__func__, ring->priv->port);
 		__free_pages(page, page_order);
 		return -1;
 	}
@@ -247,7 +247,7 @@ int mqnic_prepare_rx_desc(struct mqnic_priv *priv, struct mqnic_ring *ring,
 	return 0;
 }
 
-void mqnic_refill_rx_buffers(struct mqnic_priv *priv, struct mqnic_ring *ring)
+void mqnic_refill_rx_buffers(struct mqnic_ring *ring)
 {
 	u32 missing = ring->size - (ring->head_ptr - ring->clean_tail_ptr);
 
@@ -255,7 +255,7 @@ void mqnic_refill_rx_buffers(struct mqnic_priv *priv, struct mqnic_ring *ring)
 		return;
 
 	for (; missing-- > 0;) {
-		if (mqnic_prepare_rx_desc(priv, ring, ring->head_ptr & ring->size_mask))
+		if (mqnic_prepare_rx_desc(ring, ring->head_ptr & ring->size_mask))
 			break;
 		ring->head_ptr++;
 	}
@@ -265,10 +265,10 @@ void mqnic_refill_rx_buffers(struct mqnic_priv *priv, struct mqnic_ring *ring)
 	mqnic_rx_write_head_ptr(ring);
 }
 
-int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
-		int napi_budget)
+int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 {
-	struct mqnic_priv *priv = netdev_priv(ndev);
+	struct mqnic_priv *priv = cq_ring->priv;
+	struct net_device *ndev = priv->ndev;
 	struct mqnic_ring *ring = priv->rx_ring[cq_ring->ring_index];
 	struct mqnic_rx_info *rx_info;
 	struct mqnic_cpl *cpl;
@@ -382,14 +382,14 @@ int mqnic_process_rx_cq(struct net_device *ndev, struct mqnic_cq_ring *cq_ring,
 	WRITE_ONCE(ring->clean_tail_ptr, ring_clean_tail_ptr);
 
 	// replenish buffers
-	mqnic_refill_rx_buffers(priv, ring);
+	mqnic_refill_rx_buffers(ring);
 
 	return done;
 }
 
 void mqnic_rx_irq(struct mqnic_cq_ring *cq)
 {
-	struct mqnic_priv *priv = netdev_priv(cq->ndev);
+	struct mqnic_priv *priv = cq->priv;
 
 	if (likely(priv->port_up))
 		napi_schedule_irqoff(&cq->napi);
@@ -400,10 +400,9 @@ void mqnic_rx_irq(struct mqnic_cq_ring *cq)
 int mqnic_poll_rx_cq(struct napi_struct *napi, int budget)
 {
 	struct mqnic_cq_ring *cq_ring = container_of(napi, struct mqnic_cq_ring, napi);
-	struct net_device *ndev = cq_ring->ndev;
 	int done;
 
-	done = mqnic_process_rx_cq(ndev, cq_ring, budget);
+	done = mqnic_process_rx_cq(cq_ring, budget);
 
 	if (done == budget)
 		return done;

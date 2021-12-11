@@ -300,8 +300,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 		mqnic_register_phc(mqnic);
 
 	// Set up interfaces
-	if (mqnic->if_count > MQNIC_MAX_IF)
-		mqnic->if_count = MQNIC_MAX_IF;
+	mqnic->if_count = min_t(u32, mqnic->if_count, MQNIC_MAX_IF);
 
 	for (k = 0; k < mqnic->if_count; k++) {
 		dev_info(dev, "Creating interface %d", k);

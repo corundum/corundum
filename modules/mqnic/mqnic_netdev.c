@@ -434,19 +434,14 @@ int mqnic_create_netdev(struct mqnic_dev *mdev, struct net_device **ndev_ptr,
 	priv->port_stride = ioread32(priv->csr_hw_addr + MQNIC_IF_REG_PORT_STRIDE);
 	dev_info(dev, "Port stride: 0x%08x", priv->port_stride);
 
-	if (priv->event_queue_count > MQNIC_MAX_EVENT_RINGS)
-		priv->event_queue_count = MQNIC_MAX_EVENT_RINGS;
-	if (priv->tx_queue_count > MQNIC_MAX_TX_RINGS)
-		priv->tx_queue_count = MQNIC_MAX_TX_RINGS;
-	if (priv->tx_cpl_queue_count > MQNIC_MAX_TX_CPL_RINGS)
-		priv->tx_cpl_queue_count = MQNIC_MAX_TX_CPL_RINGS;
-	if (priv->rx_queue_count > MQNIC_MAX_RX_RINGS)
-		priv->rx_queue_count = MQNIC_MAX_RX_RINGS;
-	if (priv->rx_cpl_queue_count > MQNIC_MAX_RX_CPL_RINGS)
-		priv->rx_cpl_queue_count = MQNIC_MAX_RX_CPL_RINGS;
+	priv->event_queue_count = min_t(u32, priv->event_queue_count, MQNIC_MAX_EVENT_RINGS);
 
-	if (priv->port_count > MQNIC_MAX_PORTS)
-		priv->port_count = MQNIC_MAX_PORTS;
+	priv->tx_queue_count = min_t(u32, priv->tx_queue_count, MQNIC_MAX_TX_RINGS);
+	priv->tx_cpl_queue_count = min_t(u32, priv->tx_cpl_queue_count, MQNIC_MAX_TX_CPL_RINGS);
+	priv->rx_queue_count = min_t(u32, priv->rx_queue_count, MQNIC_MAX_RX_RINGS);
+	priv->rx_cpl_queue_count = min_t(u32, priv->rx_cpl_queue_count, MQNIC_MAX_RX_CPL_RINGS);
+
+	priv->port_count = min_t(u32, priv->port_count, MQNIC_MAX_PORTS);
 
 	netif_set_real_num_tx_queues(ndev, priv->tx_queue_count);
 	netif_set_real_num_rx_queues(ndev, priv->rx_queue_count);
@@ -477,9 +472,9 @@ int mqnic_create_netdev(struct mqnic_dev *mdev, struct net_device **ndev_ptr,
 
 	dev_info(dev, "Max desc block size: %d", priv->max_desc_block_size);
 
-	priv->max_desc_block_size = priv->max_desc_block_size < MQNIC_MAX_FRAGS ? priv->max_desc_block_size : MQNIC_MAX_FRAGS;
+	priv->max_desc_block_size = min_t(u32, priv->max_desc_block_size, MQNIC_MAX_FRAGS);
 
-	desc_block_size = priv->max_desc_block_size < 4 ? priv->max_desc_block_size : 4;
+	desc_block_size = min_t(u32, priv->max_desc_block_size, 4);
 
 	// allocate rings
 	for (k = 0; k < priv->event_queue_count; k++) {

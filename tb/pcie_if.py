@@ -337,7 +337,7 @@ class PcieIfBase:
         self._pause_generator = generator
 
         if self._pause_generator is not None:
-            self._pause_cr = cocotb.fork(self._run_pause())
+            self._pause_cr = cocotb.start_soon(self._run_pause())
 
     def clear_pause_generator(self):
         self.set_pause_generator(None)
@@ -402,8 +402,8 @@ class PcieIfSource(PcieIfBase):
         if hasattr(self.bus, "tlp_prfx_par"):
             self.bus.tlp_prfx_par.setimmediatevalue(0)
 
-        cocotb.fork(self._run_source())
-        cocotb.fork(self._run())
+        cocotb.start_soon(self._run_source())
+        cocotb.start_soon(self._run())
 
     async def _drive(self, obj):
         if self.drive_obj is not None:
@@ -562,8 +562,8 @@ class PcieIfSink(PcieIfBase):
 
         self.bus.ready.setimmediatevalue(0)
 
-        cocotb.fork(self._run_sink())
-        cocotb.fork(self._run())
+        cocotb.start_soon(self._run_sink())
+        cocotb.start_soon(self._run())
 
     def _recv(self, frame):
         if self.queue.empty():
@@ -842,19 +842,19 @@ class PcieIfDevice(Device):
         # fork coroutines
 
         if self.rx_req_tlp_source:
-            cocotb.fork(self._run_rx_req_logic())
+            cocotb.start_soon(self._run_rx_req_logic())
         if self.rx_cpl_tlp_source:
-            cocotb.fork(self._run_rx_cpl_logic())
+            cocotb.start_soon(self._run_rx_cpl_logic())
         if self.tx_cpl_tlp_sink:
-            cocotb.fork(self._run_tx_cpl_logic())
+            cocotb.start_soon(self._run_tx_cpl_logic())
         if self.tx_rd_req_tlp_sink:
-            cocotb.fork(self._run_tx_rd_req_logic())
-            cocotb.fork(self._run_rd_req_tx_seq_num_logic())
+            cocotb.start_soon(self._run_tx_rd_req_logic())
+            cocotb.start_soon(self._run_rd_req_tx_seq_num_logic())
         if self.tx_wr_req_tlp_sink:
-            cocotb.fork(self._run_tx_wr_req_logic())
-            cocotb.fork(self._run_wr_req_tx_seq_num_logic())
-        cocotb.fork(self._run_cfg_status_logic())
-        cocotb.fork(self._run_fc_logic())
+            cocotb.start_soon(self._run_tx_wr_req_logic())
+            cocotb.start_soon(self._run_wr_req_tx_seq_num_logic())
+        cocotb.start_soon(self._run_cfg_status_logic())
+        cocotb.start_soon(self._run_fc_logic())
 
     async def upstream_recv(self, tlp):
         self.log.debug("Got downstream TLP: %s", repr(tlp))
@@ -1180,8 +1180,8 @@ class PcieIfTestDevice:
 
         # fork coroutines
 
-        cocotb.fork(self._run_rx_req_tlp())
-        cocotb.fork(self._run_rx_cpl_tlp())
+        cocotb.start_soon(self._run_rx_req_tlp())
+        cocotb.start_soon(self._run_rx_cpl_tlp())
 
     def add_region(self, size, read=None, write=None, ext=False, prefetch=False, io=False):
         if self.bar_ptr > 5 or (ext and self.bar_ptr > 4):

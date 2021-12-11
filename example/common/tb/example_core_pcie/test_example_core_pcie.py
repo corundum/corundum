@@ -54,7 +54,7 @@ class TB(object):
         self.log = SimLog("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.fork(Clock(dut.clk, 4, units="ns").start())
+        cocotb.start_soon(Clock(dut.clk, 4, units="ns").start())
 
         # PCIe
         self.rc = RootComplex()
@@ -100,8 +100,8 @@ class TB(object):
         # monitor error outputs
         self.status_error_cor_asserted = False
         self.status_error_uncor_asserted = False
-        cocotb.fork(self._run_monitor_status_error_cor())
-        cocotb.fork(self._run_monitor_status_error_uncor())
+        cocotb.start_soon(self._run_monitor_status_error_cor())
+        cocotb.start_soon(self._run_monitor_status_error_uncor())
 
     async def _run_monitor_status_error_cor(self):
         while True:

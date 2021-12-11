@@ -123,7 +123,7 @@ class PsdpRamWrite(Memory):
         self.bus.wr_cmd_ready.setimmediatevalue(0)
         self.bus.wr_done.setimmediatevalue(0)
 
-        cocotb.fork(self._run())
+        cocotb.start_soon(self._run())
 
     def set_pause_generator(self, generator=None):
         if self._pause_cr is not None:
@@ -133,7 +133,7 @@ class PsdpRamWrite(Memory):
         self._pause_generator = generator
 
         if self._pause_generator is not None:
-            self._pause_cr = cocotb.fork(self._run_pause())
+            self._pause_cr = cocotb.start_soon(self._run_pause())
 
     def clear_pause_generator(self):
         self.set_pause_generator(None)
@@ -235,7 +235,7 @@ class PsdpRamRead(Memory):
         self.bus.rd_cmd_ready.setimmediatevalue(0)
         self.bus.rd_resp_valid.setimmediatevalue(0)
 
-        cocotb.fork(self._run())
+        cocotb.start_soon(self._run())
 
     def set_pause_generator(self, generator=None):
         if self._pause_cr is not None:
@@ -245,7 +245,7 @@ class PsdpRamRead(Memory):
         self._pause_generator = generator
 
         if self._pause_generator is not None:
-            self._pause_cr = cocotb.fork(self._run_pause())
+            self._pause_cr = cocotb.start_soon(self._run_pause())
 
     def clear_pause_generator(self):
         self.set_pause_generator(None)

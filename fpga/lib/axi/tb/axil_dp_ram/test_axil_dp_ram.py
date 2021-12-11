@@ -45,8 +45,8 @@ class TB(object):
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.fork(Clock(dut.a_clk, 8, units="ns").start())
-        cocotb.fork(Clock(dut.b_clk, 10, units="ns").start())
+        cocotb.start_soon(Clock(dut.a_clk, 8, units="ns").start())
+        cocotb.start_soon(Clock(dut.b_clk, 10, units="ns").start())
 
         self.axil_master = []
 
@@ -71,13 +71,13 @@ class TB(object):
         self.dut.b_rst.setimmediatevalue(0)
         await RisingEdge(self.dut.a_clk)
         await RisingEdge(self.dut.a_clk)
-        self.dut.a_rst <= 1
-        self.dut.b_rst <= 1
+        self.dut.a_rst.value = 1
+        self.dut.b_rst.value = 1
         await RisingEdge(self.dut.a_clk)
         await RisingEdge(self.dut.a_clk)
-        self.dut.a_rst <= 0
+        self.dut.a_rst.value = 0
         await RisingEdge(self.dut.b_clk)
-        self.dut.b_rst <= 0
+        self.dut.b_rst.value = 0
         await RisingEdge(self.dut.a_clk)
         await RisingEdge(self.dut.a_clk)
 
@@ -159,8 +159,8 @@ async def run_test_arb(dut, data_in=None, idle_inserter=None, backpressure_inser
     workers = []
 
     for k in range(10):
-        workers.append(cocotb.fork(worker(tb.axil_master[0], k*256)))
-        workers.append(cocotb.fork(worker(tb.axil_master[1], k*256)))
+        workers.append(cocotb.start_soon(worker(tb.axil_master[0], k*256)))
+        workers.append(cocotb.start_soon(worker(tb.axil_master[1], k*256)))
 
     while workers:
         await workers.pop(0).join()
@@ -196,7 +196,7 @@ async def run_stress_test(dut, idle_inserter=None, backpressure_inserter=None):
     workers = []
 
     for k in range(16):
-        workers.append(cocotb.fork(worker(tb.axil_master[k%len(tb.axil_master)], k*0x1000, 0x1000, count=16)))
+        workers.append(cocotb.start_soon(worker(tb.axil_master[k%len(tb.axil_master)], k*0x1000, 0x1000, count=16)))
 
     while workers:
         await workers.pop(0).join()

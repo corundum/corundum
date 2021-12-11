@@ -190,7 +190,7 @@ assign m_axil_awprot   = m_axil_awprot_reg;
 assign m_axil_awvalid  = m_axil_awvalid_reg;
 
 // enable ready input next cycle if output buffer will be empty
-wire s_axil_awready_eawly = !m_axil_awvalid_next;
+wire s_axil_awready_early = !m_axil_awvalid_next;
 
 always @* begin
     // transfer sink ready state to source
@@ -211,7 +211,7 @@ always @(posedge clk) begin
         s_axil_awready_reg <= 1'b0;
         m_axil_awvalid_reg <= 1'b0;
     end else begin
-        s_axil_awready_reg <= s_axil_awready_eawly;
+        s_axil_awready_reg <= s_axil_awready_early;
         m_axil_awvalid_reg <= m_axil_awvalid_next;
     end
 
@@ -336,7 +336,7 @@ assign m_axil_wstrb  = m_axil_wstrb_reg;
 assign m_axil_wvalid = m_axil_wvalid_reg;
 
 // enable ready input next cycle if output buffer will be empty
-wire s_axil_wready_ewly = !m_axil_wvalid_next;
+wire s_axil_wready_early = !m_axil_wvalid_next;
 
 always @* begin
     // transfer sink ready state to source
@@ -357,7 +357,7 @@ always @(posedge clk) begin
         s_axil_wready_reg <= 1'b0;
         m_axil_wvalid_reg <= 1'b0;
     end else begin
-        s_axil_wready_reg <= s_axil_wready_ewly;
+        s_axil_wready_reg <= s_axil_wready_early;
         m_axil_wvalid_reg <= m_axil_wvalid_next;
     end
 

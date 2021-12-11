@@ -262,7 +262,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	}
 
 	// Allocate MSI IRQs
-	mqnic->irq_count = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI);
+	mqnic->irq_count = pci_alloc_irq_vectors(pdev, 1, MQNIC_MAX_IRQ, PCI_IRQ_MSI);
 	if (mqnic->irq_count < 0) {
 		ret = -ENOMEM;
 		dev_err(dev, "Failed to allocate IRQs");

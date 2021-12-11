@@ -51,7 +51,8 @@ static int mqnic_start_port(struct net_device *ndev)
 
 	// set up RX completion queues
 	for (k = 0; k < priv->rx_cpl_queue_count; k++) {
-		mqnic_activate_cq_ring(priv->rx_cpl_ring[k], k % priv->event_queue_count);
+		mqnic_activate_cq_ring(priv->rx_cpl_ring[k],
+				priv->event_ring[k % priv->event_queue_count]->ring_index);
 		priv->rx_cpl_ring[k]->handler = mqnic_rx_irq;
 
 		netif_napi_add(ndev, &priv->rx_cpl_ring[k]->napi,
@@ -68,12 +69,14 @@ static int mqnic_start_port(struct net_device *ndev)
 			priv->rx_ring[k]->page_order = 0;
 		else
 			priv->rx_ring[k]->page_order = ilog2((ndev->mtu + ETH_HLEN + PAGE_SIZE - 1) / PAGE_SIZE - 1) + 1;
-		mqnic_activate_rx_ring(priv->rx_ring[k], k);
+		mqnic_activate_rx_ring(priv->rx_ring[k],
+				priv->rx_cpl_ring[k % priv->rx_cpl_queue_count]->ring_index);
 	}
 
 	// set up TX completion queues
 	for (k = 0; k < priv->tx_cpl_queue_count; k++) {
-		mqnic_activate_cq_ring(priv->tx_cpl_ring[k], k % priv->event_queue_count);
+		mqnic_activate_cq_ring(priv->tx_cpl_ring[k],
+				priv->event_ring[k % priv->event_queue_count]->ring_index);
 		priv->tx_cpl_ring[k]->handler = mqnic_tx_irq;
 
 		netif_tx_napi_add(ndev, &priv->tx_cpl_ring[k]->napi,
@@ -85,7 +88,8 @@ static int mqnic_start_port(struct net_device *ndev)
 
 	// set up TX queues
 	for (k = 0; k < priv->tx_queue_count; k++) {
-		mqnic_activate_tx_ring(priv->tx_ring[k], k);
+		mqnic_activate_tx_ring(priv->tx_ring[k],
+				priv->tx_cpl_ring[k % priv->tx_cpl_queue_count]->ring_index);
 		priv->tx_ring[k]->tx_queue = netdev_get_tx_queue(ndev, k);
 	}
 

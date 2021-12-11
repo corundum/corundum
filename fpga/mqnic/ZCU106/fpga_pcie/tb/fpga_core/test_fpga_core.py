@@ -269,14 +269,14 @@ class TB(object):
             self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
         # Ethernet
-        cocotb.fork(Clock(dut.sfp0_rx_clk, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.sfp0_rx_clk, 6.4, units="ns").start())
         self.sfp0_source = XgmiiSource(dut.sfp0_rxd, dut.sfp0_rxc, dut.sfp0_rx_clk, dut.sfp0_rx_rst)
-        cocotb.fork(Clock(dut.sfp0_tx_clk, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.sfp0_tx_clk, 6.4, units="ns").start())
         self.sfp0_sink = XgmiiSink(dut.sfp0_txd, dut.sfp0_txc, dut.sfp0_tx_clk, dut.sfp0_tx_rst)
 
-        cocotb.fork(Clock(dut.sfp1_rx_clk, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.sfp1_rx_clk, 6.4, units="ns").start())
         self.sfp1_source = XgmiiSource(dut.sfp1_rxd, dut.sfp1_rxc, dut.sfp1_rx_clk, dut.sfp1_rx_rst)
-        cocotb.fork(Clock(dut.sfp1_tx_clk, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.sfp1_tx_clk, 6.4, units="ns").start())
         self.sfp1_sink = XgmiiSink(dut.sfp1_txd, dut.sfp1_txc, dut.sfp1_tx_clk, dut.sfp1_tx_rst)
 
         dut.sfp0_rx_error_count.setimmediatevalue(0)
@@ -293,7 +293,7 @@ class TB(object):
         dut.i2c_sda_i.setimmediatevalue(1)
 
         self.loopback_enable = False
-        cocotb.fork(self._run_loopback())
+        cocotb.start_soon(self._run_loopback())
 
     async def init(self):
 

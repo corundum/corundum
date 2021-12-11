@@ -53,9 +53,9 @@ class TB(object):
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.fork(Clock(dut.clk, 4, units="ns").start())
-        cocotb.fork(Clock(dut.phy_tx_clk, 6.4, units="ns").start())
-        cocotb.fork(Clock(dut.phy_rx_clk, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.clk, 4, units="ns").start())
+        cocotb.start_soon(Clock(dut.phy_tx_clk, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.phy_rx_clk, 6.4, units="ns").start())
 
         self.axil_master = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "s_axil"), dut.clk, dut.rst)
 

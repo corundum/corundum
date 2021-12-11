@@ -1046,13 +1046,13 @@ class Interrupt:
         self.queue = Queue()
         self.handler = handler
 
-        cocotb.fork(self._run())
+        cocotb.start_soon(self._run())
 
     @classmethod
     def from_edge(cls, index, signal, handler=None):
         obj = cls(index, handler)
         obj.signal = signal
-        cocotb.fork(obj._run_edge())
+        cocotb.start_soon(obj._run_edge())
         return obj
 
     async def interrupt(self):
@@ -1143,7 +1143,7 @@ class Driver:
         if irq:
             for index in range(len(irq)):
                 self.irq_list.append(Interrupt(index, self.interrupt_handler))
-            cocotb.fork(self._run_edge_interrupts(irq))
+            cocotb.start_soon(self._run_edge_interrupts(irq))
 
         await self.init_common()
 

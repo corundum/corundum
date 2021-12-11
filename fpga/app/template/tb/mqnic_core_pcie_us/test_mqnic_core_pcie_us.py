@@ -291,8 +291,8 @@ class TB(object):
 
         for iface in dut.core_pcie_inst.core_inst.iface:
             for port in iface.port:
-                cocotb.fork(Clock(port.port_rx_clk, eth_clock_period, units="ns").start())
-                cocotb.fork(Clock(port.port_tx_clk, eth_clock_period, units="ns").start())
+                cocotb.start_soon(Clock(port.port_rx_clk, eth_clock_period, units="ns").start())
+                cocotb.start_soon(Clock(port.port_tx_clk, eth_clock_period, units="ns").start())
 
                 port.port_rx_rst.setimmediatevalue(0)
                 port.port_tx_rst.setimmediatevalue(0)
@@ -327,7 +327,7 @@ class TB(object):
         dut.s_axis_stat_tvalid.setimmediatevalue(0)
 
         self.loopback_enable = False
-        cocotb.fork(self._run_loopback())
+        cocotb.start_soon(self._run_loopback())
 
     async def init(self):
 

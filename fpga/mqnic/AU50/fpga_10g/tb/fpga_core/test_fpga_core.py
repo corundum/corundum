@@ -269,24 +269,24 @@ class TB(object):
             self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
         # Ethernet
-        cocotb.fork(Clock(dut.qsfp_rx_clk_1, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp_rx_clk_1, 6.4, units="ns").start())
         self.qsfp_1_source = XgmiiSource(dut.qsfp_rxd_1, dut.qsfp_rxc_1, dut.qsfp_rx_clk_1, dut.qsfp_rx_rst_1)
-        cocotb.fork(Clock(dut.qsfp_tx_clk_1, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp_tx_clk_1, 6.4, units="ns").start())
         self.qsfp_1_sink = XgmiiSink(dut.qsfp_txd_1, dut.qsfp_txc_1, dut.qsfp_tx_clk_1, dut.qsfp_tx_rst_1)
 
-        cocotb.fork(Clock(dut.qsfp_rx_clk_2, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp_rx_clk_2, 6.4, units="ns").start())
         self.qsfp_2_source = XgmiiSource(dut.qsfp_rxd_2, dut.qsfp_rxc_2, dut.qsfp_rx_clk_2, dut.qsfp_rx_rst_2)
-        cocotb.fork(Clock(dut.qsfp_tx_clk_2, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp_tx_clk_2, 6.4, units="ns").start())
         self.qsfp_2_sink = XgmiiSink(dut.qsfp_txd_2, dut.qsfp_txc_2, dut.qsfp_tx_clk_2, dut.qsfp_tx_rst_2)
 
-        cocotb.fork(Clock(dut.qsfp_rx_clk_3, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp_rx_clk_3, 6.4, units="ns").start())
         self.qsfp_3_source = XgmiiSource(dut.qsfp_rxd_3, dut.qsfp_rxc_3, dut.qsfp_rx_clk_3, dut.qsfp_rx_rst_3)
-        cocotb.fork(Clock(dut.qsfp_tx_clk_3, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp_tx_clk_3, 6.4, units="ns").start())
         self.qsfp_3_sink = XgmiiSink(dut.qsfp_txd_3, dut.qsfp_txc_3, dut.qsfp_tx_clk_3, dut.qsfp_tx_rst_3)
 
-        cocotb.fork(Clock(dut.qsfp_rx_clk_4, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp_rx_clk_4, 6.4, units="ns").start())
         self.qsfp_4_source = XgmiiSource(dut.qsfp_rxd_4, dut.qsfp_rxc_4, dut.qsfp_rx_clk_4, dut.qsfp_rx_rst_4)
-        cocotb.fork(Clock(dut.qsfp_tx_clk_4, 6.4, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp_tx_clk_4, 6.4, units="ns").start())
         self.qsfp_4_sink = XgmiiSink(dut.qsfp_txd_4, dut.qsfp_txc_4, dut.qsfp_tx_clk_4, dut.qsfp_tx_rst_4)
 
         dut.qsfp_rx_error_count_1.setimmediatevalue(0)
@@ -299,7 +299,7 @@ class TB(object):
         self.cms_ram = AxiLiteRam(AxiLiteBus.from_prefix(dut, "m_axil_cms"), dut.m_axil_cms_clk, dut.m_axil_cms_rst, size=256*1024)
 
         self.loopback_enable = False
-        cocotb.fork(self._run_loopback())
+        cocotb.start_soon(self._run_loopback())
 
     async def init(self):
 

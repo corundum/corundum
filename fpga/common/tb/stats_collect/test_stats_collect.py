@@ -51,7 +51,7 @@ class TB(object):
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.fork(Clock(dut.clk, 10, units="ns").start())
+        cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
 
         self.stat_sink = AxiStreamSink(AxiStreamBus.from_prefix(dut, "m_axis_stat"), dut.clk, dut.rst)
 
@@ -148,7 +148,7 @@ async def run_stress_test(dut, backpressure_inserter=None):
     queue_drive = [Queue() for k in range(stat_count)]
 
     for k in range(stat_count):
-        workers.append(cocotb.fork(worker(k, queue_ref, queue_drive[k], count=1024)))
+        workers.append(cocotb.start_soon(worker(k, queue_ref, queue_drive[k], count=1024)))
 
     async def driver(dut, queues):
         while True:
@@ -165,7 +165,7 @@ async def run_stress_test(dut, backpressure_inserter=None):
             dut.stat_inc <= inc
             dut.stat_valid <= valid
 
-    driver = cocotb.fork(driver(dut, queue_drive))
+    driver = cocotb.start_soon(driver(dut, queue_drive))
 
     while workers:
         await workers.pop(0).join()

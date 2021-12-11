@@ -269,8 +269,8 @@ class TB(object):
             self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
         # Ethernet
-        cocotb.fork(Clock(dut.qsfp_rx_clk, 3.102, units="ns").start())
-        cocotb.fork(Clock(dut.qsfp_tx_clk, 3.102, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp_rx_clk, 3.102, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp_tx_clk, 3.102, units="ns").start())
 
         self.qsfp_mac = EthMac(
             tx_clk=dut.qsfp_tx_clk,
@@ -292,7 +292,7 @@ class TB(object):
         self.cms_ram = AxiLiteRam(AxiLiteBus.from_prefix(dut, "m_axil_cms"), dut.m_axil_cms_clk, dut.m_axil_cms_rst, size=256*1024)
 
         self.loopback_enable = False
-        cocotb.fork(self._run_loopback())
+        cocotb.start_soon(self._run_loopback())
 
     async def init(self):
 

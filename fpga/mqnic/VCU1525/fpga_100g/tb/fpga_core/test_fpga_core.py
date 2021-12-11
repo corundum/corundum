@@ -269,8 +269,8 @@ class TB(object):
             self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
         # Ethernet
-        cocotb.fork(Clock(dut.qsfp0_rx_clk, 3.102, units="ns").start())
-        cocotb.fork(Clock(dut.qsfp0_tx_clk, 3.102, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp0_rx_clk, 3.102, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp0_tx_clk, 3.102, units="ns").start())
 
         self.qsfp0_mac = EthMac(
             tx_clk=dut.qsfp0_tx_clk,
@@ -287,8 +287,8 @@ class TB(object):
             ifg=12, speed=100e9
         )
 
-        cocotb.fork(Clock(dut.qsfp1_rx_clk, 3.102, units="ns").start())
-        cocotb.fork(Clock(dut.qsfp1_tx_clk, 3.102, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp1_rx_clk, 3.102, units="ns").start())
+        cocotb.start_soon(Clock(dut.qsfp1_tx_clk, 3.102, units="ns").start())
 
         self.qsfp1_mac = EthMac(
             tx_clk=dut.qsfp1_tx_clk,
@@ -319,7 +319,7 @@ class TB(object):
         dut.qspi_dq_i.setimmediatevalue(0)
 
         self.loopback_enable = False
-        cocotb.fork(self._run_loopback())
+        cocotb.start_soon(self._run_loopback())
 
     async def init(self):
 

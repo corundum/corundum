@@ -45,7 +45,7 @@ class TB(object):
         self.log = logging.getLogger("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.fork(Clock(dut.clk, 10, units="ns").start())
+        cocotb.start_soon(Clock(dut.clk, 10, units="ns").start())
 
         self.axil_master = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "s_axil"), dut.clk, dut.rst)
         self.axil_ram = AxiLiteRam(AxiLiteBus.from_prefix(dut, "m_axil"), dut.clk, dut.rst, size=2**16)
@@ -163,7 +163,7 @@ async def run_stress_test(dut, idle_inserter=None, backpressure_inserter=None):
     workers = []
 
     for k in range(16):
-        workers.append(cocotb.fork(worker(tb.axil_master, k*0x1000, 0x1000, count=16)))
+        workers.append(cocotb.start_soon(worker(tb.axil_master, k*0x1000, 0x1000, count=16)))
 
     while workers:
         await workers.pop(0).join()

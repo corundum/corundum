@@ -322,7 +322,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 
 	for (k = 0; k < mqnic->if_count; k++) {
 		dev_info(dev, "Creating interface %d", k);
-		ret = mqnic_init_netdev(mqnic, k, mqnic->hw_addr + k * mqnic->if_stride);
+		ret = mqnic_create_netdev(mqnic, &mqnic->ndev[k], k, mqnic->hw_addr + k * mqnic->if_stride);
 		if (ret) {
 			dev_err(dev, "Failed to create net_device");
 			goto fail_init_netdev;
@@ -360,7 +360,7 @@ fail_miscdev:
 fail_init_netdev:
 	for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
 		if (mqnic->ndev[k])
-			mqnic_destroy_netdev(mqnic->ndev[k]);
+			mqnic_destroy_netdev(&mqnic->ndev[k]);
 	mqnic_unregister_phc(mqnic);
 	pci_clear_master(pdev);
 fail_board:
@@ -402,7 +402,7 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
 
 	for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
 		if (mqnic->ndev[k])
-			mqnic_destroy_netdev(mqnic->ndev[k]);
+			mqnic_destroy_netdev(&mqnic->ndev[k]);
 
 	mqnic_unregister_phc(mqnic);
 

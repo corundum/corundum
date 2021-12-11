@@ -331,8 +331,9 @@ extern const struct file_operations mqnic_fops;
 
 // mqnic_netdev.c
 void mqnic_update_stats(struct net_device *ndev);
-int mqnic_init_netdev(struct mqnic_dev *mdev, int index, u8 __iomem *hw_addr);
-void mqnic_destroy_netdev(struct net_device *ndev);
+int mqnic_create_netdev(struct mqnic_dev *mdev, struct net_device **ndev_ptr,
+		int index, u8 __iomem *hw_addr);
+void mqnic_destroy_netdev(struct net_device **ndev_ptr);
 
 // mqnic_port.c
 int mqnic_create_port(struct mqnic_priv *priv, struct mqnic_port **port_ptr,

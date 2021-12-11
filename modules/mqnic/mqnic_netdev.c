@@ -366,7 +366,8 @@ static const struct net_device_ops mqnic_netdev_ops = {
 	.ndo_do_ioctl = mqnic_ioctl,
 };
 
-int mqnic_init_netdev(struct mqnic_dev *mdev, int index, u8 __iomem *hw_addr)
+int mqnic_create_netdev(struct mqnic_dev *mdev, struct net_device **ndev_ptr,
+		int index, u8 __iomem *hw_addr)
 {
 	struct device *dev = mdev->dev;
 	struct net_device *ndev;
@@ -556,25 +557,25 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int index, u8 __iomem *hw_addr)
 
 	priv->registered = 1;
 
-	mdev->ndev[index] = ndev;
+	*ndev_ptr = ndev;
 
 	return 0;
 
 fail:
-	mqnic_destroy_netdev(ndev);
+	mqnic_destroy_netdev(ndev_ptr);
 	return ret;
 }
 
-void mqnic_destroy_netdev(struct net_device *ndev)
+void mqnic_destroy_netdev(struct net_device **ndev_ptr)
 {
+	struct net_device *ndev = *ndev_ptr;
 	struct mqnic_priv *priv = netdev_priv(ndev);
-	struct mqnic_dev *mdev = priv->mdev;
 	int k;
 
 	if (priv->registered)
 		unregister_netdev(ndev);
 
-	mdev->ndev[priv->index] = NULL;
+	*ndev_ptr = NULL;
 
 	// free rings
 	for (k = 0; k < ARRAY_SIZE(priv->event_ring); k++)

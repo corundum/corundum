@@ -50,6 +50,8 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	ring->ndev = priv->ndev;
 	ring->priv = priv;
 
+	ring->ring_index = index;
+
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
 	ring->stride = roundup_pow_of_two(stride);

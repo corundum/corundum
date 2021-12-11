@@ -49,6 +49,8 @@ int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_pt
 	ring->ndev = priv->ndev;
 	ring->priv = priv;
 
+	ring->ring_index = index;
+
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
 	ring->stride = roundup_pow_of_two(stride);

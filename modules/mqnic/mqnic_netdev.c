@@ -41,7 +41,7 @@ static int mqnic_start_port(struct net_device *ndev)
 	struct mqnic_dev *mdev = priv->mdev;
 	int k;
 
-	dev_info(mdev->dev, "%s on port %d", __func__, priv->port);
+	dev_info(mdev->dev, "%s on port %d", __func__, priv->index);
 
 	// set up event queues
 	for (k = 0; k < priv->event_queue_count; k++) {
@@ -119,7 +119,7 @@ static int mqnic_stop_port(struct net_device *ndev)
 	struct mqnic_dev *mdev = priv->mdev;
 	int k;
 
-	dev_info(mdev->dev, "%s on port %d", __func__, priv->port);
+	dev_info(mdev->dev, "%s on port %d", __func__, priv->index);
 
 	netif_tx_lock_bh(ndev);
 //	if (detach)
@@ -191,7 +191,7 @@ static int mqnic_open(struct net_device *ndev)
 	ret = mqnic_start_port(ndev);
 
 	if (ret)
-		dev_err(mdev->dev, "Failed to start port: %d", priv->port);
+		dev_err(mdev->dev, "Failed to start port: %d", priv->index);
 
 	mutex_unlock(&mdev->state_lock);
 	return ret;
@@ -208,7 +208,7 @@ static int mqnic_close(struct net_device *ndev)
 	ret = mqnic_stop_port(ndev);
 
 	if (ret)
-		dev_err(mdev->dev, "Failed to stop port: %d", priv->port);
+		dev_err(mdev->dev, "Failed to stop port: %d", priv->index);
 
 	mutex_unlock(&mdev->state_lock);
 	return ret;
@@ -366,7 +366,7 @@ static const struct net_device_ops mqnic_netdev_ops = {
 	.ndo_do_ioctl = mqnic_ioctl,
 };
 
-int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
+int mqnic_init_netdev(struct mqnic_dev *mdev, int index, u8 __iomem *hw_addr)
 {
 	struct device *dev = mdev->dev;
 	struct net_device *ndev;
@@ -382,7 +382,7 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 	}
 
 	SET_NETDEV_DEV(ndev, dev);
-	ndev->dev_port = port;
+	ndev->dev_port = index;
 
 	// init private data
 	priv = netdev_priv(ndev);
@@ -393,7 +393,7 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 	priv->ndev = ndev;
 	priv->mdev = mdev;
 	priv->dev = dev;
-	priv->port = port;
+	priv->index = index;
 	priv->port_up = false;
 
 	priv->hw_addr = hw_addr;
@@ -452,11 +452,11 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 	// set MAC
 	ndev->addr_len = ETH_ALEN;
 
-	if (port >= mdev->mac_count) {
+	if (index >= mdev->mac_count) {
 		dev_warn(dev, "Exhausted permanent MAC addresses; using random MAC");
 		eth_hw_addr_random(ndev);
 	} else {
-		memcpy(ndev->dev_addr, mdev->mac_list[port], ETH_ALEN);
+		memcpy(ndev->dev_addr, mdev->mac_list[index], ETH_ALEN);
 
 		if (!is_valid_ether_addr(ndev->dev_addr)) {
 			dev_warn(dev, "Invalid MAC address in list; using random MAC");
@@ -550,13 +550,13 @@ int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr)
 
 	ret = register_netdev(ndev);
 	if (ret) {
-		dev_err(dev, "netdev registration failed on port %d", port);
+		dev_err(dev, "netdev registration failed on port %d", index);
 		goto fail;
 	}
 
 	priv->registered = 1;
 
-	mdev->ndev[port] = ndev;
+	mdev->ndev[index] = ndev;
 
 	return 0;
 
@@ -574,7 +574,7 @@ void mqnic_destroy_netdev(struct net_device *ndev)
 	if (priv->registered)
 		unregister_netdev(ndev);
 
-	mdev->ndev[priv->port] = NULL;
+	mdev->ndev[priv->index] = NULL;
 
 	// free rings
 	for (k = 0; k < ARRAY_SIZE(priv->event_ring); k++)

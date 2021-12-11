@@ -212,14 +212,14 @@ int mqnic_prepare_rx_desc(struct mqnic_ring *ring, int index)
 
 	if (unlikely(page)) {
 		dev_err(ring->dev, "%s: skb not yet processed on port %d",
-				__func__, ring->priv->port);
+				__func__, ring->priv->index);
 		return -1;
 	}
 
 	page = dev_alloc_pages(page_order);
 	if (unlikely(!page)) {
 		dev_err(ring->dev, "%s: failed to allocate memory on port %d",
-				__func__, ring->priv->port);
+				__func__, ring->priv->index);
 		return -1;
 	}
 
@@ -228,7 +228,7 @@ int mqnic_prepare_rx_desc(struct mqnic_ring *ring, int index)
 
 	if (unlikely(dma_mapping_error(ring->dev, dma_addr))) {
 		dev_err(ring->dev, "%s: DMA mapping failed on port %d",
-				__func__, ring->priv->port);
+				__func__, ring->priv->index);
 		__free_pages(page, page_order);
 		return -1;
 	}

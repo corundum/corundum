@@ -287,8 +287,8 @@ struct mqnic_priv {
 
 	spinlock_t stats_lock;
 
+	int index;
 	bool registered;
-	int port;
 	bool port_up;
 
 	u32 if_id;
@@ -331,7 +331,7 @@ extern const struct file_operations mqnic_fops;
 
 // mqnic_netdev.c
 void mqnic_update_stats(struct net_device *ndev);
-int mqnic_init_netdev(struct mqnic_dev *mdev, int port, u8 __iomem *hw_addr);
+int mqnic_init_netdev(struct mqnic_dev *mdev, int index, u8 __iomem *hw_addr);
 void mqnic_destroy_netdev(struct net_device *ndev);
 
 // mqnic_port.c

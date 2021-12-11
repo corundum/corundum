@@ -200,6 +200,7 @@ struct mqnic_ring {
 	struct net_device *ndev;
 	struct mqnic_priv *priv;
 	int ring_index;
+	int active;
 
 	u32 hw_ptr_mask;
 	u8 __iomem *hw_addr;
@@ -225,6 +226,7 @@ struct mqnic_cq_ring {
 	struct napi_struct napi;
 	int ring_index;
 	int eq_index;
+	int active;
 
 	void (*handler)(struct mqnic_cq_ring *ring);
 
@@ -251,6 +253,7 @@ struct mqnic_eq_ring {
 	struct mqnic_priv *priv;
 	int ring_index;
 	int int_index;
+	int active;
 
 	int irq;
 

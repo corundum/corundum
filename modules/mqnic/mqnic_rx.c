@@ -51,6 +51,7 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	ring->priv = priv;
 
 	ring->ring_index = index;
+	ring->active = 0;
 
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
@@ -114,7 +115,8 @@ void mqnic_destroy_rx_ring(struct mqnic_ring **ring_ptr)
 	struct mqnic_ring *ring = *ring_ptr;
 	*ring_ptr = NULL;
 
-	mqnic_deactivate_rx_ring(ring);
+	if (ring->active)
+		mqnic_deactivate_rx_ring(ring);
 
 	mqnic_free_rx_buf(ring);
 
@@ -126,6 +128,9 @@ void mqnic_destroy_rx_ring(struct mqnic_ring **ring_ptr)
 
 int mqnic_activate_rx_ring(struct mqnic_ring *ring, int cpl_index)
 {
+	if (ring->active)
+		mqnic_deactivate_rx_ring(ring);
+
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 	// set base address
@@ -140,6 +145,8 @@ int mqnic_activate_rx_ring(struct mqnic_ring *ring, int cpl_index)
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK,
 			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
+	ring->active = 1;
+
 	mqnic_refill_rx_buffers(ring);
 
 	return 0;
@@ -150,6 +157,8 @@ void mqnic_deactivate_rx_ring(struct mqnic_ring *ring)
 	// deactivate queue
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
 			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+
+	ring->active = 0;
 }
 
 bool mqnic_is_rx_ring_empty(const struct mqnic_ring *ring)

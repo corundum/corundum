@@ -280,7 +280,7 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 {
 	struct mqnic_priv *priv = cq_ring->priv;
 	struct net_device *ndev = priv->ndev;
-	struct mqnic_ring *ring = priv->rx_ring[cq_ring->ring_index];
+	struct mqnic_ring *rx_ring = priv->rx_ring[cq_ring->ring_index];
 	struct mqnic_rx_info *rx_info;
 	struct mqnic_cpl *cpl;
 	struct sk_buff *skb;
@@ -307,8 +307,8 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 	while (cq_ring->head_ptr != cq_tail_ptr && done < budget) {
 		cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index * cq_ring->stride);
-		ring_index = le16_to_cpu(cpl->index) & ring->size_mask;
-		rx_info = &ring->rx_info[ring_index];
+		ring_index = le16_to_cpu(cpl->index) & rx_ring->size_mask;
+		rx_info = &rx_ring->rx_info[ring_index];
 		page = rx_info->page;
 
 		if (unlikely(!page)) {
@@ -328,9 +328,9 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 		// RX hardware timestamp
 		if (priv->if_features & MQNIC_IF_FEATURE_PTP_TS)
-			skb_hwtstamps(skb)->hwtstamp = mqnic_read_cpl_ts(priv->mdev, ring, cpl);
+			skb_hwtstamps(skb)->hwtstamp = mqnic_read_cpl_ts(priv->mdev, rx_ring, cpl);
 
-		skb_record_rx_queue(skb, cq_ring->ring_index);
+		skb_record_rx_queue(skb, rx_ring->ring_index);
 
 		// RX hardware checksum
 		if (ndev->features & NETIF_F_RXCSUM) {
@@ -359,8 +359,8 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		// hand off SKB
 		napi_gro_frags(&cq_ring->napi);
 
-		ring->packets++;
-		ring->bytes += le16_to_cpu(cpl->len);
+		rx_ring->packets++;
+		rx_ring->bytes += le16_to_cpu(cpl->len);
 
 		done++;
 
@@ -374,26 +374,26 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 	// process ring
 	// read tail pointer from NIC
-	mqnic_rx_read_tail_ptr(ring);
+	mqnic_rx_read_tail_ptr(rx_ring);
 
-	ring_clean_tail_ptr = READ_ONCE(ring->clean_tail_ptr);
-	ring_index = ring_clean_tail_ptr & ring->size_mask;
+	ring_clean_tail_ptr = READ_ONCE(rx_ring->clean_tail_ptr);
+	ring_index = ring_clean_tail_ptr & rx_ring->size_mask;
 
-	while (ring_clean_tail_ptr != ring->tail_ptr) {
-		rx_info = &ring->rx_info[ring_index];
+	while (ring_clean_tail_ptr != rx_ring->tail_ptr) {
+		rx_info = &rx_ring->rx_info[ring_index];
 
 		if (rx_info->page)
 			break;
 
 		ring_clean_tail_ptr++;
-		ring_index = ring_clean_tail_ptr & ring->size_mask;
+		ring_index = ring_clean_tail_ptr & rx_ring->size_mask;
 	}
 
 	// update ring tail
-	WRITE_ONCE(ring->clean_tail_ptr, ring_clean_tail_ptr);
+	WRITE_ONCE(rx_ring->clean_tail_ptr, ring_clean_tail_ptr);
 
 	// replenish buffers
-	mqnic_refill_rx_buffers(ring);
+	mqnic_refill_rx_buffers(rx_ring);
 
 	return done;
 }

@@ -224,7 +224,7 @@ int mqnic_free_tx_buf(struct mqnic_ring *ring)
 int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 {
 	struct mqnic_priv *priv = cq_ring->priv;
-	struct mqnic_ring *ring = priv->tx_ring[cq_ring->ring_index];
+	struct mqnic_ring *tx_ring = priv->tx_ring[cq_ring->ring_index];
 	struct mqnic_tx_info *tx_info;
 	struct mqnic_cpl *cpl;
 	struct skb_shared_hwtstamps hwts;
@@ -241,7 +241,7 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		return done;
 
 	// prefetch for BQL
-	netdev_txq_bql_complete_prefetchw(ring->tx_queue);
+	netdev_txq_bql_complete_prefetchw(tx_ring->tx_queue);
 
 	// process completion queue
 	// read head pointer from NIC
@@ -252,17 +252,17 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 	while (cq_ring->head_ptr != cq_tail_ptr && done < budget) {
 		cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index * cq_ring->stride);
-		ring_index = le16_to_cpu(cpl->index) & ring->size_mask;
-		tx_info = &ring->tx_info[ring_index];
+		ring_index = le16_to_cpu(cpl->index) & tx_ring->size_mask;
+		tx_info = &tx_ring->tx_info[ring_index];
 
 		// TX hardware timestamp
 		if (unlikely(tx_info->ts_requested)) {
 			dev_info(priv->dev, "%s: TX TS requested", __func__);
-			hwts.hwtstamp = mqnic_read_cpl_ts(priv->mdev, ring, cpl);
+			hwts.hwtstamp = mqnic_read_cpl_ts(priv->mdev, tx_ring, cpl);
 			skb_tstamp_tx(tx_info->skb, &hwts);
 		}
 		// free TX descriptor
-		mqnic_free_tx_desc(ring, ring_index, napi_budget);
+		mqnic_free_tx_desc(tx_ring, ring_index, napi_budget);
 
 		packets++;
 		bytes += le16_to_cpu(cpl->len);
@@ -279,30 +279,30 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 	// process ring
 	// read tail pointer from NIC
-	mqnic_tx_read_tail_ptr(ring);
+	mqnic_tx_read_tail_ptr(tx_ring);
 
-	ring_clean_tail_ptr = READ_ONCE(ring->clean_tail_ptr);
-	ring_index = ring_clean_tail_ptr & ring->size_mask;
+	ring_clean_tail_ptr = READ_ONCE(tx_ring->clean_tail_ptr);
+	ring_index = ring_clean_tail_ptr & tx_ring->size_mask;
 
-	while (ring_clean_tail_ptr != ring->tail_ptr) {
-		tx_info = &ring->tx_info[ring_index];
+	while (ring_clean_tail_ptr != tx_ring->tail_ptr) {
+		tx_info = &tx_ring->tx_info[ring_index];
 
 		if (tx_info->skb)
 			break;
 
 		ring_clean_tail_ptr++;
-		ring_index = ring_clean_tail_ptr & ring->size_mask;
+		ring_index = ring_clean_tail_ptr & tx_ring->size_mask;
 	}
 
 	// update ring tail
-	WRITE_ONCE(ring->clean_tail_ptr, ring_clean_tail_ptr);
+	WRITE_ONCE(tx_ring->clean_tail_ptr, ring_clean_tail_ptr);
 
 	// BQL
-	//netdev_tx_completed_queue(ring->tx_queue, packets, bytes);
+	//netdev_tx_completed_queue(tx_ring->tx_queue, packets, bytes);
 
 	// wake queue if it is stopped
-	if (netif_tx_queue_stopped(ring->tx_queue) && !mqnic_is_tx_ring_full(ring))
-		netif_tx_wake_queue(ring->tx_queue);
+	if (netif_tx_queue_stopped(tx_ring->tx_queue) && !mqnic_is_tx_ring_full(tx_ring))
+		netif_tx_wake_queue(tx_ring->tx_queue);
 
 	return done;
 }

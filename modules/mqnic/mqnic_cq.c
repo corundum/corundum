@@ -36,11 +36,9 @@
 #include "mqnic.h"
 
 int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_ptr,
-		int size, int stride, int index, u8 __iomem *hw_addr)
+		int index, u8 __iomem *hw_addr)
 {
-	struct device *dev = priv->dev;
 	struct mqnic_cq_ring *ring;
-	int ret;
 
 	ring = kzalloc(sizeof(*ring), GFP_KERNEL);
 	if (!ring)
@@ -52,22 +50,43 @@ int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_pt
 	ring->ring_index = index;
 	ring->active = 0;
 
+	ring->hw_addr = hw_addr;
+	ring->hw_ptr_mask = 0xffff;
+	ring->hw_head_ptr = hw_addr + MQNIC_CPL_QUEUE_HEAD_PTR_REG;
+	ring->hw_tail_ptr = hw_addr + MQNIC_CPL_QUEUE_TAIL_PTR_REG;
+
+	ring->head_ptr = 0;
+	ring->tail_ptr = 0;
+
+	// deactivate queue
+	iowrite32(0, ring->hw_addr + MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG);
+
+	*ring_ptr = ring;
+	return 0;
+}
+
+void mqnic_destroy_cq_ring(struct mqnic_cq_ring **ring_ptr)
+{
+	struct mqnic_cq_ring *ring = *ring_ptr;
+	*ring_ptr = NULL;
+
+	mqnic_free_cq_ring(ring);
+
+	kfree(ring);
+}
+
+int mqnic_alloc_cq_ring(struct mqnic_cq_ring *ring, int size, int stride)
+{
+	struct device *dev = ring->priv->dev;
+
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
 	ring->stride = roundup_pow_of_two(stride);
 
 	ring->buf_size = ring->size * ring->stride;
-	ring->buf = dma_alloc_coherent(dev, ring->buf_size,
-			&ring->buf_dma_addr, GFP_KERNEL);
-	if (!ring->buf) {
-		ret = -ENOMEM;
-		goto fail_ring;
-	}
-
-	ring->hw_addr = hw_addr;
-	ring->hw_ptr_mask = 0xffff;
-	ring->hw_head_ptr = hw_addr + MQNIC_CPL_QUEUE_HEAD_PTR_REG;
-	ring->hw_tail_ptr = hw_addr + MQNIC_CPL_QUEUE_TAIL_PTR_REG;
+	ring->buf = dma_alloc_coherent(dev, ring->buf_size, &ring->buf_dma_addr, GFP_KERNEL);
+	if (!ring->buf)
+		return -ENOMEM;
 
 	ring->head_ptr = 0;
 	ring->tail_ptr = 0;
@@ -85,29 +104,29 @@ int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_pt
 	// set size
 	iowrite32(ilog2(ring->size), ring->hw_addr + MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG);
 
-	*ring_ptr = ring;
 	return 0;
-
-fail_ring:
-	kfree(ring);
-	*ring_ptr = NULL;
-	return ret;
 }
 
-void mqnic_destroy_cq_ring(struct mqnic_cq_ring **ring_ptr)
+void mqnic_free_cq_ring(struct mqnic_cq_ring *ring)
 {
-	struct mqnic_cq_ring *ring = *ring_ptr;
-	*ring_ptr = NULL;
+	struct device *dev = ring->priv->dev;
 
 	mqnic_deactivate_cq_ring(ring);
 
-	dma_free_coherent(ring->priv->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
-	kfree(ring);
+	if (!ring->buf)
+		return;
+
+	dma_free_coherent(dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
+	ring->buf = NULL;
+	ring->buf_dma_addr = 0;
 }
 
 int mqnic_activate_cq_ring(struct mqnic_cq_ring *ring, int eq_index)
 {
 	mqnic_deactivate_cq_ring(ring);
+
+	if (!ring->buf)
+		return -EINVAL;
 
 	ring->eq_index = eq_index;
 

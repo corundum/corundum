@@ -478,36 +478,56 @@ int mqnic_create_netdev(struct mqnic_dev *mdev, struct net_device **ndev_ptr,
 
 	// allocate rings
 	for (k = 0; k < priv->event_queue_count; k++) {
-		ret = mqnic_create_eq_ring(priv, &priv->event_ring[k], 1024, MQNIC_EVENT_SIZE, k,
-				hw_addr + priv->event_queue_offset + k * MQNIC_EVENT_QUEUE_STRIDE); // TODO configure/constant
+		ret = mqnic_create_eq_ring(priv, &priv->event_ring[k], k,
+				hw_addr + priv->event_queue_offset + k * MQNIC_EVENT_QUEUE_STRIDE);
+		if (ret)
+			goto fail;
+
+		ret = mqnic_alloc_eq_ring(priv->event_ring[k], 1024, MQNIC_EVENT_SIZE); // TODO configure/constant
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->tx_queue_count; k++) {
-		ret = mqnic_create_tx_ring(priv, &priv->tx_ring[k], 1024, MQNIC_DESC_SIZE * desc_block_size, k,
-				hw_addr + priv->tx_queue_offset + k * MQNIC_QUEUE_STRIDE); // TODO configure/constant
+		ret = mqnic_create_tx_ring(priv, &priv->tx_ring[k], k,
+				hw_addr + priv->tx_queue_offset + k * MQNIC_QUEUE_STRIDE);
+		if (ret)
+			goto fail;
+
+		ret = mqnic_alloc_tx_ring(priv->tx_ring[k], 1024, MQNIC_DESC_SIZE * desc_block_size); // TODO configure/constant
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->tx_cpl_queue_count; k++) {
-		ret = mqnic_create_cq_ring(priv, &priv->tx_cpl_ring[k], 1024, MQNIC_CPL_SIZE, k,
-				hw_addr + priv->tx_cpl_queue_offset + k * MQNIC_CPL_QUEUE_STRIDE); // TODO configure/constant
+		ret = mqnic_create_cq_ring(priv, &priv->tx_cpl_ring[k], k,
+				hw_addr + priv->tx_cpl_queue_offset + k * MQNIC_CPL_QUEUE_STRIDE);
+		if (ret)
+			goto fail;
+
+		ret = mqnic_alloc_cq_ring(priv->tx_cpl_ring[k], 1024, MQNIC_CPL_SIZE); // TODO configure/constant
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->rx_queue_count; k++) {
-		ret = mqnic_create_rx_ring(priv, &priv->rx_ring[k], 1024, MQNIC_DESC_SIZE, k,
-				hw_addr + priv->rx_queue_offset + k * MQNIC_QUEUE_STRIDE); // TODO configure/constant
+		ret = mqnic_create_rx_ring(priv, &priv->rx_ring[k], k,
+				hw_addr + priv->rx_queue_offset + k * MQNIC_QUEUE_STRIDE);
+		if (ret)
+			goto fail;
+
+		ret = mqnic_alloc_rx_ring(priv->rx_ring[k], 1024, MQNIC_DESC_SIZE); // TODO configure/constant
 		if (ret)
 			goto fail;
 	}
 
 	for (k = 0; k < priv->rx_cpl_queue_count; k++) {
-		ret = mqnic_create_cq_ring(priv, &priv->rx_cpl_ring[k], 1024, MQNIC_CPL_SIZE, k,
-				hw_addr + priv->rx_cpl_queue_offset + k * MQNIC_CPL_QUEUE_STRIDE); // TODO configure/constant
+		ret = mqnic_create_cq_ring(priv, &priv->rx_cpl_ring[k], k,
+				hw_addr + priv->rx_cpl_queue_offset + k * MQNIC_CPL_QUEUE_STRIDE);
+		if (ret)
+			goto fail;
+
+		ret = mqnic_alloc_cq_ring(priv->rx_cpl_ring[k], 1024, MQNIC_CPL_SIZE); // TODO configure/constant
 		if (ret)
 			goto fail;
 	}

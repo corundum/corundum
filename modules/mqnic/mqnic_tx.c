@@ -37,11 +37,9 @@
 #include "mqnic.h"
 
 int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
-		int size, int stride, int index, u8 __iomem *hw_addr)
+		int index, u8 __iomem *hw_addr)
 {
-	struct device *dev = priv->dev;
 	struct mqnic_ring *ring;
-	int ret;
 
 	ring = kzalloc(sizeof(*ring), GFP_KERNEL);
 	if (!ring)
@@ -54,6 +52,39 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	ring->ring_index = index;
 	ring->active = 0;
 
+	ring->hw_addr = hw_addr;
+	ring->hw_ptr_mask = 0xffff;
+	ring->hw_head_ptr = hw_addr + MQNIC_QUEUE_HEAD_PTR_REG;
+	ring->hw_tail_ptr = hw_addr + MQNIC_QUEUE_TAIL_PTR_REG;
+
+	ring->head_ptr = 0;
+	ring->tail_ptr = 0;
+	ring->clean_tail_ptr = 0;
+
+	// deactivate queue
+	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+
+	*ring_ptr = ring;
+	return 0;
+}
+
+void mqnic_destroy_tx_ring(struct mqnic_ring **ring_ptr)
+{
+	struct mqnic_ring *ring = *ring_ptr;
+	*ring_ptr = NULL;
+
+	mqnic_free_tx_ring(ring);
+
+	kfree(ring);
+}
+
+int mqnic_alloc_tx_ring(struct mqnic_ring *ring, int size, int stride)
+{
+	int ret;
+
+	if (ring->active || ring->buf)
+		return -EINVAL;
+
 	ring->size = roundup_pow_of_two(size);
 	ring->full_size = ring->size >> 1;
 	ring->size_mask = ring->size - 1;
@@ -64,23 +95,15 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	ring->desc_block_size = 1 << ring->log_desc_block_size;
 
 	ring->tx_info = kvzalloc(sizeof(*ring->tx_info) * ring->size, GFP_KERNEL);
-	if (!ring->tx_info) {
-		ret = -ENOMEM;
-		goto fail_ring;
-	}
+	if (!ring->tx_info)
+		return -ENOMEM;
 
 	ring->buf_size = ring->size * ring->stride;
-	ring->buf = dma_alloc_coherent(dev, ring->buf_size,
-			&ring->buf_dma_addr, GFP_KERNEL);
+	ring->buf = dma_alloc_coherent(ring->dev, ring->buf_size, &ring->buf_dma_addr, GFP_KERNEL);
 	if (!ring->buf) {
 		ret = -ENOMEM;
 		goto fail_info;
 	}
-
-	ring->hw_addr = hw_addr;
-	ring->hw_ptr_mask = 0xffff;
-	ring->hw_head_ptr = hw_addr + MQNIC_QUEUE_HEAD_PTR_REG;
-	ring->hw_tail_ptr = hw_addr + MQNIC_QUEUE_TAIL_PTR_REG;
 
 	ring->head_ptr = 0;
 	ring->tail_ptr = 0;
@@ -100,36 +123,37 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
 			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
-	*ring_ptr = ring;
 	return 0;
 
 fail_info:
 	kvfree(ring->tx_info);
 	ring->tx_info = NULL;
-fail_ring:
-	kfree(ring);
-	*ring_ptr = NULL;
 	return ret;
 }
 
-void mqnic_destroy_tx_ring(struct mqnic_ring **ring_ptr)
+void mqnic_free_tx_ring(struct mqnic_ring *ring)
 {
-	struct mqnic_ring *ring = *ring_ptr;
-	*ring_ptr = NULL;
-
 	mqnic_deactivate_tx_ring(ring);
+
+	if (!ring->buf)
+		return;
 
 	mqnic_free_tx_buf(ring);
 
 	dma_free_coherent(ring->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
+	ring->buf = NULL;
+	ring->buf_dma_addr = 0;
+
 	kvfree(ring->tx_info);
 	ring->tx_info = NULL;
-	kfree(ring);
 }
 
 int mqnic_activate_tx_ring(struct mqnic_ring *ring, int cpl_index)
 {
 	mqnic_deactivate_tx_ring(ring);
+
+	if (!ring->buf)
+		return -EINVAL;
 
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);

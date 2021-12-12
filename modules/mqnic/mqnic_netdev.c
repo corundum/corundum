@@ -49,8 +49,9 @@ static int mqnic_start_port(struct net_device *ndev)
 		mqnic_arm_eq(priv->event_ring[k]);
 	}
 
-	// set up RX completion queues
-	for (k = 0; k < priv->rx_cpl_queue_count; k++) {
+	// set up RX queues
+	for (k = 0; k < min(priv->rx_queue_count, priv->rx_cpl_queue_count); k++) {
+		// set up CQ
 		mqnic_activate_cq_ring(priv->rx_cpl_ring[k],
 				priv->event_ring[k % priv->event_queue_count]);
 		priv->rx_cpl_ring[k]->handler = mqnic_rx_irq;
@@ -60,21 +61,19 @@ static int mqnic_start_port(struct net_device *ndev)
 		napi_enable(&priv->rx_cpl_ring[k]->napi);
 
 		mqnic_arm_cq(priv->rx_cpl_ring[k]);
-	}
 
-	// set up RX queues
-	for (k = 0; k < priv->rx_queue_count; k++) {
+		// set up queue
 		priv->rx_ring[k]->mtu = ndev->mtu;
 		if (ndev->mtu + ETH_HLEN <= PAGE_SIZE)
 			priv->rx_ring[k]->page_order = 0;
 		else
 			priv->rx_ring[k]->page_order = ilog2((ndev->mtu + ETH_HLEN + PAGE_SIZE - 1) / PAGE_SIZE - 1) + 1;
-		mqnic_activate_rx_ring(priv->rx_ring[k],
-				priv->rx_cpl_ring[k % priv->rx_cpl_queue_count]->index);
+		mqnic_activate_rx_ring(priv->rx_ring[k], priv->rx_cpl_ring[k]->index);
 	}
 
-	// set up TX completion queues
-	for (k = 0; k < priv->tx_cpl_queue_count; k++) {
+	// set up TX queues
+	for (k = 0; k < min(priv->tx_queue_count, priv->tx_cpl_queue_count); k++) {
+		// set up CQ
 		mqnic_activate_cq_ring(priv->tx_cpl_ring[k],
 				priv->event_ring[k % priv->event_queue_count]);
 		priv->tx_cpl_ring[k]->handler = mqnic_tx_irq;
@@ -84,12 +83,9 @@ static int mqnic_start_port(struct net_device *ndev)
 		napi_enable(&priv->tx_cpl_ring[k]->napi);
 
 		mqnic_arm_cq(priv->tx_cpl_ring[k]);
-	}
 
-	// set up TX queues
-	for (k = 0; k < priv->tx_queue_count; k++) {
-		mqnic_activate_tx_ring(priv->tx_ring[k],
-				priv->tx_cpl_ring[k % priv->tx_cpl_queue_count]->index);
+		// set up queue
+		mqnic_activate_tx_ring(priv->tx_ring[k], priv->tx_cpl_ring[k]->index);
 		priv->tx_ring[k]->tx_queue = netdev_get_tx_queue(ndev, k);
 	}
 
@@ -140,11 +136,9 @@ static int mqnic_stop_port(struct net_device *ndev)
 		mqnic_deactivate_port(priv->port[k]);
 
 	// deactivate TX queues
-	for (k = 0; k < priv->tx_queue_count; k++)
+	for (k = 0; k < min(priv->tx_queue_count, priv->tx_cpl_queue_count); k++) {
 		mqnic_deactivate_tx_ring(priv->tx_ring[k]);
 
-	// deactivate TX completion queues
-	for (k = 0; k < priv->tx_cpl_queue_count; k++) {
 		mqnic_deactivate_cq_ring(priv->tx_cpl_ring[k]);
 
 		napi_disable(&priv->tx_cpl_ring[k]->napi);
@@ -152,11 +146,9 @@ static int mqnic_stop_port(struct net_device *ndev)
 	}
 
 	// deactivate RX queues
-	for (k = 0; k < priv->rx_queue_count; k++)
+	for (k = 0; k < min(priv->rx_queue_count, priv->rx_cpl_queue_count); k++) {
 		mqnic_deactivate_rx_ring(priv->rx_ring[k]);
 
-	// deactivate RX completion queues
-	for (k = 0; k < priv->rx_cpl_queue_count; k++) {
 		mqnic_deactivate_cq_ring(priv->rx_cpl_ring[k]);
 
 		napi_disable(&priv->rx_cpl_ring[k]->napi);

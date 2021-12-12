@@ -178,10 +178,10 @@ void mqnic_deactivate_eq_ring(struct mqnic_eq_ring *ring)
 	iowrite32(0, ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
 
 	// unregister interrupt
-	if (ring->irq) {
+	if (ring->irq)
 		ret = atomic_notifier_chain_unregister(&ring->irq->nh, &ring->irq_nb);
-		ring->irq = NULL;
-	}
+
+	ring->irq = NULL;
 
 	ring->active = 0;
 }

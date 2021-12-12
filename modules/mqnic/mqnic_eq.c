@@ -130,24 +130,22 @@ void mqnic_free_eq_ring(struct mqnic_eq_ring *ring)
 	ring->buf_dma_addr = 0;
 }
 
-int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, int int_index)
+int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, struct mqnic_irq *irq)
 {
 	int ret = 0;
 
 	mqnic_deactivate_eq_ring(ring);
 
-	if (!ring->buf)
-		return -EINVAL;
-
-	if (int_index < 0 || int_index >= ring->priv->mdev->irq_count)
+	if (!ring->buf || !irq)
 		return -EINVAL;
 
 	// register interrupt
-	ring->int_index = int_index;
-	ret = atomic_notifier_chain_register(&ring->priv->mdev->irq_nh[int_index], &ring->irq_nb);
-
+	ret = atomic_notifier_chain_register(&irq->nh, &ring->irq_nb);
 	if (ret)
 		return ret;
+
+	ring->irq = irq;
+	ring->irq_index = irq->index;
 
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -155,7 +153,7 @@ int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, int int_index)
 	iowrite32(ring->buf_dma_addr, ring->hw_addr + MQNIC_EVENT_QUEUE_BASE_ADDR_REG + 0);
 	iowrite32(ring->buf_dma_addr >> 32, ring->hw_addr + MQNIC_EVENT_QUEUE_BASE_ADDR_REG + 4);
 	// set interrupt index
-	iowrite32(int_index, ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
+	iowrite32(ring->irq_index, ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
 	// set pointers
 	iowrite32(ring->head_ptr & ring->hw_ptr_mask,
 			ring->hw_addr + MQNIC_EVENT_QUEUE_HEAD_PTR_REG);
@@ -167,7 +165,7 @@ int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, int int_index)
 
 	ring->active = 1;
 
-	return ret;
+	return 0;
 }
 
 void mqnic_deactivate_eq_ring(struct mqnic_eq_ring *ring)
@@ -177,11 +175,13 @@ void mqnic_deactivate_eq_ring(struct mqnic_eq_ring *ring)
 	// deactivate queue
 	iowrite32(ilog2(ring->size), ring->hw_addr + MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG);
 	// disarm queue
-	iowrite32(ring->int_index, ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
+	iowrite32(0, ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
 
 	// unregister interrupt
-	if (ring->active)
-		ret = atomic_notifier_chain_unregister(&ring->priv->mdev->irq_nh[ring->int_index], &ring->irq_nb);
+	if (ring->irq) {
+		ret = atomic_notifier_chain_unregister(&ring->irq->nh, &ring->irq_nb);
+		ring->irq = NULL;
+	}
 
 	ring->active = 0;
 }
@@ -208,7 +208,10 @@ void mqnic_eq_write_tail_ptr(struct mqnic_eq_ring *ring)
 
 void mqnic_arm_eq(struct mqnic_eq_ring *ring)
 {
-	iowrite32(ring->int_index | MQNIC_EVENT_QUEUE_ARM_MASK,
+	if (!ring->active)
+		return;
+
+	iowrite32(ring->irq_index | MQNIC_EVENT_QUEUE_ARM_MASK,
 			ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
 }
 

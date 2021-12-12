@@ -78,6 +78,12 @@ struct mqnic_i2c_bus {
 	struct i2c_adapter adapter;
 };
 
+struct mqnic_irq {
+	int index;
+	int irqn;
+	struct atomic_notifier_head nh;
+};
+
 struct mqnic_dev {
 	struct device *dev;
 	struct pci_dev *pdev;
@@ -103,8 +109,7 @@ struct mqnic_dev {
 	char name[16];
 
 	int irq_count;
-	int irq_map[32];
-	struct atomic_notifier_head irq_nh[MQNIC_MAX_IRQ];
+	struct mqnic_irq *irq[MQNIC_MAX_IRQ];
 
 	unsigned int id;
 	struct list_head dev_list_node;
@@ -255,7 +260,8 @@ struct mqnic_eq_ring {
 	struct net_device *ndev;
 	struct mqnic_priv *priv;
 	int ring_index;
-	int int_index;
+	struct mqnic_irq *irq;
+	int irq_index;
 	int active;
 
 	struct notifier_block irq_nb;
@@ -334,6 +340,10 @@ struct mqnic_priv {
 
 // mqnic_main.c
 
+// mqnic_irq.c
+int mqnic_irq_init_pcie(struct mqnic_dev *mdev);
+void mqnic_irq_deinit_pcie(struct mqnic_dev *mdev);
+
 // mqnic_dev.c
 extern const struct file_operations mqnic_fops;
 
@@ -380,7 +390,7 @@ int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_pt
 void mqnic_destroy_eq_ring(struct mqnic_eq_ring **ring_ptr);
 int mqnic_alloc_eq_ring(struct mqnic_eq_ring *ring, int size, int stride);
 void mqnic_free_eq_ring(struct mqnic_eq_ring *ring);
-int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, int int_index);
+int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, struct mqnic_irq *irq);
 void mqnic_deactivate_eq_ring(struct mqnic_eq_ring *ring);
 bool mqnic_is_eq_ring_empty(const struct mqnic_eq_ring *ring);
 bool mqnic_is_eq_ring_full(const struct mqnic_eq_ring *ring);

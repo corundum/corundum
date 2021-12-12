@@ -78,15 +78,6 @@ static unsigned int mqnic_get_free_id(void)
 	return id;
 }
 
-static irqreturn_t mqnic_interrupt(int irq, void *data)
-{
-	struct atomic_notifier_head *nh = data;
-
-	atomic_notifier_call_chain(nh, 0, NULL);
-
-	return IRQ_HANDLED;
-}
-
 static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	int ret = 0;
@@ -261,28 +252,11 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 		goto fail_map_bars;
 	}
 
-	// Allocate MSI IRQs
-	mqnic->irq_count = pci_alloc_irq_vectors(pdev, 1, MQNIC_MAX_IRQ, PCI_IRQ_MSI);
-	if (mqnic->irq_count < 0) {
-		ret = -ENOMEM;
-		dev_err(dev, "Failed to allocate IRQs");
-		goto fail_map_bars;
-	}
-
 	// Set up interrupts
-	for (k = 0; k < MQNIC_MAX_IRQ; k++) {
-		ATOMIC_INIT_NOTIFIER_HEAD(&mqnic->irq_nh[k]);
-	}
-
-	for (k = 0; k < mqnic->irq_count; k++) {
-		ret = pci_request_irq(pdev, k, mqnic_interrupt, NULL,
-				&mqnic->irq_nh[k], "%s-%d", mqnic->name, k);
-		if (ret < 0) {
-			dev_err(dev, "Failed to request IRQ");
-			goto fail_irq;
-		}
-
-		mqnic->irq_map[k] = pci_irq_vector(pdev, k);
+	ret = mqnic_irq_init_pcie(mqnic);
+	if (ret) {
+		dev_err(dev, "Failed to set up interrupts");
+		goto fail_map_bars;
 	}
 
 	// Board-specific init
@@ -346,11 +320,7 @@ fail_init_netdev:
 	mqnic_unregister_phc(mqnic);
 	pci_clear_master(pdev);
 fail_board:
-	mqnic_board_deinit(mqnic);
-	for (k = 0; k < mqnic->irq_count; k++)
-		pci_free_irq(pdev, k, &mqnic->irq_nh[k]);
-fail_irq:
-	pci_free_irq_vectors(pdev);
+	mqnic_irq_deinit_pcie(mqnic);
 fail_map_bars:
 	if (mqnic->hw_addr)
 		pci_iounmap(pdev, mqnic->hw_addr);
@@ -390,9 +360,7 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
 
 	pci_clear_master(pdev);
 	mqnic_board_deinit(mqnic);
-	for (k = 0; k < mqnic->irq_count; k++)
-		pci_free_irq(pdev, k, &mqnic->irq_nh[k]);
-	pci_free_irq_vectors(pdev);
+	mqnic_irq_deinit_pcie(mqnic);
 	if (mqnic->hw_addr)
 		pci_iounmap(pdev, mqnic->hw_addr);
 	if (mqnic->app_hw_addr)

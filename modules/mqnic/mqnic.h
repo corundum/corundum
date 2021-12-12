@@ -232,6 +232,7 @@ struct mqnic_cq_ring {
 	struct mqnic_priv *priv;
 	struct napi_struct napi;
 	int index;
+	struct mqnic_eq_ring *eq_ring;
 	int eq_index;
 	int active;
 
@@ -405,7 +406,7 @@ int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_pt
 void mqnic_destroy_cq_ring(struct mqnic_cq_ring **ring_ptr);
 int mqnic_alloc_cq_ring(struct mqnic_cq_ring *ring, int size, int stride);
 void mqnic_free_cq_ring(struct mqnic_cq_ring *ring);
-int mqnic_activate_cq_ring(struct mqnic_cq_ring *ring, int eq_index);
+int mqnic_activate_cq_ring(struct mqnic_cq_ring *ring, struct mqnic_eq_ring *eq_ring);
 void mqnic_deactivate_cq_ring(struct mqnic_cq_ring *ring);
 bool mqnic_is_cq_ring_empty(const struct mqnic_cq_ring *ring);
 bool mqnic_is_cq_ring_full(const struct mqnic_cq_ring *ring);

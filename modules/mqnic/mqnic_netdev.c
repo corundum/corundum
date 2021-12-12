@@ -52,7 +52,7 @@ static int mqnic_start_port(struct net_device *ndev)
 	// set up RX completion queues
 	for (k = 0; k < priv->rx_cpl_queue_count; k++) {
 		mqnic_activate_cq_ring(priv->rx_cpl_ring[k],
-				priv->event_ring[k % priv->event_queue_count]->index);
+				priv->event_ring[k % priv->event_queue_count]);
 		priv->rx_cpl_ring[k]->handler = mqnic_rx_irq;
 
 		netif_napi_add(ndev, &priv->rx_cpl_ring[k]->napi,
@@ -76,7 +76,7 @@ static int mqnic_start_port(struct net_device *ndev)
 	// set up TX completion queues
 	for (k = 0; k < priv->tx_cpl_queue_count; k++) {
 		mqnic_activate_cq_ring(priv->tx_cpl_ring[k],
-				priv->event_ring[k % priv->event_queue_count]->index);
+				priv->event_ring[k % priv->event_queue_count]);
 		priv->tx_cpl_ring[k]->handler = mqnic_tx_irq;
 
 		netif_tx_napi_add(ndev, &priv->tx_cpl_ring[k]->napi,

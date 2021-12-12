@@ -114,8 +114,7 @@ void mqnic_destroy_eq_ring(struct mqnic_eq_ring **ring_ptr)
 	struct device *dev = ring->priv->dev;
 	*ring_ptr = NULL;
 
-	if (ring->active)
-		mqnic_deactivate_eq_ring(ring);
+	mqnic_deactivate_eq_ring(ring);
 
 	dma_free_coherent(dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
 	kfree(ring);
@@ -125,8 +124,7 @@ int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, int int_index)
 {
 	int ret = 0;
 
-	if (ring->active)
-		mqnic_deactivate_eq_ring(ring);
+	mqnic_deactivate_eq_ring(ring);
 
 	if (int_index < 0 || int_index >= ring->priv->mdev->irq_count)
 		return -EINVAL;

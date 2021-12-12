@@ -117,8 +117,7 @@ void mqnic_destroy_tx_ring(struct mqnic_ring **ring_ptr)
 	struct mqnic_ring *ring = *ring_ptr;
 	*ring_ptr = NULL;
 
-	if (ring->active)
-		mqnic_deactivate_tx_ring(ring);
+	mqnic_deactivate_tx_ring(ring);
 
 	mqnic_free_tx_buf(ring);
 
@@ -130,8 +129,7 @@ void mqnic_destroy_tx_ring(struct mqnic_ring **ring_ptr)
 
 int mqnic_activate_tx_ring(struct mqnic_ring *ring, int cpl_index)
 {
-	if (ring->active)
-		mqnic_deactivate_tx_ring(ring);
+	mqnic_deactivate_tx_ring(ring);
 
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);

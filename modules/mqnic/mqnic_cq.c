@@ -99,8 +99,7 @@ void mqnic_destroy_cq_ring(struct mqnic_cq_ring **ring_ptr)
 	struct mqnic_cq_ring *ring = *ring_ptr;
 	*ring_ptr = NULL;
 
-	if (ring->active)
-		mqnic_deactivate_cq_ring(ring);
+	mqnic_deactivate_cq_ring(ring);
 
 	dma_free_coherent(ring->priv->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
 	kfree(ring);
@@ -108,8 +107,7 @@ void mqnic_destroy_cq_ring(struct mqnic_cq_ring **ring_ptr)
 
 int mqnic_activate_cq_ring(struct mqnic_cq_ring *ring, int eq_index)
 {
-	if (ring->active)
-		mqnic_deactivate_cq_ring(ring);
+	mqnic_deactivate_cq_ring(ring);
 
 	ring->eq_index = eq_index;
 

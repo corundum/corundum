@@ -96,12 +96,12 @@ static int mqnic_start_port(struct net_device *ndev)
 	// configure ports
 	for (k = 0; k < priv->port_count; k++) {
 		// set port MTU
-		mqnic_port_set_tx_mtu(priv->ports[k], ndev->mtu + ETH_HLEN);
-		mqnic_port_set_rx_mtu(priv->ports[k], ndev->mtu + ETH_HLEN);
+		mqnic_port_set_tx_mtu(priv->port[k], ndev->mtu + ETH_HLEN);
+		mqnic_port_set_rx_mtu(priv->port[k], ndev->mtu + ETH_HLEN);
 	}
 
 	// enable first port
-	mqnic_activate_port(priv->ports[0]);
+	mqnic_activate_port(priv->port[0]);
 
 	priv->port_up = true;
 
@@ -137,7 +137,7 @@ static int mqnic_stop_port(struct net_device *ndev)
 
 	// disable ports
 	for (k = 0; k < priv->port_count; k++)
-		mqnic_deactivate_port(priv->ports[k]);
+		mqnic_deactivate_port(priv->port[k]);
 
 	// deactivate TX queues
 	for (k = 0; k < priv->tx_queue_count; k++)
@@ -513,12 +513,12 @@ int mqnic_create_netdev(struct mqnic_dev *mdev, struct net_device **ndev_ptr,
 	}
 
 	for (k = 0; k < priv->port_count; k++) {
-		ret = mqnic_create_port(priv, &priv->ports[k], k,
+		ret = mqnic_create_port(priv, &priv->port[k], k,
 				hw_addr + priv->port_offset + k * priv->port_stride);
 		if (ret)
 			goto fail;
 
-		mqnic_port_set_rss_mask(priv->ports[k], 0xffffffff);
+		mqnic_port_set_rss_mask(priv->port[k], 0xffffffff);
 	}
 
 	// entry points
@@ -540,8 +540,8 @@ int mqnic_create_netdev(struct mqnic_dev *mdev, struct net_device **ndev_ptr,
 	ndev->min_mtu = ETH_MIN_MTU;
 	ndev->max_mtu = 1500;
 
-	if (priv->ports[0] && priv->ports[0]->port_mtu)
-		ndev->max_mtu = priv->ports[0]->port_mtu - ETH_HLEN;
+	if (priv->port[0] && priv->port[0]->port_mtu)
+		ndev->max_mtu = priv->port[0]->port_mtu - ETH_HLEN;
 
 	netif_carrier_off(ndev);
 
@@ -594,9 +594,9 @@ void mqnic_destroy_netdev(struct net_device **ndev_ptr)
 		if (priv->rx_cpl_ring[k])
 			mqnic_destroy_cq_ring(&priv->rx_cpl_ring[k]);
 
-	for (k = 0; k < ARRAY_SIZE(priv->ports); k++)
-		if (priv->ports[k])
-			mqnic_destroy_port(&priv->ports[k]);
+	for (k = 0; k < ARRAY_SIZE(priv->port); k++)
+		if (priv->port[k])
+			mqnic_destroy_port(&priv->port[k]);
 
 	free_netdev(ndev);
 }

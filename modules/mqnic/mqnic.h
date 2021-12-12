@@ -323,7 +323,7 @@ struct mqnic_priv {
 	struct mqnic_cq_ring *tx_cpl_ring[MQNIC_MAX_TX_CPL_RINGS];
 	struct mqnic_ring *rx_ring[MQNIC_MAX_RX_RINGS];
 	struct mqnic_cq_ring *rx_cpl_ring[MQNIC_MAX_RX_CPL_RINGS];
-	struct mqnic_port *ports[MQNIC_MAX_PORTS];
+	struct mqnic_port *port[MQNIC_MAX_PORTS];
 
 	struct hwtstamp_config hwts_config;
 

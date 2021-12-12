@@ -222,6 +222,7 @@ struct mqnic_cq_ring {
 	u8 *buf;
 	dma_addr_t buf_dma_addr;
 
+	struct device *dev;
 	struct net_device *ndev;
 	struct mqnic_priv *priv;
 	struct napi_struct napi;
@@ -250,6 +251,7 @@ struct mqnic_eq_ring {
 	u8 *buf;
 	dma_addr_t buf_dma_addr;
 
+	struct device *dev;
 	struct net_device *ndev;
 	struct mqnic_priv *priv;
 	int ring_index;

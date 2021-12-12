@@ -54,6 +54,7 @@ int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_pt
 	if (!ring)
 		return -ENOMEM;
 
+	ring->dev = priv->dev;
 	ring->ndev = priv->ndev;
 	ring->priv = priv;
 
@@ -89,14 +90,12 @@ void mqnic_destroy_eq_ring(struct mqnic_eq_ring **ring_ptr)
 
 int mqnic_alloc_eq_ring(struct mqnic_eq_ring *ring, int size, int stride)
 {
-	struct device *dev = ring->priv->dev;
-
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
 	ring->stride = roundup_pow_of_two(stride);
 
 	ring->buf_size = ring->size * ring->stride;
-	ring->buf = dma_alloc_coherent(dev, ring->buf_size, &ring->buf_dma_addr, GFP_KERNEL);
+	ring->buf = dma_alloc_coherent(ring->dev, ring->buf_size, &ring->buf_dma_addr, GFP_KERNEL);
 	if (!ring->buf)
 		return -ENOMEM;
 
@@ -121,14 +120,12 @@ int mqnic_alloc_eq_ring(struct mqnic_eq_ring *ring, int size, int stride)
 
 void mqnic_free_eq_ring(struct mqnic_eq_ring *ring)
 {
-	struct device *dev = ring->priv->dev;
-
 	mqnic_deactivate_eq_ring(ring);
 
 	if (!ring->buf)
 		return;
 
-	dma_free_coherent(dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
+	dma_free_coherent(ring->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
 	ring->buf = NULL;
 	ring->buf_dma_addr = 0;
 }
@@ -239,7 +236,7 @@ void mqnic_process_eq(struct mqnic_eq_ring *eq_ring)
 		if (event->type == MQNIC_EVENT_TYPE_TX_CPL) {
 			// transmit completion event
 			if (unlikely(le16_to_cpu(event->source) > priv->tx_cpl_queue_count)) {
-				dev_err(priv->dev, "%s on port %d: unknown event source %d (index %d, type %d)",
+				dev_err(eq_ring->dev, "%s on port %d: unknown event source %d (index %d, type %d)",
 						__func__, priv->index, le16_to_cpu(event->source), eq_index,
 						le16_to_cpu(event->type));
 				print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
@@ -252,7 +249,7 @@ void mqnic_process_eq(struct mqnic_eq_ring *eq_ring)
 		} else if (le16_to_cpu(event->type) == MQNIC_EVENT_TYPE_RX_CPL) {
 			// receive completion event
 			if (unlikely(le16_to_cpu(event->source) > priv->rx_cpl_queue_count)) {
-				dev_err(priv->dev, "%s on port %d: unknown event source %d (index %d, type %d)",
+				dev_err(eq_ring->dev, "%s on port %d: unknown event source %d (index %d, type %d)",
 						__func__, priv->index, le16_to_cpu(event->source), eq_index,
 						le16_to_cpu(event->type));
 				print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
@@ -263,7 +260,7 @@ void mqnic_process_eq(struct mqnic_eq_ring *eq_ring)
 					cq_ring->handler(cq_ring);
 			}
 		} else {
-			dev_err(priv->dev, "%s on port %d: unknown event type %d (index %d, source %d)",
+			dev_err(eq_ring->dev, "%s on port %d: unknown event type %d (index %d, source %d)",
 					__func__, priv->index, le16_to_cpu(event->type), eq_index,
 					le16_to_cpu(event->source));
 			print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,

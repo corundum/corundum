@@ -44,6 +44,7 @@ int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_pt
 	if (!ring)
 		return -ENOMEM;
 
+	ring->dev = priv->dev;
 	ring->ndev = priv->ndev;
 	ring->priv = priv;
 
@@ -77,14 +78,12 @@ void mqnic_destroy_cq_ring(struct mqnic_cq_ring **ring_ptr)
 
 int mqnic_alloc_cq_ring(struct mqnic_cq_ring *ring, int size, int stride)
 {
-	struct device *dev = ring->priv->dev;
-
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
 	ring->stride = roundup_pow_of_two(stride);
 
 	ring->buf_size = ring->size * ring->stride;
-	ring->buf = dma_alloc_coherent(dev, ring->buf_size, &ring->buf_dma_addr, GFP_KERNEL);
+	ring->buf = dma_alloc_coherent(ring->dev, ring->buf_size, &ring->buf_dma_addr, GFP_KERNEL);
 	if (!ring->buf)
 		return -ENOMEM;
 
@@ -109,14 +108,12 @@ int mqnic_alloc_cq_ring(struct mqnic_cq_ring *ring, int size, int stride)
 
 void mqnic_free_cq_ring(struct mqnic_cq_ring *ring)
 {
-	struct device *dev = ring->priv->dev;
-
 	mqnic_deactivate_cq_ring(ring);
 
 	if (!ring->buf)
 		return;
 
-	dma_free_coherent(dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
+	dma_free_coherent(ring->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
 	ring->buf = NULL;
 	ring->buf_dma_addr = 0;
 }

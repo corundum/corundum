@@ -48,7 +48,7 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	ring->ndev = priv->ndev;
 	ring->priv = priv;
 
-	ring->ring_index = index;
+	ring->index = index;
 	ring->active = 0;
 
 	ring->hw_addr = hw_addr;
@@ -302,7 +302,7 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 {
 	struct mqnic_priv *priv = cq_ring->priv;
 	struct net_device *ndev = priv->ndev;
-	struct mqnic_ring *rx_ring = priv->rx_ring[cq_ring->ring_index];
+	struct mqnic_ring *rx_ring = priv->rx_ring[cq_ring->index];
 	struct mqnic_rx_info *rx_info;
 	struct mqnic_cpl *cpl;
 	struct sk_buff *skb;
@@ -335,7 +335,7 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 		if (unlikely(!page)) {
 			dev_err(priv->dev, "%s: ring %d null page at index %d",
-					__func__, cq_ring->ring_index, ring_index);
+					__func__, cq_ring->index, ring_index);
 			print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 					cpl, MQNIC_CPL_SIZE, true);
 			break;
@@ -344,7 +344,7 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		skb = napi_get_frags(&cq_ring->napi);
 		if (unlikely(!skb)) {
 			dev_err(priv->dev, "%s: ring %d failed to allocate skb",
-					__func__, cq_ring->ring_index);
+					__func__, cq_ring->index);
 			break;
 		}
 
@@ -352,7 +352,7 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		if (priv->if_features & MQNIC_IF_FEATURE_PTP_TS)
 			skb_hwtstamps(skb)->hwtstamp = mqnic_read_cpl_ts(priv->mdev, rx_ring, cpl);
 
-		skb_record_rx_queue(skb, rx_ring->ring_index);
+		skb_record_rx_queue(skb, rx_ring->index);
 
 		// RX hardware checksum
 		if (ndev->features & NETIF_F_RXCSUM) {

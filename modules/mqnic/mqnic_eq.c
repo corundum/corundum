@@ -58,7 +58,7 @@ int mqnic_create_eq_ring(struct mqnic_priv *priv, struct mqnic_eq_ring **ring_pt
 	ring->ndev = priv->ndev;
 	ring->priv = priv;
 
-	ring->ring_index = index;
+	ring->index = index;
 	ring->active = 0;
 
 	ring->irq_nb.notifier_call = mqnic_eq_int;

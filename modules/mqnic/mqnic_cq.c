@@ -48,7 +48,7 @@ int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_pt
 	ring->ndev = priv->ndev;
 	ring->priv = priv;
 
-	ring->ring_index = index;
+	ring->index = index;
 	ring->active = 0;
 
 	ring->hw_addr = hw_addr;

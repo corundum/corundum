@@ -49,7 +49,7 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	ring->ndev = priv->ndev;
 	ring->priv = priv;
 
-	ring->ring_index = index;
+	ring->index = index;
 	ring->active = 0;
 
 	ring->hw_addr = hw_addr;
@@ -246,7 +246,7 @@ int mqnic_free_tx_buf(struct mqnic_ring *ring)
 int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 {
 	struct mqnic_priv *priv = cq_ring->priv;
-	struct mqnic_ring *tx_ring = priv->tx_ring[cq_ring->ring_index];
+	struct mqnic_ring *tx_ring = priv->tx_ring[cq_ring->index];
 	struct mqnic_tx_info *tx_info;
 	struct mqnic_cpl *cpl;
 	struct skb_shared_hwtstamps hwts;

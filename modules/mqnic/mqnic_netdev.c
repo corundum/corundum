@@ -54,7 +54,6 @@ static int mqnic_start_port(struct net_device *ndev)
 		// set up CQ
 		mqnic_activate_cq_ring(priv->rx_cpl_ring[k],
 				priv->event_ring[k % priv->event_queue_count]);
-		priv->rx_cpl_ring[k]->handler = mqnic_rx_irq;
 
 		netif_napi_add(ndev, &priv->rx_cpl_ring[k]->napi,
 				mqnic_poll_rx_cq, NAPI_POLL_WEIGHT);
@@ -68,7 +67,7 @@ static int mqnic_start_port(struct net_device *ndev)
 			priv->rx_ring[k]->page_order = 0;
 		else
 			priv->rx_ring[k]->page_order = ilog2((ndev->mtu + ETH_HLEN + PAGE_SIZE - 1) / PAGE_SIZE - 1) + 1;
-		mqnic_activate_rx_ring(priv->rx_ring[k], priv->rx_cpl_ring[k]->index);
+		mqnic_activate_rx_ring(priv->rx_ring[k], priv->rx_cpl_ring[k]);
 	}
 
 	// set up TX queues
@@ -76,7 +75,6 @@ static int mqnic_start_port(struct net_device *ndev)
 		// set up CQ
 		mqnic_activate_cq_ring(priv->tx_cpl_ring[k],
 				priv->event_ring[k % priv->event_queue_count]);
-		priv->tx_cpl_ring[k]->handler = mqnic_tx_irq;
 
 		netif_tx_napi_add(ndev, &priv->tx_cpl_ring[k]->napi,
 				mqnic_poll_tx_cq, NAPI_POLL_WEIGHT);
@@ -85,8 +83,8 @@ static int mqnic_start_port(struct net_device *ndev)
 		mqnic_arm_cq(priv->tx_cpl_ring[k]);
 
 		// set up queue
-		mqnic_activate_tx_ring(priv->tx_ring[k], priv->tx_cpl_ring[k]->index);
 		priv->tx_ring[k]->tx_queue = netdev_get_tx_queue(ndev, k);
+		mqnic_activate_tx_ring(priv->tx_ring[k], priv->tx_cpl_ring[k]);
 	}
 
 	// configure ports

@@ -206,6 +206,7 @@ struct mqnic_ring {
 	struct net_device *ndev;
 	struct mqnic_priv *priv;
 	int index;
+	struct mqnic_cq_ring *cq_ring;
 	int active;
 
 	u32 hw_ptr_mask;
@@ -233,6 +234,7 @@ struct mqnic_cq_ring {
 	struct napi_struct napi;
 	int index;
 	struct mqnic_eq_ring *eq_ring;
+	struct mqnic_ring *src_ring;
 	int eq_index;
 	int active;
 
@@ -420,7 +422,7 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 void mqnic_destroy_tx_ring(struct mqnic_ring **ring_ptr);
 int mqnic_alloc_tx_ring(struct mqnic_ring *ring, int size, int stride);
 void mqnic_free_tx_ring(struct mqnic_ring *ring);
-int mqnic_activate_tx_ring(struct mqnic_ring *ring, int cpl_index);
+int mqnic_activate_tx_ring(struct mqnic_ring *ring, struct mqnic_cq_ring *cq_ring);
 void mqnic_deactivate_tx_ring(struct mqnic_ring *ring);
 bool mqnic_is_tx_ring_empty(const struct mqnic_ring *ring);
 bool mqnic_is_tx_ring_full(const struct mqnic_ring *ring);
@@ -439,7 +441,7 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 void mqnic_destroy_rx_ring(struct mqnic_ring **ring_ptr);
 int mqnic_alloc_rx_ring(struct mqnic_ring *ring, int size, int stride);
 void mqnic_free_rx_ring(struct mqnic_ring *ring);
-int mqnic_activate_rx_ring(struct mqnic_ring *ring, int cpl_index);
+int mqnic_activate_rx_ring(struct mqnic_ring *ring, struct mqnic_cq_ring *cq_ring);
 void mqnic_deactivate_rx_ring(struct mqnic_ring *ring);
 bool mqnic_is_rx_ring_empty(const struct mqnic_ring *ring);
 bool mqnic_is_rx_ring_full(const struct mqnic_ring *ring);

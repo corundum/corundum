@@ -86,6 +86,9 @@ static int mqnic_start_port(struct net_device *ndev)
 		// set port MTU
 		mqnic_port_set_tx_mtu(priv->port[k], ndev->mtu + ETH_HLEN);
 		mqnic_port_set_rx_mtu(priv->port[k], ndev->mtu + ETH_HLEN);
+
+		// configure RSS
+		mqnic_port_set_rss_mask(priv->port[k], 0xffffffff);
 	}
 
 	// enable first port

@@ -35,7 +35,7 @@
 
 #include "mqnic.h"
 
-int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_ptr,
+int mqnic_create_cq_ring(struct mqnic_if *interface, struct mqnic_cq_ring **ring_ptr,
 		int index, u8 __iomem *hw_addr)
 {
 	struct mqnic_cq_ring *ring;
@@ -44,9 +44,8 @@ int mqnic_create_cq_ring(struct mqnic_priv *priv, struct mqnic_cq_ring **ring_pt
 	if (!ring)
 		return -ENOMEM;
 
-	ring->dev = priv->dev;
-	ring->ndev = priv->ndev;
-	ring->priv = priv;
+	ring->dev = interface->dev;
+	ring->interface = interface;
 
 	ring->index = index;
 	ring->active = 0;

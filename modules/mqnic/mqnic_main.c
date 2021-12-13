@@ -82,7 +82,6 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 {
 	int ret = 0;
 	struct mqnic_dev *mqnic;
-	struct mqnic_priv *priv;
 	struct device *dev = &pdev->dev;
 
 	int k = 0;
@@ -278,17 +277,16 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 
 	for (k = 0; k < mqnic->if_count; k++) {
 		dev_info(dev, "Creating interface %d", k);
-		ret = mqnic_create_netdev(mqnic, &mqnic->ndev[k], k, mqnic->hw_addr + k * mqnic->if_stride);
+		ret = mqnic_create_interface(mqnic, &mqnic->interface[k], k, mqnic->hw_addr + k * mqnic->if_stride);
 		if (ret) {
-			dev_err(dev, "Failed to create net_device");
-			goto fail_init_netdev;
+			dev_err(dev, "Failed to create interface: %d", ret);
+			goto fail_create_if;
 		}
 	}
 
-	// pass module I2C clients to net_device instances
+	// pass module I2C clients to interface instances
 	for (k = 0; k < mqnic->if_count; k++) {
-		priv = netdev_priv(mqnic->ndev[k]);
-		priv->mod_i2c_client = mqnic->mod_i2c_client[k];
+		mqnic->interface[k]->mod_i2c_client = mqnic->mod_i2c_client[k];
 	}
 
 	mqnic->misc_dev.minor = MISC_DYNAMIC_MINOR;
@@ -313,10 +311,10 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 
 	// error handling
 fail_miscdev:
-fail_init_netdev:
-	for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
-		if (mqnic->ndev[k])
-			mqnic_destroy_netdev(&mqnic->ndev[k]);
+fail_create_if:
+	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++)
+		if (mqnic->interface[k])
+			mqnic_destroy_interface(&mqnic->interface[k]);
 	mqnic_unregister_phc(mqnic);
 	pci_clear_master(pdev);
 fail_board:
@@ -352,9 +350,9 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
 	list_del(&mqnic->dev_list_node);
 	spin_unlock(&mqnic_devices_lock);
 
-	for (k = 0; k < ARRAY_SIZE(mqnic->ndev); k++)
-		if (mqnic->ndev[k])
-			mqnic_destroy_netdev(&mqnic->ndev[k]);
+	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++)
+		if (mqnic->interface[k])
+			mqnic_destroy_interface(&mqnic->interface[k]);
 
 	mqnic_unregister_phc(mqnic);
 

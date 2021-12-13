@@ -4,6 +4,7 @@ obj-m += mqnic.o
 mqnic-y += mqnic_main.o
 mqnic-y += mqnic_irq.o
 mqnic-y += mqnic_dev.o
+mqnic-y += mqnic_if.o
 mqnic-y += mqnic_netdev.o
 mqnic-y += mqnic_port.o
 mqnic-y += mqnic_ptp.o

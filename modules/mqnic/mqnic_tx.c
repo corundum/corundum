@@ -36,7 +36,7 @@
 #include <linux/version.h>
 #include "mqnic.h"
 
-int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
+int mqnic_create_tx_ring(struct mqnic_if *interface, struct mqnic_ring **ring_ptr,
 		int index, u8 __iomem *hw_addr)
 {
 	struct mqnic_ring *ring;
@@ -45,9 +45,8 @@ int mqnic_create_tx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	if (!ring)
 		return -ENOMEM;
 
-	ring->dev = priv->dev;
-	ring->ndev = priv->ndev;
-	ring->priv = priv;
+	ring->dev = interface->dev;
+	ring->interface = interface;
 
 	ring->index = index;
 	ring->active = 0;
@@ -148,13 +147,15 @@ void mqnic_free_tx_ring(struct mqnic_ring *ring)
 	ring->tx_info = NULL;
 }
 
-int mqnic_activate_tx_ring(struct mqnic_ring *ring, struct mqnic_cq_ring *cq_ring)
+int mqnic_activate_tx_ring(struct mqnic_ring *ring, struct mqnic_priv *priv,
+		struct mqnic_cq_ring *cq_ring)
 {
 	mqnic_deactivate_tx_ring(ring);
 
-	if (!ring->buf || !cq_ring || cq_ring->handler || cq_ring->src_ring)
+	if (!ring->buf || !priv || !cq_ring || cq_ring->handler || cq_ring->src_ring)
 		return -EINVAL;
 
+	ring->priv = priv;
 	ring->cq_ring = cq_ring;
 	cq_ring->src_ring = ring;
 	cq_ring->handler = mqnic_tx_irq;
@@ -189,6 +190,7 @@ void mqnic_deactivate_tx_ring(struct mqnic_ring *ring)
 		ring->cq_ring->handler = NULL;
 	}
 
+	ring->priv = NULL;
 	ring->cq_ring = NULL;
 
 	ring->active = 0;
@@ -256,8 +258,9 @@ int mqnic_free_tx_buf(struct mqnic_ring *ring)
 
 int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 {
-	struct mqnic_priv *priv = cq_ring->priv;
+	struct mqnic_if *interface = cq_ring->interface;
 	struct mqnic_ring *tx_ring = cq_ring->src_ring;
+	struct mqnic_priv *priv = tx_ring->priv;
 	struct mqnic_tx_info *tx_info;
 	struct mqnic_cpl *cpl;
 	struct skb_shared_hwtstamps hwts;
@@ -270,7 +273,7 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 	int done = 0;
 	int budget = napi_budget;
 
-	if (unlikely(!priv->port_up))
+	if (unlikely(!priv || !priv->port_up))
 		return done;
 
 	// prefetch for BQL
@@ -290,8 +293,8 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 		// TX hardware timestamp
 		if (unlikely(tx_info->ts_requested)) {
-			dev_info(priv->dev, "%s: TX TS requested", __func__);
-			hwts.hwtstamp = mqnic_read_cpl_ts(priv->mdev, tx_ring, cpl);
+			dev_info(interface->dev, "%s: TX TS requested", __func__);
+			hwts.hwtstamp = mqnic_read_cpl_ts(interface->mdev, tx_ring, cpl);
 			skb_tstamp_tx(tx_info->skb, &hwts);
 		}
 		// free TX descriptor
@@ -342,12 +345,7 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 void mqnic_tx_irq(struct mqnic_cq_ring *cq)
 {
-	struct mqnic_priv *priv = cq->priv;
-
-	if (likely(priv->port_up))
-		napi_schedule_irqoff(&cq->napi);
-	else
-		mqnic_arm_cq(cq);
+	napi_schedule_irqoff(&cq->napi);
 }
 
 int mqnic_poll_tx_cq(struct napi_struct *napi, int budget)

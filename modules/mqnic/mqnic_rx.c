@@ -35,7 +35,7 @@
 
 #include "mqnic.h"
 
-int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
+int mqnic_create_rx_ring(struct mqnic_if *interface, struct mqnic_ring **ring_ptr,
 		int index, u8 __iomem *hw_addr)
 {
 	struct mqnic_ring *ring;
@@ -44,9 +44,8 @@ int mqnic_create_rx_ring(struct mqnic_priv *priv, struct mqnic_ring **ring_ptr,
 	if (!ring)
 		return -ENOMEM;
 
-	ring->dev = priv->dev;
-	ring->ndev = priv->ndev;
-	ring->priv = priv;
+	ring->dev = interface->dev;
+	ring->interface = interface;
 
 	ring->index = index;
 	ring->active = 0;
@@ -146,13 +145,15 @@ void mqnic_free_rx_ring(struct mqnic_ring *ring)
 	ring->rx_info = NULL;
 }
 
-int mqnic_activate_rx_ring(struct mqnic_ring *ring, struct mqnic_cq_ring *cq_ring)
+int mqnic_activate_rx_ring(struct mqnic_ring *ring, struct mqnic_priv *priv,
+		struct mqnic_cq_ring *cq_ring)
 {
 	mqnic_deactivate_rx_ring(ring);
 
-	if (!ring->buf || !cq_ring || cq_ring->handler || cq_ring->src_ring)
+	if (!ring->buf || !priv || !cq_ring || cq_ring->handler || cq_ring->src_ring)
 		return -EINVAL;
 
+	ring->priv = priv;
 	ring->cq_ring = cq_ring;
 	cq_ring->src_ring = ring;
 	cq_ring->handler = mqnic_rx_irq;
@@ -189,6 +190,7 @@ void mqnic_deactivate_rx_ring(struct mqnic_ring *ring)
 		ring->cq_ring->handler = NULL;
 	}
 
+	ring->priv = NULL;
 	ring->cq_ring = NULL;
 
 	ring->active = 0;
@@ -255,15 +257,15 @@ int mqnic_prepare_rx_desc(struct mqnic_ring *ring, int index)
 	dma_addr_t dma_addr;
 
 	if (unlikely(page)) {
-		dev_err(ring->dev, "%s: skb not yet processed on port %d",
-				__func__, ring->priv->index);
+		dev_err(ring->dev, "%s: skb not yet processed on interface %d",
+				__func__, ring->interface->index);
 		return -1;
 	}
 
 	page = dev_alloc_pages(page_order);
 	if (unlikely(!page)) {
-		dev_err(ring->dev, "%s: failed to allocate memory on port %d",
-				__func__, ring->priv->index);
+		dev_err(ring->dev, "%s: failed to allocate memory on interface %d",
+				__func__, ring->interface->index);
 		return -1;
 	}
 
@@ -271,8 +273,8 @@ int mqnic_prepare_rx_desc(struct mqnic_ring *ring, int index)
 	dma_addr = dma_map_page(ring->dev, page, 0, len, PCI_DMA_FROMDEVICE);
 
 	if (unlikely(dma_mapping_error(ring->dev, dma_addr))) {
-		dev_err(ring->dev, "%s: DMA mapping failed on port %d",
-				__func__, ring->priv->index);
+		dev_err(ring->dev, "%s: DMA mapping failed on interface %d",
+				__func__, ring->interface->index);
 		__free_pages(page, page_order);
 		return -1;
 	}
@@ -311,9 +313,10 @@ void mqnic_refill_rx_buffers(struct mqnic_ring *ring)
 
 int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 {
-	struct mqnic_priv *priv = cq_ring->priv;
-	struct net_device *ndev = priv->ndev;
+	struct mqnic_if *interface = cq_ring->interface;
+	struct device *dev = interface->dev;
 	struct mqnic_ring *rx_ring = cq_ring->src_ring;
+	struct mqnic_priv *priv = rx_ring->priv;
 	struct mqnic_rx_info *rx_info;
 	struct mqnic_cpl *cpl;
 	struct sk_buff *skb;
@@ -326,7 +329,7 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 	int budget = napi_budget;
 	u32 len;
 
-	if (unlikely(!priv->port_up))
+	if (unlikely(!priv || !priv->port_up))
 		return done;
 
 	// process completion queue
@@ -345,7 +348,7 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		page = rx_info->page;
 
 		if (unlikely(!page)) {
-			dev_err(priv->dev, "%s: ring %d null page at index %d",
+			dev_err(dev, "%s: ring %d null page at index %d",
 					__func__, cq_ring->index, ring_index);
 			print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 					cpl, MQNIC_CPL_SIZE, true);
@@ -354,31 +357,31 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 		skb = napi_get_frags(&cq_ring->napi);
 		if (unlikely(!skb)) {
-			dev_err(priv->dev, "%s: ring %d failed to allocate skb",
+			dev_err(dev, "%s: ring %d failed to allocate skb",
 					__func__, cq_ring->index);
 			break;
 		}
 
 		// RX hardware timestamp
-		if (priv->if_features & MQNIC_IF_FEATURE_PTP_TS)
-			skb_hwtstamps(skb)->hwtstamp = mqnic_read_cpl_ts(priv->mdev, rx_ring, cpl);
+		if (interface->if_features & MQNIC_IF_FEATURE_PTP_TS)
+			skb_hwtstamps(skb)->hwtstamp = mqnic_read_cpl_ts(interface->mdev, rx_ring, cpl);
 
 		skb_record_rx_queue(skb, rx_ring->index);
 
 		// RX hardware checksum
-		if (ndev->features & NETIF_F_RXCSUM) {
+		if (priv->ndev->features & NETIF_F_RXCSUM) {
 			skb->csum = csum_unfold((__sum16) cpu_to_be16(le16_to_cpu(cpl->rx_csum)));
 			skb->ip_summed = CHECKSUM_COMPLETE;
 		}
 
 		// unmap
-		dma_unmap_page(priv->dev, dma_unmap_addr(rx_info, dma_addr),
+		dma_unmap_page(dev, dma_unmap_addr(rx_info, dma_addr),
 				dma_unmap_len(rx_info, len), PCI_DMA_FROMDEVICE);
 		rx_info->dma_addr = 0;
 
 		len = min_t(u32, le16_to_cpu(cpl->len), rx_info->len);
 
-		dma_sync_single_range_for_cpu(priv->dev, rx_info->dma_addr, rx_info->page_offset,
+		dma_sync_single_range_for_cpu(dev, rx_info->dma_addr, rx_info->page_offset,
 				rx_info->len, PCI_DMA_FROMDEVICE);
 
 		__skb_fill_page_desc(skb, 0, page, rx_info->page_offset, len);
@@ -433,12 +436,7 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 void mqnic_rx_irq(struct mqnic_cq_ring *cq)
 {
-	struct mqnic_priv *priv = cq->priv;
-
-	if (likely(priv->port_up))
-		napi_schedule_irqoff(&cq->napi);
-	else
-		mqnic_arm_cq(cq);
+	napi_schedule_irqoff(&cq->napi);
 }
 
 int mqnic_poll_rx_cq(struct napi_struct *napi, int budget)

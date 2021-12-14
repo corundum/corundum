@@ -52,9 +52,13 @@
 
 #include "mqnic_hw.h"
 
+#include "mqnic_selq.h"
+
 extern unsigned int mqnic_num_ev_queue_entries;
 extern unsigned int mqnic_num_tx_queue_entries;
 extern unsigned int mqnic_num_rx_queue_entries;
+
+extern bool mqnic_selq_handler_enable;
 
 struct mqnic_dev;
 struct mqnic_if;
@@ -402,6 +406,7 @@ struct mqnic_if {
 struct mqnic_priv {
 	struct device *dev;
 	struct net_device *ndev;
+	struct net_device_ops ndev_ops;
 	struct mqnic_dev *mdev;
 	struct mqnic_if *interface;
 
@@ -437,6 +442,9 @@ struct mqnic_priv {
 	struct hwtstamp_config hwts_config;
 
 	struct i2c_client *mod_i2c_client;
+
+	mqnic_selq_handler_func_t __rcu *selq_handler;
+	void __rcu *selq_handler_data;
 };
 
 // mqnic_main.c
@@ -574,5 +582,19 @@ int mqnic_poll_rx_cq(struct napi_struct *napi, int budget);
 
 // mqnic_ethtool.c
 extern const struct ethtool_ops mqnic_ethtool_ops;
+
+// mqnic_selq.c
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0)
+u16 mqnic_select_queue(struct net_device *ndev, struct sk_buff *skb,
+		       struct net_device *sb_dev);
+#elif LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0)
+u16 mqnic_select_queue(struct net_device *ndev, struct sk_buff *skb,
+		       struct net_device *sb_dev,
+		       select_queue_fallback_t fallback);
+#else
+u16 mqnic_select_queue(struct net_device *ndev, struct sk_buff *skb,
+		       void *accel_priv,
+		       select_queue_fallback_t fallback);
+#endif
 
 #endif /* MQNIC_H */

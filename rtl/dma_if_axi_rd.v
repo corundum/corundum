@@ -275,12 +275,12 @@ reg [3:0] m_axis_read_desc_status_error_reg = 4'd0, m_axis_read_desc_status_erro
 reg m_axis_read_desc_status_valid_reg = 1'b0, m_axis_read_desc_status_valid_next;
 
 // internal datapath
-reg  [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0]  ram_wr_cmd_sel_int;
+reg  [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0]      ram_wr_cmd_sel_int;
 reg  [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]   ram_wr_cmd_be_int;
 reg  [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0] ram_wr_cmd_addr_int;
 reg  [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0] ram_wr_cmd_data_int;
-reg  [RAM_SEG_COUNT-1:0]                ram_wr_cmd_valid_int;
-wire [RAM_SEG_COUNT-1:0]                ram_wr_cmd_ready_int;
+reg  [RAM_SEG_COUNT-1:0]                    ram_wr_cmd_valid_int;
+wire [RAM_SEG_COUNT-1:0]                    ram_wr_cmd_ready_int;
 
 wire [RAM_SEG_COUNT-1:0] out_done;
 reg [RAM_SEG_COUNT-1:0] out_done_ack;
@@ -786,11 +786,11 @@ genvar n;
 
 for (n = 0; n < RAM_SEG_COUNT; n = n + 1) begin
 
-    reg [RAM_SEL_WIDTH-1:0]  ram_wr_cmd_sel_reg = {RAM_SEL_WIDTH{1'b0}};
+    reg [RAM_SEL_WIDTH-1:0]      ram_wr_cmd_sel_reg = {RAM_SEL_WIDTH{1'b0}};
     reg [RAM_SEG_BE_WIDTH-1:0]   ram_wr_cmd_be_reg = {RAM_SEG_BE_WIDTH{1'b0}};
     reg [RAM_SEG_ADDR_WIDTH-1:0] ram_wr_cmd_addr_reg = {RAM_SEG_ADDR_WIDTH{1'b0}};
     reg [RAM_SEG_DATA_WIDTH-1:0] ram_wr_cmd_data_reg = {RAM_SEG_DATA_WIDTH{1'b0}};
-    reg                      ram_wr_cmd_valid_reg = 1'b0;
+    reg                          ram_wr_cmd_valid_reg = 1'b0;
 
     reg [OUTPUT_FIFO_ADDR_WIDTH-1:0] out_fifo_wr_ptr_reg = 0;
     reg [OUTPUT_FIFO_ADDR_WIDTH-1:0] out_fifo_rd_ptr_reg = 0;

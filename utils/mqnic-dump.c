@@ -139,7 +139,14 @@ int main(int argc, char *argv[])
         goto err;
     }
 
-    struct mqnic_if *dev_interface = &dev->interfaces[interface];
+    struct mqnic_if *dev_interface = dev->interfaces[interface];
+
+    if (!dev_interface)
+    {
+        fprintf(stderr, "Invalid interface\n");
+        ret = -1;
+        goto err;
+    }
 
     printf("IF ID: 0x%08x\n", dev_interface->if_id);
     printf("IF features: 0x%08x\n", dev_interface->if_features);
@@ -165,7 +172,14 @@ int main(int argc, char *argv[])
         goto err;
     }
 
-    struct mqnic_port *dev_port = &dev_interface->ports[port];
+    struct mqnic_port *dev_port = dev_interface->ports[port];
+
+    if (!dev_port)
+    {
+        fprintf(stderr, "Invalid port\n");
+        ret = -1;
+        goto err;
+    }
 
     printf("Port ID: 0x%08x\n", dev_port->port_id);
     printf("Port features: 0x%08x\n", dev_port->port_features);
@@ -289,7 +303,7 @@ int main(int argc, char *argv[])
         printf("Port %d scheduler %d\n", port, k);
         for (int l = 0; l < dev_interface->tx_queue_count; l++)
         {
-            printf("Sched %2d queue %4d state: 0x%08x\n", k, l, mqnic_reg_read32(dev_port->sched[k].regs, l*4));
+            printf("Sched %2d queue %4d state: 0x%08x\n", k, l, mqnic_reg_read32(dev_port->sched[k]->regs, l*4));
         }
     }
 

@@ -47,16 +47,22 @@ struct mqnic;
 
 struct mqnic_sched {
     struct mqnic *mqnic;
-    struct mqnic_if *mqnic_if;
-    struct mqnic_port *mqnic_port;
+    struct mqnic_if *interface;
+    struct mqnic_port *port;
 
+    int index;
+
+    size_t regs_size;
     volatile uint8_t *regs;
 };
 
 struct mqnic_port {
     struct mqnic *mqnic;
-    struct mqnic_if *mqnic_if;
+    struct mqnic_if *interface;
 
+    int index;
+
+    size_t regs_size;
     volatile uint8_t *regs;
 
     uint32_t port_id;
@@ -70,12 +76,15 @@ struct mqnic_port {
 
     uint32_t tdma_timeslot_count;
 
-    struct mqnic_sched sched[MQNIC_MAX_SCHED];
+    struct mqnic_sched *sched[MQNIC_MAX_SCHED];
 };
 
 struct mqnic_if {
     struct mqnic *mqnic;
 
+    int index;
+
+    size_t regs_size;
     volatile uint8_t *regs;
     volatile uint8_t *csr_regs;
 
@@ -97,7 +106,7 @@ struct mqnic_if {
     uint32_t port_offset;
     uint32_t port_stride;
 
-    struct mqnic_port ports[MQNIC_MAX_PORTS];
+    struct mqnic_port *ports[MQNIC_MAX_PORTS];
 };
 
 struct mqnic {
@@ -120,10 +129,19 @@ struct mqnic {
     uint32_t if_stride;
     uint32_t if_csr_offset;
 
-    struct mqnic_if interfaces[MQNIC_MAX_IF];
+    struct mqnic_if *interfaces[MQNIC_MAX_IF];
 };
 
 struct mqnic *mqnic_open(const char *dev_name);
 void mqnic_close(struct mqnic *dev);
+
+struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs);
+void mqnic_if_close(struct mqnic_if *interface);
+
+struct mqnic_port *mqnic_port_open(struct mqnic_if *interface, int index, volatile uint8_t *regs);
+void mqnic_port_close(struct mqnic_port *port);
+
+struct mqnic_sched *mqnic_sched_open(struct mqnic_port *port, int index, volatile uint8_t *regs);
+void mqnic_sched_close(struct mqnic_sched *sched);
 
 #endif /* MQNIC_H */

@@ -142,83 +142,20 @@ struct mqnic *mqnic_open(const char *dev_name)
 
     for (int k = 0; k < dev->if_count; k++)
     {
-        struct mqnic_if *interface = &dev->interfaces[k];
-        interface->regs = dev->regs + k*dev->if_stride;
-        interface->csr_regs = interface->regs + dev->if_csr_offset;
+        struct mqnic_if *interface = mqnic_if_open(dev, k, dev->regs + k*dev->if_stride);
 
-        if (interface->regs >= dev->regs+dev->regs_size)
-            goto fail_range;
-        if (interface->csr_regs >= dev->regs+dev->regs_size)
-            goto fail_range;
+        if (!interface)
+            goto fail;
 
-        interface->if_id = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_ID);
-        interface->if_features = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_FEATURES);
-
-        interface->event_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_EVENT_QUEUE_COUNT);
-        interface->event_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_EVENT_QUEUE_OFFSET);
-        interface->tx_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_QUEUE_COUNT);
-        interface->tx_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_QUEUE_OFFSET);
-        interface->tx_cpl_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_CPL_QUEUE_COUNT);
-        interface->tx_cpl_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_CPL_QUEUE_OFFSET);
-        interface->rx_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_QUEUE_COUNT);
-        interface->rx_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_QUEUE_OFFSET);
-        interface->rx_cpl_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_CPL_QUEUE_COUNT);
-        interface->rx_cpl_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_CPL_QUEUE_OFFSET);
-
-        interface->port_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_COUNT);
-        interface->port_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_OFFSET);
-        interface->port_stride = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_STRIDE);
-
-        if (interface->event_queue_count > MQNIC_MAX_EVENT_RINGS)
-            interface->event_queue_count = MQNIC_MAX_EVENT_RINGS;
-        if (interface->tx_queue_count > MQNIC_MAX_TX_RINGS)
-            interface->tx_queue_count = MQNIC_MAX_TX_RINGS;
-        if (interface->tx_cpl_queue_count > MQNIC_MAX_TX_CPL_RINGS)
-            interface->tx_cpl_queue_count = MQNIC_MAX_TX_CPL_RINGS;
-        if (interface->rx_queue_count > MQNIC_MAX_RX_RINGS)
-            interface->rx_queue_count = MQNIC_MAX_RX_RINGS;
-        if (interface->rx_cpl_queue_count > MQNIC_MAX_RX_CPL_RINGS)
-            interface->rx_cpl_queue_count = MQNIC_MAX_RX_CPL_RINGS;
-
-        if (interface->port_count > MQNIC_MAX_PORTS)
-            interface->port_count = MQNIC_MAX_PORTS;
-
-        for (int l = 0; l < interface->port_count; l++)
-        {
-            struct mqnic_port *port = &interface->ports[l];
-            port->regs = interface->regs + interface->port_offset + interface->port_stride*l;
-
-            if (port->regs >= dev->regs+dev->regs_size)
-                goto fail_range;
-
-            port->port_id = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_ID);
-            port->port_features = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_FEATURES);
-            port->port_mtu = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_MTU);
-
-            port->sched_count = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_COUNT);
-            port->sched_offset = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_OFFSET);
-            port->sched_stride = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_STRIDE);
-            port->sched_type = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_TYPE);
-
-            port->tdma_timeslot_count = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_COUNT);
-
-            for (int m = 0; m < port->sched_count; m++)
-            {
-                struct mqnic_sched *sched = &port->sched[m];
-                sched->regs = port->regs + port->sched_offset + port->sched_stride*m;
-
-                if (sched->regs >= dev->regs+dev->regs_size)
-                    goto fail_range;
-            }
-        }
+        dev->interfaces[k] = interface;
     }
 
     return dev;
 
-fail_range:
-    fprintf(stderr, "Error: computed pointer out of range\n");
+fail:
 fail_reset:
-    munmap((void *)dev->regs, dev->regs_size);
+    mqnic_close(dev);
+    return NULL;
 fail_mmap_regs:
 fail_ioctl:
 fail_fstat:
@@ -234,8 +171,207 @@ void mqnic_close(struct mqnic *dev)
     if (!dev)
         return;
 
+    for (int k = 0; k < dev->if_count; k++)
+    {
+        if (!dev->interfaces[k])
+            continue;
+
+        mqnic_if_close(dev->interfaces[k]);
+        dev->interfaces[k] = NULL;
+    }
+
     munmap((void *)dev->regs, dev->regs_size);
     close(dev->fd);
     free(dev);
 }
 
+
+struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs)
+{
+    struct mqnic_if *interface = calloc(1, sizeof(struct mqnic_if));
+
+    if (!interface)
+        return NULL;
+
+    interface->mqnic = dev;
+
+    interface->index = index;
+
+    interface->regs_size = dev->if_stride;
+    interface->regs = regs;
+    interface->csr_regs = interface->regs + dev->if_csr_offset;
+
+    if (interface->regs >= dev->regs+dev->regs_size || interface->csr_regs >= dev->regs+dev->regs_size)
+    {
+        fprintf(stderr, "Error: computed pointer out of range\n");
+        goto fail;
+    }
+
+    interface->if_id = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_ID);
+    interface->if_features = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_FEATURES);
+
+    interface->event_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_EVENT_QUEUE_COUNT);
+    interface->event_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_EVENT_QUEUE_OFFSET);
+    interface->tx_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_QUEUE_COUNT);
+    interface->tx_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_QUEUE_OFFSET);
+    interface->tx_cpl_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_CPL_QUEUE_COUNT);
+    interface->tx_cpl_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_CPL_QUEUE_OFFSET);
+    interface->rx_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_QUEUE_COUNT);
+    interface->rx_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_QUEUE_OFFSET);
+    interface->rx_cpl_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_CPL_QUEUE_COUNT);
+    interface->rx_cpl_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_CPL_QUEUE_OFFSET);
+
+    interface->port_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_COUNT);
+    interface->port_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_OFFSET);
+    interface->port_stride = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_STRIDE);
+
+    if (interface->event_queue_count > MQNIC_MAX_EVENT_RINGS)
+        interface->event_queue_count = MQNIC_MAX_EVENT_RINGS;
+    if (interface->tx_queue_count > MQNIC_MAX_TX_RINGS)
+        interface->tx_queue_count = MQNIC_MAX_TX_RINGS;
+    if (interface->tx_cpl_queue_count > MQNIC_MAX_TX_CPL_RINGS)
+        interface->tx_cpl_queue_count = MQNIC_MAX_TX_CPL_RINGS;
+    if (interface->rx_queue_count > MQNIC_MAX_RX_RINGS)
+        interface->rx_queue_count = MQNIC_MAX_RX_RINGS;
+    if (interface->rx_cpl_queue_count > MQNIC_MAX_RX_CPL_RINGS)
+        interface->rx_cpl_queue_count = MQNIC_MAX_RX_CPL_RINGS;
+
+    if (interface->port_count > MQNIC_MAX_PORTS)
+        interface->port_count = MQNIC_MAX_PORTS;
+
+    for (int k = 0; k < interface->port_count; k++)
+    {
+        struct mqnic_port *port = mqnic_port_open(interface, k, interface->regs + interface->port_offset + k*interface->port_stride);
+
+        if (!port)
+            goto fail;
+
+        interface->ports[k] = port;
+    }
+
+    return interface;
+
+fail:
+    mqnic_if_close(interface);
+    return NULL;
+}
+
+void mqnic_if_close(struct mqnic_if *interface)
+{
+    if (!interface)
+        return;
+
+    for (int k = 0; k < interface->port_count; k++)
+    {
+        if (!interface->ports[k])
+            continue;
+
+        mqnic_port_close(interface->ports[k]);
+        interface->ports[k] = NULL;
+    }
+
+    free(interface);
+}
+
+struct mqnic_port *mqnic_port_open(struct mqnic_if *interface, int index, volatile uint8_t *regs)
+{
+    struct mqnic_port *port = calloc(1, sizeof(struct mqnic_port));
+
+    if (!port)
+        return NULL;
+
+    port->mqnic = interface->mqnic;
+    port->interface = interface;
+
+    port->index = index;
+
+    port->regs_size = interface->port_stride;
+    port->regs = regs;
+
+    if (port->regs >= interface->regs+interface->regs_size)
+    {
+        fprintf(stderr, "Error: computed pointer out of range\n");
+        goto fail;
+    }
+
+    port->port_id = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_ID);
+    port->port_features = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_FEATURES);
+    port->port_mtu = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_MTU);
+
+    port->sched_count = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_COUNT);
+    port->sched_offset = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_OFFSET);
+    port->sched_stride = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_STRIDE);
+    port->sched_type = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_TYPE);
+
+    port->tdma_timeslot_count = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_COUNT);
+
+    for (int k = 0; k < port->sched_count; k++)
+    {
+        struct mqnic_sched *sched = mqnic_sched_open(port, k, port->regs + port->sched_offset + k*port->sched_stride);
+
+        if (!sched)
+            goto fail;
+
+        port->sched[k] = sched;
+    }
+
+    return port;
+
+fail:
+    mqnic_port_close(port);
+    return NULL;
+}
+
+void mqnic_port_close(struct mqnic_port *port)
+{
+    if (!port)
+        return;
+
+    for (int k = 0; k < port->sched_count; k++)
+    {
+        if (!port->sched[k])
+            continue;
+
+        mqnic_sched_close(port->sched[k]);
+        port->sched[k] = NULL;
+    }
+
+    free(port);
+}
+
+struct mqnic_sched *mqnic_sched_open(struct mqnic_port *port, int index, volatile uint8_t *regs)
+{
+    struct mqnic_sched *sched = calloc(1, sizeof(struct mqnic_sched));
+
+    if (!sched)
+        return NULL;
+
+    sched->mqnic = port->mqnic;
+    sched->interface = port->interface;
+    sched->port = port;
+
+    sched->index = index;
+
+    sched->regs_size = port->sched_stride;
+    sched->regs = regs;
+
+    if (sched->regs >= port->interface->regs+port->interface->regs_size)
+    {
+        fprintf(stderr, "Error: computed pointer out of range\n");
+        goto fail;
+    }
+
+    return sched;
+
+fail:
+    mqnic_sched_close(sched);
+    return NULL;
+}
+
+void mqnic_sched_close(struct mqnic_sched *sched)
+{
+    if (!sched)
+        return;
+
+    free(sched);
+}

@@ -109,13 +109,124 @@ static void mqnic_free_id(struct mqnic_dev *mqnic)
 	spin_unlock(&mqnic_devices_lock);
 }
 
+static int mqnic_common_probe(struct mqnic_dev *mqnic)
+{
+	int ret = 0;
+	struct device *dev = mqnic->dev;
+
+	int k = 0;
+
+	// Read ID registers
+	mqnic->fw_id = ioread32(mqnic->hw_addr + MQNIC_REG_FW_ID);
+	dev_info(dev, "FW ID: 0x%08x", mqnic->fw_id);
+	mqnic->fw_ver = ioread32(mqnic->hw_addr + MQNIC_REG_FW_VER);
+	dev_info(dev, "FW version: %d.%d", mqnic->fw_ver >> 16, mqnic->fw_ver & 0xffff);
+	mqnic->board_id = ioread32(mqnic->hw_addr + MQNIC_REG_BOARD_ID);
+	dev_info(dev, "Board ID: 0x%08x", mqnic->board_id);
+	mqnic->board_ver = ioread32(mqnic->hw_addr + MQNIC_REG_BOARD_VER);
+	dev_info(dev, "Board version: %d.%d", mqnic->board_ver >> 16, mqnic->board_ver & 0xffff);
+
+	mqnic->phc_count = ioread32(mqnic->hw_addr + MQNIC_REG_PHC_COUNT);
+	dev_info(dev, "PHC count: %d", mqnic->phc_count);
+	mqnic->phc_offset = ioread32(mqnic->hw_addr + MQNIC_REG_PHC_OFFSET);
+	dev_info(dev, "PHC offset: 0x%08x", mqnic->phc_offset);
+
+	if (mqnic->phc_count)
+		mqnic->phc_hw_addr = mqnic->hw_addr + mqnic->phc_offset;
+
+	mqnic->if_count = ioread32(mqnic->hw_addr + MQNIC_REG_IF_COUNT);
+	dev_info(dev, "IF count: %d", mqnic->if_count);
+	mqnic->if_stride = ioread32(mqnic->hw_addr + MQNIC_REG_IF_STRIDE);
+	dev_info(dev, "IF stride: 0x%08x", mqnic->if_stride);
+	mqnic->if_csr_offset = ioread32(mqnic->hw_addr + MQNIC_REG_IF_CSR_OFFSET);
+	dev_info(dev, "IF CSR offset: 0x%08x", mqnic->if_csr_offset);
+
+	// check BAR size
+	if (mqnic->if_count * mqnic->if_stride > mqnic->hw_regs_size) {
+		dev_err(dev, "Invalid BAR configuration (%d IF * 0x%x > 0x%llx)",
+				mqnic->if_count, mqnic->if_stride, mqnic->hw_regs_size);
+		return -EIO;
+	}
+
+	// Board-specific init
+	ret = mqnic_board_init(mqnic);
+	if (ret) {
+		dev_err(dev, "Failed to initialize board");
+		return ret;
+	}
+
+	// register PHC
+	if (mqnic->phc_count)
+		mqnic_register_phc(mqnic);
+
+	mutex_init(&mqnic->state_lock);
+
+	// Set up interfaces
+	mqnic->if_count = min_t(u32, mqnic->if_count, MQNIC_MAX_IF);
+
+	for (k = 0; k < mqnic->if_count; k++) {
+		dev_info(dev, "Creating interface %d", k);
+		ret = mqnic_create_interface(mqnic, &mqnic->interface[k], k, mqnic->hw_addr + k * mqnic->if_stride);
+		if (ret) {
+			dev_err(dev, "Failed to create interface: %d", ret);
+			goto fail_create_if;
+		}
+	}
+
+	// pass module I2C clients to interface instances
+	for (k = 0; k < mqnic->if_count; k++)
+		mqnic->interface[k]->mod_i2c_client = mqnic->mod_i2c_client[k];
+
+	mqnic->misc_dev.minor = MISC_DYNAMIC_MINOR;
+	mqnic->misc_dev.name = mqnic->name;
+	mqnic->misc_dev.fops = &mqnic_fops;
+	mqnic->misc_dev.parent = dev;
+
+	ret = misc_register(&mqnic->misc_dev);
+	if (ret) {
+		dev_err(dev, "misc_register failed: %d\n", ret);
+		goto fail_miscdev;
+	}
+
+	dev_info(dev, "Registered device %s", mqnic->name);
+
+	// probe complete
+	return 0;
+
+	// error handling
+fail_miscdev:
+fail_create_if:
+	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++)
+		if (mqnic->interface[k])
+			mqnic_destroy_interface(&mqnic->interface[k]);
+
+	mqnic_unregister_phc(mqnic);
+
+	mqnic_board_deinit(mqnic);
+
+	return ret;
+}
+
+static void mqnic_common_remove(struct mqnic_dev *mqnic)
+{
+	int k = 0;
+
+	misc_deregister(&mqnic->misc_dev);
+
+	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++)
+		if (mqnic->interface[k])
+			mqnic_destroy_interface(&mqnic->interface[k]);
+
+	mqnic_unregister_phc(mqnic);
+
+	mqnic_board_deinit(mqnic);
+}
+
 static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	int ret = 0;
 	struct mqnic_dev *mqnic;
 	struct device *dev = &pdev->dev;
-
-	int k = 0;
 
 	dev_info(dev, DRIVER_NAME " PCI probe");
 	dev_info(dev, " Vendor: 0x%04x", pdev->vendor);
@@ -241,40 +352,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	if (ioread32(mqnic->hw_addr) == 0xffffffff) {
 		ret = -EIO;
 		dev_err(dev, "Device needs to be reset");
-		goto fail_map_bars;
-	}
-
-	// Read ID registers
-	mqnic->fw_id = ioread32(mqnic->hw_addr + MQNIC_REG_FW_ID);
-	dev_info(dev, "FW ID: 0x%08x", mqnic->fw_id);
-	mqnic->fw_ver = ioread32(mqnic->hw_addr + MQNIC_REG_FW_VER);
-	dev_info(dev, "FW version: %d.%d", mqnic->fw_ver >> 16, mqnic->fw_ver & 0xffff);
-	mqnic->board_id = ioread32(mqnic->hw_addr + MQNIC_REG_BOARD_ID);
-	dev_info(dev, "Board ID: 0x%08x", mqnic->board_id);
-	mqnic->board_ver = ioread32(mqnic->hw_addr + MQNIC_REG_BOARD_VER);
-	dev_info(dev, "Board version: %d.%d", mqnic->board_ver >> 16, mqnic->board_ver & 0xffff);
-
-	mqnic->phc_count = ioread32(mqnic->hw_addr + MQNIC_REG_PHC_COUNT);
-	dev_info(dev, "PHC count: %d", mqnic->phc_count);
-	mqnic->phc_offset = ioread32(mqnic->hw_addr + MQNIC_REG_PHC_OFFSET);
-	dev_info(dev, "PHC offset: 0x%08x", mqnic->phc_offset);
-
-	if (mqnic->phc_count)
-		mqnic->phc_hw_addr = mqnic->hw_addr + mqnic->phc_offset;
-
-	mqnic->if_count = ioread32(mqnic->hw_addr + MQNIC_REG_IF_COUNT);
-	dev_info(dev, "IF count: %d", mqnic->if_count);
-	mqnic->if_stride = ioread32(mqnic->hw_addr + MQNIC_REG_IF_STRIDE);
-	dev_info(dev, "IF stride: 0x%08x", mqnic->if_stride);
-	mqnic->if_csr_offset = ioread32(mqnic->hw_addr + MQNIC_REG_IF_CSR_OFFSET);
-	dev_info(dev, "IF CSR offset: 0x%08x", mqnic->if_csr_offset);
-
-	// check BAR size
-	if (mqnic->if_count * mqnic->if_stride > mqnic->hw_regs_size) {
-		ret = -EIO;
-		dev_err(dev, "Invalid BAR configuration (%d IF * 0x%x > 0x%llx)",
-				mqnic->if_count, mqnic->if_stride, mqnic->hw_regs_size);
-		goto fail_map_bars;
+		goto fail_reset;
 	}
 
 	// Set up interrupts
@@ -284,67 +362,22 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 		goto fail_map_bars;
 	}
 
-	// Board-specific init
-	ret = mqnic_board_init(mqnic);
-	if (ret) {
-		dev_err(dev, "Failed to initialize board");
-		goto fail_board;
-	}
-
 	// Enable bus mastering for DMA
 	pci_set_master(pdev);
 
-	// register PHC
-	if (mqnic->phc_count)
-		mqnic_register_phc(mqnic);
-
-	mutex_init(&mqnic->state_lock);
-
-	// Set up interfaces
-	mqnic->if_count = min_t(u32, mqnic->if_count, MQNIC_MAX_IF);
-
-	for (k = 0; k < mqnic->if_count; k++) {
-		dev_info(dev, "Creating interface %d", k);
-		ret = mqnic_create_interface(mqnic, &mqnic->interface[k], k, mqnic->hw_addr + k * mqnic->if_stride);
-		if (ret) {
-			dev_err(dev, "Failed to create interface: %d", ret);
-			goto fail_create_if;
-		}
-	}
-
-	// pass module I2C clients to interface instances
-	for (k = 0; k < mqnic->if_count; k++) {
-		mqnic->interface[k]->mod_i2c_client = mqnic->mod_i2c_client[k];
-	}
-
-	mqnic->misc_dev.minor = MISC_DYNAMIC_MINOR;
-	mqnic->misc_dev.name = mqnic->name;
-	mqnic->misc_dev.fops = &mqnic_fops;
-	mqnic->misc_dev.parent = dev;
-
-	ret = misc_register(&mqnic->misc_dev);
-	if (ret) {
-		dev_err(dev, "misc_register failed: %d\n", ret);
-		goto fail_miscdev;
-	}
-
-	dev_info(dev, "Registered device %s", mqnic->name);
-
-	pci_save_state(pdev);
+	// Common init
+	ret = mqnic_common_probe(mqnic);
+	if (ret)
+		goto fail_common;
 
 	// probe complete
 	return 0;
 
 	// error handling
-fail_miscdev:
-fail_create_if:
-	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++)
-		if (mqnic->interface[k])
-			mqnic_destroy_interface(&mqnic->interface[k]);
-	mqnic_unregister_phc(mqnic);
+fail_common:
 	pci_clear_master(pdev);
-fail_board:
 	mqnic_irq_deinit_pcie(mqnic);
+fail_reset:
 fail_map_bars:
 	if (mqnic->hw_addr)
 		pci_iounmap(pdev, mqnic->hw_addr);
@@ -364,20 +397,11 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
 {
 	struct mqnic_dev *mqnic = pci_get_drvdata(pdev);
 
-	int k = 0;
-
 	dev_info(&pdev->dev, DRIVER_NAME " PCI remove");
 
-	misc_deregister(&mqnic->misc_dev);
-
-	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++)
-		if (mqnic->interface[k])
-			mqnic_destroy_interface(&mqnic->interface[k]);
-
-	mqnic_unregister_phc(mqnic);
+	mqnic_common_remove(mqnic);
 
 	pci_clear_master(pdev);
-	mqnic_board_deinit(mqnic);
 	mqnic_irq_deinit_pcie(mqnic);
 	if (mqnic->hw_addr)
 		pci_iounmap(pdev, mqnic->hw_addr);

@@ -92,6 +92,23 @@ static unsigned int mqnic_get_free_id(void)
 	return id;
 }
 
+static void mqnic_assign_id(struct mqnic_dev *mqnic)
+{
+	spin_lock(&mqnic_devices_lock);
+	mqnic->id = mqnic_get_free_id();
+	list_add_tail(&mqnic->dev_list_node, &mqnic_devices);
+	spin_unlock(&mqnic_devices_lock);
+
+	snprintf(mqnic->name, sizeof(mqnic->name), DRIVER_NAME "%d", mqnic->id);
+}
+
+static void mqnic_free_id(struct mqnic_dev *mqnic)
+{
+	spin_lock(&mqnic_devices_lock);
+	list_del(&mqnic->dev_list_node);
+	spin_unlock(&mqnic_devices_lock);
+}
+
 static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 {
 	int ret = 0;
@@ -150,12 +167,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	pci_set_drvdata(pdev, mqnic);
 
 	// assign ID and add to list
-	spin_lock(&mqnic_devices_lock);
-	mqnic->id = mqnic_get_free_id();
-	list_add_tail(&mqnic->dev_list_node, &mqnic_devices);
-	spin_unlock(&mqnic_devices_lock);
-
-	snprintf(mqnic->name, sizeof(mqnic->name), DRIVER_NAME "%d", mqnic->id);
+	mqnic_assign_id(mqnic);
 
 	// Disable ASPM
 	pci_disable_link_state(pdev, PCIE_LINK_STATE_L0S |
@@ -344,9 +356,7 @@ fail_map_bars:
 fail_regions:
 	pci_disable_device(pdev);
 fail_enable_device:
-	spin_lock(&mqnic_devices_lock);
-	list_del(&mqnic->dev_list_node);
-	spin_unlock(&mqnic_devices_lock);
+	mqnic_free_id(mqnic);
 	return ret;
 }
 
@@ -359,10 +369,6 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
 	dev_info(&pdev->dev, DRIVER_NAME " PCI remove");
 
 	misc_deregister(&mqnic->misc_dev);
-
-	spin_lock(&mqnic_devices_lock);
-	list_del(&mqnic->dev_list_node);
-	spin_unlock(&mqnic_devices_lock);
 
 	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++)
 		if (mqnic->interface[k])
@@ -381,6 +387,7 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
 		pci_iounmap(pdev, mqnic->ram_hw_addr);
 	pci_release_regions(pdev);
 	pci_disable_device(pdev);
+	mqnic_free_id(mqnic);
 }
 
 static void mqnic_pci_shutdown(struct pci_dev *pdev)

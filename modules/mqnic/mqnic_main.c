@@ -51,14 +51,11 @@ unsigned int mqnic_num_ev_queue_entries = 1024;
 unsigned int mqnic_num_tx_queue_entries = 1024;
 unsigned int mqnic_num_rx_queue_entries = 1024;
 
-module_param_named(num_ev_queue_entries, mqnic_num_ev_queue_entries,
-		   uint, 0444);
+module_param_named(num_ev_queue_entries, mqnic_num_ev_queue_entries, uint, 0444);
 MODULE_PARM_DESC(num_ev_queue_entries, "number of entries to allocate per event queue (default: 1024)");
-module_param_named(num_tx_queue_entries, mqnic_num_tx_queue_entries,
-		   uint, 0444);
+module_param_named(num_tx_queue_entries, mqnic_num_tx_queue_entries, uint, 0444);
 MODULE_PARM_DESC(num_tx_queue_entries, "number of entries to allocate per transmit queue (default: 1024)");
-module_param_named(num_rx_queue_entries, mqnic_num_rx_queue_entries,
-		   uint, 0444);
+module_param_named(num_rx_queue_entries, mqnic_num_rx_queue_entries, uint, 0444);
 MODULE_PARM_DESC(num_rx_queue_entries, "number of entries to allocate per receive queue (default: 1024)");
 
 static const struct pci_device_id mqnic_pci_id_table[] = {

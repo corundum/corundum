@@ -40,7 +40,6 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 {
 	struct device *dev = mdev->dev;
 	struct mqnic_if *interface;
-	struct mqnic_priv *priv;
 	int ret = 0;
 	int k;
 	u32 desc_block_size;
@@ -178,9 +177,6 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 		ret = mqnic_create_netdev(interface, &interface->ndev[k], k);
 		if (ret)
 			goto fail;
-
-		priv = netdev_priv(interface->ndev[k]);
-		priv->mod_i2c_client = interface->mod_i2c_client;
 	}
 
 	return 0;

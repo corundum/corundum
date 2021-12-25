@@ -111,7 +111,7 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 	int ret = 0;
 	struct device *dev = mqnic->dev;
 
-	int k = 0;
+	int k = 0, l = 0;
 
 	// Read ID registers
 	mqnic->fw_id = ioread32(mqnic->hw_addr + MQNIC_REG_FW_ID);
@@ -171,8 +171,15 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 	}
 
 	// pass module I2C clients to interface instances
-	for (k = 0; k < mqnic->if_count; k++)
-		mqnic->interface[k]->mod_i2c_client = mqnic->mod_i2c_client[k];
+	for (k = 0; k < mqnic->if_count; k++) {
+		struct mqnic_if *interface = mqnic->interface[k];
+		interface->mod_i2c_client = mqnic->mod_i2c_client[k];
+
+		for (l = 0; l < interface->ndev_count; l++) {
+			struct mqnic_priv *priv = netdev_priv(interface->ndev[l]);
+			priv->mod_i2c_client = mqnic->mod_i2c_client[k];
+		}
+	}
 
 	mqnic->misc_dev.minor = MISC_DYNAMIC_MINOR;
 	mqnic->misc_dev.name = mqnic->name;

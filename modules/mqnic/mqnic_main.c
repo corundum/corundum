@@ -159,6 +159,9 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 	mutex_init(&mqnic->state_lock);
 
 	// Set up interfaces
+	mqnic->dev_port_max = 0;
+	mqnic->dev_port_limit = MQNIC_MAX_IF;
+
 	mqnic->if_count = min_t(u32, mqnic->if_count, MQNIC_MAX_IF);
 
 	for (k = 0; k < mqnic->if_count; k++) {
@@ -168,6 +171,7 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 			dev_err(dev, "Failed to create interface: %d", ret);
 			goto fail_create_if;
 		}
+		mqnic->dev_port_max = mqnic->interface[k]->dev_port_max;
 	}
 
 	// pass module I2C clients to interface instances

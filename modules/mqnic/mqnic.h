@@ -121,6 +121,9 @@ struct mqnic_dev {
 
 	struct miscdevice misc_dev;
 
+	int dev_port_max;
+	int dev_port_limit;
+
 	u32 fw_id;
 	u32 fw_ver;
 	u32 board_id;
@@ -306,6 +309,10 @@ struct mqnic_if {
 
 	int index;
 
+	int dev_port_base;
+	int dev_port_max;
+	int dev_port_limit;
+
 	u32 if_id;
 	u32 if_features;
 
@@ -400,7 +407,8 @@ void mqnic_destroy_interface(struct mqnic_if **interface_ptr);
 
 // mqnic_netdev.c
 void mqnic_update_stats(struct net_device *ndev);
-int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr, int index);
+int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr,
+		int index, int dev_port);
 void mqnic_destroy_netdev(struct net_device **ndev_ptr);
 
 // mqnic_port.c

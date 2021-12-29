@@ -350,7 +350,8 @@ static const struct net_device_ops mqnic_netdev_ops = {
 	.ndo_do_ioctl = mqnic_ioctl,
 };
 
-int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr, int index)
+int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr,
+		int index, int dev_port)
 {
 	struct mqnic_dev *mdev = interface->mdev;
 	struct device *dev = interface->dev;
@@ -367,7 +368,7 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	}
 
 	SET_NETDEV_DEV(ndev, dev);
-	ndev->dev_port = index;
+	ndev->dev_port = dev_port;
 
 	// init private data
 	priv = netdev_priv(ndev);
@@ -415,11 +416,11 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	// set MAC
 	ndev->addr_len = ETH_ALEN;
 
-	if (index >= mdev->mac_count) {
+	if (dev_port >= mdev->mac_count) {
 		dev_warn(dev, "Exhausted permanent MAC addresses; using random MAC");
 		eth_hw_addr_random(ndev);
 	} else {
-		memcpy(ndev->dev_addr, mdev->mac_list[index], ETH_ALEN);
+		memcpy(ndev->dev_addr, mdev->mac_list[dev_port], ETH_ALEN);
 
 		if (!is_valid_ether_addr(ndev->dev_addr)) {
 			dev_warn(dev, "Invalid MAC address in list; using random MAC");

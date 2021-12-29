@@ -172,9 +172,12 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 	}
 
 	// create net_devices
+	interface->dev_port_base = mdev->dev_port_max;
+	interface->dev_port_max = mdev->dev_port_max;
+
 	interface->ndev_count = 1;
 	for (k = 0; k < interface->ndev_count; k++) {
-		ret = mqnic_create_netdev(interface, &interface->ndev[k], k);
+		ret = mqnic_create_netdev(interface, &interface->ndev[k], k, interface->dev_port_max++);
 		if (ret)
 			goto fail;
 	}

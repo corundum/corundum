@@ -825,6 +825,7 @@ axis_fifo #(
     .ID_WIDTH(DESC_REQ_TAG_WIDTH_INT),
     .DEST_ENABLE(0),
     .USER_ENABLE(0),
+    .PIPELINE_OUTPUT(3),
     .FRAME_FIFO(0)
 )
 tx_desc_fifo (
@@ -1016,6 +1017,7 @@ axis_fifo #(
     .ID_WIDTH(DESC_REQ_TAG_WIDTH_INT),
     .DEST_ENABLE(0),
     .USER_ENABLE(0),
+    .PIPELINE_OUTPUT(3),
     .FRAME_FIFO(0)
 )
 rx_desc_fifo (

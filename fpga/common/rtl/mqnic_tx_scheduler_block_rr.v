@@ -48,6 +48,10 @@ module mqnic_tx_scheduler_block #
     parameter REG_DATA_WIDTH = 32,
     // Width of control register interface strb
     parameter REG_STRB_WIDTH = (REG_DATA_WIDTH/8),
+    // Register block base address
+    parameter RB_BASE_ADDR = 0,
+    // Register block next pointer
+    parameter RB_NEXT_PTR = 0,
     // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
     // Width of AXI lite address bus in bits
@@ -146,6 +150,8 @@ module mqnic_tx_scheduler_block #
 parameter SCHED_COUNT = 1;
 parameter AXIL_SCHED_ADDR_WIDTH = AXIL_ADDR_WIDTH-$clog2(SCHED_COUNT);
 
+localparam RBB = RB_BASE_ADDR & {REG_ADDR_WIDTH{1'b1}};
+
 // control registers
 reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [REG_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = 0;
@@ -168,8 +174,9 @@ always @(posedge clk) begin
         // write operation
         ctrl_reg_wr_ack_reg <= 1'b1;
         case ({ctrl_reg_wr_addr >> 2, 2'b00})
-            16'h0040: begin
-                // Scheduler enable
+            // Scheduler
+            RBB+8'h28: begin
+                // Sched: Control
                 if (ctrl_reg_wr_strb[0]) begin
                     sched_enable_reg <= ctrl_reg_wr_data[0];
                 end
@@ -182,14 +189,23 @@ always @(posedge clk) begin
         // read operation
         ctrl_reg_rd_ack_reg <= 1'b1;
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
-            16'h0010: ctrl_reg_rd_data_reg <= SCHED_COUNT; // scheduler_count
-            16'h0014: ctrl_reg_rd_data_reg <= AXIL_OFFSET; // scheduler_offset
-            16'h0018: ctrl_reg_rd_data_reg <= 2**AXIL_SCHED_ADDR_WIDTH; // scheduler_stride
-            16'h001C: ctrl_reg_rd_data_reg <= 32'd0;       // scheduler_type
-            16'h0040: begin
-                // Scheduler enable
+            // Scheduler block
+            RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C003;          // Sched block: Type
+            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000100;          // Sched block: Version
+            RBB+8'h08: ctrl_reg_rd_data_reg <= RB_NEXT_PTR;           // Sched block: Next header
+            RBB+8'h0C: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h10;    // Sched block: Offset
+            // Round-robin scheduler
+            RBB+8'h10: ctrl_reg_rd_data_reg <= 32'h0000C040;          // Sched: Type
+            RBB+8'h14: ctrl_reg_rd_data_reg <= 32'h00000100;          // Sched: Version
+            RBB+8'h18: ctrl_reg_rd_data_reg <= 0;                     // Sched: Next header
+            RBB+8'h1C: ctrl_reg_rd_data_reg <= AXIL_OFFSET;           // Sched: Offset
+            RBB+8'h20: ctrl_reg_rd_data_reg <= 2**QUEUE_INDEX_WIDTH;  // Sched: Channel count
+            RBB+8'h24: ctrl_reg_rd_data_reg <= 4;                     // Sched: Channel stride
+            RBB+8'h28: begin
+                // Sched: Control
                 ctrl_reg_rd_data_reg[0] <= sched_enable_reg;
             end
+            RBB+8'h2C: ctrl_reg_rd_data_reg <= 0;                     // Sched: dest
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end

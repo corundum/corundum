@@ -78,6 +78,8 @@ int main(int argc, char *argv[])
     int interface = 0;
     int port = 0;
 
+    struct reg_block *rb;
+
     struct timespec ts_now;
     struct timespec ts_start;
     struct timespec ts_period;
@@ -142,18 +144,22 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    printf("FPGA ID: 0x%08x\n", dev->fpga_id);
     printf("FW ID: 0x%08x\n", dev->fw_id);
-    printf("FW version: %d.%d\n", dev->fw_ver >> 16, dev->fw_ver & 0xffff);
+    printf("FW version: %d.%d.%d.%d\n", dev->fw_ver >> 24,
+            (dev->fw_ver >> 16) & 0xff,
+            (dev->fw_ver >> 8) & 0xff,
+            dev->fw_ver & 0xff);
     printf("Board ID: 0x%08x\n", dev->board_id);
-    printf("Board version: %d.%d\n", dev->board_ver >> 16, dev->board_ver & 0xffff);
-    printf("PHC count: %d\n", dev->phc_count);
-    printf("PHC offset: 0x%08x\n", dev->phc_offset);
-    printf("PHC stride: 0x%08x\n", dev->phc_stride);
-    printf("IF count: %d\n", dev->if_count);
-    printf("IF stride: 0x%08x\n", dev->if_stride);
-    printf("IF CSR offset: 0x%08x\n", dev->if_csr_offset);
+    printf("Board version: %d.%d.%d.%d\n", dev->board_ver >> 24,
+            (dev->board_ver >> 16) & 0xff,
+            (dev->board_ver >> 8) & 0xff,
+            dev->board_ver & 0xff);
+    printf("Build date: %s UTC (raw 0x%08x)\n", dev->build_date_str, dev->build_date);
+    printf("Git hash: %08x\n", dev->git_hash);
+    printf("Release info: %08x\n", dev->rel_info);
 
-    if (dev->phc_count == 0)
+    if (!dev->phc_rb)
     {
         fprintf(stderr, "No PHC on card\n");
         goto err;
@@ -173,21 +179,35 @@ int main(int argc, char *argv[])
         goto err;
     }
 
-    printf("IF ID: 0x%08x\n", dev_interface->if_id);
-    
-    printf("Event queue count: %d\n", dev_interface->event_queue_count);
+    printf("IF TX features: 0x%08x\n", dev_interface->if_tx_features);
+    printf("Max TX MTU: %d\n", dev_interface->max_tx_mtu);
+    printf("TX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_tx_rb->regs, MQNIC_RB_IF_CTRL_TX_REG_MTU));
+
+    printf("IF RX features: 0x%08x\n", dev_interface->if_rx_features);
+    printf("Max RX MTU: %d\n", dev_interface->max_rx_mtu);
+    printf("RX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rx_rb->regs, MQNIC_RB_IF_CTRL_RX_REG_MTU));
+
     printf("Event queue offset: 0x%08x\n", dev_interface->event_queue_offset);
-    printf("TX queue count: %d\n", dev_interface->tx_queue_count);
+    printf("Event queue count: %d\n", dev_interface->event_queue_count);
+    printf("Event queue stride: 0x%08x\n", dev_interface->event_queue_stride);
+
     printf("TX queue offset: 0x%08x\n", dev_interface->tx_queue_offset);
-    printf("TX completion queue count: %d\n", dev_interface->tx_cpl_queue_count);
+    printf("TX queue count: %d\n", dev_interface->tx_queue_count);
+    printf("TX queue stride: 0x%08x\n", dev_interface->tx_queue_stride);
+
     printf("TX completion queue offset: 0x%08x\n", dev_interface->tx_cpl_queue_offset);
-    printf("RX queue count: %d\n", dev_interface->rx_queue_count);
+    printf("TX completion queue count: %d\n", dev_interface->tx_cpl_queue_count);
+    printf("TX completion queue stride: 0x%08x\n", dev_interface->tx_cpl_queue_stride);
+
     printf("RX queue offset: 0x%08x\n", dev_interface->rx_queue_offset);
-    printf("RX completion queue count: %d\n", dev_interface->rx_cpl_queue_count);
+    printf("RX queue count: %d\n", dev_interface->rx_queue_count);
+    printf("RX queue stride: 0x%08x\n", dev_interface->rx_queue_stride);
+
     printf("RX completion queue offset: 0x%08x\n", dev_interface->rx_cpl_queue_offset);
+    printf("RX completion queue count: %d\n", dev_interface->rx_cpl_queue_count);
+    printf("RX completion queue stride: 0x%08x\n", dev_interface->rx_cpl_queue_stride);
+
     printf("Port count: %d\n", dev_interface->port_count);
-    printf("Port offset: 0x%08x\n", dev_interface->port_offset);
-    printf("Port stride: 0x%08x\n", dev_interface->port_stride);
 
     if (port < 0 || port >= dev_interface->port_count)
     {
@@ -202,91 +222,107 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Invalid port\n");
         goto err;
     }
-
-    printf("Port ID: 0x%08x\n", dev_port->port_id);
     
     printf("Sched count: %d\n", dev_port->sched_count);
-    printf("Sched offset: 0x%08x\n", dev_port->sched_offset);
-    printf("Sched stride: 0x%08x\n", dev_port->sched_stride);
-    printf("Sched type: 0x%08x\n", dev_port->sched_type);
 
-    printf("Timeslot count: %d\n", dev_port->tdma_timeslot_count);
+    rb = find_reg_block(dev_port->rb_list, MQNIC_RB_TDMA_SCH_TYPE, MQNIC_RB_TDMA_SCH_VER, 0);
 
-    if (period_nsec > 0)
+    if (dev->phc_rb && rb)
     {
-        printf("Configure port TDMA schedule\n");
+        printf("TDMA timeslot count: %d\n", mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_TS_COUNT));
+        printf("TDMA control: 0x%08x\n", mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_CTRL));
+        printf("TDMA status:  0x%08x\n", mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_STATUS));
 
-        ts_now.tv_nsec = mqnic_reg_read32(dev->phc_regs, MQNIC_PHC_REG_PTP_CUR_NS);
-        ts_now.tv_sec = mqnic_reg_read32(dev->phc_regs, MQNIC_PHC_REG_PTP_CUR_SEC_L) + (((int64_t)mqnic_reg_read32(dev->phc_regs, MQNIC_PHC_REG_PTP_CUR_SEC_H)) << 32);
+        printf("TDMA schedule start:  %ld.%09d s\n", mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_START_SEC_L) +
+                (((int64_t)mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_START_SEC_H)) << 32),
+                mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_START_NS));
+        printf("TDMA schedule period: %ld.%09d s\n", mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_PERIOD_SEC_L) +
+                (((int64_t)mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_PERIOD_SEC_H)) << 32),
+                mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_PERIOD_NS));
+        printf("TDMA timeslot period: %ld.%09d s\n", mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_TS_PERIOD_SEC_L) +
+                (((int64_t)mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_TS_PERIOD_SEC_H)) << 32),
+                mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_TS_PERIOD_NS));
+        printf("TDMA active period:   %ld.%09d s\n", mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_SEC_L) +
+                (((int64_t)mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_SEC_H)) << 32),
+                mqnic_reg_read32(rb->regs, MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_NS));
 
-        // normalize start
-        ts_start.tv_sec = start_nsec / NSEC_PER_SEC;
-        ts_start.tv_nsec = start_nsec - ts_start.tv_sec * NSEC_PER_SEC;
-
-        // normalize period
-        ts_period.tv_sec = period_nsec / NSEC_PER_SEC;
-        ts_period.tv_nsec = period_nsec - ts_period.tv_sec * NSEC_PER_SEC;
-
-        printf("time   %ld.%09ld s\n", ts_now.tv_sec, ts_now.tv_nsec);
-        printf("start  %ld.%09ld s\n", ts_start.tv_sec, ts_start.tv_nsec);
-        printf("period %ld.%09ld s\n", ts_period.tv_sec, ts_period.tv_nsec);
-
-        if (timespec_lt(ts_start, ts_now))
+        if (period_nsec > 0)
         {
-            // start time is in the past
+            printf("Configure port TDMA schedule\n");
 
-            // modulo start with period
-            ts_start = timespec_mod(ts_start, ts_period);
+            ts_now.tv_nsec = mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_NS);
+            ts_now.tv_sec = mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_SEC_L) +
+                    (((int64_t)mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_SEC_H)) << 32);
 
-            // align time with period
-            struct timespec ts_aligned = timespec_sub(ts_now, timespec_mod(ts_now, ts_period));
+            // normalize start
+            ts_start.tv_sec = start_nsec / NSEC_PER_SEC;
+            ts_start.tv_nsec = start_nsec - ts_start.tv_sec * NSEC_PER_SEC;
 
-            // add aligned time
-            ts_start = timespec_add(ts_start, ts_aligned);
+            // normalize period
+            ts_period.tv_sec = period_nsec / NSEC_PER_SEC;
+            ts_period.tv_nsec = period_nsec - ts_period.tv_sec * NSEC_PER_SEC;
+
+            printf("time   %ld.%09ld s\n", ts_now.tv_sec, ts_now.tv_nsec);
+            printf("start  %ld.%09ld s\n", ts_start.tv_sec, ts_start.tv_nsec);
+            printf("period %ld.%09ld s\n", ts_period.tv_sec, ts_period.tv_nsec);
+
+            if (timespec_lt(ts_start, ts_now))
+            {
+                // start time is in the past
+
+                // modulo start with period
+                ts_start = timespec_mod(ts_start, ts_period);
+
+                // align time with period
+                struct timespec ts_aligned = timespec_sub(ts_now, timespec_mod(ts_now, ts_period));
+
+                // add aligned time
+                ts_start = timespec_add(ts_start, ts_aligned);
+            }
+
+            printf("time   %ld.%09ld s\n", ts_now.tv_sec, ts_now.tv_nsec);
+            printf("start  %ld.%09ld s\n", ts_start.tv_sec, ts_start.tv_nsec);
+            printf("period %ld.%09ld s\n", ts_period.tv_sec, ts_period.tv_nsec);
+
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_START_NS, ts_start.tv_nsec);
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_START_SEC_L, ts_start.tv_sec & 0xffffffff);
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_START_SEC_H, ts_start.tv_sec >> 32);
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_PERIOD_NS, ts_period.tv_nsec);
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_PERIOD_SEC_L, ts_period.tv_sec & 0xffffffff);
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_SCH_PERIOD_SEC_H, ts_period.tv_sec >> 32);
+
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_CTRL, 0x00000001);
         }
 
-        printf("time   %ld.%09ld s\n", ts_now.tv_sec, ts_now.tv_nsec);
-        printf("start  %ld.%09ld s\n", ts_start.tv_sec, ts_start.tv_nsec);
-        printf("period %ld.%09ld s\n", ts_period.tv_sec, ts_period.tv_nsec);
+        if (timeslot_period_nsec > 0)
+        {
+            printf("Configure port TDMA timeslot period\n");
 
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_START_NS, ts_start.tv_nsec);
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_START_SEC_L, ts_start.tv_sec & 0xffffffff);
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_START_SEC_H, ts_start.tv_sec >> 32);
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_PERIOD_NS, ts_period.tv_nsec);
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_L, ts_period.tv_sec & 0xffffffff);
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_H, ts_period.tv_sec >> 32);
+            // normalize period
+            ts_timeslot_period.tv_sec = timeslot_period_nsec / NSEC_PER_SEC;
+            ts_timeslot_period.tv_nsec = timeslot_period_nsec - ts_timeslot_period.tv_sec * NSEC_PER_SEC;
 
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_CTRL, 0x00000001);
-    }
+            printf("period %ld.%09ld s\n", ts_timeslot_period.tv_sec, ts_timeslot_period.tv_nsec);
 
-    if (timeslot_period_nsec > 0)
-    {
-        printf("Configure port TDMA timeslot period\n");
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_TS_PERIOD_NS, ts_timeslot_period.tv_nsec);
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_TS_PERIOD_SEC_L, ts_timeslot_period.tv_sec & 0xffffffff);
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_TS_PERIOD_SEC_H, ts_timeslot_period.tv_sec >> 32);
+        }
 
-        // normalize period
-        ts_timeslot_period.tv_sec = timeslot_period_nsec / NSEC_PER_SEC;
-        ts_timeslot_period.tv_nsec = timeslot_period_nsec - ts_timeslot_period.tv_sec * NSEC_PER_SEC;
+        if (active_period_nsec > 0)
+        {
+            printf("Configure port TDMA active period\n");
 
-        printf("period %ld.%09ld s\n", ts_timeslot_period.tv_sec, ts_timeslot_period.tv_nsec);
+            // normalize period
+            ts_active_period.tv_sec = active_period_nsec / NSEC_PER_SEC;
+            ts_active_period.tv_nsec = active_period_nsec - ts_active_period.tv_sec * NSEC_PER_SEC;
 
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_NS, ts_timeslot_period.tv_nsec);
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_L, ts_timeslot_period.tv_sec & 0xffffffff);
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_H, ts_timeslot_period.tv_sec >> 32);
-    }
+            printf("period %ld.%09ld s\n", ts_active_period.tv_sec, ts_active_period.tv_nsec);
 
-    if (active_period_nsec > 0)
-    {
-        printf("Configure port TDMA active period\n");
-
-        // normalize period
-        ts_active_period.tv_sec = active_period_nsec / NSEC_PER_SEC;
-        ts_active_period.tv_nsec = active_period_nsec - ts_active_period.tv_sec * NSEC_PER_SEC;
-
-        printf("period %ld.%09ld s\n", ts_active_period.tv_sec, ts_active_period.tv_nsec);
-
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_NS, ts_active_period.tv_nsec);
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L, ts_active_period.tv_sec & 0xffffffff);
-        mqnic_reg_write32(dev_port->regs, MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H, ts_active_period.tv_sec >> 32);
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_NS, ts_active_period.tv_nsec);
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_SEC_L, ts_active_period.tv_sec & 0xffffffff);
+            mqnic_reg_write32(rb->regs, MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_SEC_H, ts_active_period.tv_sec >> 32);
+        }
     }
 
 err:

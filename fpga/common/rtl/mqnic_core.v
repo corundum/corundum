@@ -43,10 +43,14 @@ either expressed or implied, of The Regents of the University of California.
 module mqnic_core #
 (
     // FW and board IDs
-    parameter FW_ID = 32'd0,
-    parameter FW_VER = {16'd0, 16'd1},
-    parameter BOARD_ID = {16'h1234, 16'h0000},
-    parameter BOARD_VER = {16'd0, 16'd1},
+    parameter FPGA_ID = 32'hDEADBEEF,
+    parameter FW_ID = 32'h00000000,
+    parameter FW_VER = 32'h00_00_01_00,
+    parameter BOARD_ID = 16'h1234_0000,
+    parameter BOARD_VER = 32'h01_00_00_00,
+    parameter BUILD_DATE = 32'd602976000,
+    parameter GIT_HASH = 32'hdce357bf,
+    parameter RELEASE_INFO = 32'h00000000,
 
     // Structural configuration
     parameter IF_COUNT = 1,
@@ -140,6 +144,7 @@ module mqnic_core #
     parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT),
     parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
     parameter AXIL_CSR_PASSTHROUGH_ENABLE = 0,
+    parameter RB_NEXT_PTR = 0,
 
     // AXI lite interface configuration (application control)
     parameter AXIL_APP_CTRL_DATA_WIDTH = AXIL_CTRL_DATA_WIDTH,
@@ -378,6 +383,16 @@ parameter AXIS_IF_KEEP_WIDTH = AXIS_SYNC_KEEP_WIDTH;
 parameter AXIS_IF_TX_USER_WIDTH = AXIS_TX_USER_WIDTH;
 parameter AXIS_IF_RX_USER_WIDTH = AXIS_RX_USER_WIDTH;
 
+localparam PHC_RB_BASE_ADDR = 32'h100;
+
+// check configuration
+initial begin
+    if (RB_NEXT_PTR > 0 && RB_NEXT_PTR < 16'h200) begin
+        $error("Error: RB_NEXT_PTR overlaps block (instance %m)");
+        $finish;
+    end
+end
+
 // parameter sizing helpers
 function [31:0] w_32(input [31:0] val);
     w_32 = val;
@@ -533,16 +548,34 @@ always @(posedge clk) begin
         // read operation
         ctrl_reg_rd_ack_reg <= 1'b1;
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
-            8'h00: ctrl_reg_rd_data_reg <= FW_ID;      // fw_id
-            8'h04: ctrl_reg_rd_data_reg <= FW_VER;     // fw_ver
-            8'h08: ctrl_reg_rd_data_reg <= BOARD_ID;   // board_id
-            8'h0C: ctrl_reg_rd_data_reg <= BOARD_VER;  // board_ver
-            8'h10: ctrl_reg_rd_data_reg <= 1;          // phc_count
-            8'h14: ctrl_reg_rd_data_reg <= 16'h0200;   // phc_offset
-            8'h18: ctrl_reg_rd_data_reg <= 16'h0080;   // phc_stride
-            8'h20: ctrl_reg_rd_data_reg <= IF_COUNT;   // if_count
-            8'h24: ctrl_reg_rd_data_reg <= 2**AXIL_IF_CTRL_ADDR_WIDTH; // if_stride
-            8'h2C: ctrl_reg_rd_data_reg <= 2**AXIL_CSR_ADDR_WIDTH; // if_csr_offset
+            // FW ID
+            8'h00: ctrl_reg_rd_data_reg <= 32'hffffffff;  // FW ID: Type
+            8'h04: ctrl_reg_rd_data_reg <= 32'h00000100;  // FW ID: Version
+            8'h08: ctrl_reg_rd_data_reg <= 32'h40;        // FW ID: Next header
+            8'h0C: ctrl_reg_rd_data_reg <= FPGA_ID;       // FW ID: FPGA JTAG ID
+            8'h10: ctrl_reg_rd_data_reg <= FW_ID;         // FW ID: Firmware ID
+            8'h14: ctrl_reg_rd_data_reg <= FW_VER;        // FW ID: Firmware version
+            8'h18: ctrl_reg_rd_data_reg <= BOARD_ID;      // FW ID: Board ID
+            8'h1C: ctrl_reg_rd_data_reg <= BOARD_VER;     // FW ID: Board version
+            8'h20: ctrl_reg_rd_data_reg <= BUILD_DATE;    // FW ID: Build date
+            8'h24: ctrl_reg_rd_data_reg <= GIT_HASH;      // FW ID: Git commit hash
+            8'h28: ctrl_reg_rd_data_reg <= RELEASE_INFO;  // FW ID: Release info
+            // Interface
+            8'h40: ctrl_reg_rd_data_reg <= 32'h0000C000;  // Interface: Type
+            8'h44: ctrl_reg_rd_data_reg <= 32'h00000100;  // Interface: Version
+            8'h48: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h60 : PHC_RB_BASE_ADDR;  // Interface: Next header
+            8'h4C: ctrl_reg_rd_data_reg <= 32'h0;         // Interface: Offset
+            8'h50: ctrl_reg_rd_data_reg <= IF_COUNT;      // Interface: Count
+            8'h54: ctrl_reg_rd_data_reg <= 2**AXIL_IF_CTRL_ADDR_WIDTH;  // Interface: Stride
+            8'h58: ctrl_reg_rd_data_reg <= 2**AXIL_CSR_ADDR_WIDTH;  // Interface: CSR offset
+            // Stats
+            8'h60: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h0000C004 : 0;  // Stats: Type
+            8'h64: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h00000100 : 0;  // Stats: Version
+            8'h68: ctrl_reg_rd_data_reg <= STAT_ENABLE ? PHC_RB_BASE_ADDR : 0;  // Stats: Next header
+            8'h6C: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 2**16 : 0;         // Stats: Offset
+            8'h70: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 2**STAT_ID_WIDTH : 0;  // Stats: Count
+            8'h74: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 8 : 0;             // Stats: Stride
+            8'h78: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h00000000 : 0;  // Stats: Flags
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end
@@ -561,9 +594,11 @@ mqnic_ptp #(
     .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
-    .REG_ADDR_WIDTH(8),
+    .REG_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
     .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
-    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH)
+    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .RB_BASE_ADDR(PHC_RB_BASE_ADDR),
+    .RB_NEXT_PTR(RB_NEXT_PTR)
 )
 mqnic_ptp_inst (
     .clk(clk),
@@ -575,11 +610,11 @@ mqnic_ptp_inst (
     .reg_wr_addr(ctrl_reg_wr_addr),
     .reg_wr_data(ctrl_reg_wr_data),
     .reg_wr_strb(ctrl_reg_wr_strb),
-    .reg_wr_en(ctrl_reg_wr_en && (ctrl_reg_wr_addr >> 8 == 2)),
+    .reg_wr_en(ctrl_reg_wr_en),
     .reg_wr_wait(ptp_ctrl_reg_wr_wait),
     .reg_wr_ack(ptp_ctrl_reg_wr_ack),
     .reg_rd_addr(ctrl_reg_rd_addr),
-    .reg_rd_en(ctrl_reg_rd_en && (ctrl_reg_rd_addr >> 8 == 2)),
+    .reg_rd_en(ctrl_reg_rd_en),
     .reg_rd_data(ptp_ctrl_reg_rd_data),
     .reg_rd_wait(ptp_ctrl_reg_rd_wait),
     .reg_rd_ack(ptp_ctrl_reg_rd_ack),

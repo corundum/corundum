@@ -69,13 +69,16 @@ static int mqnic_i2c_get_sda(void *data)
 	return !!(ioread32(bus->sda_in_reg) & bus->sda_in_mask);
 }
 
-struct mqnic_i2c_bus *mqnic_i2c_bus_create(struct mqnic_dev *mqnic, u8 __iomem *reg)
+struct mqnic_i2c_bus *mqnic_i2c_bus_create(struct mqnic_dev *mqnic, int index)
 {
 	struct mqnic_i2c_bus *bus;
 	struct i2c_algo_bit_data *algo;
 	struct i2c_adapter *adapter;
+	struct reg_block *rb;
 
-	if (!reg)
+	rb = find_reg_block(mqnic->rb_list, MQNIC_RB_I2C_TYPE, MQNIC_RB_I2C_VER, index);
+
+	if (!rb)
 		return NULL;
 
 	bus = kzalloc(sizeof(*bus), GFP_KERNEL);
@@ -85,10 +88,10 @@ struct mqnic_i2c_bus *mqnic_i2c_bus_create(struct mqnic_dev *mqnic, u8 __iomem *
 
 	// set private data
 	bus->mqnic = mqnic;
-	bus->scl_in_reg = reg;
-	bus->scl_out_reg = reg;
-	bus->sda_in_reg = reg;
-	bus->sda_out_reg = reg;
+	bus->scl_in_reg = rb->regs + MQNIC_RB_I2C_REG_CTRL;
+	bus->scl_out_reg = rb->regs + MQNIC_RB_I2C_REG_CTRL;
+	bus->sda_in_reg = rb->regs + MQNIC_RB_I2C_REG_CTRL;
+	bus->sda_out_reg = rb->regs + MQNIC_RB_I2C_REG_CTRL;
 	bus->scl_in_mask = MQNIC_REG_GPIO_I2C_SCL_IN;
 	bus->scl_out_mask = MQNIC_REG_GPIO_I2C_SCL_OUT;
 	bus->sda_in_mask = MQNIC_REG_GPIO_I2C_SDA_IN;
@@ -128,9 +131,9 @@ err_free_bus:
 	return NULL;
 }
 
-struct i2c_adapter *mqnic_i2c_adapter_create(struct mqnic_dev *mqnic, u8 __iomem *reg)
+struct i2c_adapter *mqnic_i2c_adapter_create(struct mqnic_dev *mqnic, int index)
 {
-	struct mqnic_i2c_bus *bus = mqnic_i2c_bus_create(mqnic, reg);
+	struct mqnic_i2c_bus *bus = mqnic_i2c_bus_create(mqnic, index);
 
 	if (!bus)
 		return NULL;

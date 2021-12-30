@@ -370,6 +370,7 @@ parameter QUEUE_REQ_TAG_WIDTH = $clog2(MAX_DESC_TABLE_SIZE) + 1 + $clog2(PORTS+1
 parameter QUEUE_OP_TAG_WIDTH = 6;
 
 parameter DMA_TAG_WIDTH_INT = DMA_TAG_WIDTH - $clog2(PORTS);
+parameter DMA_CLIENT_LEN_WIDTH = DMA_LEN_WIDTH;
 
 parameter QUEUE_INDEX_WIDTH = TX_QUEUE_INDEX_WIDTH > RX_QUEUE_INDEX_WIDTH ? TX_QUEUE_INDEX_WIDTH : RX_QUEUE_INDEX_WIDTH;
 parameter CPL_QUEUE_INDEX_WIDTH = TX_CPL_QUEUE_INDEX_WIDTH > RX_CPL_QUEUE_INDEX_WIDTH ? TX_CPL_QUEUE_INDEX_WIDTH : RX_CPL_QUEUE_INDEX_WIDTH;
@@ -394,7 +395,11 @@ parameter AXIL_RX_QM_BASE_ADDR = AXIL_TX_CQM_BASE_ADDR + 2**AXIL_TX_CQM_ADDR_WID
 parameter AXIL_RX_CQM_BASE_ADDR = AXIL_RX_QM_BASE_ADDR + 2**AXIL_RX_QM_ADDR_WIDTH;
 parameter AXIL_PORT_BASE_ADDR = AXIL_RX_CQM_BASE_ADDR + 2**AXIL_RX_CQM_ADDR_WIDTH;
 
-parameter PORT_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(PORTS+1);
+localparam RB_BASE_ADDR = AXIL_CTRL_BASE_ADDR;
+localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
+
+localparam PORT_RB_BASE_ADDR = RB_BASE_ADDR + 16'h1000;
+localparam PORT_RB_STRIDE = 16'h1000;
 
 // parameter sizing helpers
 function [31:0] w_32(input [31:0] val);
@@ -903,6 +908,11 @@ always @* begin
     end
 end
 
+reg [DMA_CLIENT_LEN_WIDTH-1:0] tx_mtu_reg = MAX_TX_SIZE;
+reg [DMA_CLIENT_LEN_WIDTH-1:0] rx_mtu_reg = MAX_RX_SIZE;
+
+reg [RX_QUEUE_INDEX_WIDTH-1:0] rss_mask_reg = 0;
+
 always @(posedge clk) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
     ctrl_reg_rd_data_reg <= {AXIL_DATA_WIDTH{1'b0}};
@@ -910,38 +920,81 @@ always @(posedge clk) begin
 
     if (ctrl_reg_wr_en && !ctrl_reg_wr_ack_reg) begin
         // write operation
-        ctrl_reg_wr_ack_reg <= 1'b0;
-        // case ({ctrl_reg_wr_addr >> 2, 2'b00})
-        //     default: ctrl_reg_wr_ack_reg <= 1'b0;
-        // endcase
+        ctrl_reg_wr_ack_reg <= 1'b1;
+        case ({ctrl_reg_wr_addr >> 2, 2'b00})
+            // Interface control (TX)
+            RBB+8'h14: tx_mtu_reg <= ctrl_reg_wr_data;                      // IF TX ctrl: TX MTU
+            // Interface control (RX)
+            RBB+8'h34: rx_mtu_reg <= ctrl_reg_wr_data;                      // IF RX ctrl: RX MTU
+            RBB+8'h38: rss_mask_reg <= ctrl_reg_wr_data;                    // IF RX ctrl: RSS mask
+            default: ctrl_reg_wr_ack_reg <= 1'b0;
+        endcase
     end
 
     if (ctrl_reg_rd_en && !ctrl_reg_rd_ack_reg) begin
         // read operation
         ctrl_reg_rd_ack_reg <= 1'b1;
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
-            16'h0000: ctrl_reg_rd_data_reg <= 32'd0;                       // if_id
-            16'h0004: begin
-                // if_features
-                ctrl_reg_rd_data_reg[0] <= RX_RSS_ENABLE && RX_HASH_ENABLE;
+            // Interface control (TX)
+            RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C001;                // IF TX ctrl: Type
+            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000100;                // IF TX ctrl: Version
+            RBB+8'h08: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h20;          // IF TX ctrl: Next header
+            RBB+8'h0C: begin
+                // IF TX ctrl: features
                 ctrl_reg_rd_data_reg[4] <= PTP_TS_ENABLE;
                 ctrl_reg_rd_data_reg[8] <= TX_CHECKSUM_ENABLE;
-                ctrl_reg_rd_data_reg[9] <= RX_CHECKSUM_ENABLE;
-                ctrl_reg_rd_data_reg[10] <= RX_HASH_ENABLE;
             end
-            16'h0010: ctrl_reg_rd_data_reg <= 2**EVENT_QUEUE_INDEX_WIDTH;  // event_queue_count
-            16'h0014: ctrl_reg_rd_data_reg <= AXIL_EQM_BASE_ADDR;          // event_queue_offset
-            16'h0020: ctrl_reg_rd_data_reg <= 2**TX_QUEUE_INDEX_WIDTH;     // tx_queue_count
-            16'h0024: ctrl_reg_rd_data_reg <= AXIL_TX_QM_BASE_ADDR;        // tx_queue_offset
-            16'h0028: ctrl_reg_rd_data_reg <= 2**TX_CPL_QUEUE_INDEX_WIDTH; // tx_cpl_queue_count
-            16'h002C: ctrl_reg_rd_data_reg <= AXIL_TX_CQM_BASE_ADDR;       // tx_cpl_queue_offset
-            16'h0030: ctrl_reg_rd_data_reg <= 2**RX_QUEUE_INDEX_WIDTH;     // rx_queue_count
-            16'h0034: ctrl_reg_rd_data_reg <= AXIL_RX_QM_BASE_ADDR;        // rx_queue_offset
-            16'h0038: ctrl_reg_rd_data_reg <= 2**RX_CPL_QUEUE_INDEX_WIDTH; // rx_cpl_queue_count
-            16'h003C: ctrl_reg_rd_data_reg <= AXIL_RX_CQM_BASE_ADDR;       // rx_cpl_queue_offset
-            16'h0040: ctrl_reg_rd_data_reg <= PORTS;                       // port_count
-            16'h0044: ctrl_reg_rd_data_reg <= AXIL_CTRL_BASE_ADDR + 2**PORT_CTRL_ADDR_WIDTH; // port_offset
-            16'h0048: ctrl_reg_rd_data_reg <= 2**PORT_CTRL_ADDR_WIDTH;     // port_stride
+            RBB+8'h10: ctrl_reg_rd_data_reg <= MAX_TX_SIZE;                 // IF TX ctrl: Max TX MTU
+            RBB+8'h14: ctrl_reg_rd_data_reg <= tx_mtu_reg;                  // IF TX ctrl: TX MTU
+            // Interface control (RX)
+            RBB+8'h20: ctrl_reg_rd_data_reg <= 32'h0000C002;                // IF RX ctrl: Type
+            RBB+8'h24: ctrl_reg_rd_data_reg <= 32'h00000100;                // IF RX ctrl: Version
+            RBB+8'h28: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h40;          // IF RX ctrl: Next header
+            RBB+8'h2C: begin
+                // IF RX ctrl: features
+                ctrl_reg_rd_data_reg[0] <= RX_RSS_ENABLE && RX_HASH_ENABLE;
+                ctrl_reg_rd_data_reg[4] <= PTP_TS_ENABLE;
+                ctrl_reg_rd_data_reg[8] <= RX_CHECKSUM_ENABLE;
+                ctrl_reg_rd_data_reg[9] <= RX_HASH_ENABLE;
+            end
+            RBB+8'h30: ctrl_reg_rd_data_reg <= MAX_RX_SIZE;                 // IF RX ctrl: Max RX MTU
+            RBB+8'h34: ctrl_reg_rd_data_reg <= rx_mtu_reg;                  // IF RX ctrl: RX MTU
+            RBB+8'h38: ctrl_reg_rd_data_reg <= rss_mask_reg;                // IF RX ctrl: RSS mask
+            // Queue manager (Event)
+            RBB+8'h40: ctrl_reg_rd_data_reg <= 32'h0000C010;                // Event QM: Type
+            RBB+8'h44: ctrl_reg_rd_data_reg <= 32'h00000100;                // Event QM: Version
+            RBB+8'h48: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h60;          // Event QM: Next header
+            RBB+8'h4C: ctrl_reg_rd_data_reg <= AXIL_EQM_BASE_ADDR;          // Event QM: Offset
+            RBB+8'h50: ctrl_reg_rd_data_reg <= 2**EVENT_QUEUE_INDEX_WIDTH;  // Event QM: Count
+            RBB+8'h54: ctrl_reg_rd_data_reg <= 32;                          // Event QM: Stride
+            // Queue manager (TX)
+            RBB+8'h60: ctrl_reg_rd_data_reg <= 32'h0000C020;                // TX QM: Type
+            RBB+8'h64: ctrl_reg_rd_data_reg <= 32'h00000100;                // TX QM: Version
+            RBB+8'h68: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h80;          // TX QM: Next header
+            RBB+8'h6C: ctrl_reg_rd_data_reg <= AXIL_TX_QM_BASE_ADDR;        // TX QM: Offset
+            RBB+8'h70: ctrl_reg_rd_data_reg <= 2**TX_QUEUE_INDEX_WIDTH;     // TX QM: Count
+            RBB+8'h74: ctrl_reg_rd_data_reg <= 32;                          // TX QM: Stride
+            // Queue manager (TX CPL)
+            RBB+8'h80: ctrl_reg_rd_data_reg <= 32'h0000C030;                // TX CPL QM: Type
+            RBB+8'h84: ctrl_reg_rd_data_reg <= 32'h00000100;                // TX CPL QM: Version
+            RBB+8'h88: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'hA0;          // TX CPL QM: Next header
+            RBB+8'h8C: ctrl_reg_rd_data_reg <= AXIL_TX_CQM_BASE_ADDR;       // TX CPL QM: Offset
+            RBB+8'h90: ctrl_reg_rd_data_reg <= 2**TX_CPL_QUEUE_INDEX_WIDTH; // TX CPL QM: Count
+            RBB+8'h94: ctrl_reg_rd_data_reg <= 32;                          // TX CPL QM: Stride
+            // Queue manager (RX)
+            RBB+8'hA0: ctrl_reg_rd_data_reg <= 32'h0000C021;                // RX QM: Type
+            RBB+8'hA4: ctrl_reg_rd_data_reg <= 32'h00000100;                // RX QM: Version
+            RBB+8'hA8: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'hC0;          // RX QM: Next header
+            RBB+8'hAC: ctrl_reg_rd_data_reg <= AXIL_RX_QM_BASE_ADDR;        // RX QM: Offset
+            RBB+8'hB0: ctrl_reg_rd_data_reg <= 2**RX_QUEUE_INDEX_WIDTH;     // RX QM: Count
+            RBB+8'hB4: ctrl_reg_rd_data_reg <= 32;                          // RX QM: Stride
+            // Queue manager (RX CPL)
+            RBB+8'hC0: ctrl_reg_rd_data_reg <= 32'h0000C031;                // RX CPL QM: Type
+            RBB+8'hC4: ctrl_reg_rd_data_reg <= 32'h00000100;                // RX CPL QM: Version
+            RBB+8'hC8: ctrl_reg_rd_data_reg <= PORT_RB_BASE_ADDR;           // RX CPL QM: Next header
+            RBB+8'hCC: ctrl_reg_rd_data_reg <= AXIL_RX_CQM_BASE_ADDR;       // RX CPL QM: Offset
+            RBB+8'hD0: ctrl_reg_rd_data_reg <= 2**RX_CPL_QUEUE_INDEX_WIDTH; // RX CPL QM: Count
+            RBB+8'hD4: ctrl_reg_rd_data_reg <= 32;                          // RX CPL QM: Stride
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end
@@ -949,6 +1002,11 @@ always @(posedge clk) begin
     if (rst) begin
         ctrl_reg_wr_ack_reg <= 1'b0;
         ctrl_reg_rd_ack_reg <= 1'b0;
+
+        tx_mtu_reg <= MAX_TX_SIZE;
+        rx_mtu_reg <= MAX_RX_SIZE;
+
+        rss_mask_reg <= 0;
     end
 end
 
@@ -2120,6 +2178,7 @@ generate
         mqnic_port #(
             .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
             .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
+            .DMA_CLIENT_LEN_WIDTH(DMA_CLIENT_LEN_WIDTH),
             .DMA_TAG_WIDTH(DMA_TAG_WIDTH_INT),
             .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
             .DESC_REQ_TAG_WIDTH(PORT_DESC_REQ_TAG_WIDTH),
@@ -2149,12 +2208,14 @@ generate
             .RX_HASH_ENABLE(RX_HASH_ENABLE),
             .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
             .REG_DATA_WIDTH(AXIL_DATA_WIDTH),
-            .REG_ADDR_WIDTH(PORT_CTRL_ADDR_WIDTH),
+            .REG_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
             .REG_STRB_WIDTH(AXIL_STRB_WIDTH),
+            .RB_BASE_ADDR(PORT_RB_BASE_ADDR + PORT_RB_STRIDE*n),
+            .RB_NEXT_PTR(n < PORTS-1 ? PORT_RB_BASE_ADDR + PORT_RB_STRIDE*(n+1) : 0),
             .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
             .AXIL_ADDR_WIDTH(AXIL_PORT_ADDR_WIDTH),
             .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
-            .AXIL_OFFSET(AXIL_PORT_BASE_ADDR + (2**AXIL_PORT_ADDR_WIDTH)*n - (AXIL_CTRL_BASE_ADDR + (2**PORT_CTRL_ADDR_WIDTH)*(n+1))),
+            .AXIL_OFFSET(AXIL_PORT_BASE_ADDR + (2**AXIL_PORT_ADDR_WIDTH)*n),
             .SEG_COUNT(SEG_COUNT),
             .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
             .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
@@ -2271,11 +2332,11 @@ generate
             .ctrl_reg_wr_addr(ctrl_reg_wr_addr),
             .ctrl_reg_wr_data(ctrl_reg_wr_data),
             .ctrl_reg_wr_strb(ctrl_reg_wr_strb),
-            .ctrl_reg_wr_en(ctrl_reg_wr_en && ((ctrl_reg_wr_addr >> PORT_CTRL_ADDR_WIDTH) == n+1)),
+            .ctrl_reg_wr_en(ctrl_reg_wr_en),
             .ctrl_reg_wr_wait(port_ctrl_reg_wr_wait[n]),
             .ctrl_reg_wr_ack(port_ctrl_reg_wr_ack[n]),
             .ctrl_reg_rd_addr(ctrl_reg_rd_addr),
-            .ctrl_reg_rd_en(ctrl_reg_rd_en && ((ctrl_reg_rd_addr >> PORT_CTRL_ADDR_WIDTH) == n+1)),
+            .ctrl_reg_rd_en(ctrl_reg_rd_en),
             .ctrl_reg_rd_data(port_ctrl_reg_rd_data[n]),
             .ctrl_reg_rd_wait(port_ctrl_reg_rd_wait[n]),
             .ctrl_reg_rd_ack(port_ctrl_reg_rd_ack[n]),
@@ -2357,7 +2418,14 @@ generate
              * PTP clock
              */
             .ptp_ts_96(ptp_ts_96),
-            .ptp_ts_step(ptp_ts_step)
+            .ptp_ts_step(ptp_ts_step),
+
+            /*
+             * Configuration
+             */
+            .tx_mtu(tx_mtu_reg),
+            .rx_mtu(rx_mtu_reg),
+            .rss_mask(rss_mask_reg)
         );
 
     end

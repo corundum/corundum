@@ -194,7 +194,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		request_module("at24");
 
 		// I2C adapter
-		adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr + MQNIC_REG_GPIO_I2C_0);
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
 
 		// IC31 TCA9548 I2C MUX
 		mux = create_i2c_client(adapter, "pca9548", 0x74, i2c_mux_props);
@@ -235,7 +235,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		request_module("at24");
 
 		// I2C adapter
-		adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr + MQNIC_REG_GPIO_I2C_0);
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
 
 		// U28 TCA9548 I2C MUX
 		mux = create_i2c_client(adapter, "pca9548", 0x74, i2c_mux_props);
@@ -280,7 +280,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		request_module("at24");
 
 		// I2C adapter
-		adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr + MQNIC_REG_GPIO_I2C_0);
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
 
 		// U28 TCA9548 I2C MUX
 		mux = create_i2c_client(adapter, "pca9548", 0x74, i2c_mux_props);
@@ -316,7 +316,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		request_module("at24");
 
 		// I2C adapter
-		adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr + MQNIC_REG_GPIO_I2C_0);
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
 
 		// U28 TCA9546 I2C MUX
 		mux = create_i2c_client(adapter, "pca9546", 0x74, i2c_mux_props);
@@ -369,7 +369,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		request_module("at24");
 
 		// I2C adapter
-		adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr + MQNIC_REG_GPIO_I2C_0);
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
 
 		// U34 TCA9548 I2C MUX
 		mux = create_i2c_client(adapter, "pca9548", 0x74, i2c_mux_props);
@@ -397,7 +397,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 	case MQNIC_BOARD_ID_ADM_PCIE_9V3:
 
 		// create I2C adapter
-		adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr + MQNIC_REG_GPIO_I2C_1);
+		adapter = mqnic_i2c_adapter_create(mqnic, 1);
 
 		// I2C EEPROM
 		mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c02", 0x50, NULL);
@@ -438,30 +438,30 @@ static struct mqnic_board_ops generic_board_ops = {
 	.deinit = mqnic_generic_board_deinit
 };
 
-static u32 mqnic_alveo_bmc_reg_read(struct mqnic_dev *mqnic, u32 reg)
+static u32 mqnic_alveo_bmc_reg_read(struct mqnic_dev *mqnic, struct reg_block *rb, u32 reg)
 {
-	iowrite32(reg, mqnic->hw_addr + 0x180);
-	ioread32(mqnic->hw_addr + 0x184); // dummy read
-	return ioread32(mqnic->hw_addr + 0x184);
+	iowrite32(reg, rb->regs + MQNIC_RB_ALVEO_BMC_REG_ADDR);
+	ioread32(rb->regs + MQNIC_RB_ALVEO_BMC_REG_DATA); // dummy read
+	return ioread32(rb->regs + MQNIC_RB_ALVEO_BMC_REG_DATA);
 }
 
-static void mqnic_alveo_bmc_reg_write(struct mqnic_dev *mqnic, u32 reg, u32 val)
+static void mqnic_alveo_bmc_reg_write(struct mqnic_dev *mqnic, struct reg_block *rb, u32 reg, u32 val)
 {
-	iowrite32(reg, mqnic->hw_addr + 0x180);
-	iowrite32(val, mqnic->hw_addr + 0x184);
-	ioread32(mqnic->hw_addr + 0x184); // dummy read
+	iowrite32(reg, rb->regs + MQNIC_RB_ALVEO_BMC_REG_ADDR);
+	iowrite32(val, rb->regs + MQNIC_RB_ALVEO_BMC_REG_DATA);
+	ioread32(rb->regs + MQNIC_RB_ALVEO_BMC_REG_DATA); // dummy read
 }
 
-static int mqnic_alveo_bmc_read_mac(struct mqnic_dev *mqnic, int index, char *mac)
+static int mqnic_alveo_bmc_read_mac(struct mqnic_dev *mqnic, struct reg_block *rb, int index, char *mac)
 {
 	u32 reg = 0x0281a0 + index * 8;
 	u32 val;
 
-	val = mqnic_alveo_bmc_reg_read(mqnic, reg);
+	val = mqnic_alveo_bmc_reg_read(mqnic, rb, reg);
 	mac[0] = (val >> 8) & 0xff;
 	mac[1] = val & 0xff;
 
-	val = mqnic_alveo_bmc_reg_read(mqnic, reg + 4);
+	val = mqnic_alveo_bmc_reg_read(mqnic, rb, reg + 4);
 	mac[2] = (val >> 24) & 0xff;
 	mac[3] = (val >> 16) & 0xff;
 	mac[4] = (val >> 8) & 0xff;
@@ -470,7 +470,7 @@ static int mqnic_alveo_bmc_read_mac(struct mqnic_dev *mqnic, int index, char *ma
 	return 0;
 }
 
-static int mqnic_alveo_bmc_read_mac_list(struct mqnic_dev *mqnic, int count)
+static int mqnic_alveo_bmc_read_mac_list(struct mqnic_dev *mqnic, struct reg_block *rb, int count)
 {
 	int ret, k;
 	char mac[ETH_ALEN];
@@ -479,7 +479,7 @@ static int mqnic_alveo_bmc_read_mac_list(struct mqnic_dev *mqnic, int count)
 
 	mqnic->mac_count = 0;
 	for (k = 0; k < count; k++) {
-		ret = mqnic_alveo_bmc_read_mac(mqnic, k, mac);
+		ret = mqnic_alveo_bmc_read_mac(mqnic, rb, k, mac);
 		if (ret) {
 			dev_warn(mqnic->dev, "Failed to read MAC from Alveo BMC");
 			return -1;
@@ -503,6 +503,7 @@ static int mqnic_alveo_board_init(struct mqnic_dev *mqnic)
 {
 	struct i2c_adapter *adapter;
 	struct i2c_client *mux;
+	struct reg_block *rb;
 	int ret = 0;
 
 	mqnic->mod_i2c_client_count = 0;
@@ -527,7 +528,7 @@ static int mqnic_alveo_board_init(struct mqnic_dev *mqnic)
 		request_module("at24");
 
 		// I2C adapter
-		adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr + MQNIC_REG_GPIO_I2C_0);
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
 
 		// U28 TCA9546 I2C MUX
 		mux = create_i2c_client(adapter, "pca9546", 0x74, i2c_mux_props);
@@ -543,28 +544,35 @@ static int mqnic_alveo_board_init(struct mqnic_dev *mqnic)
 
 		mqnic->mod_i2c_client_count = 2;
 
-		// falls through
+		break;
 	case MQNIC_BOARD_ID_AU50:
 	case MQNIC_BOARD_ID_AU280:
-		// init BMC
-
-		if (mqnic_alveo_bmc_reg_read(mqnic, 0x020000) == 0 ||
-		    mqnic_alveo_bmc_reg_read(mqnic, 0x028000) != 0x74736574) {
-			dev_info(mqnic->dev, "Resetting Alveo CMS");
-
-			mqnic_alveo_bmc_reg_write(mqnic, 0x020000, 0);
-			mqnic_alveo_bmc_reg_write(mqnic, 0x020000, 1);
-			msleep(100);
-		}
-
-		if (mqnic_alveo_bmc_reg_read(mqnic, 0x028000) != 0x74736574)
-			dev_warn(mqnic->dev, "Alveo CMS not responding");
-		else
-			mqnic_alveo_bmc_read_mac_list(mqnic, 8);
+		// no I2C interfaces
 
 		break;
 	default:
 		dev_warn(mqnic->dev, "Unknown Alveo board ID");
+	}
+
+	// init BMC
+	rb = find_reg_block(mqnic->rb_list, MQNIC_RB_ALVEO_BMC_TYPE, MQNIC_RB_ALVEO_BMC_VER, 0);
+
+	if (rb) {
+		if (mqnic_alveo_bmc_reg_read(mqnic, rb, 0x020000) == 0 ||
+		    mqnic_alveo_bmc_reg_read(mqnic, rb, 0x028000) != 0x74736574) {
+			dev_info(mqnic->dev, "Resetting Alveo CMS");
+
+			mqnic_alveo_bmc_reg_write(mqnic, rb, 0x020000, 0);
+			mqnic_alveo_bmc_reg_write(mqnic, rb, 0x020000, 1);
+			msleep(100);
+		}
+
+		if (mqnic_alveo_bmc_reg_read(mqnic, rb, 0x028000) != 0x74736574)
+			dev_warn(mqnic->dev, "Alveo CMS not responding");
+		else
+			mqnic_alveo_bmc_read_mac_list(mqnic, rb, 8);
+	} else {
+		dev_warn(mqnic->dev, "Alveo CMS not found");
 	}
 
 	return ret;
@@ -575,13 +583,13 @@ static struct mqnic_board_ops alveo_board_ops = {
 	.deinit = mqnic_generic_board_deinit
 };
 
-static int mqnic_gecko_bmc_read(struct mqnic_dev *mqnic)
+static int mqnic_gecko_bmc_read(struct mqnic_dev *mqnic, struct reg_block *rb)
 {
 	u32 val;
 	int timeout = 200;
 
 	while (1) {
-		val = ioread32(mqnic->hw_addr + 0x188);
+		val = ioread32(rb->regs + MQNIC_RB_GECKO_BMC_REG_STATUS);
 		if (val & BIT(19)) {
 			if (val & BIT(18)) {
 				// timed out
@@ -603,40 +611,40 @@ static int mqnic_gecko_bmc_read(struct mqnic_dev *mqnic)
 	return -1;
 }
 
-static int mqnic_gecko_bmc_write(struct mqnic_dev *mqnic, u16 cmd, u32 data)
+static int mqnic_gecko_bmc_write(struct mqnic_dev *mqnic, struct reg_block *rb, u16 cmd, u32 data)
 {
 	int ret;
 
-	ret = mqnic_gecko_bmc_read(mqnic);
+	ret = mqnic_gecko_bmc_read(mqnic, rb);
 
 	if (ret == -1)
 		return ret;
 
-	iowrite32(data, mqnic->hw_addr + 0x180);
-	iowrite32(cmd << 16, mqnic->hw_addr + 0x184);
+	iowrite32(data, rb->regs + MQNIC_RB_GECKO_BMC_REG_DATA);
+	iowrite32(cmd << 16, rb->regs + MQNIC_RB_GECKO_BMC_REG_CMD);
 
 	return 0;
 }
 
-static int mqnic_gecko_bmc_query(struct mqnic_dev *mqnic, u16 cmd, u32 data)
+static int mqnic_gecko_bmc_query(struct mqnic_dev *mqnic, struct reg_block *rb, u16 cmd, u32 data)
 {
 	int ret;
 
-	ret = mqnic_gecko_bmc_write(mqnic, cmd, data);
+	ret = mqnic_gecko_bmc_write(mqnic, rb, cmd, data);
 
 	if (ret)
 		return ret;
 
-	return mqnic_gecko_bmc_read(mqnic);
+	return mqnic_gecko_bmc_read(mqnic, rb);
 }
 
-static int mqnic_gecko_bmc_read_mac(struct mqnic_dev *mqnic, int index, char *mac)
+static int mqnic_gecko_bmc_read_mac(struct mqnic_dev *mqnic, struct reg_block *rb, int index, char *mac)
 {
 	int i;
 	u16 val;
 
 	for (i = 0; i < ETH_ALEN; i += 2) {
-		val = mqnic_gecko_bmc_query(mqnic, 0x2003, 0 + index * ETH_ALEN + i);
+		val = mqnic_gecko_bmc_query(mqnic, rb, 0x2003, 0 + index * ETH_ALEN + i);
 		if (val < 0)
 			return val;
 		mac[i] = val & 0xff;
@@ -646,7 +654,7 @@ static int mqnic_gecko_bmc_read_mac(struct mqnic_dev *mqnic, int index, char *ma
 	return 0;
 }
 
-static int mqnic_gecko_bmc_read_mac_list(struct mqnic_dev *mqnic, int count)
+static int mqnic_gecko_bmc_read_mac_list(struct mqnic_dev *mqnic, struct reg_block *rb, int count)
 {
 	int ret, k;
 	char mac[ETH_ALEN];
@@ -655,7 +663,7 @@ static int mqnic_gecko_bmc_read_mac_list(struct mqnic_dev *mqnic, int count)
 
 	mqnic->mac_count = 0;
 	for (k = 0; k < count; k++) {
-		ret = mqnic_gecko_bmc_read_mac(mqnic, k, mac);
+		ret = mqnic_gecko_bmc_read_mac(mqnic, rb, k, mac);
 		if (ret) {
 			dev_warn(mqnic->dev, "Failed to read MAC from Gecko BMC");
 			return -1;
@@ -678,6 +686,7 @@ static int mqnic_gecko_bmc_read_mac_list(struct mqnic_dev *mqnic, int count)
 static int mqnic_gecko_board_init(struct mqnic_dev *mqnic)
 {
 	struct i2c_adapter *adapter;
+	struct reg_block *rb;
 	int ret = 0;
 
 	mqnic->mod_i2c_client_count = 0;
@@ -697,35 +706,41 @@ static int mqnic_gecko_board_init(struct mqnic_dev *mqnic)
 		request_module("at24");
 
 		// I2C adapter
-		adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr + MQNIC_REG_GPIO_I2C_0);
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
 
 		// QSFP0
 		mqnic->mod_i2c_client[0] = create_i2c_client(adapter, "24c02", 0x50, NULL);
 
 		// I2C adapter
-		adapter = mqnic_i2c_adapter_create(mqnic, mqnic->hw_addr + MQNIC_REG_GPIO_I2C_1);
+		adapter = mqnic_i2c_adapter_create(mqnic, 1);
 
 		// QSFP1
 		mqnic->mod_i2c_client[1] = create_i2c_client(adapter, "24c02", 0x50, NULL);
 
 		mqnic->mod_i2c_client_count = 2;
 
-		// init BMC
-		if (mqnic_gecko_bmc_query(mqnic, 0x7006, 0) <= 0) {
+		break;
+	default:
+		dev_warn(mqnic->dev, "Unknown board ID (Silicom Gecko BMC)");
+	}
+
+	// init BMC
+	rb = find_reg_block(mqnic->rb_list, MQNIC_RB_GECKO_BMC_TYPE, MQNIC_RB_GECKO_BMC_VER, 0);
+
+	if (rb) {
+		if (mqnic_gecko_bmc_query(mqnic, rb, 0x7006, 0) <= 0) {
 			dev_warn(mqnic->dev, "Gecko BMC not responding");
 		} else {
-			u16 v_l = mqnic_gecko_bmc_query(mqnic, 0x7005, 0);
-			u16 v_h = mqnic_gecko_bmc_query(mqnic, 0x7006, 0);
+			u16 v_l = mqnic_gecko_bmc_query(mqnic, rb, 0x7005, 0);
+			u16 v_h = mqnic_gecko_bmc_query(mqnic, rb, 0x7006, 0);
 
 			dev_info(mqnic->dev, "Gecko BMC version %d.%d.%d.%d",
 					(v_h >> 8) & 0xff, v_h & 0xff, (v_l >> 8) & 0xff, v_l & 0xff);
 
-			mqnic_gecko_bmc_read_mac_list(mqnic, 8);
+			mqnic_gecko_bmc_read_mac_list(mqnic, rb, 8);
 		}
-
-		break;
-	default:
-		dev_warn(mqnic->dev, "Unknown board ID (Silicom Gecko BMC)");
+	} else {
+		dev_warn(mqnic->dev, "Gecko BMC not found");
 	}
 
 	return ret;

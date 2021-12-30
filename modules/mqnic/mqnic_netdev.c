@@ -81,15 +81,12 @@ static int mqnic_start_port(struct net_device *ndev)
 		mqnic_activate_tx_ring(priv->tx_ring[k], priv, priv->tx_cpl_ring[k]);
 	}
 
-	// configure ports
-	for (k = 0; k < priv->port_count; k++) {
-		// set port MTU
-		mqnic_port_set_tx_mtu(priv->port[k], ndev->mtu + ETH_HLEN);
-		mqnic_port_set_rx_mtu(priv->port[k], ndev->mtu + ETH_HLEN);
+	// set MTU
+	mqnic_interface_set_tx_mtu(priv->interface, ndev->mtu + ETH_HLEN);
+	mqnic_interface_set_rx_mtu(priv->interface, ndev->mtu + ETH_HLEN);
 
-		// configure RSS
-		mqnic_port_set_rss_mask(priv->port[k], 0xffffffff);
-	}
+	// configure RSS
+	mqnic_interface_set_rss_mask(priv->interface, 0xffffffff);
 
 	// enable first port
 	mqnic_activate_port(priv->port[0]);
@@ -384,7 +381,8 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	priv->port_up = false;
 
 	// associate interface resources
-	priv->if_features = interface->if_features;
+	priv->if_tx_features = interface->if_tx_features;
+	priv->if_rx_features = interface->if_rx_features;
 
 	priv->event_queue_count = interface->event_queue_count;
 	for (k = 0; k < interface->event_queue_count; k++)
@@ -471,10 +469,10 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	// set up features
 	ndev->hw_features = NETIF_F_SG;
 
-	if (priv->if_features & MQNIC_IF_FEATURE_RX_CSUM)
+	if (priv->if_rx_features & MQNIC_IF_RX_FEATURE_CSUM)
 		ndev->hw_features |= NETIF_F_RXCSUM;
 
-	if (priv->if_features & MQNIC_IF_FEATURE_TX_CSUM)
+	if (priv->if_tx_features & MQNIC_IF_TX_FEATURE_CSUM)
 		ndev->hw_features |= NETIF_F_HW_CSUM;
 
 	ndev->features = ndev->hw_features | NETIF_F_HIGHDMA;
@@ -483,8 +481,8 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	ndev->min_mtu = ETH_MIN_MTU;
 	ndev->max_mtu = 1500;
 
-	if (priv->port[0] && priv->port[0]->port_mtu)
-		ndev->max_mtu = priv->port[0]->port_mtu - ETH_HLEN;
+	if (interface->max_tx_mtu && interface->max_rx_mtu)
+		ndev->max_mtu = min(interface->max_tx_mtu, interface->max_rx_mtu) - ETH_HLEN;
 
 	netif_carrier_off(ndev);
 

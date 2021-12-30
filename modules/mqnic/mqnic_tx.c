@@ -470,7 +470,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	// TX hardware timestamp
 	tx_info->ts_requested = 0;
-	if (unlikely(priv->if_features & MQNIC_IF_FEATURE_PTP_TS && shinfo->tx_flags & SKBTX_HW_TSTAMP)) {
+	if (unlikely(priv->if_tx_features & MQNIC_IF_TX_FEATURE_PTP_TS && shinfo->tx_flags & SKBTX_HW_TSTAMP)) {
 		dev_info(priv->dev, "%s: TX TS requested", __func__);
 		shinfo->tx_flags |= SKBTX_IN_PROGRESS;
 		tx_info->ts_requested = 1;

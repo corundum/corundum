@@ -51,7 +51,9 @@ module mqnic_ptp #
     parameter PTP_PEROUT_COUNT = 1,
     parameter REG_ADDR_WIDTH = 7+(PTP_PEROUT_ENABLE ? $clog2((PTP_PEROUT_COUNT+1)/2) + 1 : 0),
     parameter REG_DATA_WIDTH = 32,
-    parameter REG_STRB_WIDTH = (REG_DATA_WIDTH/8)
+    parameter REG_STRB_WIDTH = (REG_DATA_WIDTH/8),
+    parameter RB_BASE_ADDR = 0,
+    parameter RB_NEXT_PTR = 0
 )
 (
     input  wire                         clk,
@@ -103,19 +105,19 @@ end
 
 wire clock_reg_wr_wait;
 wire clock_reg_wr_ack;
-wire [31:0] clock_reg_rd_data;
+wire [REG_DATA_WIDTH-1:0] clock_reg_rd_data;
 wire clock_reg_rd_wait;
 wire clock_reg_rd_ack;
 
 wire perout_reg_wr_wait[PTP_PEROUT_COUNT-1:0];
 wire perout_reg_wr_ack[PTP_PEROUT_COUNT-1:0];
-wire [31:0] perout_reg_rd_data[PTP_PEROUT_COUNT-1:0];
+wire [REG_DATA_WIDTH-1:0] perout_reg_rd_data[PTP_PEROUT_COUNT-1:0];
 wire perout_reg_rd_wait[PTP_PEROUT_COUNT-1:0];
 wire perout_reg_rd_ack[PTP_PEROUT_COUNT-1:0];
 
 reg reg_wr_wait_cmb;
 reg reg_wr_ack_cmb;
-reg [31:0] reg_rd_data_cmb;
+reg [REG_DATA_WIDTH-1:0] reg_rd_data_cmb;
 reg reg_rd_wait_cmb;
 reg reg_rd_ack_cmb;
 
@@ -152,7 +154,12 @@ mqnic_ptp_clock #(
     .PTP_PERIOD_NS(PTP_PERIOD_NS),
     .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
-    .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT)
+    .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
+    .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
+    .REG_DATA_WIDTH(REG_DATA_WIDTH),
+    .REG_STRB_WIDTH(REG_STRB_WIDTH),
+    .RB_BASE_ADDR(RB_BASE_ADDR),
+    .RB_NEXT_PTR(PTP_PEROUT_ENABLE ? RB_BASE_ADDR + 32'h80 : RB_NEXT_PTR)
 )
 ptp_clock_inst (
     .clk(clk),
@@ -164,11 +171,11 @@ ptp_clock_inst (
     .reg_wr_addr(reg_wr_addr),
     .reg_wr_data(reg_wr_data),
     .reg_wr_strb(reg_wr_strb),
-    .reg_wr_en(reg_wr_en && (reg_wr_addr >> 7 == 0)),
+    .reg_wr_en(reg_wr_en),
     .reg_wr_wait(clock_reg_wr_wait),
     .reg_wr_ack(clock_reg_wr_ack),
     .reg_rd_addr(reg_rd_addr),
-    .reg_rd_en(reg_rd_en && (reg_rd_addr >> 7 == 0)),
+    .reg_rd_en(reg_rd_en),
     .reg_rd_data(clock_reg_rd_data),
     .reg_rd_wait(clock_reg_rd_wait),
     .reg_rd_ack(clock_reg_rd_ack),
@@ -188,8 +195,15 @@ genvar n;
 if (PTP_PEROUT_ENABLE) begin
 
     for (n = 0; n < PTP_PEROUT_COUNT; n = n + 1) begin : perout
-        
-        mqnic_ptp_perout ptp_perout_inst (
+
+        mqnic_ptp_perout  #(
+            .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
+            .REG_DATA_WIDTH(REG_DATA_WIDTH),
+            .REG_STRB_WIDTH(REG_STRB_WIDTH),
+            .RB_BASE_ADDR(RB_BASE_ADDR + 32'h80 + 32'h40*n),
+            .RB_NEXT_PTR(n < PTP_PEROUT_COUNT-1 ? RB_BASE_ADDR + 32'h80 + 32'h40*(n+1) : RB_NEXT_PTR)
+        )
+        ptp_perout_inst (
             .clk(clk),
             .rst(rst),
 
@@ -199,11 +213,11 @@ if (PTP_PEROUT_ENABLE) begin
             .reg_wr_addr(reg_wr_addr),
             .reg_wr_data(reg_wr_data),
             .reg_wr_strb(reg_wr_strb),
-            .reg_wr_en(reg_wr_en && ((reg_wr_addr >> 6) == n+2)),
+            .reg_wr_en(reg_wr_en),
             .reg_wr_wait(perout_reg_wr_wait[n]),
             .reg_wr_ack(perout_reg_wr_ack[n]),
             .reg_rd_addr(reg_rd_addr),
-            .reg_rd_en(reg_rd_en && ((reg_rd_addr >> 6) == n+2)),
+            .reg_rd_en(reg_rd_en),
             .reg_rd_data(perout_reg_rd_data[n]),
             .reg_rd_wait(perout_reg_rd_wait[n]),
             .reg_rd_ack(perout_reg_rd_ack[n]),

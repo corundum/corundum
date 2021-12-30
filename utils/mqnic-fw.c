@@ -464,6 +464,8 @@ int main(int argc, char *argv[])
 
     struct mqnic *dev = NULL;
 
+    struct reg_block *flash_rb = NULL;
+
     struct flash_device *pri_flash = NULL;
     struct flash_device *sec_flash = NULL;
 
@@ -566,32 +568,30 @@ int main(int argc, char *argv[])
     printf("PCIe ID (device): %s\n", strrchr(device_path, '/')+1);
     printf("PCIe ID (upstream port): %s\n", strrchr(port_path, '/')+1);
 
-    printf("FW ID: 0x%08x\n", dev->fw_id);
-    printf("FW version: %d.%d\n", dev->fw_ver >> 16, dev->fw_ver & 0xffff);
-    printf("Board ID: 0x%08x\n", dev->board_id);
-    printf("Board version: %d.%d\n", dev->board_ver >> 16, dev->board_ver & 0xffff);
+    uint32_t flash_format = 0;
+    const char *fpga_part = get_fpga_part(dev->fpga_id);
 
-    uint32_t flash_id = mqnic_reg_read32(dev->regs, MQNIC_REG_FLASH_ID);
-    uint32_t fpga_id = mqnic_reg_read32(dev->regs, MQNIC_REG_FPGA_ID);
-    const char *fpga_part = get_fpga_part(fpga_id);
+    uint8_t flash_configuration = 0;
+    uint8_t flash_data_width = 0;
+    uint8_t flash_addr_width = 0;
 
-    uint8_t flash_type = flash_id >> 0;
-    uint8_t flash_configuration = flash_id >> 8;
-    uint8_t flash_data_width = flash_id >> 16;
-    uint8_t flash_addr_width = flash_id >> 24;
-
-    printf("Flash ID: 0x%08x\n", flash_id);
-    printf("FPGA ID: 0x%08x\n", fpga_id);
+    printf("FPGA ID: 0x%08x\n", dev->fpga_id);
     printf("FPGA part: %s\n", fpga_part);
+    printf("FW ID: 0x%08x\n", dev->fw_id);
+    printf("FW version: %d.%d.%d.%d\n", dev->fw_ver >> 24,
+            (dev->fw_ver >> 16) & 0xff,
+            (dev->fw_ver >> 8) & 0xff,
+            dev->fw_ver & 0xff);
+    printf("Board ID: 0x%08x\n", dev->board_id);
+    printf("Board version: %d.%d.%d.%d\n", dev->board_ver >> 24,
+            (dev->board_ver >> 16) & 0xff,
+            (dev->board_ver >> 8) & 0xff,
+            dev->board_ver & 0xff);
+    printf("Build date: %s UTC (raw 0x%08x)\n", dev->build_date_str, dev->build_date);
+    printf("Git hash: %08x\n", dev->git_hash);
+    printf("Release info: %08x\n", dev->rel_info);
 
-    if (flash_id == 0 || flash_id == 0xffffffff)
-    {
-        fprintf(stderr, "Invalid flash ID\n");
-        ret = -1;
-        goto skip_flash;
-    }
-
-    if (fpga_id == 0 || fpga_id == 0xffffffff)
+    if (dev->fpga_id == 0 || dev->fpga_id == 0xffffffff)
     {
         fprintf(stderr, "Invalid FPGA ID\n");
         ret = -1;
@@ -602,20 +602,29 @@ int main(int argc, char *argv[])
     int word_size = 8;
     int dual_qspi = 0;
 
-    size_t flash_size;
-    size_t segment_size;
-    size_t segment_offset;
+    size_t flash_size = 0;
+    size_t segment_size = 0;
+    size_t segment_offset = 0;
 
-    if (flash_type == 0 || flash_type == 2)
+    if ((flash_rb = find_reg_block(dev->rb_list, MQNIC_RB_SPI_FLASH_TYPE, MQNIC_RB_SPI_FLASH_VER, 0)))
     {
+        // SPI flash
+        flash_format = mqnic_reg_read32(flash_rb->regs, MQNIC_RB_SPI_FLASH_REG_FORMAT);
+
         printf("Flash type: SPI\n");
+        printf("Flash format: 0x%08x\n", flash_format);
+
+        flash_configuration = flash_format >> 8;
+        flash_data_width = flash_format >> 16;
+        flash_addr_width = flash_format >> 24;
+
         printf("Data width: %d\n", flash_data_width);
 
         if (flash_data_width > 4)
         {
             dual_qspi = 1;
-            pri_flash = flash_open_spi(4, dev->regs+MQNIC_REG_FLASH_SPI_0_CTRL);
-            sec_flash = flash_open_spi(4, dev->regs+MQNIC_REG_FLASH_SPI_1_CTRL);
+            pri_flash = flash_open_spi(4, flash_rb->regs+MQNIC_RB_SPI_FLASH_REG_CTRL_0);
+            sec_flash = flash_open_spi(4, flash_rb->regs+MQNIC_RB_SPI_FLASH_REG_CTRL_1);
 
             if (!pri_flash || !sec_flash)
             {
@@ -628,8 +637,7 @@ int main(int argc, char *argv[])
         }
         else
         {
-            pri_flash = flash_open_spi(flash_data_width,
-                dev->regs+MQNIC_REG_FLASH_SPI_0_CTRL);
+            pri_flash = flash_open_spi(flash_data_width, flash_rb->regs+MQNIC_RB_SPI_FLASH_REG_CTRL_0);
 
             if (!pri_flash)
             {
@@ -641,9 +649,18 @@ int main(int argc, char *argv[])
             flash_size = pri_flash->size;
         }
     }
-    else if (flash_type == 1)
+    else if ((flash_rb = find_reg_block(dev->rb_list, MQNIC_RB_BPI_FLASH_TYPE, MQNIC_RB_BPI_FLASH_VER, 0)))
     {
+        // BPI flash
+        flash_format = mqnic_reg_read32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_FORMAT);
+
         printf("Flash type: BPI\n");
+        printf("Flash format: 0x%08x\n", flash_format);
+
+        flash_configuration = flash_format >> 8;
+        flash_data_width = flash_format >> 16;
+        flash_addr_width = flash_format >> 24;
+
         printf("Data width: %d\n", flash_data_width);
         printf("Address width: %d\n", flash_addr_width);
 
@@ -655,9 +672,9 @@ int main(int argc, char *argv[])
         }
 
         pri_flash = flash_open_bpi(flash_data_width,
-            dev->regs+MQNIC_REG_FLASH_BPI_CTRL,
-            dev->regs+MQNIC_REG_FLASH_BPI_ADDR,
-            dev->regs+MQNIC_REG_FLASH_BPI_DATA);
+            flash_rb->regs+MQNIC_RB_BPI_FLASH_REG_CTRL,
+            flash_rb->regs+MQNIC_RB_BPI_FLASH_REG_ADDR,
+            flash_rb->regs+MQNIC_RB_BPI_FLASH_REG_DATA);
 
         if (!pri_flash)
         {
@@ -670,7 +687,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        fprintf(stderr, "Unknown flash type: %d\n", flash_type);
+        fprintf(stderr, "Failed to detect flash\n");
         ret = -1;
         goto skip_flash;
     }
@@ -1240,7 +1257,9 @@ skip_flash:
 
             // reload FPGA
             printf("Triggering IPROG to reload FPGA...\n");
-            mqnic_reg_write32(dev->regs, MQNIC_REG_FPGA_ID, 0xFEE1DEAD);
+            if (flash_rb)
+                mqnic_reg_write32(flash_rb, MQNIC_RB_BPI_FLASH_REG_FORMAT, 0xFEE1DEAD);
+            mqnic_reg_write32(dev->fw_id_rb, MQNIC_RB_FW_ID_REG_FPGA_ID, 0xFEE1DEAD);
 
             // disconnect
             mqnic_close(dev);

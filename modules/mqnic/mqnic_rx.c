@@ -363,7 +363,7 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		}
 
 		// RX hardware timestamp
-		if (interface->if_features & MQNIC_IF_FEATURE_PTP_TS)
+		if (interface->if_rx_features & MQNIC_IF_RX_FEATURE_PTP_TS)
 			skb_hwtstamps(skb)->hwtstamp = mqnic_read_cpl_ts(interface->mdev, rx_ring, cpl);
 
 		skb_record_rx_queue(skb, rx_ring->index);

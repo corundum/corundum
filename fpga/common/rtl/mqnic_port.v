@@ -46,6 +46,8 @@ module mqnic_port #
     parameter DMA_ADDR_WIDTH = 64,
     // DMA length field width
     parameter DMA_LEN_WIDTH = 16,
+    // DMA client length field width
+    parameter DMA_CLIENT_LEN_WIDTH = DMA_LEN_WIDTH,
     // DMA tag field width
     parameter DMA_TAG_WIDTH = 8,
     // Request tag field width
@@ -108,6 +110,10 @@ module mqnic_port #
     parameter REG_DATA_WIDTH = 32,
     // Width of control register interface strb
     parameter REG_STRB_WIDTH = (REG_DATA_WIDTH/8),
+    // Register block base address
+    parameter RB_BASE_ADDR = 0,
+    // Register block next pointer
+    parameter RB_NEXT_PTR = 0,
     // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
     // Width of AXI lite address bus in bits
@@ -334,11 +340,17 @@ module mqnic_port #
      * PTP clock
      */
     input  wire [PTP_TS_WIDTH-1:0]              ptp_ts_96,
-    input  wire                                 ptp_ts_step
+    input  wire                                 ptp_ts_step,
+
+    /*
+     * Configuration
+     */
+    input  wire [DMA_CLIENT_LEN_WIDTH-1:0]      tx_mtu,
+    input  wire [DMA_CLIENT_LEN_WIDTH-1:0]      rx_mtu,
+    input  wire [RX_QUEUE_INDEX_WIDTH-1:0]      rss_mask
 );
 
 parameter DMA_CLIENT_TAG_WIDTH = $clog2(TX_DESC_TABLE_SIZE > RX_DESC_TABLE_SIZE ? TX_DESC_TABLE_SIZE : RX_DESC_TABLE_SIZE);
-parameter DMA_CLIENT_LEN_WIDTH = DMA_LEN_WIDTH;
 
 parameter DESC_REQ_TAG_WIDTH_INT = DESC_REQ_TAG_WIDTH - $clog2(2);
 
@@ -530,74 +542,6 @@ wire                            dma_rx_desc_status_user;
 wire [3:0]                      dma_rx_desc_status_error;
 wire                            dma_rx_desc_status_valid;
 
-wire sched_ctrl_reg_wr_wait;
-wire sched_ctrl_reg_wr_ack;
-wire [AXIL_DATA_WIDTH-1:0] sched_ctrl_reg_rd_data;
-wire sched_ctrl_reg_rd_wait;
-wire sched_ctrl_reg_rd_ack;
-
-reg ctrl_reg_wr_ack_reg = 1'b0;
-reg [AXIL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_DATA_WIDTH{1'b0}};
-reg ctrl_reg_rd_ack_reg = 1'b0;
-
-reg [RX_QUEUE_INDEX_WIDTH-1:0] rss_mask_reg = 0;
-
-reg [DMA_CLIENT_LEN_WIDTH-1:0] tx_mtu_reg = MAX_TX_SIZE;
-reg [DMA_CLIENT_LEN_WIDTH-1:0] rx_mtu_reg = MAX_RX_SIZE;
-
-assign ctrl_reg_wr_wait = sched_ctrl_reg_wr_wait;
-assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg | sched_ctrl_reg_wr_ack;
-assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg | sched_ctrl_reg_rd_data;
-assign ctrl_reg_rd_wait = sched_ctrl_reg_rd_wait;
-assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg | sched_ctrl_reg_rd_ack;
-
-always @(posedge clk) begin
-    ctrl_reg_wr_ack_reg <= 1'b0;
-    ctrl_reg_rd_data_reg <= {AXIL_DATA_WIDTH{1'b0}};
-    ctrl_reg_rd_ack_reg <= 1'b0;
-
-    if (ctrl_reg_wr_en && !ctrl_reg_wr_ack_reg) begin
-        // write operation
-        ctrl_reg_wr_ack_reg <= 1'b1;
-        case ({ctrl_reg_wr_addr >> 2, 2'b00})
-            16'h0080: rss_mask_reg <= ctrl_reg_wr_data; // RSS mask
-            16'h0100: tx_mtu_reg <= ctrl_reg_wr_data; // TX MTU
-            16'h0200: rx_mtu_reg <= ctrl_reg_wr_data; // RX MTU
-            default: ctrl_reg_wr_ack_reg <= 1'b0;
-        endcase
-    end
-
-    if (ctrl_reg_rd_en && !ctrl_reg_rd_ack_reg) begin
-        // read operation
-        ctrl_reg_rd_ack_reg <= 1'b1;
-        case ({ctrl_reg_rd_addr >> 2, 2'b00})
-            16'h0000: ctrl_reg_rd_data_reg <= 32'd0;       // port_id
-            16'h0004: begin
-                // port_features
-                ctrl_reg_rd_data_reg[0] <= RX_RSS_ENABLE && RX_HASH_ENABLE;
-                ctrl_reg_rd_data_reg[4] <= PTP_TS_ENABLE;
-                ctrl_reg_rd_data_reg[8] <= TX_CHECKSUM_ENABLE;
-                ctrl_reg_rd_data_reg[9] <= RX_CHECKSUM_ENABLE;
-                ctrl_reg_rd_data_reg[10] <= RX_HASH_ENABLE;
-            end
-            16'h0008: ctrl_reg_rd_data_reg <= MAX_TX_SIZE; // port_mtu
-            16'h0080: ctrl_reg_rd_data_reg <= rss_mask_reg; // RSS mask
-            16'h0100: ctrl_reg_rd_data_reg <= tx_mtu_reg; // TX MTU
-            16'h0200: ctrl_reg_rd_data_reg <= rx_mtu_reg; // RX MTU
-            default: ctrl_reg_rd_ack_reg <= 1'b0;
-        endcase
-    end
-
-    if (rst) begin
-        ctrl_reg_wr_ack_reg <= 1'b0;
-        ctrl_reg_rd_ack_reg <= 1'b0;
-
-        rss_mask_reg <= 0;
-        tx_mtu_reg <= MAX_TX_SIZE;
-        rx_mtu_reg <= MAX_RX_SIZE;
-    end
-end
-
 desc_op_mux #(
     .PORTS(2),
     .SELECT_WIDTH(1),
@@ -733,6 +677,8 @@ mqnic_tx_scheduler_block #(
     .REG_DATA_WIDTH(REG_DATA_WIDTH),
     .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
     .REG_STRB_WIDTH(REG_STRB_WIDTH),
+    .RB_BASE_ADDR(RB_BASE_ADDR),
+    .RB_NEXT_PTR(RB_NEXT_PTR),
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
     .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
@@ -757,13 +703,13 @@ scheduler_block (
     .ctrl_reg_wr_data(ctrl_reg_wr_data),
     .ctrl_reg_wr_strb(ctrl_reg_wr_strb),
     .ctrl_reg_wr_en(ctrl_reg_wr_en),
-    .ctrl_reg_wr_wait(sched_ctrl_reg_wr_wait),
-    .ctrl_reg_wr_ack(sched_ctrl_reg_wr_ack),
+    .ctrl_reg_wr_wait(ctrl_reg_wr_wait),
+    .ctrl_reg_wr_ack(ctrl_reg_wr_ack),
     .ctrl_reg_rd_addr(ctrl_reg_rd_addr),
     .ctrl_reg_rd_en(ctrl_reg_rd_en),
-    .ctrl_reg_rd_data(sched_ctrl_reg_rd_data),
-    .ctrl_reg_rd_wait(sched_ctrl_reg_rd_wait),
-    .ctrl_reg_rd_ack(sched_ctrl_reg_rd_ack),
+    .ctrl_reg_rd_data(ctrl_reg_rd_data),
+    .ctrl_reg_rd_wait(ctrl_reg_rd_wait),
+    .ctrl_reg_rd_ack(ctrl_reg_rd_ack),
 
     /*
      * AXI-Lite slave interface
@@ -1204,7 +1150,7 @@ rx_engine_inst (
     /*
      * Configuration
      */
-    .mtu(rx_mtu_reg),
+    .mtu(rx_mtu),
     .enable(1'b1)
 );
 
@@ -1338,7 +1284,7 @@ if (RX_RSS_ENABLE && RX_HASH_ENABLE) begin
         .rst(rst),
 
         // AXI input
-        .s_axis_tdata(rx_hash & rss_mask_reg),
+        .s_axis_tdata(rx_hash & rss_mask),
         .s_axis_tkeep(0),
         .s_axis_tvalid(rx_hash_valid),
         .s_axis_tready(),

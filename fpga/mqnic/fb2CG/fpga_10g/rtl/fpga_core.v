@@ -43,11 +43,14 @@ either expressed or implied, of The Regents of the University of California.
 module fpga_core #
 (
     // FW and board IDs
-    parameter FW_ID = 32'd0,
-    parameter FW_VER = {16'd0, 16'd1},
-    parameter BOARD_ID = {16'h1c2c, 16'ha00e},
-    parameter BOARD_VER = {16'd0, 16'd1},
     parameter FPGA_ID = 32'h4A56093,
+    parameter FW_ID = 32'h00000000,
+    parameter FW_VER = 32'h00_00_01_00,
+    parameter BOARD_ID = 32'h1c2c_a00e,
+    parameter BOARD_VER = 32'h01_00_00_00,
+    parameter BUILD_DATE = 32'd602976000,
+    parameter GIT_HASH = 32'hdce357bf,
+    parameter RELEASE_INFO = 32'h00000000,
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -416,6 +419,9 @@ parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8);
 parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT);
 parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8);
 
+localparam RB_BASE_ADDR = 16'h1000;
+localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
+
 initial begin
     if (PORT_COUNT > 8) begin
         $error("Error: Max port count exceeded (instance %m)");
@@ -534,13 +540,14 @@ always @(posedge clk_250mhz) begin
         // write operation
         ctrl_reg_wr_ack_reg <= 1'b0;
         case ({ctrl_reg_wr_addr >> 2, 2'b00})
-            16'h0040: begin
-                // FPGA ID
+            // FW ID
+            8'h0C: begin
+                // FW ID: FPGA JTAG ID
                 fpga_boot_reg <= ctrl_reg_wr_data == 32'hFEE1DEAD;
             end
-            // GPIO
-            16'h0110: begin
-                // GPIO I2C 0
+            // I2C 0
+            RBB+8'h0C: begin
+                // I2C ctrl: control
                 if (ctrl_reg_wr_strb[0]) begin
                     qsfp_0_i2c_scl_o_reg <= ctrl_reg_wr_data[1];
                 end
@@ -548,8 +555,9 @@ always @(posedge clk_250mhz) begin
                     qsfp_0_i2c_sda_o_reg <= ctrl_reg_wr_data[9];
                 end
             end
-            16'h0114: begin
-                // GPIO I2C 1
+            // I2C 1
+            RBB+8'h1C: begin
+                // I2C ctrl: control
                 if (ctrl_reg_wr_strb[0]) begin
                     qsfp_1_i2c_scl_o_reg <= ctrl_reg_wr_data[1];
                 end
@@ -557,8 +565,9 @@ always @(posedge clk_250mhz) begin
                     qsfp_1_i2c_sda_o_reg <= ctrl_reg_wr_data[9];
                 end
             end
-            16'h0120: begin
-                // GPIO XCVR 0123
+            // XCVR GPIO
+            RBB+8'h2C: begin
+                // XCVR GPIO: control 0123
                 if (ctrl_reg_wr_strb[0]) begin
                     qsfp_0_reset_reg <= ctrl_reg_wr_data[4];
                     qsfp_0_lp_mode_reg <= ctrl_reg_wr_data[5];
@@ -568,9 +577,13 @@ always @(posedge clk_250mhz) begin
                     qsfp_1_lp_mode_reg <= ctrl_reg_wr_data[13];
                 end
             end
-            // Flash
-            16'h0144: begin
-                // QSPI control
+            // QSPI flash
+            RBB+8'h3C: begin
+                // SPI flash ctrl: format
+                fpga_boot_reg <= ctrl_reg_wr_data == 32'hFEE1DEAD;
+            end
+            RBB+8'h40: begin
+                // SPI flash ctrl: control 0
                 if (ctrl_reg_wr_strb[0]) begin
                     qspi_dq_o_reg <= ctrl_reg_wr_data[3:0];
                 end
@@ -582,9 +595,10 @@ always @(posedge clk_250mhz) begin
                     qspi_cs_reg <= ctrl_reg_wr_data[17];
                 end
             end
-            // BMC
-            16'h0180: bmc_ctrl_data_reg <= ctrl_reg_wr_data;
-            16'h0184: begin
+            // Gecko BMC
+            RBB+8'h60: bmc_ctrl_data_reg <= ctrl_reg_wr_data;            // BMC ctrl: data
+            RBB+8'h64: begin
+                // BMC ctrl: cmd
                 bmc_ctrl_cmd_reg <= ctrl_reg_wr_data[31:16];
                 bmc_ctrl_valid_reg <= 1'b1;
             end
@@ -596,24 +610,34 @@ always @(posedge clk_250mhz) begin
         // read operation
         ctrl_reg_rd_ack_reg <= 1'b1;
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
-            16'h0040: ctrl_reg_rd_data_reg <= FPGA_ID; // FPGA ID
-            // GPIO
-            16'h0110: begin
-                // GPIO I2C 0
+            // I2C 0
+            RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C110;             // I2C ctrl: Type
+            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000100;             // I2C ctrl: Version
+            RBB+8'h08: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h10;       // I2C ctrl: Next header
+            RBB+8'h0C: begin
+                // I2C ctrl: control
                 ctrl_reg_rd_data_reg[0] <= qsfp_0_i2c_scl_i;
                 ctrl_reg_rd_data_reg[1] <= qsfp_0_i2c_scl_o_reg;
                 ctrl_reg_rd_data_reg[8] <= qsfp_0_i2c_sda_i;
                 ctrl_reg_rd_data_reg[9] <= qsfp_0_i2c_sda_o_reg;
             end
-            16'h0114: begin
-                // GPIO I2C 1
+            // I2C 1
+            RBB+8'h10: ctrl_reg_rd_data_reg <= 32'h0000C110;             // I2C ctrl: Type
+            RBB+8'h14: ctrl_reg_rd_data_reg <= 32'h00000100;             // I2C ctrl: Version
+            RBB+8'h18: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h20;       // I2C ctrl: Next header
+            RBB+8'h1C: begin
+                // I2C ctrl: control
                 ctrl_reg_rd_data_reg[0] <= qsfp_1_i2c_scl_i;
                 ctrl_reg_rd_data_reg[1] <= qsfp_1_i2c_scl_o_reg;
                 ctrl_reg_rd_data_reg[8] <= qsfp_1_i2c_sda_i;
                 ctrl_reg_rd_data_reg[9] <= qsfp_1_i2c_sda_o_reg;
             end
-            16'h0120: begin
-                // GPIO XCVR 0123
+            // XCVR GPIO
+            RBB+8'h20: ctrl_reg_rd_data_reg <= 32'h0000C101;             // XCVR GPIO: Type
+            RBB+8'h24: ctrl_reg_rd_data_reg <= 32'h00000100;             // XCVR GPIO: Version
+            RBB+8'h28: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h30;       // XCVR GPIO: Next header
+            RBB+8'h2C: begin
+                // XCVR GPIO: control 0123
                 ctrl_reg_rd_data_reg[0] <= !qsfp_0_mod_prsnt_n;
                 ctrl_reg_rd_data_reg[1] <= !qsfp_0_intr_n;
                 ctrl_reg_rd_data_reg[4] <= qsfp_0_reset_reg;
@@ -623,30 +647,37 @@ always @(posedge clk_250mhz) begin
                 ctrl_reg_rd_data_reg[12] <= qsfp_1_reset_reg;
                 ctrl_reg_rd_data_reg[13] <= qsfp_1_lp_mode_reg;
             end
-            // Flash
-            16'h0140: begin
-                // Flash ID
+            // QSPI flash
+            RBB+8'h30: ctrl_reg_rd_data_reg <= 32'h0000C120;             // SPI flash ctrl: Type
+            RBB+8'h34: ctrl_reg_rd_data_reg <= 32'h00000100;             // SPI flash ctrl: Version
+            RBB+8'h38: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h50;       // SPI flash ctrl: Next header
+            RBB+8'h3C: begin
+                // SPI flash ctrl: format
                 ctrl_reg_rd_data_reg[7:0]   <= 0; // type (SPI)
                 ctrl_reg_rd_data_reg[15:8]  <= 1; // configuration (one segment)
                 ctrl_reg_rd_data_reg[23:16] <= 4; // data width (QSPI)
                 ctrl_reg_rd_data_reg[31:24] <= 0; // address width (N/A for SPI)
             end
-            16'h0144: begin
-                // QSPI control
+            RBB+8'h40: begin
+                // SPI flash ctrl: control 0
                 ctrl_reg_rd_data_reg[3:0] <= qspi_dq_i;
                 ctrl_reg_rd_data_reg[11:8] <= qspi_dq_oe;
                 ctrl_reg_rd_data_reg[16] <= qspi_clk;
                 ctrl_reg_rd_data_reg[17] <= qspi_cs;
             end
-            // BMC
-            16'h0180: ctrl_reg_rd_data_reg <= bmc_ctrl_data_reg;
-            16'h0184: ctrl_reg_rd_data_reg[31:16] <= bmc_ctrl_cmd_reg;
-            16'h0188: begin
+            // Gecko BMC
+            RBB+8'h50: ctrl_reg_rd_data_reg <= 32'h0000C141;             // BMC ctrl: Type
+            RBB+8'h54: ctrl_reg_rd_data_reg <= 32'h00000100;             // BMC ctrl: Version
+            RBB+8'h58: ctrl_reg_rd_data_reg <= 0;                        // BMC ctrl: Next header
+            RBB+8'h5C: begin
+                // BMC ctrl: status
                 ctrl_reg_rd_data_reg[15:0] <= bmc_read_data;
                 ctrl_reg_rd_data_reg[16] <= bmc_status_done;
                 ctrl_reg_rd_data_reg[18] <= bmc_status_timeout;
                 ctrl_reg_rd_data_reg[19] <= bmc_status_idle;
             end
+            RBB+8'h60: ctrl_reg_rd_data_reg <= bmc_ctrl_data_reg;        // BMC ctrl: data
+            RBB+8'h64: ctrl_reg_rd_data_reg[31:16] <= bmc_ctrl_cmd_reg;  // BMC ctrl: cmd
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end
@@ -1034,10 +1065,14 @@ endgenerate
 
 mqnic_core_pcie_us #(
     // FW and board IDs
+    .FPGA_ID(FPGA_ID),
     .FW_ID(FW_ID),
     .FW_VER(FW_VER),
     .BOARD_ID(BOARD_ID),
     .BOARD_VER(BOARD_VER),
+    .BUILD_DATE(BUILD_DATE),
+    .GIT_HASH(GIT_HASH),
+    .RELEASE_INFO(RELEASE_INFO),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),
@@ -1141,6 +1176,7 @@ mqnic_core_pcie_us #(
     .AXIL_IF_CTRL_ADDR_WIDTH(AXIL_IF_CTRL_ADDR_WIDTH),
     .AXIL_CSR_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .AXIL_CSR_PASSTHROUGH_ENABLE(1),
+    .RB_NEXT_PTR(RB_BASE_ADDR),
 
     // AXI lite interface configuration (application control)
     .AXIL_APP_CTRL_DATA_WIDTH(AXIL_APP_CTRL_DATA_WIDTH),

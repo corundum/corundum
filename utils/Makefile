@@ -19,16 +19,16 @@ all: $(BIN)
 %.o: %.c
 	$(CC) $(ALL_CFLAGS) -c -o $@ $<
 
-mqnic-config: mqnic-config.o mqnic.o timespec.o
+mqnic-config: mqnic-config.o mqnic.o reg_block.o timespec.o
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@
 
-mqnic-dump: mqnic-dump.o mqnic.o
+mqnic-dump: mqnic-dump.o mqnic.o reg_block.o
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@
 
-mqnic-fw: mqnic-fw.o mqnic.o flash.o flash_spi.o flash_bpi.o fpga_id.o bitfile.o
+mqnic-fw: mqnic-fw.o mqnic.o reg_block.o flash.o flash_spi.o flash_bpi.o fpga_id.o bitfile.o
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@
 
-mqnic-bmc: mqnic-bmc.o mqnic.o
+mqnic-bmc: mqnic-bmc.o mqnic.o reg_block.o
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@
 
 perout: perout.o timespec.o

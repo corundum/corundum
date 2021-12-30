@@ -48,6 +48,10 @@ module mqnic_tx_scheduler_block #
     parameter REG_DATA_WIDTH = 32,
     // Width of control register interface strb
     parameter REG_STRB_WIDTH = (REG_DATA_WIDTH/8),
+    // Register block base address
+    parameter RB_BASE_ADDR = 0,
+    // Register block next pointer
+    parameter RB_NEXT_PTR = 0,
     // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
     // Width of AXI lite address bus in bits
@@ -146,6 +150,8 @@ module mqnic_tx_scheduler_block #
 parameter SCHED_COUNT = 2;
 parameter AXIL_SCHED_ADDR_WIDTH = AXIL_ADDR_WIDTH-$clog2(SCHED_COUNT);
 
+localparam RBB = RB_BASE_ADDR & {REG_ADDR_WIDTH{1'b1}};
+
 // parameter sizing helpers
 function [31:0] w_32(input [31:0] val);
     w_32 = val;
@@ -224,43 +230,52 @@ always @(posedge clk) begin
         // write operation
         ctrl_reg_wr_ack_reg <= 1'b1;
         case ({ctrl_reg_wr_addr >> 2, 2'b00})
-            16'h0040: begin
-                // Scheduler enable
+            // Scheduler
+            RBB+8'h28: begin
+                // Sched: Control
                 if (ctrl_reg_wr_strb[0]) begin
                     sched_enable_reg <= ctrl_reg_wr_data[0];
                 end
             end
-            16'h1000: begin
-                // TDMA control
+            // TDMA scheduler controller
+            RBB+8'h48: begin
+                // Sched ctrl: Control
+                if (ctrl_reg_wr_strb[0]) begin
+                    // sched_enable_reg <= ctrl_reg_wr_data[0];
+                end
+            end
+            // TDMA scheduler
+            RBB+8'h60: begin
+                // TDMA: control
                 if (ctrl_reg_wr_strb[0]) begin
                     tdma_enable_reg <= ctrl_reg_wr_data[0];
                 end
             end
-            16'h1014: set_tdma_schedule_start_reg[29:0] <= ctrl_reg_wr_data; // TDMA schedule start ns
-            16'h1018: set_tdma_schedule_start_reg[63:32] <= ctrl_reg_wr_data; // TDMA schedule start sec l
-            16'h101C: begin
-                // TDMA schedule start sec h
+            RBB+8'h74: set_tdma_schedule_start_reg[29:0] <= ctrl_reg_wr_data;  // TDMA: schedule start ns
+            RBB+8'h78: set_tdma_schedule_start_reg[63:32] <= ctrl_reg_wr_data; // TDMA: schedule start sec l
+            RBB+8'h7C: begin
+                // TDMA: schedule start sec h
                 set_tdma_schedule_start_reg[79:64] <= ctrl_reg_wr_data;
                 set_tdma_schedule_start_valid_reg <= 1'b1;
             end
-            16'h1024: set_tdma_schedule_period_reg[29:0] <= ctrl_reg_wr_data; // TDMA schedule period ns
-            16'h1028: set_tdma_schedule_period_reg[63:32] <= ctrl_reg_wr_data; // TDMA schedule period sec l
-            16'h102C: begin
-                // TDMA schedule period sec h
+            RBB+8'h84: set_tdma_schedule_period_reg[29:0] <= ctrl_reg_wr_data;  // TDMA: schedule period ns
+            RBB+8'h88: set_tdma_schedule_period_reg[63:32] <= ctrl_reg_wr_data; // TDMA: schedule period sec l
+            RBB+8'h8C: begin
+                // TDMA: schedule period sec h
                 set_tdma_schedule_period_reg[79:64] <= ctrl_reg_wr_data;
                 set_tdma_schedule_period_valid_reg <= 1'b1;
             end
-            16'h1034: set_tdma_timeslot_period_reg[29:0] <= ctrl_reg_wr_data; // TDMA timeslot period ns
-            16'h1038: set_tdma_timeslot_period_reg[63:32] <= ctrl_reg_wr_data; // TDMA timeslot period sec l
-            16'h103C: begin
-                // TDMA timeslot period sec h
+            RBB+8'h94: set_tdma_timeslot_period_reg[29:0] <= ctrl_reg_wr_data;  // TDMA: timeslot period ns
+            RBB+8'h98: set_tdma_timeslot_period_reg[63:32] <= ctrl_reg_wr_data; // TDMA: timeslot period sec l
+            RBB+8'h9C: begin
+                // TDMA: timeslot period sec h
                 set_tdma_timeslot_period_reg[79:64] <= ctrl_reg_wr_data;
                 set_tdma_timeslot_period_valid_reg <= 1'b1;
             end
-            16'h1044: set_tdma_active_period_reg[29:0] <= ctrl_reg_wr_data; // TDMA active period ns
-            16'h1048: set_tdma_active_period_reg[63:32] <= ctrl_reg_wr_data; // TDMA active period sec l
-            16'h104C: begin
-                // TDMA active period sec h
+            RBB+8'hA4: set_tdma_active_period_reg[29:0] <= ctrl_reg_wr_data;  // TDMA: active period ns
+            RBB+8'hA8: set_tdma_active_period_reg[63:32] <= ctrl_reg_wr_data; // TDMA: active period sec l
+            RBB+8'hAC: begin
+                // TDMA: active period sec h
                 set_tdma_active_period_reg[79:64] <= ctrl_reg_wr_data;
                 set_tdma_active_period_valid_reg <= 1'b1;
             end
@@ -272,36 +287,61 @@ always @(posedge clk) begin
         // read operation
         ctrl_reg_rd_ack_reg <= 1'b1;
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
-            16'h0010: ctrl_reg_rd_data_reg <= SCHED_COUNT; // scheduler_count
-            16'h0014: ctrl_reg_rd_data_reg <= AXIL_OFFSET; // scheduler_offset
-            16'h0018: ctrl_reg_rd_data_reg <= 2**AXIL_SCHED_ADDR_WIDTH; // scheduler_stride
-            16'h001C: ctrl_reg_rd_data_reg <= 32'd0;       // scheduler_type
-            16'h0040: begin
-                // Scheduler enable
+            // Scheduler block
+            RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C003;          // Sched block: Type
+            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000100;          // Sched block: Version
+            RBB+8'h08: ctrl_reg_rd_data_reg <= RB_NEXT_PTR;           // Sched block: Next header
+            RBB+8'h0C: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h10;    // Sched block: Offset
+            // Scheduler
+            RBB+8'h10: ctrl_reg_rd_data_reg <= 32'h0000C040;          // Sched: Type
+            RBB+8'h14: ctrl_reg_rd_data_reg <= 32'h00000100;          // Sched: Version
+            RBB+8'h18: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h30;    // Sched: Next header
+            RBB+8'h1C: ctrl_reg_rd_data_reg <= AXIL_OFFSET;           // Sched: Offset
+            RBB+8'h20: ctrl_reg_rd_data_reg <= 2**QUEUE_INDEX_WIDTH;  // Sched: Channel count
+            RBB+8'h24: ctrl_reg_rd_data_reg <= 4;                     // Sched: Channel stride
+            RBB+8'h28: begin
+                // Sched: Control
                 ctrl_reg_rd_data_reg[0] <= sched_enable_reg;
             end
-            16'h1000: begin
-                // TDMA control
+            RBB+8'h2C: ctrl_reg_rd_data_reg <= 0;                     // Sched: dest
+            // TDMA scheduler controller
+            RBB+8'h30: ctrl_reg_rd_data_reg <= 32'h0000C050;          // Sched ctrl: Type
+            RBB+8'h34: ctrl_reg_rd_data_reg <= 32'h00000100;          // Sched ctrl: Version
+            RBB+8'h38: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h50;    // Sched ctrl: Next header
+            RBB+8'h3C: ctrl_reg_rd_data_reg <= AXIL_OFFSET+2**(AXIL_ADDR_WIDTH-1);  // Sched ctrl: Offset
+            RBB+8'h40: ctrl_reg_rd_data_reg <= 2**QUEUE_INDEX_WIDTH;  // Sched ctrl: Channel count
+            RBB+8'h44: ctrl_reg_rd_data_reg <= 4*((2**TDMA_INDEX_WIDTH+31)/32);  // Sched ctrl: Channel stride
+            RBB+8'h48: begin
+                // Sched ctrl: Control
+                ctrl_reg_rd_data_reg[0] <= 1'b1;
+            end
+            RBB+8'h4C: ctrl_reg_rd_data_reg <= 2**TDMA_INDEX_WIDTH;   // Sched ctrl: Timeslot count
+            // TDMA scheduler
+            RBB+8'h50: ctrl_reg_rd_data_reg <= 32'h0000C060;          // TDMA: Type
+            RBB+8'h54: ctrl_reg_rd_data_reg <= 32'h00000100;          // TDMA: Version
+            RBB+8'h58: ctrl_reg_rd_data_reg <= 0;                     // TDMA: Next header
+            RBB+8'h5C: ctrl_reg_rd_data_reg <= 2**TDMA_INDEX_WIDTH;   // TDMA: Timeslot count
+            RBB+8'h60: begin
+                // TDMA: control
                 ctrl_reg_rd_data_reg[0] <= tdma_enable_reg;
             end
-            16'h1004: begin
-                // TDMA status
+            RBB+8'h64: begin
+                // TDMA: status
                 ctrl_reg_rd_data_reg[0] <= tdma_locked;
                 ctrl_reg_rd_data_reg[1] <= tdma_error;
             end
-            16'h1008: ctrl_reg_rd_data_reg <= 2**TDMA_INDEX_WIDTH; // TDMA timeslot count
-            16'h1014: ctrl_reg_rd_data_reg <= set_tdma_schedule_start_reg[29:0]; // TDMA schedule start ns
-            16'h1018: ctrl_reg_rd_data_reg <= set_tdma_schedule_start_reg[63:32]; // TDMA schedule start sec l
-            16'h101C: ctrl_reg_rd_data_reg <= set_tdma_schedule_start_reg[79:64]; // TDMA schedule start sec h
-            16'h1024: ctrl_reg_rd_data_reg <= set_tdma_schedule_period_reg[29:0]; // TDMA schedule period ns
-            16'h1028: ctrl_reg_rd_data_reg <= set_tdma_schedule_period_reg[63:32]; // TDMA schedule period sec l
-            16'h102C: ctrl_reg_rd_data_reg <= set_tdma_schedule_period_reg[79:64]; // TDMA schedule period sec h
-            16'h1034: ctrl_reg_rd_data_reg <= set_tdma_timeslot_period_reg[29:0]; // TDMA timeslot period ns
-            16'h1038: ctrl_reg_rd_data_reg <= set_tdma_timeslot_period_reg[63:32]; // TDMA timeslot period sec l
-            16'h103C: ctrl_reg_rd_data_reg <= set_tdma_timeslot_period_reg[79:64]; // TDMA timeslot period sec h
-            16'h1044: ctrl_reg_rd_data_reg <= set_tdma_active_period_reg[29:0]; // TDMA active period ns
-            16'h1048: ctrl_reg_rd_data_reg <= set_tdma_active_period_reg[63:32]; // TDMA active period sec l
-            16'h104C: ctrl_reg_rd_data_reg <= set_tdma_active_period_reg[79:64]; // TDMA active period sec h
+            RBB+8'h74: ctrl_reg_rd_data_reg <= set_tdma_schedule_start_reg[29:0];    // TDMA: schedule start ns
+            RBB+8'h78: ctrl_reg_rd_data_reg <= set_tdma_schedule_start_reg[63:32];   // TDMA: schedule start sec l
+            RBB+8'h7C: ctrl_reg_rd_data_reg <= set_tdma_schedule_start_reg[79:64];   // TDMA: schedule start sec h
+            RBB+8'h84: ctrl_reg_rd_data_reg <= set_tdma_schedule_period_reg[29:0];   // TDMA: schedule period ns
+            RBB+8'h88: ctrl_reg_rd_data_reg <= set_tdma_schedule_period_reg[63:32];  // TDMA: schedule period sec l
+            RBB+8'h8C: ctrl_reg_rd_data_reg <= set_tdma_schedule_period_reg[79:64];  // TDMA: schedule period sec h
+            RBB+8'h94: ctrl_reg_rd_data_reg <= set_tdma_timeslot_period_reg[29:0];   // TDMA: timeslot period ns
+            RBB+8'h98: ctrl_reg_rd_data_reg <= set_tdma_timeslot_period_reg[63:32];  // TDMA: timeslot period sec l
+            RBB+8'h9C: ctrl_reg_rd_data_reg <= set_tdma_timeslot_period_reg[79:64];  // TDMA: timeslot period sec h
+            RBB+8'hA4: ctrl_reg_rd_data_reg <= set_tdma_active_period_reg[29:0];     // TDMA: active period ns
+            RBB+8'hA8: ctrl_reg_rd_data_reg <= set_tdma_active_period_reg[63:32];    // TDMA: active period sec l
+            RBB+8'hAC: ctrl_reg_rd_data_reg <= set_tdma_active_period_reg[79:64];    // TDMA: active period sec h
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end

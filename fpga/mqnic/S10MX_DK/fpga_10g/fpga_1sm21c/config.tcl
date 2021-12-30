@@ -29,12 +29,55 @@
 
 set params [dict create]
 
+# collect build information
+set build_date [clock seconds]
+set git_hash 00000000
+set git_tag ""
+
+if { [catch {set git_hash [exec git rev-parse --short=8 HEAD]}] } {
+    puts "Error running git or project not under version control"
+}
+
+if { [catch {set git_tag [exec git describe --tags HEAD]}] } {
+    puts "Error running git, project not under version control, or no tag found"
+}
+
+puts "Build date: ${build_date}"
+puts "Git hash: ${git_hash}"
+puts "Git tag: ${git_tag}"
+
+if { ! [regsub {^.*(\d+\.\d+\.\d+([\.-]\d+)?).*$} $git_tag {\1} tag_ver ] } {
+    puts "Failed to extract version from git tag"
+    set tag_ver 0.0.1
+}
+
+puts "Tag version: ${tag_ver}"
+
 # FW and board IDs
-dict set params FW_ID "32'd0"
-dict set params FW_VER "32'h00000001"
-dict set params BOARD_ID "32'h11720001"
-dict set params BOARD_VER "32'h00000001"
-dict set params FPGA_ID "32'h432AC0DD"
+set fpga_id [expr 0x432AC0DD]
+set fw_id [expr 0x00000000]
+set fw_ver $tag_ver
+set board_vendor_id [expr 0x1172]
+set board_device_id [expr 0x0001]
+set board_ver 1.0
+set release_info [expr 0x00000000]
+
+# PCIe IDs
+set pcie_vendor_id [expr 0x1234]
+set pcie_device_id [expr 0x1001]
+set pcie_class_code [expr 0x020000]
+set pcie_revision_id [expr 0x00]
+set pcie_subsystem_vendor_id $board_vendor_id
+set pcie_subsystem_device_id $board_device_id
+
+dict set params FPGA_ID [format "32'h%08x" $fpga_id]
+dict set params FW_ID [format "32'h%08x" $fw_id]
+dict set params FW_VER [format "32'h%02x%02x%02x%02x" {*}[split $fw_ver .-] 0 0 0 0]
+dict set params BOARD_ID [format "32'h%04x%04x" $board_vendor_id $board_device_id]
+dict set params BOARD_VER [format "32'h%02x%02x%02x%02x" {*}[split $board_ver .-] 0 0 0 0]
+dict set params BUILD_DATE  "32'd${build_date}"
+dict set params GIT_HASH  "32'h${git_hash}"
+dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
 
 # Structural configuration
 
@@ -167,12 +210,12 @@ set fp [open "update_ip_${pcie_ip}.tcl" "w"]
 puts $fp "package require qsys"
 puts $fp "load_system ip/${pcie_ip}.ip"
 
-puts $fp "set_instance_parameter_value ${pcie} {pf0_pci_type0_device_id_hwtcl} {4097}"
-puts $fp "set_instance_parameter_value ${pcie} {pf0_pci_type0_vendor_id_hwtcl} {4660}"
-puts $fp "set_instance_parameter_value ${pcie} {pf0_class_code_hwtcl} {131072}"
-puts $fp "set_instance_parameter_value ${pcie} {pf0_revision_id_hwtcl} {0}"
-puts $fp "set_instance_parameter_value ${pcie} {pf0_subsys_dev_id_hwtcl} {1}"
-puts $fp "set_instance_parameter_value ${pcie} {pf0_subsys_vendor_id_hwtcl} {4466}"
+puts $fp "set_instance_parameter_value ${pcie} {pf0_pci_type0_device_id_hwtcl} {$pcie_device_id}"
+puts $fp "set_instance_parameter_value ${pcie} {pf0_pci_type0_vendor_id_hwtcl} {$pcie_vendor_id}"
+puts $fp "set_instance_parameter_value ${pcie} {pf0_class_code_hwtcl} {$pcie_class_code}"
+puts $fp "set_instance_parameter_value ${pcie} {pf0_revision_id_hwtcl} {$pcie_revision_id}"
+puts $fp "set_instance_parameter_value ${pcie} {pf0_subsys_dev_id_hwtcl} {$pcie_subsystem_device_id}"
+puts $fp "set_instance_parameter_value ${pcie} {pf0_subsys_vendor_id_hwtcl} {$pcie_subsystem_vendor_id}"
 
 # configure BAR settings
 proc configure_bar {fp pcie pf bar aperture} {

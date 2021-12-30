@@ -170,7 +170,7 @@ create_project.tcl: Makefile $(QSF_FILES_REL) | $(IP_FILES_INT) $(IP_TCL_FILES_I
 	for x in $(SDC_FILES_REL); do echo set_global_assignment -name SDC_FILE "$$x" >> $@; done
 	for x in $(QSF_FILES_REL); do echo source "$$x" >> $@; done
 
-update_config.tcl: $(CONFIG_TCL_FILES_REL)
+update_config.tcl: $(CONFIG_TCL_FILES_REL) $(SYN_FILES_REL)
 	echo "project_open $(FPGA_TOP)" > $@
 	for x in $(CONFIG_TCL_FILES_REL); do echo source "$$x" >> $@; done
 

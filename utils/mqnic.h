@@ -39,6 +39,7 @@ either expressed or implied, of The Regents of the University of California.
 
 #include "mqnic_hw.h"
 #include "mqnic_ioctl.h"
+#include "reg_block.h"
 
 #define mqnic_reg_read32(base, reg) (((volatile uint32_t *)(base))[(reg)/4])
 #define mqnic_reg_write32(base, reg, val) (((volatile uint32_t *)(base))[(reg)/4]) = val
@@ -51,6 +52,13 @@ struct mqnic_sched {
     struct mqnic_port *port;
 
     int index;
+
+    struct reg_block *rb;
+
+    uint32_t type;
+    uint32_t offset;
+    uint32_t channel_count;
+    uint32_t channel_stride;
 
     size_t regs_size;
     volatile uint8_t *regs;
@@ -65,17 +73,9 @@ struct mqnic_port {
     size_t regs_size;
     volatile uint8_t *regs;
 
-    uint32_t port_id;
-    uint32_t port_features;
-    uint32_t port_mtu;
+    struct reg_block *rb_list;
 
     uint32_t sched_count;
-    uint32_t sched_offset;
-    uint32_t sched_stride;
-    uint32_t sched_type;
-
-    uint32_t tdma_timeslot_count;
-
     struct mqnic_sched *sched[MQNIC_MAX_SCHED];
 };
 
@@ -88,24 +88,39 @@ struct mqnic_if {
     volatile uint8_t *regs;
     volatile uint8_t *csr_regs;
 
-    uint32_t if_id;
-    uint32_t if_features;
+    struct reg_block *rb_list;
+    struct reg_block *if_ctrl_tx_rb;
+    struct reg_block *if_ctrl_rx_rb;
+    struct reg_block *event_queue_rb;
+    struct reg_block *tx_queue_rb;
+    struct reg_block *tx_cpl_queue_rb;
+    struct reg_block *rx_queue_rb;
+    struct reg_block *rx_cpl_queue_rb;
 
-    uint32_t event_queue_count;
+    uint32_t if_tx_features;
+    uint32_t if_rx_features;
+
+    uint32_t max_tx_mtu;
+    uint32_t max_rx_mtu;
+
     uint32_t event_queue_offset;
-    uint32_t tx_queue_count;
+    uint32_t event_queue_count;
+    uint32_t event_queue_stride;
+
     uint32_t tx_queue_offset;
-    uint32_t tx_cpl_queue_count;
+    uint32_t tx_queue_count;
+    uint32_t tx_queue_stride;
     uint32_t tx_cpl_queue_offset;
-    uint32_t rx_queue_count;
+    uint32_t tx_cpl_queue_count;
+    uint32_t tx_cpl_queue_stride;
     uint32_t rx_queue_offset;
-    uint32_t rx_cpl_queue_count;
+    uint32_t rx_queue_count;
+    uint32_t rx_queue_stride;
     uint32_t rx_cpl_queue_offset;
+    uint32_t rx_cpl_queue_count;
+    uint32_t rx_cpl_queue_stride;
 
     uint32_t port_count;
-    uint32_t port_offset;
-    uint32_t port_stride;
-
     struct mqnic_port *ports[MQNIC_MAX_PORTS];
 };
 
@@ -114,20 +129,27 @@ struct mqnic {
 
     size_t regs_size;
     volatile uint8_t *regs;
-    volatile uint8_t *phc_regs;
 
+    struct reg_block *rb_list;
+    struct reg_block *fw_id_rb;
+    struct reg_block *if_rb;
+    struct reg_block *phc_rb;
+
+    uint32_t fpga_id;
     uint32_t fw_id;
     uint32_t fw_ver;
     uint32_t board_id;
     uint32_t board_ver;
+    uint32_t build_date;
+    uint32_t git_hash;
+    uint32_t rel_info;
 
-    uint32_t phc_count;
-    uint32_t phc_offset;
-    uint32_t phc_stride;
-
+    uint32_t if_offset;
     uint32_t if_count;
     uint32_t if_stride;
     uint32_t if_csr_offset;
+
+    char build_date_str[32];
 
     struct mqnic_if *interfaces[MQNIC_MAX_IF];
 };
@@ -138,10 +160,10 @@ void mqnic_close(struct mqnic *dev);
 struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs);
 void mqnic_if_close(struct mqnic_if *interface);
 
-struct mqnic_port *mqnic_port_open(struct mqnic_if *interface, int index, volatile uint8_t *regs);
+struct mqnic_port *mqnic_port_open(struct mqnic_if *interface, int index, struct reg_block *block_rb);
 void mqnic_port_close(struct mqnic_port *port);
 
-struct mqnic_sched *mqnic_sched_open(struct mqnic_port *port, int index, volatile uint8_t *regs);
+struct mqnic_sched *mqnic_sched_open(struct mqnic_port *port, int index, struct reg_block *rb);
 void mqnic_sched_close(struct mqnic_sched *sched);
 
 #endif /* MQNIC_H */

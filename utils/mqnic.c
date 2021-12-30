@@ -38,6 +38,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -88,7 +89,7 @@ struct mqnic *mqnic_open(const char *dev_name)
         goto fail_mmap_regs;
     }
 
-    if (mqnic_reg_read32(dev->regs, MQNIC_REG_FW_ID) == 0xffffffff)
+    if (mqnic_reg_read32(dev->regs, 4) == 0xffffffff)
     {
         // if we were given a PCIe resource, then we may need to enable the device
         char path[PATH_MAX+32];
@@ -113,46 +114,80 @@ struct mqnic *mqnic_open(const char *dev_name)
         }
     }
 
-    if (mqnic_reg_read32(dev->regs, MQNIC_REG_FW_ID) == 0xffffffff)
+    if (mqnic_reg_read32(dev->regs, 4) == 0xffffffff)
     {
         fprintf(stderr, "Error: device needs to be reset\n");
         goto fail_reset;
     }
 
-    dev->fw_id = mqnic_reg_read32(dev->regs, MQNIC_REG_FW_ID);
-    dev->fw_ver = mqnic_reg_read32(dev->regs, MQNIC_REG_FW_VER);
-    dev->board_id = mqnic_reg_read32(dev->regs, MQNIC_REG_BOARD_ID);
-    dev->board_ver = mqnic_reg_read32(dev->regs, MQNIC_REG_BOARD_VER);
+    dev->rb_list = enumerate_reg_block_list(dev->regs, 0, dev->regs_size);
 
-    dev->phc_count = mqnic_reg_read32(dev->regs, MQNIC_REG_PHC_COUNT);
-    dev->phc_offset = mqnic_reg_read32(dev->regs, MQNIC_REG_PHC_OFFSET);
-    dev->phc_stride = mqnic_reg_read32(dev->regs, MQNIC_REG_PHC_STRIDE);
-
-    if (dev->phc_count)
+    if (!dev->rb_list)
     {
-        dev->phc_regs = dev->regs + dev->phc_offset;
+        fprintf(stderr, "Error: filed to enumerate blocks\n");
+        goto fail_enum;
     }
 
-    dev->if_count = mqnic_reg_read32(dev->regs, MQNIC_REG_IF_COUNT);
-    dev->if_stride = mqnic_reg_read32(dev->regs, MQNIC_REG_IF_STRIDE);
-    dev->if_csr_offset = mqnic_reg_read32(dev->regs, MQNIC_REG_IF_CSR_OFFSET);
+    // Read ID registers
+    dev->fw_id_rb = find_reg_block(dev->rb_list, MQNIC_RB_FW_ID_TYPE, MQNIC_RB_FW_ID_VER, 0);
+
+    if (!dev->fw_id_rb)
+    {
+        fprintf(stderr, "Error: FW ID block not found\n");
+        goto fail_enum;
+    }
+
+    dev->fpga_id = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_FPGA_ID);
+    dev->fw_id = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_FW_ID);
+    dev->fw_ver = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_FW_VER);
+    dev->board_id = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_BOARD_ID);
+    dev->board_ver = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_BOARD_VER);
+    dev->build_date = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_BUILD_DATE);
+    dev->git_hash = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_GIT_HASH);
+    dev->rel_info = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_REL_INFO);
+
+    time_t build_date = dev->build_date;
+    struct tm *tm_info = gmtime(&build_date);
+    strftime(dev->build_date_str, sizeof(dev->build_date_str), "%F %T", tm_info);
+
+    dev->phc_rb = find_reg_block(dev->rb_list, MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER, 0);
+
+    // Enumerate interfaces
+    dev->if_rb = find_reg_block(dev->rb_list, MQNIC_RB_IF_TYPE, MQNIC_RB_IF_VER, 0);
+
+    if (!dev->if_rb)
+    {
+        fprintf(stderr, "Interface block not found, skipping interface enumeration\n");
+        dev->if_count = 0;
+        goto skip_interface;
+    }
+
+    dev->if_offset = mqnic_reg_read32(dev->if_rb->regs, MQNIC_RB_IF_REG_OFFSET);
+    dev->if_count = mqnic_reg_read32(dev->if_rb->regs, MQNIC_RB_IF_REG_COUNT);
+    dev->if_stride = mqnic_reg_read32(dev->if_rb->regs, MQNIC_RB_IF_REG_STRIDE);
+    dev->if_csr_offset = mqnic_reg_read32(dev->if_rb->regs, MQNIC_RB_IF_REG_CSR_OFFSET);
 
     if (dev->if_count > MQNIC_MAX_IF)
         dev->if_count = MQNIC_MAX_IF;
 
     for (int k = 0; k < dev->if_count; k++)
     {
-        struct mqnic_if *interface = mqnic_if_open(dev, k, dev->regs + k*dev->if_stride);
+        struct mqnic_if *interface = mqnic_if_open(dev, k, dev->regs + dev->if_offset + k*dev->if_stride);
 
         if (!interface)
-            goto fail;
+        {
+            fprintf(stderr, "Failed to create interface %d, skipping\n", k);
+            continue;
+        }
 
         dev->interfaces[k] = interface;
     }
 
+skip_interface:
     return dev;
 
 fail:
+fail_enum:
 fail_reset:
     mqnic_close(dev);
     return NULL;
@@ -179,6 +214,9 @@ void mqnic_close(struct mqnic *dev)
         mqnic_if_close(dev->interfaces[k]);
         dev->interfaces[k] = NULL;
     }
+
+    if (dev->rb_list)
+        free_reg_block_list(dev->rb_list);
 
     munmap((void *)dev->regs, dev->regs_size);
     close(dev->fd);
@@ -207,46 +245,127 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
         goto fail;
     }
 
-    interface->if_id = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_ID);
-    interface->if_features = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_IF_FEATURES);
+    // Enumerate registers
+    interface->rb_list = enumerate_reg_block_list(interface->regs, dev->if_csr_offset, interface->regs_size);
 
-    interface->event_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_EVENT_QUEUE_COUNT);
-    interface->event_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_EVENT_QUEUE_OFFSET);
-    interface->tx_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_QUEUE_COUNT);
-    interface->tx_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_QUEUE_OFFSET);
-    interface->tx_cpl_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_CPL_QUEUE_COUNT);
-    interface->tx_cpl_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_TX_CPL_QUEUE_OFFSET);
-    interface->rx_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_QUEUE_COUNT);
-    interface->rx_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_QUEUE_OFFSET);
-    interface->rx_cpl_queue_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_CPL_QUEUE_COUNT);
-    interface->rx_cpl_queue_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_RX_CPL_QUEUE_OFFSET);
+    if (!interface->rb_list)
+    {
+        fprintf(stderr, "Error: filed to enumerate blocks\n");
+        goto fail;
+    }
 
-    interface->port_count = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_COUNT);
-    interface->port_offset = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_OFFSET);
-    interface->port_stride = mqnic_reg_read32(interface->csr_regs, MQNIC_IF_REG_PORT_STRIDE);
+    interface->if_ctrl_tx_rb = find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_TX_TYPE, MQNIC_RB_IF_CTRL_TX_VER, 0);
+
+    if (!interface->if_ctrl_tx_rb)
+    {
+        fprintf(stderr, "Error: TX interface control block not found\n");
+        goto fail;
+    }
+
+    interface->if_tx_features = mqnic_reg_read32(interface->if_ctrl_tx_rb->regs, MQNIC_RB_IF_CTRL_TX_REG_FEATURES);
+    interface->max_tx_mtu = mqnic_reg_read32(interface->if_ctrl_tx_rb->regs, MQNIC_RB_IF_CTRL_TX_REG_MAX_MTU);
+
+    interface->if_ctrl_rx_rb = find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_RX_TYPE, MQNIC_RB_IF_CTRL_RX_VER, 0);
+
+    if (!interface->if_ctrl_rx_rb)
+    {
+        fprintf(stderr, "Error: RX interface control block not found\n");
+        goto fail;
+    }
+
+    interface->if_rx_features = mqnic_reg_read32(interface->if_ctrl_rx_rb->regs, MQNIC_RB_IF_CTRL_RX_REG_FEATURES);
+    interface->max_rx_mtu = mqnic_reg_read32(interface->if_ctrl_rx_rb->regs, MQNIC_RB_IF_CTRL_TX_REG_MAX_MTU);
+
+    interface->event_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_EVENT_QM_TYPE, MQNIC_RB_EVENT_QM_VER, 0);
+
+    if (!interface->event_queue_rb)
+    {
+        fprintf(stderr, "Error: Event queue block not found\n");
+        goto fail;
+    }
+
+    interface->event_queue_offset = mqnic_reg_read32(interface->event_queue_rb->regs, MQNIC_RB_EVENT_QM_REG_OFFSET);
+    interface->event_queue_count = mqnic_reg_read32(interface->event_queue_rb->regs, MQNIC_RB_EVENT_QM_REG_COUNT);
+    interface->event_queue_stride = mqnic_reg_read32(interface->event_queue_rb->regs, MQNIC_RB_EVENT_QM_REG_STRIDE);
 
     if (interface->event_queue_count > MQNIC_MAX_EVENT_RINGS)
         interface->event_queue_count = MQNIC_MAX_EVENT_RINGS;
+
+    interface->tx_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_TX_QM_TYPE, MQNIC_RB_TX_QM_VER, 0);
+
+    if (!interface->tx_queue_rb)
+    {
+        fprintf(stderr, "Error: TX queue block not found\n");
+        goto fail;
+    }
+
+    interface->tx_queue_offset = mqnic_reg_read32(interface->tx_queue_rb->regs, MQNIC_RB_TX_QM_REG_OFFSET);
+    interface->tx_queue_count = mqnic_reg_read32(interface->tx_queue_rb->regs, MQNIC_RB_TX_QM_REG_COUNT);
+    interface->tx_queue_stride = mqnic_reg_read32(interface->tx_queue_rb->regs, MQNIC_RB_TX_QM_REG_STRIDE);
+
     if (interface->tx_queue_count > MQNIC_MAX_TX_RINGS)
         interface->tx_queue_count = MQNIC_MAX_TX_RINGS;
+
+    interface->tx_cpl_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_TX_CQM_TYPE, MQNIC_RB_TX_CQM_VER, 0);
+
+    if (!interface->tx_cpl_queue_rb)
+    {
+        fprintf(stderr, "Error: TX completion queue block not found\n");
+        goto fail;
+    }
+
+    interface->tx_cpl_queue_offset = mqnic_reg_read32(interface->tx_cpl_queue_rb->regs, MQNIC_RB_TX_CQM_REG_OFFSET);
+    interface->tx_cpl_queue_count = mqnic_reg_read32(interface->tx_cpl_queue_rb->regs, MQNIC_RB_TX_CQM_REG_COUNT);
+    interface->tx_cpl_queue_stride = mqnic_reg_read32(interface->tx_cpl_queue_rb->regs, MQNIC_RB_TX_CQM_REG_STRIDE);
+
     if (interface->tx_cpl_queue_count > MQNIC_MAX_TX_CPL_RINGS)
         interface->tx_cpl_queue_count = MQNIC_MAX_TX_CPL_RINGS;
+
+    interface->rx_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_RX_QM_TYPE, MQNIC_RB_RX_QM_VER, 0);
+
+    if (!interface->rx_queue_rb)
+    {
+        fprintf(stderr, "Error: RX queue block not found\n");
+        goto fail;
+    }
+
+    interface->rx_queue_offset = mqnic_reg_read32(interface->rx_queue_rb->regs, MQNIC_RB_RX_QM_REG_OFFSET);
+    interface->rx_queue_count = mqnic_reg_read32(interface->rx_queue_rb->regs, MQNIC_RB_RX_QM_REG_COUNT);
+    interface->rx_queue_stride = mqnic_reg_read32(interface->rx_queue_rb->regs, MQNIC_RB_RX_QM_REG_STRIDE);
+
     if (interface->rx_queue_count > MQNIC_MAX_RX_RINGS)
         interface->rx_queue_count = MQNIC_MAX_RX_RINGS;
+
+    interface->rx_cpl_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_RX_CQM_TYPE, MQNIC_RB_RX_CQM_VER, 0);
+
+    if (!interface->rx_cpl_queue_rb)
+    {
+        fprintf(stderr, "Error: RX completion queue block not found\n");
+        goto fail;
+    }
+
+    interface->rx_cpl_queue_offset = mqnic_reg_read32(interface->rx_cpl_queue_rb->regs, MQNIC_RB_RX_CQM_REG_OFFSET);
+    interface->rx_cpl_queue_count = mqnic_reg_read32(interface->rx_cpl_queue_rb->regs, MQNIC_RB_RX_CQM_REG_COUNT);
+    interface->rx_cpl_queue_stride = mqnic_reg_read32(interface->rx_cpl_queue_rb->regs, MQNIC_RB_RX_CQM_REG_STRIDE);
+
     if (interface->rx_cpl_queue_count > MQNIC_MAX_RX_CPL_RINGS)
         interface->rx_cpl_queue_count = MQNIC_MAX_RX_CPL_RINGS;
 
-    if (interface->port_count > MQNIC_MAX_PORTS)
-        interface->port_count = MQNIC_MAX_PORTS;
-
-    for (int k = 0; k < interface->port_count; k++)
+    interface->port_count = 0;
+    while (interface->port_count < MQNIC_MAX_PORTS)
     {
-        struct mqnic_port *port = mqnic_port_open(interface, k, interface->regs + interface->port_offset + k*interface->port_stride);
+        struct reg_block *sched_block_rb = find_reg_block(interface->rb_list, MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, interface->port_count);
+        struct mqnic_port *port;
+
+        if (!sched_block_rb)
+            break;
+
+        port = mqnic_port_open(interface, interface->port_count, sched_block_rb);
 
         if (!port)
             goto fail;
 
-        interface->ports[k] = port;
+        interface->ports[interface->port_count++] = port;
     }
 
     return interface;
@@ -270,49 +389,46 @@ void mqnic_if_close(struct mqnic_if *interface)
         interface->ports[k] = NULL;
     }
 
+    if (interface->rb_list)
+        free_reg_block_list(interface->rb_list);
+
     free(interface);
 }
 
-struct mqnic_port *mqnic_port_open(struct mqnic_if *interface, int index, volatile uint8_t *regs)
+struct mqnic_port *mqnic_port_open(struct mqnic_if *interface, int index, struct reg_block *block_rb)
 {
     struct mqnic_port *port = calloc(1, sizeof(struct mqnic_port));
 
     if (!port)
         return NULL;
 
+    int offset = mqnic_reg_read32(block_rb->regs, MQNIC_RB_SCHED_BLOCK_REG_OFFSET);
+
     port->mqnic = interface->mqnic;
     port->interface = interface;
 
     port->index = index;
 
-    port->regs_size = interface->port_stride;
-    port->regs = regs;
+    port->rb_list = enumerate_reg_block_list(interface->regs, offset, interface->regs_size);
 
-    if (port->regs >= interface->regs+interface->regs_size)
+    if (!port->rb_list)
     {
-        fprintf(stderr, "Error: computed pointer out of range\n");
+        fprintf(stderr, "Error: filed to enumerate blocks\n");
         goto fail;
     }
 
-    port->port_id = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_ID);
-    port->port_features = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_FEATURES);
-    port->port_mtu = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_PORT_MTU);
-
-    port->sched_count = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_COUNT);
-    port->sched_offset = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_OFFSET);
-    port->sched_stride = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_STRIDE);
-    port->sched_type = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_SCHED_TYPE);
-
-    port->tdma_timeslot_count = mqnic_reg_read32(port->regs, MQNIC_PORT_REG_TDMA_TIMESLOT_COUNT);
-
-    for (int k = 0; k < port->sched_count; k++)
+    port->sched_count = 0;
+    for (struct reg_block *rb = port->rb_list; rb->type && rb->version; rb++)
     {
-        struct mqnic_sched *sched = mqnic_sched_open(port, k, port->regs + port->sched_offset + k*port->sched_stride);
+        if (rb->type == MQNIC_RB_SCHED_RR_TYPE && rb->version == MQNIC_RB_SCHED_RR_VER)
+        {
+            struct mqnic_sched *sched = mqnic_sched_open(port, port->sched_count, rb);
 
-        if (!sched)
-            goto fail;
+            if (!sched)
+                goto fail;
 
-        port->sched[k] = sched;
+            port->sched[port->sched_count++] = sched;
+        }
     }
 
     return port;
@@ -336,10 +452,13 @@ void mqnic_port_close(struct mqnic_port *port)
         port->sched[k] = NULL;
     }
 
+    if (port->rb_list)
+        free_reg_block_list(port->rb_list);
+
     free(port);
 }
 
-struct mqnic_sched *mqnic_sched_open(struct mqnic_port *port, int index, volatile uint8_t *regs)
+struct mqnic_sched *mqnic_sched_open(struct mqnic_port *port, int index, struct reg_block *rb)
 {
     struct mqnic_sched *sched = calloc(1, sizeof(struct mqnic_sched));
 
@@ -352,14 +471,19 @@ struct mqnic_sched *mqnic_sched_open(struct mqnic_port *port, int index, volatil
 
     sched->index = index;
 
-    sched->regs_size = port->sched_stride;
-    sched->regs = regs;
+    sched->rb = rb;
+    sched->regs = rb->base + mqnic_reg_read32(rb->regs, MQNIC_RB_SCHED_RR_REG_OFFSET);
 
     if (sched->regs >= port->interface->regs+port->interface->regs_size)
     {
         fprintf(stderr, "Error: computed pointer out of range\n");
         goto fail;
     }
+
+    sched->type = rb->type;
+    sched->offset = mqnic_reg_read32(rb->regs, MQNIC_RB_SCHED_RR_REG_OFFSET);
+    sched->channel_count = mqnic_reg_read32(rb->regs, MQNIC_RB_SCHED_RR_REG_CH_COUNT);
+    sched->channel_stride = mqnic_reg_read32(rb->regs, MQNIC_RB_SCHED_RR_REG_CH_STRIDE);
 
     return sched;
 

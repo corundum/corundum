@@ -43,11 +43,14 @@ either expressed or implied, of The Regents of the University of California.
 module fpga_core #
 (
     // FW and board IDs
-    parameter FW_ID = 32'd0,
-    parameter FW_VER = {16'd0, 16'd1},
-    parameter BOARD_ID = {16'h1c2c, 16'ha00e},
-    parameter BOARD_VER = {16'd0, 16'd1},
     parameter FPGA_ID = 32'h432AC0DD,
+    parameter FW_ID = 32'h00000000,
+    parameter FW_VER = 32'h00_00_01_00,
+    parameter BOARD_ID = 32'h1172_0001,
+    parameter BOARD_VER = 32'h01_00_00_00,
+    parameter BUILD_DATE = 32'd1563227611,
+    parameter GIT_HASH = 32'hdce357bf,
+    parameter RELEASE_INFO = 32'h00000000,
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -327,6 +330,9 @@ parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8);
 parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT);
 parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8);
 
+localparam RB_BASE_ADDR = 16'h1000;
+localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
+
 initial begin
     if (PORT_COUNT > 8) begin
         $error("Error: Max port count exceeded (instance %m)");
@@ -490,7 +496,7 @@ always @(posedge clk_250mhz) begin
         // read operation
         ctrl_reg_rd_ack_reg <= 1'b1;
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
-            16'h0040: ctrl_reg_rd_data_reg <= FPGA_ID; // FPGA ID
+            // 16'h0040: ctrl_reg_rd_data_reg <= FPGA_ID; // FPGA ID
             // GPIO
             // 16'h0110: begin
             //     // GPIO I2C 0
@@ -886,10 +892,14 @@ endgenerate
 
 mqnic_core_pcie_s10 #(
     // FW and board IDs
+    .FPGA_ID(FPGA_ID),
     .FW_ID(FW_ID),
     .FW_VER(FW_VER),
     .BOARD_ID(BOARD_ID),
     .BOARD_VER(BOARD_VER),
+    .BUILD_DATE(BUILD_DATE),
+    .GIT_HASH(GIT_HASH),
+    .RELEASE_INFO(RELEASE_INFO),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),
@@ -990,6 +1000,7 @@ mqnic_core_pcie_s10 #(
     .AXIL_IF_CTRL_ADDR_WIDTH(AXIL_IF_CTRL_ADDR_WIDTH),
     .AXIL_CSR_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .AXIL_CSR_PASSTHROUGH_ENABLE(0),
+    .RB_NEXT_PTR(RB_BASE_ADDR),
 
     // AXI lite interface configuration (application control)
     .AXIL_APP_CTRL_DATA_WIDTH(AXIL_APP_CTRL_DATA_WIDTH),

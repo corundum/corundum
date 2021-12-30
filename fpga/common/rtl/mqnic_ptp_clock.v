@@ -48,38 +48,68 @@ module mqnic_ptp_clock #
     parameter PTP_PERIOD_NS = 4'd4,
     parameter PTP_PERIOD_FNS = 32'd0,
     parameter PTP_PEROUT_ENABLE = 0,
-    parameter PTP_PEROUT_COUNT = 1
+    parameter PTP_PEROUT_COUNT = 1,
+    parameter REG_ADDR_WIDTH = 7,
+    parameter REG_DATA_WIDTH = 32,
+    parameter REG_STRB_WIDTH = (REG_DATA_WIDTH/8),
+    parameter RB_BASE_ADDR = 0,
+    parameter RB_NEXT_PTR = 0
 )
 (
-    input  wire         clk,
-    input  wire         rst,
+    input  wire                       clk,
+    input  wire                       rst,
 
     /*
      * Register interface
      */
-    input  wire [6:0]   reg_wr_addr,
-    input  wire [31:0]  reg_wr_data,
-    input  wire [3:0]   reg_wr_strb,
-    input  wire         reg_wr_en,
-    output wire         reg_wr_wait,
-    output wire         reg_wr_ack,
-    input  wire [6:0]   reg_rd_addr,
-    input  wire         reg_rd_en,
-    output wire [31:0]  reg_rd_data,
-    output wire         reg_rd_wait,
-    output wire         reg_rd_ack,
+    input  wire [REG_ADDR_WIDTH-1:0]  reg_wr_addr,
+    input  wire [REG_DATA_WIDTH-1:0]  reg_wr_data,
+    input  wire [REG_STRB_WIDTH-1:0]  reg_wr_strb,
+    input  wire                       reg_wr_en,
+    output wire                       reg_wr_wait,
+    output wire                       reg_wr_ack,
+    input  wire [REG_ADDR_WIDTH-1:0]  reg_rd_addr,
+    input  wire                       reg_rd_en,
+    output wire [REG_DATA_WIDTH-1:0]  reg_rd_data,
+    output wire                       reg_rd_wait,
+    output wire                       reg_rd_ack,
 
     /*
      * PTP clock
      */
-    output wire         ptp_pps,
-    output wire [95:0]  ptp_ts_96,
-    output wire         ptp_ts_step
+    output wire                       ptp_pps,
+    output wire [95:0]                ptp_ts_96,
+    output wire                       ptp_ts_step
 );
+
+localparam RBB = RB_BASE_ADDR & {REG_ADDR_WIDTH{1'b1}};
+
+// check configuration
+initial begin
+    if (REG_DATA_WIDTH != 32) begin
+        $error("Error: Register interface width must be 32 (instance %m)");
+        $finish;
+    end
+
+    if (REG_STRB_WIDTH * 8 != REG_DATA_WIDTH) begin
+        $error("Error: Register interface requires byte (8-bit) granularity (instance %m)");
+        $finish;
+    end
+
+    if (REG_ADDR_WIDTH < 7) begin
+        $error("Error: Register address width too narrow (instance %m)");
+        $finish;
+    end
+
+    if (RB_NEXT_PTR >= RB_BASE_ADDR && RB_NEXT_PTR < RB_BASE_ADDR + 7'h60) begin
+        $error("Error: RB_NEXT_PTR overlaps block (instance %m)");
+        $finish;
+    end
+end
 
 // control registers
 reg reg_wr_ack_reg = 1'b0;
-reg [31:0] reg_rd_data_reg = 0;
+reg [REG_DATA_WIDTH-1:0] reg_rd_data_reg = 0;
 reg reg_rd_ack_reg = 1'b0;
 
 reg [95:0] get_ptp_ts_96_reg = 0;
@@ -114,23 +144,23 @@ always @(posedge clk) begin
         reg_wr_ack_reg <= 1'b1;
         case ({reg_wr_addr >> 2, 2'b00})
             // PHC
-            7'h30: set_ptp_ts_96_reg[15:0] <= reg_wr_data;  // PTP set fns
-            7'h34: set_ptp_ts_96_reg[45:16] <= reg_wr_data; // PTP set ns
-            7'h38: set_ptp_ts_96_reg[79:48] <= reg_wr_data; // PTP set sec l
-            7'h3C: begin
+            RBB+7'h30: set_ptp_ts_96_reg[15:0] <= reg_wr_data;  // PTP set fns
+            RBB+7'h34: set_ptp_ts_96_reg[45:16] <= reg_wr_data; // PTP set ns
+            RBB+7'h38: set_ptp_ts_96_reg[79:48] <= reg_wr_data; // PTP set sec l
+            RBB+7'h3C: begin
                 // PTP set sec h
                 set_ptp_ts_96_reg[95:80] <= reg_wr_data;
                 set_ptp_ts_96_valid_reg <= 1'b1;
             end
-            7'h40: set_ptp_period_fns_reg <= reg_wr_data; // PTP period fns
-            7'h44: begin
+            RBB+7'h40: set_ptp_period_fns_reg <= reg_wr_data; // PTP period fns
+            RBB+7'h44: begin
                 // PTP period ns
                 set_ptp_period_ns_reg <= reg_wr_data;
                 set_ptp_period_valid_reg <= 1'b1;
             end
-            7'h50: set_ptp_offset_fns_reg <= reg_wr_data; // PTP offset fns
-            7'h54: set_ptp_offset_ns_reg <= reg_wr_data;  // PTP offset ns
-            7'h58: begin
+            RBB+7'h50: set_ptp_offset_fns_reg <= reg_wr_data; // PTP offset fns
+            RBB+7'h54: set_ptp_offset_ns_reg <= reg_wr_data;  // PTP offset ns
+            RBB+7'h58: begin
                 // PTP offset count
                 set_ptp_offset_count_reg <= reg_wr_data;
                 set_ptp_offset_valid_reg <= 1'b1;
@@ -144,37 +174,40 @@ always @(posedge clk) begin
         reg_rd_ack_reg <= 1'b1;
         case ({reg_rd_addr >> 2, 2'b00})
             // PHC
-            7'h00: begin
+            RBB+7'h00: reg_rd_data_reg <= 32'h0000C080;  // PHC: Type
+            RBB+7'h04: reg_rd_data_reg <= 32'h00000100;  // PHC: Version
+            RBB+7'h08: reg_rd_data_reg <= RB_NEXT_PTR;   // PHC: Next header
+            RBB+7'h0C: begin
                 // PHC features
                 reg_rd_data_reg[7:0] <= PTP_PEROUT_ENABLE ? PTP_PEROUT_COUNT : 0;
                 reg_rd_data_reg[15:8] <= 0;
                 reg_rd_data_reg[23:16] <= 0;
                 reg_rd_data_reg[31:24] <= 0;
             end
-            7'h10: reg_rd_data_reg <= ptp_ts_96[15:0];  // PTP cur fns
-            7'h14: reg_rd_data_reg <= ptp_ts_96[45:16]; // PTP cur ns
-            7'h18: reg_rd_data_reg <= ptp_ts_96[79:48]; // PTP cur sec l
-            7'h1C: reg_rd_data_reg <= ptp_ts_96[95:80]; // PTP cur sec h
-            7'h20: begin
+            RBB+7'h10: reg_rd_data_reg <= ptp_ts_96[15:0];    // PTP cur fns
+            RBB+7'h14: reg_rd_data_reg <= ptp_ts_96[45:16];   // PTP cur ns
+            RBB+7'h18: reg_rd_data_reg <= ptp_ts_96[79:48];   // PTP cur sec l
+            RBB+7'h1C: reg_rd_data_reg <= ptp_ts_96[95:80];   // PTP cur sec h
+            RBB+7'h20: begin
                 // PTP get fns
                 get_ptp_ts_96_reg <= ptp_ts_96;
                 reg_rd_data_reg <= ptp_ts_96[15:0];
             end
-            7'h24: reg_rd_data_reg <= get_ptp_ts_96_reg[45:16]; // PTP get ns
-            7'h28: reg_rd_data_reg <= get_ptp_ts_96_reg[79:48]; // PTP get sec l
-            7'h2C: reg_rd_data_reg <= get_ptp_ts_96_reg[95:80]; // PTP get sec h
-            7'h30: reg_rd_data_reg <= set_ptp_ts_96_reg[15:0];  // PTP set fns
-            7'h34: reg_rd_data_reg <= set_ptp_ts_96_reg[45:16]; // PTP set ns
-            7'h38: reg_rd_data_reg <= set_ptp_ts_96_reg[79:48]; // PTP set sec l
-            7'h3C: reg_rd_data_reg <= set_ptp_ts_96_reg[95:80]; // PTP set sec h
-            7'h40: reg_rd_data_reg <= set_ptp_period_fns_reg;   // PTP period fns
-            7'h44: reg_rd_data_reg <= set_ptp_period_ns_reg;    // PTP period ns
-            7'h48: reg_rd_data_reg <= PTP_PERIOD_FNS;           // PTP nom period fns
-            7'h4C: reg_rd_data_reg <= PTP_PERIOD_NS;            // PTP nom period ns
-            7'h50: reg_rd_data_reg <= set_ptp_offset_fns_reg;   // PTP offset fns
-            7'h54: reg_rd_data_reg <= set_ptp_offset_ns_reg;    // PTP offset ns
-            7'h58: reg_rd_data_reg <= set_ptp_offset_count_reg; // PTP offset count
-            7'h5C: reg_rd_data_reg <= set_ptp_offset_active;    // PTP offset status
+            RBB+7'h24: reg_rd_data_reg <= get_ptp_ts_96_reg[45:16]; // PTP get ns
+            RBB+7'h28: reg_rd_data_reg <= get_ptp_ts_96_reg[79:48]; // PTP get sec l
+            RBB+7'h2C: reg_rd_data_reg <= get_ptp_ts_96_reg[95:80]; // PTP get sec h
+            RBB+7'h30: reg_rd_data_reg <= set_ptp_ts_96_reg[15:0];  // PTP set fns
+            RBB+7'h34: reg_rd_data_reg <= set_ptp_ts_96_reg[45:16]; // PTP set ns
+            RBB+7'h38: reg_rd_data_reg <= set_ptp_ts_96_reg[79:48]; // PTP set sec l
+            RBB+7'h3C: reg_rd_data_reg <= set_ptp_ts_96_reg[95:80]; // PTP set sec h
+            RBB+7'h40: reg_rd_data_reg <= set_ptp_period_fns_reg;   // PTP period fns
+            RBB+7'h44: reg_rd_data_reg <= set_ptp_period_ns_reg;    // PTP period ns
+            RBB+7'h48: reg_rd_data_reg <= PTP_PERIOD_FNS;           // PTP nom period fns
+            RBB+7'h4C: reg_rd_data_reg <= PTP_PERIOD_NS;            // PTP nom period ns
+            RBB+7'h50: reg_rd_data_reg <= set_ptp_offset_fns_reg;   // PTP offset fns
+            RBB+7'h54: reg_rd_data_reg <= set_ptp_offset_ns_reg;    // PTP offset ns
+            RBB+7'h58: reg_rd_data_reg <= set_ptp_offset_count_reg; // PTP offset count
+            RBB+7'h5C: reg_rd_data_reg <= set_ptp_offset_active;    // PTP offset status
             default: reg_rd_ack_reg <= 1'b0;
         endcase
     end

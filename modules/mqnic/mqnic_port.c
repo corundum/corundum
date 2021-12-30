@@ -36,10 +36,13 @@
 #include "mqnic.h"
 
 int mqnic_create_port(struct mqnic_if *interface, struct mqnic_port **port_ptr,
-		int index, u8 __iomem *hw_addr)
+		int index, struct reg_block *block_rb)
 {
 	struct device *dev = interface->dev;
 	struct mqnic_port *port;
+	struct reg_block *rb;
+	u32 offset;
+	int ret = 0;
 
 	port = kzalloc(sizeof(*port), GFP_KERNEL);
 	if (!port)
@@ -54,36 +57,61 @@ int mqnic_create_port(struct mqnic_if *interface, struct mqnic_port **port_ptr,
 
 	port->tx_queue_count = interface->tx_queue_count;
 
-	port->hw_addr = hw_addr;
+	port->block_rb = block_rb;
 
-	// read ID registers
-	port->port_id = ioread32(port->hw_addr + MQNIC_PORT_REG_PORT_ID);
-	dev_info(dev, "Port ID: 0x%08x", port->port_id);
-	port->port_features = ioread32(port->hw_addr + MQNIC_PORT_REG_PORT_FEATURES);
-	dev_info(dev, "Port features: 0x%08x", port->port_features);
-	port->port_mtu = ioread32(port->hw_addr + MQNIC_PORT_REG_PORT_MTU);
-	dev_info(dev, "Port MTU: %d", port->port_mtu);
+	offset = ioread32(block_rb->regs + MQNIC_RB_SCHED_BLOCK_REG_OFFSET);
 
-	port->sched_count = ioread32(port->hw_addr + MQNIC_PORT_REG_SCHED_COUNT);
+	port->rb_list = enumerate_reg_block_list(interface->hw_addr, offset, interface->hw_regs_size - offset);
+
+	if (!port->rb_list) {
+		ret = -EIO;
+		dev_err(dev, "Failed to enumerate blocks");
+		goto fail;
+	}
+
+	dev_info(dev, "Port-level register blocks:");
+	for (rb = port->rb_list; rb->type && rb->version; rb++)
+		dev_info(dev, " type 0x%08x (v %d.%d.%d.%d)", rb->type, rb->version >> 24, 
+				(rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
+
+	port->sched_count = 0;
+	for (rb = port->rb_list; rb->type && rb->version; rb++) {
+		if (rb->type == MQNIC_RB_SCHED_RR_TYPE && rb->version == MQNIC_RB_SCHED_RR_VER) {
+			ret = mqnic_create_scheduler(port, &port->sched[port->sched_count],
+					port->sched_count, rb);
+
+			if (ret)
+				goto fail;
+
+			port->sched_count++;
+		}
+	}
+
 	dev_info(dev, "Scheduler count: %d", port->sched_count);
-	port->sched_offset = ioread32(port->hw_addr + MQNIC_PORT_REG_SCHED_OFFSET);
-	dev_info(dev, "Scheduler offset: 0x%08x", port->sched_offset);
-	port->sched_stride = ioread32(port->hw_addr + MQNIC_PORT_REG_SCHED_STRIDE);
-	dev_info(dev, "Scheduler stride: 0x%08x", port->sched_stride);
-	port->sched_type = ioread32(port->hw_addr + MQNIC_PORT_REG_SCHED_TYPE);
-	dev_info(dev, "Scheduler type: 0x%08x", port->sched_type);
 
 	mqnic_deactivate_port(port);
 
 	return 0;
+
+fail:
+	mqnic_destroy_port(port_ptr);
+	return ret;
 }
 
 void mqnic_destroy_port(struct mqnic_port **port_ptr)
 {
 	struct mqnic_port *port = *port_ptr;
+	int k;
 	*port_ptr = NULL;
 
 	mqnic_deactivate_port(port);
+
+	for (k = 0; k < ARRAY_SIZE(port->sched); k++)
+		if (port->sched[k])
+			mqnic_destroy_scheduler(&port->sched[k]);
+
+	if (port->rb_list)
+		free_reg_block_list(port->rb_list);
 
 	kfree(port);
 }
@@ -93,47 +121,19 @@ int mqnic_activate_port(struct mqnic_port *port)
 	int k;
 
 	// enable schedulers
-	iowrite32(0xffffffff, port->hw_addr + MQNIC_PORT_REG_SCHED_ENABLE);
-
-	// enable queues
-	for (k = 0; k < port->tx_queue_count; k++)
-		iowrite32(3, port->hw_addr + port->sched_offset + k * 4);
+	for (k = 0; k < ARRAY_SIZE(port->sched); k++)
+		if (port->sched[k])
+			mqnic_scheduler_enable(port->sched[k]);
 
 	return 0;
 }
 
 void mqnic_deactivate_port(struct mqnic_port *port)
 {
+	int k;
+
 	// disable schedulers
-	iowrite32(0, port->hw_addr + MQNIC_PORT_REG_SCHED_ENABLE);
-}
-
-u32 mqnic_port_get_rss_mask(struct mqnic_port *port)
-{
-	return ioread32(port->hw_addr + MQNIC_PORT_REG_RSS_MASK);
-}
-
-void mqnic_port_set_rss_mask(struct mqnic_port *port, u32 rss_mask)
-{
-	iowrite32(rss_mask, port->hw_addr + MQNIC_PORT_REG_RSS_MASK);
-}
-
-u32 mqnic_port_get_tx_mtu(struct mqnic_port *port)
-{
-	return ioread32(port->hw_addr + MQNIC_PORT_REG_TX_MTU);
-}
-
-void mqnic_port_set_tx_mtu(struct mqnic_port *port, u32 mtu)
-{
-	iowrite32(mtu, port->hw_addr + MQNIC_PORT_REG_TX_MTU);
-}
-
-u32 mqnic_port_get_rx_mtu(struct mqnic_port *port)
-{
-	return ioread32(port->hw_addr + MQNIC_PORT_REG_RX_MTU);
-}
-
-void mqnic_port_set_rx_mtu(struct mqnic_port *port, u32 mtu)
-{
-	iowrite32(mtu, port->hw_addr + MQNIC_PORT_REG_RX_MTU);
+	for (k = 0; k < ARRAY_SIZE(port->sched); k++)
+		if (port->sched[k])
+			mqnic_scheduler_disable(port->sched[k]);
 }

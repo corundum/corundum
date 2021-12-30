@@ -44,9 +44,11 @@ ktime_t mqnic_read_cpl_ts(struct mqnic_dev *mdev, struct mqnic_ring *ring,
 
 	if (unlikely(!ring->ts_valid || (ring->ts_s ^ ts_s) & 0xff00)) {
 		// seconds MSBs do not match, update cached timestamp
-		ring->ts_s = ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_CUR_SEC_L);
-		ring->ts_s |= (u64) ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_CUR_SEC_H) << 32;
-		ring->ts_valid = 1;
+		if (mdev->phc_rb) {
+			ring->ts_s = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_CUR_SEC_L);
+			ring->ts_s |= (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_CUR_SEC_H) << 32;
+			ring->ts_valid = 1;
+		}
 	}
 
 	ts_s |= ring->ts_s & 0xffffffffffffff00;
@@ -68,8 +70,8 @@ static int mqnic_phc_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 		scaled_ppm = -scaled_ppm;
 	}
 
-	nom_per_fns = ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_NOM_PERIOD_FNS);
-	nom_per_fns = (u64) ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_NOM_PERIOD_NS) << 32;
+	nom_per_fns = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_NOM_PERIOD_FNS);
+	nom_per_fns = (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_NOM_PERIOD_NS) << 32;
 
 	if (nom_per_fns == 0)
 		nom_per_fns = 0x4ULL << 32;
@@ -81,8 +83,8 @@ static int mqnic_phc_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	else
 		adj = nom_per_fns + adj;
 
-	iowrite32(adj & 0xffffffff, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_PERIOD_FNS);
-	iowrite32(adj >> 32, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_PERIOD_NS);
+	iowrite32(adj & 0xffffffff, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_PERIOD_FNS);
+	iowrite32(adj >> 32, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_PERIOD_NS);
 
 	dev_info(mdev->dev, "%s adj: 0x%llx", __func__, adj);
 
@@ -93,10 +95,10 @@ static int mqnic_phc_gettime(struct ptp_clock_info *ptp, struct timespec64 *ts)
 {
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
 
-	ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_GET_FNS);
-	ts->tv_nsec = ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_GET_NS);
-	ts->tv_sec = ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_GET_SEC_L);
-	ts->tv_sec |= (u64) ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_GET_SEC_H) << 32;
+	ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_FNS);
+	ts->tv_nsec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_NS);
+	ts->tv_sec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_SEC_L);
+	ts->tv_sec |= (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_SEC_H) << 32;
 
 	return 0;
 }
@@ -108,11 +110,11 @@ static int mqnic_phc_gettimex(struct ptp_clock_info *ptp, struct timespec64 *ts,
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
 
 	ptp_read_system_prets(sts);
-	ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_GET_FNS);
+	ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_FNS);
 	ptp_read_system_postts(sts);
-	ts->tv_nsec = ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_GET_NS);
-	ts->tv_sec = ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_GET_SEC_L);
-	ts->tv_sec |= (u64) ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_GET_SEC_H) << 32;
+	ts->tv_nsec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_NS);
+	ts->tv_sec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_SEC_L);
+	ts->tv_sec |= (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_SEC_H) << 32;
 
 	return 0;
 }
@@ -122,10 +124,10 @@ static int mqnic_phc_settime(struct ptp_clock_info *ptp, const struct timespec64
 {
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
 
-	iowrite32(0, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_SET_FNS);
-	iowrite32(ts->tv_nsec, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_SET_NS);
-	iowrite32(ts->tv_sec & 0xffffffff, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_SET_SEC_L);
-	iowrite32(ts->tv_sec >> 32, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_SET_SEC_H);
+	iowrite32(0, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_FNS);
+	iowrite32(ts->tv_nsec, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_NS);
+	iowrite32(ts->tv_sec & 0xffffffff, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_SEC_L);
+	iowrite32(ts->tv_sec >> 32, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_SEC_H);
 
 	return 0;
 }
@@ -142,9 +144,9 @@ static int mqnic_phc_adjtime(struct ptp_clock_info *ptp, s64 delta)
 		ts = timespec64_add(ts, ns_to_timespec64(delta));
 		mqnic_phc_settime(ptp, &ts);
 	} else {
-		iowrite32(0, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_ADJ_FNS);
-		iowrite32(delta & 0xffffffff, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_ADJ_NS);
-		iowrite32(1, mdev->phc_hw_addr + MQNIC_PHC_REG_PTP_ADJ_COUNT);
+		iowrite32(0, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_ADJ_FNS);
+		iowrite32(delta & 0xffffffff, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_ADJ_NS);
+		iowrite32(1, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_ADJ_COUNT);
 	}
 
 	return 0;
@@ -153,18 +155,19 @@ static int mqnic_phc_adjtime(struct ptp_clock_info *ptp, s64 delta)
 static int mqnic_phc_perout(struct ptp_clock_info *ptp, int on, struct ptp_perout_request *perout)
 {
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
-	u8 __iomem *hw_addr;
+	struct reg_block *rb;
 
 	u64 start_sec, period_sec, width_sec;
 	u32 start_nsec, period_nsec, width_nsec;
 
-	if (perout->index >= mdev->ptp_clock_info.n_per_out)
+	rb = find_reg_block(mdev->rb_list, MQNIC_RB_PHC_PEROUT_TYPE,
+			MQNIC_RB_PHC_PEROUT_VER, perout->index);
+
+	if (!rb)
 		return -EINVAL;
 
-	hw_addr = mdev->phc_hw_addr + MQNIC_PHC_PEROUT_OFFSET;
-
 	if (!on) {
-		iowrite32(0, hw_addr + MQNIC_PHC_REG_PEROUT_CTRL);
+		iowrite32(0, rb->regs + MQNIC_RB_PHC_PEROUT_REG_CTRL);
 
 		return 0;
 	}
@@ -187,22 +190,22 @@ static int mqnic_phc_perout(struct ptp_clock_info *ptp, int on, struct ptp_perou
 	dev_info(mdev->dev, "%s: period: %lld.%09d", __func__, period_sec, period_nsec);
 	dev_info(mdev->dev, "%s: width: %lld.%09d", __func__, width_sec, width_nsec);
 
-	iowrite32(0, hw_addr + MQNIC_PHC_REG_PEROUT_START_FNS);
-	iowrite32(start_nsec, hw_addr + MQNIC_PHC_REG_PEROUT_START_NS);
-	iowrite32(start_sec & 0xffffffff, hw_addr + MQNIC_PHC_REG_PEROUT_START_SEC_L);
-	iowrite32(start_sec >> 32, hw_addr + MQNIC_PHC_REG_PEROUT_START_SEC_H);
+	iowrite32(0, rb->regs + MQNIC_RB_PHC_PEROUT_REG_START_FNS);
+	iowrite32(start_nsec, rb->regs + MQNIC_RB_PHC_PEROUT_REG_START_NS);
+	iowrite32(start_sec & 0xffffffff, rb->regs + MQNIC_RB_PHC_PEROUT_REG_START_SEC_L);
+	iowrite32(start_sec >> 32, rb->regs + MQNIC_RB_PHC_PEROUT_REG_START_SEC_H);
 
-	iowrite32(0, hw_addr + MQNIC_PHC_REG_PEROUT_PERIOD_FNS);
-	iowrite32(period_nsec, hw_addr + MQNIC_PHC_REG_PEROUT_PERIOD_NS);
-	iowrite32(period_sec & 0xffffffff, hw_addr + MQNIC_PHC_REG_PEROUT_PERIOD_SEC_L);
-	iowrite32(period_sec >> 32, hw_addr + MQNIC_PHC_REG_PEROUT_PERIOD_SEC_H);
+	iowrite32(0, rb->regs + MQNIC_RB_PHC_PEROUT_REG_PERIOD_FNS);
+	iowrite32(period_nsec, rb->regs + MQNIC_RB_PHC_PEROUT_REG_PERIOD_NS);
+	iowrite32(period_sec & 0xffffffff, rb->regs + MQNIC_RB_PHC_PEROUT_REG_PERIOD_SEC_L);
+	iowrite32(period_sec >> 32, rb->regs + MQNIC_RB_PHC_PEROUT_REG_PERIOD_SEC_H);
 
-	iowrite32(0, hw_addr + MQNIC_PHC_REG_PEROUT_WIDTH_FNS);
-	iowrite32(width_nsec, hw_addr + MQNIC_PHC_REG_PEROUT_WIDTH_NS);
-	iowrite32(width_sec & 0xffffffff, hw_addr + MQNIC_PHC_REG_PEROUT_WIDTH_SEC_L);
-	iowrite32(width_sec >> 32, hw_addr + MQNIC_PHC_REG_PEROUT_WIDTH_SEC_H);
+	iowrite32(0, rb->regs + MQNIC_RB_PHC_PEROUT_REG_WIDTH_FNS);
+	iowrite32(width_nsec, rb->regs + MQNIC_RB_PHC_PEROUT_REG_WIDTH_NS);
+	iowrite32(width_sec & 0xffffffff, rb->regs + MQNIC_RB_PHC_PEROUT_REG_WIDTH_SEC_L);
+	iowrite32(width_sec >> 32, rb->regs + MQNIC_RB_PHC_PEROUT_REG_WIDTH_SEC_H);
 
-	iowrite32(1, hw_addr + MQNIC_PHC_REG_PEROUT_CTRL);
+	iowrite32(1, rb->regs + MQNIC_RB_PHC_PEROUT_REG_CTRL);
 
 	return 0;
 }
@@ -239,20 +242,29 @@ static void mqnic_phc_set_from_system_clock(struct ptp_clock_info *ptp)
 
 void mqnic_register_phc(struct mqnic_dev *mdev)
 {
-	u32 phc_features;
+	int perout_ch_count = 0;
+	struct reg_block *rb;
+
+	if (!mdev->phc_rb) {
+		dev_err(mdev->dev, "PTP clock not present");
+		return;
+	}
 
 	if (mdev->ptp_clock) {
 		dev_warn(mdev->dev, "PTP clock already registered");
 		return;
 	}
 
-	phc_features = ioread32(mdev->phc_hw_addr + MQNIC_PHC_REG_FEATURES);
+	while ((rb = find_reg_block(mdev->rb_list, MQNIC_RB_PHC_PEROUT_TYPE,
+			MQNIC_RB_PHC_PEROUT_VER, perout_ch_count))) {
+		perout_ch_count++;
+	}
 
 	mdev->ptp_clock_info.owner = THIS_MODULE;
 	mdev->ptp_clock_info.max_adj = 100000000;
 	mdev->ptp_clock_info.n_alarm = 0;
 	mdev->ptp_clock_info.n_ext_ts = 0;
-	mdev->ptp_clock_info.n_per_out = phc_features & 0xff;
+	mdev->ptp_clock_info.n_per_out = perout_ch_count;
 	mdev->ptp_clock_info.n_pins = 0;
 	mdev->ptp_clock_info.pps = 0;
 	mdev->ptp_clock_info.adjfine = mqnic_phc_adjfine;

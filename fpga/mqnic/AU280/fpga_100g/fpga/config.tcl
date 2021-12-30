@@ -29,12 +29,55 @@
 
 set params [dict create]
 
+# collect build information
+set build_date [clock seconds]
+set git_hash 00000000
+set git_tag ""
+
+if { [catch {set git_hash [exec git rev-parse --short=8 HEAD]}] } {
+    puts "Error running git or project not under version control"
+}
+
+if { [catch {set git_tag [exec git describe --tags HEAD]}] } {
+    puts "Error running git, project not under version control, or no tag found"
+}
+
+puts "Build date: ${build_date}"
+puts "Git hash: ${git_hash}"
+puts "Git tag: ${git_tag}"
+
+if { ! [regsub {^.*(\d+\.\d+\.\d+([\.-]\d+)?).*$} $git_tag {\1} tag_ver ] } {
+    puts "Failed to extract version from git tag"
+    set tag_ver 0.0.1
+}
+
+puts "Tag version: ${tag_ver}"
+
 # FW and board IDs
-dict set params FW_ID "32'd0"
-dict set params FW_VER "32'h00000001"
-dict set params BOARD_ID "32'h10ee9118"
-dict set params BOARD_VER "32'h00000001"
-dict set params FPGA_ID "32'h4B7D093"
+set fpga_id [expr 0x4B7D093]
+set fw_id [expr 0x00000000]
+set fw_ver $tag_ver
+set board_vendor_id [expr 0x10ee]
+set board_device_id [expr 0x9118]
+set board_ver 1.0
+set release_info [expr 0x00000000]
+
+# PCIe IDs
+set pcie_vendor_id [expr 0x1234]
+set pcie_device_id [expr 0x1001]
+set pcie_class_code [expr 0x020000]
+set pcie_revision_id [expr 0x00]
+set pcie_subsystem_vendor_id $board_vendor_id
+set pcie_subsystem_device_id $board_device_id
+
+dict set params FPGA_ID [format "32'h%08x" $fpga_id]
+dict set params FW_ID [format "32'h%08x" $fw_id]
+dict set params FW_VER [format "32'h%02x%02x%02x%02x" {*}[split $fw_ver .-] 0 0 0 0]
+dict set params BOARD_ID [format "32'h%04x%04x" $board_vendor_id $board_device_id]
+dict set params BOARD_VER [format "32'h%02x%02x%02x%02x" {*}[split $board_ver .-] 0 0 0 0]
+dict set params BUILD_DATE  "32'd${build_date}"
+dict set params GIT_HASH  "32'h${git_hash}"
+dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
 
 # Structural configuration
 
@@ -142,12 +185,12 @@ dict set params STAT_ID_WIDTH "12"
 set pcie [get_ips pcie4c_uscale_plus_0]
 
 # PCIe IDs
-set_property CONFIG.vendor_id {1234} $pcie
-set_property CONFIG.PF0_DEVICE_ID {1001} $pcie
-set_property CONFIG.PF0_CLASS_CODE {020000} $pcie
-set_property CONFIG.PF0_REVISION_ID {00} $pcie
-set_property CONFIG.PF0_SUBSYSTEM_VENDOR_ID {10ee} $pcie
-set_property CONFIG.PF0_SUBSYSTEM_ID {9118} $pcie
+set_property CONFIG.vendor_id [format "%04x" $pcie_vendor_id] $pcie
+set_property CONFIG.PF0_DEVICE_ID [format "%04x" $pcie_device_id] $pcie
+set_property CONFIG.PF0_CLASS_CODE [format "%06x" $pcie_class_code] $pcie
+set_property CONFIG.PF0_REVISION_ID [format "%02x" $pcie_revision_id] $pcie
+set_property CONFIG.PF0_SUBSYSTEM_VENDOR_ID [format "%04x" $pcie_subsystem_vendor_id] $pcie
+set_property CONFIG.PF0_SUBSYSTEM_ID [format "%04x" $pcie_subsystem_device_id] $pcie
 
 # Internal interface settings
 dict set params AXIS_PCIE_DATA_WIDTH [regexp -all -inline -- {[0-9]+} [get_property CONFIG.axisten_if_width $pcie]]

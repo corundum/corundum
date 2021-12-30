@@ -31,12 +31,15 @@ either expressed or implied, of The Regents of the University of California.
 
 """
 
+import datetime
 from collections import deque
 
 import cocotb
 from cocotb.log import SimLog
 from cocotb.queue import Queue
 from cocotb.triggers import Event, Edge, RisingEdge
+
+from cocotbext.axi import Window
 
 import struct
 
@@ -46,147 +49,201 @@ MQNIC_MAX_TX_CPL_RINGS  = 32
 MQNIC_MAX_RX_RINGS      = 8
 MQNIC_MAX_RX_CPL_RINGS  = 8
 
-MQNIC_QUEUE_STRIDE        = 0x00000020
-MQNIC_CPL_QUEUE_STRIDE    = 0x00000020
-MQNIC_EVENT_QUEUE_STRIDE  = 0x00000020
+# Register blocks
+MQNIC_RB_REG_TYPE      = 0x00
+MQNIC_RB_REG_VER       = 0x04
+MQNIC_RB_REG_NEXT_PTR  = 0x08
 
-# NIC CSRs
-MQNIC_REG_FW_ID                  = 0x0000
-MQNIC_REG_FW_VER                 = 0x0004
-MQNIC_REG_BOARD_ID               = 0x0008
-MQNIC_REG_BOARD_VER              = 0x000C
+MQNIC_RB_FW_ID_TYPE            = 0xFFFFFFFF
+MQNIC_RB_FW_ID_VER             = 0x00000100
+MQNIC_RB_FW_ID_REG_FPGA_ID     = 0x0C
+MQNIC_RB_FW_ID_REG_FW_ID       = 0x10
+MQNIC_RB_FW_ID_REG_FW_VER      = 0x14
+MQNIC_RB_FW_ID_REG_BOARD_ID    = 0x18
+MQNIC_RB_FW_ID_REG_BOARD_VER   = 0x1C
+MQNIC_RB_FW_ID_REG_BUILD_DATE  = 0x20
+MQNIC_RB_FW_ID_REG_GIT_HASH    = 0x24
+MQNIC_RB_FW_ID_REG_REL_INFO    = 0x28
 
-MQNIC_REG_PHC_COUNT              = 0x0010
-MQNIC_REG_PHC_OFFSET             = 0x0014
+MQNIC_RB_GPIO_TYPE          = 0x0000C100
+MQNIC_RB_GPIO_VER           = 0x00000100
+MQNIC_RB_GPIO_REG_GPIO_IN   = 0x0C
+MQNIC_RB_GPIO_REG_GPIO_OUT  = 0x10
 
-MQNIC_REG_IF_COUNT               = 0x0020
-MQNIC_REG_IF_STRIDE              = 0x0024
-MQNIC_REG_IF_CSR_OFFSET          = 0x002C
+MQNIC_RB_I2C_TYPE      = 0x0000C110
+MQNIC_RB_I2C_VER       = 0x00000100
+MQNIC_RB_I2C_REG_CTRL  = 0x0C
 
-MQNIC_REG_FPGA_ID                = 0x0040
+MQNIC_RB_SPI_FLASH_TYPE        = 0x0000C120
+MQNIC_RB_SPI_FLASH_VER         = 0x00000100
+MQNIC_RB_SPI_FLASH_REG_FORMAT  = 0x0C
+MQNIC_RB_SPI_FLASH_REG_CTRL_0  = 0x10
+MQNIC_RB_SPI_FLASH_REG_CTRL_1  = 0x14
 
-MQNIC_REG_GPIO_OUT               = 0x0100
-MQNIC_REG_GPIO_IN                = 0x0104
+MQNIC_RB_BPI_FLASH_TYPE        = 0x0000C121
+MQNIC_RB_BPI_FLASH_VER         = 0x00000100
+MQNIC_RB_BPI_FLASH_REG_FORMAT  = 0x0C
+MQNIC_RB_BPI_FLASH_REG_ADDR    = 0x10
+MQNIC_RB_BPI_FLASH_REG_DATA    = 0x14
+MQNIC_RB_BPI_FLASH_REG_CTRL    = 0x18
 
-MQNIC_REG_GPIO_I2C_0             = 0x0110
-MQNIC_REG_GPIO_I2C_1             = 0x0114
-MQNIC_REG_GPIO_I2C_2             = 0x0118
-MQNIC_REG_GPIO_I2C_3             = 0x011C
+MQNIC_RB_ALVEO_BMC_TYPE      = 0x0000C140
+MQNIC_RB_ALVEO_BMC_VER       = 0x00000100
+MQNIC_RB_ALVEO_BMC_REG_ADDR  = 0x0C
+MQNIC_RB_ALVEO_BMC_REG_DATA  = 0x10
 
-MQNIC_REG_GPIO_I2C_SCL_IN        = 0x00000001
-MQNIC_REG_GPIO_I2C_SCL_OUT       = 0x00000002
-MQNIC_REG_GPIO_I2C_SDA_IN        = 0x00000100
-MQNIC_REG_GPIO_I2C_SDA_OUT       = 0x00000200
+MQNIC_RB_GECKO_BMC_TYPE        = 0x0000C141
+MQNIC_RB_GECKO_BMC_VER         = 0x00000100
+MQNIC_RB_GECKO_BMC_REG_STATUS  = 0x0C
+MQNIC_RB_GECKO_BMC_REG_DATA    = 0x10
+MQNIC_RB_GECKO_BMC_REG_CMD     = 0x14
 
-MQNIC_REG_GPIO_XCVR_0123         = 0x0120
-MQNIC_REG_GPIO_XCVR_4567         = 0x0124
+MQNIC_RB_STATS_TYPE        = 0x0000C004
+MQNIC_RB_STATS_VER         = 0x00000100
+MQNIC_RB_STATS_REG_OFFSET  = 0x0C
+MQNIC_RB_STATS_REG_COUNT   = 0x10
+MQNIC_RB_STATS_REG_STRIDE  = 0x14
+MQNIC_RB_STATS_REG_FLAGS   = 0x18
 
-MQNIC_REG_GPIO_XCVR_PRSNT_IN          = 0x01
-MQNIC_REG_GPIO_XCVR_TX_FAULT_INT_IN   = 0x02
-MQNIC_REG_GPIO_XCVR_RX_LOS_IN         = 0x03
-MQNIC_REG_GPIO_XCVR_RST_OUT           = 0x10
-MQNIC_REG_GPIO_XCVR_TX_DIS_LPMODE_OUT = 0x20
-MQNIC_REG_GPIO_XCVR_RS0_OUT           = 0x40
-MQNIC_REG_GPIO_XCVR_RS1_OUT           = 0x80
+MQNIC_RB_PHC_TYPE               = 0x0000C080
+MQNIC_RB_PHC_VER                = 0x00000100
+MQNIC_RB_PHC_REG_CTRL           = 0x0C
+MQNIC_RB_PHC_REG_CUR_FNS        = 0x10
+MQNIC_RB_PHC_REG_CUR_NS         = 0x14
+MQNIC_RB_PHC_REG_CUR_SEC_L      = 0x18
+MQNIC_RB_PHC_REG_CUR_SEC_H      = 0x1C
+MQNIC_RB_PHC_REG_GET_FNS        = 0x20
+MQNIC_RB_PHC_REG_GET_NS         = 0x24
+MQNIC_RB_PHC_REG_GET_SEC_L      = 0x28
+MQNIC_RB_PHC_REG_GET_SEC_H      = 0x2C
+MQNIC_RB_PHC_REG_SET_FNS        = 0x30
+MQNIC_RB_PHC_REG_SET_NS         = 0x34
+MQNIC_RB_PHC_REG_SET_SEC_L      = 0x38
+MQNIC_RB_PHC_REG_SET_SEC_H      = 0x3C
+MQNIC_RB_PHC_REG_PERIOD_FNS     = 0x40
+MQNIC_RB_PHC_REG_PERIOD_NS      = 0x44
+MQNIC_RB_PHC_REG_NOM_PERIOD_FNS = 0x48
+MQNIC_RB_PHC_REG_NOM_PERIOD_NS  = 0x4C
+MQNIC_RB_PHC_REG_ADJ_FNS        = 0x50
+MQNIC_RB_PHC_REG_ADJ_NS         = 0x54
+MQNIC_RB_PHC_REG_ADJ_COUNT      = 0x58
+MQNIC_RB_PHC_REG_ADJ_ACTIVE     = 0x5C
 
-MQNIC_PHC_REG_FEATURES           = 0x0000
-MQNIC_PHC_REG_PTP_CUR_FNS        = 0x0010
-MQNIC_PHC_REG_PTP_CUR_NS         = 0x0014
-MQNIC_PHC_REG_PTP_CUR_SEC_L      = 0x0018
-MQNIC_PHC_REG_PTP_CUR_SEC_H      = 0x001C
-MQNIC_PHC_REG_PTP_GET_FNS        = 0x0020
-MQNIC_PHC_REG_PTP_GET_NS         = 0x0024
-MQNIC_PHC_REG_PTP_GET_SEC_L      = 0x0028
-MQNIC_PHC_REG_PTP_GET_SEC_H      = 0x002C
-MQNIC_PHC_REG_PTP_SET_FNS        = 0x0030
-MQNIC_PHC_REG_PTP_SET_NS         = 0x0034
-MQNIC_PHC_REG_PTP_SET_SEC_L      = 0x0038
-MQNIC_PHC_REG_PTP_SET_SEC_H      = 0x003C
-MQNIC_PHC_REG_PTP_PERIOD_FNS     = 0x0040
-MQNIC_PHC_REG_PTP_PERIOD_NS      = 0x0044
-MQNIC_PHC_REG_PTP_NOM_PERIOD_FNS = 0x0048
-MQNIC_PHC_REG_PTP_NOM_PERIOD_NS  = 0x004C
-MQNIC_PHC_REG_PTP_ADJ_FNS        = 0x0050
-MQNIC_PHC_REG_PTP_ADJ_NS         = 0x0054
-MQNIC_PHC_REG_PTP_ADJ_COUNT      = 0x0058
-MQNIC_PHC_REG_PTP_ADJ_ACTIVE     = 0x005C
+MQNIC_RB_PHC_PEROUT_TYPE              = 0x0000C081
+MQNIC_RB_PHC_PEROUT_VER               = 0x00000100
+MQNIC_RB_PHC_PEROUT_REG_CTRL          = 0x0C
+MQNIC_RB_PHC_PEROUT_REG_START_FNS     = 0x10
+MQNIC_RB_PHC_PEROUT_REG_START_NS      = 0x14
+MQNIC_RB_PHC_PEROUT_REG_START_SEC_L   = 0x18
+MQNIC_RB_PHC_PEROUT_REG_START_SEC_H   = 0x1C
+MQNIC_RB_PHC_PEROUT_REG_PERIOD_FNS    = 0x20
+MQNIC_RB_PHC_PEROUT_REG_PERIOD_NS     = 0x24
+MQNIC_RB_PHC_PEROUT_REG_PERIOD_SEC_L  = 0x28
+MQNIC_RB_PHC_PEROUT_REG_PERIOD_SEC_H  = 0x2C
+MQNIC_RB_PHC_PEROUT_REG_WIDTH_FNS     = 0x30
+MQNIC_RB_PHC_PEROUT_REG_WIDTH_NS      = 0x34
+MQNIC_RB_PHC_PEROUT_REG_WIDTH_SEC_L   = 0x38
+MQNIC_RB_PHC_PEROUT_REG_WIDTH_SEC_H   = 0x3C
 
-MQNIC_PHC_REG_PEROUT_CTRL         = 0x0000
-MQNIC_PHC_REG_PEROUT_STATUS       = 0x0004
-MQNIC_PHC_REG_PEROUT_START_FNS    = 0x0010
-MQNIC_PHC_REG_PEROUT_START_NS     = 0x0014
-MQNIC_PHC_REG_PEROUT_START_SEC_L  = 0x0018
-MQNIC_PHC_REG_PEROUT_START_SEC_H  = 0x001C
-MQNIC_PHC_REG_PEROUT_PERIOD_FNS   = 0x0020
-MQNIC_PHC_REG_PEROUT_PERIOD_NS    = 0x0024
-MQNIC_PHC_REG_PEROUT_PERIOD_SEC_L = 0x0028
-MQNIC_PHC_REG_PEROUT_PERIOD_SEC_H = 0x002C
-MQNIC_PHC_REG_PEROUT_WIDTH_FNS    = 0x0030
-MQNIC_PHC_REG_PEROUT_WIDTH_NS     = 0x0034
-MQNIC_PHC_REG_PEROUT_WIDTH_SEC_L  = 0x0038
-MQNIC_PHC_REG_PEROUT_WIDTH_SEC_H  = 0x003C
+MQNIC_RB_IF_TYPE            = 0x0000C000
+MQNIC_RB_IF_VER             = 0x00000100
+MQNIC_RB_IF_REG_OFFSET      = 0x0C
+MQNIC_RB_IF_REG_COUNT       = 0x10
+MQNIC_RB_IF_REG_STRIDE      = 0x14
+MQNIC_RB_IF_REG_CSR_OFFSET  = 0x18
 
-# Interface CSRs
-MQNIC_IF_REG_IF_ID               = 0x0000
-MQNIC_IF_REG_IF_FEATURES         = 0x0004
+MQNIC_RB_IF_CTRL_TX_TYPE          = 0x0000C001
+MQNIC_RB_IF_CTRL_TX_VER           = 0x00000100
+MQNIC_RB_IF_CTRL_TX_REG_FEATURES  = 0x0C
+MQNIC_RB_IF_CTRL_TX_REG_MAX_MTU   = 0x10
+MQNIC_RB_IF_CTRL_TX_REG_MTU       = 0x14
 
-MQNIC_IF_REG_EVENT_QUEUE_COUNT   = 0x0010
-MQNIC_IF_REG_EVENT_QUEUE_OFFSET  = 0x0014
-MQNIC_IF_REG_TX_QUEUE_COUNT      = 0x0020
-MQNIC_IF_REG_TX_QUEUE_OFFSET     = 0x0024
-MQNIC_IF_REG_TX_CPL_QUEUE_COUNT  = 0x0028
-MQNIC_IF_REG_TX_CPL_QUEUE_OFFSET = 0x002C
-MQNIC_IF_REG_RX_QUEUE_COUNT      = 0x0030
-MQNIC_IF_REG_RX_QUEUE_OFFSET     = 0x0034
-MQNIC_IF_REG_RX_CPL_QUEUE_COUNT  = 0x0038
-MQNIC_IF_REG_RX_CPL_QUEUE_OFFSET = 0x003C
-MQNIC_IF_REG_PORT_COUNT          = 0x0040
-MQNIC_IF_REG_PORT_OFFSET         = 0x0044
-MQNIC_IF_REG_PORT_STRIDE         = 0x0048
+MQNIC_IF_TX_FEATURE_PTP_TS  = (1 << 4)
+MQNIC_IF_TX_FEATURE_CSUM    = (1 << 8)
 
-MQNIC_IF_FEATURE_RSS             = (1 << 0)
-MQNIC_IF_FEATURE_PTP_TS          = (1 << 4)
-MQNIC_IF_FEATURE_TX_CSUM         = (1 << 8)
-MQNIC_IF_FEATURE_RX_CSUM         = (1 << 9)
+MQNIC_RB_IF_CTRL_RX_TYPE          = 0x0000C002
+MQNIC_RB_IF_CTRL_RX_VER           = 0x00000100
+MQNIC_RB_IF_CTRL_RX_REG_FEATURES  = 0x0C
+MQNIC_RB_IF_CTRL_RX_REG_MAX_MTU   = 0x10
+MQNIC_RB_IF_CTRL_RX_REG_MTU       = 0x14
+MQNIC_RB_IF_CTRL_RX_REG_RSS_MASK  = 0x18
 
-# Port CSRs
-MQNIC_PORT_REG_PORT_ID                    = 0x0000
-MQNIC_PORT_REG_PORT_FEATURES              = 0x0004
-MQNIC_PORT_REG_PORT_MTU                   = 0x0008
+MQNIC_IF_RX_FEATURE_RSS     = (1 << 0)
+MQNIC_IF_RX_FEATURE_PTP_TS  = (1 << 4)
+MQNIC_IF_RX_FEATURE_CSUM    = (1 << 8)
+MQNIC_IF_RX_FEATURE_HASH    = (1 << 9)
 
-MQNIC_PORT_REG_SCHED_COUNT                = 0x0010
-MQNIC_PORT_REG_SCHED_OFFSET               = 0x0014
-MQNIC_PORT_REG_SCHED_STRIDE               = 0x0018
-MQNIC_PORT_REG_SCHED_TYPE                 = 0x001C
-MQNIC_PORT_REG_SCHED_ENABLE               = 0x0040
+MQNIC_RB_EVENT_QM_TYPE        = 0x0000C010
+MQNIC_RB_EVENT_QM_VER         = 0x00000100
+MQNIC_RB_EVENT_QM_REG_OFFSET  = 0x0C
+MQNIC_RB_EVENT_QM_REG_COUNT   = 0x10
+MQNIC_RB_EVENT_QM_REG_STRIDE  = 0x14
 
-MQNIC_PORT_REG_TX_MTU                     = 0x0100
-MQNIC_PORT_REG_RX_MTU                     = 0x0200
+MQNIC_RB_TX_QM_TYPE        = 0x0000C020
+MQNIC_RB_TX_QM_VER         = 0x00000100
+MQNIC_RB_TX_QM_REG_OFFSET  = 0x0C
+MQNIC_RB_TX_QM_REG_COUNT   = 0x10
+MQNIC_RB_TX_QM_REG_STRIDE  = 0x14
 
-MQNIC_PORT_REG_TDMA_CTRL                  = 0x1000
-MQNIC_PORT_REG_TDMA_STATUS                = 0x1004
-MQNIC_PORT_REG_TDMA_TIMESLOT_COUNT        = 0x1008
-MQNIC_PORT_REG_TDMA_SCHED_START_FNS       = 0x1010
-MQNIC_PORT_REG_TDMA_SCHED_START_NS        = 0x1014
-MQNIC_PORT_REG_TDMA_SCHED_START_SEC_L     = 0x1018
-MQNIC_PORT_REG_TDMA_SCHED_START_SEC_H     = 0x101C
-MQNIC_PORT_REG_TDMA_SCHED_PERIOD_FNS      = 0x1020
-MQNIC_PORT_REG_TDMA_SCHED_PERIOD_NS       = 0x1024
-MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_L    = 0x1028
-MQNIC_PORT_REG_TDMA_SCHED_PERIOD_SEC_H    = 0x102C
-MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_FNS   = 0x1030
-MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_NS    = 0x1034
-MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_L = 0x1038
-MQNIC_PORT_REG_TDMA_TIMESLOT_PERIOD_SEC_H = 0x103C
-MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_FNS     = 0x1040
-MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_NS      = 0x1044
-MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_L   = 0x1048
-MQNIC_PORT_REG_TDMA_ACTIVE_PERIOD_SEC_H   = 0x104C
+MQNIC_RB_TX_CQM_TYPE        = 0x0000C030
+MQNIC_RB_TX_CQM_VER         = 0x00000100
+MQNIC_RB_TX_CQM_REG_OFFSET  = 0x0C
+MQNIC_RB_TX_CQM_REG_COUNT   = 0x10
+MQNIC_RB_TX_CQM_REG_STRIDE  = 0x14
 
-MQNIC_PORT_FEATURE_RSS                    = (1 << 0)
-MQNIC_PORT_FEATURE_PTP_TS                 = (1 << 4)
-MQNIC_PORT_FEATURE_TX_CSUM                = (1 << 8)
-MQNIC_PORT_FEATURE_RX_CSUM                = (1 << 9)
+MQNIC_RB_RX_QM_TYPE        = 0x0000C021
+MQNIC_RB_RX_QM_VER         = 0x00000100
+MQNIC_RB_RX_QM_REG_OFFSET  = 0x0C
+MQNIC_RB_RX_QM_REG_COUNT   = 0x10
+MQNIC_RB_RX_QM_REG_STRIDE  = 0x14
+
+MQNIC_RB_RX_CQM_TYPE        = 0x0000C031
+MQNIC_RB_RX_CQM_VER         = 0x00000100
+MQNIC_RB_RX_CQM_REG_OFFSET  = 0x0C
+MQNIC_RB_RX_CQM_REG_COUNT   = 0x10
+MQNIC_RB_RX_CQM_REG_STRIDE  = 0x14
+
+MQNIC_RB_SCHED_BLOCK_TYPE        = 0x0000C003
+MQNIC_RB_SCHED_BLOCK_VER         = 0x00000100
+MQNIC_RB_SCHED_BLOCK_REG_OFFSET  = 0x0C
+
+MQNIC_RB_SCHED_RR_TYPE           = 0x0000C040
+MQNIC_RB_SCHED_RR_VER            = 0x00000100
+MQNIC_RB_SCHED_RR_REG_OFFSET     = 0x0C
+MQNIC_RB_SCHED_RR_REG_CH_COUNT   = 0x10
+MQNIC_RB_SCHED_RR_REG_CH_STRIDE  = 0x14
+MQNIC_RB_SCHED_RR_REG_CTRL       = 0x18
+MQNIC_RB_SCHED_RR_REG_DEST       = 0x1C
+
+MQNIC_RB_SCHED_CTRL_TDMA_TYPE           = 0x0000C050
+MQNIC_RB_SCHED_CTRL_TDMA_VER            = 0x00000100
+MQNIC_RB_SCHED_CTRL_TDMA_REG_OFFSET     = 0x0C
+MQNIC_RB_SCHED_CTRL_TDMA_REG_CH_COUNT   = 0x10
+MQNIC_RB_SCHED_CTRL_TDMA_REG_CH_STRIDE  = 0x14
+MQNIC_RB_SCHED_CTRL_TDMA_REG_CTRL       = 0x18
+MQNIC_RB_SCHED_CTRL_TDMA_REG_TS_COUNT   = 0x1C
+
+MQNIC_RB_TDMA_SCH_TYPE                     = 0x0000C060
+MQNIC_RB_TDMA_SCH_VER                      = 0x00000100
+MQNIC_RB_TDMA_SCH_REG_TS_COUNT             = 0x0C
+MQNIC_RB_TDMA_SCH_REG_CTRL                 = 0x10
+MQNIC_RB_TDMA_SCH_REG_STATUS               = 0x14
+MQNIC_RB_TDMA_SCH_REG_SCH_START_FNS        = 0x20
+MQNIC_RB_TDMA_SCH_REG_SCH_START_NS         = 0x24
+MQNIC_RB_TDMA_SCH_REG_SCH_START_SEC_L      = 0x28
+MQNIC_RB_TDMA_SCH_REG_SCH_START_SEC_H      = 0x2C
+MQNIC_RB_TDMA_SCH_REG_SCH_PERIOD_FNS       = 0x30
+MQNIC_RB_TDMA_SCH_REG_SCH_PERIOD_NS        = 0x34
+MQNIC_RB_TDMA_SCH_REG_SCH_PERIOD_SEC_L     = 0x38
+MQNIC_RB_TDMA_SCH_REG_SCH_PERIOD_SEC_H     = 0x3C
+MQNIC_RB_TDMA_SCH_REG_TS_PERIOD_FNS        = 0x40
+MQNIC_RB_TDMA_SCH_REG_TS_PERIOD_NS         = 0x44
+MQNIC_RB_TDMA_SCH_REG_TS_PERIOD_SEC_L      = 0x48
+MQNIC_RB_TDMA_SCH_REG_TS_PERIOD_SEC_H      = 0x4C
+MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_FNS    = 0x50
+MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_NS     = 0x54
+MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_SEC_L  = 0x58
+MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_SEC_H  = 0x5C
 
 MQNIC_QUEUE_BASE_ADDR_REG       = 0x00
 MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG = 0x08
@@ -224,6 +281,50 @@ MQNIC_EVENT_TYPE_RX_CPL = 0x0001
 MQNIC_DESC_SIZE = 16
 MQNIC_CPL_SIZE = 32
 MQNIC_EVENT_SIZE = 32
+
+
+class RegBlock(Window):
+    def __init__(self, parent, offset, size, base=0, **kwargs):
+        super().__init__(parent, offset, size, base, **kwargs)
+        self._offset = offset
+        self.type = 0
+        self.version = 0
+
+
+class RegBlockList:
+    def __init__(self):
+        self.blocks = []
+
+    async def enumerate_reg_blocks(self, window, offset=0):
+        while True:
+            rb_type = await window.read_dword(offset+MQNIC_RB_REG_TYPE)
+            rb_version = await window.read_dword(offset+MQNIC_RB_REG_VER)
+            rb = window.create_window(offset, window_type=RegBlock)
+            rb.type = rb_type
+            rb.version = rb_version
+            print(f"Block ID {rb_type:#010x} version {rb_version:#010x} at offset {offset:#010x}")
+            self.blocks.append(rb)
+            offset = await window.read_dword(offset+MQNIC_RB_REG_NEXT_PTR)
+            if offset == 0:
+                return
+            assert offset & 0x3 == 0, "Register block not aligned"
+            for block in self.blocks:
+                assert block.offset != offset, "Register blocks form a loop"
+
+    def find(self, rb_type, version=None, index=0):
+        for block in self.blocks:
+            if block.type == rb_type and (not version or block.version == version):
+                if index <= 0:
+                    return block
+                else:
+                    index -= 1
+        return None
+
+    def __getitem__(self, key):
+        return self.blocks[key]
+
+    def __len__(self):
+        return len(self.blocks)
 
 
 class Packet:
@@ -615,63 +716,76 @@ class RxRing:
         await self.write_head_ptr()
 
 
-class Scheduler:
-    def __init__(self, port, index, hw_regs):
+class BaseScheduler:
+    def __init__(self, port, index, rb):
         self.port = port
         self.log = port.log
         self.interface = port.interface
         self.driver = port.interface.driver
-        self.rc = port.interface.driver.rc
         self.index = index
-        self.hw_regs = hw_regs
+        self.rb = rb
+        self.hw_regs = None
+
+    async def init(self):
+        pass
+
+
+class SchedulerRoundRobin(BaseScheduler):
+    def __init__(self, port, index, rb):
+        super().__init__(port, index, rb)
+
+    async def init(self):
+        offset = await self.rb.read_dword(MQNIC_RB_SCHED_RR_REG_OFFSET)
+        self.hw_regs = self.rb.parent.create_window(offset)
+
+
+class SchedulerControlTdma(BaseScheduler):
+    def __init__(self, port, index, rb):
+        super().__init__(port, index, rb)
+
+    async def init(self):
+        offset = await self.rb.read_dword(MQNIC_RB_SCHED_CTRL_TDMA_REG_OFFSET)
+        self.hw_regs = self.rb.parent.create_window(offset)
 
 
 class Port:
-    def __init__(self, interface, index, hw_regs):
+    def __init__(self, interface, index, rb):
         self.interface = interface
         self.log = interface.log
         self.driver = interface.driver
-        self.rc = interface.driver.rc
         self.index = index
-        self.hw_regs = hw_regs
 
-        self.port_id = None
-        self.port_features = None
-        self.port_mtu = 0
+        self.block_rb = rb
+        self.reg_blocks = RegBlockList()
+
         self.sched_count = None
-        self.sched_offset = None
-        self.sched_stride = None
-        self.sched_type = None
-
-    async def init(self):
-        # Read ID registers
-        self.port_id = await self.hw_regs.read_dword(MQNIC_PORT_REG_PORT_ID)
-        self.log.info("Port ID: 0x%08x", self.port_id)
-        self.port_features = await self.hw_regs.read_dword(MQNIC_PORT_REG_PORT_FEATURES)
-        self.log.info("Port features: 0x%08x", self.port_features)
-        self.port_mtu = await self.hw_regs.read_dword(MQNIC_PORT_REG_PORT_MTU)
-        self.log.info("Port MTU: %d", self.port_mtu)
-
-        self.sched_count = await self.hw_regs.read_dword(MQNIC_PORT_REG_SCHED_COUNT)
-        self.log.info("Scheduler count: %d", self.sched_count)
-        self.sched_offset = await self.hw_regs.read_dword(MQNIC_PORT_REG_SCHED_OFFSET)
-        self.log.info("Scheduler offset: 0x%08x", self.sched_offset)
-        self.sched_stride = await self.hw_regs.read_dword(MQNIC_PORT_REG_SCHED_STRIDE)
-        self.log.info("Scheduler stride: 0x%08x", self.sched_stride)
-        self.sched_type = await self.hw_regs.read_dword(MQNIC_PORT_REG_SCHED_TYPE)
-        self.log.info("Scheduler type: 0x%08x", self.sched_type)
 
         self.schedulers = []
 
-        await self.set_mtu(min(self.port_mtu, 9214))
+    async def init(self):
+        # Read ID registers
 
-        for k in range(self.sched_count):
-            p = Scheduler(self, k, self.hw_regs.parent.create_window(self.hw_regs.get_parent_address(0) + self.sched_offset + k*self.sched_stride, self.sched_stride))
-            self.schedulers.append(p)
+        offset = await self.block_rb.read_dword(MQNIC_RB_SCHED_BLOCK_REG_OFFSET)
+        await self.reg_blocks.enumerate_reg_blocks(self.block_rb.parent, offset)
 
-    async def set_mtu(self, mtu):
-        await self.hw_regs.write_dword(MQNIC_PORT_REG_TX_MTU, mtu)
-        await self.hw_regs.write_dword(MQNIC_PORT_REG_RX_MTU, mtu)
+        self.schedulers = []
+
+        self.sched_count = 0
+        for rb in self.reg_blocks:
+            if rb.type == MQNIC_RB_SCHED_RR_TYPE and rb.version == MQNIC_RB_SCHED_RR_VER:
+                s = SchedulerRoundRobin(self, self.sched_count, rb)
+                await s.init()
+                self.schedulers.append(s)
+
+                self.sched_count += 1
+            elif rb.type == MQNIC_RB_SCHED_CTRL_TDMA_TYPE and rb.version == MQNIC_RB_SCHED_CTRL_TDMA_VER:
+                s = SchedulerControlTdma(self, self.sched_count, rb)
+                await s.init()
+                self.schedulers.append(s)
+
+                self.sched_count += 1
+
+        self.log.info("Scheduler count: %d", self.sched_count)
 
 
 class Interface:
@@ -680,23 +794,49 @@ class Interface:
         self.log = driver.log
         self.index = index
         self.hw_regs = hw_regs
-        self.csr_hw_regs = hw_regs.create_window(driver.if_csr_offset, self.hw_regs.size-driver.if_csr_offset)
+        self.csr_hw_regs = hw_regs.create_window(driver.if_csr_offset)
         self.port_up = False
 
-        self.if_id = None
-        self.event_queue_count = None
+        self.reg_blocks = RegBlockList()
+        self.if_ctrl_tx_rb = None
+        self.if_ctrl_rx_rb = None
+        self.event_queue_rb = None
+        self.tx_queue_rb = None
+        self.tx_cpl_queue_rb = None
+        self.rx_queue_rb = None
+        self.rx_cpl_queue_rb = None
+
+        self.if_tx_features = None
+        self.if_rx_features = None
+
+        self.max_tx_mtu = 0
+        self.max_rx_mtu = 0
+
         self.event_queue_offset = None
-        self.tx_queue_count = None
+        self.event_queue_count = None
+        self.event_queue_stride = None
         self.tx_queue_offset = None
-        self.tx_cpl_queue_count = None
+        self.tx_queue_count = None
+        self.tx_queue_stride = None
         self.tx_cpl_queue_offset = None
-        self.rx_queue_count = None
+        self.tx_cpl_queue_count = None
+        self.tx_cpl_queue_stride = None
         self.rx_queue_offset = None
-        self.rx_cpl_queue_count = None
+        self.rx_queue_count = None
+        self.rx_queue_stride = None
         self.rx_cpl_queue_offset = None
+        self.rx_cpl_queue_count = None
+        self.rx_cpl_queue_stride = None
+
         self.port_count = None
-        self.port_offset = None
-        self.port_stride = None
+
+        self.event_queues = []
+
+        self.tx_queues = []
+        self.tx_cpl_queues = []
+        self.rx_queues = []
+        self.rx_cpl_queues = []
+        self.ports = []
 
         self.interrupt_running = False
         self.interrupt_pending = 0
@@ -706,45 +846,90 @@ class Interface:
 
     async def init(self):
         # Read ID registers
-        self.if_id = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_IF_ID)
-        self.log.info("IF ID: 0x%08x", self.if_id)
-        self.if_features = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_IF_FEATURES)
-        self.log.info("IF features: 0x%08x", self.if_features)
 
-        self.event_queue_count = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_EVENT_QUEUE_COUNT)
-        self.log.info("Event queue count: %d", self.event_queue_count)
-        self.event_queue_offset = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_EVENT_QUEUE_OFFSET)
+        # Enumerate registers
+        await self.reg_blocks.enumerate_reg_blocks(self.hw_regs, self.driver.if_csr_offset)
+
+        self.if_ctrl_tx_rb = self.reg_blocks.find(MQNIC_RB_IF_CTRL_TX_TYPE, MQNIC_RB_IF_CTRL_TX_VER)
+
+        self.if_tx_features = await self.if_ctrl_tx_rb.read_dword(MQNIC_RB_IF_CTRL_TX_REG_FEATURES)
+        self.max_tx_mtu = await self.if_ctrl_tx_rb.read_dword(MQNIC_RB_IF_CTRL_TX_REG_MAX_MTU)
+
+        self.log.info("IF TX features: 0x%08x", self.if_tx_features)
+        self.log.info("Max TX MTU: %d", self.max_tx_mtu)
+
+        self.if_ctrl_rx_rb = self.reg_blocks.find(MQNIC_RB_IF_CTRL_RX_TYPE, MQNIC_RB_IF_CTRL_RX_VER)
+
+        self.if_rx_features = await self.if_ctrl_rx_rb.read_dword(MQNIC_RB_IF_CTRL_RX_REG_FEATURES)
+        self.max_rx_mtu = await self.if_ctrl_rx_rb.read_dword(MQNIC_RB_IF_CTRL_TX_REG_MAX_MTU)
+
+        self.log.info("IF RX features: 0x%08x", self.if_rx_features)
+        self.log.info("Max RX MTU: %d", self.max_rx_mtu)
+
+        await self.set_mtu(min(self.max_tx_mtu, self.max_rx_mtu, 9214))
+
+        self.event_queue_rb = self.reg_blocks.find(MQNIC_RB_EVENT_QM_TYPE, MQNIC_RB_EVENT_QM_VER)
+
+        self.event_queue_offset = await self.event_queue_rb.read_dword(MQNIC_RB_EVENT_QM_REG_OFFSET)
+        self.event_queue_count = await self.event_queue_rb.read_dword(MQNIC_RB_EVENT_QM_REG_COUNT)
+        self.event_queue_stride = await self.event_queue_rb.read_dword(MQNIC_RB_EVENT_QM_REG_STRIDE)
+
         self.log.info("Event queue offset: 0x%08x", self.event_queue_offset)
-        self.tx_queue_count = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_TX_QUEUE_COUNT)
-        self.log.info("TX queue count: %d", self.tx_queue_count)
-        self.tx_queue_offset = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_TX_QUEUE_OFFSET)
-        self.log.info("TX queue offset: 0x%08x", self.tx_queue_offset)
-        self.tx_cpl_queue_count = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_TX_CPL_QUEUE_COUNT)
-        self.log.info("TX completion queue count: %d", self.tx_cpl_queue_count)
-        self.tx_cpl_queue_offset = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_TX_CPL_QUEUE_OFFSET)
-        self.log.info("TX completion queue offset: 0x%08x", self.tx_cpl_queue_offset)
-        self.rx_queue_count = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_RX_QUEUE_COUNT)
-        self.log.info("RX queue count: %d", self.rx_queue_count)
-        self.rx_queue_offset = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_RX_QUEUE_OFFSET)
-        self.log.info("RX queue offset: 0x%08x", self.rx_queue_offset)
-        self.rx_cpl_queue_count = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_RX_CPL_QUEUE_COUNT)
-        self.log.info("RX completion queue count: %d", self.rx_cpl_queue_count)
-        self.rx_cpl_queue_offset = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_RX_CPL_QUEUE_OFFSET)
-        self.log.info("RX completion queue offset: 0x%08x", self.rx_cpl_queue_offset)
-        self.port_count = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_PORT_COUNT)
-        self.log.info("Port count: %d", self.port_count)
-        self.port_offset = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_PORT_OFFSET)
-        self.log.info("Port offset: 0x%08x", self.port_offset)
-        self.port_stride = await self.csr_hw_regs.read_dword(MQNIC_IF_REG_PORT_STRIDE)
-        self.log.info("Port stride: 0x%08x", self.port_stride)
+        self.log.info("Event queue count: %d", self.event_queue_count)
+        self.log.info("Event queue stride: 0x%08x", self.event_queue_stride)
 
         self.event_queue_count = min(self.event_queue_count, MQNIC_MAX_EVENT_RINGS)
+
+        self.tx_queue_rb = self.reg_blocks.find(MQNIC_RB_TX_QM_TYPE, MQNIC_RB_TX_QM_VER)
+
+        self.tx_queue_offset = await self.tx_queue_rb.read_dword(MQNIC_RB_TX_QM_REG_OFFSET)
+        self.tx_queue_count = await self.tx_queue_rb.read_dword(MQNIC_RB_TX_QM_REG_COUNT)
+        self.tx_queue_stride = await self.tx_queue_rb.read_dword(MQNIC_RB_TX_QM_REG_STRIDE)
+
+        self.log.info("TX queue offset: 0x%08x", self.tx_queue_offset)
+        self.log.info("TX queue count: %d", self.tx_queue_count)
+        self.log.info("TX queue stride: 0x%08x", self.tx_queue_stride)
+
         self.tx_queue_count = min(self.tx_queue_count, MQNIC_MAX_TX_RINGS)
+
+        self.tx_cpl_queue_rb = self.reg_blocks.find(MQNIC_RB_TX_CQM_TYPE, MQNIC_RB_TX_CQM_VER)
+
+        self.tx_cpl_queue_offset = await self.tx_cpl_queue_rb.read_dword(MQNIC_RB_TX_CQM_REG_OFFSET)
+        self.tx_cpl_queue_count = await self.tx_cpl_queue_rb.read_dword(MQNIC_RB_TX_CQM_REG_COUNT)
+        self.tx_cpl_queue_stride = await self.tx_cpl_queue_rb.read_dword(MQNIC_RB_TX_CQM_REG_STRIDE)
+
+        self.log.info("TX completion queue offset: 0x%08x", self.tx_cpl_queue_offset)
+        self.log.info("TX completion queue count: %d", self.tx_cpl_queue_count)
+        self.log.info("TX completion queue stride: 0x%08x", self.tx_cpl_queue_stride)
+
         self.tx_cpl_queue_count = min(self.tx_cpl_queue_count, MQNIC_MAX_TX_CPL_RINGS)
+
+        self.rx_queue_rb = self.reg_blocks.find(MQNIC_RB_RX_QM_TYPE, MQNIC_RB_RX_QM_VER)
+
+        self.rx_queue_offset = await self.rx_queue_rb.read_dword(MQNIC_RB_RX_QM_REG_OFFSET)
+        self.rx_queue_count = await self.rx_queue_rb.read_dword(MQNIC_RB_RX_QM_REG_COUNT)
+        self.rx_queue_stride = await self.rx_queue_rb.read_dword(MQNIC_RB_RX_QM_REG_STRIDE)
+
+        self.log.info("RX queue offset: 0x%08x", self.rx_queue_offset)
+        self.log.info("RX queue count: %d", self.rx_queue_count)
+        self.log.info("RX queue stride: 0x%08x", self.rx_queue_stride)
+
         self.rx_queue_count = min(self.rx_queue_count, MQNIC_MAX_RX_RINGS)
+
+        self.rx_cpl_queue_rb = self.reg_blocks.find(MQNIC_RB_RX_CQM_TYPE, MQNIC_RB_RX_CQM_VER)
+
+        self.rx_cpl_queue_offset = await self.rx_cpl_queue_rb.read_dword(MQNIC_RB_RX_CQM_REG_OFFSET)
+        self.rx_cpl_queue_count = await self.rx_cpl_queue_rb.read_dword(MQNIC_RB_RX_CQM_REG_COUNT)
+        self.rx_cpl_queue_stride = await self.rx_cpl_queue_rb.read_dword(MQNIC_RB_RX_CQM_REG_STRIDE)
+
+        self.log.info("RX completion queue offset: 0x%08x", self.rx_cpl_queue_offset)
+        self.log.info("RX completion queue count: %d", self.rx_cpl_queue_count)
+        self.log.info("RX completion queue stride: 0x%08x", self.rx_cpl_queue_stride)
+
         self.rx_cpl_queue_count = min(self.rx_cpl_queue_count, MQNIC_MAX_RX_CPL_RINGS)
 
         self.event_queues = []
+
         self.tx_queues = []
         self.tx_cpl_queues = []
         self.rx_queues = []
@@ -753,38 +938,47 @@ class Interface:
 
         for k in range(self.event_queue_count):
             q = EqRing(self, 1024, MQNIC_EVENT_SIZE, self.index,
-                    self.hw_regs.create_window(self.event_queue_offset + k*MQNIC_EVENT_QUEUE_STRIDE, MQNIC_EVENT_QUEUE_STRIDE))
+                    self.hw_regs.create_window(self.event_queue_offset + k*self.event_queue_stride, self.event_queue_stride))
             await q.init()
             self.event_queues.append(q)
 
         for k in range(self.tx_queue_count):
             q = TxRing(self, 1024, MQNIC_DESC_SIZE*4, k,
-                    self.hw_regs.create_window(self.tx_queue_offset + k*MQNIC_QUEUE_STRIDE, MQNIC_QUEUE_STRIDE))
+                    self.hw_regs.create_window(self.tx_queue_offset + k*self.tx_queue_stride, self.tx_queue_stride))
             await q.init()
             self.tx_queues.append(q)
 
         for k in range(self.tx_cpl_queue_count):
             q = CqRing(self, 1024, MQNIC_CPL_SIZE, k,
-                    self.hw_regs.create_window(self.tx_cpl_queue_offset + k*MQNIC_CPL_QUEUE_STRIDE, MQNIC_CPL_QUEUE_STRIDE))
+                    self.hw_regs.create_window(self.tx_cpl_queue_offset + k*self.tx_cpl_queue_stride, self.tx_cpl_queue_stride))
             await q.init()
             self.tx_cpl_queues.append(q)
 
         for k in range(self.rx_queue_count):
             q = RxRing(self, 1024, MQNIC_DESC_SIZE*4, k,
-                    self.hw_regs.create_window(self.rx_queue_offset + k*MQNIC_QUEUE_STRIDE, MQNIC_QUEUE_STRIDE))
+                    self.hw_regs.create_window(self.rx_queue_offset + k*self.rx_queue_stride, self.rx_queue_stride))
             await q.init()
             self.rx_queues.append(q)
 
         for k in range(self.rx_cpl_queue_count):
             q = CqRing(self, 1024, MQNIC_CPL_SIZE, k,
-                    self.hw_regs.create_window(self.rx_cpl_queue_offset + k*MQNIC_CPL_QUEUE_STRIDE, MQNIC_CPL_QUEUE_STRIDE))
+                    self.hw_regs.create_window(self.rx_cpl_queue_offset + k*self.rx_cpl_queue_stride, self.rx_cpl_queue_stride))
             await q.init()
             self.rx_cpl_queues.append(q)
 
-        for k in range(self.port_count):
-            p = Port(self, k, self.hw_regs.create_window(self.port_offset + k*self.port_stride, self.port_stride))
+        self.port_count = 0
+        while True:
+            rb = self.reg_blocks.find(MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, index=self.port_count)
+            if not rb:
+                break
+
+            p = Port(self, self.port_count, rb)
             await p.init()
             self.ports.append(p)
+
+            self.port_count += 1
+
+        self.log.info("Port count: %d", self.port_count)
 
         # wait for all writes to complete
         await self.hw_regs.read_dword(0)
@@ -1020,8 +1214,11 @@ class Interface:
         await ring.write_head_ptr()
 
     async def set_mtu(self, mtu):
-        for p in self.ports:
-            await p.set_mtu(mtu)
+        await self.if_ctrl_tx_rb.write_dword(MQNIC_RB_IF_CTRL_TX_REG_MTU, mtu)
+        await self.if_ctrl_rx_rb.write_dword(MQNIC_RB_IF_CTRL_RX_REG_MTU, mtu)
+
+    async def set_rss_mask(self, mask):
+        await self.if_ctrl_rx_rb.write_dword(MQNIC_RB_IF_CTRL_RX_REG_RSS_MASK, mask)
 
     async def recv(self):
         if not self.pkt_rx_queue:
@@ -1087,13 +1284,22 @@ class Driver:
         self.irq_sig = None
         self.irq_list = []
 
+        self.reg_blocks = RegBlockList()
+        self.fw_id_rb = None
+        self.if_rb = None
+        self.phc_rb = None
+
+        self.fpga_id = None
         self.fw_id = None
         self.fw_ver = None
         self.board_id = None
         self.board_ver = None
-        self.phc_count = None
-        self.phc_offset = None
-        self.phc_hw_addr = None
+        self.build_date = None
+        self.build_time = None
+        self.git_hash = None
+        self.rel_info = None
+
+        self.if_offset = None
         self.if_count = None
         self.if_stride = None
         self.if_csr_offset = None
@@ -1154,34 +1360,52 @@ class Driver:
         if self.ram_hw_regs:
             self.log.info("RAM BAR size: %d", self.ram_hw_regs.size)
 
+        # Enumerate registers
+        await self.reg_blocks.enumerate_reg_blocks(self.hw_regs)
+
         # Read ID registers
-        self.fw_id = await self.hw_regs.read_dword(MQNIC_REG_FW_ID)
+        self.fw_id_rb = self.reg_blocks.find(MQNIC_RB_FW_ID_TYPE, MQNIC_RB_FW_ID_VER)
+
+        self.fpga_id = await self.fw_id_rb.read_dword(MQNIC_RB_FW_ID_REG_FPGA_ID)
+        self.log.info("FPGA JTAG ID: 0x%08x", self.fpga_id)
+        self.fw_id = await self.fw_id_rb.read_dword(MQNIC_RB_FW_ID_REG_FW_ID)
         self.log.info("FW ID: 0x%08x", self.fw_id)
-        self.fw_ver = await self.hw_regs.read_dword(MQNIC_REG_FW_VER)
-        self.log.info("FW version: %d.%d", self.fw_ver >> 16, self.fw_ver & 0xffff)
-        self.board_id = await self.hw_regs.read_dword(MQNIC_REG_BOARD_ID)
+        self.fw_ver = await self.fw_id_rb.read_dword(MQNIC_RB_FW_ID_REG_FW_VER)
+        self.log.info("FW version: %d.%d.%d.%d", *self.fw_ver.to_bytes(4, 'big'))
+        self.board_id = await self.fw_id_rb.read_dword(MQNIC_RB_FW_ID_REG_BOARD_ID)
         self.log.info("Board ID: 0x%08x", self.board_id)
-        self.board_ver = await self.hw_regs.read_dword(MQNIC_REG_BOARD_VER)
-        self.log.info("Board version: %d.%d", self.board_ver >> 16, self.board_ver & 0xffff)
+        self.board_ver = await self.fw_id_rb.read_dword(MQNIC_RB_FW_ID_REG_BOARD_VER)
+        self.log.info("Board version: %d.%d.%d.%d", *self.board_ver.to_bytes(4, 'big'))
+        self.build_date = await self.fw_id_rb.read_dword(MQNIC_RB_FW_ID_REG_BUILD_DATE)
+        self.log.info("Build date: %s UTC (raw: 0x%08x)", datetime.datetime.utcfromtimestamp(self.build_date).isoformat(' '), self.build_date)
+        self.git_hash = await self.fw_id_rb.read_dword(MQNIC_RB_FW_ID_REG_GIT_HASH)
+        self.log.info("Git hash: %08x", self.git_hash)
+        self.rel_info = await self.fw_id_rb.read_dword(MQNIC_RB_FW_ID_REG_REL_INFO)
+        self.log.info("Release info: %d", self.rel_info)
 
-        self.phc_count = await self.hw_regs.read_dword(MQNIC_REG_PHC_COUNT)
-        self.log.info("PHC count: %d", self.phc_count)
-        self.phc_offset = await self.hw_regs.read_dword(MQNIC_REG_PHC_OFFSET)
-        self.log.info("PHC offset: 0x%08x", self.phc_offset)
+        self.phc_rb = self.reg_blocks.find(MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER)
 
-        self.if_count = await self.hw_regs.read_dword(MQNIC_REG_IF_COUNT)
-        self.log.info("IF count: %d", self.if_count)
-        self.if_stride = await self.hw_regs.read_dword(MQNIC_REG_IF_STRIDE)
-        self.log.info("IF stride: 0x%08x", self.if_stride)
-        self.if_csr_offset = await self.hw_regs.read_dword(MQNIC_REG_IF_CSR_OFFSET)
-        self.log.info("IF CSR offset: 0x%08x", self.if_csr_offset)
-
+        # Enumerate interfaces
+        self.if_rb = self.reg_blocks.find(MQNIC_RB_IF_TYPE, MQNIC_RB_IF_VER)
         self.interfaces = []
 
-        for k in range(self.if_count):
-            i = Interface(self, k, self.hw_regs.create_window(k*self.if_stride, self.if_stride))
-            await i.init()
-            self.interfaces.append(i)
+        if self.if_rb:
+            self.if_offset = await self.if_rb.read_dword(MQNIC_RB_IF_REG_OFFSET)
+            self.log.info("IF offset: %d", self.if_offset)
+            self.if_count = await self.if_rb.read_dword(MQNIC_RB_IF_REG_COUNT)
+            self.log.info("IF count: %d", self.if_count)
+            self.if_stride = await self.if_rb.read_dword(MQNIC_RB_IF_REG_STRIDE)
+            self.log.info("IF stride: 0x%08x", self.if_stride)
+            self.if_csr_offset = await self.if_rb.read_dword(MQNIC_RB_IF_REG_CSR_OFFSET)
+            self.log.info("IF CSR offset: 0x%08x", self.if_csr_offset)
+
+            for k in range(self.if_count):
+                i = Interface(self, k, self.hw_regs.create_window(self.if_offset + k*self.if_stride, self.if_stride))
+                await i.init()
+                self.interfaces.append(i)
+
+        else:
+            self.log.warning("No interface block found")
 
     async def _run_edge_interrupts(self, signal):
         last_val = 0

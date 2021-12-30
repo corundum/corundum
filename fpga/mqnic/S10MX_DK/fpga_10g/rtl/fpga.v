@@ -43,11 +43,14 @@ either expressed or implied, of The Regents of the University of California.
 module fpga #
 (
     // FW and board IDs
-    parameter FW_ID = 32'd0,
-    parameter FW_VER = {16'd0, 16'd1},
-    parameter BOARD_ID = {16'h1172, 16'h0001},
-    parameter BOARD_VER = {16'd0, 16'd1},
     parameter FPGA_ID = 32'h432AC0DD,
+    parameter FW_ID = 32'h00000000,
+    parameter FW_VER = 32'h00_00_01_00,
+    parameter BOARD_ID = 32'h1172_0001,
+    parameter BOARD_VER = 32'h01_00_00_00,
+    parameter BUILD_DATE = 32'd1563227611,
+    parameter GIT_HASH = 32'hdce357bf,
+    parameter RELEASE_INFO = 32'h00000000,
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -821,11 +824,14 @@ eth_xcvr_phy_quad_wrapper qsfp1_eth_xcvr_phy_quad (
 
 fpga_core #(
     // FW and board IDs
+    .FPGA_ID(FPGA_ID),
     .FW_ID(FW_ID),
     .FW_VER(FW_VER),
     .BOARD_ID(BOARD_ID),
     .BOARD_VER(BOARD_VER),
-    .FPGA_ID(FPGA_ID),
+    .BUILD_DATE(BUILD_DATE),
+    .GIT_HASH(GIT_HASH),
+    .RELEASE_INFO(RELEASE_INFO),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),

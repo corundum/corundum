@@ -43,11 +43,14 @@ either expressed or implied, of The Regents of the University of California.
 module fpga_core #
 (
     // FW and board IDs
-    parameter FW_ID = 32'd0,
-    parameter FW_VER = {16'd0, 16'd1},
-    parameter BOARD_ID = {16'h1ce4, 16'h0003},
-    parameter BOARD_VER = {16'd0, 16'd1},
     parameter FPGA_ID = 32'h3823093,
+    parameter FW_ID = 32'h00000000,
+    parameter FW_VER = 32'h00_00_01_00,
+    parameter BOARD_ID = 32'h1ce4_0003,
+    parameter BOARD_VER = 32'h01_00_00_00,
+    parameter BUILD_DATE = 32'd602976000,
+    parameter GIT_HASH = 32'hdce357bf,
+    parameter RELEASE_INFO = 32'h00000000,
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -342,6 +345,9 @@ parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8);
 parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT);
 parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8);
 
+localparam RB_BASE_ADDR = 16'h1000;
+localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
+
 initial begin
     if (PORT_COUNT > 2) begin
         $error("Error: Max port count exceeded (instance %m)");
@@ -446,13 +452,14 @@ always @(posedge clk_250mhz) begin
         // write operation
         ctrl_reg_wr_ack_reg <= 1'b0;
         case ({ctrl_reg_wr_addr >> 2, 2'b00})
-            16'h0040: begin
-                // FPGA ID
+            // FW ID
+            8'h0C: begin
+                // FW ID: FPGA JTAG ID
                 fpga_boot_reg <= ctrl_reg_wr_data == 32'hFEE1DEAD;
             end
-            // GPIO
-            16'h0110: begin
-                // GPIO I2C 0
+            // I2C 0
+            RBB+8'h0C: begin
+                // I2C ctrl: control
                 if (ctrl_reg_wr_strb[0]) begin
                     sfp_i2c_scl_o_reg <= ctrl_reg_wr_data[1];
                 end
@@ -464,8 +471,9 @@ always @(posedge clk_250mhz) begin
                     sfp_2_sel_reg <= ctrl_reg_wr_data[17];
                 end
             end
-            16'h0114: begin
-                // GPIO I2C 1
+            // I2C 1
+            RBB+8'h1C: begin
+                // I2C ctrl: control
                 if (ctrl_reg_wr_strb[0]) begin
                     eeprom_i2c_scl_o_reg <= ctrl_reg_wr_data[1];
                 end
@@ -473,8 +481,9 @@ always @(posedge clk_250mhz) begin
                     eeprom_i2c_sda_o_reg <= ctrl_reg_wr_data[9];
                 end
             end
-            16'h0120: begin
-                // GPIO XCVR 0123
+            // XCVR GPIO
+            RBB+8'h2C: begin
+                // XCVR GPIO: control 0123
                 if (ctrl_reg_wr_strb[0]) begin
                     sfp_1_tx_disable_reg <= ctrl_reg_wr_data[5];
                     sfp_1_rs_reg <= ctrl_reg_wr_data[6];
@@ -484,15 +493,19 @@ always @(posedge clk_250mhz) begin
                     sfp_2_rs_reg <= ctrl_reg_wr_data[14];
                 end
             end
-            // Flash
-            16'h0144: begin
-                // Flash address
+            // BPI flash
+            RBB+8'h3C: begin
+                // BPI flash ctrl: format
+                fpga_boot_reg <= ctrl_reg_wr_data == 32'hFEE1DEAD;
+            end
+            RBB+8'h40: begin
+                // BPI flash ctrl: address
                 flash_addr_reg <= ctrl_reg_wr_data[22:0];
                 flash_region_reg <= ctrl_reg_wr_data[23];
             end
-            16'h0148: flash_dq_o_reg <= ctrl_reg_wr_data; // Flash data
-            16'h014C: begin
-                // Flash control
+            RBB+8'h44: flash_dq_o_reg <= ctrl_reg_wr_data; // BPI flash ctrl: data
+            RBB+8'h48: begin
+                // BPI flash ctrl: control
                 if (ctrl_reg_wr_strb[0]) begin
                     flash_ce_n_reg <= ctrl_reg_wr_data[0];
                     flash_oe_n_reg <= ctrl_reg_wr_data[1];
@@ -514,10 +527,12 @@ always @(posedge clk_250mhz) begin
         // read operation
         ctrl_reg_rd_ack_reg <= 1'b1;
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
-            16'h0040: ctrl_reg_rd_data_reg <= FPGA_ID; // FPGA ID
-            // GPIO
-            16'h0110: begin
-                // GPIO I2C 0
+            // I2C 0
+            RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C110;             // I2C ctrl: Type
+            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000100;             // I2C ctrl: Version
+            RBB+8'h08: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h10;       // I2C ctrl: Next header
+            RBB+8'h0C: begin
+                // I2C ctrl: control
                 ctrl_reg_rd_data_reg[0] <= sfp_i2c_scl_i;
                 ctrl_reg_rd_data_reg[1] <= sfp_i2c_scl_o_reg;
                 ctrl_reg_rd_data_reg[8] <= (sfp_1_i2c_sda_i || !sfp_1_sel_reg) && (sfp_2_i2c_sda_i || !sfp_2_sel_reg);
@@ -525,15 +540,23 @@ always @(posedge clk_250mhz) begin
                 ctrl_reg_rd_data_reg[16] <= sfp_1_sel_reg;
                 ctrl_reg_rd_data_reg[17] <= sfp_2_sel_reg;
             end
-            16'h0114: begin
-                // GPIO I2C 1
+            // I2C 1
+            RBB+8'h10: ctrl_reg_rd_data_reg <= 32'h0000C110;             // I2C ctrl: Type
+            RBB+8'h14: ctrl_reg_rd_data_reg <= 32'h00000100;             // I2C ctrl: Version
+            RBB+8'h18: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h20;       // I2C ctrl: Next header
+            RBB+8'h1C: begin
+                // I2C ctrl: control
                 ctrl_reg_rd_data_reg[0] <= eeprom_i2c_scl_i;
                 ctrl_reg_rd_data_reg[1] <= eeprom_i2c_scl_o_reg;
                 ctrl_reg_rd_data_reg[8] <= eeprom_i2c_sda_i;
                 ctrl_reg_rd_data_reg[9] <= eeprom_i2c_sda_o_reg;
             end
-            16'h0120: begin
-                // GPIO XCVR 0123
+            // XCVR GPIO
+            RBB+8'h20: ctrl_reg_rd_data_reg <= 32'h0000C101;             // XCVR GPIO: Type
+            RBB+8'h24: ctrl_reg_rd_data_reg <= 32'h00000100;             // XCVR GPIO: Version
+            RBB+8'h28: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h30;       // XCVR GPIO: Next header
+            RBB+8'h2C: begin
+                // XCVR GPIO: control 0123
                 ctrl_reg_rd_data_reg[0] <= !sfp_1_npres;
                 ctrl_reg_rd_data_reg[2] <= sfp_1_los;
                 ctrl_reg_rd_data_reg[5] <= sfp_1_tx_disable_reg;
@@ -543,22 +566,25 @@ always @(posedge clk_250mhz) begin
                 ctrl_reg_rd_data_reg[13] <= sfp_2_tx_disable_reg;
                 ctrl_reg_rd_data_reg[14] <= sfp_2_rs_reg;
             end
-            // Flash
-            16'h0140: begin
-                // Flash ID
+            // BPI flash
+            RBB+8'h30: ctrl_reg_rd_data_reg <= 32'h0000C121;             // SPI flash ctrl: Type
+            RBB+8'h34: ctrl_reg_rd_data_reg <= 32'h00000100;             // SPI flash ctrl: Version
+            RBB+8'h38: ctrl_reg_rd_data_reg <= 0;                        // SPI flash ctrl: Next header
+            RBB+8'h3C: begin
+                // BPI flash ctrl: format
                 ctrl_reg_rd_data_reg[7:0]   <= 1;   // type (BPI)
                 ctrl_reg_rd_data_reg[15:8]  <= 2;   // configuration (two segments)
                 ctrl_reg_rd_data_reg[23:16] <= 16;  // data width
                 ctrl_reg_rd_data_reg[31:24] <= 24;  // address width
             end
-            16'h0144: begin
-                // Flash address
+            RBB+8'h40: begin
+                // BPI flash ctrl: address
                 ctrl_reg_rd_data_reg[22:0] <= flash_addr_reg;
                 ctrl_reg_rd_data_reg[23] <= flash_region_reg;
             end
-            16'h0148: ctrl_reg_rd_data_reg <= flash_dq_i; // Flash data
-            16'h014C: begin
-                // Flash control
+            RBB+8'h44: ctrl_reg_rd_data_reg <= flash_dq_i; // BPI flash ctrl: data
+            RBB+8'h48: begin
+                // BPI flash ctrl: control
                 ctrl_reg_rd_data_reg[0] <= flash_ce_n_reg; // chip enable (inverted)
                 ctrl_reg_rd_data_reg[1] <= flash_oe_n_reg; // output enable (inverted)
                 ctrl_reg_rd_data_reg[2] <= flash_we_n_reg; // write enable (inverted)
@@ -774,10 +800,14 @@ endgenerate
 
 mqnic_core_pcie_us #(
     // FW and board IDs
+    .FPGA_ID(FPGA_ID),
     .FW_ID(FW_ID),
     .FW_VER(FW_VER),
     .BOARD_ID(BOARD_ID),
     .BOARD_VER(BOARD_VER),
+    .BUILD_DATE(BUILD_DATE),
+    .GIT_HASH(GIT_HASH),
+    .RELEASE_INFO(RELEASE_INFO),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),
@@ -881,6 +911,7 @@ mqnic_core_pcie_us #(
     .AXIL_IF_CTRL_ADDR_WIDTH(AXIL_IF_CTRL_ADDR_WIDTH),
     .AXIL_CSR_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .AXIL_CSR_PASSTHROUGH_ENABLE(0),
+    .RB_NEXT_PTR(RB_BASE_ADDR),
 
     // AXI lite interface configuration (application control)
     .AXIL_APP_CTRL_DATA_WIDTH(AXIL_APP_CTRL_DATA_WIDTH),

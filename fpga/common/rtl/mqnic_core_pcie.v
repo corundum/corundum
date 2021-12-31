@@ -38,7 +38,7 @@ either expressed or implied, of The Regents of the University of California.
 `default_nettype none
 
 /*
- * FPGA core logic
+ * mqnic core logic - Generic PCIe DMA wrapper
  */
 module mqnic_core_pcie #
 (
@@ -166,6 +166,7 @@ module mqnic_core_pcie #
     parameter AXIS_DATA_WIDTH = 512,
     parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
     parameter AXIS_SYNC_DATA_WIDTH = AXIS_DATA_WIDTH,
+    parameter AXIS_IF_DATA_WIDTH = AXIS_SYNC_DATA_WIDTH*2**$clog2(PORTS_PER_IF),
     parameter AXIS_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
     parameter AXIS_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1,
     parameter AXIS_RX_USE_READY = 0,
@@ -380,7 +381,7 @@ parameter RAM_SEG_COUNT = TLP_SEG_COUNT*2;
 parameter RAM_SEG_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH*2/RAM_SEG_COUNT;
 parameter RAM_SEG_ADDR_WIDTH = 12;
 parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8;
-parameter IF_RAM_SEL_WIDTH = PORTS_PER_IF > 1 ? $clog2(PORTS_PER_IF) : 1;
+parameter IF_RAM_SEL_WIDTH = 1;
 parameter RAM_SEL_WIDTH = $clog2(IF_COUNT+(APP_ENABLE && APP_DMA_ENABLE ? 1 : 0))+IF_RAM_SEL_WIDTH+1;
 parameter RAM_ADDR_WIDTH = RAM_SEG_ADDR_WIDTH+$clog2(RAM_SEG_COUNT)+$clog2(RAM_SEG_BE_WIDTH);
 
@@ -1407,6 +1408,7 @@ mqnic_core #(
     .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
     .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),
     .AXIS_SYNC_DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
+    .AXIS_IF_DATA_WIDTH(AXIS_IF_DATA_WIDTH),
     .AXIS_TX_USER_WIDTH(AXIS_TX_USER_WIDTH),
     .AXIS_RX_USER_WIDTH(AXIS_RX_USER_WIDTH),
     .AXIS_RX_USE_READY(AXIS_RX_USE_READY),

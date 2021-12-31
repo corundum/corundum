@@ -105,8 +105,12 @@ module mqnic_app_block #
     parameter AXIS_SYNC_RX_USER_WIDTH = AXIS_RX_USER_WIDTH,
 
     // Ethernet interface configuration (interface)
-    parameter AXIS_IF_DATA_WIDTH = AXIS_SYNC_DATA_WIDTH,
+    parameter AXIS_IF_DATA_WIDTH = AXIS_SYNC_DATA_WIDTH*2**$clog2(PORTS_PER_IF),
     parameter AXIS_IF_KEEP_WIDTH = AXIS_IF_DATA_WIDTH/8,
+    parameter AXIS_IF_TX_ID_WIDTH = 12,
+    parameter AXIS_IF_RX_ID_WIDTH = PORTS_PER_IF > 1 ? $clog2(PORTS_PER_IF) : 1,
+    parameter AXIS_IF_TX_DEST_WIDTH = $clog2(PORTS_PER_IF)+4,
+    parameter AXIS_IF_RX_DEST_WIDTH = 8,
     parameter AXIS_IF_TX_USER_WIDTH = AXIS_SYNC_TX_USER_WIDTH,
     parameter AXIS_IF_RX_USER_WIDTH = AXIS_SYNC_RX_USER_WIDTH,
 
@@ -375,43 +379,51 @@ module mqnic_app_block #
     /*
      * Ethernet (internal at interface module)
      */
-    input  wire [PORT_COUNT*AXIS_IF_DATA_WIDTH-1:0]       s_axis_if_tx_tdata,
-    input  wire [PORT_COUNT*AXIS_IF_KEEP_WIDTH-1:0]       s_axis_if_tx_tkeep,
-    input  wire [PORT_COUNT-1:0]                          s_axis_if_tx_tvalid,
-    output wire [PORT_COUNT-1:0]                          s_axis_if_tx_tready,
-    input  wire [PORT_COUNT-1:0]                          s_axis_if_tx_tlast,
-    input  wire [PORT_COUNT*AXIS_IF_TX_USER_WIDTH-1:0]    s_axis_if_tx_tuser,
+    input  wire [IF_COUNT*AXIS_IF_DATA_WIDTH-1:0]         s_axis_if_tx_tdata,
+    input  wire [IF_COUNT*AXIS_IF_KEEP_WIDTH-1:0]         s_axis_if_tx_tkeep,
+    input  wire [IF_COUNT-1:0]                            s_axis_if_tx_tvalid,
+    output wire [IF_COUNT-1:0]                            s_axis_if_tx_tready,
+    input  wire [IF_COUNT-1:0]                            s_axis_if_tx_tlast,
+    input  wire [IF_COUNT*AXIS_IF_TX_ID_WIDTH-1:0]        s_axis_if_tx_tid,
+    input  wire [IF_COUNT*AXIS_IF_TX_DEST_WIDTH-1:0]      s_axis_if_tx_tdest,
+    input  wire [IF_COUNT*AXIS_IF_TX_USER_WIDTH-1:0]      s_axis_if_tx_tuser,
 
-    output wire [PORT_COUNT*AXIS_IF_DATA_WIDTH-1:0]       m_axis_if_tx_tdata,
-    output wire [PORT_COUNT*AXIS_IF_KEEP_WIDTH-1:0]       m_axis_if_tx_tkeep,
-    output wire [PORT_COUNT-1:0]                          m_axis_if_tx_tvalid,
-    input  wire [PORT_COUNT-1:0]                          m_axis_if_tx_tready,
-    output wire [PORT_COUNT-1:0]                          m_axis_if_tx_tlast,
-    output wire [PORT_COUNT*AXIS_IF_TX_USER_WIDTH-1:0]    m_axis_if_tx_tuser,
+    output wire [IF_COUNT*AXIS_IF_DATA_WIDTH-1:0]         m_axis_if_tx_tdata,
+    output wire [IF_COUNT*AXIS_IF_KEEP_WIDTH-1:0]         m_axis_if_tx_tkeep,
+    output wire [IF_COUNT-1:0]                            m_axis_if_tx_tvalid,
+    input  wire [IF_COUNT-1:0]                            m_axis_if_tx_tready,
+    output wire [IF_COUNT-1:0]                            m_axis_if_tx_tlast,
+    output wire [IF_COUNT*AXIS_IF_TX_ID_WIDTH-1:0]        m_axis_if_tx_tid,
+    output wire [IF_COUNT*AXIS_IF_TX_DEST_WIDTH-1:0]      m_axis_if_tx_tdest,
+    output wire [IF_COUNT*AXIS_IF_TX_USER_WIDTH-1:0]      m_axis_if_tx_tuser,
 
-    input  wire [PORT_COUNT*PTP_TS_WIDTH-1:0]             s_axis_if_tx_ptp_ts,
-    input  wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]            s_axis_if_tx_ptp_ts_tag,
-    input  wire [PORT_COUNT-1:0]                          s_axis_if_tx_ptp_ts_valid,
-    output wire [PORT_COUNT-1:0]                          s_axis_if_tx_ptp_ts_ready,
+    input  wire [IF_COUNT*PTP_TS_WIDTH-1:0]               s_axis_if_tx_ptp_ts,
+    input  wire [IF_COUNT*PTP_TAG_WIDTH-1:0]              s_axis_if_tx_ptp_ts_tag,
+    input  wire [IF_COUNT-1:0]                            s_axis_if_tx_ptp_ts_valid,
+    output wire [IF_COUNT-1:0]                            s_axis_if_tx_ptp_ts_ready,
 
-    output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]             m_axis_if_tx_ptp_ts,
-    output wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]            m_axis_if_tx_ptp_ts_tag,
-    output wire [PORT_COUNT-1:0]                          m_axis_if_tx_ptp_ts_valid,
-    input  wire [PORT_COUNT-1:0]                          m_axis_if_tx_ptp_ts_ready,
+    output wire [IF_COUNT*PTP_TS_WIDTH-1:0]               m_axis_if_tx_ptp_ts,
+    output wire [IF_COUNT*PTP_TAG_WIDTH-1:0]              m_axis_if_tx_ptp_ts_tag,
+    output wire [IF_COUNT-1:0]                            m_axis_if_tx_ptp_ts_valid,
+    input  wire [IF_COUNT-1:0]                            m_axis_if_tx_ptp_ts_ready,
 
-    input  wire [PORT_COUNT*AXIS_IF_DATA_WIDTH-1:0]       s_axis_if_rx_tdata,
-    input  wire [PORT_COUNT*AXIS_IF_KEEP_WIDTH-1:0]       s_axis_if_rx_tkeep,
-    input  wire [PORT_COUNT-1:0]                          s_axis_if_rx_tvalid,
-    output wire [PORT_COUNT-1:0]                          s_axis_if_rx_tready,
-    input  wire [PORT_COUNT-1:0]                          s_axis_if_rx_tlast,
-    input  wire [PORT_COUNT*AXIS_IF_RX_USER_WIDTH-1:0]    s_axis_if_rx_tuser,
+    input  wire [IF_COUNT*AXIS_IF_DATA_WIDTH-1:0]         s_axis_if_rx_tdata,
+    input  wire [IF_COUNT*AXIS_IF_KEEP_WIDTH-1:0]         s_axis_if_rx_tkeep,
+    input  wire [IF_COUNT-1:0]                            s_axis_if_rx_tvalid,
+    output wire [IF_COUNT-1:0]                            s_axis_if_rx_tready,
+    input  wire [IF_COUNT-1:0]                            s_axis_if_rx_tlast,
+    input  wire [IF_COUNT*AXIS_IF_RX_ID_WIDTH-1:0]        s_axis_if_rx_tid,
+    input  wire [IF_COUNT*AXIS_IF_RX_DEST_WIDTH-1:0]      s_axis_if_rx_tdest,
+    input  wire [IF_COUNT*AXIS_IF_RX_USER_WIDTH-1:0]      s_axis_if_rx_tuser,
 
-    output wire [PORT_COUNT*AXIS_IF_DATA_WIDTH-1:0]       m_axis_if_rx_tdata,
-    output wire [PORT_COUNT*AXIS_IF_KEEP_WIDTH-1:0]       m_axis_if_rx_tkeep,
-    output wire [PORT_COUNT-1:0]                          m_axis_if_rx_tvalid,
-    input  wire [PORT_COUNT-1:0]                          m_axis_if_rx_tready,
-    output wire [PORT_COUNT-1:0]                          m_axis_if_rx_tlast,
-    output wire [PORT_COUNT*AXIS_IF_RX_USER_WIDTH-1:0]    m_axis_if_rx_tuser,
+    output wire [IF_COUNT*AXIS_IF_DATA_WIDTH-1:0]         m_axis_if_rx_tdata,
+    output wire [IF_COUNT*AXIS_IF_KEEP_WIDTH-1:0]         m_axis_if_rx_tkeep,
+    output wire [IF_COUNT-1:0]                            m_axis_if_rx_tvalid,
+    input  wire [IF_COUNT-1:0]                            m_axis_if_rx_tready,
+    output wire [IF_COUNT-1:0]                            m_axis_if_rx_tlast,
+    output wire [IF_COUNT*AXIS_IF_RX_ID_WIDTH-1:0]        m_axis_if_rx_tid,
+    output wire [IF_COUNT*AXIS_IF_RX_DEST_WIDTH-1:0]      m_axis_if_rx_tdest,
+    output wire [IF_COUNT*AXIS_IF_RX_USER_WIDTH-1:0]      m_axis_if_rx_tuser,
 
     /*
      * Statistics increment output
@@ -523,6 +535,8 @@ assign m_axis_if_tx_tkeep = s_axis_if_tx_tkeep;
 assign m_axis_if_tx_tvalid = s_axis_if_tx_tvalid;
 assign s_axis_if_tx_tready = m_axis_if_tx_tready;
 assign m_axis_if_tx_tlast = s_axis_if_tx_tlast;
+assign m_axis_if_tx_tid = s_axis_if_tx_tid;
+assign m_axis_if_tx_tdest = s_axis_if_tx_tdest;
 assign m_axis_if_tx_tuser = s_axis_if_tx_tuser;
 
 assign m_axis_if_tx_ptp_ts = s_axis_if_tx_ptp_ts;
@@ -535,6 +549,8 @@ assign m_axis_if_rx_tkeep = s_axis_if_rx_tkeep;
 assign m_axis_if_rx_tvalid = s_axis_if_rx_tvalid;
 assign s_axis_if_rx_tready = m_axis_if_rx_tready;
 assign m_axis_if_rx_tlast = s_axis_if_rx_tlast;
+assign m_axis_if_rx_tid = s_axis_if_rx_tid;
+assign m_axis_if_rx_tdest = s_axis_if_rx_tdest;
 assign m_axis_if_rx_tuser = s_axis_if_rx_tuser;
 
 /*

@@ -42,6 +42,10 @@ either expressed or implied, of The Regents of the University of California.
  */
 module mqnic_tx_scheduler_block #
 (
+    // Number of ports
+    parameter PORTS = 1,
+    // Scheduler index
+    parameter INDEX = 0,
     // Width of control register interface address in bits
     parameter REG_ADDR_WIDTH = 16,
     // Width of control register interface data in bits
@@ -74,6 +78,8 @@ module mqnic_tx_scheduler_block #
     parameter TDMA_INDEX_WIDTH = 8,
     // PTP timestamp width
     parameter PTP_TS_WIDTH = 96,
+    // AXI stream tdest signal width
+    parameter AXIS_TX_DEST_WIDTH = $clog2(PORTS)+4,
     // Max transmit packet size
     parameter MAX_TX_SIZE = 2048
 )
@@ -124,6 +130,7 @@ module mqnic_tx_scheduler_block #
      */
     output wire [QUEUE_INDEX_WIDTH-1:0]  m_axis_tx_req_queue,
     output wire [REQ_TAG_WIDTH-1:0]      m_axis_tx_req_tag,
+    output wire [AXIS_TX_DEST_WIDTH-1:0] m_axis_tx_req_dest,
     output wire                          m_axis_tx_req_valid,
     input  wire                          m_axis_tx_req_ready,
 
@@ -144,7 +151,12 @@ module mqnic_tx_scheduler_block #
      * PTP clock
      */
     input  wire [PTP_TS_WIDTH-1:0]       ptp_ts_96,
-    input  wire                          ptp_ts_step
+    input  wire                          ptp_ts_step,
+
+    /*
+     * Configuration
+     */
+    input  wire [LEN_WIDTH-1:0]          mtu
 );
 
 parameter SCHED_COUNT = 1;
@@ -217,6 +229,8 @@ always @(posedge clk) begin
         sched_enable_reg <= 1'b0;
     end
 end
+
+assign m_axis_tx_req_dest = INDEX << 4;
 
 tx_scheduler_rr #(
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),

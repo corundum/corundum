@@ -38,7 +38,7 @@ either expressed or implied, of The Regents of the University of California.
 `default_nettype none
 
 /*
- * FPGA core logic
+ * mqnic core logic - Xilinx UltraScale/UltraScale+ wrapper
  */
 module mqnic_core_pcie_us #
 (
@@ -164,6 +164,7 @@ module mqnic_core_pcie_us #
     parameter AXIS_ETH_DATA_WIDTH = 512,
     parameter AXIS_ETH_KEEP_WIDTH = AXIS_ETH_DATA_WIDTH/8,
     parameter AXIS_ETH_SYNC_DATA_WIDTH = AXIS_ETH_DATA_WIDTH,
+    parameter AXIS_ETH_IF_DATA_WIDTH = AXIS_ETH_SYNC_DATA_WIDTH*2**$clog2(PORTS_PER_IF),
     parameter AXIS_ETH_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
     parameter AXIS_ETH_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1,
     parameter AXIS_ETH_RX_USE_READY = 0,
@@ -777,6 +778,7 @@ mqnic_core_pcie #(
     .AXIS_DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
     .AXIS_KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
     .AXIS_SYNC_DATA_WIDTH(AXIS_ETH_SYNC_DATA_WIDTH),
+    .AXIS_IF_DATA_WIDTH(AXIS_ETH_IF_DATA_WIDTH),
     .AXIS_TX_USER_WIDTH(AXIS_ETH_TX_USER_WIDTH),
     .AXIS_RX_USER_WIDTH(AXIS_ETH_RX_USER_WIDTH),
     .AXIS_RX_USE_READY(AXIS_ETH_RX_USE_READY),

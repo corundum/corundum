@@ -323,7 +323,7 @@ struct mqnic_cpl {
 	__le16 rx_csum;
 	__le32 rx_hash;
 	__u8 rx_hash_type;
-	__u8 rsvd1;
+	__u8 port;
 	__u8 rsvd2;
 	__u8 rsvd3;
 	__le32 rsvd4;

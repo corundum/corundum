@@ -208,6 +208,7 @@ reg [REG_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = 0;
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
 reg sched_enable_reg = 1'b0;
+reg [AXIS_TX_DEST_WIDTH-1:0] sched_dest_reg = INDEX << 4;
 
 reg tdma_enable_reg = 1'b0;
 wire tdma_locked;
@@ -247,6 +248,12 @@ always @(posedge clk) begin
                 // Sched: Control
                 if (ctrl_reg_wr_strb[0]) begin
                     sched_enable_reg <= ctrl_reg_wr_data[0];
+                end
+            end
+            RBB+8'h2C: begin
+                // Sched: dest
+                if (ctrl_reg_wr_strb[0]) begin
+                    sched_dest_reg <= ctrl_reg_wr_data[7:0];
                 end
             end
             // TDMA scheduler controller
@@ -315,7 +322,7 @@ always @(posedge clk) begin
                 // Sched: Control
                 ctrl_reg_rd_data_reg[0] <= sched_enable_reg;
             end
-            RBB+8'h2C: ctrl_reg_rd_data_reg <= 0;                     // Sched: dest
+            RBB+8'h2C: ctrl_reg_rd_data_reg <= sched_dest_reg;        // Sched: dest
             // TDMA scheduler controller
             RBB+8'h30: ctrl_reg_rd_data_reg <= 32'h0000C050;          // Sched ctrl: Type
             RBB+8'h34: ctrl_reg_rd_data_reg <= 32'h00000100;          // Sched ctrl: Version
@@ -363,6 +370,7 @@ always @(posedge clk) begin
         ctrl_reg_rd_ack_reg <= 1'b0;
 
         sched_enable_reg <= 1'b0;
+        sched_dest_reg <= INDEX << 4;
     end
 end
 
@@ -423,7 +431,7 @@ axil_crossbar_inst (
     .m_axil_rready(axil_sched_rready)
 );
 
-assign m_axis_tx_req_dest = INDEX << 4;
+assign m_axis_tx_req_dest = sched_dest_reg;
 
 tx_scheduler_rr #(
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),

@@ -328,30 +328,30 @@ void mqnic_destroy_interface(struct mqnic_if **interface_ptr)
 
 u32 mqnic_interface_get_rss_mask(struct mqnic_if *interface)
 {
-	return ioread32(interface->if_ctrl_rx_rb + MQNIC_RB_IF_CTRL_RX_REG_RSS_MASK);
+	return ioread32(interface->if_ctrl_rx_rb->regs + MQNIC_RB_IF_CTRL_RX_REG_RSS_MASK);
 }
 
 void mqnic_interface_set_rss_mask(struct mqnic_if *interface, u32 rss_mask)
 {
-	iowrite32(rss_mask, interface->if_ctrl_rx_rb + MQNIC_RB_IF_CTRL_RX_REG_RSS_MASK);
+	iowrite32(rss_mask, interface->if_ctrl_rx_rb->regs + MQNIC_RB_IF_CTRL_RX_REG_RSS_MASK);
 }
 
 u32 mqnic_interface_get_tx_mtu(struct mqnic_if *interface)
 {
-	return ioread32(interface->if_ctrl_tx_rb + MQNIC_RB_IF_CTRL_TX_REG_MTU);
+	return ioread32(interface->if_ctrl_tx_rb->regs + MQNIC_RB_IF_CTRL_TX_REG_MTU);
 }
 
 void mqnic_interface_set_tx_mtu(struct mqnic_if *interface, u32 mtu)
 {
-	iowrite32(mtu, interface->if_ctrl_tx_rb + MQNIC_RB_IF_CTRL_TX_REG_MTU);
+	iowrite32(mtu, interface->if_ctrl_tx_rb->regs + MQNIC_RB_IF_CTRL_TX_REG_MTU);
 }
 
 u32 mqnic_interface_get_rx_mtu(struct mqnic_if *interface)
 {
-	return ioread32(interface->if_ctrl_rx_rb + MQNIC_RB_IF_CTRL_RX_REG_MTU);
+	return ioread32(interface->if_ctrl_rx_rb->regs + MQNIC_RB_IF_CTRL_RX_REG_MTU);
 }
 
 void mqnic_interface_set_rx_mtu(struct mqnic_if *interface, u32 mtu)
 {
-	iowrite32(mtu, interface->if_ctrl_rx_rb + MQNIC_RB_IF_CTRL_RX_REG_MTU);
+	iowrite32(mtu, interface->if_ctrl_rx_rb->regs + MQNIC_RB_IF_CTRL_RX_REG_MTU);
 }

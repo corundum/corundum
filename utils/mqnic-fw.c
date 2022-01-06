@@ -1258,8 +1258,8 @@ skip_flash:
             // reload FPGA
             printf("Triggering IPROG to reload FPGA...\n");
             if (flash_rb)
-                mqnic_reg_write32(flash_rb, MQNIC_RB_BPI_FLASH_REG_FORMAT, 0xFEE1DEAD);
-            mqnic_reg_write32(dev->fw_id_rb, MQNIC_RB_FW_ID_REG_FPGA_ID, 0xFEE1DEAD);
+                mqnic_reg_write32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_FORMAT, 0xFEE1DEAD);
+            mqnic_reg_write32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_FPGA_ID, 0xFEE1DEAD);
 
             // disconnect
             mqnic_close(dev);

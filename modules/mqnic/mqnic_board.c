@@ -564,7 +564,7 @@ static int mqnic_alveo_board_init(struct mqnic_dev *mqnic)
 
 			mqnic_alveo_bmc_reg_write(mqnic, rb, 0x020000, 0);
 			mqnic_alveo_bmc_reg_write(mqnic, rb, 0x020000, 1);
-			msleep(100);
+			msleep(200);
 		}
 
 		if (mqnic_alveo_bmc_reg_read(mqnic, rb, 0x028000) != 0x74736574)

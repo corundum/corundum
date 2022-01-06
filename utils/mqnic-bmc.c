@@ -256,7 +256,7 @@ int main(int argc, char *argv[])
             // reset CMS
             mqnic_alveo_bmc_reg_write(bmc_rb, 0x020000, 0);
             mqnic_alveo_bmc_reg_write(bmc_rb, 0x020000, 1);
-            usleep(100000);
+            usleep(200000);
         }
 
         if (mqnic_alveo_bmc_reg_read(bmc_rb, 0x028000) != 0x74736574)

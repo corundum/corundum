@@ -34,6 +34,7 @@ either expressed or implied, of The Regents of the University of California.
 #ifndef MQNIC_H
 #define MQNIC_H
 
+#include <limits.h>
 #include <stdint.h>
 #include <unistd.h>
 
@@ -152,6 +153,9 @@ struct mqnic {
     char build_date_str[32];
 
     struct mqnic_if *interfaces[MQNIC_MAX_IF];
+
+    char device_path[PATH_MAX];
+    char pci_device_path[PATH_MAX];
 };
 
 struct mqnic *mqnic_open(const char *dev_name);

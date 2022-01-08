@@ -33,8 +33,10 @@ either expressed or implied, of The Regents of the University of California.
 
 #include "mqnic.h"
 
+#include <dirent.h>
 #include <fcntl.h>
 #include <limits.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -43,18 +45,29 @@ either expressed or implied, of The Regents of the University of California.
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-struct mqnic *mqnic_open(const char *dev_name)
+static int mqnic_try_open(struct mqnic *dev, const char *fmt, ...)
 {
-    struct mqnic *dev = calloc(1, sizeof(struct mqnic));
+    va_list ap;
+    char path[PATH_MAX+32];
     struct stat st;
+    char *ptr;
 
-    if (!dev)
-    {
-        perror("memory allocation failed");
-        goto fail_alloc;
-    }
+    va_start(ap, fmt);
+    vsnprintf(dev->device_path, sizeof(dev->device_path), fmt, ap);
+    va_end(ap);
 
-    dev->fd = open(dev_name, O_RDWR);
+    dev->pci_device_path[0] = 0;
+
+    if (access(dev->device_path, W_OK))
+        return -1;
+
+    if (stat(dev->device_path, &st))
+        return -1;
+
+    if (S_ISDIR(st.st_mode))
+        return -1;
+
+    dev->fd = open(dev->device_path, O_RDWR);
 
     if (dev->fd < 0)
     {
@@ -82,6 +95,35 @@ struct mqnic *mqnic_open(const char *dev_name)
         dev->regs_size = info.regs_size;
     }
 
+    // determine sysfs path of PCIe device
+    // first, try to find via miscdevice
+    ptr = strrchr(dev->device_path, '/');
+    ptr = ptr ? ptr+1 : dev->device_path;
+
+    snprintf(path, sizeof(path), "/sys/class/misc/%s/device", ptr);
+
+    if (!realpath(path, dev->pci_device_path))
+    {
+        // that failed, perhaps it was a PCIe resource
+        snprintf(path, sizeof(path), "%s", dev->device_path);
+        ptr = strrchr(path, '/');
+        if (ptr)
+            *ptr = 0;
+
+        if (!realpath(path, dev->pci_device_path))
+            dev->pci_device_path[0] = 0;
+    }
+
+    // PCIe device will have a config space, so check for that
+    if (dev->pci_device_path[0])
+    {
+        snprintf(path, sizeof(path), "%s/config", dev->pci_device_path);
+
+        if (access(path, F_OK))
+            dev->pci_device_path[0] = 0;
+    }
+
+    // map registers
     dev->regs = (volatile uint8_t *)mmap(NULL, dev->regs_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, 0);
     if (dev->regs == MAP_FAILED)
     {
@@ -89,20 +131,12 @@ struct mqnic *mqnic_open(const char *dev_name)
         goto fail_mmap_regs;
     }
 
-    if (mqnic_reg_read32(dev->regs, 4) == 0xffffffff)
+    if (dev->pci_device_path[0] && mqnic_reg_read32(dev->regs, 4) == 0xffffffff)
     {
         // if we were given a PCIe resource, then we may need to enable the device
-        char path[PATH_MAX+32];
-        char *ptr;
+        snprintf(path, sizeof(path), "%s/enable", dev->pci_device_path);
 
-        strcpy(path, dev_name);
-        ptr = strrchr(path, '/');
-        if (ptr)
-        {
-            strcpy(++ptr, "enable");
-        }
-
-        if (access(path, F_OK) == 0)
+        if (access(path, W_OK) == 0)
         {
             FILE *fp = fopen(path, "w");
 
@@ -137,6 +171,85 @@ struct mqnic *mqnic_open(const char *dev_name)
         goto fail_enum;
     }
 
+    return 0;
+
+fail_enum:
+    if (dev->rb_list)
+        free_reg_block_list(dev->rb_list);
+fail_reset:
+    munmap((void *)dev->regs, dev->regs_size);
+fail_mmap_regs:
+fail_ioctl:
+fail_fstat:
+    close(dev->fd);
+fail_open:
+    return -1;
+}
+
+static int mqnic_try_open_if_name(struct mqnic *dev, const char *if_name)
+{
+    DIR *folder;
+    struct dirent *entry;
+    char path[PATH_MAX];
+
+    snprintf(path, sizeof(path), "/sys/class/net/%s/device/misc/", if_name);
+
+    folder = opendir(path);
+    if (!folder)
+        return -1;
+
+    while ((entry = readdir(folder)))
+    {
+        if (entry->d_name[0] != '.')
+            break;
+    }
+
+    if (!entry)
+    {
+        closedir(folder);
+        return -1;
+    }
+
+    snprintf(path, sizeof(path), "/dev/%s", entry->d_name);
+
+    closedir(folder);
+
+    return mqnic_try_open(dev, "%s", path);
+}
+
+struct mqnic *mqnic_open(const char *dev_name)
+{
+    struct mqnic *dev = calloc(1, sizeof(struct mqnic));
+
+    if (!dev)
+    {
+        perror("memory allocation failed");
+        goto fail_alloc;
+    }
+
+    // absolute path
+    if (mqnic_try_open(dev, "%s", dev_name) == 0)
+        goto open;
+
+    // network interface
+    if (mqnic_try_open_if_name(dev, dev_name) == 0)
+        goto open;
+
+    // PCIe sysfs path
+    if (mqnic_try_open(dev, "%s/resource0", dev_name) == 0)
+        goto open;
+
+    // PCIe BDF (dddd:xx:yy.z)
+    if (mqnic_try_open(dev, "/sys/bus/pci/devices/%s/resource0", dev_name) == 0)
+        goto open;
+
+    // PCIe BDF (xx:yy.z)
+    if (mqnic_try_open(dev, "/sys/bus/pci/devices/0000:%s/resource0", dev_name) == 0)
+        goto open;
+
+    goto fail_open;
+
+open:
     dev->fpga_id = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_FPGA_ID);
     dev->fw_id = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_FW_ID);
     dev->fw_ver = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_FW_VER);
@@ -186,15 +299,6 @@ struct mqnic *mqnic_open(const char *dev_name)
 skip_interface:
     return dev;
 
-fail:
-fail_enum:
-fail_reset:
-    mqnic_close(dev);
-    return NULL;
-fail_mmap_regs:
-fail_ioctl:
-fail_fstat:
-    close(dev->fd);
 fail_open:
     free(dev);
 fail_alloc:

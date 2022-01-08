@@ -347,13 +347,13 @@ int file_type_from_ext(const char *file_name)
     return FILE_TYPE_BIN;
 }
 
-int pcie_hot_reset(const char *pcie_port_path)
+int pcie_hot_reset(const char *pci_port_path)
 {
     int fd;
     char path[PATH_MAX+32];
     char buf[32];
 
-    snprintf(path, sizeof(path), "%s/config", pcie_port_path);
+    snprintf(path, sizeof(path), "%s/config", pci_port_path);
 
     fd = open(path, O_RDWR);
 
@@ -381,14 +381,14 @@ int pcie_hot_reset(const char *pcie_port_path)
     return 0;
 }
 
-int pcie_disable_fatal_err(const char *pcie_port_path)
+int pcie_disable_fatal_err(const char *pci_port_path)
 {
     int fd;
     char path[PATH_MAX+32];
     char buf[32];
     int offset;
 
-    snprintf(path, sizeof(path), "%s/config", pcie_port_path);
+    snprintf(path, sizeof(path), "%s/config", pci_port_path);
 
     fd = open(path, O_RDWR);
 
@@ -451,8 +451,8 @@ int main(int argc, char *argv[])
     FILE *write_file = NULL;
 
     char path[PATH_MAX+32];
-    char device_path[PATH_MAX];
-    char port_path[PATH_MAX];
+    char pci_device_path[PATH_MAX];
+    char pci_port_path[PATH_MAX];
     char *ptr;
 
     int slot = -1;
@@ -526,47 +526,24 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // determine sysfs path of PCIe device
-    // first, try to find via miscdevice
-    ptr = strrchr(device, '/');
-    ptr = ptr ? ptr+1 : device;
-
-    snprintf(path, sizeof(path), "/sys/class/misc/%s/device", ptr);
-
-    if (!realpath(path, device_path))
+    if (!dev->pci_device_path[0])
     {
-        // that failed, perhaps it was a PCIe resource
-        strcpy(path, device);
-        ptr = strrchr(path, '/');
-        if (ptr)
-            *ptr = 0;
-
-        if (!realpath(path, device_path))
-        {
-            perror("failed to determine device path");
-            ret = -1;
-            goto err;
-        }
-    }
-
-    // PCIe device will have a config space, so check for that
-    snprintf(path, sizeof(path), "%s/config", device_path);
-
-    if (access(path, F_OK))
-    {
-        perror("failed to determine device path");
+        fprintf(stderr, "Failed to determine PCIe device path\n");
         ret = -1;
         goto err;
     }
 
+    // snprintf(device_path, sizeof(device_path), dev->device_path)
+    snprintf(pci_device_path, sizeof(pci_device_path), "%s", dev->pci_device_path);
+
     // determine sysfs path of upstream port
-    strcpy(port_path, device_path);
-    ptr = strrchr(port_path, '/');
+    snprintf(pci_port_path, sizeof(pci_port_path), "%s", pci_device_path);
+    ptr = strrchr(pci_port_path, '/');
     if (ptr)
         *ptr = 0;
 
-    printf("PCIe ID (device): %s\n", strrchr(device_path, '/')+1);
-    printf("PCIe ID (upstream port): %s\n", strrchr(port_path, '/')+1);
+    printf("PCIe ID (device): %s\n", strrchr(pci_device_path, '/')+1);
+    printf("PCIe ID (upstream port): %s\n", strrchr(pci_port_path, '/')+1);
 
     uint32_t flash_format = 0;
     const char *fpga_part = get_fpga_part(dev->fpga_id);
@@ -1216,27 +1193,23 @@ skip_flash:
 
         // disable fatal error reporting on port (to prevent IPMI-triggered reboot)
         printf("Disabling PCIe fatal error reporting on port...\n");
-        pcie_disable_fatal_err(port_path);
+        pcie_disable_fatal_err(pci_port_path);
 
         // disconnect from device
         mqnic_close(dev);
         dev = NULL;
 
         // attempt to disconnect driver
-        ptr = strrchr(device_path, '/');
-        if (ptr)
-        {
-            snprintf(path, sizeof(path), "%s/driver/unbind", device_path);
+        snprintf(path, sizeof(path), "%s/driver/unbind", pci_device_path);
 
-            if (access(path, F_OK) == 0)
-            {
-                printf("Unbinding driver...\n");
-                write_str_to_file(path, ptr+1);
-            }
-            else
-            {
-                printf("No driver bound\n");
-            }
+        if (access(path, F_OK) == 0)
+        {
+            printf("Unbinding driver...\n");
+            write_str_to_file(path, ptr+1);
+        }
+        else
+        {
+            printf("No driver bound\n");
         }
 
         sleep(1);
@@ -1245,7 +1218,7 @@ skip_flash:
         if (action_boot)
         {
             // reconnect directly to device
-            snprintf(path, sizeof(path), "%s/resource0", device_path);
+            snprintf(path, sizeof(path), "%s/resource0", pci_device_path);
             dev = mqnic_open(path);
 
             if (!dev)
@@ -1269,7 +1242,7 @@ skip_flash:
         // remove PCIe device
         printf("Removing device...\n");
 
-        snprintf(path, sizeof(path), "%s/remove", device_path);
+        snprintf(path, sizeof(path), "%s/remove", pci_device_path);
 
         if (write_1_to_file(path))
         {
@@ -1289,13 +1262,13 @@ skip_flash:
         for (int tries = 5; tries > 0; tries--)
         {
             printf("Performing hot reset on upstream port...\n");
-            pcie_hot_reset(port_path);
+            pcie_hot_reset(pci_port_path);
 
             sleep(2);
 
             printf("Rescanning on upstream port...\n");
 
-            snprintf(path, sizeof(path), "%s/rescan", port_path);
+            snprintf(path, sizeof(path), "%s/rescan", pci_port_path);
 
             if (write_1_to_file(path))
             {
@@ -1305,7 +1278,7 @@ skip_flash:
             }
 
             // PCIe device will have a config space, so check for that
-            snprintf(path, sizeof(path), "%s/config", device_path);
+            snprintf(path, sizeof(path), "%s/config", pci_device_path);
 
             if (access(path, F_OK) == 0)
             {

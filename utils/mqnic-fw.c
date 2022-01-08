@@ -552,7 +552,7 @@ int main(int argc, char *argv[])
     // PCIe device will have a config space, so check for that
     snprintf(path, sizeof(path), "%s/config", device_path);
 
-    if (access(path, F_OK) == -1)
+    if (access(path, F_OK))
     {
         perror("failed to determine device path");
         ret = -1;
@@ -1228,7 +1228,7 @@ skip_flash:
         {
             snprintf(path, sizeof(path), "%s/driver/unbind", device_path);
 
-            if (access(path, F_OK) != -1)
+            if (access(path, F_OK) == 0)
             {
                 printf("Unbinding driver...\n");
                 write_str_to_file(path, ptr+1);

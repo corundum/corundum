@@ -62,7 +62,7 @@ struct mqnic *mqnic_open(const char *dev_name)
         goto fail_open;
     }
 
-    if (fstat(dev->fd, &st) == -1)
+    if (fstat(dev->fd, &st))
     {
         perror("fstat failed");
         goto fail_fstat;
@@ -102,7 +102,7 @@ struct mqnic *mqnic_open(const char *dev_name)
             strcpy(++ptr, "enable");
         }
 
-        if (access(path, F_OK) != -1)
+        if (access(path, F_OK) == 0)
         {
             FILE *fp = fopen(path, "w");
 

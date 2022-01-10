@@ -51,8 +51,9 @@ static void mqnic_get_drvinfo(struct net_device *ndev,
 	strscpy(drvinfo->driver, DRIVER_NAME, sizeof(drvinfo->driver));
 	strscpy(drvinfo->version, DRIVER_VERSION, sizeof(drvinfo->version));
 
-	snprintf(drvinfo->fw_version, sizeof(drvinfo->fw_version), "%d.%d",
-			mdev->fw_ver >> 16, mdev->fw_ver & 0xffff);
+	snprintf(drvinfo->fw_version, sizeof(drvinfo->fw_version), "%d.%d.%d.%d",
+			mdev->fw_ver >> 24, (mdev->fw_ver >> 16) & 0xff,
+			(mdev->fw_ver >> 8) & 0xff, mdev->fw_ver & 0xff);
 	strscpy(drvinfo->bus_info, dev_name(mdev->dev), sizeof(drvinfo->bus_info));
 }
 

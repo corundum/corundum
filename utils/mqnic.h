@@ -90,16 +90,14 @@ struct mqnic_if {
     volatile uint8_t *csr_regs;
 
     struct reg_block *rb_list;
-    struct reg_block *if_ctrl_tx_rb;
-    struct reg_block *if_ctrl_rx_rb;
+    struct reg_block *if_ctrl_rb;
     struct reg_block *event_queue_rb;
     struct reg_block *tx_queue_rb;
     struct reg_block *tx_cpl_queue_rb;
     struct reg_block *rx_queue_rb;
     struct reg_block *rx_cpl_queue_rb;
 
-    uint32_t if_tx_features;
-    uint32_t if_rx_features;
+    uint32_t if_features;
 
     uint32_t max_tx_mtu;
     uint32_t max_rx_mtu;

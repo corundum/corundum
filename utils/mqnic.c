@@ -358,27 +358,17 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
         goto fail;
     }
 
-    interface->if_ctrl_tx_rb = find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_TX_TYPE, MQNIC_RB_IF_CTRL_TX_VER, 0);
+    interface->if_ctrl_rb = find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_TYPE, MQNIC_RB_IF_CTRL_VER, 0);
 
-    if (!interface->if_ctrl_tx_rb)
+    if (!interface->if_ctrl_rb)
     {
-        fprintf(stderr, "Error: TX interface control block not found\n");
+        fprintf(stderr, "Error: Interface control block not found\n");
         goto fail;
     }
 
-    interface->if_tx_features = mqnic_reg_read32(interface->if_ctrl_tx_rb->regs, MQNIC_RB_IF_CTRL_TX_REG_FEATURES);
-    interface->max_tx_mtu = mqnic_reg_read32(interface->if_ctrl_tx_rb->regs, MQNIC_RB_IF_CTRL_TX_REG_MAX_MTU);
-
-    interface->if_ctrl_rx_rb = find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_RX_TYPE, MQNIC_RB_IF_CTRL_RX_VER, 0);
-
-    if (!interface->if_ctrl_rx_rb)
-    {
-        fprintf(stderr, "Error: RX interface control block not found\n");
-        goto fail;
-    }
-
-    interface->if_rx_features = mqnic_reg_read32(interface->if_ctrl_rx_rb->regs, MQNIC_RB_IF_CTRL_RX_REG_FEATURES);
-    interface->max_rx_mtu = mqnic_reg_read32(interface->if_ctrl_rx_rb->regs, MQNIC_RB_IF_CTRL_TX_REG_MAX_MTU);
+    interface->if_features = mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_FEATURES);
+    interface->max_tx_mtu = mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU);
+    interface->max_rx_mtu = mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU);
 
     interface->event_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_EVENT_QM_TYPE, MQNIC_RB_EVENT_QM_VER, 0);
 

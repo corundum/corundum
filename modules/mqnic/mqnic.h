@@ -337,8 +337,7 @@ struct mqnic_if {
 	struct mqnic_dev *mdev;
 
 	struct reg_block *rb_list;
-	struct reg_block *if_ctrl_tx_rb;
-	struct reg_block *if_ctrl_rx_rb;
+	struct reg_block *if_ctrl_rb;
 	struct reg_block *event_queue_rb;
 	struct reg_block *tx_queue_rb;
 	struct reg_block *tx_cpl_queue_rb;
@@ -351,8 +350,7 @@ struct mqnic_if {
 	int dev_port_max;
 	int dev_port_limit;
 
-	u32 if_tx_features;
-	u32 if_rx_features;
+	u32 if_features;
 
 	u32 max_tx_mtu;
 	u32 max_rx_mtu;
@@ -411,8 +409,7 @@ struct mqnic_priv {
 	bool registered;
 	bool port_up;
 
-	u32 if_tx_features;
-	u32 if_rx_features;
+	u32 if_features;
 
 	u32 event_queue_count;
 	struct mqnic_eq_ring *event_ring[MQNIC_MAX_EVENT_RINGS];

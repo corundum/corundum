@@ -71,32 +71,20 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 		dev_info(dev, " type 0x%08x (v %d.%d.%d.%d)", rb->type, rb->version >> 24, 
 				(rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
-	interface->if_ctrl_tx_rb = find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_TX_TYPE, MQNIC_RB_IF_CTRL_TX_VER, 0);
+	interface->if_ctrl_rb = find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_TYPE, MQNIC_RB_IF_CTRL_VER, 0);
 
-	if (!interface->if_ctrl_tx_rb) {
+	if (!interface->if_ctrl_rb) {
 		ret = -EIO;
-		dev_err(dev, "TX interface control block not found");
+		dev_err(dev, "Interface control block not found");
 		goto fail;
 	}
 
-	interface->if_tx_features = ioread32(interface->if_ctrl_tx_rb->regs + MQNIC_RB_IF_CTRL_TX_REG_FEATURES);
-	interface->max_tx_mtu = ioread32(interface->if_ctrl_tx_rb->regs + MQNIC_RB_IF_CTRL_TX_REG_MAX_MTU);
+	interface->if_features = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_FEATURES);
+	interface->max_tx_mtu = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU);
+	interface->max_rx_mtu = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU);
 
-	dev_info(dev, "IF TX features: 0x%08x", interface->if_tx_features);
+	dev_info(dev, "IF features: 0x%08x", interface->if_features);
 	dev_info(dev, "Max TX MTU: %d", interface->max_tx_mtu);
-
-	interface->if_ctrl_rx_rb = find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_RX_TYPE, MQNIC_RB_IF_CTRL_RX_VER, 0);
-
-	if (!interface->if_ctrl_rx_rb) {
-		ret = -EIO;
-		dev_err(dev, "RX interface control block not found");
-		goto fail;
-	}
-
-	interface->if_rx_features = ioread32(interface->if_ctrl_rx_rb->regs + MQNIC_RB_IF_CTRL_RX_REG_FEATURES);
-	interface->max_rx_mtu = ioread32(interface->if_ctrl_rx_rb->regs + MQNIC_RB_IF_CTRL_TX_REG_MAX_MTU);
-
-	dev_info(dev, "IF RX features: 0x%08x", interface->if_rx_features);
 	dev_info(dev, "Max RX MTU: %d", interface->max_rx_mtu);
 
 	interface->event_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_EVENT_QM_TYPE, MQNIC_RB_EVENT_QM_VER, 0);
@@ -328,30 +316,30 @@ void mqnic_destroy_interface(struct mqnic_if **interface_ptr)
 
 u32 mqnic_interface_get_rss_mask(struct mqnic_if *interface)
 {
-	return ioread32(interface->if_ctrl_rx_rb->regs + MQNIC_RB_IF_CTRL_RX_REG_RSS_MASK);
+	return ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_RSS_MASK);
 }
 
 void mqnic_interface_set_rss_mask(struct mqnic_if *interface, u32 rss_mask)
 {
-	iowrite32(rss_mask, interface->if_ctrl_rx_rb->regs + MQNIC_RB_IF_CTRL_RX_REG_RSS_MASK);
+	iowrite32(rss_mask, interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_RSS_MASK);
 }
 
 u32 mqnic_interface_get_tx_mtu(struct mqnic_if *interface)
 {
-	return ioread32(interface->if_ctrl_tx_rb->regs + MQNIC_RB_IF_CTRL_TX_REG_MTU);
+	return ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_TX_MTU);
 }
 
 void mqnic_interface_set_tx_mtu(struct mqnic_if *interface, u32 mtu)
 {
-	iowrite32(mtu, interface->if_ctrl_tx_rb->regs + MQNIC_RB_IF_CTRL_TX_REG_MTU);
+	iowrite32(mtu, interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_TX_MTU);
 }
 
 u32 mqnic_interface_get_rx_mtu(struct mqnic_if *interface)
 {
-	return ioread32(interface->if_ctrl_rx_rb->regs + MQNIC_RB_IF_CTRL_RX_REG_MTU);
+	return ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_RX_MTU);
 }
 
 void mqnic_interface_set_rx_mtu(struct mqnic_if *interface, u32 mtu)
 {
-	iowrite32(mtu, interface->if_ctrl_rx_rb->regs + MQNIC_RB_IF_CTRL_RX_REG_MTU);
+	iowrite32(mtu, interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_RX_MTU);
 }

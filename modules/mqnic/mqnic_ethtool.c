@@ -68,7 +68,7 @@ static int mqnic_get_ts_info(struct net_device *ndev,
 	if (mdev->ptp_clock)
 		info->phc_index = ptp_clock_index(mdev->ptp_clock);
 
-	if (!(priv->if_tx_features & MQNIC_IF_TX_FEATURE_PTP_TS) || !mdev->ptp_clock)
+	if (!(priv->if_features & MQNIC_IF_FEATURE_PTP_TS) || !mdev->ptp_clock)
 		return 0;
 
 	info->so_timestamping |= SOF_TIMESTAMPING_TX_HARDWARE |

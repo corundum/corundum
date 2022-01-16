@@ -177,14 +177,12 @@ int main(int argc, char *argv[])
         printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
-    printf("IF TX features: 0x%08x\n", dev_interface->if_tx_features);
+    printf("IF features: 0x%08x\n", dev_interface->if_features);
     printf("Max TX MTU: %d\n", dev_interface->max_tx_mtu);
-    printf("TX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_tx_rb->regs, MQNIC_RB_IF_CTRL_TX_REG_MTU));
-
-    printf("IF RX features: 0x%08x\n", dev_interface->if_rx_features);
     printf("Max RX MTU: %d\n", dev_interface->max_rx_mtu);
-    printf("RX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rx_rb->regs, MQNIC_RB_IF_CTRL_RX_REG_MTU));
-    printf("RSS mask: 0x%08x\n", mqnic_reg_read32(dev_interface->if_ctrl_rx_rb->regs, MQNIC_RB_IF_CTRL_RX_REG_RSS_MASK));
+    printf("TX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_TX_MTU));
+    printf("RX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_RX_MTU));
+    printf("RSS mask: 0x%08x\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_RSS_MASK));
 
     printf("Event queue offset: 0x%08x\n", dev_interface->event_queue_offset);
     printf("Event queue count: %d\n", dev_interface->event_queue_count);

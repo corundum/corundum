@@ -102,7 +102,6 @@ void mqnic_destroy_port(struct mqnic_port **port_ptr)
 {
 	struct mqnic_port *port = *port_ptr;
 	int k;
-	*port_ptr = NULL;
 
 	mqnic_deactivate_port(port);
 
@@ -113,6 +112,7 @@ void mqnic_destroy_port(struct mqnic_port **port_ptr)
 	if (port->rb_list)
 		free_reg_block_list(port->rb_list);
 
+	*port_ptr = NULL;
 	kfree(port);
 }
 

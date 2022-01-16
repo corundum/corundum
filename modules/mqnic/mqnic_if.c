@@ -49,6 +49,8 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 	if (!interface)
 		return -ENOMEM;
 
+	*interface_ptr = interface;
+
 	interface->mdev = mdev;
 	interface->dev = dev;
 
@@ -187,8 +189,6 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 	interface->max_desc_block_size = min_t(u32, interface->max_desc_block_size, MQNIC_MAX_FRAGS);
 
 	desc_block_size = min_t(u32, interface->max_desc_block_size, 4);
-
-	*interface_ptr = interface;
 
 	// create rings
 	for (k = 0; k < interface->event_queue_count; k++) {

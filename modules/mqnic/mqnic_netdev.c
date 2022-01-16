@@ -364,6 +364,8 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 		return -ENOMEM;
 	}
 
+	*ndev_ptr = ndev;
+
 	SET_NETDEV_DEV(ndev, dev);
 	ndev->dev_port = dev_port;
 
@@ -493,8 +495,6 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 
 	priv->registered = 1;
 
-	*ndev_ptr = ndev;
-
 	return 0;
 
 fail:
@@ -510,8 +510,6 @@ void mqnic_destroy_netdev(struct net_device **ndev_ptr)
 
 	if (priv->registered)
 		unregister_netdev(ndev);
-
-	*ndev_ptr = NULL;
 
 	// free rings
 	for (k = 0; k < ARRAY_SIZE(priv->tx_ring); k++)
@@ -530,5 +528,6 @@ void mqnic_destroy_netdev(struct net_device **ndev_ptr)
 		if (priv->rx_cpl_ring[k])
 			mqnic_free_cq_ring(priv->rx_cpl_ring[k]);
 
+	*ndev_ptr = NULL;
 	free_netdev(ndev);
 }

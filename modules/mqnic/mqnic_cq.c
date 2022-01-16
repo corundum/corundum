@@ -44,6 +44,8 @@ int mqnic_create_cq_ring(struct mqnic_if *interface, struct mqnic_cq_ring **ring
 	if (!ring)
 		return -ENOMEM;
 
+	*ring_ptr = ring;
+
 	ring->dev = interface->dev;
 	ring->interface = interface;
 
@@ -61,17 +63,16 @@ int mqnic_create_cq_ring(struct mqnic_if *interface, struct mqnic_cq_ring **ring
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG);
 
-	*ring_ptr = ring;
 	return 0;
 }
 
 void mqnic_destroy_cq_ring(struct mqnic_cq_ring **ring_ptr)
 {
 	struct mqnic_cq_ring *ring = *ring_ptr;
-	*ring_ptr = NULL;
 
 	mqnic_free_cq_ring(ring);
 
+	*ring_ptr = NULL;
 	kfree(ring);
 }
 

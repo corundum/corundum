@@ -1058,7 +1058,7 @@ class Interface:
 
         while (cq_ring.head_ptr != cq_tail_ptr):
             cpl_data = struct.unpack_from("<HHHxxQ", cq_ring.buf, cq_index*cq_ring.stride)
-            ring_index = cpl_data[1]
+            ring_index = cpl_data[1] & ring.size_mask
 
             self.log.info("CPL data: %s", cpl_data)
 
@@ -1103,7 +1103,7 @@ class Interface:
 
         while (cq_ring.head_ptr != cq_tail_ptr):
             cpl_data = struct.unpack_from("<HHHxxLHH", cq_ring.buf, cq_index*cq_ring.stride)
-            ring_index = cpl_data[1]
+            ring_index = cpl_data[1] & ring.size_mask
 
             self.log.info("CPL data: %s", cpl_data)
 

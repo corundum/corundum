@@ -139,6 +139,7 @@ for (n = 0; n < PORTS; n = n + 1) begin : fifo
         .ID_ENABLE(ID_ENABLE),
         .ID_WIDTH(S_ID_WIDTH),
         .DEST_ENABLE(DEST_ENABLE),
+        .DEST_WIDTH(DEST_WIDTH),
         .USER_ENABLE(USER_ENABLE),
         .USER_WIDTH(USER_WIDTH),
         .PIPELINE_OUTPUT(PIPELINE_OUTPUT),

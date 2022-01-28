@@ -536,6 +536,8 @@ class TxRing:
         self.tail_ptr = 0
         self.clean_tail_ptr = 0
 
+        self.clean_event = Event()
+
         self.packets = 0
         self.bytes = 0
 
@@ -1087,6 +1089,8 @@ class Interface:
 
         ring.clean_tail_ptr = ring_clean_tail_ptr
 
+        ring.clean_event.set()
+
     async def process_rx_cq(self, cq_ring):
         self.log.info("Process RX CQ %d (interface %d)", cq_ring.ring_index, self.index)
 
@@ -1163,7 +1167,14 @@ class Interface:
 
         ring = self.tx_queues[ring_index]
 
-        tail_ptr = ring.tail_ptr
+        while True:
+            # check for space in ring
+            if ring.head_ptr - ring.clean_tail_ptr < ring.full_size:
+                break
+
+            # wait for space
+            ring.clean_event.clear()
+            await ring.clean_event.wait()
 
         index = ring.head_ptr & ring.size_mask
 

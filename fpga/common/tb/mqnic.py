@@ -1157,13 +1157,14 @@ class Interface:
         if not self.port_up:
             return
 
-        if isinstance(skb, Packet):
-            data = skb.data
-        else:
-            data = skb
+        data = bytes(skb)
 
-        data = data[:16384]  # TODO
-        ring_index = tx_ring  # TODO!
+        assert len(data) < self.max_tx_mtu
+
+        if tx_ring is not None:
+            ring_index = tx_ring
+        else:
+            ring_index = 0
 
         ring = self.tx_queues[ring_index]
 

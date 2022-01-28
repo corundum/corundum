@@ -1172,6 +1172,7 @@ class Interface:
 
         pkt = self.driver.alloc_pkt()
 
+        assert not ring.tx_info[index]
         ring.tx_info[index] = pkt
 
         # put data in packet buffer

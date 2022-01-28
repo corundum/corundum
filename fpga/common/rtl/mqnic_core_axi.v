@@ -121,6 +121,8 @@ module mqnic_core_axi #
     parameter APP_AXIS_SYNC_ENABLE = 1,
     parameter APP_AXIS_IF_ENABLE = 1,
     parameter APP_STAT_ENABLE = 1,
+    parameter APP_GPIO_IN_WIDTH = 32,
+    parameter APP_GPIO_OUT_WIDTH = 32,
 
     // AXI interface configuration (DMA)
     parameter AXI_DATA_WIDTH = 128,
@@ -360,7 +362,21 @@ module mqnic_core_axi #
     input  wire [STAT_INC_WIDTH-1:0]                  s_axis_stat_tdata,
     input  wire [STAT_ID_WIDTH-1:0]                   s_axis_stat_tid,
     input  wire                                       s_axis_stat_tvalid,
-    output wire                                       s_axis_stat_tready
+    output wire                                       s_axis_stat_tready,
+
+    /*
+     * GPIO
+     */
+    input  wire [APP_GPIO_IN_WIDTH-1:0]               app_gpio_in,
+    output wire [APP_GPIO_OUT_WIDTH-1:0]              app_gpio_out,
+
+    /*
+     * JTAG
+     */
+    input  wire                                       app_jtag_tdi,
+    output wire                                       app_jtag_tdo,
+    input  wire                                       app_jtag_tms,
+    input  wire                                       app_jtag_tck
 );
 
 parameter DMA_ADDR_WIDTH = AXI_ADDR_WIDTH;
@@ -867,7 +883,21 @@ core_inst (
     .s_axis_stat_tdata(s_axis_stat_tdata),
     .s_axis_stat_tid(s_axis_stat_tid),
     .s_axis_stat_tvalid(s_axis_stat_tvalid),
-    .s_axis_stat_tready(s_axis_stat_tready)
+    .s_axis_stat_tready(s_axis_stat_tready),
+
+    /*
+     * GPIO
+     */
+    .app_gpio_in(app_gpio_in),
+    .app_gpio_out(app_gpio_out),
+
+    /*
+     * JTAG
+     */
+    .app_jtag_tdi(app_jtag_tdi),
+    .app_jtag_tdo(app_jtag_tdo),
+    .app_jtag_tms(app_jtag_tms),
+    .app_jtag_tck(app_jtag_tck)
 );
 
 endmodule

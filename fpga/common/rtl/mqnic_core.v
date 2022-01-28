@@ -121,6 +121,8 @@ module mqnic_core #
     parameter APP_AXIS_SYNC_ENABLE = 1,
     parameter APP_AXIS_IF_ENABLE = 1,
     parameter APP_STAT_ENABLE = 1,
+    parameter APP_GPIO_IN_WIDTH = 32,
+    parameter APP_GPIO_OUT_WIDTH = 32,
 
     // DMA interface configuration
     parameter DMA_ADDR_WIDTH = 64,
@@ -370,7 +372,21 @@ module mqnic_core #
     input  wire [STAT_INC_WIDTH-1:0]                    s_axis_stat_tdata,
     input  wire [STAT_ID_WIDTH-1:0]                     s_axis_stat_tid,
     input  wire                                         s_axis_stat_tvalid,
-    output wire                                         s_axis_stat_tready
+    output wire                                         s_axis_stat_tready,
+
+    /*
+     * GPIO
+     */
+    input  wire [APP_GPIO_IN_WIDTH-1:0]                 app_gpio_in,
+    output wire [APP_GPIO_OUT_WIDTH-1:0]                app_gpio_out,
+
+    /*
+     * JTAG
+     */
+    input  wire                                         app_jtag_tdi,
+    output wire                                         app_jtag_tdo,
+    input  wire                                         app_jtag_tms,
+    input  wire                                         app_jtag_tck
 );
 
 parameter IF_COUNT_INT = IF_COUNT+(APP_ENABLE && APP_DMA_ENABLE ? 1 : 0);
@@ -3807,7 +3823,21 @@ if (APP_ENABLE) begin : app
         .m_axis_stat_tdata(axis_app_stat_tdata),
         .m_axis_stat_tid(axis_app_stat_tid),
         .m_axis_stat_tvalid(axis_app_stat_tvalid),
-        .m_axis_stat_tready(axis_app_stat_tready)
+        .m_axis_stat_tready(axis_app_stat_tready),
+
+        /*
+         * GPIO
+         */
+        .gpio_in(app_gpio_in),
+        .gpio_out(app_gpio_out),
+
+        /*
+         * JTAG
+         */
+        .jtag_tdi(app_jtag_tdi),
+        .jtag_tdo(app_jtag_tdo),
+        .jtag_tms(app_jtag_tms),
+        .jtag_tck(app_jtag_tck)
     );
 
 end else begin
@@ -3946,6 +3976,10 @@ end else begin
     assign axis_app_stat_tdata = 0;
     assign axis_app_stat_tid = 0;
     assign axis_app_stat_tvalid = 1'b0;
+
+    assign app_gpio_out = 0;
+
+    assign app_jtag_tdo = app_jtag_tdi;
 
 end
 

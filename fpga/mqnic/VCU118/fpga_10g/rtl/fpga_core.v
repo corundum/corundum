@@ -1086,6 +1086,8 @@ mqnic_core_pcie_us #(
     .APP_AXIS_SYNC_ENABLE(APP_AXIS_SYNC_ENABLE),
     .APP_AXIS_IF_ENABLE(APP_AXIS_IF_ENABLE),
     .APP_STAT_ENABLE(APP_STAT_ENABLE),
+    .APP_GPIO_IN_WIDTH(32),
+    .APP_GPIO_OUT_WIDTH(32),
 
     // DMA interface configuration
     .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
@@ -1344,7 +1346,21 @@ core_inst (
     .s_axis_stat_tdata(0),
     .s_axis_stat_tid(0),
     .s_axis_stat_tvalid(1'b0),
-    .s_axis_stat_tready()
+    .s_axis_stat_tready(),
+
+    /*
+     * GPIO
+     */
+    .app_gpio_in(0),
+    .app_gpio_out(),
+
+    /*
+     * JTAG
+     */
+    .app_jtag_tdi(1'b0),
+    .app_jtag_tdo(),
+    .app_jtag_tms(1'b0),
+    .app_jtag_tck(1'b0)
 );
 
 endmodule

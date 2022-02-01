@@ -45,6 +45,7 @@ export PARAM_RAM_ADDR_WIDTH ?= $(shell python -c "print($(PARAM_RAM_SEG_ADDR_WID
 export PARAM_LEN_WIDTH ?= 16
 export PARAM_TAG_WIDTH ?= 8
 export PARAM_OP_TABLE_SIZE ?= $(shell python -c "print(2**$(PARAM_AXI_ID_WIDTH))")
+export PARAM_USE_AXI_ID ?= 0
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst
@@ -62,6 +63,7 @@ ifeq ($(SIM), icarus)
 	COMPILE_ARGS += -P $(TOPLEVEL).LEN_WIDTH=$(PARAM_LEN_WIDTH)
 	COMPILE_ARGS += -P $(TOPLEVEL).TAG_WIDTH=$(PARAM_TAG_WIDTH)
 	COMPILE_ARGS += -P $(TOPLEVEL).OP_TABLE_SIZE=$(PARAM_OP_TABLE_SIZE)
+	COMPILE_ARGS += -P $(TOPLEVEL).USE_AXI_ID=$(PARAM_USE_AXI_ID)
 
 	ifeq ($(WAVES), 1)
 		VERILOG_SOURCES += iverilog_dump.v
@@ -83,6 +85,7 @@ else ifeq ($(SIM), verilator)
 	COMPILE_ARGS += -GLEN_WIDTH=$(PARAM_LEN_WIDTH)
 	COMPILE_ARGS += -GTAG_WIDTH=$(PARAM_TAG_WIDTH)
 	COMPILE_ARGS += -GOP_TABLE_SIZE=$(PARAM_OP_TABLE_SIZE)
+	COMPILE_ARGS += -GUSE_AXI_ID=$(PARAM_USE_AXI_ID)
 
 	ifeq ($(WAVES), 1)
 		COMPILE_ARGS += --trace-fst

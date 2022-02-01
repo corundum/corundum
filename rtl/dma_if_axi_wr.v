@@ -304,7 +304,7 @@ reg                       m_axi_wlast_int;
 reg                       m_axi_wvalid_int;
 wire                      m_axi_wready_int;
 
-assign m_axi_awid = m_axi_awid_reg;
+assign m_axi_awid = USE_AXI_ID ? m_axi_awid_reg : {AXI_ID_WIDTH{1'b0}};
 assign m_axi_awaddr = m_axi_awaddr_reg;
 assign m_axi_awlen = m_axi_awlen_reg;
 assign m_axi_awsize = AXI_BURST_SIZE;
@@ -770,27 +770,47 @@ always @* begin
         mask_fifo_rd_ptr_next = mask_fifo_rd_ptr_reg+1;
     end
 
-    // accept write completions
-    m_axi_bready_next = 1'b1;
-    if (m_axi_bready && m_axi_bvalid) begin
-        op_table_write_complete_en = 1'b1;
-        op_table_write_complete_ptr = m_axi_bid;
-    end
+    if (USE_AXI_ID) begin
+        // accept write completions
+        m_axi_bready_next = 1'b1;
+        if (m_axi_bready && m_axi_bvalid) begin
+            op_table_write_complete_en = 1'b1;
+            op_table_write_complete_ptr = m_axi_bid;
+        end
 
-    // commit operations in-order
-    op_table_finish_en = 1'b0;
+        // commit operations in-order
+        op_table_finish_en = 1'b0;
 
-    m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
-    m_axis_write_desc_status_error_next = 0;
-    m_axis_write_desc_status_valid_next = 1'b0;
+        m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
+        m_axis_write_desc_status_error_next = 0;
+        m_axis_write_desc_status_valid_next = 1'b0;
 
-    if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_write_complete[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_finish_ptr_reg != op_table_tx_finish_ptr_reg) begin
-        op_table_finish_en = 1'b1;
+        if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_write_complete[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_finish_ptr_reg != op_table_tx_finish_ptr_reg) begin
+            op_table_finish_en = 1'b1;
 
-        if (op_table_last[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
-            m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
-            m_axis_write_desc_status_error_next = 0;
-            m_axis_write_desc_status_valid_next = 1'b1;
+            if (op_table_last[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
+                m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
+                m_axis_write_desc_status_error_next = 0;
+                m_axis_write_desc_status_valid_next = 1'b1;
+            end
+        end
+    end else begin
+        // accept write completions
+        op_table_finish_en = 1'b0;
+
+        m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
+        m_axis_write_desc_status_error_next = 0;
+        m_axis_write_desc_status_valid_next = 1'b0;
+
+        m_axi_bready_next = 1'b1;
+        if (m_axi_bready && m_axi_bvalid) begin
+            op_table_finish_en = 1'b1;
+
+            if (op_table_last[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
+                m_axis_write_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
+                m_axis_write_desc_status_error_next = 0;
+                m_axis_write_desc_status_valid_next = 1'b1;
+            end
         end
     end
 end
@@ -882,7 +902,7 @@ always @(posedge clk) begin
         op_table_tx_finish_ptr_reg <= op_table_tx_finish_ptr_reg + 1;
     end
 
-    if (op_table_write_complete_en) begin
+    if (USE_AXI_ID && op_table_write_complete_en) begin
         op_table_write_complete[op_table_write_complete_ptr] <= 1'b1;
     end
 

@@ -775,6 +775,8 @@ always @(posedge clk) begin
         status_fifo_we_reg <= 1'b0;
         status_fifo_rd_valid_reg <= 1'b0;
 
+        op_table_start_ptr_reg <= 0;
+        op_table_finish_ptr_reg <= 0;
         op_table_active <= 0;
     end
 end

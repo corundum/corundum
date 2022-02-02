@@ -530,8 +530,8 @@ always @* begin
             offset_next = op_table_ram_addr[op_tag_next][RAM_OFFSET_WIDTH-1:0]-(op_table_axi_addr[op_tag_next] & OFFSET_MASK);
 
             if (m_axi_rready && m_axi_rvalid) begin
-                if (op_count_next > AXI_WORD_WIDTH-(op_table_axi_addr[m_axi_rid[OP_TAG_WIDTH-1:0]] & OFFSET_MASK)) begin
-                    cycle_byte_count_next = AXI_WORD_WIDTH-(op_table_axi_addr[m_axi_rid[OP_TAG_WIDTH-1:0]] & OFFSET_MASK);
+                if (op_count_next > AXI_WORD_WIDTH-(op_table_axi_addr[op_tag_next] & OFFSET_MASK)) begin
+                    cycle_byte_count_next = AXI_WORD_WIDTH-(op_table_axi_addr[op_tag_next] & OFFSET_MASK);
                 end else begin
                     cycle_byte_count_next = op_count_next;
                 end

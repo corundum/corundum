@@ -62,7 +62,7 @@ module dma_if_axi_rd #
     // Operation table size
     parameter OP_TABLE_SIZE = 2**(AXI_ID_WIDTH),
     // Use AXI ID signals
-    parameter USE_AXI_ID = 1
+    parameter USE_AXI_ID = 0
 )
 (
     input  wire                                         clk,
@@ -285,7 +285,7 @@ wire [RAM_SEG_COUNT-1:0]                    ram_wr_cmd_ready_int;
 wire [RAM_SEG_COUNT-1:0] out_done;
 reg [RAM_SEG_COUNT-1:0] out_done_ack;
 
-assign m_axi_arid = m_axi_arid_reg;
+assign m_axi_arid = USE_AXI_ID ? m_axi_arid_reg : {AXI_ID_WIDTH{1'b0}};
 assign m_axi_araddr = m_axi_araddr_reg;
 assign m_axi_arlen = m_axi_arlen_reg;
 assign m_axi_arsize = AXI_BURST_SIZE;
@@ -312,6 +312,8 @@ reg [CYCLE_COUNT_WIDTH-1:0] op_table_start_cycle_count;
 reg [TAG_WIDTH-1:0] op_table_start_tag;
 reg op_table_start_last;
 reg op_table_start_en;
+reg op_table_read_complete_en;
+reg [OP_TAG_WIDTH+1-1:0] op_table_read_complete_ptr_reg = 0;
 reg op_table_write_complete_en;
 reg [OP_TAG_WIDTH-1:0] op_table_write_complete_ptr;
 reg [OP_TAG_WIDTH+1-1:0] op_table_finish_ptr_reg = 0;
@@ -486,6 +488,7 @@ always @* begin
     offset_next = offset_reg;
     op_tag_next = op_tag_reg;
 
+    op_table_read_complete_en = 1'b0;
     op_table_write_complete_en = 1'b0;
     op_table_write_complete_ptr = m_axi_rid;
 
@@ -523,7 +526,11 @@ always @* begin
             // idle state, wait for read data
             m_axi_rready_next = &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
 
-            op_tag_next = m_axi_rid[OP_TAG_WIDTH-1:0];
+            if (USE_AXI_ID) begin
+                op_tag_next = m_axi_rid[OP_TAG_WIDTH-1:0];
+            end else begin
+                op_tag_next = op_table_read_complete_ptr_reg;
+            end
             ram_sel_next = op_table_ram_sel[op_tag_next];
             addr_next = op_table_ram_addr[op_tag_next];
             op_count_next = op_table_len[op_tag_next];
@@ -558,6 +565,10 @@ always @* begin
 
                 status_fifo_finish_next = 1'b0;
                 status_fifo_we_next = 1'b1;
+
+                if (!USE_AXI_ID) begin
+                    op_table_read_complete_en = 1'b1;
+                end
 
                 if (m_axi_rlast) begin
                     status_fifo_finish_next = 1'b1;
@@ -749,6 +760,10 @@ always @(posedge clk) begin
         op_table_write_complete[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= 1'b0;
     end
 
+    if (!USE_AXI_ID && op_table_read_complete_en) begin
+        op_table_read_complete_ptr_reg <= op_table_read_complete_ptr_reg + 1;
+    end
+
     if (op_table_write_complete_en) begin
         op_table_write_complete[op_table_write_complete_ptr] <= 1'b1;
     end
@@ -776,6 +791,7 @@ always @(posedge clk) begin
         status_fifo_rd_valid_reg <= 1'b0;
 
         op_table_start_ptr_reg <= 0;
+        op_table_read_complete_ptr_reg <= 0;
         op_table_finish_ptr_reg <= 0;
         op_table_active <= 0;
     end

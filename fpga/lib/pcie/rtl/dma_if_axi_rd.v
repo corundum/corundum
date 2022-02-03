@@ -62,7 +62,7 @@ module dma_if_axi_rd #
     // Operation table size
     parameter OP_TABLE_SIZE = 2**(AXI_ID_WIDTH),
     // Use AXI ID signals
-    parameter USE_AXI_ID = 1
+    parameter USE_AXI_ID = 0
 )
 (
     input  wire                                         clk,
@@ -275,17 +275,17 @@ reg [3:0] m_axis_read_desc_status_error_reg = 4'd0, m_axis_read_desc_status_erro
 reg m_axis_read_desc_status_valid_reg = 1'b0, m_axis_read_desc_status_valid_next;
 
 // internal datapath
-reg  [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0]  ram_wr_cmd_sel_int;
+reg  [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0]      ram_wr_cmd_sel_int;
 reg  [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]   ram_wr_cmd_be_int;
 reg  [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0] ram_wr_cmd_addr_int;
 reg  [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0] ram_wr_cmd_data_int;
-reg  [RAM_SEG_COUNT-1:0]                ram_wr_cmd_valid_int;
-reg  [RAM_SEG_COUNT-1:0]                ram_wr_cmd_ready_int;
+reg  [RAM_SEG_COUNT-1:0]                    ram_wr_cmd_valid_int;
+wire [RAM_SEG_COUNT-1:0]                    ram_wr_cmd_ready_int;
 
 wire [RAM_SEG_COUNT-1:0] out_done;
 reg [RAM_SEG_COUNT-1:0] out_done_ack;
 
-assign m_axi_arid = m_axi_arid_reg;
+assign m_axi_arid = USE_AXI_ID ? m_axi_arid_reg : {AXI_ID_WIDTH{1'b0}};
 assign m_axi_araddr = m_axi_araddr_reg;
 assign m_axi_arlen = m_axi_arlen_reg;
 assign m_axi_arsize = AXI_BURST_SIZE;
@@ -312,6 +312,8 @@ reg [CYCLE_COUNT_WIDTH-1:0] op_table_start_cycle_count;
 reg [TAG_WIDTH-1:0] op_table_start_tag;
 reg op_table_start_last;
 reg op_table_start_en;
+reg op_table_read_complete_en;
+reg [OP_TAG_WIDTH+1-1:0] op_table_read_complete_ptr_reg = 0;
 reg op_table_write_complete_en;
 reg [OP_TAG_WIDTH-1:0] op_table_write_complete_ptr;
 reg [OP_TAG_WIDTH+1-1:0] op_table_finish_ptr_reg = 0;
@@ -486,6 +488,7 @@ always @* begin
     offset_next = offset_reg;
     op_tag_next = op_tag_reg;
 
+    op_table_read_complete_en = 1'b0;
     op_table_write_complete_en = 1'b0;
     op_table_write_complete_ptr = m_axi_rid;
 
@@ -523,15 +526,19 @@ always @* begin
             // idle state, wait for read data
             m_axi_rready_next = &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
 
-            op_tag_next = m_axi_rid[OP_TAG_WIDTH-1:0];
+            if (USE_AXI_ID) begin
+                op_tag_next = m_axi_rid[OP_TAG_WIDTH-1:0];
+            end else begin
+                op_tag_next = op_table_read_complete_ptr_reg;
+            end
             ram_sel_next = op_table_ram_sel[op_tag_next];
             addr_next = op_table_ram_addr[op_tag_next];
             op_count_next = op_table_len[op_tag_next];
             offset_next = op_table_ram_addr[op_tag_next][RAM_OFFSET_WIDTH-1:0]-(op_table_axi_addr[op_tag_next] & OFFSET_MASK);
 
             if (m_axi_rready && m_axi_rvalid) begin
-                if (op_count_next > AXI_WORD_WIDTH-(op_table_axi_addr[m_axi_rid[OP_TAG_WIDTH-1:0]] & OFFSET_MASK)) begin
-                    cycle_byte_count_next = AXI_WORD_WIDTH-(op_table_axi_addr[m_axi_rid[OP_TAG_WIDTH-1:0]] & OFFSET_MASK);
+                if (op_count_next > AXI_WORD_WIDTH-(op_table_axi_addr[op_tag_next] & OFFSET_MASK)) begin
+                    cycle_byte_count_next = AXI_WORD_WIDTH-(op_table_axi_addr[op_tag_next] & OFFSET_MASK);
                 end else begin
                     cycle_byte_count_next = op_count_next;
                 end
@@ -558,6 +565,10 @@ always @* begin
 
                 status_fifo_finish_next = 1'b0;
                 status_fifo_we_next = 1'b1;
+
+                if (!USE_AXI_ID) begin
+                    op_table_read_complete_en = 1'b1;
+                end
 
                 if (m_axi_rlast) begin
                     status_fifo_finish_next = 1'b1;
@@ -749,6 +760,10 @@ always @(posedge clk) begin
         op_table_write_complete[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= 1'b0;
     end
 
+    if (!USE_AXI_ID && op_table_read_complete_en) begin
+        op_table_read_complete_ptr_reg <= op_table_read_complete_ptr_reg + 1;
+    end
+
     if (op_table_write_complete_en) begin
         op_table_write_complete[op_table_write_complete_ptr] <= 1'b1;
     end
@@ -775,6 +790,9 @@ always @(posedge clk) begin
         status_fifo_we_reg <= 1'b0;
         status_fifo_rd_valid_reg <= 1'b0;
 
+        op_table_start_ptr_reg <= 0;
+        op_table_read_complete_ptr_reg <= 0;
+        op_table_finish_ptr_reg <= 0;
         op_table_active <= 0;
     end
 end
@@ -786,11 +804,11 @@ genvar n;
 
 for (n = 0; n < RAM_SEG_COUNT; n = n + 1) begin
 
-    reg [RAM_SEL_WIDTH-1:0]  ram_wr_cmd_sel_reg = {RAM_SEL_WIDTH{1'b0}};
+    reg [RAM_SEL_WIDTH-1:0]      ram_wr_cmd_sel_reg = {RAM_SEL_WIDTH{1'b0}};
     reg [RAM_SEG_BE_WIDTH-1:0]   ram_wr_cmd_be_reg = {RAM_SEG_BE_WIDTH{1'b0}};
     reg [RAM_SEG_ADDR_WIDTH-1:0] ram_wr_cmd_addr_reg = {RAM_SEG_ADDR_WIDTH{1'b0}};
     reg [RAM_SEG_DATA_WIDTH-1:0] ram_wr_cmd_data_reg = {RAM_SEG_DATA_WIDTH{1'b0}};
-    reg                      ram_wr_cmd_valid_reg = 1'b0;
+    reg                          ram_wr_cmd_valid_reg = 1'b0;
 
     reg [OUTPUT_FIFO_ADDR_WIDTH-1:0] out_fifo_wr_ptr_reg = 0;
     reg [OUTPUT_FIFO_ADDR_WIDTH-1:0] out_fifo_rd_ptr_reg = 0;

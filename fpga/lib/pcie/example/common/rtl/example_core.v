@@ -292,7 +292,7 @@ always @* begin
     dma_write_desc_ram_addr_next = dma_write_desc_ram_addr_reg;
     dma_write_desc_len_next = dma_write_desc_len_reg;
     dma_write_desc_tag_next = dma_write_desc_tag_reg;
-    dma_write_desc_valid_next = dma_write_desc_valid_reg && !m_axis_dma_read_desc_ready;
+    dma_write_desc_valid_next = dma_write_desc_valid_reg && !m_axis_dma_write_desc_ready;
 
     dma_write_desc_status_tag_next = dma_write_desc_status_tag_reg;
     dma_write_desc_status_error_next = dma_write_desc_status_error_reg;

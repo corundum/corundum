@@ -63,8 +63,10 @@ module dma_if_axi #
     parameter READ_OP_TABLE_SIZE = 2**(AXI_ID_WIDTH),
     // Operation table size (write)
     parameter WRITE_OP_TABLE_SIZE = 2**(AXI_ID_WIDTH),
-    // Use AXI ID signals
-    parameter USE_AXI_ID = 1
+    // Use AXI ID signals (read)
+    parameter READ_USE_AXI_ID = 0,
+    // Use AXI ID signals (write)
+    parameter WRITE_USE_AXI_ID = 1
 )
 (
     input  wire                                         clk,
@@ -185,7 +187,7 @@ dma_if_axi_rd #(
     .LEN_WIDTH(LEN_WIDTH),
     .TAG_WIDTH(TAG_WIDTH),
     .OP_TABLE_SIZE(READ_OP_TABLE_SIZE),
-    .USE_AXI_ID(USE_AXI_ID)
+    .USE_AXI_ID(READ_USE_AXI_ID)
 )
 dma_if_axi_rd_inst (
     .clk(clk),
@@ -261,7 +263,7 @@ dma_if_axi_wr #(
     .LEN_WIDTH(LEN_WIDTH),
     .TAG_WIDTH(TAG_WIDTH),
     .OP_TABLE_SIZE(WRITE_OP_TABLE_SIZE),
-    .USE_AXI_ID(USE_AXI_ID)
+    .USE_AXI_ID(WRITE_USE_AXI_ID)
 )
 dma_if_axi_wr_inst (
     .clk(clk),

@@ -267,7 +267,8 @@ def test_dma_if_axi(request, axi_data_width):
     parameters['TAG_WIDTH'] = 8
     parameters['READ_OP_TABLE_SIZE'] = 2**parameters['AXI_ID_WIDTH']
     parameters['WRITE_OP_TABLE_SIZE'] = 2**parameters['AXI_ID_WIDTH']
-    parameters['USE_AXI_ID'] = 1
+    parameters['READ_USE_AXI_ID'] = 0
+    parameters['WRITE_USE_AXI_ID'] = 1
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

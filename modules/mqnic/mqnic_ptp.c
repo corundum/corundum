@@ -261,6 +261,8 @@ void mqnic_register_phc(struct mqnic_dev *mdev)
 	}
 
 	mdev->ptp_clock_info.owner = THIS_MODULE;
+	snprintf(mdev->ptp_clock_info.name, sizeof(mdev->ptp_clock_info.name),
+			"%s_ptp", mdev->name);
 	mdev->ptp_clock_info.max_adj = 100000000;
 	mdev->ptp_clock_info.n_alarm = 0;
 	mdev->ptp_clock_info.n_ext_ts = 0;

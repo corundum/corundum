@@ -98,8 +98,11 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     // FIFO to maintain response ordering
     reg [FIFO_ADDR_WIDTH+1-1:0] fifo_wr_ptr_reg = 0;
     reg [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_reg = 0;
+    wire [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_inc = fifo_rd_ptr_reg + 1;
+
     (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
     reg [CL_PORTS-1:0] fifo_sel[(2**FIFO_ADDR_WIDTH)-1:0];
+    reg [CL_PORTS-1:0] select_resp = 0;
 
     wire fifo_empty = fifo_wr_ptr_reg == fifo_rd_ptr_reg;
     wire fifo_full = fifo_wr_ptr_reg == (fifo_rd_ptr_reg ^ (1 << FIFO_ADDR_WIDTH));
@@ -156,13 +159,30 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
         seg_ram_rd_cmd_valid_int = (seg_ctrl_rd_cmd_valid && seg_ctrl_rd_cmd_ready) << select_cmd;
     end
 
-    always @(posedge clk) begin
+    always @(posedge clk) begin : fifo_p
+
+        reg [FIFO_ADDR_WIDTH+1-1:0] fifo_curr_rd_ptr;
+        fifo_curr_rd_ptr = fifo_rd_ptr_reg;
+
+        if (current_resp_valid && seg_ctrl_rd_resp_ready_int && !fifo_empty) begin
+            fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
+            select_resp <= fifo_sel[fifo_rd_ptr_inc[FIFO_ADDR_WIDTH-1:0]];
+            fifo_curr_rd_ptr = fifo_rd_ptr_inc;
+        end
+
         if (seg_ctrl_rd_cmd_valid && seg_ctrl_rd_cmd_ready) begin
             fifo_sel[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= select_cmd;
             fifo_wr_ptr_reg <= fifo_wr_ptr_reg + 1;
+
+            //if fifo is empty we want the data at the output right away
+            if (fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0] == fifo_curr_rd_ptr[FIFO_ADDR_WIDTH-1:0]) begin
+                select_resp <= select_cmd;
+            end
         end
 
         if (rst) begin
+            select_resp <= select_cmd;
+            fifo_rd_ptr_reg <= 0;
             fifo_wr_ptr_reg <= 0;
         end
     end
@@ -266,8 +286,6 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     reg                       seg_ctrl_rd_resp_valid_int;
     wire                      seg_ctrl_rd_resp_ready_int;
 
-    wire [CL_PORTS-1:0] select_resp = fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
-
     assign seg_ram_rd_resp_ready = (seg_ctrl_rd_resp_ready_int && !fifo_empty) << select_resp;
 
     // mux for incoming packet
@@ -279,16 +297,6 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
         // pass through selected packet data
         seg_ctrl_rd_resp_data_int  = current_resp_data;
         seg_ctrl_rd_resp_valid_int = current_resp_valid && seg_ctrl_rd_resp_ready_int && !fifo_empty;
-    end
-
-    always @(posedge clk) begin
-        if (current_resp_valid && seg_ctrl_rd_resp_ready_int && !fifo_empty) begin
-            fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
-        end
-
-        if (rst) begin
-            fifo_rd_ptr_reg <= 0;
-        end
     end
 
     // output datapath logic

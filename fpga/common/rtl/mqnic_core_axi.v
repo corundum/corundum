@@ -135,7 +135,8 @@ module mqnic_core_axi #
     parameter DMA_TAG_WIDTH = 16,
     parameter RAM_PIPELINE = 2,
     parameter AXI_DMA_MAX_BURST_LEN = 256,
-    parameter AXI_DMA_USE_ID = 1,
+    parameter AXI_DMA_READ_USE_ID = 0,
+    parameter AXI_DMA_WRITE_USE_ID = 1,
     parameter AXI_DMA_READ_OP_TABLE_SIZE = 2**(AXI_ID_WIDTH),
     parameter AXI_DMA_WRITE_OP_TABLE_SIZE = 2**(AXI_ID_WIDTH),
 
@@ -173,7 +174,7 @@ module mqnic_core_axi #
     // Statistics counter subsystem
     parameter STAT_ENABLE = 1,
     parameter STAT_DMA_ENABLE = 1,
-    parameter STAT_PCIE_ENABLE = 1,
+    parameter STAT_AXI_ENABLE = 1,
     parameter STAT_INC_WIDTH = 24,
     parameter STAT_ID_WIDTH = 12
 )
@@ -448,7 +449,8 @@ dma_if_axi #(
     .TAG_WIDTH(DMA_TAG_WIDTH),
     .READ_OP_TABLE_SIZE(AXI_DMA_READ_OP_TABLE_SIZE),
     .WRITE_OP_TABLE_SIZE(AXI_DMA_WRITE_OP_TABLE_SIZE),
-    .USE_AXI_ID(AXI_DMA_USE_ID)
+    .READ_USE_AXI_ID(AXI_DMA_READ_USE_ID),
+    .WRITE_USE_AXI_ID(AXI_DMA_WRITE_USE_ID)
 )
 dma_if_axi_inst (
     .clk(clk),

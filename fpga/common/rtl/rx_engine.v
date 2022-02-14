@@ -264,6 +264,11 @@ initial begin
         $error("Error: DESC_REQ_TAG_WIDTH must be at least $clog2(DESC_TABLE_SIZE) (instance %m)");
         $finish;
     end
+
+    if (RAM_ADDR_WIDTH < CL_RX_BUFFER_SIZE) begin
+        $error("Error: RAM_ADDR_WIDTH insufficient for buffer size (instance %m)");
+        $finish;
+    end
 end
 
 reg s_axis_rx_req_ready_reg = 1'b0, s_axis_rx_req_ready_next;

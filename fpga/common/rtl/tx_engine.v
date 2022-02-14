@@ -270,6 +270,11 @@ initial begin
         $error("Error: QUEUE_REQ_TAG_WIDTH must be at least REQ_TAG_WIDTH (instance %m)");
         $finish;
     end
+
+    if (RAM_ADDR_WIDTH < CL_TX_BUFFER_SIZE) begin
+        $error("Error: RAM_ADDR_WIDTH insufficient for buffer size (instance %m)");
+        $finish;
+    end
 end
 
 reg s_axis_tx_req_ready_reg = 1'b0, s_axis_tx_req_ready_next;

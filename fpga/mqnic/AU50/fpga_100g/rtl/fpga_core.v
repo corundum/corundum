@@ -591,7 +591,7 @@ generate
         assign qsfp_tx_axis_tvalid = axis_eth_tx_tvalid[QSFP_IND];
         assign axis_eth_tx_tready[QSFP_IND] = qsfp_tx_axis_tready;
         assign qsfp_tx_axis_tlast = axis_eth_tx_tlast[QSFP_IND];
-        assign qsfp_tx_axis_tuser = axis_eth_tx_tuser[QSFP_IND*17 +: 17];
+        assign qsfp_tx_axis_tuser = axis_eth_tx_tuser[QSFP_IND*AXIS_ETH_TX_USER_WIDTH +: AXIS_ETH_TX_USER_WIDTH];
 
         assign axis_eth_tx_ptp_ts[QSFP_IND*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {qsfp_tx_ptp_ts, 16'd0};
         assign axis_eth_tx_ptp_ts_tag[QSFP_IND*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = qsfp_tx_ptp_ts_tag;

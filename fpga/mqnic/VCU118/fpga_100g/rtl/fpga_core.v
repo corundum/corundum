@@ -690,7 +690,7 @@ generate
         assign qsfp1_tx_axis_tvalid = axis_eth_tx_tvalid[QSFP1_IND];
         assign axis_eth_tx_tready[QSFP1_IND] = qsfp1_tx_axis_tready;
         assign qsfp1_tx_axis_tlast = axis_eth_tx_tlast[QSFP1_IND];
-        assign qsfp1_tx_axis_tuser = axis_eth_tx_tuser[QSFP1_IND*17 +: 17];
+        assign qsfp1_tx_axis_tuser = axis_eth_tx_tuser[QSFP1_IND*AXIS_ETH_TX_USER_WIDTH +: AXIS_ETH_TX_USER_WIDTH];
 
         assign axis_eth_tx_ptp_ts[QSFP1_IND*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {qsfp1_tx_ptp_ts, 16'd0};
         assign axis_eth_tx_ptp_ts_tag[QSFP1_IND*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = qsfp1_tx_ptp_ts_tag;
@@ -728,7 +728,7 @@ generate
         assign qsfp2_tx_axis_tvalid = axis_eth_tx_tvalid[QSFP2_IND];
         assign axis_eth_tx_tready[QSFP2_IND] = qsfp2_tx_axis_tready;
         assign qsfp2_tx_axis_tlast = axis_eth_tx_tlast[QSFP2_IND];
-        assign qsfp2_tx_axis_tuser = axis_eth_tx_tuser[QSFP2_IND*17 +: 17];
+        assign qsfp2_tx_axis_tuser = axis_eth_tx_tuser[QSFP2_IND*AXIS_ETH_TX_USER_WIDTH +: AXIS_ETH_TX_USER_WIDTH];
 
         assign axis_eth_tx_ptp_ts[QSFP2_IND*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {qsfp2_tx_ptp_ts, 16'd0};
         assign axis_eth_tx_ptp_ts_tag[QSFP2_IND*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = qsfp2_tx_ptp_ts_tag;

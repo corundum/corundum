@@ -47,18 +47,18 @@ module dma_if_pcie #
     parameter TX_SEQ_NUM_WIDTH = 5,
     // TX sequence number tracking enable
     parameter TX_SEQ_NUM_ENABLE = 0,
+    // RAM select width
+    parameter RAM_SEL_WIDTH = 2,
+    // RAM address width
+    parameter RAM_ADDR_WIDTH = 16,
     // RAM segment count
     parameter RAM_SEG_COUNT = TLP_SEG_COUNT*2,
     // RAM segment data width
     parameter RAM_SEG_DATA_WIDTH = (TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH)*2/RAM_SEG_COUNT,
-    // RAM segment address width
-    parameter RAM_SEG_ADDR_WIDTH = 8,
     // RAM segment byte enable width
     parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
-    // RAM select width
-    parameter RAM_SEL_WIDTH = 2,
-    // RAM address width
-    parameter RAM_ADDR_WIDTH = RAM_SEG_ADDR_WIDTH+$clog2(RAM_SEG_COUNT)+$clog2(RAM_SEG_BE_WIDTH),
+    // RAM segment address width
+    parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH),
     // PCIe address width
     parameter PCIE_ADDR_WIDTH = 64,
     // PCIe tag count
@@ -252,12 +252,12 @@ dma_if_pcie_rd #(
     .TX_SEQ_NUM_COUNT(TX_SEQ_NUM_COUNT),
     .TX_SEQ_NUM_WIDTH(TX_SEQ_NUM_WIDTH),
     .TX_SEQ_NUM_ENABLE(TX_SEQ_NUM_ENABLE),
-    .RAM_SEG_COUNT(RAM_SEG_COUNT),
-    .RAM_SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
-    .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
-    .RAM_SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
     .RAM_SEL_WIDTH(RAM_SEL_WIDTH),
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+    .RAM_SEG_COUNT(RAM_SEG_COUNT),
+    .RAM_SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
+    .RAM_SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
+    .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
     .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .LEN_WIDTH(LEN_WIDTH),
@@ -378,12 +378,12 @@ dma_if_pcie_wr #(
     .TX_SEQ_NUM_COUNT(TX_SEQ_NUM_COUNT),
     .TX_SEQ_NUM_WIDTH(TX_SEQ_NUM_WIDTH),
     .TX_SEQ_NUM_ENABLE(TX_SEQ_NUM_ENABLE),
-    .RAM_SEG_COUNT(RAM_SEG_COUNT),
-    .RAM_SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
-    .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
-    .RAM_SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
     .RAM_SEL_WIDTH(RAM_SEL_WIDTH),
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+    .RAM_SEG_COUNT(RAM_SEG_COUNT),
+    .RAM_SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
+    .RAM_SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
+    .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
     .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
     .LEN_WIDTH(LEN_WIDTH),
     .TAG_WIDTH(TAG_WIDTH),

@@ -33,16 +33,16 @@ THE SOFTWARE.
  */
 module dma_client_axis_source #
 (
+    // RAM address width
+    parameter RAM_ADDR_WIDTH = 16,
     // RAM segment count
     parameter SEG_COUNT = 2,
     // RAM segment data width
     parameter SEG_DATA_WIDTH = 64,
-    // RAM segment address width
-    parameter SEG_ADDR_WIDTH = 8,
     // RAM segment byte enable width
     parameter SEG_BE_WIDTH = SEG_DATA_WIDTH/8,
-    // RAM address width
-    parameter RAM_ADDR_WIDTH = SEG_ADDR_WIDTH+$clog2(SEG_COUNT)+$clog2(SEG_BE_WIDTH),
+    // RAM segment address width
+    parameter SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(SEG_COUNT*SEG_BE_WIDTH),
     // Width of AXI stream interfaces in bits
     parameter AXIS_DATA_WIDTH = SEG_DATA_WIDTH*SEG_COUNT/2,
     // Use AXI stream tkeep signal

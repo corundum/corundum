@@ -39,10 +39,10 @@ module dma_ram_demux_wr #
     parameter SEG_COUNT = 2,
     // RAM segment data width
     parameter SEG_DATA_WIDTH = 64,
-    // RAM segment address width
-    parameter SEG_ADDR_WIDTH = 8,
     // RAM segment byte enable width
     parameter SEG_BE_WIDTH = SEG_DATA_WIDTH/8,
+    // RAM segment address width
+    parameter SEG_ADDR_WIDTH = 8,
     // Input RAM segment select width
     parameter S_RAM_SEL_WIDTH = 2,
     // Output RAM segment select width

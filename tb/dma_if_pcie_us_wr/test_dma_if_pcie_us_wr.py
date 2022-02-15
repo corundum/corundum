@@ -235,24 +235,24 @@ def test_dma_if_pcie_us_wr(request, axis_pcie_data_width, pcie_offset):
     parameters = {}
 
     # segmented interface parameters
+    ram_sel_width = 2
+    ram_addr_width = 16
     seg_count = max(2, axis_pcie_data_width*2 // 128)
     seg_data_width = axis_pcie_data_width*2 // seg_count
-    seg_addr_width = 12
     seg_be_width = seg_data_width // 8
-    ram_sel_width = 2
-    ram_addr_width = seg_addr_width + (seg_count-1).bit_length() + (seg_be_width-1).bit_length()
+    seg_addr_width = ram_addr_width - (seg_count*seg_be_width-1).bit_length()
 
     parameters['AXIS_PCIE_DATA_WIDTH'] = axis_pcie_data_width
     parameters['AXIS_PCIE_KEEP_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH'] // 32
     parameters['AXIS_PCIE_RQ_USER_WIDTH'] = 62 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 137
     parameters['RQ_SEQ_NUM_WIDTH'] = 4 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 6
     parameters['RQ_SEQ_NUM_ENABLE'] = 1
-    parameters['SEG_COUNT'] = seg_count
-    parameters['SEG_DATA_WIDTH'] = seg_data_width
-    parameters['SEG_ADDR_WIDTH'] = seg_addr_width
-    parameters['SEG_BE_WIDTH'] = seg_be_width
     parameters['RAM_SEL_WIDTH'] = ram_sel_width
     parameters['RAM_ADDR_WIDTH'] = ram_addr_width
+    parameters['SEG_COUNT'] = seg_count
+    parameters['SEG_DATA_WIDTH'] = seg_data_width
+    parameters['SEG_BE_WIDTH'] = seg_be_width
+    parameters['SEG_ADDR_WIDTH'] = seg_addr_width
     parameters['PCIE_ADDR_WIDTH'] = 64
     parameters['LEN_WIDTH'] = 20
     parameters['TAG_WIDTH'] = 8

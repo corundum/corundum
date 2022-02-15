@@ -45,18 +45,18 @@ module example_core #
     parameter DMA_LEN_WIDTH = 16,
     // DMA Tag field width
     parameter DMA_TAG_WIDTH = 8,
+    // RAM select width
+    parameter RAM_SEL_WIDTH = 2,
+    // RAM address width
+    parameter RAM_ADDR_WIDTH = 16,
     // RAM segment count
     parameter RAM_SEG_COUNT = 2,
     // RAM segment data width
     parameter RAM_SEG_DATA_WIDTH = 256*2/RAM_SEG_COUNT,
-    // RAM segment address width
-    parameter RAM_SEG_ADDR_WIDTH = 8,
     // RAM segment byte enable width
     parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
-    // RAM select width
-    parameter RAM_SEL_WIDTH = 2,
-    // RAM address width
-    parameter RAM_ADDR_WIDTH = RAM_SEG_ADDR_WIDTH+$clog2(RAM_SEG_COUNT)+$clog2(RAM_SEG_BE_WIDTH)
+    // RAM segment address width
+    parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH)
 )
 (
     input  wire                                         clk,

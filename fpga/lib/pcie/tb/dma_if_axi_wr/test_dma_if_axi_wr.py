@@ -184,23 +184,23 @@ def test_dma_if_axi_wr(request, axi_data_width):
     parameters = {}
 
     # segmented interface parameters
+    ram_sel_width = 2
+    ram_addr_width = 16
     ram_seg_count = 2
     ram_seg_data_width = axi_data_width*2 // ram_seg_count
-    ram_seg_addr_width = 12
     ram_seg_be_width = ram_seg_data_width // 8
-    ram_sel_width = 2
-    ram_addr_width = ram_seg_addr_width + (ram_seg_count*ram_seg_be_width-1).bit_length()
+    ram_seg_addr_width = ram_addr_width - (ram_seg_count*ram_seg_be_width-1).bit_length()
 
     parameters['AXI_DATA_WIDTH'] = axi_data_width
     parameters['AXI_ADDR_WIDTH'] = 16
     parameters['AXI_STRB_WIDTH'] = parameters['AXI_DATA_WIDTH'] // 8
     parameters['AXI_ID_WIDTH'] = 8
-    parameters['RAM_SEG_COUNT'] = ram_seg_count
-    parameters['RAM_SEG_DATA_WIDTH'] = ram_seg_data_width
-    parameters['RAM_SEG_ADDR_WIDTH'] = ram_seg_addr_width
-    parameters['RAM_SEG_BE_WIDTH'] = ram_seg_be_width
     parameters['RAM_SEL_WIDTH'] = ram_sel_width
     parameters['RAM_ADDR_WIDTH'] = ram_addr_width
+    parameters['RAM_SEG_COUNT'] = ram_seg_count
+    parameters['RAM_SEG_DATA_WIDTH'] = ram_seg_data_width
+    parameters['RAM_SEG_BE_WIDTH'] = ram_seg_be_width
+    parameters['RAM_SEG_ADDR_WIDTH'] = ram_seg_addr_width
     parameters['LEN_WIDTH'] = 16
     parameters['TAG_WIDTH'] = 8
     parameters['OP_TABLE_SIZE'] = 2**parameters['AXI_ID_WIDTH']

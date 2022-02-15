@@ -39,10 +39,10 @@ module dma_psdpram #
     parameter SEG_COUNT = 2,
     // RAM segment data width
     parameter SEG_DATA_WIDTH = 128,
-    // RAM segment address width
-    parameter SEG_ADDR_WIDTH = 8,
     // RAM segment byte enable width
     parameter SEG_BE_WIDTH = SEG_DATA_WIDTH/8,
+    // RAM segment address width
+    parameter SEG_ADDR_WIDTH = $clog2(SIZE/(SEG_COUNT*SEG_BE_WIDTH)),
     // Read data output pipeline stages
     parameter PIPELINE = 2
 )

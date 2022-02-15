@@ -43,18 +43,18 @@ module dma_if_axi_wr #
     parameter AXI_ID_WIDTH = 8,
     // Maximum AXI burst length to generate
     parameter AXI_MAX_BURST_LEN = 256,
-    // RAM segment countm_axis_read_desc_status_error
-    parameter RAM_SEG_COUNT = 2,
-    // RAM segment data width
-    parameter RAM_SEG_DATA_WIDTH = AXI_DATA_WIDTH*2/RAM_SEG_COUNT,
-    // RAM segment address width
-    parameter RAM_SEG_ADDR_WIDTH = 8,
-    // RAM segment byte enable width
-    parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
     // RAM select width
     parameter RAM_SEL_WIDTH = 2,
     // RAM address width
-    parameter RAM_ADDR_WIDTH = RAM_SEG_ADDR_WIDTH+$clog2(RAM_SEG_COUNT)+$clog2(RAM_SEG_BE_WIDTH),
+    parameter RAM_ADDR_WIDTH = 16,
+    // RAM segment count
+    parameter RAM_SEG_COUNT = 2,
+    // RAM segment data width
+    parameter RAM_SEG_DATA_WIDTH = AXI_DATA_WIDTH*2/RAM_SEG_COUNT,
+    // RAM segment byte enable width
+    parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
+    // RAM segment address width
+    parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH),
     // Length field width
     parameter LEN_WIDTH = 16,
     // Tag field width

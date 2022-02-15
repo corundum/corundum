@@ -39,10 +39,10 @@ module dma_ram_demux #
     parameter SEG_COUNT = 2,
     // RAM segment data width
     parameter SEG_DATA_WIDTH = 64,
-    // RAM segment address width
-    parameter SEG_ADDR_WIDTH = 8,
     // RAM segment byte enable width
     parameter SEG_BE_WIDTH = SEG_DATA_WIDTH/8,
+    // RAM segment address width
+    parameter SEG_ADDR_WIDTH = 8,
     // Input RAM segment select width
     parameter S_RAM_SEL_WIDTH = 2,
     // Output RAM segment select width
@@ -94,8 +94,8 @@ dma_ram_demux_wr #(
     .PORTS(PORTS),
     .SEG_COUNT(SEG_COUNT),
     .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
-    .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
     .SEG_BE_WIDTH(SEG_BE_WIDTH),
+    .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
     .S_RAM_SEL_WIDTH(S_RAM_SEL_WIDTH),
     .M_RAM_SEL_WIDTH(M_RAM_SEL_WIDTH)
 )

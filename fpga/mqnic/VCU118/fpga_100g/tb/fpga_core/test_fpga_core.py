@@ -676,6 +676,7 @@ def test_fpga_core(request):
     # DMA interface configuration
     parameters['DMA_LEN_WIDTH'] = 16
     parameters['DMA_TAG_WIDTH'] = 16
+    parameters['RAM_ADDR_WIDTH'] = (max(parameters['TX_RAM_SIZE'], parameters['RX_RAM_SIZE'])-1).bit_length()
     parameters['RAM_PIPELINE'] = 2
 
     # PCIe interface configuration

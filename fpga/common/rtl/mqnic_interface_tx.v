@@ -96,16 +96,16 @@ module mqnic_interface_tx #
     parameter PTP_TAG_WIDTH = 16,
     // Enable TX checksum offload
     parameter TX_CHECKSUM_ENABLE = 1,
+    // DMA RAM address width
+    parameter RAM_ADDR_WIDTH = 18,
     // DMA RAM segment count
     parameter SEG_COUNT = 2,
     // DMA RAM segment data width
     parameter SEG_DATA_WIDTH = 64,
-    // DMA RAM segment address width
-    parameter SEG_ADDR_WIDTH = 8,
     // DMA RAM segment byte enable width
     parameter SEG_BE_WIDTH = SEG_DATA_WIDTH/8,
-    // DMA RAM address width
-    parameter RAM_ADDR_WIDTH = SEG_ADDR_WIDTH+$clog2(SEG_COUNT)+$clog2(SEG_BE_WIDTH),
+    // DMA RAM segment address width
+    parameter SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(SEG_COUNT*SEG_BE_WIDTH),
     // DMA RAM pipeline stages
     parameter RAM_PIPELINE = 2,
     // Width of AXI stream interfaces in bits
@@ -499,8 +499,8 @@ dma_psdpram #(
     .SIZE(TX_RAM_SIZE),
     .SEG_COUNT(SEG_COUNT),
     .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
-    .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
     .SEG_BE_WIDTH(SEG_BE_WIDTH),
+    .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
     .PIPELINE(RAM_PIPELINE)
 )
 dma_psdpram_tx_inst (
@@ -538,11 +538,11 @@ wire [AXIS_TX_DEST_WIDTH-1:0]  tx_axis_tdest_int;
 wire [AXIS_TX_USER_WIDTH-1:0]  tx_axis_tuser_int;
 
 dma_client_axis_source #(
+    .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
     .SEG_COUNT(SEG_COUNT),
     .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
     .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
     .SEG_BE_WIDTH(SEG_BE_WIDTH),
-    .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
     .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
     .AXIS_KEEP_ENABLE(AXIS_KEEP_WIDTH > 1),
     .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),

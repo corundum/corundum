@@ -52,7 +52,6 @@ SYN_FILES += rtl/common/cmac_pad.v
 SYN_FILES += lib/eth/rtl/ptp_clock.v
 SYN_FILES += lib/eth/rtl/ptp_clock_cdc.v
 SYN_FILES += lib/eth/rtl/ptp_perout.v
-SYN_FILES += lib/eth/rtl/ptp_ts_extract.v
 SYN_FILES += lib/axi/rtl/axil_interconnect.v
 SYN_FILES += lib/axi/rtl/axil_crossbar.v
 SYN_FILES += lib/axi/rtl/axil_crossbar_addr.v

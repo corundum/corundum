@@ -67,7 +67,6 @@ SYN_FILES += lib/eth/rtl/lfsr.v
 SYN_FILES += lib/eth/rtl/ptp_clock.v
 SYN_FILES += lib/eth/rtl/ptp_clock_cdc.v
 SYN_FILES += lib/eth/rtl/ptp_perout.v
-SYN_FILES += lib/eth/rtl/ptp_ts_extract.v
 SYN_FILES += lib/axi/rtl/axil_cdc.v
 SYN_FILES += lib/axi/rtl/axil_cdc_rd.v
 SYN_FILES += lib/axi/rtl/axil_cdc_wr.v

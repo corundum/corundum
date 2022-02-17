@@ -558,7 +558,6 @@ def test_fpga_core(request):
         os.path.join(eth_rtl_dir, "ptp_clock.v"),
         os.path.join(eth_rtl_dir, "ptp_clock_cdc.v"),
         os.path.join(eth_rtl_dir, "ptp_perout.v"),
-        os.path.join(eth_rtl_dir, "ptp_ts_extract.v"),
         os.path.join(axi_rtl_dir, "axil_interconnect.v"),
         os.path.join(axi_rtl_dir, "axil_crossbar.v"),
         os.path.join(axi_rtl_dir, "axil_crossbar_addr.v"),

@@ -79,7 +79,6 @@ VERILOG_SOURCES += ../../rtl/tdma_scheduler.v
 VERILOG_SOURCES += ../../lib/eth/rtl/ptp_clock.v
 VERILOG_SOURCES += ../../lib/eth/rtl/ptp_clock_cdc.v
 VERILOG_SOURCES += ../../lib/eth/rtl/ptp_perout.v
-VERILOG_SOURCES += ../../lib/eth/rtl/ptp_ts_extract.v
 VERILOG_SOURCES += ../../lib/axi/rtl/axil_crossbar.v
 VERILOG_SOURCES += ../../lib/axi/rtl/axil_crossbar_addr.v
 VERILOG_SOURCES += ../../lib/axi/rtl/axil_crossbar_rd.v

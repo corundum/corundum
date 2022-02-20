@@ -46,7 +46,7 @@ module mqnic_core #
     parameter FPGA_ID = 32'hDEADBEEF,
     parameter FW_ID = 32'h00000000,
     parameter FW_VER = 32'h00_00_01_00,
-    parameter BOARD_ID = 16'h1234_0000,
+    parameter BOARD_ID = 32'h1234_0000,
     parameter BOARD_VER = 32'h01_00_00_00,
     parameter BUILD_DATE = 32'd602976000,
     parameter GIT_HASH = 32'hdce357bf,

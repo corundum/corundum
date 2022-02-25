@@ -161,6 +161,15 @@ generate
 
         reg [CL_M_COUNT-1:0] fifo_rd_select_reg = 0;
         reg fifo_rd_decerr_reg = 0;
+
+        reg [CL_M_COUNT-1:0] fifo_rd_select_int_reg = 0;
+        reg fifo_rd_decerr_int_reg = 0;
+
+        reg  fifo_rd_valid_last_reg = 0;
+
+        reg [CL_M_COUNT-1:0] fifo_rd_select = 0;
+        reg fifo_rd_decerr = 0;
+
         reg fifo_rd_valid_reg = 0;
         wire fifo_rd_en;
         reg fifo_half_full_reg = 1'b0;
@@ -177,6 +186,8 @@ generate
         end
 
         always @(posedge clk) begin
+
+            fifo_rd_valid_last_reg <= 1'b0;
             if (fifo_wr_en) begin
                 fifo_select[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= fifo_wr_select;
                 fifo_decerr[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= fifo_wr_decerr;
@@ -185,12 +196,18 @@ generate
 
             fifo_rd_valid_reg <= fifo_rd_valid_reg && !fifo_rd_en;
 
+            fifo_rd_select_int_reg <= fifo_select[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
+            fifo_rd_decerr_int_reg <= fifo_decerr[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
             if ((fifo_rd_ptr_reg != fifo_wr_ptr_reg) && (!fifo_rd_valid_reg || fifo_rd_en)) begin
-                fifo_rd_select_reg <= fifo_select[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
-                fifo_rd_decerr_reg <= fifo_decerr[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
                 fifo_rd_valid_reg <= 1'b1;
                 fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
+                fifo_rd_valid_last_reg <= 1'b1;
             end
+
+            if (fifo_rd_valid_last_reg == 1'b1) begin
+                fifo_rd_select_reg <= fifo_rd_select_int_reg;
+                fifo_rd_decerr_reg <= fifo_rd_decerr_int_reg;
+            end;
 
             fifo_half_full_reg <= $unsigned(fifo_wr_ptr_reg - fifo_rd_ptr_reg) >= 2**(FIFO_ADDR_WIDTH-1);
 
@@ -198,6 +215,17 @@ generate
                 fifo_wr_ptr_reg <= 0;
                 fifo_rd_ptr_reg <= 0;
                 fifo_rd_valid_reg <= 1'b0;
+            end
+        end
+
+
+        always @(*) begin
+            if (fifo_rd_valid_last_reg == 1'b1) begin
+                fifo_rd_select <= fifo_rd_select_int_reg;
+                fifo_rd_decerr <= fifo_rd_decerr_int_reg;
+            end else begin
+                fifo_rd_select <= fifo_rd_select_reg;
+                fifo_rd_decerr <= fifo_rd_decerr_reg;
             end
         end
 
@@ -270,8 +298,8 @@ generate
         assign m_rc_ready = !fifo_half_full_reg;
 
         // write response handling
-        wire [CL_M_COUNT-1:0] r_select = M_COUNT > 1 ? fifo_rd_select_reg : 0;
-        wire r_decerr = fifo_rd_decerr_reg;
+        wire [CL_M_COUNT-1:0] r_select = M_COUNT > 1 ? fifo_rd_select : 0;
+        wire r_decerr = fifo_rd_decerr;
         wire r_valid = fifo_rd_valid_reg;
 
         // read response mux

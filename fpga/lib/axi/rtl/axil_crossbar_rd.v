@@ -320,6 +320,7 @@ generate
 
         reg [FIFO_ADDR_WIDTH+1-1:0] fifo_wr_ptr_reg = 0;
         reg [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_reg = 0;
+        wire [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_inc = fifo_rd_ptr_reg + 1;
 
         (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
         reg [CL_S_COUNT-1:0] fifo_select[(2**FIFO_ADDR_WIDTH)-1:0];
@@ -329,6 +330,7 @@ generate
         reg fifo_half_full_reg = 1'b0;
 
         wire fifo_empty = fifo_rd_ptr_reg == fifo_wr_ptr_reg;
+        reg [CL_S_COUNT-1:0] b_select_reg;
 
         integer i;
 
@@ -338,20 +340,31 @@ generate
             end
         end
 
-        always @(posedge clk) begin
+        always @(posedge clk) begin : fifo_p
+
+            reg [FIFO_ADDR_WIDTH:0] fifo_curr_rd_ptr;
+            fifo_curr_rd_ptr = fifo_rd_ptr_reg;
+
+            if (fifo_rd_en) begin
+                fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
+                b_select_reg <= fifo_select[fifo_rd_ptr_inc[FIFO_ADDR_WIDTH-1:0]];
+                fifo_curr_rd_ptr = fifo_rd_ptr_inc;
+            end
+
             if (fifo_wr_en) begin
                 fifo_select[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= fifo_wr_select;
                 fifo_wr_ptr_reg <= fifo_wr_ptr_reg + 1;
-            end
-            if (fifo_rd_en) begin
-                fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
-            end
+                if (fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0] == fifo_curr_rd_ptr[FIFO_ADDR_WIDTH-1:0]) begin
+                    b_select_reg <= fifo_wr_select;
+                end
+	    end
 
             fifo_half_full_reg <= $unsigned(fifo_wr_ptr_reg - fifo_rd_ptr_reg) >= 2**(FIFO_ADDR_WIDTH-1);
 
             if (rst) begin
                 fifo_wr_ptr_reg <= 0;
                 fifo_rd_ptr_reg <= 0;
+                b_select_reg <= 0;
             end
         end
 
@@ -396,7 +409,7 @@ generate
         assign fifo_wr_en = s_axil_arvalid_mux && s_axil_arready_mux && a_grant_valid;
 
         // read response forwarding
-        wire [CL_S_COUNT-1:0] r_select = S_COUNT > 1 ? fifo_select[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]] : 0;
+        wire [CL_S_COUNT-1:0] r_select = S_COUNT > 1 ? b_select_reg : 0;
 
         assign int_axil_rvalid[n*S_COUNT +: S_COUNT] = int_m_axil_rvalid[n] << r_select;
         assign int_m_axil_rready[n] = int_axil_rready[r_select*M_COUNT+n];

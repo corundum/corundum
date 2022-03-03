@@ -334,6 +334,15 @@ module fpga_core #
     output wire                               qsfp_0_rx_prbs31_enable_3,
     input  wire [6:0]                         qsfp_0_rx_error_count_3,
 
+    input  wire                               qsfp_0_drp_clk,
+    input  wire                               qsfp_0_drp_rst,
+    output wire [23:0]                        qsfp_0_drp_addr,
+    output wire [15:0]                        qsfp_0_drp_di,
+    output wire                               qsfp_0_drp_en,
+    output wire                               qsfp_0_drp_we,
+    input  wire [15:0]                        qsfp_0_drp_do,
+    input  wire                               qsfp_0_drp_rdy,
+
     input  wire                               qsfp_0_mod_prsnt_n,
     output wire                               qsfp_0_reset_n,
     output wire                               qsfp_0_lp_mode,
@@ -390,6 +399,15 @@ module fpga_core #
     output wire                               qsfp_1_rx_prbs31_enable_3,
     input  wire [6:0]                         qsfp_1_rx_error_count_3,
 
+    input  wire                               qsfp_1_drp_clk,
+    input  wire                               qsfp_1_drp_rst,
+    output wire [23:0]                        qsfp_1_drp_addr,
+    output wire [15:0]                        qsfp_1_drp_di,
+    output wire                               qsfp_1_drp_en,
+    output wire                               qsfp_1_drp_we,
+    input  wire [15:0]                        qsfp_1_drp_do,
+    input  wire                               qsfp_1_drp_rdy,
+
     input  wire                               qsfp_1_mod_prsnt_n,
     output wire                               qsfp_1_reset_n,
     output wire                               qsfp_1_lp_mode,
@@ -422,6 +440,9 @@ parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3
 
 localparam RB_BASE_ADDR = 16'h1000;
 localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
+
+localparam RB_DRP_QSFP_0_BASE = RB_BASE_ADDR + 16'h70;
+localparam RB_DRP_QSFP_1_BASE = RB_DRP_QSFP_0_BASE + 16'h20;
 
 initial begin
     if (PORT_COUNT > 8) begin
@@ -473,6 +494,18 @@ wire [AXIL_CTRL_DATA_WIDTH-1:0]  ctrl_reg_rd_data;
 wire                             ctrl_reg_rd_wait;
 wire                             ctrl_reg_rd_ack;
 
+wire qsfp_0_drp_reg_wr_wait;
+wire qsfp_0_drp_reg_wr_ack;
+wire [AXIL_CTRL_DATA_WIDTH-1:0] qsfp_0_drp_reg_rd_data;
+wire qsfp_0_drp_reg_rd_wait;
+wire qsfp_0_drp_reg_rd_ack;
+
+wire qsfp_1_drp_reg_wr_wait;
+wire qsfp_1_drp_reg_wr_ack;
+wire [AXIL_CTRL_DATA_WIDTH-1:0] qsfp_1_drp_reg_rd_data;
+wire qsfp_1_drp_reg_rd_wait;
+wire qsfp_1_drp_reg_rd_ack;
+
 reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
@@ -503,11 +536,11 @@ wire bmc_status_idle;
 wire bmc_status_done;
 wire bmc_status_timeout;
 
-assign ctrl_reg_wr_wait = 1'b0;
-assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg;
-assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg;
-assign ctrl_reg_rd_wait = 1'b0;
-assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg;
+assign ctrl_reg_wr_wait = qsfp_0_drp_reg_wr_wait | qsfp_1_drp_reg_wr_wait;
+assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg | qsfp_0_drp_reg_wr_ack | qsfp_1_drp_reg_wr_ack;
+assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg | qsfp_0_drp_reg_rd_data | qsfp_1_drp_reg_rd_data;
+assign ctrl_reg_rd_wait = qsfp_0_drp_reg_rd_wait | qsfp_1_drp_reg_rd_wait;
+assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg | qsfp_0_drp_reg_rd_ack | qsfp_1_drp_reg_rd_ack;
 
 assign qsfp_0_reset_n = !qsfp_0_reset_reg;
 assign qsfp_0_lp_mode = qsfp_0_lp_mode_reg;
@@ -669,7 +702,7 @@ always @(posedge clk_250mhz) begin
             // Gecko BMC
             RBB+8'h50: ctrl_reg_rd_data_reg <= 32'h0000C141;             // BMC ctrl: Type
             RBB+8'h54: ctrl_reg_rd_data_reg <= 32'h00000100;             // BMC ctrl: Version
-            RBB+8'h58: ctrl_reg_rd_data_reg <= 0;                        // BMC ctrl: Next header
+            RBB+8'h58: ctrl_reg_rd_data_reg <= RB_DRP_QSFP_0_BASE;       // BMC ctrl: Next header
             RBB+8'h5C: begin
                 // BMC ctrl: status
                 ctrl_reg_rd_data_reg[15:0] <= bmc_read_data;
@@ -730,6 +763,90 @@ bmc_spi_inst (
     .bmc_mosi(bmc_mosi),
     .bmc_miso(bmc_miso),
     .bmc_int(bmc_int)
+);
+
+rb_drp #(
+    .DRP_ADDR_WIDTH(24),
+    .DRP_DATA_WIDTH(16),
+    .DRP_INFO({8'd0, 8'd0, 8'd0, 8'd4}),
+    .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
+    .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .RB_BASE_ADDR(RB_DRP_QSFP_0_BASE),
+    .RB_NEXT_PTR(RB_DRP_QSFP_1_BASE)
+)
+qsfp_0_rb_drp_inst (
+    .clk(clk_250mhz),
+    .rst(rst_250mhz),
+
+    /*
+     * Register interface
+     */
+    .reg_wr_addr(ctrl_reg_wr_addr),
+    .reg_wr_data(ctrl_reg_wr_data),
+    .reg_wr_strb(ctrl_reg_wr_strb),
+    .reg_wr_en(ctrl_reg_wr_en),
+    .reg_wr_wait(qsfp_0_drp_reg_wr_wait),
+    .reg_wr_ack(qsfp_0_drp_reg_wr_ack),
+    .reg_rd_addr(ctrl_reg_rd_addr),
+    .reg_rd_en(ctrl_reg_rd_en),
+    .reg_rd_data(qsfp_0_drp_reg_rd_data),
+    .reg_rd_wait(qsfp_0_drp_reg_rd_wait),
+    .reg_rd_ack(qsfp_0_drp_reg_rd_ack),
+
+    /*
+     * DRP
+     */
+    .drp_clk(qsfp_0_drp_clk),
+    .drp_rst(qsfp_0_drp_rst),
+    .drp_addr(qsfp_0_drp_addr),
+    .drp_di(qsfp_0_drp_di),
+    .drp_en(qsfp_0_drp_en),
+    .drp_we(qsfp_0_drp_we),
+    .drp_do(qsfp_0_drp_do),
+    .drp_rdy(qsfp_0_drp_rdy)
+);
+
+rb_drp #(
+    .DRP_ADDR_WIDTH(24),
+    .DRP_DATA_WIDTH(16),
+    .DRP_INFO({8'd0, 8'd0, 8'd0, 8'd4}),
+    .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
+    .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .RB_BASE_ADDR(RB_DRP_QSFP_1_BASE),
+    .RB_NEXT_PTR(0)
+)
+qsfp_1_rb_drp_inst (
+    .clk(clk_250mhz),
+    .rst(rst_250mhz),
+
+    /*
+     * Register interface
+     */
+    .reg_wr_addr(ctrl_reg_wr_addr),
+    .reg_wr_data(ctrl_reg_wr_data),
+    .reg_wr_strb(ctrl_reg_wr_strb),
+    .reg_wr_en(ctrl_reg_wr_en),
+    .reg_wr_wait(qsfp_1_drp_reg_wr_wait),
+    .reg_wr_ack(qsfp_1_drp_reg_wr_ack),
+    .reg_rd_addr(ctrl_reg_rd_addr),
+    .reg_rd_en(ctrl_reg_rd_en),
+    .reg_rd_data(qsfp_1_drp_reg_rd_data),
+    .reg_rd_wait(qsfp_1_drp_reg_rd_wait),
+    .reg_rd_ack(qsfp_1_drp_reg_rd_ack),
+
+    /*
+     * DRP
+     */
+    .drp_clk(qsfp_1_drp_clk),
+    .drp_rst(qsfp_1_drp_rst),
+    .drp_addr(qsfp_1_drp_addr),
+    .drp_di(qsfp_1_drp_di),
+    .drp_en(qsfp_1_drp_en),
+    .drp_we(qsfp_1_drp_we),
+    .drp_do(qsfp_1_drp_do),
+    .drp_rdy(qsfp_1_drp_rdy)
 );
 
 assign pps_out = ptp_perout_pulse[0];

@@ -768,7 +768,7 @@ bmc_spi_inst (
 rb_drp #(
     .DRP_ADDR_WIDTH(24),
     .DRP_DATA_WIDTH(16),
-    .DRP_INFO({8'd0, 8'd0, 8'd0, 8'd4}),
+    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
     .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
@@ -810,7 +810,7 @@ qsfp_0_rb_drp_inst (
 rb_drp #(
     .DRP_ADDR_WIDTH(24),
     .DRP_DATA_WIDTH(16),
-    .DRP_INFO({8'd0, 8'd0, 8'd0, 8'd4}),
+    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
     .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),

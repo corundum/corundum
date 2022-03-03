@@ -279,6 +279,11 @@ class TB(object):
         cocotb.start_soon(Clock(dut.sfp_2_tx_clk, 2.56, units="ns").start())
         self.sfp_2_sink = XgmiiSink(dut.sfp_2_txd, dut.sfp_2_txc, dut.sfp_2_tx_clk, dut.sfp_2_tx_rst)
 
+        cocotb.start_soon(Clock(dut.sfp_drp_clk, 8, units="ns").start())
+        dut.sfp_drp_rst.setimmediatevalue(0)
+        dut.sfp_drp_do.setimmediatevalue(0)
+        dut.sfp_drp_rdy.setimmediatevalue(0)
+
         dut.sfp_1_rx_error_count.setimmediatevalue(0)
         dut.sfp_2_rx_error_count.setimmediatevalue(0)
 
@@ -505,6 +510,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "tx_checksum.v"),
         os.path.join(rtl_dir, "common", "rx_hash.v"),
         os.path.join(rtl_dir, "common", "rx_checksum.v"),
+        os.path.join(rtl_dir, "common", "rb_drp.v"),
         os.path.join(rtl_dir, "common", "stats_counter.v"),
         os.path.join(rtl_dir, "common", "stats_collect.v"),
         os.path.join(rtl_dir, "common", "stats_pcie_if.v"),

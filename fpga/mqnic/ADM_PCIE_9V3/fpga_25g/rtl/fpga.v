@@ -963,6 +963,15 @@ wire [XGMII_CTRL_WIDTH-1:0]  qsfp_0_rxc_3_int;
 wire                         qsfp_0_rx_prbs31_enable_3_int;
 wire [6:0]                   qsfp_0_rx_error_count_3_int;
 
+wire        qsfp_0_drp_clk = clk_125mhz_int;
+wire        qsfp_0_drp_rst = rst_125mhz_int;
+wire [23:0] qsfp_0_drp_addr;
+wire [15:0] qsfp_0_drp_di;
+wire        qsfp_0_drp_en;
+wire        qsfp_0_drp_we;
+wire [15:0] qsfp_0_drp_do;
+wire        qsfp_0_drp_rdy;
+
 wire qsfp_0_rx_block_lock_0;
 wire qsfp_0_rx_block_lock_1;
 wire qsfp_0_rx_block_lock_2;
@@ -1003,7 +1012,7 @@ qsfp_0_sync_reset_inst (
     .out(qsfp_0_rst)
 );
 
-eth_xcvr_phy_quad_wrapper #(
+eth_xcvr_phy_10g_gty_quad_wrapper #(
     .PRBS31_ENABLE(1),
     .TX_SERDES_PIPELINE(1),
     .RX_SERDES_PIPELINE(1),
@@ -1018,6 +1027,18 @@ qsfp_0_phy_quad_inst (
      */
     .xcvr_gtpowergood_out(qsfp_0_gtpowergood),
     .xcvr_ref_clk(qsfp_0_mgt_refclk),
+
+    /*
+     * DRP
+     */
+    .drp_clk(qsfp_0_drp_clk),
+    .drp_rst(qsfp_0_drp_rst),
+    .drp_addr(qsfp_0_drp_addr),
+    .drp_di(qsfp_0_drp_di),
+    .drp_en(qsfp_0_drp_en),
+    .drp_we(qsfp_0_drp_we),
+    .drp_do(qsfp_0_drp_do),
+    .drp_rdy(qsfp_0_drp_rdy),
 
     /*
      * Serial data
@@ -1145,6 +1166,15 @@ wire [XGMII_CTRL_WIDTH-1:0]  qsfp_1_rxc_3_int;
 wire                         qsfp_1_rx_prbs31_enable_3_int;
 wire [6:0]                   qsfp_1_rx_error_count_3_int;
 
+wire        qsfp_1_drp_clk = clk_125mhz_int;
+wire        qsfp_1_drp_rst = rst_125mhz_int;
+wire [23:0] qsfp_1_drp_addr;
+wire [15:0] qsfp_1_drp_di;
+wire        qsfp_1_drp_en;
+wire        qsfp_1_drp_we;
+wire [15:0] qsfp_1_drp_do;
+wire        qsfp_1_drp_rdy;
+
 wire qsfp_1_rx_block_lock_0;
 wire qsfp_1_rx_block_lock_1;
 wire qsfp_1_rx_block_lock_2;
@@ -1185,7 +1215,7 @@ qsfp_1_sync_reset_inst (
     .out(qsfp_1_rst)
 );
 
-eth_xcvr_phy_quad_wrapper #(
+eth_xcvr_phy_10g_gty_quad_wrapper #(
     .PRBS31_ENABLE(1),
     .TX_SERDES_PIPELINE(1),
     .RX_SERDES_PIPELINE(1),
@@ -1200,6 +1230,18 @@ qsfp_1_phy_quad_inst (
      */
     .xcvr_gtpowergood_out(qsfp_1_gtpowergood),
     .xcvr_ref_clk(qsfp_1_mgt_refclk),
+
+    /*
+     * DRP
+     */
+    .drp_clk(qsfp_1_drp_clk),
+    .drp_rst(qsfp_1_drp_rst),
+    .drp_addr(qsfp_1_drp_addr),
+    .drp_di(qsfp_1_drp_di),
+    .drp_en(qsfp_1_drp_en),
+    .drp_we(qsfp_1_drp_we),
+    .drp_do(qsfp_1_drp_do),
+    .drp_rdy(qsfp_1_drp_rdy),
 
     /*
      * Serial data
@@ -1553,6 +1595,16 @@ core_inst (
     .qsfp_0_rxc_3(qsfp_0_rxc_3_int),
     .qsfp_0_rx_prbs31_enable_3(qsfp_0_rx_prbs31_enable_3_int),
     .qsfp_0_rx_error_count_3(qsfp_0_rx_error_count_3_int),
+
+    .qsfp_0_drp_clk(qsfp_0_drp_clk),
+    .qsfp_0_drp_rst(qsfp_0_drp_rst),
+    .qsfp_0_drp_addr(qsfp_0_drp_addr),
+    .qsfp_0_drp_di(qsfp_0_drp_di),
+    .qsfp_0_drp_en(qsfp_0_drp_en),
+    .qsfp_0_drp_we(qsfp_0_drp_we),
+    .qsfp_0_drp_do(qsfp_0_drp_do),
+    .qsfp_0_drp_rdy(qsfp_0_drp_rdy),
+
     .qsfp_0_modprs_l(qsfp_0_modprs_l_int),
     .qsfp_0_sel_l(qsfp_0_sel_l),
 
@@ -1600,6 +1652,16 @@ core_inst (
     .qsfp_1_rxc_3(qsfp_1_rxc_3_int),
     .qsfp_1_rx_prbs31_enable_3(qsfp_1_rx_prbs31_enable_3_int),
     .qsfp_1_rx_error_count_3(qsfp_1_rx_error_count_3_int),
+
+    .qsfp_1_drp_clk(qsfp_1_drp_clk),
+    .qsfp_1_drp_rst(qsfp_1_drp_rst),
+    .qsfp_1_drp_addr(qsfp_1_drp_addr),
+    .qsfp_1_drp_di(qsfp_1_drp_di),
+    .qsfp_1_drp_en(qsfp_1_drp_en),
+    .qsfp_1_drp_we(qsfp_1_drp_we),
+    .qsfp_1_drp_do(qsfp_1_drp_do),
+    .qsfp_1_drp_rdy(qsfp_1_drp_rdy),
+
     .qsfp_1_modprs_l(qsfp_1_modprs_l_int),
     .qsfp_1_sel_l(qsfp_1_sel_l),
 

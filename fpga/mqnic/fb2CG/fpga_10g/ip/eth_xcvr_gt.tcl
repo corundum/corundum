@@ -39,6 +39,7 @@ set qpll_fracn [expr {int(fmod($line_rate*1000/2 / $refclk_freq, 1)*pow(2, 24))}
 set sec_qpll_fracn [expr {int(fmod($sec_line_rate*1000/2 / $refclk_freq, 1)*pow(2, 24))}]
 set user_data_width {64}
 set int_data_width $user_data_width
+set rx_eq_mode {DFE}
 set extra_ports [list]
 set extra_pll_ports [list]
 # DRP connections
@@ -86,6 +87,7 @@ dict set config RX_REFCLK_FREQUENCY $refclk_freq
 dict set config RX_QPLL_FRACN_NUMERATOR $qpll_fracn
 dict set config RX_USER_DATA_WIDTH $user_data_width
 dict set config RX_INT_DATA_WIDTH $int_data_width
+dict set config RX_EQ_MODE $rx_eq_mode
 if {$sec_line_rate != 0} {
     dict set config SECONDARY_QPLL_ENABLE true
     dict set config SECONDARY_QPLL_FRACN_NUMERATOR $sec_qpll_fracn

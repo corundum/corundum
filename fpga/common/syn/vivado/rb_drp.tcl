@@ -47,8 +47,8 @@ foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == rb_drp || REF_NAME == r
     set_max_delay -from [get_cells $inst/drp_flag_reg_reg] -to [get_cells $inst/drp_flag_sync_reg_1_reg] -datapath_only $rb_clk_period
     set_max_delay -from [get_cells $inst/rb_flag_reg_reg] -to [get_cells $inst/rb_flag_sync_reg_1_reg] -datapath_only $drp_clk_period
 
-    set source [get_cells -quiet -hier -regexp ".*/rb_(addr|di|we)_reg_reg\\\[\\d+\\\]" -filter "PARENT == $inst"]
-    set dest   [get_cells -quiet -hier -regexp ".*/drp_(addr|di|we)_reg_reg\\\[\\d+\\\]" -filter "PARENT == $inst"]
+    set source [get_cells -quiet -hier -regexp ".*/rb_(addr|di|we)_reg_reg(\\\[\\d+\\\])?" -filter "PARENT == $inst"]
+    set dest   [get_cells -quiet -hier -regexp ".*/drp_(addr|di|we)_reg_reg(\\\[\\d+\\\])?" -filter "PARENT == $inst"]
 
     if {[llength $dest]} {
         if {![llength $source]} {

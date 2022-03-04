@@ -878,6 +878,15 @@ wire                         sfp_2_rx_rst_int;
 wire [XGMII_DATA_WIDTH-1:0]  sfp_2_rxd_int;
 wire [XGMII_CTRL_WIDTH-1:0]  sfp_2_rxc_int;
 
+wire        sfp_drp_clk = clk_125mhz_int;
+wire        sfp_drp_rst = rst_125mhz_int;
+wire [23:0] sfp_drp_addr;
+wire [15:0] sfp_drp_di;
+wire        sfp_drp_en;
+wire        sfp_drp_we;
+wire [15:0] sfp_drp_do;
+wire        sfp_drp_rdy;
+
 wire sfp_1_rx_block_lock;
 wire sfp_2_rx_block_lock;
 
@@ -916,8 +925,11 @@ sfp_sync_reset_inst (
     .out(sfp_rst)
 );
 
-eth_xcvr_phy_quad_wrapper #(
-    .COUNT(2)
+eth_xcvr_phy_10g_gty_quad_wrapper #(
+    .COUNT(2),
+    .GT_GTH(1),
+    .GT_1_TX_POLARITY(1'b1),
+    .GT_2_TX_POLARITY(1'b1)
 )
 sfp_phy_quad_inst (
     .xcvr_ctrl_clk(clk_125mhz_int),
@@ -928,6 +940,18 @@ sfp_phy_quad_inst (
      */
     .xcvr_gtpowergood_out(sfp_gtpowergood),
     .xcvr_ref_clk(sfp_mgt_refclk),
+
+    /*
+     * DRP
+     */
+    .drp_clk(sfp_drp_clk),
+    .drp_rst(sfp_drp_rst),
+    .drp_addr(sfp_drp_addr),
+    .drp_di(sfp_drp_di),
+    .drp_en(sfp_drp_en),
+    .drp_we(sfp_drp_we),
+    .drp_do(sfp_drp_do),
+    .drp_rdy(sfp_drp_rdy),
 
     /*
      * Serial data
@@ -1227,6 +1251,15 @@ core_inst (
     .sfp_2_rx_rst(sfp_2_rx_rst_int),
     .sfp_2_rxd(sfp_2_rxd_int),
     .sfp_2_rxc(sfp_2_rxc_int),
+
+    .sfp_drp_clk(sfp_drp_clk),
+    .sfp_drp_rst(sfp_drp_rst),
+    .sfp_drp_addr(sfp_drp_addr),
+    .sfp_drp_di(sfp_drp_di),
+    .sfp_drp_en(sfp_drp_en),
+    .sfp_drp_we(sfp_drp_we),
+    .sfp_drp_do(sfp_drp_do),
+    .sfp_drp_rdy(sfp_drp_rdy),
 
     .sfp_1_tx_disable(sfp_1_tx_disable),
     .sfp_2_tx_disable(sfp_2_tx_disable),

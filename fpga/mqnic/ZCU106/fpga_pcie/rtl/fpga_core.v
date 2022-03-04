@@ -313,7 +313,16 @@ module fpga_core #
     input  wire [7:0]                         sfp1_rxc,
     output wire                               sfp1_rx_prbs31_enable,
     input  wire [6:0]                         sfp1_rx_error_count,
-    output wire                               sfp1_tx_disable_b
+    output wire                               sfp1_tx_disable_b,
+
+    input  wire                               sfp_drp_clk,
+    input  wire                               sfp_drp_rst,
+    output wire [23:0]                        sfp_drp_addr,
+    output wire [15:0]                        sfp_drp_di,
+    output wire                               sfp_drp_en,
+    output wire                               sfp_drp_we,
+    input  wire [15:0]                        sfp_drp_do,
+    input  wire                               sfp_drp_rdy
 );
 
 parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF;
@@ -326,6 +335,8 @@ parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3
 
 localparam RB_BASE_ADDR = 16'h1000;
 localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
+
+localparam RB_DRP_SFP_BASE = RB_BASE_ADDR + 16'h20;
 
 initial begin
     if (PORT_COUNT > 2) begin
@@ -377,6 +388,12 @@ wire [AXIL_CTRL_DATA_WIDTH-1:0]  ctrl_reg_rd_data;
 wire                             ctrl_reg_rd_wait;
 wire                             ctrl_reg_rd_ack;
 
+wire sfp_drp_reg_wr_wait;
+wire sfp_drp_reg_wr_ack;
+wire [AXIL_CTRL_DATA_WIDTH-1:0] sfp_drp_reg_rd_data;
+wire sfp_drp_reg_rd_wait;
+wire sfp_drp_reg_rd_ack;
+
 reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
@@ -387,11 +404,11 @@ reg sfp1_tx_disable_reg = 1'b0;
 reg i2c_scl_o_reg = 1'b1;
 reg i2c_sda_o_reg = 1'b1;
 
-assign ctrl_reg_wr_wait = 1'b0;
-assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg;
-assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg;
-assign ctrl_reg_rd_wait = 1'b0;
-assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg;
+assign ctrl_reg_wr_wait = sfp_drp_reg_wr_wait;
+assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg | sfp_drp_reg_wr_ack;
+assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg | sfp_drp_reg_rd_data;
+assign ctrl_reg_rd_wait = sfp_drp_reg_rd_wait;
+assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg | sfp_drp_reg_rd_ack;
 
 assign sfp0_tx_disable_b = !sfp0_tx_disable_reg;
 assign sfp1_tx_disable_b = !sfp1_tx_disable_reg;
@@ -452,7 +469,7 @@ always @(posedge clk_250mhz) begin
             // XCVR GPIO
             RBB+8'h10: ctrl_reg_rd_data_reg <= 32'h0000C101;             // XCVR GPIO: Type
             RBB+8'h14: ctrl_reg_rd_data_reg <= 32'h00000100;             // XCVR GPIO: Version
-            RBB+8'h18: ctrl_reg_rd_data_reg <= 0;                        // XCVR GPIO: Next header
+            RBB+8'h18: ctrl_reg_rd_data_reg <= RB_DRP_SFP_BASE;          // XCVR GPIO: Next header
             RBB+8'h1C: begin
                 // XCVR GPIO: control 0123
                 ctrl_reg_rd_data_reg[5] <= sfp0_tx_disable_reg;
@@ -473,6 +490,48 @@ always @(posedge clk_250mhz) begin
         i2c_sda_o_reg <= 1'b1;
     end
 end
+
+rb_drp #(
+    .DRP_ADDR_WIDTH(24),
+    .DRP_DATA_WIDTH(16),
+    .DRP_INFO({8'h09, 8'h02, 8'd0, 8'd2}),
+    .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
+    .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .RB_BASE_ADDR(RB_DRP_SFP_BASE),
+    .RB_NEXT_PTR(0)
+)
+sfp_rb_drp_inst (
+    .clk(clk_250mhz),
+    .rst(rst_250mhz),
+
+    /*
+     * Register interface
+     */
+    .reg_wr_addr(ctrl_reg_wr_addr),
+    .reg_wr_data(ctrl_reg_wr_data),
+    .reg_wr_strb(ctrl_reg_wr_strb),
+    .reg_wr_en(ctrl_reg_wr_en),
+    .reg_wr_wait(sfp_drp_reg_wr_wait),
+    .reg_wr_ack(sfp_drp_reg_wr_ack),
+    .reg_rd_addr(ctrl_reg_rd_addr),
+    .reg_rd_en(ctrl_reg_rd_en),
+    .reg_rd_data(sfp_drp_reg_rd_data),
+    .reg_rd_wait(sfp_drp_reg_rd_wait),
+    .reg_rd_ack(sfp_drp_reg_rd_ack),
+
+    /*
+     * DRP
+     */
+    .drp_clk(sfp_drp_clk),
+    .drp_rst(sfp_drp_rst),
+    .drp_addr(sfp_drp_addr),
+    .drp_di(sfp_drp_di),
+    .drp_en(sfp_drp_en),
+    .drp_we(sfp_drp_we),
+    .drp_do(sfp_drp_do),
+    .drp_rdy(sfp_drp_rdy)
+);
 
 reg [26:0] pps_led_counter_reg = 0;
 reg pps_led_reg = 0;

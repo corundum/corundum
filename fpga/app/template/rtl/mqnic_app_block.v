@@ -75,12 +75,12 @@ module mqnic_app_block #
     parameter DMA_ADDR_WIDTH = 64,
     parameter DMA_LEN_WIDTH = 16,
     parameter DMA_TAG_WIDTH = 16,
+    parameter RAM_SEL_WIDTH = 4,
+    parameter RAM_ADDR_WIDTH = 16,
     parameter RAM_SEG_COUNT = 2,
     parameter RAM_SEG_DATA_WIDTH = 256*2/RAM_SEG_COUNT,
-    parameter RAM_SEG_ADDR_WIDTH = 12,
     parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
-    parameter RAM_SEL_WIDTH = 4,
-    parameter RAM_ADDR_WIDTH = RAM_SEG_ADDR_WIDTH+$clog2(RAM_SEG_COUNT)+$clog2(RAM_SEG_BE_WIDTH),
+    parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH),
     parameter RAM_PIPELINE = 2,
 
     // AXI lite interface (application control from host)

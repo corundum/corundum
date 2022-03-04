@@ -27,7 +27,7 @@
 # of the authors and should not be interpreted as representing official policies,
 # either expressed or implied, of The Regents of the University of California.
 
-set base_name {eth_xcvr_gt}
+set base_name {eth_xcvr_gty}
 
 set preset {GTY-10GBASE-R}
 

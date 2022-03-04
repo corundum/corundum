@@ -27,9 +27,9 @@
 # of the authors and should not be interpreted as representing official policies,
 # either expressed or implied, of The Regents of the University of California.
 
-set base_name {eth_xcvr_gt}
+set base_name {eth_xcvr_gth}
 
-set preset {GTY-10GBASE-R}
+set preset {GTH-10GBASE-R}
 
 set freerun_freq {125}
 set line_rate {10.3125}
@@ -38,7 +38,7 @@ set refclk_freq {156.25}
 set qpll_fracn [expr {int(fmod($line_rate*1000/2 / $refclk_freq, 1)*pow(2, 24))}]
 set sec_qpll_fracn [expr {int(fmod($sec_line_rate*1000/2 / $refclk_freq, 1)*pow(2, 24))}]
 set user_data_width {64}
-set int_data_width $user_data_width
+set int_data_width {32}
 set rx_eq_mode {DFE}
 set extra_ports [list]
 set extra_pll_ports [list]

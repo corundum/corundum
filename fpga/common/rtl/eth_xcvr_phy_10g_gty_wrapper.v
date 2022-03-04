@@ -981,10 +981,10 @@ end
 
 generate
 
-if (HAS_COMMON && !GT_GTH) begin : xcvr
+if (HAS_COMMON && !GT_GTH) begin : xcvr_gty_com
 
-    eth_xcvr_gt_full
-    eth_xcvr_gt_full_inst (
+    eth_xcvr_gty_full
+    eth_xcvr_gty_full_inst (
         // Common
         .gtpowergood_out(xcvr_gtpowergood_out),
         .loopback_in(gt_loopback_reg),
@@ -1114,10 +1114,10 @@ if (HAS_COMMON && !GT_GTH) begin : xcvr
     assign xcvr_qpll1clk_out = qpll1_clk;
     assign xcvr_qpll1refclk_out = qpll1_refclk;
 
-end else if (HAS_COMMON && GT_GTH) begin : xcvr
+end else if (HAS_COMMON && GT_GTH) begin : xcvr_gth_com
 
-    eth_xcvr_gt_full
-    eth_xcvr_gt_full_inst (
+    eth_xcvr_gth_full
+    eth_xcvr_gth_full_inst (
         // Common
         .gtpowergood_out(xcvr_gtpowergood_out),
         .loopback_in(gt_loopback_reg),
@@ -1247,10 +1247,10 @@ end else if (HAS_COMMON && GT_GTH) begin : xcvr
     assign xcvr_qpll1clk_out = qpll1_clk;
     assign xcvr_qpll1refclk_out = qpll1_refclk;
 
-end else if (!GT_GTH) begin : xcvr
+end else if (!GT_GTH) begin : xcvr_gty
 
-    eth_xcvr_gt_channel
-    eth_xcvr_gt_channel_inst (
+    eth_xcvr_gty_channel
+    eth_xcvr_gty_channel_inst (
         // Common
         .gtpowergood_out(xcvr_gtpowergood_out),
         .loopback_in(gt_loopback_reg),
@@ -1373,10 +1373,10 @@ end else if (!GT_GTH) begin : xcvr
     assign drp_do_2 = 16'd0;
     assign drp_rdy_2 = 1'b0;
 
-end else begin : xcvr
+end else begin : xcvr_gth
 
-    eth_xcvr_gt_channel
-    eth_xcvr_gt_channel_inst (
+    eth_xcvr_gth_channel
+    eth_xcvr_gth_channel_inst (
         // Common
         .gtpowergood_out(xcvr_gtpowergood_out),
         .loopback_in(gt_loopback_reg),

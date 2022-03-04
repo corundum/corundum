@@ -6,9 +6,13 @@ CC ?= gcc
 CFLAGS ?= -O3
 
 CFLAGS += -Wall
-CPPFLAGS += -I../modules/mqnic
+CPPFLAGS += -I../modules/mqnic -I ../include
 
-BIN = mqnic-config mqnic-dump mqnic-fw mqnic-bmc perout
+BIN = mqnic-config
+BIN += mqnic-dump
+BIN += mqnic-fw
+BIN += mqnic-bmc
+BIN += perout
 
 GENDEPFLAGS = -MD -MP -MF .$(@F).d
 

@@ -133,7 +133,7 @@ static void usage(char *name)
 
 int flash_read_progress(struct flash_device *fdev, size_t addr, size_t len, void *dest)
 {
-    int ret;
+    int ret = 0;
     size_t remain = len;
     size_t seg;
     int step = 0x10000;
@@ -163,13 +163,15 @@ int flash_read_progress(struct flash_device *fdev, size_t addr, size_t len, void
             seg = remain;
         }
 
-        printf("Read address 0x%08lx, length 0x%08lx (%ld%%)\r", addr, seg, ((100*(len-remain))/len));
+        printf("Read address 0x%08lx, length 0x%08lx (%ld%%)\r", addr, seg, (100*(len-remain))/len);
         fflush(stdout);
 
         ret = flash_read(fdev, addr, seg, dest);
 
-        if (ret)
-            return ret;
+        if (ret) {
+            fprintf(stderr, "\nRead failed\n");
+            goto err;
+        }
 
         addr += seg;
         remain -= seg;
@@ -178,12 +180,13 @@ int flash_read_progress(struct flash_device *fdev, size_t addr, size_t len, void
 
     printf("\n");
 
-    return 0;
+err:
+    return ret;
 }
 
 int flash_write_progress(struct flash_device *fdev, size_t addr, size_t len, const void *src)
 {
-    int ret;
+    int ret = 0;
     size_t remain = len;
     size_t seg;
     int step = 0x10000;
@@ -215,13 +218,15 @@ int flash_write_progress(struct flash_device *fdev, size_t addr, size_t len, con
             seg = remain;
         }
 
-        printf("Write address 0x%08lx, length 0x%08lx (%ld%%)\r", addr, seg, ((100*(len-remain))/len));
+        printf("Write address 0x%08lx, length 0x%08lx (%ld%%)\r", addr, seg, (100*(len-remain))/len);
         fflush(stdout);
 
         ret = flash_write(fdev, addr, seg, src);
 
-        if (ret)
-            return ret;
+        if (ret) {
+            fprintf(stderr, "\nWrite failed\n");
+            goto err;
+        }
 
         addr += seg;
         remain -= seg;
@@ -230,7 +235,8 @@ int flash_write_progress(struct flash_device *fdev, size_t addr, size_t len, con
 
     printf("\n");
 
-    return 0;
+err:
+    return ret;
 }
 
 int flash_erase_progress(struct flash_device *fdev, size_t addr, size_t len)

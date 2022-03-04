@@ -239,6 +239,99 @@ err:
     return ret;
 }
 
+int flash_write_verify_progress(struct flash_device *fdev, size_t addr, size_t len, const void *src)
+{
+    int ret = 0;
+    size_t remain = len;
+    size_t seg;
+    int step = 0x10000;
+    const uint8_t *ptr = src;
+    uint8_t *check_buf;
+
+    printf("Start address: 0x%08lx\n", addr);
+    printf("Length: 0x%08lx\n", len);
+
+    step = fdev->write_buffer_size > step ? fdev->write_buffer_size : step;
+
+    check_buf = calloc(step, 1);
+
+    if (!check_buf)
+        return -1;
+
+    while (remain > 0)
+    {
+        if (remain > step)
+        {
+            // longer than step, trim
+            if ((addr + step) & (step-1))
+            {
+                // align to step size
+                seg = step - ((addr + step) & (step-1));
+            }
+            else
+            {
+                // already aligned
+                seg = step;
+            }
+        }
+        else
+        {
+            // shorter than step
+            seg = remain;
+        }
+
+        printf("Write/verify address 0x%08lx, length 0x%08lx (%ld%%)\r", addr, seg, (100*(len-remain))/len);
+        fflush(stdout);
+
+        ret = flash_write(fdev, addr, seg, ptr);
+
+        if (ret) {
+            fprintf(stderr, "\nWrite failed\n");
+            goto err;
+        }
+
+        for (int read_attempts = 3; read_attempts >= 0; read_attempts--)
+        {
+            ret = flash_read(fdev, addr, seg, check_buf);
+
+            if (ret) {
+                fprintf(stderr, "\nRead failed\n");
+                goto err;
+            }
+
+            if (memcmp(ptr, check_buf, seg))
+            {
+                fprintf(stderr, "\nVerify failed (%d more attempts)\n", read_attempts);
+
+                for (size_t k = 0; k < seg; k++)
+                {
+                    if (ptr[k] != check_buf[k])
+                    {
+                        fprintf(stderr, "flash offset 0x%08lx: expected 0x%02x, read 0x%02x\n",
+                            addr+k, ptr[k], check_buf[k]);
+                    }
+                }
+
+                if (read_attempts > 0)
+                    continue;
+
+                ret = -1;
+                goto err;
+            }
+        }
+
+        addr += seg;
+        remain -= seg;
+        ptr += seg;
+    }
+
+    printf("\n");
+
+err:
+    free(check_buf);
+    return ret;
+}
+
 int flash_erase_progress(struct flash_device *fdev, size_t addr, size_t len)
 {
     int ret;
@@ -960,10 +1053,10 @@ int main(int argc, char *argv[])
                 goto err;
             }
 
-            printf("Writing primary flash...\n");
-            if (flash_write_progress(pri_flash, segment_offset/2, len_int, pri_buf))
+            printf("Writing and verifying primary flash...\n");
+            if (flash_write_verify_progress(pri_flash, segment_offset/2, len_int, pri_buf))
             {
-                fprintf(stderr, "Write failed!\n");
+                fprintf(stderr, "Write/verify failed!\n");
                 ret = -1;
                 free(segment);
                 free(pri_buf);
@@ -971,10 +1064,10 @@ int main(int argc, char *argv[])
                 goto err;
             }
 
-            printf("Writing secondary flash...\n");
-            if (flash_write_progress(sec_flash, segment_offset/2, len_int, sec_buf))
+            printf("Writing and verifying secondary flash...\n");
+            if (flash_write_verify_progress(sec_flash, segment_offset/2, len_int, sec_buf))
             {
-                fprintf(stderr, "Write failed!\n");
+                fprintf(stderr, "Write/verify failed!\n");
                 ret = -1;
                 free(segment);
                 free(pri_buf);
@@ -982,47 +1075,7 @@ int main(int argc, char *argv[])
                 goto err;
             }
 
-            char *pri_check_buf = calloc(segment_size/2, 1);
-            char *sec_check_buf = calloc(segment_size/2, 1);
-            memset(pri_check_buf, 0xff, segment_size/2);
-            memset(sec_check_buf, 0xff, segment_size/2);
-
-            printf("Verifying primary flash...\n");
-            flash_read_progress(pri_flash, segment_offset/2, len_int, pri_check_buf);
-            printf("Verifying secondary flash...\n");
-            flash_read_progress(sec_flash, segment_offset/2, len_int, sec_check_buf);
-
-            if (memcmp(pri_buf, pri_check_buf, len_int) || memcmp(sec_buf, sec_check_buf, len_int))
-            {
-                fprintf(stderr, "Verify failed!\n");
-
-                for (size_t k = 0; k < len; k++)
-                {
-                    if (pri_buf[k] != pri_check_buf[k])
-                    {
-                        fprintf(stderr, "primary flash offset 0x%08lx: expected 0x%02x, read 0x%02x\n",
-                            k, pri_buf[k] & 0xff, pri_check_buf[k] & 0xff);
-                    }
-                }
-
-                for (size_t k = 0; k < len; k++)
-                {
-                    if (sec_buf[k] != sec_check_buf[k])
-                    {
-                        fprintf(stderr, "secondary flash offset 0x%08lx: expected 0x%02x, read 0x%02x\n",
-                            k, sec_buf[k] & 0xff, sec_check_buf[k] & 0xff);
-                    }
-                }
-
-                ret = -1;
-            }
-            else
-            {
-                printf("Programming succeeded!\n");
-            }
-
-            free(pri_check_buf);
-            free(sec_check_buf);
+            printf("Programming succeeded!\n");
 
             free(pri_buf);
             free(sec_buf);
@@ -1046,42 +1099,16 @@ int main(int argc, char *argv[])
                 goto err;
             }
 
-            printf("Writing flash...\n");
-            if (flash_write_progress(pri_flash, segment_offset, len, segment))
+            printf("Writing and verifying flash...\n");
+            if (flash_write_verify_progress(pri_flash, segment_offset, len, segment))
             {
-                fprintf(stderr, "Write failed!\n");
+                fprintf(stderr, "Write/verify failed!\n");
                 ret = -1;
                 free(segment);
                 goto err;
             }
 
-            char *check_buf = calloc(segment_size, 1);
-            memset(check_buf, 0xff, segment_size);
-
-            printf("Verifying flash...\n");
-            flash_read_progress(pri_flash, segment_offset, len, check_buf);
-
-            if (memcmp(segment, check_buf, len))
-            {
-                fprintf(stderr, "Verify failed!\n");
-
-                for (size_t k = 0; k < len; k++)
-                {
-                    if (segment[k] != check_buf[k])
-                    {
-                        fprintf(stderr, "flash offset 0x%08lx: expected 0x%02x, read 0x%02x\n",
-                            k, segment[k] & 0xff, check_buf[k] & 0xff);
-                    }
-                }
-
-                ret = -1;
-            }
-            else
-            {
-                printf("Programming succeeded!\n");
-            }
-
-            free(check_buf);
+            printf("Programming succeeded!\n");
         }
 
         free(segment);

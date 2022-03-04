@@ -290,10 +290,10 @@ class TB(object):
         dut.btnc.setimmediatevalue(0)
         dut.sw.setimmediatevalue(0)
 
-        cocotb.start_soon(Clock(dut.qsfp1_drp_clk, 8, units="ns").start())
-        dut.qsfp1_drp_rst.setimmediatevalue(0)
-        dut.qsfp1_drp_do.setimmediatevalue(0)
-        dut.qsfp1_drp_rdy.setimmediatevalue(0)
+        cocotb.start_soon(Clock(dut.qsfp_drp_clk, 8, units="ns").start())
+        dut.qsfp_drp_rst.setimmediatevalue(0)
+        dut.qsfp_drp_do.setimmediatevalue(0)
+        dut.qsfp_drp_rdy.setimmediatevalue(0)
 
         dut.qsfp_rx_error_count_1.setimmediatevalue(0)
         dut.qsfp_rx_error_count_2.setimmediatevalue(0)

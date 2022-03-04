@@ -147,6 +147,7 @@ uint8_t spi_flash_read_byte(struct flash_device *fdev, int protocol)
         for (int i = 7; i >= 0; i--)
         {
             reg_write32(fdev->ctrl_reg, 0);
+            reg_read32(fdev->ctrl_reg); // dummy read
             val |= ((reg_read32(fdev->ctrl_reg) & FLASH_D_1) != 0) << i;
             reg_write32(fdev->ctrl_reg, FLASH_CLK);
             reg_read32(fdev->ctrl_reg); // dummy read
@@ -158,6 +159,7 @@ uint8_t spi_flash_read_byte(struct flash_device *fdev, int protocol)
         for (int i = 6; i >= 0; i -= 2)
         {
             reg_write32(fdev->ctrl_reg, 0);
+            reg_read32(fdev->ctrl_reg); // dummy read
             val |= (reg_read32(fdev->ctrl_reg) & FLASH_D_01) << i;
             reg_write32(fdev->ctrl_reg, FLASH_CLK);
             reg_read32(fdev->ctrl_reg); // dummy read
@@ -169,6 +171,7 @@ uint8_t spi_flash_read_byte(struct flash_device *fdev, int protocol)
         for (int i = 4; i >= 0; i -= 4)
         {
             reg_write32(fdev->ctrl_reg, 0);
+            reg_read32(fdev->ctrl_reg); // dummy read
             val |= (reg_read32(fdev->ctrl_reg) & FLASH_D_0123) << i;
             reg_write32(fdev->ctrl_reg, FLASH_CLK);
             reg_read32(fdev->ctrl_reg); // dummy read

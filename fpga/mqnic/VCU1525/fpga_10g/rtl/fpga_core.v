@@ -329,6 +329,15 @@ module fpga_core #
     output wire                               qsfp0_rx_prbs31_enable_4,
     input  wire [6:0]                         qsfp0_rx_error_count_4,
 
+    input  wire                               qsfp0_drp_clk,
+    input  wire                               qsfp0_drp_rst,
+    output wire [23:0]                        qsfp0_drp_addr,
+    output wire [15:0]                        qsfp0_drp_di,
+    output wire                               qsfp0_drp_en,
+    output wire                               qsfp0_drp_we,
+    input  wire [15:0]                        qsfp0_drp_do,
+    input  wire                               qsfp0_drp_rdy,
+
     output wire                               qsfp0_modsell,
     output wire                               qsfp0_resetl,
     input  wire                               qsfp0_modprsl,
@@ -380,6 +389,15 @@ module fpga_core #
     output wire                               qsfp1_rx_prbs31_enable_4,
     input  wire [6:0]                         qsfp1_rx_error_count_4,
 
+    input  wire                               qsfp1_drp_clk,
+    input  wire                               qsfp1_drp_rst,
+    output wire [23:0]                        qsfp1_drp_addr,
+    output wire [15:0]                        qsfp1_drp_di,
+    output wire                               qsfp1_drp_en,
+    output wire                               qsfp1_drp_we,
+    input  wire [15:0]                        qsfp1_drp_do,
+    input  wire                               qsfp1_drp_rdy,
+
     output wire                               qsfp1_modsell,
     output wire                               qsfp1_resetl,
     input  wire                               qsfp1_modprsl,
@@ -407,6 +425,9 @@ parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3
 
 localparam RB_BASE_ADDR = 16'h1000;
 localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
+
+localparam RB_DRP_QSFP0_BASE = RB_BASE_ADDR + 16'h40;
+localparam RB_DRP_QSFP1_BASE = RB_DRP_QSFP0_BASE + 16'h20;
 
 initial begin
     if (PORT_COUNT > 8) begin
@@ -458,6 +479,18 @@ wire [AXIL_CTRL_DATA_WIDTH-1:0]  ctrl_reg_rd_data;
 wire                             ctrl_reg_rd_wait;
 wire                             ctrl_reg_rd_ack;
 
+wire qsfp0_drp_reg_wr_wait;
+wire qsfp0_drp_reg_wr_ack;
+wire [AXIL_CTRL_DATA_WIDTH-1:0] qsfp0_drp_reg_rd_data;
+wire qsfp0_drp_reg_rd_wait;
+wire qsfp0_drp_reg_rd_ack;
+
+wire qsfp1_drp_reg_wr_wait;
+wire qsfp1_drp_reg_wr_ack;
+wire [AXIL_CTRL_DATA_WIDTH-1:0] qsfp1_drp_reg_rd_data;
+wire qsfp1_drp_reg_rd_wait;
+wire qsfp1_drp_reg_rd_ack;
+
 reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
@@ -478,11 +511,11 @@ reg qspi_cs_reg = 1'b1;
 reg [3:0] qspi_dq_o_reg = 4'd0;
 reg [3:0] qspi_dq_oe_reg = 4'd0;
 
-assign ctrl_reg_wr_wait = 1'b0;
-assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg;
-assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg;
-assign ctrl_reg_rd_wait = 1'b0;
-assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg;
+assign ctrl_reg_wr_wait = qsfp0_drp_reg_wr_wait | qsfp1_drp_reg_wr_wait;
+assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg | qsfp0_drp_reg_wr_ack | qsfp1_drp_reg_wr_ack;
+assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg | qsfp0_drp_reg_rd_data | qsfp1_drp_reg_rd_data;
+assign ctrl_reg_rd_wait = qsfp0_drp_reg_rd_wait | qsfp1_drp_reg_rd_wait;
+assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg | qsfp0_drp_reg_rd_ack | qsfp1_drp_reg_rd_ack;
 
 assign qsfp0_modsell = 1'b0;
 assign qsfp1_modsell = 1'b0;
@@ -596,7 +629,7 @@ always @(posedge clk_250mhz) begin
             // QSPI flash
             RBB+8'h20: ctrl_reg_rd_data_reg <= 32'h0000C120;             // SPI flash ctrl: Type
             RBB+8'h24: ctrl_reg_rd_data_reg <= 32'h00000100;             // SPI flash ctrl: Version
-            RBB+8'h28: ctrl_reg_rd_data_reg <= 0;                        // SPI flash ctrl: Next header
+            RBB+8'h28: ctrl_reg_rd_data_reg <= RB_DRP_QSFP0_BASE;        // SPI flash ctrl: Next header
             RBB+8'h2C: begin
                 // SPI flash ctrl: format
                 ctrl_reg_rd_data_reg[7:0]   <= 0;  // type (SPI)
@@ -636,6 +669,90 @@ always @(posedge clk_250mhz) begin
         qspi_dq_oe_reg <= 4'd0;
     end
 end
+
+rb_drp #(
+    .DRP_ADDR_WIDTH(24),
+    .DRP_DATA_WIDTH(16),
+    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
+    .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
+    .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .RB_BASE_ADDR(RB_DRP_QSFP0_BASE),
+    .RB_NEXT_PTR(RB_DRP_QSFP1_BASE)
+)
+qsfp0_rb_drp_inst (
+    .clk(clk_250mhz),
+    .rst(rst_250mhz),
+
+    /*
+     * Register interface
+     */
+    .reg_wr_addr(ctrl_reg_wr_addr),
+    .reg_wr_data(ctrl_reg_wr_data),
+    .reg_wr_strb(ctrl_reg_wr_strb),
+    .reg_wr_en(ctrl_reg_wr_en),
+    .reg_wr_wait(qsfp0_drp_reg_wr_wait),
+    .reg_wr_ack(qsfp0_drp_reg_wr_ack),
+    .reg_rd_addr(ctrl_reg_rd_addr),
+    .reg_rd_en(ctrl_reg_rd_en),
+    .reg_rd_data(qsfp0_drp_reg_rd_data),
+    .reg_rd_wait(qsfp0_drp_reg_rd_wait),
+    .reg_rd_ack(qsfp0_drp_reg_rd_ack),
+
+    /*
+     * DRP
+     */
+    .drp_clk(qsfp0_drp_clk),
+    .drp_rst(qsfp0_drp_rst),
+    .drp_addr(qsfp0_drp_addr),
+    .drp_di(qsfp0_drp_di),
+    .drp_en(qsfp0_drp_en),
+    .drp_we(qsfp0_drp_we),
+    .drp_do(qsfp0_drp_do),
+    .drp_rdy(qsfp0_drp_rdy)
+);
+
+rb_drp #(
+    .DRP_ADDR_WIDTH(24),
+    .DRP_DATA_WIDTH(16),
+    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
+    .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
+    .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .RB_BASE_ADDR(RB_DRP_QSFP1_BASE),
+    .RB_NEXT_PTR(0)
+)
+qsfp1_rb_drp_inst (
+    .clk(clk_250mhz),
+    .rst(rst_250mhz),
+
+    /*
+     * Register interface
+     */
+    .reg_wr_addr(ctrl_reg_wr_addr),
+    .reg_wr_data(ctrl_reg_wr_data),
+    .reg_wr_strb(ctrl_reg_wr_strb),
+    .reg_wr_en(ctrl_reg_wr_en),
+    .reg_wr_wait(qsfp1_drp_reg_wr_wait),
+    .reg_wr_ack(qsfp1_drp_reg_wr_ack),
+    .reg_rd_addr(ctrl_reg_rd_addr),
+    .reg_rd_en(ctrl_reg_rd_en),
+    .reg_rd_data(qsfp1_drp_reg_rd_data),
+    .reg_rd_wait(qsfp1_drp_reg_rd_wait),
+    .reg_rd_ack(qsfp1_drp_reg_rd_ack),
+
+    /*
+     * DRP
+     */
+    .drp_clk(qsfp1_drp_clk),
+    .drp_rst(qsfp1_drp_rst),
+    .drp_addr(qsfp1_drp_addr),
+    .drp_di(qsfp1_drp_di),
+    .drp_en(qsfp1_drp_en),
+    .drp_we(qsfp1_drp_we),
+    .drp_do(qsfp1_drp_do),
+    .drp_rdy(qsfp1_drp_rdy)
+);
 
 reg [26:0] pps_led_counter_reg = 0;
 reg pps_led_reg = 0;

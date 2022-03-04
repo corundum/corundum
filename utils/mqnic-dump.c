@@ -99,6 +99,13 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    if (dev->pci_device_path)
+    {
+        char *ptr = strrchr(dev->pci_device_path, '/');
+        if (ptr)
+            printf("PCIe ID: %s\n", ptr+1);
+    }
+
     printf("Device-level register blocks:\n");
     for (struct reg_block *rb = dev->rb_list; rb->type && rb->version; rb++)
         printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 

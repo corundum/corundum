@@ -228,6 +228,13 @@ int main(int argc, char *argv[])
         return -1;
     }
 
+    if (dev->pci_device_path)
+    {
+        char *ptr = strrchr(dev->pci_device_path, '/');
+        if (ptr)
+            printf("PCIe ID: %s\n", ptr+1);
+    }
+
     printf("FPGA ID: 0x%08x\n", dev->fpga_id);
     printf("FW ID: 0x%08x\n", dev->fw_id);
     printf("FW version: %d.%d.%d.%d\n", dev->fw_ver >> 24,

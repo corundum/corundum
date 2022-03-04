@@ -131,7 +131,7 @@ static void usage(char *name)
         name);
 }
 
-int flash_read_progress(struct flash_device *fdev, size_t addr, size_t len, void* dest)
+int flash_read_progress(struct flash_device *fdev, size_t addr, size_t len, void *dest)
 {
     int ret;
     size_t remain = len;
@@ -181,7 +181,7 @@ int flash_read_progress(struct flash_device *fdev, size_t addr, size_t len, void
     return 0;
 }
 
-int flash_write_progress(struct flash_device *fdev, size_t addr, size_t len, void* src)
+int flash_write_progress(struct flash_device *fdev, size_t addr, size_t len, const void *src)
 {
     int ret;
     size_t remain = len;

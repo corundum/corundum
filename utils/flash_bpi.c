@@ -197,9 +197,9 @@ int bpi_flash_intel_sector_erase(struct flash_device *fdev, size_t addr)
     return 0;
 }
 
-int bpi_flash_intel_buffered_program(struct flash_device *fdev, size_t addr, size_t len, void *src)
+int bpi_flash_intel_buffered_program(struct flash_device *fdev, size_t addr, size_t len, const void *src)
 {
-    uint8_t *s = src;
+    const uint8_t *s = (const uint8_t *)src;
 
     bpi_flash_set_addr(fdev, addr);
     bpi_flash_write_cur(fdev, BPI_INTEL_BUFFERED_PROGRAM_SETUP);
@@ -296,9 +296,9 @@ int bpi_flash_amd_sector_erase(struct flash_device *fdev, size_t addr)
     return 0;
 }
 
-int bpi_flash_amd_buffered_program(struct flash_device *fdev, size_t addr, size_t len, void *src)
+int bpi_flash_amd_buffered_program(struct flash_device *fdev, size_t addr, size_t len, const void *src)
 {
-    uint8_t *s = src;
+    const uint8_t *s = (const uint8_t *)src;
 
     bpi_flash_amd_unlock(fdev);
     bpi_flash_write_word(fdev, addr, BPI_AMD_BUFFERED_PROGRAM_SETUP);
@@ -379,9 +379,9 @@ int bpi_flash_micron_sector_erase(struct flash_device *fdev, size_t addr)
     return 0;
 }
 
-int bpi_flash_micron_buffered_program(struct flash_device *fdev, size_t addr, size_t len, void *src)
+int bpi_flash_micron_buffered_program(struct flash_device *fdev, size_t addr, size_t len, const void *src)
 {
-    uint8_t *s = src;
+    const uint8_t *s = (const uint8_t *)src;
 
     bpi_flash_set_addr(fdev, addr);
     bpi_flash_write_cur(fdev, BPI_MICRON_BUFFERED_PROGRAM_SETUP);
@@ -577,9 +577,9 @@ int bpi_flash_read(struct flash_device *fdev, size_t addr, size_t len, void *des
     return 0;
 }
 
-int bpi_flash_write(struct flash_device *fdev, size_t addr, size_t len, void *src)
+int bpi_flash_write(struct flash_device *fdev, size_t addr, size_t len, const void *src)
 {
-    char *s = src;
+    const char *s = src;
 
     while (len > 0)
     {

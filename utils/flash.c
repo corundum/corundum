@@ -110,7 +110,7 @@ void flash_release(struct flash_device *fdev)
     free(fdev);
 }
 
-int flash_read(struct flash_device *fdev, size_t addr, size_t len, void* dest)
+int flash_read(struct flash_device *fdev, size_t addr, size_t len, void *dest)
 {
     if (!fdev)
         return -1;
@@ -118,7 +118,7 @@ int flash_read(struct flash_device *fdev, size_t addr, size_t len, void* dest)
     return fdev->driver->read(fdev, addr, len, dest);
 }
 
-int flash_write(struct flash_device *fdev, size_t addr, size_t len, void* src)
+int flash_write(struct flash_device *fdev, size_t addr, size_t len, const void *src)
 {
     if (!fdev)
         return -1;

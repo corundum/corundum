@@ -431,9 +431,9 @@ int spi_flash_read(struct flash_device *fdev, size_t addr, size_t len, void *des
     return 0;
 }
 
-int spi_flash_write(struct flash_device *fdev, size_t addr, size_t len, void *src)
+int spi_flash_write(struct flash_device *fdev, size_t addr, size_t len, const void *src)
 {
-    char *s = src;
+    const char *s = src;
 
     int protocol = SPI_PROTO_STR;
 

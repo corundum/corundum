@@ -75,22 +75,22 @@ struct flash_device {
 struct flash_ops {
     void (*init)(struct flash_device *fdev);
     int (*sector_erase)(struct flash_device *fdev, size_t addr);
-    int (*buffered_program)(struct flash_device *fdev, size_t addr, size_t len, void *src);
+    int (*buffered_program)(struct flash_device *fdev, size_t addr, size_t len, const void *src);
 };
 
 struct flash_driver {
     int (*init)(struct flash_device *fdev);
     void (*release)(struct flash_device *fdev);
-    int (*read)(struct flash_device *fdev, size_t addr, size_t len, void* dest);
-    int (*write)(struct flash_device *fdev, size_t addr, size_t len, void* src);
+    int (*read)(struct flash_device *fdev, size_t addr, size_t len, void *dest);
+    int (*write)(struct flash_device *fdev, size_t addr, size_t len, const void *src);
     int (*erase)(struct flash_device *fdev, size_t addr, size_t len);
 };
 
 struct flash_device *flash_open_spi(int data_width, volatile uint8_t *ctrl_reg);
 struct flash_device *flash_open_bpi(int data_width, volatile uint8_t *ctrl_reg, volatile uint8_t *addr_reg, volatile uint8_t *data_reg);
 void flash_release(struct flash_device *fdev);
-int flash_read(struct flash_device *fdev, size_t addr, size_t len, void* dest);
-int flash_write(struct flash_device *fdev, size_t addr, size_t len, void* src);
+int flash_read(struct flash_device *fdev, size_t addr, size_t len, void *dest);
+int flash_write(struct flash_device *fdev, size_t addr, size_t len, const void *src);
 int flash_erase(struct flash_device *fdev, size_t addr, size_t len);
 
 #endif /* FLASH_H */

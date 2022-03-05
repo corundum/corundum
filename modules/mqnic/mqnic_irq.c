@@ -84,6 +84,8 @@ int mqnic_irq_init_pcie(struct mqnic_dev *mdev)
 		mdev->irq[k] = irq;
 	}
 
+	dev_info(dev, "Configured %d IRQs", mdev->irq_count);
+
 	return 0;
 fail:
 	mqnic_irq_deinit_pcie(mdev);

@@ -4,6 +4,8 @@
 
 GitHub repository: https://github.com/corundum/corundum
 
+Documentation: https://corundum.readthedocs.io/
+
 GitHub wiki: https://github.com/corundum/corundum/wiki
 
 Google group: https://groups.google.com/d/forum/corundum-nic
@@ -40,6 +42,8 @@ For operation at 10G and 25G, Corundum uses the open source 10G/25G MAC and PHY 
 Operation at 100G on Xilinx UltraScale+ devices currently requires using the Xilinx CMAC core with RS-FEC enabled, which is covered by the free CMAC license.
 
 ## Documentation
+
+For detailed documentation, see https://corundum.readthedocs.io/
 
 ### Block Diagram
 

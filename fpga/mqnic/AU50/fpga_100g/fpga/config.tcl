@@ -70,6 +70,7 @@ set pcie_revision_id [expr 0x00]
 set pcie_subsystem_vendor_id $board_vendor_id
 set pcie_subsystem_device_id $board_device_id
 
+# FW ID block
 dict set params FPGA_ID [format "32'h%08x" $fpga_id]
 dict set params FW_ID [format "32'h%08x" $fw_id]
 dict set params FW_VER [format "32'h%02x%02x%02x%02x" {*}[split $fw_ver .-] 0 0 0 0]
@@ -211,12 +212,16 @@ proc configure_bar {pcie pf bar aperture} {
 
             puts "${pcie} PF${pf} BAR${bar}: aperture ${aperture} bits ($size $scale)"
 
-            set_property "CONFIG.pf${pf}_bar${bar}_enabled" {true} $pcie
-            set_property "CONFIG.pf${pf}_bar${bar}_type" {Memory} $pcie
-            set_property "CONFIG.pf${pf}_bar${bar}_64bit" {true} $pcie
-            set_property "CONFIG.pf${pf}_bar${bar}_prefetchable" {true} $pcie
-            set_property "CONFIG.pf${pf}_bar${bar}_scale" $scale $pcie
-            set_property "CONFIG.pf${pf}_bar${bar}_size" $size $pcie
+            set pcie_config [dict create]
+
+            dict set pcie_config "CONFIG.pf${pf}_bar${bar}_enabled" {true}
+            dict set pcie_config "CONFIG.pf${pf}_bar${bar}_type" {Memory}
+            dict set pcie_config "CONFIG.pf${pf}_bar${bar}_64bit" {true}
+            dict set pcie_config "CONFIG.pf${pf}_bar${bar}_prefetchable" {true}
+            dict set pcie_config "CONFIG.pf${pf}_bar${bar}_scale" $scale
+            dict set pcie_config "CONFIG.pf${pf}_bar${bar}_size" $size
+
+            set_property -dict $pcie_config $pcie
 
             return
         }

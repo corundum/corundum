@@ -144,6 +144,7 @@ module fpga #
     parameter AXIL_APP_CTRL_ADDR_WIDTH = 24,
 
     // Ethernet interface configuration
+    parameter AXIS_ETH_SYNC_DATA_WIDTH_DOUBLE = 1,
     parameter AXIS_ETH_TX_PIPELINE = 4,
     parameter AXIS_ETH_TX_FIFO_PIPELINE = 4,
     parameter AXIS_ETH_TX_TS_PIPELINE = 4,
@@ -264,7 +265,7 @@ parameter XGMII_DATA_WIDTH = 64;
 parameter XGMII_CTRL_WIDTH = XGMII_DATA_WIDTH/8;
 parameter AXIS_ETH_DATA_WIDTH = XGMII_DATA_WIDTH;
 parameter AXIS_ETH_KEEP_WIDTH = AXIS_ETH_DATA_WIDTH/8;
-parameter AXIS_ETH_SYNC_DATA_WIDTH = AXIS_ETH_DATA_WIDTH;
+parameter AXIS_ETH_SYNC_DATA_WIDTH = AXIS_ETH_DATA_WIDTH*(AXIS_ETH_SYNC_DATA_WIDTH_DOUBLE ? 2 : 1);
 parameter AXIS_ETH_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1;
 parameter AXIS_ETH_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1;
 
@@ -1143,7 +1144,10 @@ qsfp0_sync_reset_inst (
 );
 
 eth_xcvr_phy_10g_gty_quad_wrapper #(
-    .PRBS31_ENABLE(1)
+    .PRBS31_ENABLE(1),
+    .TX_SERDES_PIPELINE(1),
+    .RX_SERDES_PIPELINE(1),
+    .COUNT_125US(125000/2.56)
 )
 qsfp0_phy_quad_inst (
     .xcvr_ctrl_clk(clk_125mhz_int),
@@ -1346,7 +1350,10 @@ qsfp1_sync_reset_inst (
 );
 
 eth_xcvr_phy_10g_gty_quad_wrapper #(
-    .PRBS31_ENABLE(1)
+    .PRBS31_ENABLE(1),
+    .TX_SERDES_PIPELINE(1),
+    .RX_SERDES_PIPELINE(1),
+    .COUNT_125US(125000/2.56)
 )
 qsfp1_phy_quad_inst (
     .xcvr_ctrl_clk(clk_125mhz_int),

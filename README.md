@@ -4,7 +4,7 @@
 
 GitHub repository: https://github.com/corundum/corundum
 
-Documentation: https://corundum.readthedocs.io/
+Documentation: https://docs.corundum.io/
 
 GitHub wiki: https://github.com/corundum/corundum/wiki
 
@@ -43,7 +43,7 @@ Operation at 100G on Xilinx UltraScale+ devices currently requires using the Xil
 
 ## Documentation
 
-For detailed documentation, see https://corundum.readthedocs.io/
+For detailed documentation, see https://docs.corundum.io/
 
 ### Block Diagram
 

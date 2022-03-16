@@ -76,10 +76,10 @@ class TB(object):
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -90,27 +90,27 @@ async def run_test(dut):
 
     await tb.reset()
 
-    dut.enable <= 1
+    dut.enable.value = 1
 
     tb.log.info("Test pulse out")
 
     await RisingEdge(dut.clk)
 
-    dut.input_schedule_start <= 1000
-    dut.input_schedule_start_valid <= 1
-    dut.input_schedule_period <= 2000
-    dut.input_schedule_period_valid <= 1
-    dut.input_timeslot_period <= 400
-    dut.input_timeslot_period_valid <= 1
-    dut.input_active_period <= 300
-    dut.input_active_period_valid <= 1
+    dut.input_schedule_start.value = 1000
+    dut.input_schedule_start_valid.value = 1
+    dut.input_schedule_period.value = 2000
+    dut.input_schedule_period_valid.value = 1
+    dut.input_timeslot_period.value = 400
+    dut.input_timeslot_period_valid.value = 1
+    dut.input_active_period.value = 300
+    dut.input_active_period_valid.value = 1
 
     await RisingEdge(dut.clk)
 
-    dut.input_schedule_start_valid <= 0
-    dut.input_schedule_period_valid <= 0
-    dut.input_timeslot_period_valid <= 0
-    dut.input_active_period_valid <= 0
+    dut.input_schedule_start_valid.value = 0
+    dut.input_schedule_period_valid.value = 0
+    dut.input_timeslot_period_valid.value = 0
+    dut.input_active_period_valid.value = 0
 
     await Timer(10000, 'ns')
 

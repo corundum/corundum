@@ -67,10 +67,10 @@ class TB(object):
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -94,11 +94,11 @@ async def run_test_acc(dut, data_in=None, backpressure_inserter=None):
             valid |= 1 << k
 
         await RisingEdge(dut.clk)
-        dut.stat_inc <= inc
-        dut.stat_valid <= valid
+        dut.stat_inc.value = inc
+        dut.stat_valid.value = valid
         await RisingEdge(dut.clk)
-        dut.stat_inc <= 0
-        dut.stat_valid <= 0
+        dut.stat_inc.value = 0
+        dut.stat_valid.value = 0
 
         await Timer(1000, 'ns')
 
@@ -162,8 +162,8 @@ async def run_stress_test(dut, backpressure_inserter=None):
                     inc |= (count) << (stat_inc_width*num)
                     valid |= 1 << num
 
-            dut.stat_inc <= inc
-            dut.stat_valid <= valid
+            dut.stat_inc.value = inc
+            dut.stat_valid.value = valid
 
     driver = cocotb.start_soon(driver(dut, queue_drive))
 

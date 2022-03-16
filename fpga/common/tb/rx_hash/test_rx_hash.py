@@ -123,16 +123,16 @@ class TB(object):
 
     def set_hash_key(self, key):
         self.hash_key = key
-        self.dut.hash_key <= int.from_bytes(key, 'big')
+        self.dut.hash_key.value = int.from_bytes(key, 'big')
 
     async def reset(self):
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 

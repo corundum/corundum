@@ -68,10 +68,10 @@ class TB(object):
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -83,14 +83,14 @@ class TB(object):
         await RisingEdge(self.dut.clk)
         for i in range(cycles):
             for k in range(slots):
-                self.dut.tdma_timeslot_index <= k
-                self.dut.tdma_timeslot_start <= 1
-                self.dut.tdma_timeslot_active <= 1
+                self.dut.tdma_timeslot_index.value = k
+                self.dut.tdma_timeslot_start.value = 1
+                self.dut.tdma_timeslot_active.value = 1
                 await RisingEdge(self.dut.clk)
-                self.dut.tdma_timeslot_start <= 0
+                self.dut.tdma_timeslot_start.value = 0
                 for k in range(active_period-1):
                     await RisingEdge(self.dut.clk)
-                self.dut.tdma_timeslot_active <= 0
+                self.dut.tdma_timeslot_active.value = 0
                 for k in range(period-active_period):
                     await RisingEdge(self.dut.clk)
 
@@ -134,12 +134,12 @@ async def run_test(dut):
     await tb.clear_timeslot_counters()
 
     await RisingEdge(dut.clk)
-    dut.phy_rx_error_count <= 1
+    dut.phy_rx_error_count.value = 1
 
     await tb.run_scheduler(period=50, active_period=None, slots=4, cycles=5)
 
     await RisingEdge(dut.clk)
-    dut.phy_rx_error_count <= 0
+    dut.phy_rx_error_count.value = 0
 
     await tb.dump_counters()
     await tb.dump_timeslot_counters()
@@ -161,12 +161,12 @@ async def run_test(dut):
     await tb.clear_timeslot_counters()
 
     await RisingEdge(dut.clk)
-    dut.phy_rx_error_count <= 1
+    dut.phy_rx_error_count.value = 1
 
     await tb.run_scheduler(period=50, active_period=40, slots=4, cycles=5)
 
     await RisingEdge(dut.clk)
-    dut.phy_rx_error_count <= 0
+    dut.phy_rx_error_count.value = 0
 
     await tb.dump_counters()
     await tb.dump_timeslot_counters()
@@ -194,12 +194,12 @@ async def run_test(dut):
         await tb.clear_timeslot_counters(k)
 
     await RisingEdge(dut.clk)
-    dut.phy_rx_error_count <= 1
+    dut.phy_rx_error_count.value = 1
 
     await tb.run_scheduler(period=500, active_period=400, slots=4, cycles=5)
 
     await RisingEdge(dut.clk)
-    dut.phy_rx_error_count <= 0
+    dut.phy_rx_error_count.value = 0
 
     await tb.dump_counters()
     for k in range(3):

@@ -98,10 +98,10 @@ class TB(object):
         self.dut.rst.setimmediatevalue(0)
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 1
+        self.dut.rst.value = 1
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
-        self.dut.rst <= 0
+        self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -114,7 +114,7 @@ async def run_test(dut):
 
     await tb.reset()
 
-    dut.enable <= 1
+    dut.enable.value = 1
 
     tb.log.info("Test read and write queue configuration registers")
 

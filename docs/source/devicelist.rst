@@ -88,35 +88,39 @@ This section details PCIe form-factor targets, which interface with a separate h
     =================  =========================  ====  =======  ====  =====
     Board              Design                     IFxP  RXQ/TXQ  MAC   Sched
     =================  =========================  ====  =======  ====  =====
-    ADM-PCIE-9V3       mqnic/fpga_10g/fpga        2x1   256/8K   10G   RR
-    ADM-PCIE-9V3       mqnic/fpga_10g/fpga_tdma   2x1   256/256  10G   TDMA
     ADM-PCIE-9V3       mqnic/fpga_25g/fpga        2x1   256/8K   25G   RR
+    ADM-PCIE-9V3       mqnic/fpga_25g/fpga_10g    2x1   256/8K   10G   RR
     ADM-PCIE-9V3       mqnic/fpga_25g/fpga_tdma   2x1   256/256  25G   TDMA
     ADM-PCIE-9V3       mqnic/fpga_100g/fpga       2x1   256/8K   100G  RR
     ADM-PCIE-9V3       mqnic/fpga_100g/fpga_tdma  2x1   256/256  100G  TDMA
     ExaNIC X10         mqnic/fpga/fpga            2x1   256/1K   10G   RR
-    ExaNIC X25         mqnic/fpga_10g/fpga        2x1   256/8K   10G   RR
     ExaNIC X25         mqnic/fpga_25g/fpga        2x1   256/8K   25G   RR
-    fb2CG\@KU15P       mqnic/fpga_10g/fpga        2x1   256/8K   10G   RR
-    fb2CG\@KU15P       mqnic/fpga_10g/fpga_tdma   2x1   256/256  10G   TDMA
+    ExaNIC X25         mqnic/fpga_25g/fpga_10g    2x1   256/8K   10G   RR
     fb2CG\@KU15P       mqnic/fpga_25g/fpga        2x1   256/8K   25G   RR
+    fb2CG\@KU15P       mqnic/fpga_25g/fpga_10g    2x1   256/8K   10G   RR
     fb2CG\@KU15P       mqnic/fpga_25g/fpga_tdma   2x1   256/256  25G   TDMA
     fb2CG\@KU15P       mqnic/fpga_100g/fpga       2x1   256/8K   100G  RR
     fb2CG\@KU15P       mqnic/fpga_100g/fpga_tdma  2x1   256/256  100G  TDMA
     NetFPGA SUME       mqnic/fpga/fpga            1x1   256/512  10G   RR
     DK-DEV-1SMC-H-A    mqnic/fpga_10g/fpga        2x1   256/1K   10G   RR
-    Alveo U50          mqnic/fpga_10g/fpga        1x1   256/8K   10G   RR
+    Alveo U50          mqnic/fpga_25g/fpga        1x1   256/8K   25G   RR
+    Alveo U50          mqnic/fpga_25g/fpga_10g    1x1   256/8K   10G   RR
     Alveo U50          mqnic/fpga_100g/fpga       1x1   256/8K   100G  RR
-    Alveo U200         mqnic/fpga_10g/fpga        2x1   256/8K   10G   RR
+    Alveo U200         mqnic/fpga_25g/fpga        2x1   256/8K   25G   RR
+    Alveo U200         mqnic/fpga_25g/fpga_10g    2x1   256/8K   10G   RR
     Alveo U200         mqnic/fpga_100g/fpga       2x1   256/8K   100G  RR
-    Alveo U250         mqnic/fpga_10g/fpga        2x1   256/8K   10G   RR
+    Alveo U250         mqnic/fpga_25g/fpga        2x1   256/8K   25G   RR
+    Alveo U250         mqnic/fpga_25g/fpga_10g    2x1   256/8K   10G   RR
     Alveo U250         mqnic/fpga_100g/fpga       2x1   256/8K   100G  RR
-    Alveo U280         mqnic/fpga_10g/fpga        2x1   256/8K   10G   RR
+    Alveo U280         mqnic/fpga_25g/fpga        2x1   256/8K   25G   RR
+    Alveo U280         mqnic/fpga_25g/fpga_10g    2x1   256/8K   10G   RR
     Alveo U280         mqnic/fpga_100g/fpga       2x1   256/8K   100G  RR
     VCU108             mqnic/fpga_10g/fpga        1x1   256/2K   10G   RR
-    VCU118             mqnic/fpga_10g/fpga        2x1   256/8K   10G   RR
+    VCU118             mqnic/fpga_25g/fpga        2x1   256/8K   25G   RR
+    VCU118             mqnic/fpga_25g/fpga_10g    2x1   256/8K   10G   RR
     VCU118             mqnic/fpga_100g/fpga       2x1   256/8K   100G  RR
-    VCU1525            mqnic/fpga_10g/fpga        2x1   256/8K   10G   RR
+    VCU1525            mqnic/fpga_25g/fpga        2x1   256/8K   25G   RR
+    VCU1525            mqnic/fpga_25g/fpga_10g    2x1   256/8K   10G   RR
     VCU1525            mqnic/fpga_100g/fpga       2x1   256/8K   100G  RR
     ZCU106             mqnic/fpga_10g/fpga        2x1   256/8K   10G   RR
     =================  =========================  ====  =======  ====  =====

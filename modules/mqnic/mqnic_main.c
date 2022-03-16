@@ -290,6 +290,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	int ret = 0;
 	struct mqnic_dev *mqnic;
 	struct device *dev = &pdev->dev;
+	struct pci_dev *bridge = pci_upstream_bridge(pdev);
 
 	dev_info(dev, DRIVER_NAME " PCI probe");
 	dev_info(dev, " Vendor: 0x%04x", pdev->vendor);
@@ -299,6 +300,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	dev_info(dev, " Class: 0x%06x", pdev->class);
 	dev_info(dev, " PCI ID: %04x:%02x:%02x.%d", pci_domain_nr(pdev->bus),
 			pdev->bus->number, PCI_SLOT(pdev->devfn), PCI_FUNC(pdev->devfn));
+
 	if (pdev->pcie_cap) {
 		u16 devctl;
 		u32 lnkcap;
@@ -325,9 +327,29 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 		dev_info(dev, " No snoop: %s",
 				devctl & PCI_EXP_DEVCTL_NOSNOOP_EN ? "enabled" : "disabled");
 	}
+
 #ifdef CONFIG_NUMA
 	dev_info(dev, " NUMA node: %d", pdev->dev.numa_node);
 #endif
+
+	if (bridge) {
+		dev_info(dev, " PCI ID (bridge): %04x:%02x:%02x.%d", pci_domain_nr(bridge->bus),
+				bridge->bus->number, PCI_SLOT(bridge->devfn), PCI_FUNC(bridge->devfn));
+	}
+
+	if (bridge && bridge->pcie_cap) {
+		u32 lnkcap;
+		u16 lnksta;
+
+		pci_read_config_dword(bridge, bridge->pcie_cap + PCI_EXP_LNKCAP, &lnkcap);
+		pci_read_config_word(bridge, bridge->pcie_cap + PCI_EXP_LNKSTA, &lnksta);
+
+		dev_info(dev, " Link capability (bridge): gen %d x%d",
+				lnkcap & PCI_EXP_LNKCAP_SLS, (lnkcap & PCI_EXP_LNKCAP_MLW) >> 4);
+		dev_info(dev, " Link status (bridge): gen %d x%d",
+				lnksta & PCI_EXP_LNKSTA_CLS, (lnksta & PCI_EXP_LNKSTA_NLW) >> 4);
+	}
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 17, 0)
 	pcie_print_link_status(pdev);
 #endif

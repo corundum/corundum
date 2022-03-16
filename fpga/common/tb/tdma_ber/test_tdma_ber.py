@@ -148,6 +148,7 @@ def test_tdma_ber(request):
     parameters['TIMESLOT_PERIOD_NS'] = 100000
     parameters['ACTIVE_PERIOD_S'] = 0
     parameters['ACTIVE_PERIOD_NS'] = 100000
+    parameters['PHY_PIPELINE'] = 0
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

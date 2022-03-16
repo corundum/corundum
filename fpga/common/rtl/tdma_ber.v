@@ -69,7 +69,9 @@ module tdma_ber #
     // Timeslot active period, seconds part
     parameter ACTIVE_PERIOD_S = 48'd0,
     // Timeslot active period, nanoseconds part
-    parameter ACTIVE_PERIOD_NS = 30'd100000
+    parameter ACTIVE_PERIOD_NS = 30'd100000,
+    // pipeline stages on PHY interface ports
+    parameter PHY_PIPELINE = 0
 )
 (
     input  wire                        clk,
@@ -423,7 +425,8 @@ generate
             .SLICE_WIDTH(SLICE_WIDTH),
             .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
             .AXIL_ADDR_WIDTH(CH_ADDR_WIDTH),
-            .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH)
+            .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
+            .PHY_PIPELINE(PHY_PIPELINE)
         )
         tdma_ber_ch_inst (
             .clk(clk),

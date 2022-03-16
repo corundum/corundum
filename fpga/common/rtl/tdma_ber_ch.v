@@ -51,7 +51,9 @@ module tdma_ber_ch #
     // Width of AXI lite address bus in bits
     parameter AXIL_ADDR_WIDTH = INDEX_WIDTH+4,
     // Width of AXI lite wstrb (width of data bus in words)
-    parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8)
+    parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
+    // pipeline stages on PHY interface ports
+    parameter PHY_PIPELINE = 0
 )
 (
     input  wire                        clk,
@@ -124,15 +126,19 @@ reg rx_prbs31_enable_reg = 1'b0, rx_prbs31_enable_next;
 
 // PHY TX BER interface
 reg phy_tx_prbs31_enable_reg = 1'b0;
+reg [PHY_PIPELINE-1:0] phy_tx_prbs31_enable_pipe_reg = 0;
 
 always @(posedge phy_tx_clk) begin
     phy_tx_prbs31_enable_reg <= tx_prbs31_enable_reg;
+    phy_tx_prbs31_enable_pipe_reg <= {phy_tx_prbs31_enable_pipe_reg, phy_tx_prbs31_enable_reg};
 end
 
-assign phy_tx_prbs31_enable = phy_tx_prbs31_enable_reg;
+assign phy_tx_prbs31_enable = PHY_PIPELINE ? phy_tx_prbs31_enable_pipe_reg[PHY_PIPELINE-1] : phy_tx_prbs31_enable_reg;
 
 // PHY RX BER interface
 reg phy_rx_prbs31_enable_reg = 1'b0;
+reg [PHY_PIPELINE-1:0] phy_rx_prbs31_enable_pipe_reg = 0;
+reg [PHY_PIPELINE*7-1:0] phy_rx_error_count_pipe_reg = 0;
 
 // accumulate errors, dump every 16 cycles
 reg [10:0] phy_rx_error_count_reg = 0;
@@ -142,19 +148,21 @@ reg phy_rx_flag_reg = 1'b0;
 
 always @(posedge phy_rx_clk) begin
     phy_rx_prbs31_enable_reg <= rx_prbs31_enable_reg;
+    phy_rx_prbs31_enable_pipe_reg <= {phy_rx_prbs31_enable_pipe_reg, phy_rx_prbs31_enable_reg};
+    phy_rx_error_count_pipe_reg <= {phy_rx_error_count_pipe_reg, phy_rx_error_count};
 
     phy_rx_count_reg <= phy_rx_count_reg + 1;
 
     if (phy_rx_count_reg == 0) begin
         phy_rx_error_count_reg <= phy_rx_error_count_acc_reg;
-        phy_rx_error_count_acc_reg <= phy_rx_error_count;
+        phy_rx_error_count_acc_reg <= PHY_PIPELINE ? phy_rx_error_count_pipe_reg[(PHY_PIPELINE-1)*7 +: 7] : phy_rx_error_count;
         phy_rx_flag_reg <= !phy_rx_flag_reg;
     end else begin
         phy_rx_error_count_acc_reg <= phy_rx_error_count_acc_reg + phy_rx_error_count;
     end
 end
 
-assign phy_rx_prbs31_enable = phy_rx_prbs31_enable_reg;
+assign phy_rx_prbs31_enable = PHY_PIPELINE ? phy_rx_prbs31_enable_pipe_reg[PHY_PIPELINE-1] : phy_rx_prbs31_enable_reg;
 
 // synchronize dumped counts to control clock domain
 reg rx_flag_sync_reg_1 = 1'b0;

@@ -244,6 +244,7 @@ def test_tdma_ber_ch(request):
     parameters['AXIL_DATA_WIDTH'] = 32
     parameters['AXIL_ADDR_WIDTH'] = parameters['INDEX_WIDTH']+4
     parameters['AXIL_STRB_WIDTH'] = parameters['AXIL_DATA_WIDTH'] // 8
+    parameters['PHY_PIPELINE'] = 0
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

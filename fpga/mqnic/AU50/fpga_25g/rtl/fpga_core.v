@@ -655,7 +655,8 @@ tdma_ber #(
     .TIMESLOT_PERIOD_S(0),
     .TIMESLOT_PERIOD_NS(100000),
     .ACTIVE_PERIOD_S(0),
-    .ACTIVE_PERIOD_NS(90000)
+    .ACTIVE_PERIOD_NS(90000),
+    .PHY_PIPELINE(2)
 )
 tdma_ber_inst (
     .clk(clk_250mhz),

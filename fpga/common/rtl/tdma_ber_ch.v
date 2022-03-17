@@ -158,7 +158,7 @@ always @(posedge phy_rx_clk) begin
         phy_rx_error_count_acc_reg <= PHY_PIPELINE ? phy_rx_error_count_pipe_reg[(PHY_PIPELINE-1)*7 +: 7] : phy_rx_error_count;
         phy_rx_flag_reg <= !phy_rx_flag_reg;
     end else begin
-        phy_rx_error_count_acc_reg <= phy_rx_error_count_acc_reg + phy_rx_error_count;
+        phy_rx_error_count_acc_reg <= phy_rx_error_count_acc_reg + (PHY_PIPELINE ? phy_rx_error_count_pipe_reg[(PHY_PIPELINE-1)*7 +: 7] : phy_rx_error_count);
     end
 end
 

@@ -29,6 +29,7 @@ import configparser
 import datetime
 import os
 import re
+import shlex
 import subprocess
 
 
@@ -134,6 +135,8 @@ class Build:
         build_cmd = self.build_cmd
         if self.settings_file:
             build_cmd = f"source {self.settings_file}; {build_cmd}"
+
+        build_cmd = "bash -c " + shlex.quote(build_cmd)
 
         proc = await asyncio.create_subprocess_shell(
             build_cmd,
@@ -326,8 +329,19 @@ async def main():
                     design = os.path.relpath(root, path).split(os.sep)
                     if len(scan_dirs) > 1:
                         design = [d]+design
-                    design = [x for x in design if x != 'fpga']
-                    design = [x.removeprefix('fpga').strip("_") for x in design]
+
+                    #design = [x for x in design if x != 'fpga']
+                    #design = [x.removeprefix('fpga').strip("_") for x in design]
+
+                    lst = []
+                    for s in design:
+                        if s.startswith('fpga'):
+                            s = s[4:]
+                        s = s.strip('_')
+                        if not s:
+                            continue
+                        lst.append(s)
+                    design = lst
 
                     if os.path.exists(os.path.join(root, "..", "common", "vivado.mk")):
                         # Vivado

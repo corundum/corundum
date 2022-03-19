@@ -300,7 +300,7 @@ integer i, j;
 
 initial begin
     // break up loop to work around iteration termination
-    for (i = 0; i < QUEUE_INDEX_WIDTH; i = i + 2**(QUEUE_INDEX_WIDTH/2)) begin
+    for (i = 0; i < 2**QUEUE_INDEX_WIDTH; i = i + 2**(QUEUE_INDEX_WIDTH/2)) begin
         for (j = i; j < i + 2**(QUEUE_INDEX_WIDTH/2); j = j + 1) begin
             queue_ram[j] = 0;
         end

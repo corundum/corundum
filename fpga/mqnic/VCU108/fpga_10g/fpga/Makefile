@@ -169,7 +169,7 @@ program: $(FPGA_TOP).bit
 	vivado -nojournal -nolog -mode batch -source program.tcl
 
 %.mcs %.prm: %.bit
-	echo "write_cfgmem -force -format mcs -size 128 -interface BPIx16 -loadbit {up 0x01000000 $*.bit} -checksum -file $*.mcs" > generate_mcs.tcl
+	echo "write_cfgmem -force -format mcs -size 128 -interface BPIx16 -loadbit {up 0x02000000 $*.bit} -checksum -file $*.mcs" > generate_mcs.tcl
 	echo "exit" >> generate_mcs.tcl
 	vivado -nojournal -nolog -mode batch -source generate_mcs.tcl
 	mkdir -p rev
@@ -195,7 +195,7 @@ program: $(FPGA_TOP).bit
 	echo "Output: rev/$*_fallback_rev$$COUNT$$x"; done;
 
 %_full.mcs %_full.prm: %_fallback.bit %.bit
-	echo "write_cfgmem -force -format mcs -size 128 -interface BPIx16 -loadbit {up 0x00000000 $*_fallback.bit up 0x01000000 $*.bit} -checksum -file $*_full.mcs" > generate_full_mcs.tcl
+	echo "write_cfgmem -force -format mcs -size 128 -interface BPIx16 -loadbit {up 0x00000000 $*_fallback.bit up 0x02000000 $*.bit} -checksum -file $*_full.mcs" > generate_full_mcs.tcl
 	echo "exit" >> generate_full_mcs.tcl
 	vivado -nojournal -nolog -mode batch -source generate_full_mcs.tcl
 	mkdir -p rev

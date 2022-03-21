@@ -152,6 +152,7 @@ include ../common/vivado.mk
 	EXT=bit; COUNT=100; \
 	while [ -e rev/$*_rev$$COUNT.$$EXT ]; \
 	do COUNT=$$((COUNT+1)); done; \
+	COUNT=$$((COUNT-1)); \
 	cp $@ rev/$*_fallback_rev$$COUNT.$$EXT; \
 	echo "Output: rev/$*_fallback_rev$$COUNT.$$EXT";
 

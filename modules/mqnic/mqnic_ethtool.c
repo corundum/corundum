@@ -87,7 +87,7 @@ static int mqnic_read_module_eeprom(struct net_device *ndev,
 	struct mqnic_priv *priv = netdev_priv(ndev);
 
 	if (!priv->mod_i2c_client)
-		return -1;
+		return -EINVAL;
 
 	if (len > I2C_SMBUS_BLOCK_MAX)
 		len = I2C_SMBUS_BLOCK_MAX;
@@ -104,6 +104,9 @@ static int mqnic_get_module_info(struct net_device *ndev,
 
 	// read module ID and revision
 	read_len = mqnic_read_module_eeprom(ndev, 0, 2, data);
+
+	if (read_len < 0)
+		return read_len;
 
 	if (read_len < 2)
 		return -EIO;
@@ -157,11 +160,11 @@ static int mqnic_get_module_eeprom(struct net_device *ndev,
 				eeprom->len - i, data + i);
 
 		if (read_len == 0)
-			return -EIO;
+			return 0;
 
 		if (read_len < 0) {
 			dev_err(priv->dev, "Failed to read module EEPROM");
-			return 0;
+			return read_len;
 		}
 
 		i += read_len;

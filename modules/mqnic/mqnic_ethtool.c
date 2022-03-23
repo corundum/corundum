@@ -36,6 +36,7 @@
 #include "mqnic.h"
 
 #include <linux/ethtool.h>
+#include <linux/version.h>
 
 #define SFF_MODULE_ID_SFP        0x03
 #define SFF_MODULE_ID_QSFP       0x0c
@@ -95,6 +96,138 @@ static int mqnic_read_module_eeprom(struct net_device *ndev,
 	return i2c_smbus_read_i2c_block_data(priv->mod_i2c_client, offset, len, data);
 }
 
+static int mqnic_write_module_eeprom(struct net_device *ndev,
+		u16 offset, u16 len, u8 *data)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+
+	if (!priv->mod_i2c_client)
+		return -EINVAL;
+
+	if (len > I2C_SMBUS_BLOCK_MAX)
+		len = I2C_SMBUS_BLOCK_MAX;
+
+	return i2c_smbus_write_i2c_block_data(priv->mod_i2c_client, offset, len, data);
+}
+
+static int mqnic_query_module_id(struct net_device *ndev)
+{
+	int ret;
+	u8 data;
+
+	ret = mqnic_read_module_eeprom(ndev, 0, 1, &data);
+
+	if (ret < 0)
+		return ret;
+
+	return data;
+}
+
+static int mqnic_query_module_eeprom_by_page(struct net_device *ndev,
+		u8 i2c_addr, u16 page, u16 bank, u16 offset, u16 len, u8 *data)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	int module_id;
+	u8 d;
+
+	module_id = mqnic_query_module_id(ndev);
+
+	if (module_id < 0) {
+		dev_err(priv->dev, "%s: Failed to read module ID (%d)", __func__, module_id);
+		return module_id;
+	}
+
+	switch (module_id) {
+	case SFF_MODULE_ID_SFP:
+		if (page > 0 || bank > 0)
+			return -EINVAL;
+		break;
+	case SFF_MODULE_ID_QSFP:
+	case SFF_MODULE_ID_QSFP_PLUS:
+	case SFF_MODULE_ID_QSFP28:
+		if (page > 3 || bank > 0)
+			return -EINVAL;
+		break;
+	default:
+		dev_err(priv->dev, "%s: Unknown module ID (0x%x)", __func__, module_id);
+		return -EINVAL;
+	}
+
+	if (i2c_addr != 0x50)
+		return -EINVAL;
+
+	// set page
+	switch (module_id) {
+	case SFF_MODULE_ID_SFP:
+		break;
+	case SFF_MODULE_ID_QSFP:
+	case SFF_MODULE_ID_QSFP_PLUS:
+	case SFF_MODULE_ID_QSFP28:
+		if (offset+len >= 128) {
+			// select page
+			d = page;
+			mqnic_write_module_eeprom(ndev, 127, 1, &d);
+			msleep(1);
+		}
+		break;
+	default:
+		dev_err(priv->dev, "%s: Unknown module ID (0x%x)", __func__, module_id);
+		return -EINVAL;
+	}
+
+	// read data
+	return mqnic_read_module_eeprom(ndev, offset, len, data);
+}
+
+static int mqnic_query_module_eeprom(struct net_device *ndev,
+		u16 offset, u16 len, u8 *data)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	int module_id;
+	u8 i2c_addr = 0x50;
+	u16 page = 0;
+	u16 bank = 0;
+
+	module_id = mqnic_query_module_id(ndev);
+
+	if (module_id < 0) {
+		dev_err(priv->dev, "%s: Failed to read module ID (%d)", __func__, module_id);
+		return module_id;
+	}
+
+	switch (module_id) {
+	case SFF_MODULE_ID_SFP:
+		i2c_addr = 0x50;
+		page = 0;
+		if (offset > 256) {
+			offset -= 256;
+			i2c_addr = 0x51;
+		}
+		break;
+	case SFF_MODULE_ID_QSFP:
+	case SFF_MODULE_ID_QSFP_PLUS:
+	case SFF_MODULE_ID_QSFP28:
+		i2c_addr = 0x50;
+		if (offset < 256) {
+			page = 0;
+		} else {
+			page = 1 + ((offset - 256) / 128);
+			offset -= page * 128;
+		}
+		break;
+	default:
+		dev_err(priv->dev, "%s: Unknown module ID (0x%x)", __func__, module_id);
+		return -EINVAL;
+	}
+
+	// clip request to end of page
+	if (offset + len > 256)
+		len = 256 - offset;
+
+	return mqnic_query_module_eeprom_by_page(ndev, i2c_addr,
+			page, bank, offset, len, data);
+}
+
 static int mqnic_get_module_info(struct net_device *ndev,
 		struct ethtool_modinfo *modinfo)
 {
@@ -136,7 +269,7 @@ static int mqnic_get_module_info(struct net_device *ndev,
 		modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
 		break;
 	default:
-		dev_err(priv->dev, "Unknown module ID");
+		dev_err(priv->dev, "%s: Unknown module ID (0x%x)", __func__, data[0]);
 		return -EINVAL;
 	}
 
@@ -156,14 +289,14 @@ static int mqnic_get_module_eeprom(struct net_device *ndev,
 	memset(data, 0, eeprom->len);
 
 	while (i < eeprom->len) {
-		read_len = mqnic_read_module_eeprom(ndev, eeprom->offset + i,
+		read_len = mqnic_query_module_eeprom(ndev, eeprom->offset + i,
 				eeprom->len - i, data + i);
 
 		if (read_len == 0)
 			return 0;
 
 		if (read_len < 0) {
-			dev_err(priv->dev, "Failed to read module EEPROM");
+			dev_err(priv->dev, "%s: Failed to read module EEPROM (%d)", __func__, read_len);
 			return read_len;
 		}
 
@@ -173,9 +306,46 @@ static int mqnic_get_module_eeprom(struct net_device *ndev,
 	return 0;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 13, 0)
+static int mqnic_get_module_eeprom_by_page(struct net_device *ndev,
+		const struct ethtool_module_eeprom *eeprom,
+		struct netlink_ext_ack *extack)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	int i = 0;
+	int read_len;
+
+	if (eeprom->length == 0)
+		return -EINVAL;
+
+	memset(eeprom->data, 0, eeprom->length);
+
+	while (i < eeprom->length) {
+		read_len = mqnic_query_module_eeprom_by_page(ndev, eeprom->i2c_address,
+				eeprom->page, eeprom->bank, eeprom->offset + i,
+				eeprom->length - i, eeprom->data + i);
+
+		if (read_len == 0)
+			return 0;
+
+		if (read_len < 0) {
+			dev_err(priv->dev, "%s: Failed to read module EEPROM (%d)", __func__, read_len);
+			return read_len;
+		}
+
+		i += read_len;
+	}
+
+	return i;
+}
+#endif
+
 const struct ethtool_ops mqnic_ethtool_ops = {
 	.get_drvinfo = mqnic_get_drvinfo,
 	.get_ts_info = mqnic_get_ts_info,
 	.get_module_info = mqnic_get_module_info,
 	.get_module_eeprom = mqnic_get_module_eeprom,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 13, 0)
+	.get_module_eeprom_by_page = mqnic_get_module_eeprom_by_page,
+#endif
 };

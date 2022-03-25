@@ -20,6 +20,7 @@ add_cells_to_pblock [get_pblocks pblock_pcie] [get_cells -quiet "core_inst/core_
 resize_pblock [get_pblocks pblock_pcie] -add {CLOCKREGION_X6Y0:CLOCKREGION_X7Y3}
 
 create_pblock pblock_eth
+add_cells_to_pblock [get_pblocks pblock_eth] [get_cells -quiet "qsfp_phy_quad_inst"]
 add_cells_to_pblock [get_pblocks pblock_eth] [get_cells -quiet "core_inst/mac[*].eth_mac_inst"]
 add_cells_to_pblock [get_pblocks pblock_eth] [get_cells -quiet "core_inst/core_inst/core_pcie_inst/core_inst/iface[*].port[*].tx_async_fifo_inst"]
 add_cells_to_pblock [get_pblocks pblock_eth] [get_cells -quiet "core_inst/core_inst/core_pcie_inst/core_inst/iface[*].port[*].rx_async_fifo_inst"]

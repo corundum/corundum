@@ -865,7 +865,11 @@ always @(posedge pcie_user_clk) begin
     pcie_user_reset_reg_2 <= pcie_user_reset_reg_1;
 end
 
-assign pcie_user_reset = pcie_user_reset_reg_2;
+BUFG
+pcie_user_reset_bufg_inst (
+    .I(pcie_user_reset_reg_2),
+    .O(pcie_user_reset)
+);
 
 pcie4_uscale_plus_0
 pcie4_uscale_plus_inst (

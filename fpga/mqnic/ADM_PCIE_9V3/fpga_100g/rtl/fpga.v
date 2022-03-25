@@ -715,7 +715,11 @@ always @(posedge pcie_user_clk) begin
     pcie_user_reset_reg_2 <= pcie_user_reset_reg_1;
 end
 
-assign pcie_user_reset = pcie_user_reset_reg_2;
+BUFG
+pcie_user_reset_bufg_inst (
+    .I(pcie_user_reset_reg_2),
+    .O(pcie_user_reset)
+);
 
 // ila_0 ila_rq (
 //     .clk(pcie_user_clk),

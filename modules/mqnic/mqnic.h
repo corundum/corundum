@@ -60,10 +60,10 @@ struct mqnic_dev;
 struct mqnic_if;
 
 struct reg_block {
-    u32 type;
-    u32 version;
-    u8 __iomem *regs;
-    u8 __iomem *base;
+	u32 type;
+	u32 version;
+	u8 __iomem *regs;
+	u8 __iomem *base;
 };
 
 struct mqnic_board_ops {

@@ -106,6 +106,12 @@ int main(int argc, char *argv[])
             printf("PCIe ID: %s\n", ptr+1);
     }
 
+    printf("Control region size: %lu\n", dev->regs_size);
+    if (dev->app_regs_size)
+        printf("Application region size: %lu\n", dev->app_regs_size);
+    if (dev->ram_size)
+        printf("RAM region size: %lu\n", dev->ram_size);
+
     printf("Device-level register blocks:\n");
     for (struct reg_block *rb = dev->rb_list; rb->type && rb->version; rb++)
         printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 

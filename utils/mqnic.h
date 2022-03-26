@@ -125,9 +125,17 @@ struct mqnic_if {
 
 struct mqnic {
     int fd;
+    int app_fd;
+    int ram_fd;
 
     size_t regs_size;
     volatile uint8_t *regs;
+
+    size_t app_regs_size;
+    volatile uint8_t *app_regs;
+
+    size_t ram_size;
+    volatile uint8_t *ram;
 
     struct reg_block *rb_list;
     struct reg_block *fw_id_rb;

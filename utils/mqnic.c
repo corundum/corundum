@@ -75,26 +75,6 @@ static int mqnic_try_open(struct mqnic *dev, const char *fmt, ...)
         goto fail_open;
     }
 
-    if (fstat(dev->fd, &st))
-    {
-        perror("fstat failed");
-        goto fail_fstat;
-    }
-
-    dev->regs_size = st.st_size;
-
-    if (dev->regs_size == 0)
-    {
-        struct mqnic_ioctl_info info;
-        if (ioctl(dev->fd, MQNIC_IOCTL_INFO, &info) != 0)
-        {
-            perror("MQNIC_IOCTL_INFO ioctl failed");
-            goto fail_ioctl;
-        }
-
-        dev->regs_size = info.regs_size;
-    }
-
     // determine sysfs path of PCIe device
     // first, try to find via miscdevice
     ptr = strrchr(dev->device_path, '/');
@@ -123,27 +103,173 @@ static int mqnic_try_open(struct mqnic *dev, const char *fmt, ...)
             dev->pci_device_path[0] = 0;
     }
 
-    // map registers
-    dev->regs = (volatile uint8_t *)mmap(NULL, dev->regs_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, 0);
-    if (dev->regs == MAP_FAILED)
+    if (fstat(dev->fd, &st))
     {
-        perror("mmap regs failed");
-        goto fail_mmap_regs;
+        perror("fstat failed");
+        goto fail_fstat;
     }
 
-    if (dev->pci_device_path[0] && mqnic_reg_read32(dev->regs, 4) == 0xffffffff)
+    dev->regs_size = st.st_size;
+
+    if (dev->regs_size == 0)
     {
-        // if we were given a PCIe resource, then we may need to enable the device
-        snprintf(path, sizeof(path), "%s/enable", dev->pci_device_path);
+        // miscdevice
+        off_t regs_offset = 0;
+        off_t app_regs_offset = 0;
+        off_t ram_offset = 0;
 
-        if (access(path, W_OK) == 0)
+        if (ioctl(dev->fd, MQNIC_IOCTL_GET_API_VERSION, 0) != MQNIC_IOCTL_API_VERSION)
         {
-            FILE *fp = fopen(path, "w");
+            fprintf(stderr, "Error: unknown API version\n");
+            goto fail_ioctl;
+        }
 
-            if (fp)
+        struct mqnic_ioctl_device_info device_info;
+        device_info.argsz = sizeof(device_info);
+        device_info.flags = 0;
+
+        if (ioctl(dev->fd, MQNIC_IOCTL_GET_DEVICE_INFO, &device_info) != 0)
+        {
+            perror("MQNIC_IOCTL_GET_DEVICE_INFO ioctl failed");
+            goto fail_ioctl;
+        }
+
+        struct mqnic_ioctl_region_info region_info;
+        region_info.argsz = sizeof(region_info);
+        region_info.flags = 0;
+        region_info.index = 0;
+
+        for (region_info.index = 0; region_info.index < device_info.num_regions; region_info.index++)
+        {
+            if (ioctl(dev->fd, MQNIC_IOCTL_GET_REGION_INFO, &region_info) != 0)
             {
-                fputc('1', fp);
-                fclose(fp);
+                perror("MQNIC_IOCTL_GET_REGION_INFO ioctl failed");
+                goto fail_ioctl;
+            }
+
+            switch (region_info.type) {
+            case MQNIC_REGION_TYPE_NIC_CTRL:
+                regs_offset = region_info.offset;
+                dev->regs_size = region_info.size;
+                break;
+            case MQNIC_REGION_TYPE_APP_CTRL:
+                app_regs_offset = region_info.offset;
+                dev->app_regs_size = region_info.size;
+                break;
+            case MQNIC_REGION_TYPE_RAM:
+                ram_offset = region_info.offset;
+                dev->ram_size = region_info.size;
+                break;
+            default:
+                break;
+            }
+        }
+
+        // map registers
+        dev->regs = (volatile uint8_t *)mmap(NULL, dev->regs_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, regs_offset);
+        if (dev->regs == MAP_FAILED)
+        {
+            perror("mmap regs failed");
+            goto fail_mmap_regs;
+        }
+
+        // map application section registers
+        if (dev->app_regs_size)
+        {
+            dev->app_regs = (volatile uint8_t *)mmap(NULL, dev->app_regs_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, app_regs_offset);
+            if (dev->app_regs == MAP_FAILED)
+            {
+                perror("mmap app regs failed");
+                goto fail_mmap_regs;
+            }
+        }
+
+        // map RAM
+        if (dev->ram_size)
+        {
+            dev->ram = (volatile uint8_t *)mmap(NULL, dev->ram_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, ram_offset);
+            if (dev->ram == MAP_FAILED)
+            {
+                perror("mmap RAM failed");
+                goto fail_mmap_regs;
+            }
+        }
+    }
+    else
+    {
+        // PCIe resource
+
+        // map registers
+        dev->regs = (volatile uint8_t *)mmap(NULL, dev->regs_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->fd, 0);
+        if (dev->regs == MAP_FAILED)
+        {
+            perror("mmap regs failed");
+            goto fail_mmap_regs;
+        }
+
+        if (dev->pci_device_path[0])
+        {
+            // map application section registers
+            snprintf(path, sizeof(path), "%s/resource2", dev->pci_device_path);
+
+            dev->app_fd = open(path, O_RDWR);
+
+            if (dev->app_fd >= 0)
+            {
+                if (fstat(dev->app_fd, &st))
+                {
+                    perror("fstat failed");
+                    goto fail_fstat;
+                }
+
+                dev->app_regs_size = st.st_size;
+
+                dev->app_regs = (volatile uint8_t *)mmap(NULL, dev->app_regs_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->app_fd, 0);
+                if (dev->app_regs == MAP_FAILED)
+                {
+                    perror("mmap app regs failed");
+                    goto fail_mmap_regs;
+                }
+            }
+
+            // map RAM
+            snprintf(path, sizeof(path), "%s/resource4", dev->pci_device_path);
+
+            dev->ram_fd = open(path, O_RDWR);
+
+            if (dev->ram_fd >= 0)
+            {
+                if (fstat(dev->ram_fd, &st))
+                {
+                    perror("fstat failed");
+                    goto fail_fstat;
+                }
+
+                dev->ram_size = st.st_size;
+
+                dev->ram = (volatile uint8_t *)mmap(NULL, dev->ram_size, PROT_READ | PROT_WRITE, MAP_SHARED, dev->ram_fd, 0);
+                if (dev->ram == MAP_FAILED)
+                {
+                    perror("mmap RAM failed");
+                    goto fail_mmap_regs;
+                }
+            }
+
+            if (dev->pci_device_path[0] && mqnic_reg_read32(dev->regs, 4) == 0xffffffff)
+            {
+                // if we were given a PCIe resource, then we may need to enable the device
+                snprintf(path, sizeof(path), "%s/enable", dev->pci_device_path);
+
+                if (access(path, W_OK) == 0)
+                {
+                    FILE *fp = fopen(path, "w");
+
+                    if (fp)
+                    {
+                        fputc('1', fp);
+                        fclose(fp);
+                    }
+                }
             }
         }
     }
@@ -177,11 +303,24 @@ fail_enum:
     if (dev->rb_list)
         free_reg_block_list(dev->rb_list);
 fail_reset:
-    munmap((void *)dev->regs, dev->regs_size);
 fail_mmap_regs:
+    if (dev->ram)
+        munmap((void *)dev->ram, dev->ram_size);
+    dev->ram = NULL;
+    if (dev->app_regs)
+        munmap((void *)dev->app_regs, dev->app_regs_size);
+    dev->app_regs = NULL;
+    if (dev->regs)
+        munmap((void *)dev->regs, dev->regs_size);
+    dev->regs = NULL;
 fail_ioctl:
 fail_fstat:
     close(dev->fd);
+    dev->fd = -1;
+    close(dev->app_fd);
+    dev->app_fd = -1;
+    close(dev->ram_fd);
+    dev->ram_fd = -1;
 fail_open:
     return -1;
 }
@@ -226,6 +365,10 @@ struct mqnic *mqnic_open(const char *dev_name)
         perror("memory allocation failed");
         goto fail_alloc;
     }
+
+    dev->fd = -1;
+    dev->app_fd = -1;
+    dev->ram_fd = -1;
 
     // absolute path
     if (mqnic_try_open(dev, "%s", dev_name) == 0)
@@ -322,8 +465,17 @@ void mqnic_close(struct mqnic *dev)
     if (dev->rb_list)
         free_reg_block_list(dev->rb_list);
 
-    munmap((void *)dev->regs, dev->regs_size);
+    if (dev->ram)
+        munmap((void *)dev->ram, dev->ram_size);
+    if (dev->app_regs)
+        munmap((void *)dev->app_regs, dev->app_regs_size);
+    if (dev->regs)
+        munmap((void *)dev->regs, dev->regs_size);
+
     close(dev->fd);
+    close(dev->app_fd);
+    close(dev->ram_fd);
+
     free(dev);
 }
 

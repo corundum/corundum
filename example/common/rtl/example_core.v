@@ -411,6 +411,7 @@ always @* begin
         axil_ctrl_arready_next = 1'b1;
         axil_ctrl_rresp_next = 2'b00;
         axil_ctrl_rvalid_next = 1'b1;
+        axil_ctrl_rdata_next = 32'd0;
 
         case ({s_axil_ctrl_araddr[15:2], 2'b00})
             // control

@@ -55,6 +55,7 @@ module fpga_core #
     // Structural configuration
     parameter IF_COUNT = 2,
     parameter PORTS_PER_IF = 1,
+    parameter SCHED_PER_IF = PORTS_PER_IF,
 
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
@@ -951,6 +952,7 @@ mqnic_core_pcie_us #(
     // Structural configuration
     .IF_COUNT(IF_COUNT),
     .PORTS_PER_IF(PORTS_PER_IF),
+    .SCHED_PER_IF(SCHED_PER_IF),
 
     .PORT_COUNT(PORT_COUNT),
 

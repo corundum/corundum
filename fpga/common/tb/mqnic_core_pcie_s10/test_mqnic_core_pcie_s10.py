@@ -597,6 +597,7 @@ def test_mqnic_core_pcie_s10(request, if_count, ports_per_if, pcie_data_width,
     # Structural configuration
     parameters['IF_COUNT'] = if_count
     parameters['PORTS_PER_IF'] = ports_per_if
+    parameters['SCHED_PER_IF'] = ports_per_if
 
     # PTP configuration
     parameters['PTP_CLOCK_PIPELINE'] = 0

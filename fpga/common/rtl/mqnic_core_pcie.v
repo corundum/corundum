@@ -55,6 +55,7 @@ module mqnic_core_pcie #
     // Structural configuration
     parameter IF_COUNT = 1,
     parameter PORTS_PER_IF = 1,
+    parameter SCHED_PER_IF = PORTS_PER_IF,
 
     parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF,
 
@@ -1326,6 +1327,7 @@ mqnic_core #(
     // Structural configuration
     .IF_COUNT(IF_COUNT),
     .PORTS_PER_IF(PORTS_PER_IF),
+    .SCHED_PER_IF(SCHED_PER_IF),
 
     .PORT_COUNT(PORT_COUNT),
 

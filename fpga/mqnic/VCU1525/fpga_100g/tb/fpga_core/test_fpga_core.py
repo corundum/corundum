@@ -608,6 +608,7 @@ def test_fpga_core(request):
     # Structural configuration
     parameters['IF_COUNT'] = 2
     parameters['PORTS_PER_IF'] = 1
+    parameters['SCHED_PER_IF'] = parameters['PORTS_PER_IF']
 
     # PTP configuration
     parameters['PTP_CLOCK_PIPELINE'] = 0

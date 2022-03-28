@@ -170,7 +170,7 @@ reg [REG_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = 0;
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
 reg sched_enable_reg = 1'b0;
-reg [AXIS_TX_DEST_WIDTH-1:0] sched_dest_reg = INDEX << 4;
+reg [AXIS_TX_DEST_WIDTH-1:0] sched_dest_reg = (INDEX % PORTS) << 4;
 
 assign ctrl_reg_wr_wait = 1'b0;
 assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg;
@@ -234,7 +234,7 @@ always @(posedge clk) begin
         ctrl_reg_rd_ack_reg <= 1'b0;
 
         sched_enable_reg <= 1'b0;
-        sched_dest_reg <= INDEX << 4;
+        sched_dest_reg <= (INDEX % PORTS) << 4;
     end
 end
 

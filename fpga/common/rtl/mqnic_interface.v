@@ -44,6 +44,8 @@ module mqnic_interface #
 (
     // Number of ports
     parameter PORTS = 1,
+    // Number of schedulers
+    parameter SCHEDULERS = 1,
     // DMA address width
     parameter DMA_ADDR_WIDTH = 64,
     // DMA length field width
@@ -379,8 +381,8 @@ parameter EVENT_TYPE_WIDTH = 16;
 
 parameter MAX_DESC_TABLE_SIZE = TX_DESC_TABLE_SIZE > RX_DESC_TABLE_SIZE ? TX_DESC_TABLE_SIZE : RX_DESC_TABLE_SIZE;
 
-parameter REQ_TAG_WIDTH = $clog2(MAX_DESC_TABLE_SIZE) + $clog2(PORTS);
-parameter REQ_TAG_WIDTH_INT = REQ_TAG_WIDTH - $clog2(PORTS);
+parameter REQ_TAG_WIDTH = $clog2(MAX_DESC_TABLE_SIZE) + $clog2(SCHEDULERS);
+parameter REQ_TAG_WIDTH_INT = REQ_TAG_WIDTH - $clog2(SCHEDULERS);
 
 parameter DESC_REQ_TAG_WIDTH = $clog2(MAX_DESC_TABLE_SIZE) + 1 + $clog2(PORTS+1);
 
@@ -395,14 +397,14 @@ parameter CPL_QUEUE_INDEX_WIDTH = TX_CPL_QUEUE_INDEX_WIDTH > RX_CPL_QUEUE_INDEX_
 
 parameter DESC_REQ_TAG_WIDTH_INT = DESC_REQ_TAG_WIDTH - $clog2(3);
 
-parameter AXIL_CSR_ADDR_WIDTH = AXIL_ADDR_WIDTH-5-$clog2((PORTS+3)/8);
-parameter AXIL_CTRL_ADDR_WIDTH = AXIL_ADDR_WIDTH-5-$clog2((PORTS+3)/8);
-parameter AXIL_EQM_ADDR_WIDTH = AXIL_ADDR_WIDTH-4-$clog2((PORTS+3)/8);
-parameter AXIL_TX_QM_ADDR_WIDTH = AXIL_ADDR_WIDTH-3-$clog2((PORTS+3)/8);
-parameter AXIL_TX_CQM_ADDR_WIDTH = AXIL_ADDR_WIDTH-3-$clog2((PORTS+3)/8);
-parameter AXIL_RX_QM_ADDR_WIDTH = AXIL_ADDR_WIDTH-4-$clog2((PORTS+3)/8);
-parameter AXIL_RX_CQM_ADDR_WIDTH = AXIL_ADDR_WIDTH-4-$clog2((PORTS+3)/8);
-parameter AXIL_PORT_ADDR_WIDTH = AXIL_ADDR_WIDTH-3-$clog2((PORTS+3)/8);
+parameter AXIL_CSR_ADDR_WIDTH = AXIL_ADDR_WIDTH-5-$clog2((SCHEDULERS+3)/8);
+parameter AXIL_CTRL_ADDR_WIDTH = AXIL_ADDR_WIDTH-5-$clog2((SCHEDULERS+3)/8);
+parameter AXIL_EQM_ADDR_WIDTH = AXIL_ADDR_WIDTH-4-$clog2((SCHEDULERS+3)/8);
+parameter AXIL_TX_QM_ADDR_WIDTH = AXIL_ADDR_WIDTH-3-$clog2((SCHEDULERS+3)/8);
+parameter AXIL_TX_CQM_ADDR_WIDTH = AXIL_ADDR_WIDTH-3-$clog2((SCHEDULERS+3)/8);
+parameter AXIL_RX_QM_ADDR_WIDTH = AXIL_ADDR_WIDTH-4-$clog2((SCHEDULERS+3)/8);
+parameter AXIL_RX_CQM_ADDR_WIDTH = AXIL_ADDR_WIDTH-4-$clog2((SCHEDULERS+3)/8);
+parameter AXIL_SCHED_ADDR_WIDTH = AXIL_ADDR_WIDTH-3-$clog2((SCHEDULERS+3)/8);
 
 parameter AXIL_CSR_BASE_ADDR = 0;
 parameter AXIL_CTRL_BASE_ADDR = AXIL_CSR_BASE_ADDR + 2**AXIL_CSR_ADDR_WIDTH;
@@ -411,13 +413,13 @@ parameter AXIL_TX_QM_BASE_ADDR = AXIL_EQM_BASE_ADDR + 2**AXIL_EQM_ADDR_WIDTH;
 parameter AXIL_TX_CQM_BASE_ADDR = AXIL_TX_QM_BASE_ADDR + 2**AXIL_TX_QM_ADDR_WIDTH;
 parameter AXIL_RX_QM_BASE_ADDR = AXIL_TX_CQM_BASE_ADDR + 2**AXIL_TX_CQM_ADDR_WIDTH;
 parameter AXIL_RX_CQM_BASE_ADDR = AXIL_RX_QM_BASE_ADDR + 2**AXIL_RX_QM_ADDR_WIDTH;
-parameter AXIL_PORT_BASE_ADDR = AXIL_RX_CQM_BASE_ADDR + 2**AXIL_RX_CQM_ADDR_WIDTH;
+parameter AXIL_SCHED_BASE_ADDR = AXIL_RX_CQM_BASE_ADDR + 2**AXIL_RX_CQM_ADDR_WIDTH;
 
 localparam RB_BASE_ADDR = AXIL_CTRL_BASE_ADDR;
 localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
 
-localparam PORT_RB_BASE_ADDR = RB_BASE_ADDR + 16'h1000;
-localparam PORT_RB_STRIDE = 16'h1000;
+localparam SCHED_RB_BASE_ADDR = RB_BASE_ADDR + 16'h1000;
+localparam SCHED_RB_STRIDE = 16'h1000;
 
 // parameter sizing helpers
 function [31:0] w_32(input [31:0] val);
@@ -545,25 +547,25 @@ wire [1:0]                 axil_rx_cpl_queue_manager_rresp;
 wire                       axil_rx_cpl_queue_manager_rvalid;
 wire                       axil_rx_cpl_queue_manager_rready;
 
-wire [PORTS*AXIL_ADDR_WIDTH-1:0] axil_port_awaddr;
-wire [PORTS*3-1:0]               axil_port_awprot;
-wire [PORTS-1:0]                 axil_port_awvalid;
-wire [PORTS-1:0]                 axil_port_awready;
-wire [PORTS*AXIL_DATA_WIDTH-1:0] axil_port_wdata;
-wire [PORTS*AXIL_STRB_WIDTH-1:0] axil_port_wstrb;
-wire [PORTS-1:0]                 axil_port_wvalid;
-wire [PORTS-1:0]                 axil_port_wready;
-wire [PORTS*2-1:0]               axil_port_bresp;
-wire [PORTS-1:0]                 axil_port_bvalid;
-wire [PORTS-1:0]                 axil_port_bready;
-wire [PORTS*AXIL_ADDR_WIDTH-1:0] axil_port_araddr;
-wire [PORTS*3-1:0]               axil_port_arprot;
-wire [PORTS-1:0]                 axil_port_arvalid;
-wire [PORTS-1:0]                 axil_port_arready;
-wire [PORTS*AXIL_DATA_WIDTH-1:0] axil_port_rdata;
-wire [PORTS*2-1:0]               axil_port_rresp;
-wire [PORTS-1:0]                 axil_port_rvalid;
-wire [PORTS-1:0]                 axil_port_rready;
+wire [PORTS*AXIL_ADDR_WIDTH-1:0] axil_sched_awaddr;
+wire [PORTS*3-1:0]               axil_sched_awprot;
+wire [PORTS-1:0]                 axil_sched_awvalid;
+wire [PORTS-1:0]                 axil_sched_awready;
+wire [PORTS*AXIL_DATA_WIDTH-1:0] axil_sched_wdata;
+wire [PORTS*AXIL_STRB_WIDTH-1:0] axil_sched_wstrb;
+wire [PORTS-1:0]                 axil_sched_wvalid;
+wire [PORTS-1:0]                 axil_sched_wready;
+wire [PORTS*2-1:0]               axil_sched_bresp;
+wire [PORTS-1:0]                 axil_sched_bvalid;
+wire [PORTS-1:0]                 axil_sched_bready;
+wire [PORTS*AXIL_ADDR_WIDTH-1:0] axil_sched_araddr;
+wire [PORTS*3-1:0]               axil_sched_arprot;
+wire [PORTS-1:0]                 axil_sched_arvalid;
+wire [PORTS-1:0]                 axil_sched_arready;
+wire [PORTS*AXIL_DATA_WIDTH-1:0] axil_sched_rdata;
+wire [PORTS*2-1:0]               axil_sched_rresp;
+wire [PORTS-1:0]                 axil_sched_rvalid;
+wire [PORTS-1:0]                 axil_sched_rready;
 
 // Queue management
 wire [CPL_QUEUE_INDEX_WIDTH-1:0]    event_enqueue_req_queue;
@@ -999,7 +1001,7 @@ always @(posedge clk) begin
             // Queue manager (RX CPL)
             RBB+8'hC0: ctrl_reg_rd_data_reg <= 32'h0000C031;                // RX CPL QM: Type
             RBB+8'hC4: ctrl_reg_rd_data_reg <= 32'h00000100;                // RX CPL QM: Version
-            RBB+8'hC8: ctrl_reg_rd_data_reg <= PORT_RB_BASE_ADDR;           // RX CPL QM: Next header
+            RBB+8'hC8: ctrl_reg_rd_data_reg <= SCHED_RB_BASE_ADDR;          // RX CPL QM: Next header
             RBB+8'hCC: ctrl_reg_rd_data_reg <= AXIL_RX_CQM_BASE_ADDR;       // RX CPL QM: Offset
             RBB+8'hD0: ctrl_reg_rd_data_reg <= 2**RX_CPL_QUEUE_INDEX_WIDTH; // RX CPL QM: Count
             RBB+8'hD4: ctrl_reg_rd_data_reg <= 32;                          // RX CPL QM: Stride
@@ -1020,7 +1022,7 @@ end
 
 // AXI lite crossbar
 parameter AXIL_S_COUNT = 1;
-parameter AXIL_M_COUNT = 7+PORTS;
+parameter AXIL_M_COUNT = 7+SCHEDULERS;
 
 axil_crossbar #(
     .DATA_WIDTH(AXIL_DATA_WIDTH),
@@ -1028,7 +1030,7 @@ axil_crossbar #(
     .STRB_WIDTH(AXIL_STRB_WIDTH),
     .S_COUNT(AXIL_S_COUNT),
     .M_COUNT(AXIL_M_COUNT),
-    .M_ADDR_WIDTH({{PORTS{w_32(AXIL_PORT_ADDR_WIDTH)}}, w_32(AXIL_RX_CQM_ADDR_WIDTH), w_32(AXIL_RX_QM_ADDR_WIDTH), w_32(AXIL_TX_CQM_ADDR_WIDTH), w_32(AXIL_TX_QM_ADDR_WIDTH), w_32(AXIL_EQM_ADDR_WIDTH), w_32(AXIL_CTRL_ADDR_WIDTH), w_32(AXIL_CSR_ADDR_WIDTH)}),
+    .M_ADDR_WIDTH({{SCHEDULERS{w_32(AXIL_SCHED_ADDR_WIDTH)}}, w_32(AXIL_RX_CQM_ADDR_WIDTH), w_32(AXIL_RX_QM_ADDR_WIDTH), w_32(AXIL_TX_CQM_ADDR_WIDTH), w_32(AXIL_TX_QM_ADDR_WIDTH), w_32(AXIL_EQM_ADDR_WIDTH), w_32(AXIL_CTRL_ADDR_WIDTH), w_32(AXIL_CSR_ADDR_WIDTH)}),
     .M_CONNECT_READ({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}}),
     .M_CONNECT_WRITE({AXIL_M_COUNT{{AXIL_S_COUNT{1'b1}}}})
 )
@@ -1054,25 +1056,25 @@ axil_crossbar_inst (
     .s_axil_rresp(s_axil_rresp),
     .s_axil_rvalid(s_axil_rvalid),
     .s_axil_rready(s_axil_rready),
-    .m_axil_awaddr( {axil_port_awaddr,  axil_rx_cpl_queue_manager_awaddr,  axil_rx_queue_manager_awaddr,  axil_tx_cpl_queue_manager_awaddr,  axil_tx_queue_manager_awaddr,  axil_event_queue_manager_awaddr,  axil_ctrl_awaddr,  m_axil_csr_awaddr}),
-    .m_axil_awprot( {axil_port_awprot,  axil_rx_cpl_queue_manager_awprot,  axil_rx_queue_manager_awprot,  axil_tx_cpl_queue_manager_awprot,  axil_tx_queue_manager_awprot,  axil_event_queue_manager_awprot,  axil_ctrl_awprot,  m_axil_csr_awprot}),
-    .m_axil_awvalid({axil_port_awvalid, axil_rx_cpl_queue_manager_awvalid, axil_rx_queue_manager_awvalid, axil_tx_cpl_queue_manager_awvalid, axil_tx_queue_manager_awvalid, axil_event_queue_manager_awvalid, axil_ctrl_awvalid, m_axil_csr_awvalid}),
-    .m_axil_awready({axil_port_awready, axil_rx_cpl_queue_manager_awready, axil_rx_queue_manager_awready, axil_tx_cpl_queue_manager_awready, axil_tx_queue_manager_awready, axil_event_queue_manager_awready, axil_ctrl_awready, m_axil_csr_awready}),
-    .m_axil_wdata(  {axil_port_wdata,   axil_rx_cpl_queue_manager_wdata,   axil_rx_queue_manager_wdata,   axil_tx_cpl_queue_manager_wdata,   axil_tx_queue_manager_wdata,   axil_event_queue_manager_wdata,   axil_ctrl_wdata,   m_axil_csr_wdata}),
-    .m_axil_wstrb(  {axil_port_wstrb,   axil_rx_cpl_queue_manager_wstrb,   axil_rx_queue_manager_wstrb,   axil_tx_cpl_queue_manager_wstrb,   axil_tx_queue_manager_wstrb,   axil_event_queue_manager_wstrb,   axil_ctrl_wstrb,   m_axil_csr_wstrb}),
-    .m_axil_wvalid( {axil_port_wvalid,  axil_rx_cpl_queue_manager_wvalid,  axil_rx_queue_manager_wvalid,  axil_tx_cpl_queue_manager_wvalid,  axil_tx_queue_manager_wvalid,  axil_event_queue_manager_wvalid,  axil_ctrl_wvalid,  m_axil_csr_wvalid}),
-    .m_axil_wready( {axil_port_wready,  axil_rx_cpl_queue_manager_wready,  axil_rx_queue_manager_wready,  axil_tx_cpl_queue_manager_wready,  axil_tx_queue_manager_wready,  axil_event_queue_manager_wready,  axil_ctrl_wready,  m_axil_csr_wready}),
-    .m_axil_bresp(  {axil_port_bresp,   axil_rx_cpl_queue_manager_bresp,   axil_rx_queue_manager_bresp,   axil_tx_cpl_queue_manager_bresp,   axil_tx_queue_manager_bresp,   axil_event_queue_manager_bresp,   axil_ctrl_bresp,   m_axil_csr_bresp}),
-    .m_axil_bvalid( {axil_port_bvalid,  axil_rx_cpl_queue_manager_bvalid,  axil_rx_queue_manager_bvalid,  axil_tx_cpl_queue_manager_bvalid,  axil_tx_queue_manager_bvalid,  axil_event_queue_manager_bvalid,  axil_ctrl_bvalid,  m_axil_csr_bvalid}),
-    .m_axil_bready( {axil_port_bready,  axil_rx_cpl_queue_manager_bready,  axil_rx_queue_manager_bready,  axil_tx_cpl_queue_manager_bready,  axil_tx_queue_manager_bready,  axil_event_queue_manager_bready,  axil_ctrl_bready,  m_axil_csr_bready}),
-    .m_axil_araddr( {axil_port_araddr,  axil_rx_cpl_queue_manager_araddr,  axil_rx_queue_manager_araddr,  axil_tx_cpl_queue_manager_araddr,  axil_tx_queue_manager_araddr,  axil_event_queue_manager_araddr,  axil_ctrl_araddr,  m_axil_csr_araddr}),
-    .m_axil_arprot( {axil_port_arprot,  axil_rx_cpl_queue_manager_arprot,  axil_rx_queue_manager_arprot,  axil_tx_cpl_queue_manager_arprot,  axil_tx_queue_manager_arprot,  axil_event_queue_manager_arprot,  axil_ctrl_arprot,  m_axil_csr_arprot}),
-    .m_axil_arvalid({axil_port_arvalid, axil_rx_cpl_queue_manager_arvalid, axil_rx_queue_manager_arvalid, axil_tx_cpl_queue_manager_arvalid, axil_tx_queue_manager_arvalid, axil_event_queue_manager_arvalid, axil_ctrl_arvalid, m_axil_csr_arvalid}),
-    .m_axil_arready({axil_port_arready, axil_rx_cpl_queue_manager_arready, axil_rx_queue_manager_arready, axil_tx_cpl_queue_manager_arready, axil_tx_queue_manager_arready, axil_event_queue_manager_arready, axil_ctrl_arready, m_axil_csr_arready}),
-    .m_axil_rdata(  {axil_port_rdata,   axil_rx_cpl_queue_manager_rdata,   axil_rx_queue_manager_rdata,   axil_tx_cpl_queue_manager_rdata,   axil_tx_queue_manager_rdata,   axil_event_queue_manager_rdata,   axil_ctrl_rdata,   m_axil_csr_rdata}),
-    .m_axil_rresp(  {axil_port_rresp,   axil_rx_cpl_queue_manager_rresp,   axil_rx_queue_manager_rresp,   axil_tx_cpl_queue_manager_rresp,   axil_tx_queue_manager_rresp,   axil_event_queue_manager_rresp,   axil_ctrl_rresp,   m_axil_csr_rresp}),
-    .m_axil_rvalid( {axil_port_rvalid,  axil_rx_cpl_queue_manager_rvalid,  axil_rx_queue_manager_rvalid,  axil_tx_cpl_queue_manager_rvalid,  axil_tx_queue_manager_rvalid,  axil_event_queue_manager_rvalid,  axil_ctrl_rvalid,  m_axil_csr_rvalid}),
-    .m_axil_rready( {axil_port_rready,  axil_rx_cpl_queue_manager_rready,  axil_rx_queue_manager_rready,  axil_tx_cpl_queue_manager_rready,  axil_tx_queue_manager_rready,  axil_event_queue_manager_rready,  axil_ctrl_rready,  m_axil_csr_rready})
+    .m_axil_awaddr( {axil_sched_awaddr,  axil_rx_cpl_queue_manager_awaddr,  axil_rx_queue_manager_awaddr,  axil_tx_cpl_queue_manager_awaddr,  axil_tx_queue_manager_awaddr,  axil_event_queue_manager_awaddr,  axil_ctrl_awaddr,  m_axil_csr_awaddr}),
+    .m_axil_awprot( {axil_sched_awprot,  axil_rx_cpl_queue_manager_awprot,  axil_rx_queue_manager_awprot,  axil_tx_cpl_queue_manager_awprot,  axil_tx_queue_manager_awprot,  axil_event_queue_manager_awprot,  axil_ctrl_awprot,  m_axil_csr_awprot}),
+    .m_axil_awvalid({axil_sched_awvalid, axil_rx_cpl_queue_manager_awvalid, axil_rx_queue_manager_awvalid, axil_tx_cpl_queue_manager_awvalid, axil_tx_queue_manager_awvalid, axil_event_queue_manager_awvalid, axil_ctrl_awvalid, m_axil_csr_awvalid}),
+    .m_axil_awready({axil_sched_awready, axil_rx_cpl_queue_manager_awready, axil_rx_queue_manager_awready, axil_tx_cpl_queue_manager_awready, axil_tx_queue_manager_awready, axil_event_queue_manager_awready, axil_ctrl_awready, m_axil_csr_awready}),
+    .m_axil_wdata(  {axil_sched_wdata,   axil_rx_cpl_queue_manager_wdata,   axil_rx_queue_manager_wdata,   axil_tx_cpl_queue_manager_wdata,   axil_tx_queue_manager_wdata,   axil_event_queue_manager_wdata,   axil_ctrl_wdata,   m_axil_csr_wdata}),
+    .m_axil_wstrb(  {axil_sched_wstrb,   axil_rx_cpl_queue_manager_wstrb,   axil_rx_queue_manager_wstrb,   axil_tx_cpl_queue_manager_wstrb,   axil_tx_queue_manager_wstrb,   axil_event_queue_manager_wstrb,   axil_ctrl_wstrb,   m_axil_csr_wstrb}),
+    .m_axil_wvalid( {axil_sched_wvalid,  axil_rx_cpl_queue_manager_wvalid,  axil_rx_queue_manager_wvalid,  axil_tx_cpl_queue_manager_wvalid,  axil_tx_queue_manager_wvalid,  axil_event_queue_manager_wvalid,  axil_ctrl_wvalid,  m_axil_csr_wvalid}),
+    .m_axil_wready( {axil_sched_wready,  axil_rx_cpl_queue_manager_wready,  axil_rx_queue_manager_wready,  axil_tx_cpl_queue_manager_wready,  axil_tx_queue_manager_wready,  axil_event_queue_manager_wready,  axil_ctrl_wready,  m_axil_csr_wready}),
+    .m_axil_bresp(  {axil_sched_bresp,   axil_rx_cpl_queue_manager_bresp,   axil_rx_queue_manager_bresp,   axil_tx_cpl_queue_manager_bresp,   axil_tx_queue_manager_bresp,   axil_event_queue_manager_bresp,   axil_ctrl_bresp,   m_axil_csr_bresp}),
+    .m_axil_bvalid( {axil_sched_bvalid,  axil_rx_cpl_queue_manager_bvalid,  axil_rx_queue_manager_bvalid,  axil_tx_cpl_queue_manager_bvalid,  axil_tx_queue_manager_bvalid,  axil_event_queue_manager_bvalid,  axil_ctrl_bvalid,  m_axil_csr_bvalid}),
+    .m_axil_bready( {axil_sched_bready,  axil_rx_cpl_queue_manager_bready,  axil_rx_queue_manager_bready,  axil_tx_cpl_queue_manager_bready,  axil_tx_queue_manager_bready,  axil_event_queue_manager_bready,  axil_ctrl_bready,  m_axil_csr_bready}),
+    .m_axil_araddr( {axil_sched_araddr,  axil_rx_cpl_queue_manager_araddr,  axil_rx_queue_manager_araddr,  axil_tx_cpl_queue_manager_araddr,  axil_tx_queue_manager_araddr,  axil_event_queue_manager_araddr,  axil_ctrl_araddr,  m_axil_csr_araddr}),
+    .m_axil_arprot( {axil_sched_arprot,  axil_rx_cpl_queue_manager_arprot,  axil_rx_queue_manager_arprot,  axil_tx_cpl_queue_manager_arprot,  axil_tx_queue_manager_arprot,  axil_event_queue_manager_arprot,  axil_ctrl_arprot,  m_axil_csr_arprot}),
+    .m_axil_arvalid({axil_sched_arvalid, axil_rx_cpl_queue_manager_arvalid, axil_rx_queue_manager_arvalid, axil_tx_cpl_queue_manager_arvalid, axil_tx_queue_manager_arvalid, axil_event_queue_manager_arvalid, axil_ctrl_arvalid, m_axil_csr_arvalid}),
+    .m_axil_arready({axil_sched_arready, axil_rx_cpl_queue_manager_arready, axil_rx_queue_manager_arready, axil_tx_cpl_queue_manager_arready, axil_tx_queue_manager_arready, axil_event_queue_manager_arready, axil_ctrl_arready, m_axil_csr_arready}),
+    .m_axil_rdata(  {axil_sched_rdata,   axil_rx_cpl_queue_manager_rdata,   axil_rx_queue_manager_rdata,   axil_tx_cpl_queue_manager_rdata,   axil_tx_queue_manager_rdata,   axil_event_queue_manager_rdata,   axil_ctrl_rdata,   m_axil_csr_rdata}),
+    .m_axil_rresp(  {axil_sched_rresp,   axil_rx_cpl_queue_manager_rresp,   axil_rx_queue_manager_rresp,   axil_tx_cpl_queue_manager_rresp,   axil_tx_queue_manager_rresp,   axil_event_queue_manager_rresp,   axil_ctrl_rresp,   m_axil_csr_rresp}),
+    .m_axil_rvalid( {axil_sched_rvalid,  axil_rx_cpl_queue_manager_rvalid,  axil_rx_queue_manager_rvalid,  axil_tx_cpl_queue_manager_rvalid,  axil_tx_queue_manager_rvalid,  axil_event_queue_manager_rvalid,  axil_ctrl_rvalid,  m_axil_csr_rvalid}),
+    .m_axil_rready( {axil_sched_rready,  axil_rx_cpl_queue_manager_rready,  axil_rx_queue_manager_rready,  axil_tx_cpl_queue_manager_rready,  axil_tx_queue_manager_rready,  axil_event_queue_manager_rready,  axil_ctrl_rready,  m_axil_csr_rready})
 );
 
 // Queue managers
@@ -1977,15 +1979,15 @@ rx_event_fifo (
 
 // TX
 
-wire [PORTS*TX_QUEUE_INDEX_WIDTH-1:0]  tx_sched_req_queue;
-wire [PORTS*REQ_TAG_WIDTH_INT-1:0]     tx_sched_req_tag;
-wire [PORTS*AXIS_TX_DEST_WIDTH-1:0]    tx_sched_req_dest;
-wire [PORTS-1:0]                       tx_sched_req_valid;
-wire [PORTS-1:0]                       tx_sched_req_ready;
+wire [SCHEDULERS*TX_QUEUE_INDEX_WIDTH-1:0]  tx_sched_req_queue;
+wire [SCHEDULERS*REQ_TAG_WIDTH_INT-1:0]     tx_sched_req_tag;
+wire [SCHEDULERS*AXIS_TX_DEST_WIDTH-1:0]    tx_sched_req_dest;
+wire [SCHEDULERS-1:0]                       tx_sched_req_valid;
+wire [SCHEDULERS-1:0]                       tx_sched_req_ready;
 
-wire [PORTS*DMA_CLIENT_LEN_WIDTH-1:0]  tx_sched_req_status_len;
-wire [PORTS*REQ_TAG_WIDTH_INT-1:0]     tx_sched_req_status_tag;
-wire [PORTS-1:0]                       tx_sched_req_status_valid;
+wire [SCHEDULERS*DMA_CLIENT_LEN_WIDTH-1:0]  tx_sched_req_status_len;
+wire [SCHEDULERS*REQ_TAG_WIDTH_INT-1:0]     tx_sched_req_status_tag;
+wire [SCHEDULERS-1:0]                       tx_sched_req_status_valid;
 
 wire [TX_QUEUE_INDEX_WIDTH-1:0]  tx_req_queue;
 wire [REQ_TAG_WIDTH-1:0]         tx_req_tag;
@@ -2001,7 +2003,7 @@ generate
 
 genvar n;
 
-for (n = 0; n < PORTS; n = n + 1) begin : port
+for (n = 0; n < SCHEDULERS; n = n + 1) begin : port
 
     mqnic_tx_scheduler_block #(
         .PORTS(PORTS),
@@ -2009,12 +2011,12 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .REG_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
         .REG_DATA_WIDTH(AXIL_DATA_WIDTH),
         .REG_STRB_WIDTH(AXIL_STRB_WIDTH),
-        .RB_BASE_ADDR(PORT_RB_BASE_ADDR + PORT_RB_STRIDE*n),
-        .RB_NEXT_PTR(n < PORTS-1 ? PORT_RB_BASE_ADDR + PORT_RB_STRIDE*(n+1) : 0),
+        .RB_BASE_ADDR(SCHED_RB_BASE_ADDR + SCHED_RB_STRIDE*n),
+        .RB_NEXT_PTR(n < SCHEDULERS-1 ? SCHED_RB_BASE_ADDR + SCHED_RB_STRIDE*(n+1) : 0),
         .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-        .AXIL_ADDR_WIDTH(AXIL_PORT_ADDR_WIDTH),
+        .AXIL_ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
         .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
-        .AXIL_OFFSET(AXIL_PORT_BASE_ADDR + (2**AXIL_PORT_ADDR_WIDTH)*n),
+        .AXIL_OFFSET(AXIL_SCHED_BASE_ADDR + (2**AXIL_SCHED_ADDR_WIDTH)*n),
         .LEN_WIDTH(DMA_CLIENT_LEN_WIDTH),
         .REQ_TAG_WIDTH(REQ_TAG_WIDTH_INT),
         .OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
@@ -2047,25 +2049,25 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         /*
          * AXI-Lite slave interface
          */
-        .s_axil_awaddr(axil_port_awaddr[n*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
-        .s_axil_awprot(axil_port_awprot[n*3 +: 3]),
-        .s_axil_awvalid(axil_port_awvalid[n +: 1]),
-        .s_axil_awready(axil_port_awready[n +: 1]),
-        .s_axil_wdata(axil_port_wdata[n*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
-        .s_axil_wstrb(axil_port_wstrb[n*AXIL_STRB_WIDTH +: AXIL_STRB_WIDTH]),
-        .s_axil_wvalid(axil_port_wvalid[n +: 1]),
-        .s_axil_wready(axil_port_wready[n +: 1]),
-        .s_axil_bresp(axil_port_bresp[n*2 +: 2]),
-        .s_axil_bvalid(axil_port_bvalid[n +: 1]),
-        .s_axil_bready(axil_port_bready[n +: 1]),
-        .s_axil_araddr(axil_port_araddr[n*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
-        .s_axil_arprot(axil_port_arprot[n*3 +: 3]),
-        .s_axil_arvalid(axil_port_arvalid[n +: 1]),
-        .s_axil_arready(axil_port_arready[n +: 1]),
-        .s_axil_rdata(axil_port_rdata[n*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
-        .s_axil_rresp(axil_port_rresp[n*2 +: 2]),
-        .s_axil_rvalid(axil_port_rvalid[n +: 1]),
-        .s_axil_rready(axil_port_rready[n +: 1]),
+        .s_axil_awaddr(axil_sched_awaddr[n*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
+        .s_axil_awprot(axil_sched_awprot[n*3 +: 3]),
+        .s_axil_awvalid(axil_sched_awvalid[n +: 1]),
+        .s_axil_awready(axil_sched_awready[n +: 1]),
+        .s_axil_wdata(axil_sched_wdata[n*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
+        .s_axil_wstrb(axil_sched_wstrb[n*AXIL_STRB_WIDTH +: AXIL_STRB_WIDTH]),
+        .s_axil_wvalid(axil_sched_wvalid[n +: 1]),
+        .s_axil_wready(axil_sched_wready[n +: 1]),
+        .s_axil_bresp(axil_sched_bresp[n*2 +: 2]),
+        .s_axil_bvalid(axil_sched_bvalid[n +: 1]),
+        .s_axil_bready(axil_sched_bready[n +: 1]),
+        .s_axil_araddr(axil_sched_araddr[n*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
+        .s_axil_arprot(axil_sched_arprot[n*3 +: 3]),
+        .s_axil_arvalid(axil_sched_arvalid[n +: 1]),
+        .s_axil_arready(axil_sched_arready[n +: 1]),
+        .s_axil_rdata(axil_sched_rdata[n*AXIL_DATA_WIDTH +: AXIL_DATA_WIDTH]),
+        .s_axil_rresp(axil_sched_rresp[n*2 +: 2]),
+        .s_axil_rvalid(axil_sched_rvalid[n +: 1]),
+        .s_axil_rready(axil_sched_rready[n +: 1]),
 
         /*
          * Transmit request output (queue index)
@@ -2103,10 +2105,10 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
 
 end
 
-if (PORTS > 1) begin
+if (SCHEDULERS > 1) begin
 
     tx_req_mux #(
-        .PORTS(PORTS),
+        .PORTS(SCHEDULERS),
         .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
         .S_REQ_TAG_WIDTH(REQ_TAG_WIDTH_INT),
         .M_REQ_TAG_WIDTH(REQ_TAG_WIDTH),

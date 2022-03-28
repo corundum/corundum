@@ -55,6 +55,7 @@ module mqnic_core #
     // Structural configuration
     parameter IF_COUNT = 1,
     parameter PORTS_PER_IF = 1,
+    parameter SCHED_PER_IF = PORTS_PER_IF,
 
     parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF,
 
@@ -2161,6 +2162,7 @@ generate
 
         mqnic_interface #(
             .PORTS(PORTS_PER_IF),
+            .SCHEDULERS(SCHED_PER_IF),
             .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
             .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
             .DMA_TAG_WIDTH(IF_DMA_TAG_WIDTH),

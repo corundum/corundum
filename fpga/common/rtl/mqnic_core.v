@@ -66,8 +66,10 @@ module mqnic_core #
     parameter PTP_FNS_WIDTH = 32,
     parameter PTP_PERIOD_NS = 4'd4,
     parameter PTP_PERIOD_FNS = 32'd0,
+    parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
     parameter PTP_SEPARATE_RX_CLOCK = 0,
+    parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
 
@@ -617,6 +619,7 @@ mqnic_ptp #(
     .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
     .PTP_PERIOD_NS(PTP_PERIOD_NS),
     .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
+    .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
     .REG_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
@@ -2775,7 +2778,8 @@ generate
                     .TS_WIDTH(PTP_TS_WIDTH),
                     .NS_WIDTH(PTP_PERIOD_NS_WIDTH),
                     .FNS_WIDTH(16),
-                    .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK)
+                    .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+                    .PIPELINE_OUTPUT(PTP_PORT_CDC_PIPELINE)
                 )
                 tx_ptp_cdc_inst (
                     .input_clk(clk),
@@ -2795,7 +2799,8 @@ generate
                     .TS_WIDTH(PTP_TS_WIDTH),
                     .NS_WIDTH(PTP_PERIOD_NS_WIDTH),
                     .FNS_WIDTH(16),
-                    .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK)
+                    .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+                    .PIPELINE_OUTPUT(PTP_PORT_CDC_PIPELINE)
                 )
                 rx_ptp_cdc_inst (
                     .input_clk(clk),

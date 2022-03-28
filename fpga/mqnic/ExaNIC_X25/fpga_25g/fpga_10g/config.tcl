@@ -101,6 +101,8 @@ dict set params IF_COUNT "2"
 dict set params PORTS_PER_IF "1"
 
 # PTP configuration
+dict set params PTP_CLOCK_PIPELINE "0"
+dict set params PTP_PORT_CDC_PIPELINE "0"
 dict set params PTP_PEROUT_ENABLE "1"
 dict set params PTP_PEROUT_COUNT "1"
 

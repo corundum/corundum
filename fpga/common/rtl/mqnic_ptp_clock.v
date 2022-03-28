@@ -47,6 +47,7 @@ module mqnic_ptp_clock #
     parameter PTP_FNS_WIDTH = 32,
     parameter PTP_PERIOD_NS = 4'd4,
     parameter PTP_PERIOD_FNS = 32'd0,
+    parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
     parameter REG_ADDR_WIDTH = 7,
@@ -225,7 +226,8 @@ ptp_clock #(
     .FNS_WIDTH(PTP_FNS_WIDTH),
     .PERIOD_NS(PTP_PERIOD_NS),
     .PERIOD_FNS(PTP_PERIOD_FNS),
-    .DRIFT_ENABLE(0)
+    .DRIFT_ENABLE(0),
+    .PIPELINE_OUTPUT(PTP_CLOCK_PIPELINE)
 )
 ptp_clock_inst (
     .clk(clk),

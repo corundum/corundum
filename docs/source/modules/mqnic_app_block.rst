@@ -66,6 +66,10 @@ Parameters
 
     Ports per interface, default ``1``.
 
+.. object:: SCHED_PER_IF
+
+    Schedulers per interface, default ``PORTS_PER_IF``.
+
 .. object:: PORT_COUNT
 
     Total port count, must be set to ``IF_COUNT*PORTS_PER_IF``.
@@ -101,6 +105,10 @@ Parameters
 .. object:: PTP_USE_SAMPLE_CLOCK
 
     Use external PTP sample clock, used to synchronize the PTP clock across clock domains.  Default ``0``.
+
+.. object:: PTP_PORT_CDC_PIPELINE
+
+    Output pipeline stages on PTP clock CDC module, default ``0``.
 
 .. object:: PTP_PEROUT_ENABLE
 

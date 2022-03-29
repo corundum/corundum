@@ -45,6 +45,7 @@ module mqnic_app_block #
     // Structural configuration
     parameter IF_COUNT = 1,
     parameter PORTS_PER_IF = 1,
+    parameter SCHED_PER_IF = PORTS_PER_IF,
 
     parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF,
 
@@ -57,6 +58,7 @@ module mqnic_app_block #
     parameter PTP_PERIOD_NS = 4'd4,
     parameter PTP_PERIOD_FNS = 32'd0,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
+    parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
     parameter PTP_TS_ENABLE = 1,

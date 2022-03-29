@@ -57,6 +57,7 @@ int main(int argc, char *argv[])
     struct mqnic *dev;
     int interface = 0;
     int port = 0;
+    int sched_block = 0;
 
     name = strrchr(argv[0], '/');
     name = name ? 1+name : argv[0];
@@ -191,6 +192,8 @@ int main(int argc, char *argv[])
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
     printf("IF features: 0x%08x\n", dev_interface->if_features);
+    printf("Port count: %d\n", dev_interface->port_count);
+    printf("Scheduler block count: %d\n", dev_interface->sched_block_count);
     printf("Max TX MTU: %d\n", dev_interface->max_tx_mtu);
     printf("Max RX MTU: %d\n", dev_interface->max_rx_mtu);
     printf("TX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_TX_MTU));
@@ -217,8 +220,6 @@ int main(int argc, char *argv[])
     printf("RX completion queue count: %d\n", dev_interface->rx_cpl_queue_count);
     printf("RX completion queue stride: 0x%08x\n", dev_interface->rx_cpl_queue_stride);
 
-    printf("Port count: %d\n", dev_interface->port_count);
-
     if (port < 0 || port >= dev_interface->port_count)
     {
         fprintf(stderr, "Port out of range\n");
@@ -226,23 +227,32 @@ int main(int argc, char *argv[])
         goto err;
     }
 
-    struct mqnic_port *dev_port = dev_interface->ports[port];
+    sched_block = port;
 
-    if (!dev_port)
+    if (sched_block < 0 || sched_block >= dev_interface->sched_block_count)
     {
-        fprintf(stderr, "Invalid port\n");
+        fprintf(stderr, "Scheduler block out of range\n");
         ret = -1;
         goto err;
     }
 
-    printf("Port-level register blocks:\n");
-    for (struct reg_block *rb = dev_port->rb_list; rb->type && rb->version; rb++)
+    struct mqnic_sched_block *dev_sched_block = dev_interface->sched_blocks[sched_block];
+
+    if (!dev_sched_block)
+    {
+        fprintf(stderr, "Invalid scheduler block\n");
+        ret = -1;
+        goto err;
+    }
+
+    printf("Scheduler block-level register blocks:\n");
+    for (struct reg_block *rb = dev_sched_block->rb_list; rb->type && rb->version; rb++)
         printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
-    printf("Sched count: %d\n", dev_port->sched_count);
+    printf("Sched count: %d\n", dev_sched_block->sched_count);
 
-    for (struct reg_block *rb = dev_port->rb_list; rb->type && rb->version; rb++)
+    for (struct reg_block *rb = dev_sched_block->rb_list; rb->type && rb->version; rb++)
     {
         if (rb->type == MQNIC_RB_SCHED_RR_TYPE && rb->version == MQNIC_RB_SCHED_RR_VER)
         {
@@ -378,12 +388,12 @@ int main(int argc, char *argv[])
         printf("EQ %4d  0x%016lx  %d  %2d  %d %d  %4d  %6d  %6d  %6d\n", k, base_addr, active, log_queue_size, armed, continuous, interrupt_index, head_ptr, tail_ptr, occupancy);
     }
 
-    for (int k = 0; k < dev_port->sched_count; k++)
+    for (int k = 0; k < dev_sched_block->sched_count; k++)
     {
-        printf("Port %d scheduler %d\n", port, k);
+        printf("Scheduler block %d scheduler %d\n", sched_block, k);
         for (int l = 0; l < dev_interface->tx_queue_count; l++)
         {
-            printf("Sched %2d queue %4d state: 0x%08x\n", k, l, mqnic_reg_read32(dev_port->sched[k]->regs, l*4));
+            printf("Sched %2d queue %4d state: 0x%08x\n", k, l, mqnic_reg_read32(dev_sched_block->sched[k]->regs, l*4));
         }
     }
 

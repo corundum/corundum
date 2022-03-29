@@ -519,6 +519,8 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
     }
 
     interface->if_features = mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_FEATURES);
+    interface->port_count = mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_PORT_COUNT);
+    interface->sched_block_count = mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_SCHED_COUNT);
     interface->max_tx_mtu = mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU);
     interface->max_rx_mtu = mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU);
 
@@ -597,21 +599,20 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
     if (interface->rx_cpl_queue_count > MQNIC_MAX_RX_CPL_RINGS)
         interface->rx_cpl_queue_count = MQNIC_MAX_RX_CPL_RINGS;
 
-    interface->port_count = 0;
-    while (interface->port_count < MQNIC_MAX_PORTS)
+    for (int k = 0; k < interface->sched_block_count; k++)
     {
-        struct reg_block *sched_block_rb = find_reg_block(interface->rb_list, MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, interface->port_count);
-        struct mqnic_port *port;
+        struct reg_block *sched_block_rb = find_reg_block(interface->rb_list, MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, k);
+        struct mqnic_sched_block *sched_block;
 
         if (!sched_block_rb)
-            break;
-
-        port = mqnic_port_open(interface, interface->port_count, sched_block_rb);
-
-        if (!port)
             goto fail;
 
-        interface->ports[interface->port_count++] = port;
+        sched_block = mqnic_sched_block_open(interface, k, sched_block_rb);
+
+        if (!sched_block)
+            goto fail;
+
+        interface->sched_blocks[k] = sched_block;
     }
 
     return interface;
@@ -626,13 +627,13 @@ void mqnic_if_close(struct mqnic_if *interface)
     if (!interface)
         return;
 
-    for (int k = 0; k < interface->port_count; k++)
+    for (int k = 0; k < interface->sched_block_count; k++)
     {
-        if (!interface->ports[k])
+        if (!interface->sched_blocks[k])
             continue;
 
-        mqnic_port_close(interface->ports[k]);
-        interface->ports[k] = NULL;
+        mqnic_sched_block_close(interface->sched_blocks[k]);
+        interface->sched_blocks[k] = NULL;
     }
 
     if (interface->rb_list)
@@ -641,86 +642,86 @@ void mqnic_if_close(struct mqnic_if *interface)
     free(interface);
 }
 
-struct mqnic_port *mqnic_port_open(struct mqnic_if *interface, int index, struct reg_block *block_rb)
+struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int index, struct reg_block *block_rb)
 {
-    struct mqnic_port *port = calloc(1, sizeof(struct mqnic_port));
+    struct mqnic_sched_block *block = calloc(1, sizeof(struct mqnic_sched_block));
 
-    if (!port)
+    if (!block)
         return NULL;
 
     int offset = mqnic_reg_read32(block_rb->regs, MQNIC_RB_SCHED_BLOCK_REG_OFFSET);
 
-    port->mqnic = interface->mqnic;
-    port->interface = interface;
+    block->mqnic = interface->mqnic;
+    block->interface = interface;
 
-    port->index = index;
+    block->index = index;
 
-    port->rb_list = enumerate_reg_block_list(interface->regs, offset, interface->regs_size);
+    block->rb_list = enumerate_reg_block_list(interface->regs, offset, interface->regs_size);
 
-    if (!port->rb_list)
+    if (!block->rb_list)
     {
         fprintf(stderr, "Error: filed to enumerate blocks\n");
         goto fail;
     }
 
-    port->sched_count = 0;
-    for (struct reg_block *rb = port->rb_list; rb->type && rb->version; rb++)
+    block->sched_count = 0;
+    for (struct reg_block *rb = block->rb_list; rb->type && rb->version; rb++)
     {
         if (rb->type == MQNIC_RB_SCHED_RR_TYPE && rb->version == MQNIC_RB_SCHED_RR_VER)
         {
-            struct mqnic_sched *sched = mqnic_sched_open(port, port->sched_count, rb);
+            struct mqnic_sched *sched = mqnic_sched_open(block, block->sched_count, rb);
 
             if (!sched)
                 goto fail;
 
-            port->sched[port->sched_count++] = sched;
+            block->sched[block->sched_count++] = sched;
         }
     }
 
-    return port;
+    return block;
 
 fail:
-    mqnic_port_close(port);
+    mqnic_sched_block_close(block);
     return NULL;
 }
 
-void mqnic_port_close(struct mqnic_port *port)
+void mqnic_sched_block_close(struct mqnic_sched_block *block)
 {
-    if (!port)
+    if (!block)
         return;
 
-    for (int k = 0; k < port->sched_count; k++)
+    for (int k = 0; k < block->sched_count; k++)
     {
-        if (!port->sched[k])
+        if (!block->sched[k])
             continue;
 
-        mqnic_sched_close(port->sched[k]);
-        port->sched[k] = NULL;
+        mqnic_sched_close(block->sched[k]);
+        block->sched[k] = NULL;
     }
 
-    if (port->rb_list)
-        free_reg_block_list(port->rb_list);
+    if (block->rb_list)
+        free_reg_block_list(block->rb_list);
 
-    free(port);
+    free(block);
 }
 
-struct mqnic_sched *mqnic_sched_open(struct mqnic_port *port, int index, struct reg_block *rb)
+struct mqnic_sched *mqnic_sched_open(struct mqnic_sched_block *block, int index, struct reg_block *rb)
 {
     struct mqnic_sched *sched = calloc(1, sizeof(struct mqnic_sched));
 
     if (!sched)
         return NULL;
 
-    sched->mqnic = port->mqnic;
-    sched->interface = port->interface;
-    sched->port = port;
+    sched->mqnic = block->mqnic;
+    sched->interface = block->interface;
+    sched->sched_block = block;
 
     sched->index = index;
 
     sched->rb = rb;
     sched->regs = rb->base + mqnic_reg_read32(rb->regs, MQNIC_RB_SCHED_RR_REG_OFFSET);
 
-    if (sched->regs >= port->interface->regs+port->interface->regs_size)
+    if (sched->regs >= block->interface->regs+block->interface->regs_size)
     {
         fprintf(stderr, "Error: computed pointer out of range\n");
         goto fail;

@@ -379,9 +379,9 @@ async def run_test_nic(dut):
     # enable queues
     tb.log.info("Enable queues")
     for interface in tb.driver.interfaces:
-        await interface.ports[0].schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000001)
+        await interface.sched_blocks[0].schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000001)
         for k in range(interface.tx_queue_count):
-            await interface.ports[0].schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
+            await interface.sched_blocks[0].schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
 
     # wait for all writes to complete
     await tb.driver.hw_regs.read_dword(0)
@@ -509,16 +509,16 @@ async def run_test_nic(dut):
 
         tb.loopback_enable = False
 
-    if len(tb.driver.interfaces[0].ports) > 1:
-        tb.log.info("All interface 0 ports")
+    if len(tb.driver.interfaces[0].sched_blocks) > 1:
+        tb.log.info("All interface 0 scheduler blocks")
 
-        for port in tb.driver.interfaces[0].ports:
-            await port.schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000001)
-            for k in range(port.interface.tx_queue_count):
-                if k % len(tb.driver.interfaces[0].ports) == port.index:
-                    await port.schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
+        for block in tb.driver.interfaces[0].sched_blocks:
+            await block.schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000001)
+            for k in range(block.interface.tx_queue_count):
+                if k % len(tb.driver.interfaces[0].sched_blocks) == block.index:
+                    await block.schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
                 else:
-                    await port.schedulers[0].hw_regs.write_dword(4*k, 0x00000000)
+                    await block.schedulers[0].hw_regs.write_dword(4*k, 0x00000000)
 
         count = 64
 
@@ -527,7 +527,7 @@ async def run_test_nic(dut):
         tb.loopback_enable = True
 
         for k, p in enumerate(pkts):
-            await tb.driver.interfaces[0].start_xmit(p, k % len(tb.driver.interfaces[0].ports))
+            await tb.driver.interfaces[0].start_xmit(p, k % len(tb.driver.interfaces[0].sched_blocks))
 
         for k in range(count):
             pkt = await tb.driver.interfaces[0].recv()
@@ -538,8 +538,8 @@ async def run_test_nic(dut):
 
         tb.loopback_enable = False
 
-        for port in tb.driver.interfaces[0].ports[1:]:
-            await port.schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000000)
+        for block in tb.driver.interfaces[0].sched_blocks[1:]:
+            await block.schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000000)
 
     tb.log.info("Read statistics counters")
 

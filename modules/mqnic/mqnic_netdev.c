@@ -88,8 +88,8 @@ static int mqnic_start_port(struct net_device *ndev)
 	// configure RSS
 	mqnic_interface_set_rss_mask(priv->interface, 0xffffffff);
 
-	// enable first port
-	mqnic_activate_port(priv->port[0]);
+	// enable first scheduler
+	mqnic_activate_sched_block(priv->sched_block[0]);
 
 	priv->port_up = true;
 
@@ -123,9 +123,9 @@ static int mqnic_stop_port(struct net_device *ndev)
 	priv->port_up = false;
 	spin_unlock_bh(&priv->stats_lock);
 
-	// disable ports
-	for (k = 0; k < priv->port_count; k++)
-		mqnic_deactivate_port(priv->port[k]);
+	// disable schedulers
+	for (k = 0; k < priv->sched_block_count; k++)
+		mqnic_deactivate_sched_block(priv->sched_block[k]);
 
 	// deactivate TX queues
 	for (k = 0; k < min(priv->tx_queue_count, priv->tx_cpl_queue_count); k++) {
@@ -405,9 +405,9 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	for (k = 0; k < interface->rx_cpl_queue_count; k++)
 		priv->rx_cpl_ring[k] = interface->rx_cpl_ring[k];
 
-	priv->port_count = interface->port_count;
-	for (k = 0; k < interface->port_count; k++)
-		priv->port[k] = interface->port[k];
+	priv->sched_block_count = interface->sched_block_count;
+	for (k = 0; k < interface->sched_block_count; k++)
+		priv->sched_block[k] = interface->sched_block[k];
 
 	netif_set_real_num_tx_queues(ndev, priv->tx_queue_count);
 	netif_set_real_num_rx_queues(ndev, priv->rx_queue_count);

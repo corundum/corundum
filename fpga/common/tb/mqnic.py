@@ -153,13 +153,15 @@ MQNIC_RB_IF_REG_STRIDE      = 0x14
 MQNIC_RB_IF_REG_CSR_OFFSET  = 0x18
 
 MQNIC_RB_IF_CTRL_TYPE            = 0x0000C001
-MQNIC_RB_IF_CTRL_VER             = 0x00000200
+MQNIC_RB_IF_CTRL_VER             = 0x00000300
 MQNIC_RB_IF_CTRL_REG_FEATURES    = 0x0C
-MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU  = 0x10
-MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU  = 0x14
-MQNIC_RB_IF_CTRL_REG_TX_MTU      = 0x18
-MQNIC_RB_IF_CTRL_REG_RX_MTU      = 0x1C
-MQNIC_RB_IF_CTRL_REG_RSS_MASK    = 0x20
+MQNIC_RB_IF_CTRL_REG_PORT_COUNT  = 0x10
+MQNIC_RB_IF_CTRL_REG_SCHED_COUNT = 0x14
+MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU  = 0x20
+MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU  = 0x24
+MQNIC_RB_IF_CTRL_REG_TX_MTU      = 0x28
+MQNIC_RB_IF_CTRL_REG_RX_MTU      = 0x2C
+MQNIC_RB_IF_CTRL_REG_RSS_MASK    = 0x30
 
 MQNIC_IF_FEATURE_RSS      = (1 << 0)
 MQNIC_IF_FEATURE_PTP_TS   = (1 << 4)
@@ -744,7 +746,7 @@ class SchedulerControlTdma(BaseScheduler):
         self.hw_regs = self.rb.parent.create_window(offset)
 
 
-class Port:
+class SchedulerBlock:
     def __init__(self, interface, index, rb):
         self.interface = interface
         self.log = interface.log
@@ -823,6 +825,7 @@ class Interface:
         self.rx_cpl_queue_stride = None
 
         self.port_count = None
+        self.sched_block_count = None
 
         self.event_queues = []
 
@@ -830,7 +833,7 @@ class Interface:
         self.tx_cpl_queues = []
         self.rx_queues = []
         self.rx_cpl_queues = []
-        self.ports = []
+        self.sched_blocks = []
 
         self.interrupt_running = False
         self.interrupt_pending = 0
@@ -847,10 +850,14 @@ class Interface:
         self.if_ctrl_rb = self.reg_blocks.find(MQNIC_RB_IF_CTRL_TYPE, MQNIC_RB_IF_CTRL_VER)
 
         self.if_features = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_FEATURES)
+        self.port_count = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_PORT_COUNT)
+        self.sched_block_count = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_SCHED_COUNT)
         self.max_tx_mtu = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU)
         self.max_rx_mtu = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU)
 
         self.log.info("IF features: 0x%08x", self.if_features)
+        self.log.info("Port count: %d", self.port_count)
+        self.log.info("Scheduler block count: %d", self.sched_block_count)
         self.log.info("Max TX MTU: %d", self.max_tx_mtu)
         self.log.info("Max RX MTU: %d", self.max_rx_mtu)
 
@@ -954,19 +961,14 @@ class Interface:
             await q.init()
             self.rx_cpl_queues.append(q)
 
-        self.port_count = 0
-        while True:
-            rb = self.reg_blocks.find(MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, index=self.port_count)
-            if not rb:
-                break
+        for k in range(self.sched_block_count):
+            rb = self.reg_blocks.find(MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, index=k)
 
-            p = Port(self, self.port_count, rb)
-            await p.init()
-            self.ports.append(p)
+            s = SchedulerBlock(self, k, rb)
+            await s.init()
+            self.sched_blocks.append(s)
 
-            self.port_count += 1
-
-        self.log.info("Port count: %d", self.port_count)
+        assert self.sched_block_count == len(self.sched_blocks)
 
         # wait for all writes to complete
         await self.hw_regs.read_dword(0)

@@ -82,10 +82,14 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 	}
 
 	interface->if_features = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_FEATURES);
+	interface->port_count = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_PORT_COUNT);
+	interface->sched_block_count = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_SCHED_COUNT);
 	interface->max_tx_mtu = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU);
 	interface->max_rx_mtu = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU);
 
 	dev_info(dev, "IF features: 0x%08x", interface->if_features);
+	dev_info(dev, "Port count: %d", interface->port_count);
+	dev_info(dev, "Scheduler block count: %d", interface->sched_block_count);
 	dev_info(dev, "Max TX MTU: %d", interface->max_tx_mtu);
 	dev_info(dev, "Max RX MTU: %d", interface->max_rx_mtu);
 
@@ -234,24 +238,21 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 			goto fail;
 	}
 
-	// create ports
-	interface->port_count = 0;
-	while (interface->port_count < MQNIC_MAX_PORTS)
-	{
-		struct reg_block *sched_block_rb = find_reg_block(interface->rb_list, MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, interface->port_count);
+	// create schedulers
+	for (k = 0; k < interface->sched_block_count; k++) {
+		struct reg_block *sched_block_rb = find_reg_block(interface->rb_list, MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, k);
 
-		if (!sched_block_rb)
-			break;
+		if (!sched_block_rb) {
+			ret = -EIO;
+			dev_err(dev, "Scheduler block index %d not found", k);
+			goto fail;
+		}
 
-		ret = mqnic_create_port(interface, &interface->port[interface->port_count],
-				interface->port_count, sched_block_rb);
+		ret = mqnic_create_sched_block(interface, &interface->sched_block[k],
+				k, sched_block_rb);
 		if (ret)
 			goto fail;
-
-		interface->port_count++;
 	}
-
-	dev_info(dev, "Port count: %d", interface->port_count);
 
 	// create net_devices
 	interface->dev_port_base = mdev->dev_port_max;
@@ -302,10 +303,10 @@ void mqnic_destroy_interface(struct mqnic_if **interface_ptr)
 		if (interface->rx_cpl_ring[k])
 			mqnic_destroy_cq_ring(&interface->rx_cpl_ring[k]);
 
-	// free ports
-	for (k = 0; k < ARRAY_SIZE(interface->port); k++)
-		if (interface->port[k])
-			mqnic_destroy_port(&interface->port[k]);
+	// free schedulers
+	for (k = 0; k < ARRAY_SIZE(interface->sched_block); k++)
+		if (interface->sched_block[k])
+			mqnic_destroy_sched_block(&interface->sched_block[k]);
 
 	if (interface->rb_list)
 		free_reg_block_list(interface->rb_list);

@@ -35,10 +35,10 @@
 
 #include "mqnic.h"
 
-int mqnic_create_scheduler(struct mqnic_port *port, struct mqnic_sched **sched_ptr,
+int mqnic_create_scheduler(struct mqnic_sched_block *block, struct mqnic_sched **sched_ptr,
 		int index, struct reg_block *rb)
 {
-	struct device *dev = port->dev;
+	struct device *dev = block->dev;
 	struct mqnic_sched *sched;
 
 	sched = kzalloc(sizeof(*sched), GFP_KERNEL);
@@ -48,8 +48,8 @@ int mqnic_create_scheduler(struct mqnic_port *port, struct mqnic_sched **sched_p
 	*sched_ptr = sched;
 
 	sched->dev = dev;
-	sched->interface = port->interface;
-	sched->port = port;
+	sched->interface = block->interface;
+	sched->sched_block = block;
 
 	sched->index = index;
 
@@ -60,7 +60,7 @@ int mqnic_create_scheduler(struct mqnic_port *port, struct mqnic_sched **sched_p
 	sched->channel_count = ioread32(rb->regs + MQNIC_RB_SCHED_RR_REG_CH_COUNT);
 	sched->channel_stride = ioread32(rb->regs + MQNIC_RB_SCHED_RR_REG_CH_STRIDE);
 
-	sched->hw_addr = port->interface->hw_addr + sched->offset;
+	sched->hw_addr = block->interface->hw_addr + sched->offset;
 
 	dev_info(dev, "Scheduler type: 0x%08x", sched->type);
 	dev_info(dev, "Scheduler offset: 0x%08x", sched->offset);

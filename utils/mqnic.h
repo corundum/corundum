@@ -50,7 +50,7 @@ struct mqnic;
 struct mqnic_sched {
     struct mqnic *mqnic;
     struct mqnic_if *interface;
-    struct mqnic_port *port;
+    struct mqnic_sched_block *sched_block;
 
     int index;
 
@@ -65,7 +65,7 @@ struct mqnic_sched {
     volatile uint8_t *regs;
 };
 
-struct mqnic_port {
+struct mqnic_sched_block {
     struct mqnic *mqnic;
     struct mqnic_if *interface;
 
@@ -120,7 +120,8 @@ struct mqnic_if {
     uint32_t rx_cpl_queue_stride;
 
     uint32_t port_count;
-    struct mqnic_port *ports[MQNIC_MAX_PORTS];
+    uint32_t sched_block_count;
+    struct mqnic_sched_block *sched_blocks[MQNIC_MAX_PORTS];
 };
 
 struct mqnic {
@@ -170,10 +171,10 @@ void mqnic_close(struct mqnic *dev);
 struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs);
 void mqnic_if_close(struct mqnic_if *interface);
 
-struct mqnic_port *mqnic_port_open(struct mqnic_if *interface, int index, struct reg_block *block_rb);
-void mqnic_port_close(struct mqnic_port *port);
+struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int index, struct reg_block *block_rb);
+void mqnic_sched_block_close(struct mqnic_sched_block *block);
 
-struct mqnic_sched *mqnic_sched_open(struct mqnic_port *port, int index, struct reg_block *rb);
+struct mqnic_sched *mqnic_sched_open(struct mqnic_sched_block *block, int index, struct reg_block *rb);
 void mqnic_sched_close(struct mqnic_sched *sched);
 
 #endif /* MQNIC_H */

@@ -77,6 +77,7 @@ int main(int argc, char *argv[])
     struct mqnic *dev;
     int interface = 0;
     int port = 0;
+    int sched_block = 0;
 
     struct reg_block *rb;
 
@@ -187,6 +188,8 @@ int main(int argc, char *argv[])
     }
 
     printf("IF features: 0x%08x\n", dev_interface->if_features);
+    printf("Port count: %d\n", dev_interface->port_count);
+    printf("Scheduler block count: %d\n", dev_interface->sched_block_count);
     printf("Max TX MTU: %d\n", dev_interface->max_tx_mtu);
     printf("Max RX MTU: %d\n", dev_interface->max_rx_mtu);
     printf("TX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_TX_MTU));
@@ -212,25 +215,31 @@ int main(int argc, char *argv[])
     printf("RX completion queue count: %d\n", dev_interface->rx_cpl_queue_count);
     printf("RX completion queue stride: 0x%08x\n", dev_interface->rx_cpl_queue_stride);
 
-    printf("Port count: %d\n", dev_interface->port_count);
-
     if (port < 0 || port >= dev_interface->port_count)
     {
         fprintf(stderr, "Port out of range\n");
         goto err;
     }
 
-    struct mqnic_port *dev_port = dev_interface->ports[port];
+    sched_block = port;
 
-    if (!dev_port)
+    if (sched_block < 0 || sched_block >= dev_interface->sched_block_count)
     {
-        fprintf(stderr, "Invalid port\n");
+        fprintf(stderr, "Scheduler block out of range\n");
+        goto err;
+    }
+
+    struct mqnic_sched_block *dev_sched_block = dev_interface->sched_blocks[sched_block];
+
+    if (!dev_sched_block)
+    {
+        fprintf(stderr, "Invalid scheduler block\n");
         goto err;
     }
     
-    printf("Sched count: %d\n", dev_port->sched_count);
+    printf("Sched count: %d\n", dev_sched_block->sched_count);
 
-    rb = find_reg_block(dev_port->rb_list, MQNIC_RB_TDMA_SCH_TYPE, MQNIC_RB_TDMA_SCH_VER, 0);
+    rb = find_reg_block(dev_sched_block->rb_list, MQNIC_RB_TDMA_SCH_TYPE, MQNIC_RB_TDMA_SCH_VER, 0);
 
     if (dev->phc_rb && rb)
     {

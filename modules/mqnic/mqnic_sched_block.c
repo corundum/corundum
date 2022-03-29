@@ -35,105 +35,105 @@
 
 #include "mqnic.h"
 
-int mqnic_create_port(struct mqnic_if *interface, struct mqnic_port **port_ptr,
+int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_block **block_ptr,
 		int index, struct reg_block *block_rb)
 {
 	struct device *dev = interface->dev;
-	struct mqnic_port *port;
+	struct mqnic_sched_block *block;
 	struct reg_block *rb;
 	u32 offset;
 	int ret = 0;
 
-	port = kzalloc(sizeof(*port), GFP_KERNEL);
-	if (!port)
+	block = kzalloc(sizeof(*block), GFP_KERNEL);
+	if (!block)
 		return -ENOMEM;
 
-	*port_ptr = port;
+	*block_ptr = block;
 
-	port->dev = dev;
-	port->interface = interface;
+	block->dev = dev;
+	block->interface = interface;
 
-	port->index = index;
+	block->index = index;
 
-	port->tx_queue_count = interface->tx_queue_count;
+	block->tx_queue_count = interface->tx_queue_count;
 
-	port->block_rb = block_rb;
+	block->block_rb = block_rb;
 
 	offset = ioread32(block_rb->regs + MQNIC_RB_SCHED_BLOCK_REG_OFFSET);
 
-	port->rb_list = enumerate_reg_block_list(interface->hw_addr, offset, interface->hw_regs_size - offset);
+	block->rb_list = enumerate_reg_block_list(interface->hw_addr, offset, interface->hw_regs_size - offset);
 
-	if (!port->rb_list) {
+	if (!block->rb_list) {
 		ret = -EIO;
 		dev_err(dev, "Failed to enumerate blocks");
 		goto fail;
 	}
 
-	dev_info(dev, "Port-level register blocks:");
-	for (rb = port->rb_list; rb->type && rb->version; rb++)
+	dev_info(dev, "Scheduler block-level register blocks:");
+	for (rb = block->rb_list; rb->type && rb->version; rb++)
 		dev_info(dev, " type 0x%08x (v %d.%d.%d.%d)", rb->type, rb->version >> 24, 
 				(rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
-	port->sched_count = 0;
-	for (rb = port->rb_list; rb->type && rb->version; rb++) {
+	block->sched_count = 0;
+	for (rb = block->rb_list; rb->type && rb->version; rb++) {
 		if (rb->type == MQNIC_RB_SCHED_RR_TYPE && rb->version == MQNIC_RB_SCHED_RR_VER) {
-			ret = mqnic_create_scheduler(port, &port->sched[port->sched_count],
-					port->sched_count, rb);
+			ret = mqnic_create_scheduler(block, &block->sched[block->sched_count],
+					block->sched_count, rb);
 
 			if (ret)
 				goto fail;
 
-			port->sched_count++;
+			block->sched_count++;
 		}
 	}
 
-	dev_info(dev, "Scheduler count: %d", port->sched_count);
+	dev_info(dev, "Scheduler count: %d", block->sched_count);
 
-	mqnic_deactivate_port(port);
+	mqnic_deactivate_sched_block(block);
 
 	return 0;
 
 fail:
-	mqnic_destroy_port(port_ptr);
+	mqnic_destroy_sched_block(block_ptr);
 	return ret;
 }
 
-void mqnic_destroy_port(struct mqnic_port **port_ptr)
+void mqnic_destroy_sched_block(struct mqnic_sched_block **block_ptr)
 {
-	struct mqnic_port *port = *port_ptr;
+	struct mqnic_sched_block *block = *block_ptr;
 	int k;
 
-	mqnic_deactivate_port(port);
+	mqnic_deactivate_sched_block(block);
 
-	for (k = 0; k < ARRAY_SIZE(port->sched); k++)
-		if (port->sched[k])
-			mqnic_destroy_scheduler(&port->sched[k]);
+	for (k = 0; k < ARRAY_SIZE(block->sched); k++)
+		if (block->sched[k])
+			mqnic_destroy_scheduler(&block->sched[k]);
 
-	if (port->rb_list)
-		free_reg_block_list(port->rb_list);
+	if (block->rb_list)
+		free_reg_block_list(block->rb_list);
 
-	*port_ptr = NULL;
-	kfree(port);
+	*block_ptr = NULL;
+	kfree(block);
 }
 
-int mqnic_activate_port(struct mqnic_port *port)
+int mqnic_activate_sched_block(struct mqnic_sched_block *block)
 {
 	int k;
 
 	// enable schedulers
-	for (k = 0; k < ARRAY_SIZE(port->sched); k++)
-		if (port->sched[k])
-			mqnic_scheduler_enable(port->sched[k]);
+	for (k = 0; k < ARRAY_SIZE(block->sched); k++)
+		if (block->sched[k])
+			mqnic_scheduler_enable(block->sched[k]);
 
 	return 0;
 }
 
-void mqnic_deactivate_port(struct mqnic_port *port)
+void mqnic_deactivate_sched_block(struct mqnic_sched_block *block)
 {
 	int k;
 
 	// disable schedulers
-	for (k = 0; k < ARRAY_SIZE(port->sched); k++)
-		if (port->sched[k])
-			mqnic_scheduler_disable(port->sched[k]);
+	for (k = 0; k < ARRAY_SIZE(block->sched); k++)
+		if (block->sched[k])
+			mqnic_scheduler_disable(block->sched[k]);
 }

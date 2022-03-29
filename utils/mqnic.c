@@ -374,6 +374,10 @@ struct mqnic *mqnic_open(const char *dev_name)
     if (mqnic_try_open(dev, "%s", dev_name) == 0)
         goto open;
 
+    // device name
+    if (mqnic_try_open(dev, "/dev/%s", dev_name) == 0)
+        goto open;
+
     // network interface
     if (mqnic_try_open_if_name(dev, dev_name) == 0)
         goto open;

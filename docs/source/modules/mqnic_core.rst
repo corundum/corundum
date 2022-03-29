@@ -61,6 +61,10 @@ Parameters
 
     Ports per interface, default ``1``.
 
+.. object:: SCHED_PER_IF
+
+    Schedulers per interface, default ``PORTS_PER_IF``.
+
 .. object:: PORT_COUNT
 
     Total port count, must be set to ``IF_COUNT*PORTS_PER_IF``.
@@ -93,6 +97,10 @@ Parameters
 
     PTP nominal period, fractional ns portion, default ``32'd0``.
 
+.. object:: PTP_CLOCK_PIPELINE
+
+    Output pipeline stages on PTP clock module, default ``0``.
+
 .. object:: PTP_USE_SAMPLE_CLOCK
 
     Use external PTP sample clock, used to synchronize the PTP clock across clock domains, default ``0``.
@@ -100,6 +108,10 @@ Parameters
 .. object:: PTP_SEPARATE_RX_CLOCK
 
     Use ``rx_ptp_clk`` instead of ``rx_clk`` for providing current PTP time if set, default ``0``.
+
+.. object:: PTP_PORT_CDC_PIPELINE
+
+    Output pipeline stages on PTP clock CDC module, default ``0``.
 
 .. object:: PTP_PEROUT_ENABLE
 

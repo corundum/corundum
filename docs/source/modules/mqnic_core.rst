@@ -141,6 +141,10 @@ Parameters
 
     Receive completion queue operation table size, default ``RX_QUEUE_OP_TABLE_SIZE``.
 
+.. object:: EVENT_QUEUE_INDEX_WIDTH
+
+    Event queue index width, default ``5``.  Sets the number of event queues on each interfaces as ``2**EVENT_QUEUE_INDEX_WIDTH``.
+
 .. object:: TX_QUEUE_INDEX_WIDTH
 
     Transmit queue index width, default ``13``.  Sets the number of transmit queues on each interfaces as ``2**TX_QUEUE_INDEX_WIDTH``.

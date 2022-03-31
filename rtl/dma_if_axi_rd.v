@@ -249,17 +249,22 @@ reg [OP_TAG_WIDTH-1:0] status_fifo_op_tag[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 reg [RAM_SEG_COUNT-1:0] status_fifo_mask[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg status_fifo_finish[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg [3:0] status_fifo_error[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 reg [OP_TAG_WIDTH-1:0] status_fifo_wr_op_tag;
 reg [RAM_SEG_COUNT-1:0] status_fifo_wr_mask;
 reg status_fifo_wr_finish;
+reg [3:0] status_fifo_wr_error;
 reg status_fifo_we;
 reg status_fifo_mask_reg = 1'b0, status_fifo_mask_next;
 reg status_fifo_finish_reg = 1'b0, status_fifo_finish_next;
+reg [3:0] status_fifo_error_reg = 4'd0, status_fifo_error_next;
 reg status_fifo_we_reg = 1'b0, status_fifo_we_next;
 reg status_fifo_half_full_reg = 1'b0;
 reg [OP_TAG_WIDTH-1:0] status_fifo_rd_op_tag_reg = 0, status_fifo_rd_op_tag_next;
 reg [RAM_SEG_COUNT-1:0] status_fifo_rd_mask_reg = 0, status_fifo_rd_mask_next;
 reg status_fifo_rd_finish_reg = 1'b0, status_fifo_rd_finish_next;
+reg [3:0] status_fifo_rd_error_reg = 4'd0, status_fifo_rd_error_next;
 reg status_fifo_rd_valid_reg = 1'b0, status_fifo_rd_valid_next;
 
 reg [AXI_DATA_WIDTH-1:0] m_axi_rdata_int_reg = {AXI_DATA_WIDTH{1'b0}}, m_axi_rdata_int_next;
@@ -316,10 +321,13 @@ reg [CYCLE_COUNT_WIDTH-1:0] op_table_start_cycle_count;
 reg [TAG_WIDTH-1:0] op_table_start_tag;
 reg op_table_start_last;
 reg op_table_start_en;
-reg op_table_read_complete_en;
 reg [OP_TAG_WIDTH+1-1:0] op_table_read_complete_ptr_reg = 0;
-reg op_table_write_complete_en;
+reg op_table_read_complete_en;
+reg [OP_TAG_WIDTH-1:0] op_table_update_status_ptr;
+reg [3:0] op_table_update_status_error;
+reg op_table_update_status_en;
 reg [OP_TAG_WIDTH-1:0] op_table_write_complete_ptr;
+reg op_table_write_complete_en;
 reg [OP_TAG_WIDTH+1-1:0] op_table_finish_ptr_reg = 0;
 reg op_table_finish_en;
 
@@ -342,6 +350,12 @@ reg [TAG_WIDTH-1:0] op_table_tag[2**OP_TAG_WIDTH-1:0];
 reg op_table_last[2**OP_TAG_WIDTH-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_write_complete[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg op_table_error_a [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg op_table_error_b [2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg [3:0] op_table_error_code [2**OP_TAG_WIDTH-1:0];
 
 integer i;
 
@@ -356,6 +370,9 @@ initial begin
         op_table_tag[i] = 0;
         op_table_last[i] = 0;
         op_table_write_complete[i] = 0;
+        op_table_error_a[i] = 0;
+        op_table_error_b[i] = 0;
+        op_table_error_code[i] = 0;
     end
 end
 
@@ -507,14 +524,13 @@ always @* begin
     op_tag_next = op_tag_reg;
 
     op_table_read_complete_en = 1'b0;
-    op_table_write_complete_en = 1'b0;
-    op_table_write_complete_ptr = m_axi_rid;
 
     m_axi_rdata_int_next = m_axi_rdata_int_reg;
     m_axi_rvalid_int_next = 1'b0;
 
     status_fifo_mask_next = 1'b1;
     status_fifo_finish_next = 1'b0;
+    status_fifo_error_next = DMA_ERROR_NONE;
     status_fifo_we_next = 1'b0;
 
     out_done_ack = {RAM_SEG_COUNT{1'b0}};
@@ -585,11 +601,22 @@ always @* begin
 
                 status_fifo_mask_next = 1'b1;
                 status_fifo_finish_next = 1'b0;
+                status_fifo_error_next = DMA_ERROR_NONE;
                 status_fifo_we_next = 1'b1;
 
                 if (zero_len_next) begin
                     m_axi_rvalid_int_next = 1'b0;
                     status_fifo_mask_next = 1'b0;
+                end
+
+                if (m_axi_rresp == AXI_RESP_SLVERR) begin
+                    m_axi_rvalid_int_next = 1'b0;
+                    status_fifo_mask_next = 1'b0;
+                    status_fifo_error_next = DMA_ERROR_AXI_RD_SLVERR;
+                end else if (m_axi_rresp == AXI_RESP_DECERR) begin
+                    m_axi_rvalid_int_next = 1'b0;
+                    status_fifo_mask_next = 1'b0;
+                    status_fifo_error_next = DMA_ERROR_AXI_RD_DECERR;
                 end
 
                 if (!USE_AXI_ID) begin
@@ -640,7 +667,18 @@ always @* begin
 
                 status_fifo_mask_next = 1'b1;
                 status_fifo_finish_next = 1'b0;
+                status_fifo_error_next = DMA_ERROR_NONE;
                 status_fifo_we_next = 1'b1;
+
+                if (m_axi_rresp == AXI_RESP_SLVERR) begin
+                    m_axi_rvalid_int_next = 1'b0;
+                    status_fifo_mask_next = 1'b0;
+                    status_fifo_error_next = DMA_ERROR_AXI_RD_SLVERR;
+                end else if (m_axi_rresp == AXI_RESP_DECERR) begin
+                    m_axi_rvalid_int_next = 1'b0;
+                    status_fifo_mask_next = 1'b0;
+                    status_fifo_error_next = DMA_ERROR_AXI_RD_DECERR;
+                end
 
                 if (m_axi_rlast) begin
                     status_fifo_finish_next = 1'b1;
@@ -659,12 +697,14 @@ always @* begin
     status_fifo_wr_op_tag = op_tag_reg;
     status_fifo_wr_mask = status_fifo_mask_reg ? ram_mask_reg : 0;
     status_fifo_wr_finish = status_fifo_finish_reg;
+    status_fifo_wr_error = status_fifo_error_reg;
     status_fifo_we = 1'b0;
 
     if (status_fifo_we_reg) begin
         status_fifo_wr_op_tag = op_tag_reg;
         status_fifo_wr_mask = status_fifo_mask_reg ? ram_mask_reg : 0;
         status_fifo_wr_finish = status_fifo_finish_reg;
+        status_fifo_wr_error = status_fifo_error_reg;
         status_fifo_we = 1'b1;
     end
 
@@ -672,6 +712,11 @@ always @* begin
     status_fifo_rd_mask_next = status_fifo_rd_mask_reg;
     status_fifo_rd_finish_next = status_fifo_rd_finish_reg;
     status_fifo_rd_valid_next = status_fifo_rd_valid_reg;
+    status_fifo_rd_error_next = status_fifo_rd_error_reg;
+
+    op_table_update_status_ptr = status_fifo_rd_op_tag_reg;
+    op_table_update_status_error = status_fifo_rd_error_reg;
+    op_table_update_status_en = 1'b0;
 
     op_table_write_complete_ptr = status_fifo_rd_op_tag_reg;
     op_table_write_complete_en = 1'b0;
@@ -679,6 +724,7 @@ always @* begin
     if (status_fifo_rd_valid_reg && (status_fifo_rd_mask_reg & ~out_done) == 0) begin
         // got write completion, pop and return status
         status_fifo_rd_valid_next = 1'b0;
+        op_table_update_status_en = 1'b1;
 
         out_done_ack = status_fifo_rd_mask_reg;
 
@@ -694,6 +740,7 @@ always @* begin
         status_fifo_rd_op_tag_next = status_fifo_op_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
         status_fifo_rd_mask_next = status_fifo_mask[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
         status_fifo_rd_finish_next = status_fifo_finish[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+        status_fifo_rd_error_next = status_fifo_error[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
         status_fifo_rd_valid_next = 1'b1;
         status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
     end
@@ -701,16 +748,24 @@ always @* begin
     // commit operations in-order
     op_table_finish_en = 1'b0;
 
+    if (m_axis_read_desc_status_valid_reg) begin
+        m_axis_read_desc_status_error_next = DMA_ERROR_NONE;
+    end else begin
+        m_axis_read_desc_status_error_next = m_axis_read_desc_status_error_reg;
+    end
+
     m_axis_read_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
-    m_axis_read_desc_status_error_next = 0;
     m_axis_read_desc_status_valid_next = 1'b0;
 
     if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_write_complete[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_finish_ptr_reg != op_table_start_ptr_reg) begin
         op_table_finish_en = 1'b1;
 
+        if (op_table_error_a[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] != op_table_error_b[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
+            m_axis_read_desc_status_error_next = op_table_error_code[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
+        end
+
         if (op_table_last[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
             m_axis_read_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
-            m_axis_read_desc_status_error_next = 0;
             m_axis_read_desc_status_valid_next = 1'b1;
         end
     end
@@ -762,17 +817,20 @@ always @(posedge clk) begin
         status_fifo_op_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_op_tag;
         status_fifo_mask[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_mask;
         status_fifo_finish[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_finish;
+        status_fifo_error[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_error;
         status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
     end
     status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
 
     status_fifo_mask_reg <= status_fifo_mask_next;
     status_fifo_finish_reg <= status_fifo_finish_next;
+    status_fifo_error_reg <= status_fifo_error_next;
     status_fifo_we_reg <= status_fifo_we_next;
 
     status_fifo_rd_op_tag_reg <= status_fifo_rd_op_tag_next;
     status_fifo_rd_mask_reg <= status_fifo_rd_mask_next;
     status_fifo_rd_finish_reg <= status_fifo_rd_finish_next;
+    status_fifo_rd_error_reg <= status_fifo_rd_error_next;
     status_fifo_rd_valid_reg <= status_fifo_rd_valid_next;
 
     status_fifo_half_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**(STATUS_FIFO_ADDR_WIDTH-1);
@@ -789,10 +847,18 @@ always @(posedge clk) begin
         op_table_tag[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_tag;
         op_table_last[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_last;
         op_table_write_complete[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= 1'b0;
+        op_table_error_a[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_error_b[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]];
     end
 
     if (!USE_AXI_ID && op_table_read_complete_en) begin
         op_table_read_complete_ptr_reg <= op_table_read_complete_ptr_reg + 1;
+    end
+
+    if (op_table_update_status_en) begin
+        if (op_table_update_status_error != 0) begin
+            op_table_error_code[op_table_update_status_ptr] <= op_table_update_status_error;
+            op_table_error_b[op_table_update_status_ptr] <= !op_table_error_a[op_table_update_status_ptr];
+        end
     end
 
     if (op_table_write_complete_en) begin
@@ -814,6 +880,7 @@ always @(posedge clk) begin
         m_axi_rready_reg <= 1'b0;
 
         s_axis_read_desc_ready_reg <= 1'b0;
+        m_axis_read_desc_status_error_reg = 4'd0;
         m_axis_read_desc_status_valid_reg <= 1'b0;
 
         status_fifo_wr_ptr_reg <= 0;

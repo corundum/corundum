@@ -13,14 +13,10 @@ PHY: 10G BASE-R PHY IP core and internal GTH transceiver
 Run make in this directory to build the bitstream and the .xsa
 file.  Ensure that the Xilinx Vivado toolchain components are in PATH.
 
-Then change into sub-directory ps/petalinux/ and build the PetaLinux project,
-while pointing at the .xsa file.  Ensure that the Xilinx PetaLinux toolchain
-components are in PATH.
+Then change into sub-directory ps/petalinux/ and build the PetaLinux project.
+Ensure that the Xilinx PetaLinux toolchain components are in PATH.
 
-	cd ps/petalinux/
-	make HDF=../../fpga/fpga.xsa gethdf
-	make
-	make package-boot
+	make -C ps/petalinux/ build-boot
 
 ## How to test
 

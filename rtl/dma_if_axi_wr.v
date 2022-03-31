@@ -235,6 +235,7 @@ reg [AXI_ADDR_WIDTH-1:0] req_axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, req_axi_addr
 reg [RAM_SEL_WIDTH-1:0] ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, ram_addr_next;
 reg [LEN_WIDTH-1:0] op_count_reg = {LEN_WIDTH{1'b0}}, op_count_next;
+reg zero_len_reg = 1'b0, zero_len_next;
 reg [LEN_WIDTH-1:0] tr_count_reg = {LEN_WIDTH{1'b0}}, tr_count_next;
 reg [12:0] tr_word_count_reg = 13'd0, tr_word_count_next;
 reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
@@ -255,6 +256,7 @@ reg [RAM_OFFSET_WIDTH-1:0] end_offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, end_offset
 
 reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
 reg [12:0] axi_len_reg = 13'd0, axi_len_next;
+reg axi_zero_len_reg = 1'b0, axi_zero_len_next;
 reg [RAM_OFFSET_WIDTH-1:0] offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, offset_next;
 reg [AXI_STRB_WIDTH-1:0] strb_offset_mask_reg = {AXI_STRB_WIDTH{1'b1}}, strb_offset_mask_next;
 reg [OFFSET_WIDTH-1:0] last_cycle_offset_reg = {OFFSET_WIDTH{1'b0}}, last_cycle_offset_next;
@@ -330,6 +332,7 @@ assign ram_rd_resp_ready = ram_rd_resp_ready_cmb;
 reg [OP_TAG_WIDTH+1-1:0] op_table_start_ptr_reg = 0;
 reg [AXI_ADDR_WIDTH-1:0] op_table_start_axi_addr;
 reg [11:0] op_table_start_len;
+reg op_table_start_zero_len;
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_start_cycle_count;
 reg [RAM_OFFSET_WIDTH-1:0] op_table_start_offset;
 reg [TAG_WIDTH-1:0] op_table_start_tag;
@@ -351,6 +354,8 @@ reg [AXI_ADDR_WIDTH-1:0] op_table_axi_addr[2**OP_TAG_WIDTH-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [11:0] op_table_len[2**OP_TAG_WIDTH-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg op_table_zero_len[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_cycle_count[2**OP_TAG_WIDTH-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [RAM_OFFSET_WIDTH-1:0] op_table_offset[2**OP_TAG_WIDTH-1:0];
@@ -365,6 +370,7 @@ initial begin
     for (i = 0; i < 2**OP_TAG_WIDTH; i = i + 1) begin
         op_table_axi_addr[i] = 0;
         op_table_len[i] = 0;
+        op_table_zero_len[i] = 1'b0;
         op_table_cycle_count[i] = 0;
         op_table_offset[i] = 0;
         op_table_tag[i] = 0;
@@ -382,6 +388,7 @@ always @* begin
     ram_sel_next = ram_sel_reg;
     ram_addr_next = ram_addr_reg;
     op_count_next = op_count_reg;
+    zero_len_next = zero_len_reg;
     tr_count_next = tr_count_reg;
     tr_word_count_next = tr_word_count_reg;
 
@@ -395,6 +402,7 @@ always @* begin
 
     op_table_start_axi_addr = req_axi_addr_reg;
     op_table_start_len = 0;
+    op_table_start_zero_len = zero_len_reg;
     op_table_start_cycle_count = 0;
     op_table_start_offset = (req_axi_addr_reg & OFFSET_MASK)-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
     op_table_start_tag = tag_reg;
@@ -410,7 +418,14 @@ always @* begin
             req_axi_addr_next = s_axis_write_desc_axi_addr;
             ram_sel_next = s_axis_write_desc_ram_sel;
             ram_addr_next = s_axis_write_desc_ram_addr;
-            op_count_next = s_axis_write_desc_len;
+            if (s_axis_write_desc_len == 0) begin
+                // zero-length operation
+                op_count_next = 1;
+                zero_len_next = 1'b1;
+            end else begin
+                op_count_next = s_axis_write_desc_len;
+                zero_len_next = 1'b0;
+            end
             tag_next = s_axis_write_desc_tag;
 
             if (op_count_next <= AXI_MAX_BURST_SIZE - (req_axi_addr_next & OFFSET_MASK) || AXI_MAX_BURST_SIZE >= 4096) begin
@@ -458,6 +473,7 @@ always @* begin
 
                 op_table_start_axi_addr = req_axi_addr_reg;
                 op_table_start_len = tr_word_count_next;
+                op_table_start_zero_len = zero_len_reg;
                 op_table_start_offset = (req_axi_addr_reg & OFFSET_MASK)-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
                 op_table_start_tag = tag_reg;
                 op_table_start_last = op_count_reg == tr_word_count_next;
@@ -656,6 +672,7 @@ always @* begin
 
     axi_addr_next = axi_addr_reg;
     axi_len_next = axi_len_reg;
+    axi_zero_len_next = axi_zero_len_reg;
     offset_next = offset_reg;
     strb_offset_mask_next = strb_offset_mask_reg;
     last_cycle_offset_next = last_cycle_offset_reg;
@@ -691,8 +708,9 @@ always @* begin
 
             axi_addr_next = op_table_axi_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             axi_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            axi_zero_len_next = op_table_zero_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             offset_next = op_table_offset[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
-            strb_offset_mask_next = {AXI_STRB_WIDTH{1'b1}} << (axi_addr_next & OFFSET_MASK);
+            strb_offset_mask_next = axi_zero_len_next ? {AXI_STRB_WIDTH{1'b0}} : ({AXI_STRB_WIDTH{1'b1}} << (axi_addr_next & OFFSET_MASK));
             last_cycle_offset_next = axi_addr_next + (axi_len_next & OFFSET_MASK);
             cycle_count_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             last_cycle_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
@@ -739,8 +757,9 @@ always @* begin
                     // skip idle state if possible
                     axi_addr_next = op_table_axi_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                     axi_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                    axi_zero_len_next = op_table_zero_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                     offset_next = op_table_offset[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
-                    strb_offset_mask_next = {AXI_STRB_WIDTH{1'b1}} << (axi_addr_next & OFFSET_MASK);
+                    strb_offset_mask_next = axi_zero_len_next ? {AXI_STRB_WIDTH{1'b0}} : ({AXI_STRB_WIDTH{1'b1}} << (axi_addr_next & OFFSET_MASK));
                     last_cycle_offset_next = axi_addr_next + (axi_len_next & OFFSET_MASK);
                     cycle_count_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                     last_cycle_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
@@ -824,6 +843,7 @@ always @(posedge clk) begin
     ram_sel_reg <= ram_sel_next;
     ram_addr_reg <= ram_addr_next;
     op_count_reg <= op_count_next;
+    zero_len_reg <= zero_len_next;
     tr_count_reg <= tr_count_next;
     tr_word_count_reg <= tr_word_count_next;
     tag_reg <= tag_next;
@@ -844,6 +864,7 @@ always @(posedge clk) begin
 
     axi_addr_reg <= axi_addr_next;
     axi_len_reg <= axi_len_next;
+    axi_zero_len_reg <= axi_zero_len_next;
     offset_reg <= offset_next;
     strb_offset_mask_reg <= strb_offset_mask_next;
     last_cycle_offset_reg <= last_cycle_offset_next;
@@ -888,6 +909,7 @@ always @(posedge clk) begin
         op_table_write_complete[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= 1'b0;
         op_table_axi_addr[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_axi_addr;
         op_table_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_len;
+        op_table_zero_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_zero_len;
         op_table_cycle_count[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_cycle_count;
         op_table_offset[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_offset;
         op_table_tag[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_tag;

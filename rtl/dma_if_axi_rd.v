@@ -223,12 +223,14 @@ reg [RAM_SEL_WIDTH-1:0] req_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, req_ram_sel_nex
 reg [RAM_ADDR_WIDTH-1:0] req_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, req_ram_addr_next;
 reg [LEN_WIDTH-1:0] req_op_count_reg = {LEN_WIDTH{1'b0}}, req_op_count_next;
 reg [LEN_WIDTH-1:0] req_tr_count_reg = {LEN_WIDTH{1'b0}}, req_tr_count_next;
+reg req_zero_len_reg = 1'b0, req_zero_len_next;
 reg [TAG_WIDTH-1:0] req_tag_reg = {TAG_WIDTH{1'b0}}, req_tag_next;
 
 reg [RAM_SEL_WIDTH-1:0] ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] addr_reg = {RAM_ADDR_WIDTH{1'b0}}, addr_next;
 reg [RAM_ADDR_WIDTH-1:0] addr_delay_reg = {RAM_ADDR_WIDTH{1'b0}}, addr_delay_next;
 reg [12:0] op_count_reg = 13'd0, op_count_next;
+reg zero_len_reg = 1'b0, zero_len_next;
 reg [RAM_SEG_COUNT-1:0] ram_mask_reg = {RAM_SEG_COUNT{1'b0}}, ram_mask_next;
 reg [RAM_SEG_COUNT-1:0] ram_mask_0_reg = {RAM_SEG_COUNT{1'b0}}, ram_mask_0_next;
 reg [RAM_SEG_COUNT-1:0] ram_mask_1_reg = {RAM_SEG_COUNT{1'b0}}, ram_mask_1_next;
@@ -251,6 +253,7 @@ reg [OP_TAG_WIDTH-1:0] status_fifo_wr_op_tag;
 reg [RAM_SEG_COUNT-1:0] status_fifo_wr_mask;
 reg status_fifo_wr_finish;
 reg status_fifo_we;
+reg status_fifo_mask_reg = 1'b0, status_fifo_mask_next;
 reg status_fifo_finish_reg = 1'b0, status_fifo_finish_next;
 reg status_fifo_we_reg = 1'b0, status_fifo_we_next;
 reg status_fifo_half_full_reg = 1'b0;
@@ -308,6 +311,7 @@ reg [AXI_ADDR_WIDTH-1:0] op_table_start_axi_addr;
 reg [RAM_SEL_WIDTH-1:0] op_table_start_ram_sel;
 reg [RAM_ADDR_WIDTH-1:0] op_table_start_ram_addr;
 reg [11:0] op_table_start_len;
+reg op_table_start_zero_len;
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_start_cycle_count;
 reg [TAG_WIDTH-1:0] op_table_start_tag;
 reg op_table_start_last;
@@ -329,6 +333,8 @@ reg [RAM_ADDR_WIDTH-1:0] op_table_ram_addr [2**OP_TAG_WIDTH-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [11:0] op_table_len[2**OP_TAG_WIDTH-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg op_table_zero_len[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_cycle_count[2**OP_TAG_WIDTH-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [TAG_WIDTH-1:0] op_table_tag[2**OP_TAG_WIDTH-1:0];
@@ -345,6 +351,7 @@ initial begin
         op_table_ram_sel[i] = 0;
         op_table_ram_addr[i] = 0;
         op_table_len[i] = 0;
+        op_table_zero_len[i] = 1'b0;
         op_table_cycle_count[i] = 0;
         op_table_tag[i] = 0;
         op_table_last[i] = 0;
@@ -362,6 +369,7 @@ always @* begin
     req_ram_addr_next = req_ram_addr_reg;
     req_op_count_next = req_op_count_reg;
     req_tr_count_next = req_tr_count_reg;
+    req_zero_len_next = req_zero_len_reg;
     req_tag_next = req_tag_reg;
 
     m_axi_arid_next = m_axi_arid_reg;
@@ -373,6 +381,7 @@ always @* begin
     op_table_start_ram_sel = req_ram_sel_reg;
     op_table_start_ram_addr = req_ram_addr_reg;
     op_table_start_len = 0;
+    op_table_start_zero_len = req_zero_len_reg;
     op_table_start_tag = req_tag_reg;
     op_table_start_cycle_count = 0;
     op_table_start_last = 0;
@@ -386,7 +395,14 @@ always @* begin
             req_axi_addr_next = s_axis_read_desc_axi_addr;
             req_ram_sel_next = s_axis_read_desc_ram_sel;
             req_ram_addr_next = s_axis_read_desc_ram_addr;
-            req_op_count_next = s_axis_read_desc_len;
+            if (s_axis_read_desc_len == 0) begin
+                // zero-length operation
+                req_op_count_next = 1;
+                req_zero_len_next = 1'b1;
+            end else begin
+                req_op_count_next = s_axis_read_desc_len;
+                req_zero_len_next = 1'b0;
+            end
             req_tag_next = s_axis_read_desc_tag;
 
             if (req_op_count_next <= AXI_MAX_BURST_SIZE - (req_axi_addr_next & OFFSET_MASK) || AXI_MAX_BURST_SIZE >= 4096) begin
@@ -426,6 +442,7 @@ always @* begin
                 op_table_start_ram_sel = req_ram_sel_reg;
                 op_table_start_ram_addr = req_ram_addr_reg;
                 op_table_start_len = req_tr_count_next;
+                op_table_start_zero_len = req_zero_len_reg;
                 op_table_start_tag = req_tag_reg;
                 op_table_start_cycle_count = (req_tr_count_next + (req_axi_addr_reg & OFFSET_MASK) - 1) >> AXI_BURST_SIZE;
                 op_table_start_last = req_op_count_reg == req_tr_count_next;
@@ -478,6 +495,7 @@ always @* begin
     addr_next = addr_reg;
     addr_delay_next = addr_delay_reg;
     op_count_next = op_count_reg;
+    zero_len_next = zero_len_reg;
     ram_mask_next = ram_mask_reg;
     ram_mask_0_next = ram_mask_0_reg;
     ram_mask_1_next = ram_mask_1_reg;
@@ -495,6 +513,7 @@ always @* begin
     m_axi_rdata_int_next = m_axi_rdata_int_reg;
     m_axi_rvalid_int_next = 1'b0;
 
+    status_fifo_mask_next = 1'b1;
     status_fifo_finish_next = 1'b0;
     status_fifo_we_next = 1'b0;
 
@@ -534,6 +553,7 @@ always @* begin
             ram_sel_next = op_table_ram_sel[op_tag_next];
             addr_next = op_table_ram_addr[op_tag_next];
             op_count_next = op_table_len[op_tag_next];
+            zero_len_next = op_table_zero_len[op_tag_next];
             offset_next = op_table_ram_addr[op_tag_next][RAM_OFFSET_WIDTH-1:0]-(op_table_axi_addr[op_tag_next] & OFFSET_MASK);
 
             if (m_axi_rready && m_axi_rvalid) begin
@@ -560,8 +580,14 @@ always @* begin
                 addr_next = addr_next + cycle_byte_count_next;
                 op_count_next = op_count_next - cycle_byte_count_next;
 
-                m_axi_rdata_int_next = m_axi_rdata;
-                m_axi_rvalid_int_next = 1'b1;
+                if (zero_len_next) begin
+                    status_fifo_mask_next = 1'b0;
+                end else begin
+                    m_axi_rdata_int_next = m_axi_rdata;
+                    m_axi_rvalid_int_next = 1'b1;
+
+                    status_fifo_mask_next = 1'b1;
+                end
 
                 status_fifo_finish_next = 1'b0;
                 status_fifo_we_next = 1'b1;
@@ -612,6 +638,7 @@ always @* begin
                 m_axi_rdata_int_next = m_axi_rdata;
                 m_axi_rvalid_int_next = 1'b1;
 
+                status_fifo_mask_next = 1'b1;
                 status_fifo_finish_next = 1'b0;
                 status_fifo_we_next = 1'b1;
 
@@ -630,13 +657,13 @@ always @* begin
     status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg;
 
     status_fifo_wr_op_tag = op_tag_reg;
-    status_fifo_wr_mask = ram_mask_reg;
+    status_fifo_wr_mask = status_fifo_mask_reg ? ram_mask_reg : 0;
     status_fifo_wr_finish = status_fifo_finish_reg;
     status_fifo_we = 1'b0;
 
     if (status_fifo_we_reg) begin
         status_fifo_wr_op_tag = op_tag_reg;
-        status_fifo_wr_mask = ram_mask_reg;
+        status_fifo_wr_mask = status_fifo_mask_reg ? ram_mask_reg : 0;
         status_fifo_wr_finish = status_fifo_finish_reg;
         status_fifo_we = 1'b1;
     end
@@ -698,12 +725,14 @@ always @(posedge clk) begin
     req_ram_addr_reg <= req_ram_addr_next;
     req_op_count_reg <= req_op_count_next;
     req_tr_count_reg <= req_tr_count_next;
+    req_zero_len_reg <= req_zero_len_next;
     req_tag_reg <= req_tag_next;
 
     ram_sel_reg <= ram_sel_next;
     addr_reg <= addr_next;
     addr_delay_reg <= addr_delay_next;
     op_count_reg <= op_count_next;
+    zero_len_reg <= zero_len_next;
     ram_mask_reg <= ram_mask_next;
     ram_mask_0_reg <= ram_mask_0_next;
     ram_mask_1_reg <= ram_mask_1_next;
@@ -737,6 +766,7 @@ always @(posedge clk) begin
     end
     status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
 
+    status_fifo_mask_reg <= status_fifo_mask_next;
     status_fifo_finish_reg <= status_fifo_finish_next;
     status_fifo_we_reg <= status_fifo_we_next;
 
@@ -754,6 +784,7 @@ always @(posedge clk) begin
         op_table_ram_sel[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_ram_sel;
         op_table_ram_addr[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_ram_addr;
         op_table_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_len;
+        op_table_zero_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_zero_len;
         op_table_cycle_count[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_cycle_count;
         op_table_tag[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_tag;
         op_table_last[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_last;

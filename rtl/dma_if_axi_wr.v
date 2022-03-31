@@ -187,6 +187,11 @@ initial begin
         $error("Error: RAM_ADDR_WIDTH does not match RAM configuration (instance %m)");
         $finish;
     end
+
+    if (OP_TABLE_SIZE > 2**AXI_ID_WIDTH) begin
+        $error("Error: AXI_ID_WIDTH insufficient for requested OP_TABLE_SIZE (instance %m)");
+        $finish;
+    end
 end
 
 localparam [1:0]

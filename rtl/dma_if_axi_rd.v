@@ -580,17 +580,17 @@ always @* begin
                 addr_next = addr_next + cycle_byte_count_next;
                 op_count_next = op_count_next - cycle_byte_count_next;
 
-                if (zero_len_next) begin
-                    status_fifo_mask_next = 1'b0;
-                end else begin
-                    m_axi_rdata_int_next = m_axi_rdata;
-                    m_axi_rvalid_int_next = 1'b1;
+                m_axi_rdata_int_next = m_axi_rdata;
+                m_axi_rvalid_int_next = 1'b1;
 
-                    status_fifo_mask_next = 1'b1;
-                end
-
+                status_fifo_mask_next = 1'b1;
                 status_fifo_finish_next = 1'b0;
                 status_fifo_we_next = 1'b1;
+
+                if (zero_len_next) begin
+                    m_axi_rvalid_int_next = 1'b0;
+                    status_fifo_mask_next = 1'b0;
+                end
 
                 if (!USE_AXI_ID) begin
                     op_table_read_complete_en = 1'b1;

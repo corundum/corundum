@@ -1064,18 +1064,18 @@ always @* begin
                     end else begin
                         // no error
 
-                        if (zero_len_next) begin
-                            status_fifo_mask_next = 1'b0;
-                        end else begin
-                            rc_tdata_int_next = s_axis_rc_tdata;
-                            rc_tvalid_int_next = 1'b1;
+                        rc_tdata_int_next = s_axis_rc_tdata;
+                        rc_tvalid_int_next = 1'b1;
 
-                            status_fifo_mask_next = 1'b1;
-                        end
-
+                        status_fifo_mask_next = 1'b1;
                         status_fifo_finish_next = 1'b0;
                         status_fifo_error_next = DMA_ERROR_NONE;
                         status_fifo_we_next = 1'b1;
+
+                        if (zero_len_next) begin
+                            rc_tvalid_int_next = 1'b0;
+                            status_fifo_mask_next = 1'b0;
+                        end
 
                         if (last_cycle) begin
                             if (final_cpl_next) begin

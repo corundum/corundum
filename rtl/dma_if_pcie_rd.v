@@ -1061,18 +1061,18 @@ always @* begin
                 end else begin
                     // no error
 
-                    if (zero_len_next) begin
-                        status_fifo_mask_next = 1'b0;
-                    end else begin
-                        tlp_data_int_next = rx_cpl_tlp_data;
-                        tlp_data_valid_int_next = 1'b1;
+                    tlp_data_int_next = rx_cpl_tlp_data;
+                    tlp_data_valid_int_next = 1'b1;
 
-                        status_fifo_mask_next = 1'b1;
-                    end
-
+                    status_fifo_mask_next = 1'b1;
                     status_fifo_finish_next = 1'b0;
                     status_fifo_error_next = DMA_ERROR_NONE;
                     status_fifo_we_next = 1'b1;
+
+                    if (zero_len_next) begin
+                        tlp_data_valid_int_next = 1'b0;
+                        status_fifo_mask_next = 1'b0;
+                    end
 
                     stat_rd_req_finish_tag_next = pcie_tag_next;
                     stat_rd_req_finish_status_next = DMA_ERROR_NONE;

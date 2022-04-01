@@ -120,7 +120,25 @@ module dma_if_axi_rd #
     /*
      * Configuration
      */
-    input  wire                                         enable
+    input  wire                                         enable,
+
+    /*
+     * Statistics
+     */
+    output wire [$clog2(OP_TABLE_SIZE)-1:0]             stat_rd_op_start_tag,
+    output wire [LEN_WIDTH-1:0]                         stat_rd_op_start_len,
+    output wire                                         stat_rd_op_start_valid,
+    output wire [$clog2(OP_TABLE_SIZE)-1:0]             stat_rd_op_finish_tag,
+    output wire [3:0]                                   stat_rd_op_finish_status,
+    output wire                                         stat_rd_op_finish_valid,
+    output wire [$clog2(OP_TABLE_SIZE)-1:0]             stat_rd_req_start_tag,
+    output wire [12:0]                                  stat_rd_req_start_len,
+    output wire                                         stat_rd_req_start_valid,
+    output wire [$clog2(OP_TABLE_SIZE)-1:0]             stat_rd_req_finish_tag,
+    output wire [3:0]                                   stat_rd_req_finish_status,
+    output wire                                         stat_rd_req_finish_valid,
+    output wire                                         stat_rd_op_table_full,
+    output wire                                         stat_rd_tx_stall
 );
 
 parameter RAM_WORD_WIDTH = RAM_SEG_BE_WIDTH;
@@ -287,6 +305,21 @@ reg [TAG_WIDTH-1:0] m_axis_read_desc_status_tag_reg = {TAG_WIDTH{1'b0}}, m_axis_
 reg [3:0] m_axis_read_desc_status_error_reg = 4'd0, m_axis_read_desc_status_error_next;
 reg m_axis_read_desc_status_valid_reg = 1'b0, m_axis_read_desc_status_valid_next;
 
+reg [OP_TAG_WIDTH-1:0] stat_rd_op_start_tag_reg = 0, stat_rd_op_start_tag_next;
+reg [LEN_WIDTH-1:0] stat_rd_op_start_len_reg = 0, stat_rd_op_start_len_next;
+reg stat_rd_op_start_valid_reg = 1'b0, stat_rd_op_start_valid_next;
+reg [OP_TAG_WIDTH-1:0] stat_rd_op_finish_tag_reg = 0, stat_rd_op_finish_tag_next;
+reg [3:0] stat_rd_op_finish_status_reg = 4'd0, stat_rd_op_finish_status_next;
+reg stat_rd_op_finish_valid_reg = 1'b0, stat_rd_op_finish_valid_next;
+reg [OP_TAG_WIDTH-1:0] stat_rd_req_start_tag_reg = 0, stat_rd_req_start_tag_next;
+reg [12:0] stat_rd_req_start_len_reg = 13'd0, stat_rd_req_start_len_next;
+reg stat_rd_req_start_valid_reg = 1'b0, stat_rd_req_start_valid_next;
+reg [OP_TAG_WIDTH-1:0] stat_rd_req_finish_tag_reg = 0, stat_rd_req_finish_tag_next;
+reg [3:0] stat_rd_req_finish_status_reg = 4'd0, stat_rd_req_finish_status_next;
+reg stat_rd_req_finish_valid_reg = 1'b0, stat_rd_req_finish_valid_next;
+reg stat_rd_op_table_full_reg = 1'b0, stat_rd_op_table_full_next;
+reg stat_rd_tx_stall_reg = 1'b0, stat_rd_tx_stall_next;
+
 // internal datapath
 reg  [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0]      ram_wr_cmd_sel_int;
 reg  [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]   ram_wr_cmd_be_int;
@@ -314,6 +347,21 @@ assign s_axis_read_desc_ready = s_axis_read_desc_ready_reg;
 assign m_axis_read_desc_status_tag = m_axis_read_desc_status_tag_reg;
 assign m_axis_read_desc_status_error = m_axis_read_desc_status_error_reg;
 assign m_axis_read_desc_status_valid = m_axis_read_desc_status_valid_reg;
+
+assign stat_rd_op_start_tag = stat_rd_op_start_tag_reg;
+assign stat_rd_op_start_len = stat_rd_op_start_len_reg;
+assign stat_rd_op_start_valid = stat_rd_op_start_valid_reg;
+assign stat_rd_op_finish_tag = stat_rd_op_finish_tag_reg;
+assign stat_rd_op_finish_status = stat_rd_op_finish_status_reg;
+assign stat_rd_op_finish_valid = stat_rd_op_finish_valid_reg;
+assign stat_rd_req_start_tag = stat_rd_req_start_tag_reg;
+assign stat_rd_req_start_len = stat_rd_req_start_len_reg;
+assign stat_rd_req_start_valid = stat_rd_req_start_valid_reg;
+assign stat_rd_req_finish_tag = stat_rd_req_finish_tag_reg;
+assign stat_rd_req_finish_status = stat_rd_req_finish_status_reg;
+assign stat_rd_req_finish_valid = stat_rd_req_finish_valid_reg;
+assign stat_rd_op_table_full = stat_rd_op_table_full_reg;
+assign stat_rd_tx_stall = stat_rd_tx_stall_reg;
 
 // operation tag management
 reg [OP_TAG_WIDTH+1-1:0] op_table_start_ptr_reg = 0;
@@ -386,6 +434,15 @@ always @* begin
 
     s_axis_read_desc_ready_next = 1'b0;
 
+    stat_rd_op_start_tag_next = stat_rd_op_start_tag_reg;
+    stat_rd_op_start_len_next = stat_rd_op_start_len_reg;
+    stat_rd_op_start_valid_next = 1'b0;
+    stat_rd_req_start_tag_next = stat_rd_req_start_tag_reg;
+    stat_rd_req_start_len_next = stat_rd_req_start_len_reg;
+    stat_rd_req_start_valid_next = 1'b0;
+    stat_rd_op_table_full_next = !(!op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] && ($unsigned(op_table_start_ptr_reg - op_table_finish_ptr_reg) < 2**OP_TAG_WIDTH));
+    stat_rd_tx_stall_next = m_axi_arvalid_reg && !m_axi_arready;
+
     req_axi_addr_next = req_axi_addr_reg;
     req_ram_sel_next = req_ram_sel_reg;
     req_ram_addr_next = req_ram_addr_reg;
@@ -449,6 +506,11 @@ always @* begin
 
             if (s_axis_read_desc_ready && s_axis_read_desc_valid) begin
                 s_axis_read_desc_ready_next = 1'b0;
+
+                stat_rd_op_start_tag_next = stat_rd_op_start_tag_reg+1;
+                stat_rd_op_start_len_next = s_axis_read_desc_len;
+                stat_rd_op_start_valid_next = 1'b1;
+
                 req_state_next = REQ_STATE_START;
             end else begin
                 req_state_next = REQ_STATE_IDLE;
@@ -469,6 +531,10 @@ always @* begin
                 op_table_start_cycle_count = (req_tr_count_next + (req_axi_addr_reg & OFFSET_MASK) - 1) >> AXI_BURST_SIZE;
                 op_table_start_last = req_op_count_reg == req_tr_count_next;
                 op_table_start_en = 1'b1;
+
+                stat_rd_req_start_tag_next = op_table_start_ptr_reg[OP_TAG_WIDTH-1:0];
+                stat_rd_req_start_len_next = req_zero_len_reg ? 0 : req_tr_count_reg;
+                stat_rd_req_start_valid_next = 1'b1;
 
                 m_axi_arid_next = op_table_start_ptr_reg[OP_TAG_WIDTH-1:0];
                 m_axi_araddr_next = req_axi_addr_reg;
@@ -512,6 +578,13 @@ always @* begin
     axi_state_next = AXI_STATE_IDLE;
 
     m_axi_rready_next = 1'b0;
+
+    stat_rd_op_finish_tag_next = stat_rd_op_finish_tag_reg;
+    stat_rd_op_finish_status_next = stat_rd_op_finish_status_reg;
+    stat_rd_op_finish_valid_next = 1'b0;
+    stat_rd_req_finish_tag_next = stat_rd_req_finish_tag_reg;
+    stat_rd_req_finish_status_next = stat_rd_req_finish_status_reg;
+    stat_rd_req_finish_valid_next = 1'b0;
 
     ram_sel_next = ram_sel_reg;
     addr_next = addr_reg;
@@ -624,12 +697,17 @@ always @* begin
                     status_fifo_error_next = DMA_ERROR_AXI_RD_DECERR;
                 end
 
+                stat_rd_req_finish_tag_next = op_tag_next;
+                stat_rd_req_finish_status_next = status_fifo_error_next;
+                stat_rd_req_finish_valid_next = 1'b0;
+
                 if (!USE_AXI_ID) begin
                     op_table_read_complete_en = 1'b1;
                 end
 
                 if (m_axi_rlast) begin
                     status_fifo_finish_next = 1'b1;
+                    stat_rd_req_finish_valid_next = 1'b1;
                     axi_state_next = AXI_STATE_IDLE;
                 end else begin
                     axi_state_next = AXI_STATE_WRITE;
@@ -685,8 +763,13 @@ always @* begin
                     status_fifo_error_next = DMA_ERROR_AXI_RD_DECERR;
                 end
 
+                stat_rd_req_finish_tag_next = op_tag_next;
+                stat_rd_req_finish_status_next = status_fifo_error_next;
+                stat_rd_req_finish_valid_next = 1'b0;
+
                 if (m_axi_rlast) begin
                     status_fifo_finish_next = 1'b1;
+                    stat_rd_req_finish_valid_next = 1'b1;
                     axi_state_next = AXI_STATE_IDLE;
                 end else begin
                     axi_state_next = AXI_STATE_WRITE;
@@ -762,6 +845,10 @@ always @* begin
     m_axis_read_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
     m_axis_read_desc_status_valid_next = 1'b0;
 
+    stat_rd_op_finish_tag_next = stat_rd_op_finish_tag_reg;
+    stat_rd_op_finish_status_next = m_axis_read_desc_status_error_next;
+    stat_rd_op_finish_valid_next = 1'b0;
+
     if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_write_complete[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_finish_ptr_reg != op_table_start_ptr_reg) begin
         op_table_finish_en = 1'b1;
 
@@ -769,9 +856,13 @@ always @* begin
             m_axis_read_desc_status_error_next = op_table_error_code[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
         end
 
+        stat_rd_op_finish_status_next = m_axis_read_desc_status_error_next;
+
         if (op_table_last[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
             m_axis_read_desc_status_tag_next = op_table_tag[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
             m_axis_read_desc_status_valid_next = 1'b1;
+            stat_rd_op_finish_tag_next = stat_rd_op_finish_tag_reg + 1;
+            stat_rd_op_finish_valid_next = 1'b1;
         end
     end
 end
@@ -817,6 +908,21 @@ always @(posedge clk) begin
     m_axis_read_desc_status_tag_reg <= m_axis_read_desc_status_tag_next;
     m_axis_read_desc_status_error_reg <= m_axis_read_desc_status_error_next;
     m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
+
+    stat_rd_op_start_tag_reg <= stat_rd_op_start_tag_next;
+    stat_rd_op_start_len_reg <= stat_rd_op_start_len_next;
+    stat_rd_op_start_valid_reg <= stat_rd_op_start_valid_next;
+    stat_rd_op_finish_tag_reg <= stat_rd_op_finish_tag_next;
+    stat_rd_op_finish_status_reg <= stat_rd_op_finish_status_next;
+    stat_rd_op_finish_valid_reg <= stat_rd_op_finish_valid_next;
+    stat_rd_req_start_tag_reg <= stat_rd_req_start_tag_next;
+    stat_rd_req_start_len_reg <= stat_rd_req_start_len_next;
+    stat_rd_req_start_valid_reg <= stat_rd_req_start_valid_next;
+    stat_rd_req_finish_tag_reg <= stat_rd_req_finish_tag_next;
+    stat_rd_req_finish_status_reg <= stat_rd_req_finish_status_next;
+    stat_rd_req_finish_valid_reg <= stat_rd_req_finish_valid_next;
+    stat_rd_op_table_full_reg <= stat_rd_op_table_full_next;
+    stat_rd_tx_stall_reg <= stat_rd_tx_stall_next;
 
     if (status_fifo_we) begin
         status_fifo_op_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_op_tag;
@@ -887,6 +993,15 @@ always @(posedge clk) begin
         s_axis_read_desc_ready_reg <= 1'b0;
         m_axis_read_desc_status_error_reg = 4'd0;
         m_axis_read_desc_status_valid_reg <= 1'b0;
+
+        stat_rd_op_start_tag_reg <= 0;
+        stat_rd_op_start_valid_reg <= 1'b0;
+        stat_rd_op_finish_tag_reg <= 0;
+        stat_rd_op_finish_valid_reg <= 1'b0;
+        stat_rd_req_start_valid_reg <= 1'b0;
+        stat_rd_req_finish_valid_reg <= 1'b0;
+        stat_rd_op_table_full_reg <= 1'b0;
+        stat_rd_tx_stall_reg <= 1'b0;
 
         status_fifo_wr_ptr_reg <= 0;
         status_fifo_rd_ptr_reg <= 0;

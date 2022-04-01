@@ -169,7 +169,39 @@ module dma_if_axi #
      * Configuration
      */
     input  wire                                         read_enable,
-    input  wire                                         write_enable
+    input  wire                                         write_enable,
+
+    /*
+     * Statistics
+     */
+    output wire [$clog2(READ_OP_TABLE_SIZE)-1:0]        stat_rd_op_start_tag,
+    output wire [LEN_WIDTH-1:0]                         stat_rd_op_start_len,
+    output wire                                         stat_rd_op_start_valid,
+    output wire [$clog2(READ_OP_TABLE_SIZE)-1:0]        stat_rd_op_finish_tag,
+    output wire [3:0]                                   stat_rd_op_finish_status,
+    output wire                                         stat_rd_op_finish_valid,
+    output wire [$clog2(READ_OP_TABLE_SIZE)-1:0]        stat_rd_req_start_tag,
+    output wire [12:0]                                  stat_rd_req_start_len,
+    output wire                                         stat_rd_req_start_valid,
+    output wire [$clog2(READ_OP_TABLE_SIZE)-1:0]        stat_rd_req_finish_tag,
+    output wire [3:0]                                   stat_rd_req_finish_status,
+    output wire                                         stat_rd_req_finish_valid,
+    output wire                                         stat_rd_op_table_full,
+    output wire                                         stat_rd_tx_stall,
+    output wire [$clog2(WRITE_OP_TABLE_SIZE)-1:0]       stat_wr_op_start_tag,
+    output wire [LEN_WIDTH-1:0]                         stat_wr_op_start_len,
+    output wire                                         stat_wr_op_start_valid,
+    output wire [$clog2(WRITE_OP_TABLE_SIZE)-1:0]       stat_wr_op_finish_tag,
+    output wire [3:0]                                   stat_wr_op_finish_status,
+    output wire                                         stat_wr_op_finish_valid,
+    output wire [$clog2(WRITE_OP_TABLE_SIZE)-1:0]       stat_wr_req_start_tag,
+    output wire [12:0]                                  stat_wr_req_start_len,
+    output wire                                         stat_wr_req_start_valid,
+    output wire [$clog2(WRITE_OP_TABLE_SIZE)-1:0]       stat_wr_req_finish_tag,
+    output wire [3:0]                                   stat_wr_req_finish_status,
+    output wire                                         stat_wr_req_finish_valid,
+    output wire                                         stat_wr_op_table_full,
+    output wire                                         stat_wr_tx_stall
 );
 
 dma_if_axi_rd #(
@@ -245,7 +277,25 @@ dma_if_axi_rd_inst (
     /*
      * Configuration
      */
-    .enable(read_enable)
+    .enable(read_enable),
+
+    /*
+     * Statistics
+     */
+    .stat_rd_op_start_tag(stat_rd_op_start_tag),
+    .stat_rd_op_start_len(stat_rd_op_start_len),
+    .stat_rd_op_start_valid(stat_rd_op_start_valid),
+    .stat_rd_op_finish_tag(stat_rd_op_finish_tag),
+    .stat_rd_op_finish_status(stat_rd_op_finish_status),
+    .stat_rd_op_finish_valid(stat_rd_op_finish_valid),
+    .stat_rd_req_start_tag(stat_rd_req_start_tag),
+    .stat_rd_req_start_len(stat_rd_req_start_len),
+    .stat_rd_req_start_valid(stat_rd_req_start_valid),
+    .stat_rd_req_finish_tag(stat_rd_req_finish_tag),
+    .stat_rd_req_finish_status(stat_rd_req_finish_status),
+    .stat_rd_req_finish_valid(stat_rd_req_finish_valid),
+    .stat_rd_op_table_full(stat_rd_op_table_full),
+    .stat_rd_tx_stall(stat_rd_tx_stall)
 );
 
 dma_if_axi_wr #(
@@ -324,7 +374,25 @@ dma_if_axi_wr_inst (
     /*
      * Configuration
      */
-    .enable(write_enable)
+    .enable(write_enable),
+
+    /*
+     * Statistics
+     */
+    .stat_wr_op_start_tag(stat_wr_op_start_tag),
+    .stat_wr_op_start_len(stat_wr_op_start_len),
+    .stat_wr_op_start_valid(stat_wr_op_start_valid),
+    .stat_wr_op_finish_tag(stat_wr_op_finish_tag),
+    .stat_wr_op_finish_status(stat_wr_op_finish_status),
+    .stat_wr_op_finish_valid(stat_wr_op_finish_valid),
+    .stat_wr_req_start_tag(stat_wr_req_start_tag),
+    .stat_wr_req_start_len(stat_wr_req_start_len),
+    .stat_wr_req_start_valid(stat_wr_req_start_valid),
+    .stat_wr_req_finish_tag(stat_wr_req_finish_tag),
+    .stat_wr_req_finish_status(stat_wr_req_finish_status),
+    .stat_wr_req_finish_valid(stat_wr_req_finish_valid),
+    .stat_wr_op_table_full(stat_wr_op_table_full),
+    .stat_wr_tx_stall(stat_wr_tx_stall)
 );
 
 endmodule

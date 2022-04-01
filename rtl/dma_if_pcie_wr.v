@@ -565,7 +565,7 @@ always @* begin
                 op_table_start_en = 1'b1;
 
                 stat_wr_req_start_tag_next = op_table_start_ptr_reg;
-                stat_wr_req_start_len_next = tlp_count_reg;
+                stat_wr_req_start_len_next = zero_len_reg ? 0 : tlp_count_reg;
                 stat_wr_req_start_valid_next = 1'b1;
 
                 // TLP size computation

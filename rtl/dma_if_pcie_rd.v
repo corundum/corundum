@@ -772,7 +772,7 @@ always @* begin
                 req_pcie_tag_valid_next = 1'b0;
 
                 stat_rd_req_start_tag_next = req_pcie_tag_reg;
-                stat_rd_req_start_len_next = req_tlp_count_next;
+                stat_rd_req_start_len_next = req_zero_len_reg ? 0 : req_tlp_count_next;
                 stat_rd_req_start_valid_next = 1'b1;
 
                 if (!req_last_tlp) begin

@@ -144,6 +144,7 @@ module dma_if_axi_wr #
     output wire                                         stat_wr_tx_stall
 );
 
+parameter RAM_DATA_WIDTH = RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH;
 parameter RAM_WORD_WIDTH = RAM_SEG_BE_WIDTH;
 parameter RAM_WORD_SIZE = RAM_SEG_DATA_WIDTH/RAM_WORD_WIDTH;
 
@@ -191,7 +192,7 @@ initial begin
         $finish;
     end
 
-    if (RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH != AXI_DATA_WIDTH*2) begin
+    if (RAM_DATA_WIDTH != AXI_DATA_WIDTH*2) begin
         $error("Error: RAM interface width must be double the AXI interface width (instance %m)");
         $finish;
     end
@@ -820,7 +821,7 @@ always @* begin
                 offset_next = offset_reg + AXI_STRB_WIDTH;
                 strb_offset_mask_next = {AXI_STRB_WIDTH{1'b1}};
 
-                m_axi_wdata_int = {2{ram_rd_resp_data}} >> (RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-offset_reg*AXI_WORD_SIZE);
+                m_axi_wdata_int = {2{ram_rd_resp_data}} >> (RAM_DATA_WIDTH-offset_reg*AXI_WORD_SIZE);
                 m_axi_wstrb_int = strb_offset_mask_reg;
                 m_axi_wvalid_int = 1'b1;
 

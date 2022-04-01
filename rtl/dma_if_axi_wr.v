@@ -664,15 +664,13 @@ always @* begin
                 read_last_cycle_next = read_cycle_count_next == 0;
 
                 for (i = 0; i < RAM_SEG_COUNT; i = i + 1) begin
-                    if (read_ram_mask_0_reg[i]) begin
+                    if (read_ram_mask_reg[i]) begin
                         ram_rd_cmd_sel_next[i*RAM_SEL_WIDTH +: RAM_SEL_WIDTH] = read_ram_sel_reg;
                         ram_rd_cmd_addr_next[i*RAM_SEG_ADDR_WIDTH +: RAM_SEG_ADDR_WIDTH] = read_ram_addr_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-RAM_SEG_ADDR_WIDTH];
                         ram_rd_cmd_valid_next[i] = 1'b1;
                     end
                     if (read_ram_mask_1_reg[i]) begin
-                        ram_rd_cmd_sel_next[i*RAM_SEL_WIDTH +: RAM_SEL_WIDTH] = read_ram_sel_reg;
                         ram_rd_cmd_addr_next[i*RAM_SEG_ADDR_WIDTH +: RAM_SEG_ADDR_WIDTH] = read_ram_addr_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-RAM_SEG_ADDR_WIDTH]+1;
-                        ram_rd_cmd_valid_next[i] = 1'b1;
                     end
                 end
 

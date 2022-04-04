@@ -310,6 +310,26 @@ async def run_test(dut):
 
     assert mem[0:1024] == mem[0x1000:0x1000+1024]
 
+    tb.log.info("Test immediate write")
+
+    # write pcie write descriptor
+    await dev_pf0_bar0.write_dword(0x000200, (mem_base+0x1000) & 0xffffffff)
+    await dev_pf0_bar0.write_dword(0x000204, (mem_base+0x1000 >> 32) & 0xffffffff)
+    await dev_pf0_bar0.write_dword(0x000208, 0x44332211)
+    await dev_pf0_bar0.write_dword(0x000210, 0x4)
+    await dev_pf0_bar0.write_dword(0x000214, 0x100AA)
+
+    await Timer(2000, 'ns')
+
+    # read status
+    val = await dev_pf0_bar0.read_dword(0x000218)
+    tb.log.info("Status: 0x%x", val)
+    assert val == 0x800100AA
+
+    tb.log.info("%s", mem.hexdump_str(0x1000, 64))
+
+    assert mem[0x1000:0x1000+4] == b'\x11\x22\x33\x44'
+
     tb.log.info("Test DMA block operations")
 
     # write packet data

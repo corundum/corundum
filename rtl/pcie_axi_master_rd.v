@@ -55,8 +55,8 @@ module pcie_axi_master_rd #
     parameter TLP_FORCE_64_BIT_ADDR = 0
 )
 (
-    input  wire                               clk,
-    input  wire                               rst,
+    input  wire                                         clk,
+    input  wire                                         rst,
 
     /*
      * TLP input (request)
@@ -443,7 +443,7 @@ always @* begin
                         // report correctable error
                         status_error_cor_next = 1'b1;
 
-                        // // UR completion
+                        // UR completion
                         tlp_cmd_status_next = CPL_STATUS_UR;
                         tlp_cmd_byte_len_next = 12'd0;
                         tlp_cmd_dword_len_next = 10'd0;

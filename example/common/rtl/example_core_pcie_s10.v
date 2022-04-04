@@ -39,6 +39,10 @@ module example_core_pcie_s10 #
     parameter SEG_DATA_WIDTH = 256,
     // H-Tile/L-Tile AVST segment empty signal width
     parameter SEG_EMPTY_WIDTH = $clog2(SEG_DATA_WIDTH/32),
+    // Immediate enable
+    parameter IMM_ENABLE = 1,
+    // Immediate width
+    parameter IMM_WIDTH = 32,
     // TX sequence number width
     parameter TX_SEQ_NUM_WIDTH = 6,
     // TX sequence number tracking enable
@@ -366,6 +370,8 @@ example_core_pcie #(
     .TX_SEQ_NUM_COUNT(TX_SEQ_NUM_COUNT),
     .TX_SEQ_NUM_WIDTH(TX_SEQ_NUM_WIDTH),
     .TX_SEQ_NUM_ENABLE(TX_SEQ_NUM_ENABLE),
+    .IMM_ENABLE(IMM_ENABLE),
+    .IMM_WIDTH(IMM_WIDTH),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .READ_OP_TABLE_SIZE(READ_OP_TABLE_SIZE),
     .READ_TX_LIMIT(READ_TX_LIMIT),

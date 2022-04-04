@@ -46,6 +46,10 @@ module dma_if_desc_mux #
     parameter RAM_ADDR_WIDTH = 16,
     // DMA address width
     parameter DMA_ADDR_WIDTH = 64,
+    // Immediate enable
+    parameter IMM_ENABLE = 0,
+    // Immediate width
+    parameter IMM_WIDTH = 32,
     // Length field width
     parameter LEN_WIDTH = 16,
     // Input tag field width
@@ -68,6 +72,8 @@ module dma_if_desc_mux #
     output wire [DMA_ADDR_WIDTH-1:0]                  m_axis_desc_dma_addr,
     output wire [M_RAM_SEL_WIDTH-1:0]                 m_axis_desc_ram_sel,
     output wire [RAM_ADDR_WIDTH-1:0]                  m_axis_desc_ram_addr,
+    output wire [IMM_WIDTH-1:0]                       m_axis_desc_imm,
+    output wire                                       m_axis_desc_imm_en,
     output wire [LEN_WIDTH-1:0]                       m_axis_desc_len,
     output wire [M_TAG_WIDTH-1:0]                     m_axis_desc_tag,
     output wire                                       m_axis_desc_valid,
@@ -86,6 +92,8 @@ module dma_if_desc_mux #
     input  wire [PORTS*DMA_ADDR_WIDTH-1:0]            s_axis_desc_dma_addr,
     input  wire [PORTS*S_RAM_SEL_WIDTH-1:0]           s_axis_desc_ram_sel,
     input  wire [PORTS*RAM_ADDR_WIDTH-1:0]            s_axis_desc_ram_addr,
+    input  wire [PORTS*IMM_WIDTH-1:0]                 s_axis_desc_imm,
+    input  wire [PORTS-1:0]                           s_axis_desc_imm_en,
     input  wire [PORTS*LEN_WIDTH-1:0]                 s_axis_desc_len,
     input  wire [PORTS*S_TAG_WIDTH-1:0]               s_axis_desc_tag,
     input  wire [PORTS-1:0]                           s_axis_desc_valid,
@@ -136,6 +144,8 @@ wire [CL_PORTS-1:0] grant_encoded;
 reg  [DMA_ADDR_WIDTH-1:0]  m_axis_desc_dma_addr_int;
 reg  [M_RAM_SEL_WIDTH-1:0] m_axis_desc_ram_sel_int;
 reg  [RAM_ADDR_WIDTH-1:0]  m_axis_desc_ram_addr_int;
+reg  [IMM_WIDTH-1:0]       m_axis_desc_imm_int;
+reg                        m_axis_desc_imm_en_int;
 reg  [LEN_WIDTH-1:0]       m_axis_desc_len_int;
 reg  [M_TAG_WIDTH-1:0]     m_axis_desc_tag_int;
 reg                        m_axis_desc_valid_int;
@@ -148,6 +158,8 @@ assign s_axis_desc_ready = (m_axis_desc_ready_int_reg && grant_valid) << grant_e
 wire [DMA_ADDR_WIDTH-1:0]  current_s_desc_dma_addr  = s_axis_desc_dma_addr[grant_encoded*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH];
 wire [S_RAM_SEL_WIDTH-1:0] current_s_desc_ram_sel   = s_axis_desc_ram_sel[grant_encoded*S_RAM_SEL_WIDTH +: S_RAM_SEL_WIDTH_INT];
 wire [RAM_ADDR_WIDTH-1:0]  current_s_desc_ram_addr  = s_axis_desc_ram_addr[grant_encoded*RAM_ADDR_WIDTH +: RAM_ADDR_WIDTH];
+wire [IMM_WIDTH-1:0]       current_s_desc_imm       = s_axis_desc_imm[grant_encoded*IMM_WIDTH +: IMM_WIDTH];
+wire                       current_s_desc_imm_en    = s_axis_desc_imm_en[grant_encoded];
 wire [LEN_WIDTH-1:0]       current_s_desc_len       = s_axis_desc_len[grant_encoded*LEN_WIDTH +: LEN_WIDTH];
 wire [S_TAG_WIDTH-1:0]     current_s_desc_tag       = s_axis_desc_tag[grant_encoded*S_TAG_WIDTH +: S_TAG_WIDTH];
 wire                       current_s_desc_valid     = s_axis_desc_valid[grant_encoded];
@@ -182,6 +194,8 @@ always @* begin
         m_axis_desc_ram_sel_int[M_RAM_SEL_WIDTH-1:M_RAM_SEL_WIDTH-CL_PORTS] = grant_encoded;
     end
     m_axis_desc_ram_addr_int  = current_s_desc_ram_addr;
+    m_axis_desc_imm_int       = current_s_desc_imm;
+    m_axis_desc_imm_en_int    = current_s_desc_imm_en;
     m_axis_desc_len_int       = current_s_desc_len;
     m_axis_desc_tag_int       = {grant_encoded, current_s_desc_tag};
     m_axis_desc_valid_int     = current_s_desc_valid && m_axis_desc_ready_int_reg && grant_valid;
@@ -191,6 +205,8 @@ end
 reg [DMA_ADDR_WIDTH-1:0]  m_axis_desc_dma_addr_reg  = {DMA_ADDR_WIDTH{1'b0}};
 reg [M_RAM_SEL_WIDTH-1:0] m_axis_desc_ram_sel_reg   = {M_RAM_SEL_WIDTH{1'b0}};
 reg [RAM_ADDR_WIDTH-1:0]  m_axis_desc_ram_addr_reg  = {RAM_ADDR_WIDTH{1'b0}};
+reg [IMM_WIDTH-1:0]       m_axis_desc_imm_reg       = {IMM_WIDTH{1'b0}};
+reg                       m_axis_desc_imm_en_reg    = 1'b0;
 reg [LEN_WIDTH-1:0]       m_axis_desc_len_reg       = {LEN_WIDTH{1'b0}};
 reg [M_TAG_WIDTH-1:0]     m_axis_desc_tag_reg       = {M_TAG_WIDTH{1'b0}};
 reg                       m_axis_desc_valid_reg     = 1'b0, m_axis_desc_valid_next;
@@ -198,6 +214,8 @@ reg                       m_axis_desc_valid_reg     = 1'b0, m_axis_desc_valid_ne
 reg [DMA_ADDR_WIDTH-1:0]  temp_m_axis_desc_dma_addr_reg  = {DMA_ADDR_WIDTH{1'b0}};
 reg [M_RAM_SEL_WIDTH-1:0] temp_m_axis_desc_ram_sel_reg   = {M_RAM_SEL_WIDTH{1'b0}};
 reg [RAM_ADDR_WIDTH-1:0]  temp_m_axis_desc_ram_addr_reg  = {RAM_ADDR_WIDTH{1'b0}};
+reg [IMM_WIDTH-1:0]       temp_m_axis_desc_imm_reg       = {IMM_WIDTH{1'b0}};
+reg                       temp_m_axis_desc_imm_en_reg    = 1'b0;
 reg [LEN_WIDTH-1:0]       temp_m_axis_desc_len_reg       = {LEN_WIDTH{1'b0}};
 reg [M_TAG_WIDTH-1:0]     temp_m_axis_desc_tag_reg       = {M_TAG_WIDTH{1'b0}};
 reg                       temp_m_axis_desc_valid_reg     = 1'b0, temp_m_axis_desc_valid_next;
@@ -210,6 +228,8 @@ reg store_axis_temp_to_output;
 assign m_axis_desc_dma_addr  = m_axis_desc_dma_addr_reg;
 assign m_axis_desc_ram_sel   = m_axis_desc_ram_sel_reg;
 assign m_axis_desc_ram_addr  = m_axis_desc_ram_addr_reg;
+assign m_axis_desc_imm       = IMM_ENABLE ? m_axis_desc_imm_reg : {IMM_WIDTH{1'b0}};
+assign m_axis_desc_imm_en    = IMM_ENABLE ? m_axis_desc_imm_en_reg : 1'b0;
 assign m_axis_desc_len       = m_axis_desc_len_reg;
 assign m_axis_desc_tag       = m_axis_desc_tag_reg;
 assign m_axis_desc_valid     = m_axis_desc_valid_reg;
@@ -261,12 +281,16 @@ always @(posedge clk) begin
         m_axis_desc_dma_addr_reg <= m_axis_desc_dma_addr_int;
         m_axis_desc_ram_sel_reg <= m_axis_desc_ram_sel_int;
         m_axis_desc_ram_addr_reg <= m_axis_desc_ram_addr_int;
+        m_axis_desc_imm_reg <= m_axis_desc_imm_int;
+        m_axis_desc_imm_en_reg <= m_axis_desc_imm_en_int;
         m_axis_desc_len_reg <= m_axis_desc_len_int;
         m_axis_desc_tag_reg <= m_axis_desc_tag_int;
     end else if (store_axis_temp_to_output) begin
         m_axis_desc_dma_addr_reg <= temp_m_axis_desc_dma_addr_reg;
         m_axis_desc_ram_sel_reg <= temp_m_axis_desc_ram_sel_reg;
         m_axis_desc_ram_addr_reg <= temp_m_axis_desc_ram_addr_reg;
+        m_axis_desc_imm_reg <= temp_m_axis_desc_imm_reg;
+        m_axis_desc_imm_en_reg <= temp_m_axis_desc_imm_en_reg;
         m_axis_desc_len_reg <= temp_m_axis_desc_len_reg;
         m_axis_desc_tag_reg <= temp_m_axis_desc_tag_reg;
     end
@@ -275,6 +299,8 @@ always @(posedge clk) begin
         temp_m_axis_desc_dma_addr_reg <= m_axis_desc_dma_addr_int;
         temp_m_axis_desc_ram_sel_reg <= m_axis_desc_ram_sel_int;
         temp_m_axis_desc_ram_addr_reg <= m_axis_desc_ram_addr_int;
+        temp_m_axis_desc_imm_reg <= m_axis_desc_imm_int;
+        temp_m_axis_desc_imm_en_reg <= m_axis_desc_imm_en_int;
         temp_m_axis_desc_len_reg <= m_axis_desc_len_int;
         temp_m_axis_desc_tag_reg <= m_axis_desc_tag_int;
     end

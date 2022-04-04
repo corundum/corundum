@@ -52,6 +52,10 @@ module dma_if_mux_wr #
     parameter RAM_ADDR_WIDTH = SEG_ADDR_WIDTH+$clog2(SEG_COUNT)+$clog2(SEG_BE_WIDTH),
     // DMA address width
     parameter DMA_ADDR_WIDTH = 64,
+    // Immediate enable
+    parameter IMM_ENABLE = 0,
+    // Immediate width
+    parameter IMM_WIDTH = 32,
     // Length field width
     parameter LEN_WIDTH = 16,
     // Input tag field width
@@ -74,6 +78,8 @@ module dma_if_mux_wr #
     output wire [DMA_ADDR_WIDTH-1:0]                  m_axis_write_desc_dma_addr,
     output wire [M_RAM_SEL_WIDTH-1:0]                 m_axis_write_desc_ram_sel,
     output wire [RAM_ADDR_WIDTH-1:0]                  m_axis_write_desc_ram_addr,
+    output wire [IMM_WIDTH-1:0]                       m_axis_write_desc_imm,
+    output wire                                       m_axis_write_desc_imm_en,
     output wire [LEN_WIDTH-1:0]                       m_axis_write_desc_len,
     output wire [M_TAG_WIDTH-1:0]                     m_axis_write_desc_tag,
     output wire                                       m_axis_write_desc_valid,
@@ -92,6 +98,8 @@ module dma_if_mux_wr #
     input  wire [PORTS*DMA_ADDR_WIDTH-1:0]            s_axis_write_desc_dma_addr,
     input  wire [PORTS*S_RAM_SEL_WIDTH-1:0]           s_axis_write_desc_ram_sel,
     input  wire [PORTS*RAM_ADDR_WIDTH-1:0]            s_axis_write_desc_ram_addr,
+    input  wire [PORTS*IMM_WIDTH-1:0]                 s_axis_write_desc_imm,
+    input  wire [PORTS-1:0]                           s_axis_write_desc_imm_en,
     input  wire [PORTS*LEN_WIDTH-1:0]                 s_axis_write_desc_len,
     input  wire [PORTS*S_TAG_WIDTH-1:0]               s_axis_write_desc_tag,
     input  wire [PORTS-1:0]                           s_axis_write_desc_valid,
@@ -134,6 +142,8 @@ dma_if_desc_mux #(
     .M_RAM_SEL_WIDTH(M_RAM_SEL_WIDTH),
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
     .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+    .IMM_ENABLE(IMM_ENABLE),
+    .IMM_WIDTH(IMM_WIDTH),
     .LEN_WIDTH(LEN_WIDTH),
     .S_TAG_WIDTH(S_TAG_WIDTH),
     .M_TAG_WIDTH(M_TAG_WIDTH),
@@ -150,6 +160,8 @@ dma_if_desc_mux_inst (
     .m_axis_desc_dma_addr(m_axis_write_desc_dma_addr),
     .m_axis_desc_ram_sel(m_axis_write_desc_ram_sel),
     .m_axis_desc_ram_addr(m_axis_write_desc_ram_addr),
+    .m_axis_desc_imm(m_axis_write_desc_imm),
+    .m_axis_desc_imm_en(m_axis_write_desc_imm_en),
     .m_axis_desc_len(m_axis_write_desc_len),
     .m_axis_desc_tag(m_axis_write_desc_tag),
     .m_axis_desc_valid(m_axis_write_desc_valid),
@@ -168,6 +180,8 @@ dma_if_desc_mux_inst (
     .s_axis_desc_dma_addr(s_axis_write_desc_dma_addr),
     .s_axis_desc_ram_sel(s_axis_write_desc_ram_sel),
     .s_axis_desc_ram_addr(s_axis_write_desc_ram_addr),
+    .s_axis_desc_imm(s_axis_write_desc_imm),
+    .s_axis_desc_imm_en(s_axis_write_desc_imm_en),
     .s_axis_desc_len(s_axis_write_desc_len),
     .s_axis_desc_tag(s_axis_write_desc_tag),
     .s_axis_desc_valid(s_axis_write_desc_valid),

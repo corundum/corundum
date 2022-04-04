@@ -55,6 +55,10 @@ module dma_if_axi_wr #
     parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
     // RAM segment address width
     parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH),
+    // Immediate enable
+    parameter IMM_ENABLE = 0,
+    // Immediate width
+    parameter IMM_WIDTH = 32,
     // Length field width
     parameter LEN_WIDTH = 16,
     // Tag field width
@@ -97,6 +101,8 @@ module dma_if_axi_wr #
     input  wire [AXI_ADDR_WIDTH-1:0]                    s_axis_write_desc_axi_addr,
     input  wire [RAM_SEL_WIDTH-1:0]                     s_axis_write_desc_ram_sel,
     input  wire [RAM_ADDR_WIDTH-1:0]                    s_axis_write_desc_ram_addr,
+    input  wire [IMM_WIDTH-1:0]                         s_axis_write_desc_imm,
+    input  wire                                         s_axis_write_desc_imm_en,
     input  wire [LEN_WIDTH-1:0]                         s_axis_write_desc_len,
     input  wire [TAG_WIDTH-1:0]                         s_axis_write_desc_tag,
     input  wire                                         s_axis_write_desc_valid,
@@ -211,6 +217,11 @@ initial begin
         $error("Error: AXI_ID_WIDTH insufficient for requested OP_TABLE_SIZE (instance %m)");
         $finish;
     end
+
+    if (IMM_ENABLE && IMM_WIDTH > AXI_DATA_WIDTH) begin
+        $error("Error: IMM_WIDTH must not be larger than the AXI interface width (instance %m)");
+        $finish;
+    end
 end
 
 localparam [1:0]
@@ -258,6 +269,8 @@ reg read_cmd_ready;
 reg [AXI_ADDR_WIDTH-1:0] req_axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, req_axi_addr_next;
 reg [RAM_SEL_WIDTH-1:0] ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, ram_addr_next;
+reg [IMM_WIDTH-1:0] imm_reg = {IMM_WIDTH{1'b0}}, imm_next;
+reg imm_en_reg = 1'b0, imm_en_next;
 reg [LEN_WIDTH-1:0] op_count_reg = {LEN_WIDTH{1'b0}}, op_count_next;
 reg zero_len_reg = 1'b0, zero_len_next;
 reg [LEN_WIDTH-1:0] tr_count_reg = {LEN_WIDTH{1'b0}}, tr_count_next;
@@ -267,6 +280,7 @@ reg [TAG_WIDTH-1:0] tag_reg = {TAG_WIDTH{1'b0}}, tag_next;
 reg [AXI_ADDR_WIDTH-1:0] read_axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, read_axi_addr_next;
 reg [RAM_SEL_WIDTH-1:0] read_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, read_ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] read_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, read_ram_addr_next;
+reg read_imm_en_reg = 1'b0, read_imm_en_next;
 reg [LEN_WIDTH-1:0] read_len_reg = {LEN_WIDTH{1'b0}}, read_len_next;
 reg [RAM_SEG_COUNT-1:0] read_ram_mask_reg = {RAM_SEG_COUNT{1'b0}}, read_ram_mask_next;
 reg [RAM_SEG_COUNT-1:0] read_ram_mask_0_reg = {RAM_SEG_COUNT{1'b0}}, read_ram_mask_0_next;
@@ -279,6 +293,8 @@ reg [RAM_OFFSET_WIDTH-1:0] start_offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, start_of
 reg [RAM_OFFSET_WIDTH-1:0] end_offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, end_offset_next;
 
 reg [AXI_ADDR_WIDTH-1:0] axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, axi_addr_next;
+reg [IMM_WIDTH-1:0] axi_imm_reg = {IMM_WIDTH{1'b0}}, axi_imm_next;
+reg axi_imm_en_reg = 1'b0, axi_imm_en_next;
 reg [12:0] axi_len_reg = 13'd0, axi_len_next;
 reg axi_zero_len_reg = 1'b0, axi_zero_len_next;
 reg [RAM_OFFSET_WIDTH-1:0] offset_reg = {RAM_OFFSET_WIDTH{1'b0}}, offset_next;
@@ -292,6 +308,7 @@ reg last_cycle_reg = 1'b0, last_cycle_next;
 reg [AXI_ADDR_WIDTH-1:0] read_cmd_axi_addr_reg = {AXI_ADDR_WIDTH{1'b0}}, read_cmd_axi_addr_next;
 reg [RAM_SEL_WIDTH-1:0] read_cmd_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, read_cmd_ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] read_cmd_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, read_cmd_ram_addr_next;
+reg read_cmd_imm_en_reg = 1'b0, read_cmd_imm_en_next;
 reg [12:0] read_cmd_len_reg = 13'd0, read_cmd_len_next;
 reg [CYCLE_COUNT_WIDTH-1:0] read_cmd_cycle_count_reg = {CYCLE_COUNT_WIDTH{1'b0}}, read_cmd_cycle_count_next;
 reg read_cmd_last_cycle_reg = 1'b0, read_cmd_last_cycle_next;
@@ -385,6 +402,8 @@ assign stat_wr_tx_stall = stat_wr_tx_stall_reg;
 // operation tag management
 reg [OP_TAG_WIDTH+1-1:0] op_table_start_ptr_reg = 0;
 reg [AXI_ADDR_WIDTH-1:0] op_table_start_axi_addr;
+reg [IMM_WIDTH-1:0] op_table_start_imm;
+reg op_table_start_imm_en;
 reg [11:0] op_table_start_len;
 reg op_table_start_zero_len;
 reg [CYCLE_COUNT_WIDTH-1:0] op_table_start_cycle_count;
@@ -407,6 +426,10 @@ reg [2**OP_TAG_WIDTH-1:0] op_table_write_complete = 0;
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [AXI_ADDR_WIDTH-1:0] op_table_axi_addr[2**OP_TAG_WIDTH-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg [IMM_WIDTH-1:0] op_table_imm[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg op_table_imm_en[2**OP_TAG_WIDTH-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [11:0] op_table_len[2**OP_TAG_WIDTH-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg op_table_zero_len[2**OP_TAG_WIDTH-1:0];
@@ -426,6 +449,8 @@ integer i;
 initial begin
     for (i = 0; i < 2**OP_TAG_WIDTH; i = i + 1) begin
         op_table_axi_addr[i] = 0;
+        op_table_imm[i] = 0;
+        op_table_imm_en[i] = 0;
         op_table_len[i] = 0;
         op_table_zero_len[i] = 1'b0;
         op_table_cycle_count[i] = 0;
@@ -454,6 +479,8 @@ always @* begin
     req_axi_addr_next = req_axi_addr_reg;
     ram_sel_next = ram_sel_reg;
     ram_addr_next = ram_addr_reg;
+    imm_next = imm_reg;
+    imm_en_next = imm_en_reg;
     op_count_next = op_count_reg;
     zero_len_next = zero_len_reg;
     tr_count_next = tr_count_reg;
@@ -462,12 +489,15 @@ always @* begin
     read_cmd_axi_addr_next = read_cmd_axi_addr_reg;
     read_cmd_ram_sel_next = read_cmd_ram_sel_reg;
     read_cmd_ram_addr_next = read_cmd_ram_addr_reg;
+    read_cmd_imm_en_next = read_cmd_imm_en_reg;
     read_cmd_len_next = read_cmd_len_reg;
     read_cmd_cycle_count_next = read_cmd_cycle_count_reg;
     read_cmd_last_cycle_next = read_cmd_last_cycle_reg;
     read_cmd_valid_next = read_cmd_valid_reg && !read_cmd_ready;
 
     op_table_start_axi_addr = req_axi_addr_reg;
+    op_table_start_imm = imm_reg;
+    op_table_start_imm_en = imm_en_reg;
     op_table_start_len = 0;
     op_table_start_zero_len = zero_len_reg;
     op_table_start_cycle_count = 0;
@@ -483,8 +513,15 @@ always @* begin
             s_axis_write_desc_ready_next = !op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] && ($unsigned(op_table_start_ptr_reg - op_table_finish_ptr_reg) < 2**OP_TAG_WIDTH) && enable;
 
             req_axi_addr_next = s_axis_write_desc_axi_addr;
-            ram_sel_next = s_axis_write_desc_ram_sel;
-            ram_addr_next = s_axis_write_desc_ram_addr;
+            if (IMM_ENABLE && s_axis_write_desc_imm_en) begin
+                ram_sel_next = 0;
+                ram_addr_next = 0;
+            end else begin
+                ram_sel_next = s_axis_write_desc_ram_sel;
+                ram_addr_next = s_axis_write_desc_ram_addr;
+            end
+            imm_next = s_axis_write_desc_imm;
+            imm_en_next = IMM_ENABLE && s_axis_write_desc_imm_en;
             if (s_axis_write_desc_len == 0) begin
                 // zero-length operation
                 op_count_next = 1;
@@ -533,6 +570,7 @@ always @* begin
                 read_cmd_axi_addr_next = req_axi_addr_reg;
                 read_cmd_ram_sel_next = ram_sel_reg;
                 read_cmd_ram_addr_next = ram_addr_reg;
+                read_cmd_imm_en_next = imm_en_reg;
                 read_cmd_len_next = tr_word_count_next;
                 read_cmd_cycle_count_next = (tr_word_count_next + (req_axi_addr_reg & OFFSET_MASK) - 1) >> AXI_BURST_SIZE;
                 op_table_start_cycle_count = read_cmd_cycle_count_next;
@@ -544,6 +582,8 @@ always @* begin
                 op_count_next = op_count_reg - tr_word_count_next;
 
                 op_table_start_axi_addr = req_axi_addr_reg;
+                op_table_start_imm = imm_reg;
+                op_table_start_imm_en = imm_en_reg;
                 op_table_start_len = tr_word_count_next;
                 op_table_start_zero_len = zero_len_reg;
                 op_table_start_offset = (req_axi_addr_reg & OFFSET_MASK)-ram_addr_reg[RAM_OFFSET_WIDTH-1:0];
@@ -600,6 +640,7 @@ always @* begin
     read_axi_addr_next = read_axi_addr_reg;
     read_ram_sel_next = read_ram_sel_reg;
     read_ram_addr_next = read_ram_addr_reg;
+    read_imm_en_next = read_imm_en_reg;
     read_len_next = read_len_reg;
     read_ram_mask_next = read_ram_mask_reg;
     read_ram_mask_0_next = read_ram_mask_0_reg;
@@ -622,6 +663,7 @@ always @* begin
             read_axi_addr_next = read_cmd_axi_addr_reg;
             read_ram_sel_next = read_cmd_ram_sel_reg;
             read_ram_addr_next = read_cmd_ram_addr_reg;
+            read_imm_en_next = read_cmd_imm_en_reg;
             read_len_next = read_cmd_len_reg;
             read_cycle_count_next = read_cmd_cycle_count_reg;
             read_last_cycle_next = read_cmd_last_cycle_reg;
@@ -667,14 +709,14 @@ always @* begin
                     if (read_ram_mask_reg[i]) begin
                         ram_rd_cmd_sel_next[i*RAM_SEL_WIDTH +: RAM_SEL_WIDTH] = read_ram_sel_reg;
                         ram_rd_cmd_addr_next[i*RAM_SEG_ADDR_WIDTH +: RAM_SEG_ADDR_WIDTH] = read_ram_addr_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-RAM_SEG_ADDR_WIDTH];
-                        ram_rd_cmd_valid_next[i] = 1'b1;
+                        ram_rd_cmd_valid_next[i] = !(IMM_ENABLE && read_imm_en_reg);
                     end
                     if (read_ram_mask_1_reg[i]) begin
                         ram_rd_cmd_addr_next[i*RAM_SEG_ADDR_WIDTH +: RAM_SEG_ADDR_WIDTH] = read_ram_addr_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-RAM_SEG_ADDR_WIDTH]+1;
                     end
                 end
 
-                mask_fifo_wr_mask = read_ram_mask_reg;
+                mask_fifo_wr_mask = (IMM_ENABLE && read_imm_en_reg) ? 0 : read_ram_mask_reg;
                 mask_fifo_we = 1'b1;
 
                 if (read_len_next > AXI_STRB_WIDTH) begin
@@ -703,6 +745,7 @@ always @* begin
                     read_axi_addr_next = read_cmd_axi_addr_reg;
                     read_ram_sel_next = read_cmd_ram_sel_reg;
                     read_ram_addr_next = read_cmd_ram_addr_reg;
+                    read_imm_en_next = read_cmd_imm_en_reg;
                     read_len_next = read_cmd_len_reg;
                     read_cycle_count_next = read_cmd_cycle_count_reg;
                     read_last_cycle_next = read_cmd_last_cycle_reg;
@@ -752,6 +795,8 @@ always @* begin
     stat_wr_req_finish_valid_next = 1'b0;
 
     axi_addr_next = axi_addr_reg;
+    axi_imm_next = axi_imm_reg;
+    axi_imm_en_next = axi_imm_en_reg;
     axi_len_next = axi_len_reg;
     axi_zero_len_next = axi_zero_len_reg;
     offset_next = offset_reg;
@@ -773,8 +818,8 @@ always @* begin
     m_axi_awvalid_next = m_axi_awvalid_reg && !m_axi_awready;
     m_axi_bready_next = 1'b0;
 
-    m_axi_wdata_int = 0;
-    m_axi_wstrb_int = 0;
+    m_axi_wdata_int = ((IMM_ENABLE && axi_imm_en_reg) ? {2{{RAM_DATA_WIDTH{1'b0}} | axi_imm_reg}} : {2{ram_rd_resp_data}}) >> (RAM_DATA_WIDTH-offset_reg*AXI_WORD_SIZE);
+    m_axi_wstrb_int = strb_offset_mask_reg;
     m_axi_wlast_int = 1'b0;
     m_axi_wvalid_int = 1'b0;
 
@@ -785,6 +830,8 @@ always @* begin
             ram_rd_resp_ready_cmb = {RAM_SEG_COUNT{1'b0}};
 
             axi_addr_next = op_table_axi_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            axi_imm_next = op_table_imm[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+            axi_imm_en_next = op_table_imm_en[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             axi_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             axi_zero_len_next = op_table_zero_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             offset_next = op_table_offset[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
@@ -819,8 +866,9 @@ always @* begin
                 offset_next = offset_reg + AXI_STRB_WIDTH;
                 strb_offset_mask_next = {AXI_STRB_WIDTH{1'b1}};
 
-                m_axi_wdata_int = {2{ram_rd_resp_data}} >> (RAM_DATA_WIDTH-offset_reg*AXI_WORD_SIZE);
+                m_axi_wdata_int = ((IMM_ENABLE && axi_imm_en_reg) ? {2{{RAM_DATA_WIDTH{1'b0}} | axi_imm_reg}} : {2{ram_rd_resp_data}}) >> (RAM_DATA_WIDTH-offset_reg*AXI_WORD_SIZE);
                 m_axi_wstrb_int = strb_offset_mask_reg;
+                m_axi_wlast_int = 1'b0;
                 m_axi_wvalid_int = 1'b1;
 
                 if (last_cycle_reg) begin
@@ -834,6 +882,8 @@ always @* begin
 
                     // skip idle state if possible
                     axi_addr_next = op_table_axi_addr[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                    axi_imm_next = op_table_imm[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
+                    axi_imm_en_next = op_table_imm_en[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                     axi_len_next = op_table_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                     axi_zero_len_next = op_table_zero_len[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                     offset_next = op_table_offset[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
@@ -959,6 +1009,8 @@ always @(posedge clk) begin
     req_axi_addr_reg <= req_axi_addr_next;
     ram_sel_reg <= ram_sel_next;
     ram_addr_reg <= ram_addr_next;
+    imm_reg <= imm_next;
+    imm_en_reg <= imm_en_next;
     op_count_reg <= op_count_next;
     zero_len_reg <= zero_len_next;
     tr_count_reg <= tr_count_next;
@@ -968,6 +1020,7 @@ always @(posedge clk) begin
     read_axi_addr_reg <= read_axi_addr_next;
     read_ram_sel_reg <= read_ram_sel_next;
     read_ram_addr_reg <= read_ram_addr_next;
+    read_imm_en_reg <= read_imm_en_next;
     read_len_reg <= read_len_next;
     read_ram_mask_reg <= read_ram_mask_next;
     read_ram_mask_0_reg <= read_ram_mask_0_next;
@@ -980,6 +1033,8 @@ always @(posedge clk) begin
     end_offset_reg <= end_offset_next;
 
     axi_addr_reg <= axi_addr_next;
+    axi_imm_reg <= axi_imm_next;
+    axi_imm_en_reg <= axi_imm_en_next;
     axi_len_reg <= axi_len_next;
     axi_zero_len_reg <= axi_zero_len_next;
     offset_reg <= offset_next;
@@ -993,6 +1048,7 @@ always @(posedge clk) begin
     read_cmd_axi_addr_reg <= read_cmd_axi_addr_next;
     read_cmd_ram_sel_reg <= read_cmd_ram_sel_next;
     read_cmd_ram_addr_reg <= read_cmd_ram_addr_next;
+    read_cmd_imm_en_reg <= read_cmd_imm_en_next;
     read_cmd_len_reg <= read_cmd_len_next;
     read_cmd_cycle_count_reg <= read_cmd_cycle_count_next;
     read_cmd_last_cycle_reg <= read_cmd_last_cycle_next;
@@ -1040,6 +1096,8 @@ always @(posedge clk) begin
         op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= 1'b1;
         op_table_write_complete[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= 1'b0;
         op_table_axi_addr[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_axi_addr;
+        op_table_imm[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_imm;
+        op_table_imm_en[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_imm_en;
         op_table_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_len;
         op_table_zero_len[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_zero_len;
         op_table_cycle_count[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] <= op_table_start_cycle_count;

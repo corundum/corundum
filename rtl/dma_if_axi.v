@@ -55,6 +55,10 @@ module dma_if_axi #
     parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
     // RAM segment address width
     parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH),
+    // Immediate enable
+    parameter IMM_ENABLE = 0,
+    // Immediate width
+    parameter IMM_WIDTH = 32,
     // Length field width
     parameter LEN_WIDTH = 16,
     // Tag field width
@@ -135,6 +139,8 @@ module dma_if_axi #
     input  wire [AXI_ADDR_WIDTH-1:0]                    s_axis_write_desc_axi_addr,
     input  wire [RAM_SEL_WIDTH-1:0]                     s_axis_write_desc_ram_sel,
     input  wire [RAM_ADDR_WIDTH-1:0]                    s_axis_write_desc_ram_addr,
+    input  wire [IMM_WIDTH-1:0]                         s_axis_write_desc_imm,
+    input  wire                                         s_axis_write_desc_imm_en,
     input  wire [LEN_WIDTH-1:0]                         s_axis_write_desc_len,
     input  wire [TAG_WIDTH-1:0]                         s_axis_write_desc_tag,
     input  wire                                         s_axis_write_desc_valid,
@@ -310,6 +316,8 @@ dma_if_axi_wr #(
     .RAM_SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
     .RAM_SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
     .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
+    .IMM_ENABLE(IMM_ENABLE),
+    .IMM_WIDTH(IMM_WIDTH),
     .LEN_WIDTH(LEN_WIDTH),
     .TAG_WIDTH(TAG_WIDTH),
     .OP_TABLE_SIZE(WRITE_OP_TABLE_SIZE),
@@ -348,6 +356,8 @@ dma_if_axi_wr_inst (
     .s_axis_write_desc_axi_addr(s_axis_write_desc_axi_addr),
     .s_axis_write_desc_ram_sel(s_axis_write_desc_ram_sel),
     .s_axis_write_desc_ram_addr(s_axis_write_desc_ram_addr),
+    .s_axis_write_desc_imm(s_axis_write_desc_imm),
+    .s_axis_write_desc_imm_en(s_axis_write_desc_imm_en),
     .s_axis_write_desc_len(s_axis_write_desc_len),
     .s_axis_write_desc_tag(s_axis_write_desc_tag),
     .s_axis_write_desc_valid(s_axis_write_desc_valid),

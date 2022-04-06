@@ -197,7 +197,10 @@ always @* begin
     m_axis_desc_imm_int       = current_s_desc_imm;
     m_axis_desc_imm_en_int    = current_s_desc_imm_en;
     m_axis_desc_len_int       = current_s_desc_len;
-    m_axis_desc_tag_int       = {grant_encoded, current_s_desc_tag};
+    m_axis_desc_tag_int       = current_s_desc_tag;
+    if (PORTS > 1) begin
+        m_axis_desc_tag_int[M_TAG_WIDTH-1:M_TAG_WIDTH-CL_PORTS] = grant_encoded;
+    end
     m_axis_desc_valid_int     = current_s_desc_valid && m_axis_desc_ready_int_reg && grant_valid;
 end
 

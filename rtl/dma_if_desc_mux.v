@@ -190,7 +190,7 @@ always @* begin
     // pass through selected packet data
     m_axis_desc_dma_addr_int  = current_s_desc_dma_addr;
     m_axis_desc_ram_sel_int   = current_s_desc_ram_sel;
-    if (PORTS > 1) begin
+    if (EXTEND_RAM_SEL && PORTS > 1) begin
         m_axis_desc_ram_sel_int[M_RAM_SEL_WIDTH-1:M_RAM_SEL_WIDTH-CL_PORTS] = grant_encoded;
     end
     m_axis_desc_ram_addr_int  = current_s_desc_ram_addr;

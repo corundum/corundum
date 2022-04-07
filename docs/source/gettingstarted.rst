@@ -250,6 +250,18 @@ To build the driver, you will first need to install the required compiler packag
     $ cd /path/to/corundum/utils
     $ make
 
+Setting up the PetaLinux build environment
+==========================================
+
+Building PetaLinux projects for Xilinx devices requires `PetaLinux Tools <https://www.xilinx.com/products/design-tools/embedded-software/petalinux-sdk.html>`_.  Linux is the recommended operating system for a build environment due to the use of symlinks (which can cause problems on Windows) and makefiles for build automation.  Download and install the appropriate version of PetaLinux Tools.  Make sure to install device support for your target device; support for other devices can be disabled to save disk space.
+
+An example for a PetaLinux project in Corundum is accompanying the FPGA design using the Xilinx ZynqMP SoC as host system for mqnic on the Xilinx ZCU106 board.  See `fpga/mqnic/ZCU106/fpga_zynqmp/README.md`.
+
+Before building a PetaLinux project, you'll have to source the appropriate settings file.  For example::
+
+    $ source /opt/Xilinx/PetaLinux/2021.1/settings.sh
+    $ make -C path/to/petalinux/project build-boot
+
 Loading the FPGA design
 =======================
 

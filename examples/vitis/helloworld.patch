@@ -1,0 +1,11 @@
+--- a/helloworld.c	2020-09-01 11:44:33.249528296 +0200
++++ b/helloworld.c~	2020-09-01 12:02:34.945994392 +0200
+@@ -54,7 +54,7 @@
+ {
+     init_platform();
+ 
+-    print("Hello World\n\r");
++    print("Hello World Vitis Makefile\n\r");
+     print("Successfully ran Hello World application");
+     cleanup_platform();
+     return 0;

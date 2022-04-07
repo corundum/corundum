@@ -1,0 +1,18 @@
+--- a/helloworld.c	2020-05-13 11:53:50.934001488 +0200
++++ b/helloworld.c~	2020-05-13 14:19:33.378515155 +0200
+@@ -48,13 +48,14 @@
+ #include <stdio.h>
+ #include "platform.h"
+ #include "xil_printf.h"
++#include "helloworldlib.h"
+ 
+ 
+ int main()
+ {
+     init_platform();
+ 
+-    print("Hello World\n\r");
++    helloworld();
+ 
+     cleanup_platform();
+     return 0;

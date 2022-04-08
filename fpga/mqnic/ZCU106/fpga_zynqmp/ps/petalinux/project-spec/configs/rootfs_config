@@ -214,7 +214,7 @@ CONFIG_kmod=y
 #
 # linuxptp 
 #
-# CONFIG_linuxptp is not set
+CONFIG_linuxptp=y
 # CONFIG_linuxptp-dev is not set
 # CONFIG_linuxptp-dbg is not set
 

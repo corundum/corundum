@@ -122,5 +122,46 @@ This section details PCIe form-factor targets, which interface with a separate h
     VCU1525            mqnic/fpga_25g/fpga        2x1   256/8K   25G   RR
     VCU1525            mqnic/fpga_25g/fpga_10g    2x1   256/8K   10G   RR
     VCU1525            mqnic/fpga_100g/fpga       2x1   256/8K   100G  RR
-    ZCU106             mqnic/fpga_10g/fpga        2x1   256/8K   10G   RR
+    ZCU106             mqnic/fpga_pcie/fpga       2x1   256/8K   10G   RR
+    =================  =========================  ====  =======  ====  =====
+
+SoC
+===
+
+This section details SoC targets, which interface with CPU cores on the same device, usually via AXI.
+
+.. table:: Summary of the various devices supported by Corundum.
+
+    ============  =================  ====================  ==========
+    Manufacturer  Board              FPGA                  Board ID
+    ============  =================  ====================  ==========
+    Xilinx        ZCU106             XCZU7EV-2FFVC1156E    0x10ee906a
+    ============  =================  ====================  ==========
+
+.. table:: Summary of available interfaces and on-board memory.
+
+    =================  =========  ==========  ===============================  =====
+    Board              PCIe IF    Network IF  DDR                              HBM
+    =================  =========  ==========  ===============================  =====
+    ZCU106             Gen 3 x4   2x SFP+     2 GB DDR4 2400 (256M x64)        \-
+    =================  =========  ==========  ===============================  =====
+
+.. table:: Summary of support for various ancillary features.
+
+    =================  ============  ============  ==========
+    Board              I2C :sup:`1`  MAC :sup:`2`  FW update
+    =================  ============  ============  ==========
+    ZCU106             Y             Y :sup:`3`    N
+    =================  ============  ============  ==========
+
+- :sup:`1` I2C access to optical modules
+- :sup:`2` Persistent MAC address storage
+- :sup:`3` Can read MAC from I2C EEPROM, but EEPROM is blank from factory
+
+.. table:: Summary of the board-specific design variants and some important configuration parameters.
+
+    =================  =========================  ====  =======  ====  =====
+    Board              Design                     IFxP  RXQ/TXQ  MAC   Sched
+    =================  =========================  ====  =======  ====  =====
+    ZCU106             mqnic/fpga_zynqmp/fpga     2x1   256/8K   10G   RR
     =================  =========================  ====  =======  ====  =====

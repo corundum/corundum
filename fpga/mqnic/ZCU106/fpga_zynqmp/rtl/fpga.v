@@ -55,8 +55,11 @@ module fpga #
     // Structural configuration
     parameter IF_COUNT = 2,
     parameter PORTS_PER_IF = 1,
+    parameter SCHED_PER_IF = PORTS_PER_IF,
 
     // PTP configuration
+    parameter PTP_CLOCK_PIPELINE = 0,
+    parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 1,
     parameter PTP_PEROUT_COUNT = 1,
 
@@ -121,6 +124,7 @@ module fpga #
     // DMA interface configuration
     parameter DMA_LEN_WIDTH = 16,
     parameter DMA_TAG_WIDTH = 16,
+    parameter RAM_ADDR_WIDTH = $clog2(TX_RAM_SIZE > RX_RAM_SIZE ? TX_RAM_SIZE : RX_RAM_SIZE),
     parameter RAM_PIPELINE = 2,
     parameter AXI_DMA_MAX_BURST_LEN = 256,
 
@@ -690,6 +694,7 @@ fpga_core #(
     // Structural configuration
     .IF_COUNT(IF_COUNT),
     .PORTS_PER_IF(PORTS_PER_IF),
+    .SCHED_PER_IF(SCHED_PER_IF),
 
     // PTP configuration
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
@@ -699,7 +704,9 @@ fpga_core #(
     .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
     .PTP_PERIOD_NS(PTP_PERIOD_NS),
     .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
+    .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
 
@@ -764,6 +771,7 @@ fpga_core #(
     // DMA interface configuration
     .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
     .DMA_TAG_WIDTH(DMA_TAG_WIDTH),
+    .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
     .RAM_PIPELINE(RAM_PIPELINE),
     .AXI_DMA_MAX_BURST_LEN(AXI_DMA_MAX_BURST_LEN),
 

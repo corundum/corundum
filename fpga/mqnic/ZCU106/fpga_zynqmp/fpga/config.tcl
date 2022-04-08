@@ -82,8 +82,11 @@ dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
 
 dict set params IF_COUNT "2"
 dict set params PORTS_PER_IF "1"
+dict set params SCHED_PER_IF [dict get $params PORTS_PER_IF]
 
 # PTP configuration
+dict set params PTP_CLOCK_PIPELINE "0"
+dict set params PTP_PORT_CDC_PIPELINE "0"
 dict set params PTP_PEROUT_ENABLE "1"
 dict set params PTP_PEROUT_COUNT "1"
 
@@ -149,6 +152,7 @@ dict set params AXI_ID_WIDTH [get_property CONFIG.ID_WIDTH $s_axi_mm]
 # DMA interface configuration
 dict set params DMA_LEN_WIDTH "16"
 dict set params DMA_TAG_WIDTH "16"
+dict set params RAM_ADDR_WIDTH [expr int(ceil(log(max([dict get $params TX_RAM_SIZE], [dict get $params RX_RAM_SIZE]))/log(2)))]
 dict set params RAM_PIPELINE "2"
 # NOTE: Querying the BD top-level interface port (or even the ZynqMP's interface
 #       pin) yields 256 for the maximum burst length, instead of 16, which is

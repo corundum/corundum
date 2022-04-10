@@ -263,10 +263,6 @@ wire clk_125mhz_mmcm_out;
 wire clk_125mhz_int;
 wire rst_125mhz_int;
 
-// Internal 390.625 MHz clock
-wire clk_390mhz_int;
-wire rst_390mhz_int;
-
 wire mmcm_rst = pcie_user_reset;
 wire mmcm_locked;
 wire mmcm_clkfb;

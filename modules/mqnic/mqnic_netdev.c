@@ -376,6 +376,7 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	spin_lock_init(&priv->stats_lock);
 
 	priv->ndev = ndev;
+	memcpy(&priv->ndev_ops, &mqnic_netdev_ops, sizeof(priv->ndev_ops));
 	priv->mdev = interface->mdev;
 	priv->interface = interface;
 	priv->dev = dev;
@@ -464,7 +465,9 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	}
 
 	// entry points
-	ndev->netdev_ops = &mqnic_netdev_ops;
+	ndev->netdev_ops = &priv->ndev_ops;
+	if (mqnic_selq_handler_enable)
+		priv->ndev_ops.ndo_select_queue = mqnic_select_queue;
 	ndev->ethtool_ops = &mqnic_ethtool_ops;
 
 	// set up features

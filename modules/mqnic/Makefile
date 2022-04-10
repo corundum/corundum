@@ -18,6 +18,7 @@ mqnic-y += mqnic_rx.o
 mqnic-y += mqnic_cq.o
 mqnic-y += mqnic_eq.o
 mqnic-y += mqnic_ethtool.o
+mqnic-y += mqnic_selq.o
 
 else
 

@@ -23,11 +23,12 @@ Corundum also provides an application section for implementing custom logic.  Th
 Corundum currently supports devices from both Xilinx and Intel, on boards from several different manufacturers.  Designs are included for the following FPGA boards:
 
 *  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex UltraScale+ XCVU3P)
+*  Dini Group DNPCIe_40G_KU_LL_2QSFP (Xilinx Kintex UltraScale XCKU040)
 *  Exablaze ExaNIC X10/Cisco Nexus K35-S (Xilinx Kintex UltraScale XCKU035)
 *  Exablaze ExaNIC X25/Cisco Nexus K3P-S (Xilinx Kintex UltraScale+ XCKU3P)
 *  Silicom fb2CG@KU15P (Xilinx Kintex UltraScale+ XCKU15P)
 *  NetFPGA SUME (Xilinx Virtex 7 XC7V690T)
-*  Intel Stratix 10 MX dev kit (Intel Stratix 10 MX 1SM21CHU1F53E1VG)
+*  Intel Stratix 10 MX dev kit (Intel Stratix 10 MX 2100)
 *  Xilinx Alveo U50 (Xilinx Virtex UltraScale+ XCU50)
 *  Xilinx Alveo U200 (Xilinx Virtex UltraScale+ XCU200)
 *  Xilinx Alveo U250 (Xilinx Virtex UltraScale+ XCU250)

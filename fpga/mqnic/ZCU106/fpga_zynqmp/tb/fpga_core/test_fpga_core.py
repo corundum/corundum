@@ -109,9 +109,6 @@ class TB(object):
         dut.btnc.setimmediatevalue(0)
         dut.sw.setimmediatevalue(0)
 
-        dut.i2c_scl_i.setimmediatevalue(1)
-        dut.i2c_sda_i.setimmediatevalue(1)
-
         self.loopback_enable = False
         cocotb.start_soon(self._run_loopback())
 

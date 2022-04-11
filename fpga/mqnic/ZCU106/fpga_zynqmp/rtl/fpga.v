@@ -822,16 +822,6 @@ core_inst (
     .led(led),
 
     /*
-     * I2C
-     */
-    .i2c_scl_i(1'b1),
-    .i2c_scl_o(),
-    .i2c_scl_t(),
-    .i2c_sda_i(1'b1),
-    .i2c_sda_o(),
-    .i2c_sda_t(),
-
-    /*
      * Interrupt outputs
      */
     .irq(irq),

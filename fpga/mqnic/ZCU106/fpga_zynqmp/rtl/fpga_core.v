@@ -194,16 +194,6 @@ module fpga_core #
     output wire [7:0]                           led,
 
     /*
-     * I2C
-     */
-    input  wire                                 i2c_scl_i,
-    output wire                                 i2c_scl_o,
-    output wire                                 i2c_scl_t,
-    input  wire                                 i2c_sda_i,
-    output wire                                 i2c_sda_o,
-    output wire                                 i2c_sda_t,
-
-    /*
      * Interrupt outputs
      */
     output wire [IRQ_COUNT-1:0]                 irq,
@@ -340,7 +330,7 @@ parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3
 localparam RB_BASE_ADDR = 16'h1000;
 localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
 
-localparam RB_DRP_SFP_BASE = RB_BASE_ADDR + 16'h20;
+localparam RB_DRP_SFP_BASE = RB_BASE_ADDR + 16'h10;
 
 initial begin
     if (PORT_COUNT > 2) begin
@@ -405,9 +395,6 @@ reg ctrl_reg_rd_ack_reg = 1'b0;
 reg sfp0_tx_disable_reg = 1'b0;
 reg sfp1_tx_disable_reg = 1'b0;
 
-reg i2c_scl_o_reg = 1'b1;
-reg i2c_sda_o_reg = 1'b1;
-
 assign ctrl_reg_wr_wait = sfp_drp_reg_wr_wait;
 assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg | sfp_drp_reg_wr_ack;
 assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg | sfp_drp_reg_rd_data;
@@ -416,11 +403,6 @@ assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg | sfp_drp_reg_rd_ack;
 
 assign sfp0_tx_disable_b = !sfp0_tx_disable_reg;
 assign sfp1_tx_disable_b = !sfp1_tx_disable_reg;
-
-assign i2c_scl_o = i2c_scl_o_reg;
-assign i2c_scl_t = i2c_scl_o_reg;
-assign i2c_sda_o = i2c_sda_o_reg;
-assign i2c_sda_t = i2c_sda_o_reg;
 
 always @(posedge clk_250mhz) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
@@ -431,18 +413,8 @@ always @(posedge clk_250mhz) begin
         // write operation
         ctrl_reg_wr_ack_reg <= 1'b0;
         case ({ctrl_reg_wr_addr >> 2, 2'b00})
-            // I2C 0
-            RBB+8'h0C: begin
-                // I2C ctrl: control
-                if (ctrl_reg_wr_strb[0]) begin
-                    i2c_scl_o_reg <= ctrl_reg_wr_data[1];
-                end
-                if (ctrl_reg_wr_strb[1]) begin
-                    i2c_sda_o_reg <= ctrl_reg_wr_data[9];
-                end
-            end
             // XCVR GPIO
-            RBB+8'h1C: begin
+            RBB+8'h0C: begin
                 // XCVR GPIO: control 0123
                 if (ctrl_reg_wr_strb[0]) begin
                     sfp0_tx_disable_reg <= ctrl_reg_wr_data[5];
@@ -459,22 +431,11 @@ always @(posedge clk_250mhz) begin
         // read operation
         ctrl_reg_rd_ack_reg <= 1'b1;
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
-            // I2C 0
-            RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C110;             // I2C ctrl: Type
-            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000100;             // I2C ctrl: Version
-            RBB+8'h08: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h10;       // I2C ctrl: Next header
-            RBB+8'h0C: begin
-                // I2C ctrl: control
-                ctrl_reg_rd_data_reg[0] <= i2c_scl_i;
-                ctrl_reg_rd_data_reg[1] <= i2c_scl_o_reg;
-                ctrl_reg_rd_data_reg[8] <= i2c_sda_i;
-                ctrl_reg_rd_data_reg[9] <= i2c_sda_o_reg;
-            end
             // XCVR GPIO
-            RBB+8'h10: ctrl_reg_rd_data_reg <= 32'h0000C101;             // XCVR GPIO: Type
-            RBB+8'h14: ctrl_reg_rd_data_reg <= 32'h00000100;             // XCVR GPIO: Version
-            RBB+8'h18: ctrl_reg_rd_data_reg <= RB_DRP_SFP_BASE;          // XCVR GPIO: Next header
-            RBB+8'h1C: begin
+            RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C101;             // XCVR GPIO: Type
+            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000100;             // XCVR GPIO: Version
+            RBB+8'h08: ctrl_reg_rd_data_reg <= RB_DRP_SFP_BASE;          // XCVR GPIO: Next header
+            RBB+8'h0C: begin
                 // XCVR GPIO: control 0123
                 ctrl_reg_rd_data_reg[5] <= sfp0_tx_disable_reg;
                 ctrl_reg_rd_data_reg[13] <= sfp1_tx_disable_reg;
@@ -489,9 +450,6 @@ always @(posedge clk_250mhz) begin
 
         sfp0_tx_disable_reg <= 1'b0;
         sfp1_tx_disable_reg <= 1'b0;
-
-        i2c_scl_o_reg <= 1'b1;
-        i2c_sda_o_reg <= 1'b1;
     end
 end
 

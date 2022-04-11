@@ -71,7 +71,7 @@ static int mqnic_phc_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	}
 
 	nom_per_fns = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_NOM_PERIOD_FNS);
-	nom_per_fns = (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_NOM_PERIOD_NS) << 32;
+	nom_per_fns |= (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_NOM_PERIOD_NS) << 32;
 
 	if (nom_per_fns == 0)
 		nom_per_fns = 0x4ULL << 32;

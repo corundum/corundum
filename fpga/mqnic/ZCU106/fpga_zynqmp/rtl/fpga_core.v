@@ -63,8 +63,8 @@ module fpga_core #
     parameter PTP_PERIOD_NS_WIDTH = 4,
     parameter PTP_OFFSET_NS_WIDTH = 32,
     parameter PTP_FNS_WIDTH = 32,
-    parameter PTP_PERIOD_NS = 4'd4,
-    parameter PTP_PERIOD_FNS = 32'd0,
+    parameter PTP_PERIOD_NS = 4'd3,
+    parameter PTP_PERIOD_FNS = 32'h55555555,
     parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
@@ -176,11 +176,11 @@ module fpga_core #
 )
 (
     /*
-     * Clock: 250 MHz
+     * Clock: 300 MHz
      * Synchronous reset
      */
-    input  wire                                 clk_250mhz,
-    input  wire                                 rst_250mhz,
+    input  wire                                 clk_300mhz,
+    input  wire                                 rst_300mhz,
 
     /*
      * GPIO
@@ -404,7 +404,7 @@ assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg | sfp_drp_reg_rd_ack;
 assign sfp0_tx_disable_b = !sfp0_tx_disable_reg;
 assign sfp1_tx_disable_b = !sfp1_tx_disable_reg;
 
-always @(posedge clk_250mhz) begin
+always @(posedge clk_300mhz) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
     ctrl_reg_rd_data_reg <= {AXIL_CTRL_DATA_WIDTH{1'b0}};
     ctrl_reg_rd_ack_reg <= 1'b0;
@@ -444,7 +444,7 @@ always @(posedge clk_250mhz) begin
         endcase
     end
 
-    if (rst_250mhz) begin
+    if (rst_300mhz) begin
         ctrl_reg_wr_ack_reg <= 1'b0;
         ctrl_reg_rd_ack_reg <= 1'b0;
 
@@ -464,8 +464,8 @@ rb_drp #(
     .RB_NEXT_PTR(0)
 )
 sfp_rb_drp_inst (
-    .clk(clk_250mhz),
-    .rst(rst_250mhz),
+    .clk(clk_300mhz),
+    .rst(rst_300mhz),
 
     /*
      * Register interface
@@ -498,7 +498,7 @@ sfp_rb_drp_inst (
 reg [26:0] pps_led_counter_reg = 0;
 reg pps_led_reg = 0;
 
-always @(posedge clk_250mhz) begin
+always @(posedge clk_300mhz) begin
     if (ptp_pps) begin
         pps_led_counter_reg <= 125000000;
     end else if (pps_led_counter_reg > 0) begin
@@ -526,8 +526,8 @@ tdma_ber #(
     .ACTIVE_PERIOD_NS(90000)
 )
 tdma_ber_inst (
-    .clk(clk_250mhz),
-    .rst(rst_250mhz),
+    .clk(clk_300mhz),
+    .rst(rst_300mhz),
     .phy_tx_clk({sfp1_tx_clk, sfp0_tx_clk}),
     .phy_rx_clk({sfp1_rx_clk, sfp0_rx_clk}),
     .phy_rx_error_count({sfp1_rx_error_count, sfp0_rx_error_count}),
@@ -843,8 +843,8 @@ mqnic_core_axi #(
     .STAT_ID_WIDTH(STAT_ID_WIDTH)
 )
 core_inst (
-    .clk(clk_250mhz),
-    .rst(rst_250mhz),
+    .clk(clk_300mhz),
+    .rst(rst_300mhz),
 
     /*
      * Interrupt outputs
@@ -977,7 +977,7 @@ core_inst (
     /*
      * PTP clock
      */
-    .ptp_sample_clk(clk_250mhz),
+    .ptp_sample_clk(clk_300mhz),
     .ptp_pps(ptp_pps),
     .ptp_ts_96(ptp_ts_96),
     .ptp_ts_step(ptp_ts_step),

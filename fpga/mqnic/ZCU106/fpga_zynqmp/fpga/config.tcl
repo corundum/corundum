@@ -143,11 +143,12 @@ dict set params APP_AXIS_IF_ENABLE "1"
 dict set params APP_STAT_ENABLE "1"
 
 # AXI DMA interface configuration
-open_bd_design [get_files bd_zynq.bd]
-set s_axi_mm [get_bd_intf_ports -of_objects [get_bd_designs bd_zynq] -filter {NAME == s_axi_mm}]
-dict set params AXI_DATA_WIDTH [get_property CONFIG.DATA_WIDTH $s_axi_mm]
-dict set params AXI_ADDR_WIDTH [get_property CONFIG.ADDR_WIDTH $s_axi_mm]
-dict set params AXI_ID_WIDTH [get_property CONFIG.ID_WIDTH $s_axi_mm]
+open_bd_design [get_files zynq_ps.bd]
+set s_axi_dma [get_bd_intf_ports s_axi_dma]
+dict set params AXI_DATA_WIDTH [get_property CONFIG.DATA_WIDTH $s_axi_dma]
+# dict set params AXI_ADDR_WIDTH [get_property CONFIG.ADDR_WIDTH $s_axi_dma]
+dict set params AXI_ADDR_WIDTH 64
+dict set params AXI_ID_WIDTH [get_property CONFIG.ID_WIDTH $s_axi_dma]
 
 # DMA interface configuration
 dict set params DMA_LEN_WIDTH "16"
@@ -157,23 +158,23 @@ dict set params RAM_PIPELINE "2"
 # NOTE: Querying the BD top-level interface port (or even the ZynqMP's interface
 #       pin) yields 256 for the maximum burst length, instead of 16, which is
 #       the actually supported length (due to ZynqMP using AXI3 internally).
-#dict set params AXI_DMA_MAX_BURST_LEN [get_property CONFIG.MAX_BURST_LENGTH $s_axi_mm]
+#dict set params AXI_DMA_MAX_BURST_LEN [get_property CONFIG.MAX_BURST_LENGTH $s_axi_dma]
 dict set params AXI_DMA_MAX_BURST_LEN "16"
 
 # AXI lite interface configuration (control)
-set m_axil_0 [get_bd_intf_pins /axi_protocol_convert_0/M_AXI]
-dict set params AXIL_CTRL_DATA_WIDTH [get_property CONFIG.DATA_WIDTH $m_axil_0]
-dict set params AXIL_CTRL_ADDR_WIDTH [get_property CONFIG.ADDR_WIDTH $m_axil_0]
+set m_axil_ctrl [get_bd_intf_ports m_axil_ctrl]
+dict set params AXIL_CTRL_DATA_WIDTH [get_property CONFIG.DATA_WIDTH $m_axil_ctrl]
+dict set params AXIL_CTRL_ADDR_WIDTH 24
 
 # AXI lite interface configuration (application control)
-set m_axil_1 [get_bd_intf_pins /axi_protocol_convert_1/M_AXI]
-dict set params AXIL_APP_CTRL_DATA_WIDTH [get_property CONFIG.DATA_WIDTH $m_axil_1]
-dict set params AXIL_APP_CTRL_ADDR_WIDTH [get_property CONFIG.ADDR_WIDTH $m_axil_1]
+set m_axil_app_ctrl [get_bd_intf_ports m_axil_app_ctrl]
+dict set params AXIL_APP_CTRL_DATA_WIDTH [get_property CONFIG.DATA_WIDTH $m_axil_app_ctrl]
+dict set params AXIL_APP_CTRL_ADDR_WIDTH 24
 
 # Interrupt configuration
-set irq [get_bd_ports -of_objects [get_bd_designs bd_zynq] -filter {NAME == irq}]
+set irq [get_bd_ports pl_ps_irq0]
 dict set params IRQ_COUNT [get_property CONFIG.PortWidth $irq]
-close_bd_design [get_bd_designs bd_zynq]
+close_bd_design [get_bd_designs zynq_ps]
 dict set params IRQ_STRETCH "10"
 
 # Ethernet interface configuration

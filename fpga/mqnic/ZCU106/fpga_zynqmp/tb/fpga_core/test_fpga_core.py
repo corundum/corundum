@@ -69,17 +69,17 @@ class TB(object):
         self.log = SimLog("cocotb.tb")
         self.log.setLevel(logging.DEBUG)
 
-        cocotb.start_soon(Clock(dut.clk_250mhz, 4, units="ns").start())
+        cocotb.start_soon(Clock(dut.clk_300mhz, 3332, units="ps").start())
 
         # AXI
         self.address_space = AddressSpace()
         self.pool = self.address_space.create_pool(0, 0x8000_0000)
 
-        self.axil_master = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "s_axil_ctrl"), dut.clk_250mhz, dut.rst_250mhz)
+        self.axil_master = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "s_axil_ctrl"), dut.clk_300mhz, dut.rst_300mhz)
         self.address_space.register_region(self.axil_master, 0x10_0000_0000)
         self.hw_regs = self.address_space.create_window(0x10_0000_0000, self.axil_master.size)
 
-        self.axi_slave = AxiSlave(AxiBus.from_prefix(dut, "m_axi"), dut.clk_250mhz, dut.rst_250mhz, self.address_space)
+        self.axi_slave = AxiSlave(AxiBus.from_prefix(dut, "m_axi"), dut.clk_300mhz, dut.rst_300mhz, self.address_space)
 
         self.driver = mqnic.Driver()
 
@@ -114,25 +114,25 @@ class TB(object):
 
     async def init(self):
 
-        self.dut.rst_250mhz.setimmediatevalue(0)
+        self.dut.rst_300mhz.setimmediatevalue(0)
         self.dut.sfp0_rx_rst.setimmediatevalue(0)
         self.dut.sfp0_tx_rst.setimmediatevalue(0)
         self.dut.sfp1_rx_rst.setimmediatevalue(0)
         self.dut.sfp1_tx_rst.setimmediatevalue(0)
 
-        await RisingEdge(self.dut.clk_250mhz)
-        await RisingEdge(self.dut.clk_250mhz)
+        await RisingEdge(self.dut.clk_300mhz)
+        await RisingEdge(self.dut.clk_300mhz)
 
-        self.dut.rst_250mhz.value = 1
+        self.dut.rst_300mhz.value = 1
         self.dut.sfp0_rx_rst.setimmediatevalue(1)
         self.dut.sfp0_tx_rst.setimmediatevalue(1)
         self.dut.sfp1_rx_rst.setimmediatevalue(1)
         self.dut.sfp1_tx_rst.setimmediatevalue(1)
 
-        await RisingEdge(self.dut.clk_250mhz)
-        await RisingEdge(self.dut.clk_250mhz)
+        await RisingEdge(self.dut.clk_300mhz)
+        await RisingEdge(self.dut.clk_300mhz)
 
-        self.dut.rst_250mhz.value = 0
+        self.dut.rst_300mhz.value = 0
         self.dut.sfp0_rx_rst.setimmediatevalue(0)
         self.dut.sfp0_tx_rst.setimmediatevalue(0)
         self.dut.sfp1_rx_rst.setimmediatevalue(0)
@@ -140,7 +140,7 @@ class TB(object):
 
     async def _run_loopback(self):
         while True:
-            await RisingEdge(self.dut.clk_250mhz)
+            await RisingEdge(self.dut.clk_300mhz)
 
             if self.loopback_enable:
                 if not self.sfp0_sink.empty():
@@ -263,8 +263,8 @@ async def run_test_nic(dut):
 
     tb.loopback_enable = False
 
-    await RisingEdge(dut.clk_250mhz)
-    await RisingEdge(dut.clk_250mhz)
+    await RisingEdge(dut.clk_300mhz)
+    await RisingEdge(dut.clk_300mhz)
 
 
 # cocotb-test

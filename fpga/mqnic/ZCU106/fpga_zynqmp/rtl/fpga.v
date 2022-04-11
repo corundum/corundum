@@ -196,8 +196,8 @@ parameter PTP_TAG_WIDTH = 16;
 parameter PTP_PERIOD_NS_WIDTH = 4;
 parameter PTP_OFFSET_NS_WIDTH = 32;
 parameter PTP_FNS_WIDTH = 32;
-parameter PTP_PERIOD_NS = 4'd4;
-parameter PTP_PERIOD_FNS = 32'd0;
+parameter PTP_PERIOD_NS = 4'h3;
+parameter PTP_PERIOD_FNS = 32'h55555555;
 parameter PTP_USE_SAMPLE_CLOCK = 0;
 parameter IF_PTP_PERIOD_NS = 6'h6;
 parameter IF_PTP_PERIOD_FNS = 16'h6666;
@@ -212,8 +212,8 @@ parameter AXIS_ETH_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1;
 parameter AXIS_ETH_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1;
 
 // Clock and reset
-wire zynq_user_clk;
-wire zynq_user_reset;
+wire zynq_pl_clk;
+wire zynq_pl_reset;
 
 wire clk_125mhz_ibufg;
 wire clk_125mhz_mmcm_out;
@@ -222,7 +222,7 @@ wire clk_125mhz_mmcm_out;
 wire clk_125mhz_int;
 wire rst_125mhz_int;
 
-wire mmcm_rst = zynq_user_reset;
+wire mmcm_rst = zynq_pl_reset;
 wire mmcm_locked;
 wire mmcm_clkfb;
 
@@ -327,8 +327,8 @@ debounce_switch #(
     .RATE(250000)
 )
 debounce_switch_inst (
-    .clk(zynq_user_clk),
-    .rst(zynq_user_reset),
+    .clk(zynq_pl_clk),
+    .rst(zynq_pl_reset),
     .in({btnu,
         btnl,
         btnd,
@@ -424,8 +424,8 @@ wire                                 axil_app_ctrl_rvalid;
 wire                                 axil_app_ctrl_rready;
 
 reg [(IRQ_COUNT*IRQ_STRETCH)-1:0] irq_stretch = {(IRQ_COUNT*IRQ_STRETCH){1'b0}};
-always @(posedge zynq_user_clk) begin
-    if (zynq_user_reset) begin
+always @(posedge zynq_pl_clk) begin
+    if (zynq_pl_reset) begin
         irq_stretch <= {(IRQ_COUNT*IRQ_STRETCH){1'b0}};
     end else begin
         /* IRQ shift vector */
@@ -444,91 +444,91 @@ always @* begin
     end
 end
 
-bd_zynq bd_zynq_inst (
-    .clk(zynq_user_clk),
-    .rst(zynq_user_reset),
+zynq_ps zynq_ps_inst (
+    .pl_clk0(zynq_pl_clk),
+    .pl_reset(zynq_pl_reset),
 
-    .irq(zynq_irq),
+    .pl_ps_irq0(zynq_irq),
 
-    .m_axil_0_araddr(axil_ctrl_araddr),
-    .m_axil_0_arprot(axil_ctrl_arprot),
-    .m_axil_0_arready(axil_ctrl_arready),
-    .m_axil_0_arvalid(axil_ctrl_arvalid),
-    .m_axil_0_awaddr(axil_ctrl_awaddr),
-    .m_axil_0_awprot(axil_ctrl_awprot),
-    .m_axil_0_awready(axil_ctrl_awready),
-    .m_axil_0_awvalid(axil_ctrl_awvalid),
-    .m_axil_0_bready(axil_ctrl_bready),
-    .m_axil_0_bresp(axil_ctrl_bresp),
-    .m_axil_0_bvalid(axil_ctrl_bvalid),
-    .m_axil_0_rdata(axil_ctrl_rdata),
-    .m_axil_0_rready(axil_ctrl_rready),
-    .m_axil_0_rresp(axil_ctrl_rresp),
-    .m_axil_0_rvalid(axil_ctrl_rvalid),
-    .m_axil_0_wdata(axil_ctrl_wdata),
-    .m_axil_0_wready(axil_ctrl_wready),
-    .m_axil_0_wstrb(axil_ctrl_wstrb),
-    .m_axil_0_wvalid(axil_ctrl_wvalid),
+    .m_axil_ctrl_araddr(axil_ctrl_araddr),
+    .m_axil_ctrl_arprot(axil_ctrl_arprot),
+    .m_axil_ctrl_arready(axil_ctrl_arready),
+    .m_axil_ctrl_arvalid(axil_ctrl_arvalid),
+    .m_axil_ctrl_awaddr(axil_ctrl_awaddr),
+    .m_axil_ctrl_awprot(axil_ctrl_awprot),
+    .m_axil_ctrl_awready(axil_ctrl_awready),
+    .m_axil_ctrl_awvalid(axil_ctrl_awvalid),
+    .m_axil_ctrl_bready(axil_ctrl_bready),
+    .m_axil_ctrl_bresp(axil_ctrl_bresp),
+    .m_axil_ctrl_bvalid(axil_ctrl_bvalid),
+    .m_axil_ctrl_rdata(axil_ctrl_rdata),
+    .m_axil_ctrl_rready(axil_ctrl_rready),
+    .m_axil_ctrl_rresp(axil_ctrl_rresp),
+    .m_axil_ctrl_rvalid(axil_ctrl_rvalid),
+    .m_axil_ctrl_wdata(axil_ctrl_wdata),
+    .m_axil_ctrl_wready(axil_ctrl_wready),
+    .m_axil_ctrl_wstrb(axil_ctrl_wstrb),
+    .m_axil_ctrl_wvalid(axil_ctrl_wvalid),
 
-    .m_axil_1_araddr(axil_app_ctrl_araddr),
-    .m_axil_1_arprot(axil_app_ctrl_arprot),
-    .m_axil_1_arready(axil_app_ctrl_arready),
-    .m_axil_1_arvalid(axil_app_ctrl_arvalid),
-    .m_axil_1_awaddr(axil_app_ctrl_awaddr),
-    .m_axil_1_awprot(axil_app_ctrl_awprot),
-    .m_axil_1_awready(axil_app_ctrl_awready),
-    .m_axil_1_awvalid(axil_app_ctrl_awvalid),
-    .m_axil_1_bready(axil_app_ctrl_bready),
-    .m_axil_1_bresp(axil_app_ctrl_bresp),
-    .m_axil_1_bvalid(axil_app_ctrl_bvalid),
-    .m_axil_1_rdata(axil_app_ctrl_rdata),
-    .m_axil_1_rready(axil_app_ctrl_rready),
-    .m_axil_1_rresp(axil_app_ctrl_rresp),
-    .m_axil_1_rvalid(axil_app_ctrl_rvalid),
-    .m_axil_1_wdata(axil_app_ctrl_wdata),
-    .m_axil_1_wready(axil_app_ctrl_wready),
-    .m_axil_1_wstrb(axil_app_ctrl_wstrb),
-    .m_axil_1_wvalid(axil_app_ctrl_wvalid),
+    .m_axil_app_ctrl_araddr(axil_app_ctrl_araddr),
+    .m_axil_app_ctrl_arprot(axil_app_ctrl_arprot),
+    .m_axil_app_ctrl_arready(axil_app_ctrl_arready),
+    .m_axil_app_ctrl_arvalid(axil_app_ctrl_arvalid),
+    .m_axil_app_ctrl_awaddr(axil_app_ctrl_awaddr),
+    .m_axil_app_ctrl_awprot(axil_app_ctrl_awprot),
+    .m_axil_app_ctrl_awready(axil_app_ctrl_awready),
+    .m_axil_app_ctrl_awvalid(axil_app_ctrl_awvalid),
+    .m_axil_app_ctrl_bready(axil_app_ctrl_bready),
+    .m_axil_app_ctrl_bresp(axil_app_ctrl_bresp),
+    .m_axil_app_ctrl_bvalid(axil_app_ctrl_bvalid),
+    .m_axil_app_ctrl_rdata(axil_app_ctrl_rdata),
+    .m_axil_app_ctrl_rready(axil_app_ctrl_rready),
+    .m_axil_app_ctrl_rresp(axil_app_ctrl_rresp),
+    .m_axil_app_ctrl_rvalid(axil_app_ctrl_rvalid),
+    .m_axil_app_ctrl_wdata(axil_app_ctrl_wdata),
+    .m_axil_app_ctrl_wready(axil_app_ctrl_wready),
+    .m_axil_app_ctrl_wstrb(axil_app_ctrl_wstrb),
+    .m_axil_app_ctrl_wvalid(axil_app_ctrl_wvalid),
 
-    .s_axi_mm_araddr(axi_araddr),
-    .s_axi_mm_arburst(axi_arburst),
-    .s_axi_mm_arcache(axi_arcache),
-    .s_axi_mm_arid(axi_arid),
-    .s_axi_mm_arlen(axi_arlen),
-    .s_axi_mm_arlock(axi_arlock),
-    .s_axi_mm_arprot(axi_arprot),
-    .s_axi_mm_arqos({4{1'b0}}),
-    .s_axi_mm_arready(axi_arready),
-    .s_axi_mm_arsize(axi_arsize),
-    .s_axi_mm_aruser(1'b0),
-    .s_axi_mm_arvalid(axi_arvalid),
-    .s_axi_mm_awaddr(axi_awaddr),
-    .s_axi_mm_awburst(axi_awburst),
-    .s_axi_mm_awcache(axi_awcache),
-    .s_axi_mm_awid(axi_awid),
-    .s_axi_mm_awlen(axi_awlen),
-    .s_axi_mm_awlock(axi_awlock),
-    .s_axi_mm_awprot(axi_awprot),
-    .s_axi_mm_awqos({4{1'b0}}),
-    .s_axi_mm_awready(axi_awready),
-    .s_axi_mm_awsize(axi_awsize),
-    .s_axi_mm_awuser(1'b0),
-    .s_axi_mm_awvalid(axi_awvalid),
-    .s_axi_mm_bid(axi_bid),
-    .s_axi_mm_bready(axi_bready),
-    .s_axi_mm_bresp(axi_bresp),
-    .s_axi_mm_bvalid(axi_bvalid),
-    .s_axi_mm_rdata(axi_rdata),
-    .s_axi_mm_rid(axi_rid),
-    .s_axi_mm_rlast(axi_rlast),
-    .s_axi_mm_rready(axi_rready),
-    .s_axi_mm_rresp(axi_rresp),
-    .s_axi_mm_rvalid(axi_rvalid),
-    .s_axi_mm_wdata(axi_wdata),
-    .s_axi_mm_wlast(axi_wlast),
-    .s_axi_mm_wready(axi_wready),
-    .s_axi_mm_wstrb(axi_wstrb),
-    .s_axi_mm_wvalid(axi_wvalid)
+    .s_axi_dma_araddr(axi_araddr),
+    .s_axi_dma_arburst(axi_arburst),
+    .s_axi_dma_arcache(axi_arcache),
+    .s_axi_dma_arid(axi_arid),
+    .s_axi_dma_arlen(axi_arlen),
+    .s_axi_dma_arlock(axi_arlock),
+    .s_axi_dma_arprot(axi_arprot),
+    .s_axi_dma_arqos({4{1'b0}}),
+    .s_axi_dma_arready(axi_arready),
+    .s_axi_dma_arsize(axi_arsize),
+    .s_axi_dma_aruser(1'b0),
+    .s_axi_dma_arvalid(axi_arvalid),
+    .s_axi_dma_awaddr(axi_awaddr),
+    .s_axi_dma_awburst(axi_awburst),
+    .s_axi_dma_awcache(axi_awcache),
+    .s_axi_dma_awid(axi_awid),
+    .s_axi_dma_awlen(axi_awlen),
+    .s_axi_dma_awlock(axi_awlock),
+    .s_axi_dma_awprot(axi_awprot),
+    .s_axi_dma_awqos({4{1'b0}}),
+    .s_axi_dma_awready(axi_awready),
+    .s_axi_dma_awsize(axi_awsize),
+    .s_axi_dma_awuser(1'b0),
+    .s_axi_dma_awvalid(axi_awvalid),
+    .s_axi_dma_bid(axi_bid),
+    .s_axi_dma_bready(axi_bready),
+    .s_axi_dma_bresp(axi_bresp),
+    .s_axi_dma_bvalid(axi_bvalid),
+    .s_axi_dma_rdata(axi_rdata),
+    .s_axi_dma_rid(axi_rid),
+    .s_axi_dma_rlast(axi_rlast),
+    .s_axi_dma_rready(axi_rready),
+    .s_axi_dma_rresp(axi_rresp),
+    .s_axi_dma_rvalid(axi_rvalid),
+    .s_axi_dma_wdata(axi_wdata),
+    .s_axi_dma_wlast(axi_wlast),
+    .s_axi_dma_wready(axi_wready),
+    .s_axi_dma_wstrb(axi_wstrb),
+    .s_axi_dma_wvalid(axi_wvalid)
 );
 
 // XGMII 10G PHY
@@ -804,11 +804,11 @@ fpga_core #(
 )
 core_inst (
     /*
-     * Clock: 250 MHz
+     * Clock: 300 MHz
      * Synchronous reset
      */
-    .clk_250mhz(zynq_user_clk),
-    .rst_250mhz(zynq_user_reset),
+    .clk_300mhz(zynq_pl_clk),
+    .rst_300mhz(zynq_pl_reset),
 
     /*
      * GPIO

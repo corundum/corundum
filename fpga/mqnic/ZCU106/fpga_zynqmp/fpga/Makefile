@@ -106,7 +106,7 @@ XDC_FILES += ../../../common/syn/vivado/eth_xcvr_phy_10g_gty_wrapper.tcl
 XDC_FILES += ../../../common/syn/vivado/tdma_ber_ch.tcl
 
 # IP
-IP_TCL_FILES = ip/bd_zynq.tcl
+IP_TCL_FILES = ip/zynq_ps.tcl
 IP_TCL_FILES += ip/eth_xcvr_gth.tcl
 
 # Configuration

@@ -942,8 +942,8 @@ always @(posedge clk) begin
         ctrl_reg_wr_ack_reg <= 1'b1;
         case ({ctrl_reg_wr_addr >> 2, 2'b00})
             // Interface control
-            RBB+8'h18: tx_mtu_reg <= ctrl_reg_wr_data;                      // IF ctrl: TX MTU
-            RBB+8'h1C: rx_mtu_reg <= ctrl_reg_wr_data;                      // IF ctrl: RX MTU
+            RBB+8'h28: tx_mtu_reg <= ctrl_reg_wr_data;                      // IF ctrl: TX MTU
+            RBB+8'h2C: rx_mtu_reg <= ctrl_reg_wr_data;                      // IF ctrl: RX MTU
             RBB+8'h30: rss_mask_reg <= ctrl_reg_wr_data;                    // IF ctrl: RSS mask
             default: ctrl_reg_wr_ack_reg <= 1'b0;
         endcase

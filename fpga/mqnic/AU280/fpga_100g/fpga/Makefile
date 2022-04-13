@@ -21,6 +21,7 @@ SYN_FILES += rtl/common/mqnic_l2_ingress.v
 SYN_FILES += rtl/common/mqnic_ptp.v
 SYN_FILES += rtl/common/mqnic_ptp_clock.v
 SYN_FILES += rtl/common/mqnic_ptp_perout.v
+SYN_FILES += rtl/common/mqnic_port_map_mac_axis.v
 SYN_FILES += rtl/common/cpl_write.v
 SYN_FILES += rtl/common/cpl_op_mux.v
 SYN_FILES += rtl/common/desc_fetch.v

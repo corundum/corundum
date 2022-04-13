@@ -56,6 +56,7 @@ module fpga_core #
     parameter IF_COUNT = 2,
     parameter PORTS_PER_IF = 1,
     parameter SCHED_PER_IF = PORTS_PER_IF,
+    parameter PORT_MASK = 0,
 
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
@@ -909,160 +910,45 @@ wire [PORT_COUNT-1:0]                   port_xgmii_rx_rst;
 wire [PORT_COUNT*XGMII_DATA_WIDTH-1:0]  port_xgmii_rxd;
 wire [PORT_COUNT*XGMII_CTRL_WIDTH-1:0]  port_xgmii_rxc;
 
-//  counts    QSFP 1                                QSFP 2
-// IF  PORT   1_1      1_2      1_3      1_4        2_1      2_2      2_3      2_4
-// 1   1      0 (0.0)
-// 1   2      0 (0.0)  1 (0.1)
-// 1   3      0 (0.0)  1 (0.1)  2 (0.2)
-// 1   4      0 (0.0)  1 (0.1)  2 (0.2)  3 (0.3)
-// 1   5      0 (0.0)  1 (0.1)  2 (0.2)  3 (0.3)    4 (0.4)
-// 1   6      0 (0.0)  1 (0.1)  2 (0.2)  3 (0.3)    4 (0.4)  5 (0.5)
-// 1   7      0 (0.0)  1 (0.1)  2 (0.2)  3 (0.3)    4 (0.4)  5 (0.5)  6 (0.6)
-// 1   8      0 (0.0)  1 (0.1)  2 (0.2)  3 (0.3)    4 (0.4)  5 (0.5)  6 (0.6)  7 (0.7)
-// 2   1      0 (0.0)                               1 (1.0)
-// 2   2      0 (0.0)  1 (0.1)                      2 (1.0)  3 (1.1)
-// 2   3      0 (0.0)  1 (0.1)  2 (0.2)             3 (1.0)  4 (1.1)  5 (1.2)
-// 2   4      0 (0.0)  1 (0.1)  2 (0.2)  3 (0.3)    4 (1.0)  5 (1.1)  6 (1.2)  7 (1.3)
-// 3   1      0 (0.0)  1 (1.0)  2 (2.0)
-// 3   2      0 (0.0)  1 (0.1)  2 (1.0)  3 (1.1)    4 (2.0)  5 (2.1)
-// 4   1      0 (0.0)  1 (1.0)  2 (2.0)  3 (3.0)
-// 4   2      0 (0.0)  1 (0.1)  2 (1.0)  3 (1.1)    4 (2.0)  5 (2.1)  6 (3.0)  7 (3.1)
-// 5   1      0 (0.0)  1 (1.0)  2 (2.0)  3 (3.0)    4 (4.0)
-// 6   1      0 (0.0)  1 (1.0)  2 (2.0)  3 (3.0)    4 (4.0)  5 (5.0)
-// 7   1      0 (0.0)  1 (1.0)  2 (2.0)  3 (3.0)    4 (4.0)  5 (5.0)  6 (6.0)
-// 8   1      0 (0.0)  1 (1.0)  2 (2.0)  3 (3.0)    4 (4.0)  5 (5.0)  6 (6.0)  7 (7.0)
+mqnic_port_map_phy_xgmii #(
+    .PHY_COUNT(8),
+    .PORT_MASK(PORT_MASK),
+    .PORT_GROUP_SIZE(4),
 
-localparam QSFP1_1_IND = 0;
-localparam QSFP1_2_IND = IF_COUNT == 2 ? (PORTS_PER_IF > 1 ? 1 : -1) : 1;
-localparam QSFP1_3_IND = IF_COUNT == 2 ? (PORTS_PER_IF > 2 ? 2 : -1) : 2;
-localparam QSFP1_4_IND = IF_COUNT == 2 ? (PORTS_PER_IF > 3 ? 3 : -1) : 3;
-localparam QSFP2_1_IND = IF_COUNT == 2 ? PORTS_PER_IF : 4;
-localparam QSFP2_2_IND = IF_COUNT == 2 ? (PORTS_PER_IF > 1 ? PORTS_PER_IF+1 : -1) : 5;
-localparam QSFP2_3_IND = IF_COUNT == 2 ? (PORTS_PER_IF > 2 ? PORTS_PER_IF+2 : -1) : 6;
-localparam QSFP2_4_IND = IF_COUNT == 2 ? (PORTS_PER_IF > 3 ? PORTS_PER_IF+3 : -1) : 7;
+    .IF_COUNT(IF_COUNT),
+    .PORTS_PER_IF(PORTS_PER_IF),
+
+    .PORT_COUNT(PORT_COUNT),
+
+    .XGMII_DATA_WIDTH(XGMII_DATA_WIDTH),
+    .XGMII_CTRL_WIDTH(XGMII_CTRL_WIDTH)
+)
+mqnic_port_map_phy_xgmii_inst (
+    // towards PHY
+    .phy_xgmii_tx_clk({qsfp2_tx_clk_4, qsfp2_tx_clk_3, qsfp2_tx_clk_2, qsfp2_tx_clk_1, qsfp1_tx_clk_4, qsfp1_tx_clk_3, qsfp1_tx_clk_2, qsfp1_tx_clk_1}),
+    .phy_xgmii_tx_rst({qsfp2_tx_rst_4, qsfp2_tx_rst_3, qsfp2_tx_rst_2, qsfp2_tx_rst_1, qsfp1_tx_rst_4, qsfp1_tx_rst_3, qsfp1_tx_rst_2, qsfp1_tx_rst_1}),
+    .phy_xgmii_txd({qsfp2_txd_4, qsfp2_txd_3, qsfp2_txd_2, qsfp2_txd_1, qsfp1_txd_4, qsfp1_txd_3, qsfp1_txd_2, qsfp1_txd_1}),
+    .phy_xgmii_txc({qsfp2_txc_4, qsfp2_txc_3, qsfp2_txc_2, qsfp2_txc_1, qsfp1_txc_4, qsfp1_txc_3, qsfp1_txc_2, qsfp1_txc_1}),
+
+    .phy_xgmii_rx_clk({qsfp2_rx_clk_4, qsfp2_rx_clk_3, qsfp2_rx_clk_2, qsfp2_rx_clk_1, qsfp1_rx_clk_4, qsfp1_rx_clk_3, qsfp1_rx_clk_2, qsfp1_rx_clk_1}),
+    .phy_xgmii_rx_rst({qsfp2_rx_rst_4, qsfp2_rx_rst_3, qsfp2_rx_rst_2, qsfp2_rx_rst_1, qsfp1_rx_rst_4, qsfp1_rx_rst_3, qsfp1_rx_rst_2, qsfp1_rx_rst_1}),
+    .phy_xgmii_rxd({qsfp2_rxd_4, qsfp2_rxd_3, qsfp2_rxd_2, qsfp2_rxd_1, qsfp1_rxd_4, qsfp1_rxd_3, qsfp1_rxd_2, qsfp1_rxd_1}),
+    .phy_xgmii_rxc({qsfp2_rxc_4, qsfp2_rxc_3, qsfp2_rxc_2, qsfp2_rxc_1, qsfp1_rxc_4, qsfp1_rxc_3, qsfp1_rxc_2, qsfp1_rxc_1}),
+
+    // towards MAC
+    .port_xgmii_tx_clk(port_xgmii_tx_clk),
+    .port_xgmii_tx_rst(port_xgmii_tx_rst),
+    .port_xgmii_txd(port_xgmii_txd),
+    .port_xgmii_txc(port_xgmii_txc),
+
+    .port_xgmii_rx_clk(port_xgmii_rx_clk),
+    .port_xgmii_rx_rst(port_xgmii_rx_rst),
+    .port_xgmii_rxd(port_xgmii_rxd),
+    .port_xgmii_rxc(port_xgmii_rxc)
+);
 
 generate
-    genvar m, n;
-
-    if (QSFP1_1_IND >= 0 && QSFP1_1_IND < PORT_COUNT) begin
-        assign port_xgmii_tx_clk[QSFP1_1_IND] = qsfp1_tx_clk_1;
-        assign port_xgmii_tx_rst[QSFP1_1_IND] = qsfp1_tx_rst_1;
-        assign port_xgmii_rx_clk[QSFP1_1_IND] = qsfp1_rx_clk_1;
-        assign port_xgmii_rx_rst[QSFP1_1_IND] = qsfp1_rx_rst_1;
-        assign port_xgmii_rxd[QSFP1_1_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = qsfp1_rxd_1;
-        assign port_xgmii_rxc[QSFP1_1_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = qsfp1_rxc_1;
-
-        assign qsfp1_txd_1 = port_xgmii_txd[QSFP1_1_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
-        assign qsfp1_txc_1 = port_xgmii_txc[QSFP1_1_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
-    end else begin
-        assign qsfp1_txd_1 = {XGMII_CTRL_WIDTH{8'h07}};
-        assign qsfp1_txc_1 = {XGMII_CTRL_WIDTH{1'b1}};
-    end
-
-    if (QSFP1_2_IND >= 0 && QSFP1_2_IND < PORT_COUNT) begin
-        assign port_xgmii_tx_clk[QSFP1_2_IND] = qsfp1_tx_clk_2;
-        assign port_xgmii_tx_rst[QSFP1_2_IND] = qsfp1_tx_rst_2;
-        assign port_xgmii_rx_clk[QSFP1_2_IND] = qsfp1_rx_clk_2;
-        assign port_xgmii_rx_rst[QSFP1_2_IND] = qsfp1_rx_rst_2;
-        assign port_xgmii_rxd[QSFP1_2_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = qsfp1_rxd_2;
-        assign port_xgmii_rxc[QSFP1_2_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = qsfp1_rxc_2;
-
-        assign qsfp1_txd_2 = port_xgmii_txd[QSFP1_2_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
-        assign qsfp1_txc_2 = port_xgmii_txc[QSFP1_2_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
-    end else begin
-        assign qsfp1_txd_2 = {XGMII_CTRL_WIDTH{8'h07}};
-        assign qsfp1_txc_2 = {XGMII_CTRL_WIDTH{1'b1}};
-    end
-
-    if (QSFP1_3_IND >= 0 && QSFP1_3_IND < PORT_COUNT) begin
-        assign port_xgmii_tx_clk[QSFP1_3_IND] = qsfp1_tx_clk_3;
-        assign port_xgmii_tx_rst[QSFP1_3_IND] = qsfp1_tx_rst_3;
-        assign port_xgmii_rx_clk[QSFP1_3_IND] = qsfp1_rx_clk_3;
-        assign port_xgmii_rx_rst[QSFP1_3_IND] = qsfp1_rx_rst_3;
-        assign port_xgmii_rxd[QSFP1_3_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = qsfp1_rxd_3;
-        assign port_xgmii_rxc[QSFP1_3_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = qsfp1_rxc_3;
-
-        assign qsfp1_txd_3 = port_xgmii_txd[QSFP1_3_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
-        assign qsfp1_txc_3 = port_xgmii_txc[QSFP1_3_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
-    end else begin
-        assign qsfp1_txd_3 = {XGMII_CTRL_WIDTH{8'h07}};
-        assign qsfp1_txc_3 = {XGMII_CTRL_WIDTH{1'b1}};
-    end
-
-    if (QSFP1_4_IND >= 0 && QSFP1_4_IND < PORT_COUNT) begin
-        assign port_xgmii_tx_clk[QSFP1_4_IND] = qsfp1_tx_clk_4;
-        assign port_xgmii_tx_rst[QSFP1_4_IND] = qsfp1_tx_rst_4;
-        assign port_xgmii_rx_clk[QSFP1_4_IND] = qsfp1_rx_clk_4;
-        assign port_xgmii_rx_rst[QSFP1_4_IND] = qsfp1_rx_rst_4;
-        assign port_xgmii_rxd[QSFP1_4_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = qsfp1_rxd_4;
-        assign port_xgmii_rxc[QSFP1_4_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = qsfp1_rxc_4;
-
-        assign qsfp1_txd_4 = port_xgmii_txd[QSFP1_4_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
-        assign qsfp1_txc_4 = port_xgmii_txc[QSFP1_4_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
-    end else begin
-        assign qsfp1_txd_4 = {XGMII_CTRL_WIDTH{8'h07}};
-        assign qsfp1_txc_4 = {XGMII_CTRL_WIDTH{1'b1}};
-    end
-
-    if (QSFP2_1_IND >= 0 && QSFP2_1_IND < PORT_COUNT) begin
-        assign port_xgmii_tx_clk[QSFP2_1_IND] = qsfp2_tx_clk_1;
-        assign port_xgmii_tx_rst[QSFP2_1_IND] = qsfp2_tx_rst_1;
-        assign port_xgmii_rx_clk[QSFP2_1_IND] = qsfp2_rx_clk_1;
-        assign port_xgmii_rx_rst[QSFP2_1_IND] = qsfp2_rx_rst_1;
-        assign port_xgmii_rxd[QSFP2_1_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = qsfp2_rxd_1;
-        assign port_xgmii_rxc[QSFP2_1_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = qsfp2_rxc_1;
-
-        assign qsfp2_txd_1 = port_xgmii_txd[QSFP2_1_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
-        assign qsfp2_txc_1 = port_xgmii_txc[QSFP2_1_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
-    end else begin
-        assign qsfp2_txd_1 = {XGMII_CTRL_WIDTH{8'h07}};
-        assign qsfp2_txc_1 = {XGMII_CTRL_WIDTH{1'b1}};
-    end
-
-    if (QSFP2_2_IND >= 0 && QSFP2_2_IND < PORT_COUNT) begin
-        assign port_xgmii_tx_clk[QSFP2_2_IND] = qsfp2_tx_clk_2;
-        assign port_xgmii_tx_rst[QSFP2_2_IND] = qsfp2_tx_rst_2;
-        assign port_xgmii_rx_clk[QSFP2_2_IND] = qsfp2_rx_clk_2;
-        assign port_xgmii_rx_rst[QSFP2_2_IND] = qsfp2_rx_rst_2;
-        assign port_xgmii_rxd[QSFP2_2_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = qsfp2_rxd_2;
-        assign port_xgmii_rxc[QSFP2_2_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = qsfp2_rxc_2;
-
-        assign qsfp2_txd_2 = port_xgmii_txd[QSFP2_2_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
-        assign qsfp2_txc_2 = port_xgmii_txc[QSFP2_2_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
-    end else begin
-        assign qsfp2_txd_2 = {XGMII_CTRL_WIDTH{8'h07}};
-        assign qsfp2_txc_2 = {XGMII_CTRL_WIDTH{1'b1}};
-    end
-
-    if (QSFP2_3_IND >= 0 && QSFP2_3_IND < PORT_COUNT) begin
-        assign port_xgmii_tx_clk[QSFP2_3_IND] = qsfp2_tx_clk_3;
-        assign port_xgmii_tx_rst[QSFP2_3_IND] = qsfp2_tx_rst_3;
-        assign port_xgmii_rx_clk[QSFP2_3_IND] = qsfp2_rx_clk_3;
-        assign port_xgmii_rx_rst[QSFP2_3_IND] = qsfp2_rx_rst_3;
-        assign port_xgmii_rxd[QSFP2_3_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = qsfp2_rxd_3;
-        assign port_xgmii_rxc[QSFP2_3_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = qsfp2_rxc_3;
-
-        assign qsfp2_txd_3 = port_xgmii_txd[QSFP2_3_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
-        assign qsfp2_txc_3 = port_xgmii_txc[QSFP2_3_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
-    end else begin
-        assign qsfp2_txd_3 = {XGMII_CTRL_WIDTH{8'h07}};
-        assign qsfp2_txc_3 = {XGMII_CTRL_WIDTH{1'b1}};
-    end
-
-    if (QSFP2_4_IND >= 0 && QSFP2_4_IND < PORT_COUNT) begin
-        assign port_xgmii_tx_clk[QSFP2_4_IND] = qsfp2_tx_clk_4;
-        assign port_xgmii_tx_rst[QSFP2_4_IND] = qsfp2_tx_rst_4;
-        assign port_xgmii_rx_clk[QSFP2_4_IND] = qsfp2_rx_clk_4;
-        assign port_xgmii_rx_rst[QSFP2_4_IND] = qsfp2_rx_rst_4;
-        assign port_xgmii_rxd[QSFP2_4_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = qsfp2_rxd_4;
-        assign port_xgmii_rxc[QSFP2_4_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = qsfp2_rxc_4;
-
-        assign qsfp2_txd_4 = port_xgmii_txd[QSFP2_4_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
-        assign qsfp2_txc_4 = port_xgmii_txc[QSFP2_4_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
-    end else begin
-        assign qsfp2_txd_4 = {XGMII_CTRL_WIDTH{8'h07}};
-        assign qsfp2_txc_4 = {XGMII_CTRL_WIDTH{1'b1}};
-    end
+    genvar n;
 
     for (n = 0; n < PORT_COUNT; n = n + 1) begin : mac
 

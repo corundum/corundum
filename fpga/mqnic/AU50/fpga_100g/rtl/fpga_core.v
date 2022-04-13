@@ -56,6 +56,7 @@ module fpga_core #
     parameter IF_COUNT = 1,
     parameter PORTS_PER_IF = 1,
     parameter SCHED_PER_IF = PORTS_PER_IF,
+    parameter PORT_MASK = 0,
 
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
@@ -578,54 +579,98 @@ wire [PORT_COUNT-1:0]                         axis_eth_rx_tready;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tlast;
 wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  axis_eth_rx_tuser;
 
-//  counts    QSFP
-// IF  PORT   1234
-// 1   1      0 (0.0)
+wire [PTP_TS_WIDTH-1:0] qsfp_tx_ptp_time_int;
+wire [PTP_TS_WIDTH-1:0] qsfp_rx_ptp_time_int;
 
-localparam QSFP_IND = 0;
+assign qsfp_tx_ptp_time = qsfp_tx_ptp_time_int >> 16;
+assign qsfp_rx_ptp_time = qsfp_rx_ptp_time_int >> 16;
 
-generate
-    genvar n;
+mqnic_port_map_mac_axis #(
+    .MAC_COUNT(1),
+    .PORT_MASK(PORT_MASK),
+    .PORT_GROUP_SIZE(1),
 
-    if (QSFP_IND >= 0 && QSFP_IND < PORT_COUNT) begin : qsfp
-        assign eth_tx_clk[QSFP_IND] = qsfp_tx_clk;
-        assign eth_tx_rst[QSFP_IND] = qsfp_tx_rst;
+    .IF_COUNT(IF_COUNT),
+    .PORTS_PER_IF(PORTS_PER_IF),
 
-        assign qsfp_tx_axis_tdata = axis_eth_tx_tdata[QSFP_IND*AXIS_ETH_DATA_WIDTH +: AXIS_ETH_DATA_WIDTH];
-        assign qsfp_tx_axis_tkeep = axis_eth_tx_tkeep[QSFP_IND*AXIS_ETH_KEEP_WIDTH +: AXIS_ETH_KEEP_WIDTH];
-        assign qsfp_tx_axis_tvalid = axis_eth_tx_tvalid[QSFP_IND];
-        assign axis_eth_tx_tready[QSFP_IND] = qsfp_tx_axis_tready;
-        assign qsfp_tx_axis_tlast = axis_eth_tx_tlast[QSFP_IND];
-        assign qsfp_tx_axis_tuser = axis_eth_tx_tuser[QSFP_IND*AXIS_ETH_TX_USER_WIDTH +: AXIS_ETH_TX_USER_WIDTH];
+    .PORT_COUNT(PORT_COUNT),
 
-        assign axis_eth_tx_ptp_ts[QSFP_IND*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {qsfp_tx_ptp_ts, 16'd0};
-        assign axis_eth_tx_ptp_ts_tag[QSFP_IND*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = qsfp_tx_ptp_ts_tag;
-        assign axis_eth_tx_ptp_ts_valid[QSFP_IND] = qsfp_tx_ptp_ts_valid;
+    .PTP_TS_WIDTH(PTP_TS_WIDTH),
+    .PTP_TAG_WIDTH(PTP_TAG_WIDTH),
+    .AXIS_DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
+    .AXIS_KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
+    .AXIS_TX_USER_WIDTH(AXIS_ETH_TX_USER_WIDTH),
+    .AXIS_RX_USER_WIDTH(AXIS_ETH_RX_USER_WIDTH)
+)
+mqnic_port_map_mac_axis_inst (
+    // towards MAC
+    .mac_tx_clk({qsfp_tx_clk}),
+    .mac_tx_rst({qsfp_tx_rst}),
 
-        assign eth_rx_clk[QSFP_IND] = qsfp_rx_clk;
-        assign eth_rx_rst[QSFP_IND] = qsfp_rx_rst;
+    .mac_tx_ptp_ts_96({qsfp_tx_ptp_time_int}),
+    .mac_tx_ptp_ts_step(),
 
-        assign axis_eth_rx_tdata[QSFP_IND*AXIS_ETH_DATA_WIDTH +: AXIS_ETH_DATA_WIDTH] = qsfp_rx_axis_tdata;
-        assign axis_eth_rx_tkeep[QSFP_IND*AXIS_ETH_KEEP_WIDTH +: AXIS_ETH_KEEP_WIDTH] = qsfp_rx_axis_tkeep;
-        assign axis_eth_rx_tvalid[QSFP_IND] = qsfp_rx_axis_tvalid;
-        assign axis_eth_rx_tlast[QSFP_IND] = qsfp_rx_axis_tlast;
-        assign axis_eth_rx_tuser[QSFP_IND*AXIS_ETH_RX_USER_WIDTH +: AXIS_ETH_RX_USER_WIDTH] = {qsfp_rx_axis_tuser[80:1], 16'd0, qsfp_rx_axis_tuser[0]};
+    .m_axis_mac_tx_tdata({qsfp_tx_axis_tdata}),
+    .m_axis_mac_tx_tkeep({qsfp_tx_axis_tkeep}),
+    .m_axis_mac_tx_tvalid({qsfp_tx_axis_tvalid}),
+    .m_axis_mac_tx_tready({qsfp_tx_axis_tready}),
+    .m_axis_mac_tx_tlast({qsfp_tx_axis_tlast}),
+    .m_axis_mac_tx_tuser({qsfp_tx_axis_tuser}),
 
-        assign eth_rx_ptp_clk[QSFP_IND] = qsfp_rx_ptp_clk;
-        assign eth_rx_ptp_rst[QSFP_IND] = qsfp_rx_ptp_rst;
-        assign qsfp_tx_ptp_time = eth_tx_ptp_ts_96[QSFP_IND*PTP_TS_WIDTH+16 +: 80];
-        assign qsfp_rx_ptp_time = eth_rx_ptp_ts_96[QSFP_IND*PTP_TS_WIDTH+16 +: 80];
-    end else begin
-        assign qsfp_tx_axis_tdata = {AXIS_ETH_DATA_WIDTH{1'b0}};
-        assign qsfp_tx_axis_tkeep = {AXIS_ETH_KEEP_WIDTH{1'b0}};
-        assign qsfp_tx_axis_tvalid = 1'b0;
-        assign qsfp_tx_axis_tlast = 1'b0;
-        assign qsfp_tx_axis_tuser = 1'b0;
-        assign qsfp_tx_ptp_time = 80'd0;
-        assign qsfp_rx_ptp_time = 80'd0;
-    end
+    .s_axis_mac_tx_ptp_ts({{qsfp_tx_ptp_ts, 16'd0}}),
+    .s_axis_mac_tx_ptp_ts_tag({qsfp_tx_ptp_ts_tag}),
+    .s_axis_mac_tx_ptp_ts_valid({qsfp_tx_ptp_ts_valid}),
+    .s_axis_mac_tx_ptp_ts_ready(),
 
-endgenerate
+    .mac_rx_clk({qsfp_rx_clk}),
+    .mac_rx_rst({qsfp_rx_rst}),
+
+    .mac_rx_ptp_clk({qsfp_rx_ptp_clk}),
+    .mac_rx_ptp_rst({qsfp_rx_ptp_rst}),
+    .mac_rx_ptp_ts_96({qsfp_rx_ptp_time_int}),
+    .mac_rx_ptp_ts_step(),
+
+    .s_axis_mac_rx_tdata({qsfp_rx_axis_tdata}),
+    .s_axis_mac_rx_tkeep({qsfp_rx_axis_tkeep}),
+    .s_axis_mac_rx_tvalid({qsfp_rx_axis_tvalid}),
+    .s_axis_mac_rx_tready(),
+    .s_axis_mac_rx_tlast({qsfp_rx_axis_tlast}),
+    .s_axis_mac_rx_tuser({{qsfp_rx_axis_tuser[80:1], 16'd0, qsfp_rx_axis_tuser[0]}}),
+
+    // towards datapath
+    .tx_clk(eth_tx_clk),
+    .tx_rst(eth_tx_rst),
+
+    .tx_ptp_ts_96(eth_tx_ptp_ts_96),
+    .tx_ptp_ts_step(eth_tx_ptp_ts_step),
+
+    .s_axis_tx_tdata(axis_eth_tx_tdata),
+    .s_axis_tx_tkeep(axis_eth_tx_tkeep),
+    .s_axis_tx_tvalid(axis_eth_tx_tvalid),
+    .s_axis_tx_tready(axis_eth_tx_tready),
+    .s_axis_tx_tlast(axis_eth_tx_tlast),
+    .s_axis_tx_tuser(axis_eth_tx_tuser),
+
+    .m_axis_tx_ptp_ts(axis_eth_tx_ptp_ts),
+    .m_axis_tx_ptp_ts_tag(axis_eth_tx_ptp_ts_tag),
+    .m_axis_tx_ptp_ts_valid(axis_eth_tx_ptp_ts_valid),
+    .m_axis_tx_ptp_ts_ready(axis_eth_tx_ptp_ts_ready),
+
+    .rx_clk(eth_rx_clk),
+    .rx_rst(eth_rx_rst),
+
+    .rx_ptp_clk(eth_rx_ptp_clk),
+    .rx_ptp_rst(eth_rx_ptp_rst),
+    .rx_ptp_ts_96(eth_rx_ptp_ts_96),
+    .rx_ptp_ts_step(eth_rx_ptp_ts_step),
+
+    .m_axis_rx_tdata(axis_eth_rx_tdata),
+    .m_axis_rx_tkeep(axis_eth_rx_tkeep),
+    .m_axis_rx_tvalid(axis_eth_rx_tvalid),
+    .m_axis_rx_tready(axis_eth_rx_tready),
+    .m_axis_rx_tlast(axis_eth_rx_tlast),
+    .m_axis_rx_tuser(axis_eth_rx_tuser)
+);
 
 mqnic_core_pcie_us #(
     // FW and board IDs

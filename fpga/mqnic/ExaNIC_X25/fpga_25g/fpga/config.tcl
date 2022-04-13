@@ -90,16 +90,10 @@ set eth_xcvr_sec_qpll_fracn [expr {int(fmod($eth_xcvr_sec_line_rate*1000/2 / $et
 set eth_xcvr_rx_eq_mode {DFE}
 
 # Structural configuration
-
-#  counts
-# IF  PORT   SFP 1    SFP 2
-# 1   1      0 (0.0)
-# 1   2      0 (0.0)  1 (0.1)
-# 2   1      0 (0.0)  1 (1.0)
-
 dict set params IF_COUNT "2"
 dict set params PORTS_PER_IF "1"
 dict set params SCHED_PER_IF [dict get $params PORTS_PER_IF]
+dict set params PORT_MASK "0"
 
 # PTP configuration
 dict set params PTP_CLOCK_PIPELINE "0"

@@ -56,6 +56,7 @@ module fpga_core #
     parameter IF_COUNT = 2,
     parameter PORTS_PER_IF = 1,
     parameter SCHED_PER_IF = PORTS_PER_IF,
+    parameter PORT_MASK = 0,
 
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
@@ -642,47 +643,45 @@ wire [PORT_COUNT-1:0]                   port_xgmii_rx_rst;
 wire [PORT_COUNT*XGMII_DATA_WIDTH-1:0]  port_xgmii_rxd;
 wire [PORT_COUNT*XGMII_CTRL_WIDTH-1:0]  port_xgmii_rxc;
 
-//  counts
-// IF  PORT   SFP0     SFP1
-// 1   1      0 (0.0)
-// 1   2      0 (0.0)  1 (0.1)
-// 2   1      0 (0.0)  1 (1.0)
+mqnic_port_map_phy_xgmii #(
+    .PHY_COUNT(2),
+    .PORT_MASK(PORT_MASK),
+    .PORT_GROUP_SIZE(1),
 
-localparam SFP0_IND = 0;
-localparam SFP1_IND = 1;
+    .IF_COUNT(IF_COUNT),
+    .PORTS_PER_IF(PORTS_PER_IF),
+
+    .PORT_COUNT(PORT_COUNT),
+
+    .XGMII_DATA_WIDTH(XGMII_DATA_WIDTH),
+    .XGMII_CTRL_WIDTH(XGMII_CTRL_WIDTH)
+)
+mqnic_port_map_phy_xgmii_inst (
+    // towards PHY
+    .phy_xgmii_tx_clk({sfp1_tx_clk, sfp0_tx_clk}),
+    .phy_xgmii_tx_rst({sfp1_tx_rst, sfp0_tx_rst}),
+    .phy_xgmii_txd({sfp1_txd, sfp0_txd}),
+    .phy_xgmii_txc({sfp1_txc, sfp0_txc}),
+
+    .phy_xgmii_rx_clk({sfp1_rx_clk, sfp0_rx_clk}),
+    .phy_xgmii_rx_rst({sfp1_rx_rst, sfp0_rx_rst}),
+    .phy_xgmii_rxd({sfp1_rxd, sfp0_rxd}),
+    .phy_xgmii_rxc({sfp1_rxc, sfp0_rxc}),
+
+    // towards MAC
+    .port_xgmii_tx_clk(port_xgmii_tx_clk),
+    .port_xgmii_tx_rst(port_xgmii_tx_rst),
+    .port_xgmii_txd(port_xgmii_txd),
+    .port_xgmii_txc(port_xgmii_txc),
+
+    .port_xgmii_rx_clk(port_xgmii_rx_clk),
+    .port_xgmii_rx_rst(port_xgmii_rx_rst),
+    .port_xgmii_rxd(port_xgmii_rxd),
+    .port_xgmii_rxc(port_xgmii_rxc)
+);
 
 generate
-    genvar m, n;
-
-    if (SFP0_IND >= 0 && SFP0_IND < PORT_COUNT) begin
-        assign port_xgmii_tx_clk[SFP0_IND] = sfp0_tx_clk;
-        assign port_xgmii_tx_rst[SFP0_IND] = sfp0_tx_rst;
-        assign port_xgmii_rx_clk[SFP0_IND] = sfp0_rx_clk;
-        assign port_xgmii_rx_rst[SFP0_IND] = sfp0_rx_rst;
-        assign port_xgmii_rxd[SFP0_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = sfp0_rxd;
-        assign port_xgmii_rxc[SFP0_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = sfp0_rxc;
-
-        assign sfp0_txd = port_xgmii_txd[SFP0_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
-        assign sfp0_txc = port_xgmii_txc[SFP0_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
-    end else begin
-        assign sfp0_txd = {XGMII_CTRL_WIDTH{8'h07}};
-        assign sfp0_txc = {XGMII_CTRL_WIDTH{1'b1}};
-    end
-
-    if (SFP1_IND >= 0 && SFP1_IND < PORT_COUNT) begin
-        assign port_xgmii_tx_clk[SFP1_IND] = sfp1_tx_clk;
-        assign port_xgmii_tx_rst[SFP1_IND] = sfp1_tx_rst;
-        assign port_xgmii_rx_clk[SFP1_IND] = sfp1_rx_clk;
-        assign port_xgmii_rx_rst[SFP1_IND] = sfp1_rx_rst;
-        assign port_xgmii_rxd[SFP1_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = sfp1_rxd;
-        assign port_xgmii_rxc[SFP1_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = sfp1_rxc;
-
-        assign sfp1_txd = port_xgmii_txd[SFP1_IND*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
-        assign sfp1_txc = port_xgmii_txc[SFP1_IND*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
-    end else begin
-        assign sfp1_txd = {XGMII_CTRL_WIDTH{8'h07}};
-        assign sfp1_txc = {XGMII_CTRL_WIDTH{1'b1}};
-    end
+    genvar n;
 
     for (n = 0; n < PORT_COUNT; n = n + 1) begin : mac
 

@@ -298,6 +298,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "mqnic_ptp.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_clock.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_perout.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_map_phy_xgmii.v"),
         os.path.join(rtl_dir, "common", "cpl_write.v"),
         os.path.join(rtl_dir, "common", "cpl_op_mux.v"),
         os.path.join(rtl_dir, "common", "desc_fetch.v"),
@@ -371,6 +372,7 @@ def test_fpga_core(request):
     parameters['IF_COUNT'] = 2
     parameters['PORTS_PER_IF'] = 1
     parameters['SCHED_PER_IF'] = parameters['PORTS_PER_IF']
+    parameters['PORT_MASK'] = 0
 
     # PTP configuration
     parameters['PTP_CLOCK_PIPELINE'] = 0

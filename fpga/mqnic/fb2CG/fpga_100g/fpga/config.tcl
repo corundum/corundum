@@ -91,6 +91,7 @@ dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
 dict set params IF_COUNT "2"
 dict set params PORTS_PER_IF "1"
 dict set params SCHED_PER_IF [dict get $params PORTS_PER_IF]
+dict set params PORT_MASK "0"
 
 # PTP configuration
 dict set params PTP_CLOCK_PIPELINE "0"

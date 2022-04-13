@@ -56,6 +56,7 @@ module fpga #
     parameter IF_COUNT = 2,
     parameter PORTS_PER_IF = 1,
     parameter SCHED_PER_IF = PORTS_PER_IF,
+    parameter PORT_MASK = 0,
 
     // PTP configuration
     parameter PTP_CLOCK_PIPELINE = 0,
@@ -1814,6 +1815,7 @@ fpga_core #(
     .IF_COUNT(IF_COUNT),
     .PORTS_PER_IF(PORTS_PER_IF),
     .SCHED_PER_IF(SCHED_PER_IF),
+    .PORT_MASK(PORT_MASK),
 
     // PTP configuration
     .PTP_TS_WIDTH(PTP_TS_WIDTH),

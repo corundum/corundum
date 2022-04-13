@@ -117,6 +117,7 @@ set eth_xcvr_rx_eq_mode {DFE}
 dict set params IF_COUNT "2"
 dict set params PORTS_PER_IF "1"
 dict set params SCHED_PER_IF [dict get $params PORTS_PER_IF]
+dict set params PORT_MASK "0"
 
 # PTP configuration
 dict set params PTP_CLOCK_PIPELINE "0"

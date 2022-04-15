@@ -683,6 +683,8 @@ int main(int argc, char *argv[])
 
     if ((flash_rb = find_reg_block(dev->rb_list, MQNIC_RB_SPI_FLASH_TYPE, MQNIC_RB_SPI_FLASH_VER, 0)))
     {
+        uint32_t reg_val;
+
         // SPI flash
         flash_format = mqnic_reg_read32(flash_rb->regs, MQNIC_RB_SPI_FLASH_REG_FORMAT);
 
@@ -690,7 +692,29 @@ int main(int argc, char *argv[])
         printf("Flash format: 0x%08x\n", flash_format);
 
         flash_configuration = flash_format >> 8;
-        flash_data_width = flash_format >> 16;
+
+        // determine data width
+        flash_data_width = 0;
+
+        mqnic_reg_write32(flash_rb->regs, MQNIC_RB_SPI_FLASH_REG_CTRL_0, 0x0002000f);
+        reg_val = mqnic_reg_read32(flash_rb->regs, MQNIC_RB_SPI_FLASH_REG_CTRL_0) & 0xf;
+        mqnic_reg_write32(flash_rb->regs, MQNIC_RB_SPI_FLASH_REG_CTRL_0, 0x00020000);
+
+        while (reg_val)
+        {
+            reg_val >>= 1;
+            flash_data_width++;
+        }
+
+        mqnic_reg_write32(flash_rb->regs, MQNIC_RB_SPI_FLASH_REG_CTRL_1, 0x0002000f);
+        reg_val = mqnic_reg_read32(flash_rb->regs, MQNIC_RB_SPI_FLASH_REG_CTRL_1) & 0xf;
+        mqnic_reg_write32(flash_rb->regs, MQNIC_RB_SPI_FLASH_REG_CTRL_1, 0x00020000);
+
+        while (reg_val)
+        {
+            reg_val >>= 1;
+            flash_data_width++;
+        }
 
         printf("Data width: %d\n", flash_data_width);
 
@@ -725,6 +749,8 @@ int main(int argc, char *argv[])
     }
     else if ((flash_rb = find_reg_block(dev->rb_list, MQNIC_RB_BPI_FLASH_TYPE, MQNIC_RB_BPI_FLASH_VER, 0)))
     {
+        uint32_t reg_val;
+
         // BPI flash
         flash_format = mqnic_reg_read32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_FORMAT);
 
@@ -732,7 +758,18 @@ int main(int argc, char *argv[])
         printf("Flash format: 0x%08x\n", flash_format);
 
         flash_configuration = flash_format >> 8;
-        flash_data_width = flash_format >> 16;
+
+        // determine data width
+        mqnic_reg_write32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_DATA, 0xffffffff);
+        reg_val = mqnic_reg_read32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_DATA);
+        mqnic_reg_write32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_DATA, 0x00000000);
+
+        flash_data_width = 0;
+        while (reg_val)
+        {
+            reg_val >>= 1;
+            flash_data_width++;
+        }
 
         printf("Data width: %d\n", flash_data_width);
 

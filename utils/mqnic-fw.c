@@ -649,7 +649,6 @@ int main(int argc, char *argv[])
 
     uint8_t flash_configuration = 0;
     uint8_t flash_data_width = 0;
-    uint8_t flash_addr_width = 0;
 
     printf("FPGA ID: 0x%08x\n", dev->fpga_id);
     printf("FPGA part: %s\n", fpga_part);
@@ -692,7 +691,6 @@ int main(int argc, char *argv[])
 
         flash_configuration = flash_format >> 8;
         flash_data_width = flash_format >> 16;
-        flash_addr_width = flash_format >> 24;
 
         printf("Data width: %d\n", flash_data_width);
 
@@ -735,10 +733,8 @@ int main(int argc, char *argv[])
 
         flash_configuration = flash_format >> 8;
         flash_data_width = flash_format >> 16;
-        flash_addr_width = flash_format >> 24;
 
         printf("Data width: %d\n", flash_data_width);
-        printf("Address width: %d\n", flash_addr_width);
 
         bitswap = 1;
 

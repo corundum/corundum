@@ -382,7 +382,7 @@ int spi_flash_read(struct flash_device *fdev, size_t addr, size_t len, void *des
         protocol = SPI_PROTO_QUAD_STR;
     }
 
-    if (addr > 0xffffff)
+    if (fdev->size > 0x1000000)
     {
         // four byte address read
         if (protocol == SPI_PROTO_QUAD_STR)
@@ -453,7 +453,7 @@ int spi_flash_write(struct flash_device *fdev, size_t addr, size_t len, const vo
             return -1;
         }
 
-        if (addr > 0xffffff)
+        if (fdev->size > 0x1000000)
         {
             // four byte address page program
             if (protocol == SPI_PROTO_QUAD_STR)
@@ -539,7 +539,7 @@ int spi_flash_erase(struct flash_device *fdev, size_t addr, size_t len)
         }
 
         // block erase
-        if (addr > 0xffffff)
+        if (fdev->size > 0x1000000)
         {
             if (erase_block_size == SPI_SECTOR_SIZE)
             {

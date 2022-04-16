@@ -144,6 +144,27 @@ static int read_mac_from_eeprom(struct mqnic_dev *mqnic,
 	return 0;
 }
 
+static int read_mac_from_eeprom_hex(struct mqnic_dev *mqnic,
+		struct i2c_client *eeprom, int offset, char *mac)
+{
+	int ret;
+	char mac_hex[3*ETH_ALEN];
+
+	if (!eeprom) {
+		dev_warn(mqnic->dev, "Failed to read MAC from EEPROM; no EEPROM I2C client registered");
+		return -1;
+	}
+
+	ret = i2c_smbus_read_i2c_block_data(eeprom, offset, 3 * ETH_ALEN - 1, mac_hex);
+	mac_hex[3*ETH_ALEN-1] = 0;
+	if (ret < 0 || !mac_pton(mac_hex, mac)) {
+		dev_warn(mqnic->dev, "Failed to read MAC from EEPROM");
+		return -1;
+	}
+
+	return 0;
+}
+
 static int init_mac_list_from_eeprom_base(struct mqnic_dev *mqnic,
 		struct i2c_client *eeprom, int offset, int count)
 {
@@ -151,6 +172,24 @@ static int init_mac_list_from_eeprom_base(struct mqnic_dev *mqnic,
 	char mac[ETH_ALEN];
 
 	ret = read_mac_from_eeprom(mqnic, eeprom, offset, mac);
+	if (ret < 0)
+		return ret;
+
+	if (!is_valid_ether_addr(mac)) {
+		dev_warn(mqnic->dev, "EEPROM does not contain a valid base MAC");
+		return -1;
+	}
+
+	return init_mac_list_from_base_mac(mqnic, count, mac);
+}
+
+static int init_mac_list_from_eeprom_base_hex(struct mqnic_dev *mqnic,
+		struct i2c_client *eeprom, int offset, int count)
+{
+	int ret;
+	char mac[ETH_ALEN];
+
+	ret = read_mac_from_eeprom_hex(mqnic, eeprom, offset, mac);
 	if (ret < 0)
 		return ret;
 
@@ -390,6 +429,46 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 
 		// read MACs from EEPROM
 		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0, MQNIC_MAX_IF);
+
+		break;
+	case MQNIC_BOARD_ID_XUPP3R:
+
+		request_module("at24");
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
+
+		// QSFP0
+		mqnic->mod_i2c_client[0] = create_i2c_client(adapter, "24c02", 0x50, NULL);
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 1);
+
+		// QSFP1
+		mqnic->mod_i2c_client[1] = create_i2c_client(adapter, "24c02", 0x50, NULL);
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 2);
+
+		// QSFP2
+		mqnic->mod_i2c_client[2] = create_i2c_client(adapter, "24c02", 0x50, NULL);
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 3);
+
+		// QSFP3
+		mqnic->mod_i2c_client[3] = create_i2c_client(adapter, "24c02", 0x50, NULL);
+
+		mqnic->mod_i2c_client_count = 4;
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 4);
+
+		// I2C EEPROM
+		mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c04", 0x50, NULL);
+
+		// read MACs from EEPROM
+		init_mac_list_from_eeprom_base_hex(mqnic, mqnic->eeprom_i2c_client, 4, MQNIC_MAX_IF);
 
 		break;
 	case MQNIC_BOARD_ID_EXANIC_X10:

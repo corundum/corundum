@@ -22,6 +22,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     Exablaze      ExaNIC X25               XCKU3P-2FFVB676E      0x1ce40009
     Silicom       fb2CG\@KU15P             XCKU15P-2FFVE1760E    0x1c2ca00e
     Digilent      NetFPGA SUME             XC7V690T-3FFG1761     0x10ee7028
+    BittWare      XUP-P3R                  XCVU9P-2FLGB2104E     0x12ba9823
     Intel         DK-DEV-1SMX-H-A          1SM21BHU2F53E1VG      0x11720001
     Intel         DK-DEV-1SMC-H-A          1SM21CHU1F53E1VG      0x11720001
     Xilinx        Alveo U50                XCU50-2FSVH2104E      0x10ee9032
@@ -45,6 +46,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     ExaNIC X25               Gen 3 x8   2x SFP28    \-                               \-
     fb2CG\@KU15P             Gen 3 x16  2x QSFP28   16 GB DDR4 2400 (4x 512M x72)    \-
     NetFPGA SUME             Gen 3 x8   4x SFP+     8 GB DDR3 1866 (2x 512M x64)     \-
+    XUP-P3R                  Gen 3 x16  4x QSFP28   4x DDR4 2400 DIMM (4x x72)       \-
     DK-DEV-1SMX-H-A          Gen 3 x8   2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     8 GB
     DK-DEV-1SMC-H-A          Gen 3 x8   2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     16 GB
     Alveo U50                Gen 3 x16  1x QSFP28   \-                               8 GB
@@ -68,6 +70,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     ExaNIC X25               N :sup:`3`    Y             Y
     fb2CG\@KU15P             Y             Y             Y
     NetFPGA SUME             Y             N :sup:`7`    N :sup:`8`
+    XUP-P3R                  Y             Y             Y
     DK-DEV-1SMX-H-A          N             N             N
     DK-DEV-1SMC-H-A          N             N             N
     Alveo U50                N :sup:`4`    Y             Y
@@ -110,6 +113,9 @@ This section details PCIe form-factor targets, which interface with a separate h
     fb2CG\@KU15P             mqnic/fpga_100g/fpga         2x1   256/8K   100G  RR
     fb2CG\@KU15P             mqnic/fpga_100g/fpga_tdma    2x1   256/256  100G  TDMA
     NetFPGA SUME             mqnic/fpga/fpga              1x1   256/512  10G   RR
+    XUP-P3R                  mqnic/fpga_25g/fpga          4x1   256/8K   25G   RR
+    XUP-P3R                  mqnic/fpga_25g/fpga_10g      4x1   256/8K   10G   RR
+    XUP-P3R                  mqnic/fpga_100g/fpga         4x1   256/8K   100G  RR
     DK-DEV-1SMX-H-A          mqnic/fpga_10g/fpga_1sm21b   2x1   256/1K   10G   RR
     DK-DEV-1SMC-H-A          mqnic/fpga_10g/fpga_1sm21c   2x1   256/1K   10G   RR
     Alveo U50                mqnic/fpga_25g/fpga          1x1   256/8K   25G   RR

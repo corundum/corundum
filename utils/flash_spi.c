@@ -344,6 +344,13 @@ int spi_flash_init(struct flash_device *fdev)
     printf("Memory type: 0x%02x\n", mem_type);
     printf("Memory capacity: 0x%02x\n", mem_capacity);
 
+    if (mfr_id == 0 || mfr_id == 0xff)
+    {
+        fprintf(stderr, "Failed to read flash ID\n");
+        spi_flash_deselect(fdev);
+        return -1;
+    }
+
     // convert from BCD
     mem_capacity = (mem_capacity & 0xf) + (((mem_capacity >> 4) & 0xf) * 10);
 

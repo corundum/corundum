@@ -126,8 +126,10 @@ static void usage(char *name)
         " -s slot    slot to program (default 1)\n"
         " -r file    read flash to file\n"
         " -w file    write and verify flash from file\n"
+        " -e         erase flash\n"
         " -b         boot FPGA from flash\n"
-        " -t         hot reset FPGA\n",
+        " -t         hot reset FPGA\n"
+        " -y         no interactive confirm\n",
         name);
 }
 
@@ -558,8 +560,10 @@ int main(int argc, char *argv[])
 
     char action_read = 0;
     char action_write = 0;
+    char action_erase = 0;
     char action_boot = 0;
     char action_reset = 0;
+    char no_confirm = 0;
 
     struct mqnic *dev = NULL;
 
@@ -575,7 +579,7 @@ int main(int argc, char *argv[])
     name = strrchr(argv[0], '/');
     name = name ? 1+name : argv[0];
 
-    while ((opt = getopt(argc, argv, "d:s:r:w:bth?")) != EOF)
+    while ((opt = getopt(argc, argv, "d:s:r:w:ebtyh?")) != EOF)
     {
         switch (opt)
         {
@@ -593,12 +597,18 @@ int main(int argc, char *argv[])
             action_write = 1;
             write_file_name = optarg;
             break;
+        case 'e':
+            action_erase = 1;
+            break;
         case 'b':
             action_boot = 1;
             action_reset = 1;
             break;
         case 't':
             action_reset = 1;
+            break;
+        case 'y':
+            no_confirm = 1;
             break;
         case 'h':
         case '?':
@@ -885,6 +895,57 @@ int main(int argc, char *argv[])
     segment_size = flash_segment_length[slot];
 
     printf("Selected: segment %d start 0x%08lx length 0x%08lx\n", slot, segment_offset, segment_size);
+
+    if (action_erase)
+    {
+        if (!no_confirm)
+        {
+            char str[32];
+
+            printf("Are you sure you want to erase the selected segment?\n");
+            printf("[y/N]: ");
+
+            fgets(str, sizeof(str), stdin);
+
+            if (str[0] != 'y' && str[0] != 'Y')
+                goto err;
+        }
+
+        if (dual_qspi)
+        {
+            // Dual QSPI flash
+            printf("Erasing primary flash...\n");
+            if (flash_erase_progress(pri_flash, segment_offset/2, segment_size/2))
+            {
+                fprintf(stderr, "Erase failed!\n");
+                ret = -1;
+                goto err;
+            }
+
+            printf("Erasing secondary flash...\n");
+            if (flash_erase_progress(sec_flash, segment_offset/2, segment_size/2))
+            {
+                fprintf(stderr, "Erase failed!\n");
+                ret = -1;
+                goto err;
+            }
+
+            printf("Erase complete!\n");
+        }
+        else
+        {
+            // SPI or BPI flash
+            printf("Erasing flash...\n");
+            if (flash_erase_progress(pri_flash, segment_offset, segment_size))
+            {
+                fprintf(stderr, "Erase failed!\n");
+                ret = -1;
+                goto err;
+            }
+
+            printf("Erase complete!\n");
+        }
+    }
 
     if (action_write)
     {

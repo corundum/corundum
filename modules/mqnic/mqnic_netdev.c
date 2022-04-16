@@ -41,7 +41,8 @@ static int mqnic_start_port(struct net_device *ndev)
 	struct mqnic_dev *mdev = priv->mdev;
 	int k;
 
-	dev_info(mdev->dev, "%s on port %d", __func__, priv->index);
+	dev_info(mdev->dev, "%s on interface %d netdev %d", __func__,
+			priv->interface->index, priv->index);
 
 	// set up RX queues
 	for (k = 0; k < min(priv->rx_queue_count, priv->rx_cpl_queue_count); k++) {
@@ -108,7 +109,8 @@ static int mqnic_stop_port(struct net_device *ndev)
 	struct mqnic_dev *mdev = priv->mdev;
 	int k;
 
-	dev_info(mdev->dev, "%s on port %d", __func__, priv->index);
+	dev_info(mdev->dev, "%s on interface %d netdev %d", __func__,
+			priv->interface->index, priv->index);
 
 	netif_tx_lock_bh(ndev);
 //	if (detach)
@@ -172,7 +174,8 @@ static int mqnic_open(struct net_device *ndev)
 	ret = mqnic_start_port(ndev);
 
 	if (ret)
-		dev_err(mdev->dev, "Failed to start port: %d", priv->index);
+		dev_err(mdev->dev, "Failed to start port on interface %d netdev %d: %d",
+				priv->interface->index, priv->index, ret);
 
 	mutex_unlock(&mdev->state_lock);
 	return ret;
@@ -189,7 +192,8 @@ static int mqnic_close(struct net_device *ndev)
 	ret = mqnic_stop_port(ndev);
 
 	if (ret)
-		dev_err(mdev->dev, "Failed to stop port: %d", priv->index);
+		dev_err(mdev->dev, "Failed to stop port on interface %d netdev %d: %d",
+				priv->interface->index, priv->index, ret);
 
 	mutex_unlock(&mdev->state_lock);
 	return ret;
@@ -489,7 +493,8 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 
 	ret = register_netdev(ndev);
 	if (ret) {
-		dev_err(dev, "netdev registration failed on port %d", index);
+		dev_err(dev, "netdev registration failed on interface %d netdev %d: %d",
+				priv->interface->index, priv->index, ret);
 		goto fail;
 	}
 

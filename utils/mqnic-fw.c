@@ -1125,6 +1125,19 @@ int main(int argc, char *argv[])
                 len_int += pri_flash->erase_block_size - ((segment_offset/2 + len_int) & (pri_flash->erase_block_size-1));
             }
 
+            if (!no_confirm)
+            {
+                char str[32];
+
+                printf("Are you sure you want to write the selected segment?\n");
+                printf("[y/N]: ");
+
+                fgets(str, sizeof(str), stdin);
+
+                if (str[0] != 'y' && str[0] != 'Y')
+                    goto err;
+            }
+
             printf("Erasing primary flash...\n");
             if (flash_erase_progress(pri_flash, segment_offset/2, len_int))
             {
@@ -1182,6 +1195,19 @@ int main(int argc, char *argv[])
             if ((segment_offset + len) & (pri_flash->erase_block_size-1))
             {
                 len += pri_flash->erase_block_size - ((segment_offset + len) & (pri_flash->erase_block_size-1));
+            }
+
+            if (!no_confirm)
+            {
+                char str[32];
+
+                printf("Are you sure you want to write the selected segment?\n");
+                printf("[y/N]: ");
+
+                fgets(str, sizeof(str), stdin);
+
+                if (str[0] != 'y' && str[0] != 'Y')
+                    goto err;
             }
 
             printf("Erasing flash...\n");
@@ -1316,6 +1342,22 @@ skip_flash:
 
     if (action_boot || action_reset)
     {
+        if (!no_confirm)
+        {
+            char str[32];
+
+            if (action_boot)
+                printf("Are you sure you want to boot from flash?\n");
+            else
+                printf("Are you sure you want to perform a reset?\n");
+            printf("[y/N]: ");
+
+            fgets(str, sizeof(str), stdin);
+
+            if (str[0] != 'y' && str[0] != 'Y')
+                goto err;
+        }
+
         printf("Preparing to reset device...\n");
 
         // disable fatal error reporting on port (to prevent IPMI-triggered reboot)

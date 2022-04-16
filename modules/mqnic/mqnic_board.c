@@ -396,6 +396,8 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 	case MQNIC_BOARD_ID_EXANIC_X25:
 	case MQNIC_BOARD_ID_ADM_PCIE_9V3:
 
+		request_module("at24");
+
 		// create I2C adapter
 		adapter = mqnic_i2c_adapter_create(mqnic, 1);
 

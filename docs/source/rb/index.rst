@@ -79,8 +79,8 @@ The NIC register space is constructed from a linked list of register blocks.  Ea
     0x0000C081  0x00000100  :ref:`rb_phc_perout`
     0x0000C100  0x00000100  :ref:`rb_gpio`
     0x0000C110  0x00000100  :ref:`rb_i2c`
-    0x0000C120  0x00000100  :ref:`rb_flash_spi`
-    0x0000C121  0x00000100  :ref:`rb_flash_bpi`
+    0x0000C120  0x00000200  :ref:`rb_flash_spi`
+    0x0000C121  0x00000200  :ref:`rb_flash_bpi`
     0x0000C140  0x00000100  :ref:`rb_bmc_alveo`
     0x0000C141  0x00000100  :ref:`rb_bmc_gecko`
     0x0000C150  0x00000100  :ref:`rb_drp`

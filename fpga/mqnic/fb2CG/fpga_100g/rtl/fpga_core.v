@@ -594,14 +594,14 @@ always @(posedge clk_250mhz) begin
             end
             // QSPI flash
             RBB+8'h30: ctrl_reg_rd_data_reg <= 32'h0000C120;             // SPI flash ctrl: Type
-            RBB+8'h34: ctrl_reg_rd_data_reg <= 32'h00000100;             // SPI flash ctrl: Version
+            RBB+8'h34: ctrl_reg_rd_data_reg <= 32'h00000200;             // SPI flash ctrl: Version
             RBB+8'h38: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h50;       // SPI flash ctrl: Next header
             RBB+8'h3C: begin
                 // SPI flash ctrl: format
-                ctrl_reg_rd_data_reg[7:0]   <= 0; // type (SPI)
-                ctrl_reg_rd_data_reg[15:8]  <= 1; // configuration (one segment)
-                ctrl_reg_rd_data_reg[23:16] <= 4; // data width (QSPI)
-                ctrl_reg_rd_data_reg[31:24] <= 0; // address width (N/A for SPI)
+                ctrl_reg_rd_data_reg[3:0]   <= 1;                   // configuration (one segment)
+                ctrl_reg_rd_data_reg[7:4]   <= 0;                   // default segment
+                ctrl_reg_rd_data_reg[11:8]  <= 0;                   // fallback segment (none)
+                ctrl_reg_rd_data_reg[31:12] <= 32'h00000000 >> 12;  // first segment size (N/A)
             end
             RBB+8'h40: begin
                 // SPI flash ctrl: control 0

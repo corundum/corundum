@@ -620,14 +620,14 @@ always @(posedge clk_250mhz) begin
             end
             // BPI flash
             RBB+8'h30: ctrl_reg_rd_data_reg <= 32'h0000C121;             // SPI flash ctrl: Type
-            RBB+8'h34: ctrl_reg_rd_data_reg <= 32'h00000100;             // SPI flash ctrl: Version
+            RBB+8'h34: ctrl_reg_rd_data_reg <= 32'h00000200;             // SPI flash ctrl: Version
             RBB+8'h38: ctrl_reg_rd_data_reg <= RB_DRP_SFP_BASE;          // SPI flash ctrl: Next header
             RBB+8'h3C: begin
                 // BPI flash ctrl: format
-                ctrl_reg_rd_data_reg[7:0]   <= 1;   // type (BPI)
-                ctrl_reg_rd_data_reg[15:8]  <= 2;   // configuration (two segments)
-                ctrl_reg_rd_data_reg[23:16] <= 16;  // data width
-                ctrl_reg_rd_data_reg[31:24] <= 24;  // address width
+                ctrl_reg_rd_data_reg[3:0]   <= 2;                   // configuration (two segments)
+                ctrl_reg_rd_data_reg[7:4]   <= 1;                   // default segment
+                ctrl_reg_rd_data_reg[11:8]  <= 0;                   // fallback segment
+                ctrl_reg_rd_data_reg[31:12] <= 32'h00000000 >> 12;  // first segment size (even split)
             end
             RBB+8'h40: begin
                 // BPI flash ctrl: address

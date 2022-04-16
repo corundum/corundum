@@ -123,7 +123,7 @@ static void usage(char *name)
     fprintf(stderr,
         "usage: %s [options]\n"
         " -d name    device to open (/dev/mqnic0)\n"
-        " -s slot    slot to program (default 1)\n"
+        " -s slot    slot to program\n"
         " -r file    read flash to file\n"
         " -w file    write and verify flash from file\n"
         " -e         erase flash\n"
@@ -659,6 +659,9 @@ int main(int argc, char *argv[])
 
     uint8_t flash_configuration = 0;
     uint8_t flash_data_width = 0;
+    uint8_t flash_default_segment = 0;
+    uint8_t flash_fallback_segment = 0;
+    uint32_t flash_segment0_length = 0;
 
     printf("FPGA ID: 0x%08x\n", dev->fpga_id);
     printf("FPGA part: %s\n", fpga_part);
@@ -691,7 +694,7 @@ int main(int argc, char *argv[])
     size_t segment_size = 0;
     size_t segment_offset = 0;
 
-    if ((flash_rb = find_reg_block(dev->rb_list, MQNIC_RB_SPI_FLASH_TYPE, MQNIC_RB_SPI_FLASH_VER, 0)))
+    if ((flash_rb = find_reg_block(dev->rb_list, MQNIC_RB_SPI_FLASH_TYPE, 0, 0)))
     {
         uint32_t reg_val;
 
@@ -701,7 +704,31 @@ int main(int argc, char *argv[])
         printf("Flash type: SPI\n");
         printf("Flash format: 0x%08x\n", flash_format);
 
-        flash_configuration = flash_format >> 8;
+        switch (flash_rb->version) {
+            case 0x00000100:
+                flash_configuration = (flash_format >> 8) & 0xff;
+                flash_default_segment = (flash_configuration > 1 ? 1 : 0);
+                flash_fallback_segment = 0;
+                flash_segment0_length = 0;
+
+                if (flash_configuration == 0x81)
+                {
+                    // Alveo boards
+                    flash_configuration = 2;
+                    flash_segment0_length = 0x01002000;
+                }
+                break;
+            case MQNIC_RB_SPI_FLASH_VER:
+                flash_configuration = flash_format & 0xf;
+                flash_default_segment = (flash_format >> 4) & 0xf;
+                flash_fallback_segment = (flash_format >> 8) & 0xf;
+                flash_segment0_length = flash_format & 0xfffff000;
+                break;
+            default:
+                fprintf(stderr, "Unknown SPI flash block version\n");
+                ret = -1;
+                goto skip_flash;
+        }
 
         // determine data width
         flash_data_width = 0;
@@ -757,7 +784,7 @@ int main(int argc, char *argv[])
             flash_size = pri_flash->size;
         }
     }
-    else if ((flash_rb = find_reg_block(dev->rb_list, MQNIC_RB_BPI_FLASH_TYPE, MQNIC_RB_BPI_FLASH_VER, 0)))
+    else if ((flash_rb = find_reg_block(dev->rb_list, MQNIC_RB_BPI_FLASH_TYPE, 0, 0)))
     {
         uint32_t reg_val;
 
@@ -767,7 +794,24 @@ int main(int argc, char *argv[])
         printf("Flash type: BPI\n");
         printf("Flash format: 0x%08x\n", flash_format);
 
-        flash_configuration = flash_format >> 8;
+        switch (flash_rb->version) {
+            case 0x00000100:
+                flash_configuration = (flash_format >> 8) & 0xff;
+                flash_default_segment = (flash_configuration > 1 ? 1 : 0);
+                flash_fallback_segment = 0;
+                flash_segment0_length = 0;
+                break;
+            case MQNIC_RB_BPI_FLASH_VER:
+                flash_configuration = flash_format & 0xf;
+                flash_default_segment = (flash_format >> 4) & 0xf;
+                flash_fallback_segment = (flash_format >> 8) & 0xf;
+                flash_segment0_length = flash_format & 0xfffff000;
+                break;
+            default:
+                fprintf(stderr, "Unknown BPI flash block version\n");
+                ret = -1;
+                goto skip_flash;
+        }
 
         // determine data width
         mqnic_reg_write32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_DATA, 0xffffffff);
@@ -820,11 +864,22 @@ int main(int argc, char *argv[])
             flash_segment_length[0] = flash_size;
             break;
         case 2:
+            if (flash_segment0_length == 0)
+            {
+                flash_segment0_length = flash_size >> 1;
+            }
+            else if (flash_size < flash_segment0_length)
+            {
+                fprintf(stderr, "Invalid flash configuration\n");
+                ret = -1;
+                goto skip_flash;
+            }
+
             flash_segment_count = 2;
             flash_segment_start[0] = 0;
-            flash_segment_length[0] = flash_size >> 1;
+            flash_segment_length[0] = flash_segment0_length;
             flash_segment_start[1] = flash_segment_start[0]+flash_segment_length[0];
-            flash_segment_length[1] = flash_size >> 1;
+            flash_segment_length[1] = flash_size-flash_segment_start[1];
             break;
         case 4:
             flash_segment_count = 4;
@@ -846,21 +901,6 @@ int main(int argc, char *argv[])
                 flash_segment_length[k] = flash_size >> 3;
             }
             break;
-        case 0x81:
-            // Alveo boards
-            if (flash_size < 0x01002000)
-            {
-                fprintf(stderr, "Invalid flash size\n");
-                ret = -1;
-                goto skip_flash;
-            }
-
-            flash_segment_count = 2;
-            flash_segment_start[0] = 0;
-            flash_segment_length[0] = 0x01002000;
-            flash_segment_start[1] = flash_segment_start[0]+flash_segment_length[0];
-            flash_segment_length[1] = flash_size - flash_segment_start[1];
-            break;
         default:
             fprintf(stderr, "Unknown flash configuration (0x%02x)\n", flash_configuration);
             ret = -1;
@@ -872,16 +912,19 @@ int main(int argc, char *argv[])
         printf("Flash segment %d: start 0x%08lx length 0x%08lx\n", k, flash_segment_start[k], flash_segment_length[k]);
     }
 
+    printf("Default segment: %d\n", flash_default_segment);
+    if (flash_fallback_segment == flash_default_segment || flash_fallback_segment >= flash_segment_count)
+    {
+        printf("Fallback segment: none\n");
+    }
+    else
+    {
+        printf("Fallback segment: %d\n", flash_fallback_segment);
+    }
+
     if (slot < 0)
     {
-        if (flash_segment_count > 1)
-        {
-            slot = 1;
-        }
-        else
-        {
-            slot = 0;
-        }
+        slot = flash_default_segment;
     }
 
     if ((action_read || action_write) && (slot < 0 || slot >= flash_segment_count))

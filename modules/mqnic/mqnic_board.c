@@ -408,6 +408,34 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0, MQNIC_MAX_IF);
 
 		break;
+	case MQNIC_BOARD_ID_DNPCIE_40G_KU:
+
+		request_module("at24");
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
+
+		// QSFP0
+		mqnic->mod_i2c_client[0] = create_i2c_client(adapter, "24c02", 0x50, NULL);
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 1);
+
+		// QSFP1
+		mqnic->mod_i2c_client[1] = create_i2c_client(adapter, "24c02", 0x50, NULL);
+
+		mqnic->mod_i2c_client_count = 2;
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 2);
+
+		// I2C EEPROM
+		mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c256", 0x50, NULL);
+
+		// read MACs from EEPROM
+		// init_mac_list_from_eeprom(mqnic, mqnic->eeprom_i2c_client, 0x000E, MQNIC_MAX_IF);
+
+		break;
 	default:
 		dev_warn(mqnic->dev, "Unknown board ID, not performing any board-specific init");
 	}

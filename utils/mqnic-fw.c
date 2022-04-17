@@ -814,8 +814,10 @@ int main(int argc, char *argv[])
         }
 
         // determine data width
+        mqnic_reg_write32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_CTRL, 0x0001010f);
         mqnic_reg_write32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_DATA, 0xffffffff);
         reg_val = mqnic_reg_read32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_DATA);
+        mqnic_reg_write32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_CTRL, 0x0000000f);
         mqnic_reg_write32(flash_rb->regs, MQNIC_RB_BPI_FLASH_REG_DATA, 0x00000000);
 
         flash_data_width = 0;

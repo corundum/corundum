@@ -244,6 +244,8 @@ static int mqnic_platform_module_eeprom_get(struct mqnic_dev *mqnic)
 }
 #endif
 
+static void mqnic_common_remove(struct mqnic_dev *mqnic);
+
 static int mqnic_common_probe(struct mqnic_dev *mqnic)
 {
 	int ret = 0;
@@ -387,6 +389,7 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 		}
 	}
 
+fail_create_if:
 	mqnic->misc_dev.minor = MISC_DYNAMIC_MINOR;
 	mqnic->misc_dev.name = mqnic->name;
 	mqnic->misc_dev.fops = &mqnic_fops;
@@ -394,6 +397,7 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 
 	ret = misc_register(&mqnic->misc_dev);
 	if (ret) {
+		mqnic->misc_dev.this_device = NULL;
 		dev_err(dev, "misc_register failed: %d\n", ret);
 		goto fail_miscdev;
 	}
@@ -405,17 +409,10 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 
 	// error handling
 fail_miscdev:
-fail_create_if:
-	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++)
-		if (mqnic->interface[k])
-			mqnic_destroy_interface(&mqnic->interface[k]);
-
-	mqnic_unregister_phc(mqnic);
-	mqnic_board_deinit(mqnic);
 fail_board:
 fail_bar_size:
 fail_rb_init:
-	free_reg_block_list(mqnic->rb_list);
+	mqnic_common_remove(mqnic);
 	return ret;
 }
 
@@ -423,7 +420,8 @@ static void mqnic_common_remove(struct mqnic_dev *mqnic)
 {
 	int k = 0;
 
-	misc_deregister(&mqnic->misc_dev);
+	if (mqnic->misc_dev.this_device)
+		misc_deregister(&mqnic->misc_dev);
 
 	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++)
 		if (mqnic->interface[k])
@@ -437,7 +435,8 @@ static void mqnic_common_remove(struct mqnic_dev *mqnic)
 	} else {
 		mqnic_board_deinit(mqnic);
 	}
-	free_reg_block_list(mqnic->rb_list);
+	if (mqnic->rb_list)
+		free_reg_block_list(mqnic->rb_list);
 }
 
 #ifdef CONFIG_PCI

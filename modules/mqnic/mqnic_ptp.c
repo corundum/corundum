@@ -246,7 +246,7 @@ void mqnic_register_phc(struct mqnic_dev *mdev)
 	struct reg_block *rb;
 
 	if (!mdev->phc_rb) {
-		dev_err(mdev->dev, "PTP clock not present");
+		dev_warn(mdev->dev, "PTP clock not present");
 		return;
 	}
 
@@ -255,6 +255,7 @@ void mqnic_register_phc(struct mqnic_dev *mdev)
 		return;
 	}
 
+	// count PTP period output channels
 	while ((rb = find_reg_block(mdev->rb_list, MQNIC_RB_PHC_PEROUT_TYPE,
 			MQNIC_RB_PHC_PEROUT_VER, perout_ch_count))) {
 		perout_ch_count++;
@@ -280,13 +281,14 @@ void mqnic_register_phc(struct mqnic_dev *mdev)
 	mdev->ptp_clock = ptp_clock_register(&mdev->ptp_clock_info, mdev->dev);
 
 	if (IS_ERR(mdev->ptp_clock)) {
+		dev_err(mdev->dev, "%s: failed to register PHC (%ld)", __func__, PTR_ERR(mdev->ptp_clock));
 		mdev->ptp_clock = NULL;
-		dev_err(mdev->dev, "%s: failed", __func__);
-	} else {
-		dev_info(mdev->dev, "registered PHC (index %d)", ptp_clock_index(mdev->ptp_clock));
-
-		mqnic_phc_set_from_system_clock(&mdev->ptp_clock_info);
+		return;
 	}
+
+	dev_info(mdev->dev, "registered PHC (index %d)", ptp_clock_index(mdev->ptp_clock));
+
+	mqnic_phc_set_from_system_clock(&mdev->ptp_clock_info);
 }
 
 void mqnic_unregister_phc(struct mqnic_dev *mdev)

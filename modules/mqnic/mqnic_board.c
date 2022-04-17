@@ -888,4 +888,5 @@ void mqnic_board_deinit(struct mqnic_dev *mqnic)
 		return;
 
 	mqnic->board_ops->deinit(mqnic);
+	mqnic->board_ops = NULL;
 }

@@ -167,6 +167,7 @@ struct mqnic {
 // mqnic.c
 struct mqnic *mqnic_open(const char *dev_name);
 void mqnic_close(struct mqnic *dev);
+void mqnic_print_fw_id(struct mqnic *dev);
 
 // mqnic_if.c
 struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs);

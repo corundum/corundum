@@ -118,20 +118,7 @@ int main(int argc, char *argv[])
         printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
-    printf("FPGA ID: 0x%08x\n", dev->fpga_id);
-    printf("FW ID: 0x%08x\n", dev->fw_id);
-    printf("FW version: %d.%d.%d.%d\n", dev->fw_ver >> 24,
-            (dev->fw_ver >> 16) & 0xff,
-            (dev->fw_ver >> 8) & 0xff,
-            dev->fw_ver & 0xff);
-    printf("Board ID: 0x%08x\n", dev->board_id);
-    printf("Board version: %d.%d.%d.%d\n", dev->board_ver >> 24,
-            (dev->board_ver >> 16) & 0xff,
-            (dev->board_ver >> 8) & 0xff,
-            dev->board_ver & 0xff);
-    printf("Build date: %s UTC (raw 0x%08x)\n", dev->build_date_str, dev->build_date);
-    printf("Git hash: %08x\n", dev->git_hash);
-    printf("Release info: %08x\n", dev->rel_info);
+    mqnic_print_fw_id(dev);
 
     printf("IF offset: 0x%08x\n", dev->if_offset);
     printf("IF count: %d\n", dev->if_count);

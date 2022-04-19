@@ -235,20 +235,7 @@ int main(int argc, char *argv[])
             printf("PCIe ID: %s\n", ptr+1);
     }
 
-    printf("FPGA ID: 0x%08x\n", dev->fpga_id);
-    printf("FW ID: 0x%08x\n", dev->fw_id);
-    printf("FW version: %d.%d.%d.%d\n", dev->fw_ver >> 24,
-            (dev->fw_ver >> 16) & 0xff,
-            (dev->fw_ver >> 8) & 0xff,
-            dev->fw_ver & 0xff);
-    printf("Board ID: 0x%08x\n", dev->board_id);
-    printf("Board version: %d.%d.%d.%d\n", dev->board_ver >> 24,
-            (dev->board_ver >> 16) & 0xff,
-            (dev->board_ver >> 8) & 0xff,
-            dev->board_ver & 0xff);
-    printf("Build date: %08x\n", dev->build_date);
-    printf("Git hash: %08x\n", dev->git_hash);
-    printf("Release info: %08x\n", dev->rel_info);
+    mqnic_print_fw_id(dev);
 
     if ((bmc_rb = find_reg_block(dev->rb_list, MQNIC_RB_ALVEO_BMC_TYPE, MQNIC_RB_ALVEO_BMC_VER, 0)))
     {

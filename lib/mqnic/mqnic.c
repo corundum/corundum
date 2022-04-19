@@ -485,3 +485,22 @@ void mqnic_close(struct mqnic *dev)
 
     free(dev);
 }
+
+void mqnic_print_fw_id(struct mqnic *dev)
+{
+    printf("FPGA ID: 0x%08x\n", dev->fpga_id);
+    printf("FPGA part: %s\n", dev->fpga_part);
+    printf("FW ID: 0x%08x\n", dev->fw_id);
+    printf("FW version: %d.%d.%d.%d\n", dev->fw_ver >> 24,
+            (dev->fw_ver >> 16) & 0xff,
+            (dev->fw_ver >> 8) & 0xff,
+            dev->fw_ver & 0xff);
+    printf("Board ID: 0x%08x\n", dev->board_id);
+    printf("Board version: %d.%d.%d.%d\n", dev->board_ver >> 24,
+            (dev->board_ver >> 16) & 0xff,
+            (dev->board_ver >> 8) & 0xff,
+            dev->board_ver & 0xff);
+    printf("Build date: %s UTC (raw 0x%08x)\n", dev->build_date_str, dev->build_date);
+    printf("Git hash: %08x\n", dev->git_hash);
+    printf("Release info: %08x\n", dev->rel_info);
+}

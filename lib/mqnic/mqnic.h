@@ -1,6 +1,6 @@
 /*
 
-Copyright 2019, The Regents of the University of California.
+Copyright 2019-2022, The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -36,7 +36,6 @@ either expressed or implied, of The Regents of the University of California.
 
 #include <limits.h>
 #include <stdint.h>
-#include <unistd.h>
 
 #include "mqnic_hw.h"
 #include "reg_block.h"
@@ -164,15 +163,19 @@ struct mqnic {
     char pci_device_path[PATH_MAX];
 };
 
+// mqnic.c
 struct mqnic *mqnic_open(const char *dev_name);
 void mqnic_close(struct mqnic *dev);
 
+// mqnic_if.c
 struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs);
 void mqnic_if_close(struct mqnic_if *interface);
 
+// mqnic_sched_block.c
 struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int index, struct reg_block *block_rb);
 void mqnic_sched_block_close(struct mqnic_sched_block *block);
 
+// mqnic_scheduler.c
 struct mqnic_sched *mqnic_sched_open(struct mqnic_sched_block *block, int index, struct reg_block *rb);
 void mqnic_sched_close(struct mqnic_sched *sched);
 

@@ -29,8 +29,7 @@ endif
 
 KDIR ?= /lib/modules/$(shell uname -r)/build
 
-all:
-	$(MAKE) -C $(KDIR) M=$(shell pwd) modules
+all: modules
 
 help modules modules_install clean:
 	$(MAKE) -C $(KDIR) M=$(shell pwd) $@

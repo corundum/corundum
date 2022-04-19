@@ -42,7 +42,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <sys/stat.h>
 #include <linux/pci.h>
 
-#include "mqnic.h"
+#include <mqnic/mqnic.h>
 #include "bitfile.h"
 #include "flash.h"
 #include "fpga_id.h"

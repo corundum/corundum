@@ -50,7 +50,7 @@ either expressed or implied, of The Regents of the University of California.
 
 #include "timespec.h"
 
-#include "mqnic.h"
+#include <mqnic/mqnic.h>
 
 #define NSEC_PER_SEC 1000000000
 

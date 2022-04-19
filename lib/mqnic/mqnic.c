@@ -32,6 +32,7 @@ either expressed or implied, of The Regents of the University of California.
 */
 
 #include "mqnic.h"
+#include "mqnic_ioctl.h"
 
 #include <dirent.h>
 #include <fcntl.h>

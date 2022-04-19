@@ -35,7 +35,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <stdlib.h>
 #include <string.h>
 
-#include "mqnic.h"
+#include <mqnic/mqnic.h>
 
 static void usage(char *name)
 {

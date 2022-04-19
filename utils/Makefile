@@ -6,7 +6,11 @@ CC ?= gcc
 CFLAGS ?= -O3
 
 CFLAGS += -Wall
-CPPFLAGS += -I../modules/mqnic -I ../include
+CPPFLAGS += -Ilib -Iinclude
+LDFLAGS += -Llib/mqnic
+LDLIBS += -lmqnic
+
+LIBMQNIC = lib/mqnic/libmqnic.a
 
 BIN = mqnic-config
 BIN += mqnic-dump
@@ -20,23 +24,28 @@ ALL_CFLAGS = $(CFLAGS) $(CPPFLAGS) $(GENDEPFLAGS)
 
 all: $(BIN)
 
+FORCE:
+
+$(LIBMQNIC): FORCE
+	$(MAKE) -C $(dir $@) $(notdir $@)
+
 %.o: %.c
 	$(CC) $(ALL_CFLAGS) -c -o $@ $<
 
-mqnic-config: mqnic-config.o mqnic.o reg_block.o timespec.o
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@
+mqnic-config: mqnic-config.o timespec.o $(LIBMQNIC)
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-mqnic-dump: mqnic-dump.o mqnic.o reg_block.o
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@
+mqnic-dump: mqnic-dump.o $(LIBMQNIC)
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-mqnic-fw: mqnic-fw.o mqnic.o reg_block.o flash.o flash_spi.o flash_bpi.o fpga_id.o bitfile.o
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@
+mqnic-fw: mqnic-fw.o flash.o flash_spi.o flash_bpi.o fpga_id.o bitfile.o $(LIBMQNIC)
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-mqnic-bmc: mqnic-bmc.o mqnic.o reg_block.o
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@
+mqnic-bmc: mqnic-bmc.o $(LIBMQNIC)
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 perout: perout.o timespec.o
-	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 install:
 	install -d $(BINDIR)
@@ -49,4 +58,4 @@ clean:
 
 -include $(wildcard .*.d)
 
-.PHONY: all install clean
+.PHONY: all install clean FORCE

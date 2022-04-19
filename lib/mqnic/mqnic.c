@@ -33,6 +33,7 @@ either expressed or implied, of The Regents of the University of California.
 
 #include "mqnic.h"
 #include "mqnic_ioctl.h"
+#include "fpga_id.h"
 
 #include <dirent.h>
 #include <fcntl.h>
@@ -405,6 +406,8 @@ open:
     dev->build_date = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_BUILD_DATE);
     dev->git_hash = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_GIT_HASH);
     dev->rel_info = mqnic_reg_read32(dev->fw_id_rb->regs, MQNIC_RB_FW_ID_REG_REL_INFO);
+
+    dev->fpga_part = get_fpga_part(dev->fpga_id);
 
     time_t build_date = dev->build_date;
     struct tm *tm_info = gmtime(&build_date);

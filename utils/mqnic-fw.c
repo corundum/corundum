@@ -45,7 +45,6 @@ either expressed or implied, of The Regents of the University of California.
 #include <mqnic/mqnic.h>
 #include "bitfile.h"
 #include "flash.h"
-#include "fpga_id.h"
 
 #define MAX_SEGMENTS 8
 
@@ -655,7 +654,6 @@ int main(int argc, char *argv[])
     printf("PCIe ID (upstream port): %s\n", strrchr(pci_port_path, '/')+1);
 
     uint32_t flash_format = 0;
-    const char *fpga_part = get_fpga_part(dev->fpga_id);
 
     uint8_t flash_configuration = 0;
     uint8_t flash_data_width = 0;
@@ -664,7 +662,7 @@ int main(int argc, char *argv[])
     uint32_t flash_segment0_length = 0;
 
     printf("FPGA ID: 0x%08x\n", dev->fpga_id);
-    printf("FPGA part: %s\n", fpga_part);
+    printf("FPGA part: %s\n", dev->fpga_part);
     printf("FW ID: 0x%08x\n", dev->fw_id);
     printf("FW version: %d.%d.%d.%d\n", dev->fw_ver >> 24,
             (dev->fw_ver >> 16) & 0xff,
@@ -1053,9 +1051,9 @@ int main(int argc, char *argv[])
                 goto err;
             }
 
-            if (stristr(bf->part, fpga_part) != bf->part)
+            if (stristr(bf->part, dev->fpga_part) != bf->part)
             {
-                fprintf(stderr, "Device mismatch (target is %s, file is %s)\n", fpga_part, bf->part);
+                fprintf(stderr, "Device mismatch (target is %s, file is %s)\n", dev->fpga_part, bf->part);
                 bitfile_close(bf);
                 free(segment);
                 ret = -1;

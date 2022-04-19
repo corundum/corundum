@@ -38,7 +38,7 @@ mqnic-config: mqnic-config.o timespec.o $(LIBMQNIC)
 mqnic-dump: mqnic-dump.o $(LIBMQNIC)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-mqnic-fw: mqnic-fw.o flash.o flash_spi.o flash_bpi.o fpga_id.o bitfile.o $(LIBMQNIC)
+mqnic-fw: mqnic-fw.o flash.o flash_spi.o flash_bpi.o bitfile.o $(LIBMQNIC)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 mqnic-bmc: mqnic-bmc.o $(LIBMQNIC)

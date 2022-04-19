@@ -142,6 +142,7 @@ struct mqnic {
     struct reg_block *phc_rb;
 
     uint32_t fpga_id;
+    const char *fpga_part;
     uint32_t fw_id;
     uint32_t fw_ver;
     uint32_t board_id;

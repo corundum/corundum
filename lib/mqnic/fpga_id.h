@@ -1,6 +1,6 @@
 /*
 
-Copyright 2020, The Regents of the University of California.
+Copyright 2020-2022, The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without

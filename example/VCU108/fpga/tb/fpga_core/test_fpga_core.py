@@ -278,6 +278,8 @@ async def run_test(dut):
 
     # enable DMA
     await dev_pf0_bar0.write_dword(0x000000, 1)
+    # enable interrupts
+    await dev_pf0_bar0.write_dword(0x000008, 0x3)
 
     # write pcie read descriptor
     await dev_pf0_bar0.write_dword(0x000100, (mem_base+0x0000) & 0xffffffff)

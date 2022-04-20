@@ -372,8 +372,8 @@ always @* begin
             16'h0208: dma_write_desc_ram_addr_imm_next = s_axil_ctrl_wdata;
             16'h0210: dma_write_desc_len_next = s_axil_ctrl_wdata;
             16'h0214: begin
-                dma_write_desc_tag_next = s_axil_ctrl_wdata[15:0];
-                dma_write_desc_imm_en_next = s_axil_ctrl_wdata[16];
+                dma_write_desc_tag_next = s_axil_ctrl_wdata[23:0];
+                dma_write_desc_imm_en_next = s_axil_ctrl_wdata[31];
                 dma_write_desc_valid_next = 1'b1;
             end
             // block read
@@ -458,10 +458,12 @@ always @* begin
             16'h0208: axil_ctrl_rdata_next = dma_write_desc_ram_addr_imm_reg;
             16'h020c: axil_ctrl_rdata_next = dma_write_desc_ram_addr_imm_reg >> 32;
             16'h0210: axil_ctrl_rdata_next = dma_write_desc_len_reg;
-            16'h0214: axil_ctrl_rdata_next = dma_write_desc_tag_reg;
+            16'h0214: begin
+                axil_ctrl_rdata_next[23:0] = dma_write_desc_tag_reg;
+                axil_ctrl_rdata_next[31] = dma_write_desc_imm_en_reg;
+            end
             16'h0218: begin
                 axil_ctrl_rdata_next[15:0] = dma_write_desc_status_tag_reg;
-                axil_ctrl_rdata_next[16] = dma_write_desc_imm_en_reg;
                 axil_ctrl_rdata_next[27:24] = dma_write_desc_status_error_reg;
                 axil_ctrl_rdata_next[31] = dma_write_desc_status_valid_reg;
                 dma_write_desc_status_valid_next = 1'b0;

@@ -318,14 +318,14 @@ async def run_test(dut):
     await dev_pf0_bar0.write_dword(0x000204, (mem_base+0x1000 >> 32) & 0xffffffff)
     await dev_pf0_bar0.write_dword(0x000208, 0x44332211)
     await dev_pf0_bar0.write_dword(0x000210, 0x4)
-    await dev_pf0_bar0.write_dword(0x000214, 0x100AA)
+    await dev_pf0_bar0.write_dword(0x000214, 0x800000AA)
 
     await Timer(2000, 'ns')
 
     # read status
     val = await dev_pf0_bar0.read_dword(0x000218)
     tb.log.info("Status: 0x%x", val)
-    assert val == 0x800100AA
+    assert val == 0x800000AA
 
     tb.log.info("%s", mem.hexdump_str(0x1000, 64))
 

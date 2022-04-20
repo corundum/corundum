@@ -240,7 +240,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	iowrite32(0x44332211, edev->bar[0] + 0x000208);
 	iowrite32(0, edev->bar[0] + 0x00020C);
 	iowrite32(0x4, edev->bar[0] + 0x000210);
-	iowrite32(0x100AA, edev->bar[0] + 0x000214);
+	iowrite32(0x800000AA, edev->bar[0] + 0x000214);
 
 	msleep(1);
 

@@ -135,6 +135,8 @@ module mqnic_core_axi #
     parameter AXI_ID_WIDTH = 8,
 
     // DMA interface configuration
+    parameter DMA_IMM_ENABLE = 0,
+    parameter DMA_IMM_WIDTH = 32,
     parameter DMA_LEN_WIDTH = 16,
     parameter DMA_TAG_WIDTH = 16,
     parameter RAM_ADDR_WIDTH = $clog2(TX_RAM_SIZE > RX_RAM_SIZE ? TX_RAM_SIZE : RX_RAM_SIZE),
@@ -426,6 +428,8 @@ wire                       dma_read_desc_status_valid;
 wire [DMA_ADDR_WIDTH-1:0]  dma_write_desc_dma_addr;
 wire [RAM_SEL_WIDTH-1:0]   dma_write_desc_ram_sel;
 wire [RAM_ADDR_WIDTH-1:0]  dma_write_desc_ram_addr;
+wire [DMA_IMM_WIDTH-1:0]   dma_write_desc_imm;
+wire                       dma_write_desc_imm_en;
 wire [DMA_LEN_WIDTH-1:0]   dma_write_desc_len;
 wire [DMA_TAG_WIDTH-1:0]   dma_write_desc_tag;
 wire                       dma_write_desc_valid;
@@ -443,12 +447,14 @@ dma_if_axi #(
     .AXI_STRB_WIDTH(AXI_STRB_WIDTH),
     .AXI_ID_WIDTH(AXI_ID_WIDTH),
     .AXI_MAX_BURST_LEN(AXI_DMA_MAX_BURST_LEN),
-    .RAM_SEG_COUNT(RAM_SEG_COUNT),
-    .RAM_SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
-    .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
-    .RAM_SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
     .RAM_SEL_WIDTH(RAM_SEL_WIDTH),
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+    .RAM_SEG_COUNT(RAM_SEG_COUNT),
+    .RAM_SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
+    .RAM_SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
+    .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
+    .IMM_ENABLE(DMA_IMM_ENABLE),
+    .IMM_WIDTH(DMA_IMM_WIDTH),
     .LEN_WIDTH(DMA_LEN_WIDTH),
     .TAG_WIDTH(DMA_TAG_WIDTH),
     .READ_OP_TABLE_SIZE(AXI_DMA_READ_OP_TABLE_SIZE),
@@ -523,6 +529,8 @@ dma_if_axi_inst (
     .s_axis_write_desc_axi_addr(dma_write_desc_dma_addr),
     .s_axis_write_desc_ram_sel(dma_write_desc_ram_sel),
     .s_axis_write_desc_ram_addr(dma_write_desc_ram_addr),
+    .s_axis_write_desc_imm(dma_write_desc_imm),
+    .s_axis_write_desc_imm_en(dma_write_desc_imm_en),
     .s_axis_write_desc_len(dma_write_desc_len),
     .s_axis_write_desc_tag(dma_write_desc_tag),
     .s_axis_write_desc_valid(dma_write_desc_valid),
@@ -647,6 +655,8 @@ mqnic_core #(
 
     // DMA interface configuration
     .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+    .DMA_IMM_ENABLE(DMA_IMM_ENABLE),
+    .DMA_IMM_WIDTH(DMA_IMM_WIDTH),
     .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
     .DMA_TAG_WIDTH(DMA_TAG_WIDTH),
     .RAM_SEG_COUNT(RAM_SEG_COUNT),
@@ -721,6 +731,8 @@ core_inst (
     .m_axis_dma_write_desc_dma_addr(dma_write_desc_dma_addr),
     .m_axis_dma_write_desc_ram_sel(dma_write_desc_ram_sel),
     .m_axis_dma_write_desc_ram_addr(dma_write_desc_ram_addr),
+    .m_axis_dma_write_desc_imm(dma_write_desc_imm),
+    .m_axis_dma_write_desc_imm_en(dma_write_desc_imm_en),
     .m_axis_dma_write_desc_len(dma_write_desc_len),
     .m_axis_dma_write_desc_tag(dma_write_desc_tag),
     .m_axis_dma_write_desc_valid(dma_write_desc_valid),

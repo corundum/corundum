@@ -734,6 +734,8 @@ def test_fpga_core(request):
     parameters['APP_STAT_ENABLE'] = 1
 
     # DMA interface configuration
+    parameters['DMA_IMM_ENABLE'] = 0
+    parameters['DMA_IMM_WIDTH'] = 32
     parameters['DMA_LEN_WIDTH'] = 16
     parameters['DMA_TAG_WIDTH'] = 16
     parameters['RAM_ADDR_WIDTH'] = (max(parameters['TX_RAM_SIZE'], parameters['RX_RAM_SIZE'])-1).bit_length()

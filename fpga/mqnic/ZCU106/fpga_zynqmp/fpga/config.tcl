@@ -145,6 +145,8 @@ dict set params AXI_ADDR_WIDTH 64
 dict set params AXI_ID_WIDTH [get_property CONFIG.ID_WIDTH $s_axi_dma]
 
 # DMA interface configuration
+dict set params DMA_IMM_ENABLE "0"
+dict set params DMA_IMM_WIDTH "32"
 dict set params DMA_LEN_WIDTH "16"
 dict set params DMA_TAG_WIDTH "16"
 dict set params RAM_ADDR_WIDTH [expr int(ceil(log(max([dict get $params TX_RAM_SIZE], [dict get $params RX_RAM_SIZE]))/log(2)))]

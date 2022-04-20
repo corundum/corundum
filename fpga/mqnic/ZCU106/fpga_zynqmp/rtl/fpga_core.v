@@ -136,6 +136,8 @@ module fpga_core #
     parameter AXI_ID_WIDTH = 8,
 
     // DMA interface configuration
+    parameter DMA_IMM_ENABLE = 0,
+    parameter DMA_IMM_WIDTH = 32,
     parameter DMA_LEN_WIDTH = 16,
     parameter DMA_TAG_WIDTH = 16,
     parameter RAM_ADDR_WIDTH = $clog2(TX_RAM_SIZE > RX_RAM_SIZE ? TX_RAM_SIZE : RX_RAM_SIZE),
@@ -800,6 +802,8 @@ mqnic_core_axi #(
     .AXI_ID_WIDTH(AXI_ID_WIDTH),
 
     // DMA interface configuration
+    .DMA_IMM_ENABLE(DMA_IMM_ENABLE),
+    .DMA_IMM_WIDTH(DMA_IMM_WIDTH),
     .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
     .DMA_TAG_WIDTH(DMA_TAG_WIDTH),
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),

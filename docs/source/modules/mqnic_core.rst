@@ -293,6 +293,14 @@ Parameters
 
     DMA interface address signal width, default ``64``.
 
+.. object:: DMA_IMM_ENABLE
+
+    DMA interface immediate enable, default ``0``.
+
+.. object:: DMA_IMM_WIDTH
+
+    DMA interface immediate signal width, default ``32``.
+
 .. object:: DMA_LEN_WIDTH
 
     DMA interface length signal width, default ``16``.
@@ -620,6 +628,8 @@ Ports
         m_axis_dma_write_desc_dma_addr  out  DMA_ADDR_WIDTH  DMA address
         m_axis_dma_write_desc_ram_sel   out  RAM_SEL_WIDTH   RAM select
         m_axis_dma_write_desc_ram_addr  out  RAM_ADDR_WIDTH  RAM address
+        m_axis_dma_write_desc_imm       out  DMA_IMM_WIDTH   Immediate
+        m_axis_dma_write_desc_imm_en    out  1               Immediate enable
         m_axis_dma_write_desc_len       out  DMA_LEN_WIDTH   Transfer length
         m_axis_dma_write_desc_tag       out  DMA_TAG_WIDTH   Transfer tag
         m_axis_dma_write_desc_valid     out  1               Request valid

@@ -130,6 +130,8 @@ module mqnic_core #
 
     // DMA interface configuration
     parameter DMA_ADDR_WIDTH = 64,
+    parameter DMA_IMM_ENABLE = 0,
+    parameter DMA_IMM_WIDTH = 32,
     parameter DMA_LEN_WIDTH = 16,
     parameter DMA_TAG_WIDTH = 16,
     parameter IF_RAM_SEL_WIDTH = 1,
@@ -288,6 +290,8 @@ module mqnic_core #
     output wire [DMA_ADDR_WIDTH-1:0]                    m_axis_dma_write_desc_dma_addr,
     output wire [RAM_SEL_WIDTH-1:0]                     m_axis_dma_write_desc_ram_sel,
     output wire [RAM_ADDR_WIDTH-1:0]                    m_axis_dma_write_desc_ram_addr,
+    output wire [DMA_IMM_WIDTH-1:0]                     m_axis_dma_write_desc_imm,
+    output wire                                         m_axis_dma_write_desc_imm_en,
     output wire [DMA_LEN_WIDTH-1:0]                     m_axis_dma_write_desc_len,
     output wire [DMA_TAG_WIDTH-1:0]                     m_axis_dma_write_desc_tag,
     output wire                                         m_axis_dma_write_desc_valid,
@@ -1163,6 +1167,8 @@ wire                       ctrl_dma_read_desc_status_valid;
 wire [DMA_ADDR_WIDTH-1:0]  ctrl_dma_write_desc_dma_addr;
 wire [RAM_SEL_WIDTH-2:0]   ctrl_dma_write_desc_ram_sel;
 wire [RAM_ADDR_WIDTH-1:0]  ctrl_dma_write_desc_ram_addr;
+wire [DMA_IMM_WIDTH-1:0]   ctrl_dma_write_desc_imm;
+wire                       ctrl_dma_write_desc_imm_en;
 wire [DMA_LEN_WIDTH-1:0]   ctrl_dma_write_desc_len;
 wire [DMA_TAG_WIDTH-2:0]   ctrl_dma_write_desc_tag;
 wire                       ctrl_dma_write_desc_valid;
@@ -1187,6 +1193,8 @@ wire                       data_dma_read_desc_status_valid;
 wire [DMA_ADDR_WIDTH-1:0]  data_dma_write_desc_dma_addr;
 wire [RAM_SEL_WIDTH-2:0]   data_dma_write_desc_ram_sel;
 wire [RAM_ADDR_WIDTH-1:0]  data_dma_write_desc_ram_addr;
+wire [DMA_IMM_WIDTH-1:0]   data_dma_write_desc_imm;
+wire                       data_dma_write_desc_imm_en;
 wire [DMA_LEN_WIDTH-1:0]   data_dma_write_desc_len;
 wire [DMA_TAG_WIDTH-2:0]   data_dma_write_desc_tag;
 wire                       data_dma_write_desc_valid;
@@ -1236,6 +1244,8 @@ dma_if_mux #(
     .SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
     .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
     .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+    .IMM_ENABLE(DMA_IMM_ENABLE),
+    .IMM_WIDTH(DMA_IMM_WIDTH),
     .LEN_WIDTH(DMA_LEN_WIDTH),
     .S_TAG_WIDTH(DMA_TAG_WIDTH-1),
     .M_TAG_WIDTH(DMA_TAG_WIDTH),
@@ -1288,6 +1298,8 @@ dma_if_mux_inst (
     .m_axis_write_desc_dma_addr(m_axis_dma_write_desc_dma_addr),
     .m_axis_write_desc_ram_sel(m_axis_dma_write_desc_ram_sel),
     .m_axis_write_desc_ram_addr(m_axis_dma_write_desc_ram_addr),
+    .m_axis_write_desc_imm(m_axis_dma_write_desc_imm),
+    .m_axis_write_desc_imm_en(m_axis_dma_write_desc_imm_en),
     .m_axis_write_desc_len(m_axis_dma_write_desc_len),
     .m_axis_write_desc_tag(m_axis_dma_write_desc_tag),
     .m_axis_write_desc_valid(m_axis_dma_write_desc_valid),
@@ -1306,6 +1318,8 @@ dma_if_mux_inst (
     .s_axis_write_desc_dma_addr({data_dma_write_desc_dma_addr, ctrl_dma_write_desc_dma_addr}),
     .s_axis_write_desc_ram_sel({data_dma_write_desc_ram_sel, ctrl_dma_write_desc_ram_sel}),
     .s_axis_write_desc_ram_addr({data_dma_write_desc_ram_addr, ctrl_dma_write_desc_ram_addr}),
+    .s_axis_write_desc_imm({data_dma_write_desc_imm, ctrl_dma_write_desc_imm}),
+    .s_axis_write_desc_imm_en({data_dma_write_desc_imm_en, ctrl_dma_write_desc_imm_en}),
     .s_axis_write_desc_len({data_dma_write_desc_len, ctrl_dma_write_desc_len}),
     .s_axis_write_desc_tag({data_dma_write_desc_tag, ctrl_dma_write_desc_tag}),
     .s_axis_write_desc_valid({data_dma_write_desc_valid, ctrl_dma_write_desc_valid}),
@@ -1371,6 +1385,8 @@ wire [IF_COUNT_INT-1:0]                   if_ctrl_dma_read_desc_status_valid;
 wire [IF_COUNT_INT*DMA_ADDR_WIDTH-1:0]    if_ctrl_dma_write_desc_dma_addr;
 wire [IF_COUNT_INT*IF_RAM_SEL_WIDTH-1:0]  if_ctrl_dma_write_desc_ram_sel;
 wire [IF_COUNT_INT*RAM_ADDR_WIDTH-1:0]    if_ctrl_dma_write_desc_ram_addr;
+wire [IF_COUNT_INT*DMA_IMM_WIDTH-1:0]     if_ctrl_dma_write_desc_imm;
+wire [IF_COUNT_INT-1:0]                   if_ctrl_dma_write_desc_imm_en;
 wire [IF_COUNT_INT*DMA_LEN_WIDTH-1:0]     if_ctrl_dma_write_desc_len;
 wire [IF_COUNT_INT*IF_DMA_TAG_WIDTH-1:0]  if_ctrl_dma_write_desc_tag;
 wire [IF_COUNT_INT-1:0]                   if_ctrl_dma_write_desc_valid;
@@ -1395,6 +1411,8 @@ wire [IF_COUNT_INT-1:0]                   if_data_dma_read_desc_status_valid;
 wire [IF_COUNT_INT*DMA_ADDR_WIDTH-1:0]    if_data_dma_write_desc_dma_addr;
 wire [IF_COUNT_INT*IF_RAM_SEL_WIDTH-1:0]  if_data_dma_write_desc_ram_sel;
 wire [IF_COUNT_INT*RAM_ADDR_WIDTH-1:0]    if_data_dma_write_desc_ram_addr;
+wire [IF_COUNT_INT*DMA_IMM_WIDTH-1:0]     if_data_dma_write_desc_imm;
+wire [IF_COUNT_INT-1:0]                   if_data_dma_write_desc_imm_en;
 wire [IF_COUNT_INT*DMA_LEN_WIDTH-1:0]     if_data_dma_write_desc_len;
 wire [IF_COUNT_INT*IF_DMA_TAG_WIDTH-1:0]  if_data_dma_write_desc_tag;
 wire [IF_COUNT_INT-1:0]                   if_data_dma_write_desc_valid;
@@ -1448,6 +1466,8 @@ if (IF_COUNT_INT > 1) begin : dma_if_mux
         .SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
         .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
         .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+        .IMM_ENABLE(DMA_IMM_ENABLE),
+        .IMM_WIDTH(DMA_IMM_WIDTH),
         .LEN_WIDTH(DMA_LEN_WIDTH),
         .S_TAG_WIDTH(IF_DMA_TAG_WIDTH),
         .M_TAG_WIDTH(DMA_TAG_WIDTH-1),
@@ -1500,6 +1520,8 @@ if (IF_COUNT_INT > 1) begin : dma_if_mux
         .m_axis_write_desc_dma_addr(ctrl_dma_write_desc_dma_addr),
         .m_axis_write_desc_ram_sel(ctrl_dma_write_desc_ram_sel),
         .m_axis_write_desc_ram_addr(ctrl_dma_write_desc_ram_addr),
+        .m_axis_write_desc_imm(ctrl_dma_write_desc_imm),
+        .m_axis_write_desc_imm_en(ctrl_dma_write_desc_imm_en),
         .m_axis_write_desc_len(ctrl_dma_write_desc_len),
         .m_axis_write_desc_tag(ctrl_dma_write_desc_tag),
         .m_axis_write_desc_valid(ctrl_dma_write_desc_valid),
@@ -1518,6 +1540,8 @@ if (IF_COUNT_INT > 1) begin : dma_if_mux
         .s_axis_write_desc_dma_addr(if_ctrl_dma_write_desc_dma_addr),
         .s_axis_write_desc_ram_sel(if_ctrl_dma_write_desc_ram_sel),
         .s_axis_write_desc_ram_addr(if_ctrl_dma_write_desc_ram_addr),
+        .s_axis_write_desc_imm(if_ctrl_dma_write_desc_imm),
+        .s_axis_write_desc_imm_en(if_ctrl_dma_write_desc_imm_en),
         .s_axis_write_desc_len(if_ctrl_dma_write_desc_len),
         .s_axis_write_desc_tag(if_ctrl_dma_write_desc_tag),
         .s_axis_write_desc_valid(if_ctrl_dma_write_desc_valid),
@@ -1577,6 +1601,8 @@ if (IF_COUNT_INT > 1) begin : dma_if_mux
         .SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
         .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
         .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+        .IMM_ENABLE(DMA_IMM_ENABLE),
+        .IMM_WIDTH(DMA_IMM_WIDTH),
         .LEN_WIDTH(DMA_LEN_WIDTH),
         .S_TAG_WIDTH(IF_DMA_TAG_WIDTH),
         .M_TAG_WIDTH(DMA_TAG_WIDTH-1),
@@ -1629,6 +1655,8 @@ if (IF_COUNT_INT > 1) begin : dma_if_mux
         .m_axis_write_desc_dma_addr(data_dma_write_desc_dma_addr),
         .m_axis_write_desc_ram_sel(data_dma_write_desc_ram_sel),
         .m_axis_write_desc_ram_addr(data_dma_write_desc_ram_addr),
+        .m_axis_write_desc_imm(data_dma_write_desc_imm),
+        .m_axis_write_desc_imm_en(data_dma_write_desc_imm_en),
         .m_axis_write_desc_len(data_dma_write_desc_len),
         .m_axis_write_desc_tag(data_dma_write_desc_tag),
         .m_axis_write_desc_valid(data_dma_write_desc_valid),
@@ -1647,6 +1675,8 @@ if (IF_COUNT_INT > 1) begin : dma_if_mux
         .s_axis_write_desc_dma_addr(if_data_dma_write_desc_dma_addr),
         .s_axis_write_desc_ram_sel(if_data_dma_write_desc_ram_sel),
         .s_axis_write_desc_ram_addr(if_data_dma_write_desc_ram_addr),
+        .s_axis_write_desc_imm(if_data_dma_write_desc_imm),
+        .s_axis_write_desc_imm_en(if_data_dma_write_desc_imm_en),
         .s_axis_write_desc_len(if_data_dma_write_desc_len),
         .s_axis_write_desc_tag(if_data_dma_write_desc_tag),
         .s_axis_write_desc_valid(if_data_dma_write_desc_valid),
@@ -1713,6 +1743,8 @@ end else begin
     assign ctrl_dma_write_desc_dma_addr = if_ctrl_dma_write_desc_dma_addr;
     assign ctrl_dma_write_desc_ram_sel = if_ctrl_dma_write_desc_ram_sel;
     assign ctrl_dma_write_desc_ram_addr = if_ctrl_dma_write_desc_ram_addr;
+    assign ctrl_dma_write_desc_imm = if_ctrl_dma_write_desc_imm;
+    assign ctrl_dma_write_desc_imm_en = if_ctrl_dma_write_desc_imm_en;
     assign ctrl_dma_write_desc_len = if_ctrl_dma_write_desc_len;
     assign ctrl_dma_write_desc_tag = if_ctrl_dma_write_desc_tag;
     assign ctrl_dma_write_desc_valid = if_ctrl_dma_write_desc_valid;
@@ -1752,6 +1784,8 @@ end else begin
     assign data_dma_write_desc_dma_addr = if_data_dma_write_desc_dma_addr;
     assign data_dma_write_desc_ram_sel = if_data_dma_write_desc_ram_sel;
     assign data_dma_write_desc_ram_addr = if_data_dma_write_desc_ram_addr;
+    assign data_dma_write_desc_imm = if_data_dma_write_desc_imm;
+    assign data_dma_write_desc_imm_en = if_data_dma_write_desc_imm_en;
     assign data_dma_write_desc_len = if_data_dma_write_desc_len;
     assign data_dma_write_desc_tag = if_data_dma_write_desc_tag;
     assign data_dma_write_desc_valid = if_data_dma_write_desc_valid;
@@ -1795,6 +1829,8 @@ wire                         app_ctrl_dma_read_desc_status_valid;
 wire [DMA_ADDR_WIDTH-1:0]    app_ctrl_dma_write_desc_dma_addr;
 wire [IF_RAM_SEL_WIDTH-1:0]  app_ctrl_dma_write_desc_ram_sel;
 wire [RAM_ADDR_WIDTH-1:0]    app_ctrl_dma_write_desc_ram_addr;
+wire [DMA_IMM_WIDTH-1:0]     app_ctrl_dma_write_desc_imm;
+wire                         app_ctrl_dma_write_desc_imm_en;
 wire [DMA_LEN_WIDTH-1:0]     app_ctrl_dma_write_desc_len;
 wire [IF_DMA_TAG_WIDTH-1:0]  app_ctrl_dma_write_desc_tag;
 wire                         app_ctrl_dma_write_desc_valid;
@@ -1819,6 +1855,8 @@ wire                         app_data_dma_read_desc_status_valid;
 wire [DMA_ADDR_WIDTH-1:0]    app_data_dma_write_desc_dma_addr;
 wire [IF_RAM_SEL_WIDTH-1:0]  app_data_dma_write_desc_ram_sel;
 wire [RAM_ADDR_WIDTH-1:0]    app_data_dma_write_desc_ram_addr;
+wire [DMA_IMM_WIDTH-1:0]     app_data_dma_write_desc_imm;
+wire                         app_data_dma_write_desc_imm_en;
 wire [DMA_LEN_WIDTH-1:0]     app_data_dma_write_desc_len;
 wire [IF_DMA_TAG_WIDTH-1:0]  app_data_dma_write_desc_tag;
 wire                         app_data_dma_write_desc_valid;
@@ -1877,6 +1915,8 @@ if (APP_ENABLE && APP_DMA_ENABLE) begin
     assign if_ctrl_dma_write_desc_dma_addr[IF_COUNT*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH] = app_ctrl_dma_write_desc_dma_addr;
     assign if_ctrl_dma_write_desc_ram_sel[IF_COUNT*IF_RAM_SEL_WIDTH +: IF_RAM_SEL_WIDTH] = app_ctrl_dma_write_desc_ram_sel;
     assign if_ctrl_dma_write_desc_ram_addr[IF_COUNT*RAM_ADDR_WIDTH +: RAM_ADDR_WIDTH] = app_ctrl_dma_write_desc_ram_addr;
+    assign if_ctrl_dma_write_desc_imm[IF_COUNT*DMA_IMM_WIDTH +: DMA_IMM_WIDTH] = app_ctrl_dma_write_desc_imm;
+    assign if_ctrl_dma_write_desc_imm_en[IF_COUNT] = app_ctrl_dma_write_desc_imm_en;
     assign if_ctrl_dma_write_desc_len[IF_COUNT*DMA_LEN_WIDTH +: DMA_LEN_WIDTH] = app_ctrl_dma_write_desc_len;
     assign if_ctrl_dma_write_desc_tag[IF_COUNT*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH] = app_ctrl_dma_write_desc_tag;
     assign if_ctrl_dma_write_desc_valid[IF_COUNT] = app_ctrl_dma_write_desc_valid;
@@ -1901,6 +1941,8 @@ if (APP_ENABLE && APP_DMA_ENABLE) begin
     assign if_data_dma_write_desc_dma_addr[IF_COUNT*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH] = app_data_dma_write_desc_dma_addr;
     assign if_data_dma_write_desc_ram_sel[IF_COUNT*IF_RAM_SEL_WIDTH +: IF_RAM_SEL_WIDTH] = app_data_dma_write_desc_ram_sel;
     assign if_data_dma_write_desc_ram_addr[IF_COUNT*RAM_ADDR_WIDTH +: RAM_ADDR_WIDTH] = app_data_dma_write_desc_ram_addr;
+    assign if_data_dma_write_desc_imm[IF_COUNT*DMA_IMM_WIDTH +: DMA_IMM_WIDTH] = app_data_dma_write_desc_imm;
+    assign if_data_dma_write_desc_imm_en[IF_COUNT] = app_data_dma_write_desc_imm_en;
     assign if_data_dma_write_desc_len[IF_COUNT*DMA_LEN_WIDTH +: DMA_LEN_WIDTH] = app_data_dma_write_desc_len;
     assign if_data_dma_write_desc_tag[IF_COUNT*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH] = app_data_dma_write_desc_tag;
     assign if_data_dma_write_desc_valid[IF_COUNT] = app_data_dma_write_desc_valid;
@@ -2165,6 +2207,8 @@ generate
             .PORTS(PORTS_PER_IF),
             .SCHEDULERS(SCHED_PER_IF),
             .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+            .DMA_IMM_ENABLE(DMA_IMM_ENABLE),
+            .DMA_IMM_WIDTH(DMA_IMM_WIDTH),
             .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
             .DMA_TAG_WIDTH(IF_DMA_TAG_WIDTH),
             .EVENT_QUEUE_OP_TABLE_SIZE(EVENT_QUEUE_OP_TABLE_SIZE),
@@ -2252,6 +2296,8 @@ generate
             .m_axis_ctrl_dma_write_desc_dma_addr(if_ctrl_dma_write_desc_dma_addr[n*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH]),
             .m_axis_ctrl_dma_write_desc_ram_sel(if_ctrl_dma_write_desc_ram_sel[n*IF_RAM_SEL_WIDTH +: IF_RAM_SEL_WIDTH]),
             .m_axis_ctrl_dma_write_desc_ram_addr(if_ctrl_dma_write_desc_ram_addr[n*RAM_ADDR_WIDTH +: RAM_ADDR_WIDTH]),
+            .m_axis_ctrl_dma_write_desc_imm(if_ctrl_dma_write_desc_imm[n*DMA_IMM_WIDTH +: DMA_IMM_WIDTH]),
+            .m_axis_ctrl_dma_write_desc_imm_en(if_ctrl_dma_write_desc_imm_en[n]),
             .m_axis_ctrl_dma_write_desc_len(if_ctrl_dma_write_desc_len[n*DMA_LEN_WIDTH +: DMA_LEN_WIDTH]),
             .m_axis_ctrl_dma_write_desc_tag(if_ctrl_dma_write_desc_tag[n*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH]),
             .m_axis_ctrl_dma_write_desc_valid(if_ctrl_dma_write_desc_valid[n]),
@@ -2288,6 +2334,8 @@ generate
             .m_axis_data_dma_write_desc_dma_addr(if_data_dma_write_desc_dma_addr[n*DMA_ADDR_WIDTH +: DMA_ADDR_WIDTH]),
             .m_axis_data_dma_write_desc_ram_sel(if_data_dma_write_desc_ram_sel[n*IF_RAM_SEL_WIDTH +: IF_RAM_SEL_WIDTH]),
             .m_axis_data_dma_write_desc_ram_addr(if_data_dma_write_desc_ram_addr[n*RAM_ADDR_WIDTH +: RAM_ADDR_WIDTH]),
+            .m_axis_data_dma_write_desc_imm(if_data_dma_write_desc_imm[n*DMA_IMM_WIDTH +: DMA_IMM_WIDTH]),
+            .m_axis_data_dma_write_desc_imm_en(if_data_dma_write_desc_imm_en[n]),
             .m_axis_data_dma_write_desc_len(if_data_dma_write_desc_len[n*DMA_LEN_WIDTH +: DMA_LEN_WIDTH]),
             .m_axis_data_dma_write_desc_tag(if_data_dma_write_desc_tag[n*IF_DMA_TAG_WIDTH +: IF_DMA_TAG_WIDTH]),
             .m_axis_data_dma_write_desc_valid(if_data_dma_write_desc_valid[n]),
@@ -3549,6 +3597,8 @@ if (APP_ENABLE) begin : app
 
         // DMA interface configuration
         .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+        .DMA_IMM_ENABLE(DMA_IMM_ENABLE),
+        .DMA_IMM_WIDTH(DMA_IMM_WIDTH),
         .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
         .DMA_TAG_WIDTH(IF_DMA_TAG_WIDTH),
         .RAM_SEG_COUNT(RAM_SEG_COUNT),
@@ -3671,6 +3721,8 @@ if (APP_ENABLE) begin : app
         .m_axis_ctrl_dma_write_desc_dma_addr(app_ctrl_dma_write_desc_dma_addr),
         .m_axis_ctrl_dma_write_desc_ram_sel(app_ctrl_dma_write_desc_ram_sel),
         .m_axis_ctrl_dma_write_desc_ram_addr(app_ctrl_dma_write_desc_ram_addr),
+        .m_axis_ctrl_dma_write_desc_imm(app_ctrl_dma_write_desc_imm),
+        .m_axis_ctrl_dma_write_desc_imm_en(app_ctrl_dma_write_desc_imm_en),
         .m_axis_ctrl_dma_write_desc_len(app_ctrl_dma_write_desc_len),
         .m_axis_ctrl_dma_write_desc_tag(app_ctrl_dma_write_desc_tag),
         .m_axis_ctrl_dma_write_desc_valid(app_ctrl_dma_write_desc_valid),
@@ -3707,6 +3759,8 @@ if (APP_ENABLE) begin : app
         .m_axis_data_dma_write_desc_dma_addr(app_data_dma_write_desc_dma_addr),
         .m_axis_data_dma_write_desc_ram_sel(app_data_dma_write_desc_ram_sel),
         .m_axis_data_dma_write_desc_ram_addr(app_data_dma_write_desc_ram_addr),
+        .m_axis_data_dma_write_desc_imm(app_data_dma_write_desc_imm),
+        .m_axis_data_dma_write_desc_imm_en(app_data_dma_write_desc_imm_en),
         .m_axis_data_dma_write_desc_len(app_data_dma_write_desc_len),
         .m_axis_data_dma_write_desc_tag(app_data_dma_write_desc_tag),
         .m_axis_data_dma_write_desc_valid(app_data_dma_write_desc_valid),
@@ -3959,6 +4013,8 @@ end else begin
     assign app_ctrl_dma_write_desc_dma_addr = 0;
     assign app_ctrl_dma_write_desc_ram_sel = 0;
     assign app_ctrl_dma_write_desc_ram_addr = 0;
+    assign app_ctrl_dma_write_desc_imm = 0;
+    assign app_ctrl_dma_write_desc_imm_en = 0;
     assign app_ctrl_dma_write_desc_len = 0;
     assign app_ctrl_dma_write_desc_tag = 0;
     assign app_ctrl_dma_write_desc_valid = 0;
@@ -3973,6 +4029,8 @@ end else begin
     assign app_data_dma_write_desc_dma_addr = 0;
     assign app_data_dma_write_desc_ram_sel = 0;
     assign app_data_dma_write_desc_ram_addr = 0;
+    assign app_data_dma_write_desc_imm = 0;
+    assign app_data_dma_write_desc_imm_en = 0;
     assign app_data_dma_write_desc_len = 0;
     assign app_data_dma_write_desc_tag = 0;
     assign app_data_dma_write_desc_valid = 0;

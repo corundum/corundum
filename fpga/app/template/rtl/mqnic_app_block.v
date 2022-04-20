@@ -75,6 +75,8 @@ module mqnic_app_block #
 
     // DMA interface configuration
     parameter DMA_ADDR_WIDTH = 64,
+    parameter DMA_IMM_ENABLE = 0,
+    parameter DMA_IMM_WIDTH = 32,
     parameter DMA_LEN_WIDTH = 16,
     parameter DMA_TAG_WIDTH = 16,
     parameter RAM_SEL_WIDTH = 4,
@@ -197,6 +199,8 @@ module mqnic_app_block #
     output wire [DMA_ADDR_WIDTH-1:0]                      m_axis_ctrl_dma_write_desc_dma_addr,
     output wire [RAM_SEL_WIDTH-1:0]                       m_axis_ctrl_dma_write_desc_ram_sel,
     output wire [RAM_ADDR_WIDTH-1:0]                      m_axis_ctrl_dma_write_desc_ram_addr,
+    output wire [DMA_IMM_WIDTH-1:0]                       m_axis_ctrl_dma_write_desc_imm,
+    output wire                                           m_axis_ctrl_dma_write_desc_imm_en,
     output wire [DMA_LEN_WIDTH-1:0]                       m_axis_ctrl_dma_write_desc_len,
     output wire [DMA_TAG_WIDTH-1:0]                       m_axis_ctrl_dma_write_desc_tag,
     output wire                                           m_axis_ctrl_dma_write_desc_valid,
@@ -233,6 +237,8 @@ module mqnic_app_block #
     output wire [DMA_ADDR_WIDTH-1:0]                      m_axis_data_dma_write_desc_dma_addr,
     output wire [RAM_SEL_WIDTH-1:0]                       m_axis_data_dma_write_desc_ram_sel,
     output wire [RAM_ADDR_WIDTH-1:0]                      m_axis_data_dma_write_desc_ram_addr,
+    output wire [DMA_IMM_WIDTH-1:0]                       m_axis_data_dma_write_desc_imm,
+    output wire                                           m_axis_data_dma_write_desc_imm_en,
     output wire [DMA_LEN_WIDTH-1:0]                       m_axis_data_dma_write_desc_len,
     output wire [DMA_TAG_WIDTH-1:0]                       m_axis_data_dma_write_desc_tag,
     output wire                                           m_axis_data_dma_write_desc_valid,
@@ -583,6 +589,8 @@ assign m_axis_ctrl_dma_read_desc_valid = 1'b0;
 assign m_axis_ctrl_dma_write_desc_dma_addr = 0;
 assign m_axis_ctrl_dma_write_desc_ram_sel = 0;
 assign m_axis_ctrl_dma_write_desc_ram_addr = 0;
+assign m_axis_ctrl_dma_write_desc_imm = 0;
+assign m_axis_ctrl_dma_write_desc_imm_en = 0;
 assign m_axis_ctrl_dma_write_desc_len = 0;
 assign m_axis_ctrl_dma_write_desc_tag = 0;
 assign m_axis_ctrl_dma_write_desc_valid = 1'b0;
@@ -605,6 +613,8 @@ assign m_axis_data_dma_read_desc_valid = 1'b0;
 assign m_axis_data_dma_write_desc_dma_addr = 0;
 assign m_axis_data_dma_write_desc_ram_sel = 0;
 assign m_axis_data_dma_write_desc_ram_addr = 0;
+assign m_axis_data_dma_write_desc_imm = 0;
+assign m_axis_data_dma_write_desc_imm_en = 0;
 assign m_axis_data_dma_write_desc_len = 0;
 assign m_axis_data_dma_write_desc_tag = 0;
 assign m_axis_data_dma_write_desc_valid = 1'b0;

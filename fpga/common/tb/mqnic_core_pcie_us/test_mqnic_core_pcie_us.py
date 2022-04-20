@@ -737,6 +737,8 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
     parameters['APP_STAT_ENABLE'] = 1
 
     # DMA interface configuration
+    parameters['DMA_IMM_ENABLE'] = 0
+    parameters['DMA_IMM_WIDTH'] = 32
     parameters['DMA_LEN_WIDTH'] = 16
     parameters['DMA_TAG_WIDTH'] = 16
     parameters['RAM_ADDR_WIDTH'] = (max(parameters['TX_RAM_SIZE'], parameters['RX_RAM_SIZE'])-1).bit_length()

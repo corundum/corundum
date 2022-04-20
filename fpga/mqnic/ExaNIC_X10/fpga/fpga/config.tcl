@@ -145,6 +145,8 @@ dict set params APP_AXIS_IF_ENABLE "1"
 dict set params APP_STAT_ENABLE "1"
 
 # DMA interface configuration
+dict set params DMA_IMM_ENABLE "0"
+dict set params DMA_IMM_WIDTH "32"
 dict set params DMA_LEN_WIDTH "16"
 dict set params DMA_TAG_WIDTH "16"
 dict set params RAM_ADDR_WIDTH [expr int(ceil(log(max([dict get $params TX_RAM_SIZE], [dict get $params RX_RAM_SIZE]))/log(2)))]

@@ -22,23 +22,14 @@ if [ ! -e "/sys/bus/pci/devices/$dev" ]; then
     exit 1
 fi
 
-ctrl=$(setpci -s $dev CAP_EXP+8.w)
+echo "Device control:" $(setpci -s $dev CAP_EXP+8.w)
 
 if (($en > 0)); then
-
     echo "Enabling ext tag on $dev..."
-
-    echo "Device control:" $ctrl
-
-    setpci -s $dev CAP_EXP+8.w=$(printf "%04x" $((0x$ctrl | 0x0100)))
-
+    setpci -s $dev CAP_EXP+8.w=0100:0100
 else
-
     echo "Disabling ext tag on $dev..."
-
-    echo "Device control:" $ctrl
-
-    setpci -s $dev CAP_EXP+8.w=$(printf "%04x" $((0x$ctrl & ~0x0100)))
-
+    setpci -s $dev CAP_EXP+8.w=0000:0100
 fi
 
+echo "Device control:" $(setpci -s $dev CAP_EXP+8.w)

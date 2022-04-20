@@ -81,13 +81,6 @@ dict set params GIT_HASH  "32'h${git_hash}"
 dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
 
 # Structural configuration
-
-#  counts    QSFP 0   QSFP 1
-# IF  PORT   0_0123   1_0123
-# 1   1      0 (0.0)
-# 1   2      0 (0.0)  1 (0.1)
-# 2   1      0 (0.0)  1 (1.0)
-
 dict set params IF_COUNT "2"
 dict set params PORTS_PER_IF "1"
 dict set params SCHED_PER_IF [dict get $params PORTS_PER_IF]

@@ -234,6 +234,23 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 16, 1,
 			edev->dma_region + 0x0200, 256, true);
 
+	dev_info(dev, "start immediate write to host");
+	iowrite32((edev->dma_region_addr + 0x0200) & 0xffffffff, edev->bar[0] + 0x000200);
+	iowrite32(((edev->dma_region_addr + 0x0200) >> 32) & 0xffffffff, edev->bar[0] + 0x000204);
+	iowrite32(0x44332211, edev->bar[0] + 0x000208);
+	iowrite32(0, edev->bar[0] + 0x00020C);
+	iowrite32(0x4, edev->bar[0] + 0x000210);
+	iowrite32(0x800000AA, edev->bar[0] + 0x000214);
+
+	msleep(1);
+
+	dev_info(dev, "Read status");
+	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000218));
+
+	dev_info(dev, "read data");
+	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 16, 1,
+			edev->dma_region + 0x0200, 4, true);
+
 	// probe complete
 	return 0;
 

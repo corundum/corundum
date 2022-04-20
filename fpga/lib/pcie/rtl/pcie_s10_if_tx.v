@@ -318,7 +318,7 @@ always @* begin
             wr_req_fifo_wr_data[63:32] = tx_wr_req_tlp_hdr[95:64];
             wr_req_fifo_wr_data[95:64] = tx_wr_req_tlp_hdr[63:32];
             if (wr_req_payload_offset_next) begin
-                wr_req_fifo_wr_data[127:96] = tx_rd_req_tlp_hdr[31:0];
+                wr_req_fifo_wr_data[127:96] = tx_wr_req_tlp_hdr[31:0];
                 wr_req_fifo_wr_data[SEG_COUNT*SEG_DATA_WIDTH-1:128] = tx_wr_req_tlp_data;
             end else begin
                 wr_req_fifo_wr_data[SEG_COUNT*SEG_DATA_WIDTH-1:96] = tx_wr_req_tlp_data;

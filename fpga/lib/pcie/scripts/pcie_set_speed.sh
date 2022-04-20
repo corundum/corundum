@@ -60,15 +60,7 @@ setpci -s $dev CAP_EXP+30.L=$lc2n
 
 echo "Triggering link retraining..."
 
-lc=$(setpci -s $dev CAP_EXP+10.L)
-
-echo "Original link control:" $lc
-
-lcn=$(printf "%08x" $((0x$lc | 0x20)))
-
-echo "New link control:" $lcn
-
-setpci -s $dev CAP_EXP+10.L=$lcn
+setpci -s $dev CAP_EXP+10.L=20:20
 
 sleep 0.1
 

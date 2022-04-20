@@ -117,7 +117,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb.dut.enable.value = 1
 
-    for length in list(range(1, ram_byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
+    for length in list(range(0, ram_byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
         for axi_offset in list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096)):
             for ram_offset in range(ram_byte_lanes+1):
                 tb.log.info("length %d, axi_offset %d, ram_offset %d", length, axi_offset, ram_offset)

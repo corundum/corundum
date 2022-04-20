@@ -772,7 +772,7 @@ always @* begin
                 req_pcie_tag_valid_next = 1'b0;
 
                 stat_rd_req_start_tag_next = req_pcie_tag_reg;
-                stat_rd_req_start_len_next = req_tlp_count_next;
+                stat_rd_req_start_len_next = req_zero_len_reg ? 0 : req_tlp_count_next;
                 stat_rd_req_start_valid_next = 1'b1;
 
                 if (!req_last_tlp) begin
@@ -1061,18 +1061,18 @@ always @* begin
                 end else begin
                     // no error
 
-                    if (zero_len_next) begin
-                        status_fifo_mask_next = 1'b0;
-                    end else begin
-                        tlp_data_int_next = rx_cpl_tlp_data;
-                        tlp_data_valid_int_next = 1'b1;
+                    tlp_data_int_next = rx_cpl_tlp_data;
+                    tlp_data_valid_int_next = 1'b1;
 
-                        status_fifo_mask_next = 1'b1;
-                    end
-
+                    status_fifo_mask_next = 1'b1;
                     status_fifo_finish_next = 1'b0;
                     status_fifo_error_next = DMA_ERROR_NONE;
                     status_fifo_we_next = 1'b1;
+
+                    if (zero_len_next) begin
+                        tlp_data_valid_int_next = 1'b0;
+                        status_fifo_mask_next = 1'b0;
+                    end
 
                     stat_rd_req_finish_tag_next = pcie_tag_next;
                     stat_rd_req_finish_status_next = DMA_ERROR_NONE;

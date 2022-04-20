@@ -41,6 +41,10 @@ module example_core #
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
     // DMA address width
     parameter DMA_ADDR_WIDTH = 64,
+    // DMA immediate enable
+    parameter DMA_IMM_ENABLE = 0,
+    // DMA immediate width
+    parameter DMA_IMM_WIDTH = 32,
     // DMA Length field width
     parameter DMA_LEN_WIDTH = 16,
     // DMA Tag field width
@@ -109,6 +113,8 @@ module example_core #
     output wire [DMA_ADDR_WIDTH-1:0]                    m_axis_dma_write_desc_dma_addr,
     output wire [RAM_SEL_WIDTH-1:0]                     m_axis_dma_write_desc_ram_sel,
     output wire [RAM_ADDR_WIDTH-1:0]                    m_axis_dma_write_desc_ram_addr,
+    output wire [DMA_IMM_WIDTH-1:0]                     m_axis_dma_write_desc_imm,
+    output wire                                         m_axis_dma_write_desc_imm_en,
     output wire [DMA_LEN_WIDTH-1:0]                     m_axis_dma_write_desc_len,
     output wire [DMA_TAG_WIDTH-1:0]                     m_axis_dma_write_desc_tag,
     output wire                                         m_axis_dma_write_desc_valid,
@@ -144,6 +150,8 @@ module example_core #
      */
     output wire [31:0]                                  msi_irq
 );
+
+localparam RAM_ADDR_IMM_WIDTH = (DMA_IMM_ENABLE && (DMA_IMM_WIDTH > RAM_ADDR_WIDTH)) ? DMA_IMM_WIDTH : RAM_ADDR_WIDTH;
 
 dma_psdpram #(
     .SIZE(16384),
@@ -203,7 +211,8 @@ reg [3:0] dma_read_desc_status_error_reg = 0, dma_read_desc_status_error_next;
 reg dma_read_desc_status_valid_reg = 0, dma_read_desc_status_valid_next;
 
 reg [DMA_ADDR_WIDTH-1:0] dma_write_desc_dma_addr_reg = 0, dma_write_desc_dma_addr_next;
-reg [RAM_ADDR_WIDTH-1:0] dma_write_desc_ram_addr_reg = 0, dma_write_desc_ram_addr_next;
+reg [RAM_ADDR_IMM_WIDTH-1:0] dma_write_desc_ram_addr_imm_reg = 0, dma_write_desc_ram_addr_imm_next;
+reg dma_write_desc_imm_en_reg = 0, dma_write_desc_imm_en_next;
 reg [DMA_LEN_WIDTH-1:0] dma_write_desc_len_reg = 0, dma_write_desc_len_next;
 reg [DMA_TAG_WIDTH-1:0] dma_write_desc_tag_reg = 0, dma_write_desc_tag_next;
 reg dma_write_desc_valid_reg = 0, dma_write_desc_valid_next;
@@ -260,7 +269,9 @@ assign m_axis_dma_read_desc_valid = dma_read_desc_valid_reg;
 
 assign m_axis_dma_write_desc_dma_addr = dma_write_desc_dma_addr_reg;
 assign m_axis_dma_write_desc_ram_sel = 0;
-assign m_axis_dma_write_desc_ram_addr = dma_write_desc_ram_addr_reg;
+assign m_axis_dma_write_desc_ram_addr = dma_write_desc_ram_addr_imm_reg;
+assign m_axis_dma_write_desc_imm = dma_write_desc_ram_addr_imm_reg;
+assign m_axis_dma_write_desc_imm_en = dma_write_desc_imm_en_reg;
 assign m_axis_dma_write_desc_len = dma_write_desc_len_reg;
 assign m_axis_dma_write_desc_tag = dma_write_desc_tag_reg;
 assign m_axis_dma_write_desc_valid = dma_write_desc_valid_reg;
@@ -289,7 +300,8 @@ always @* begin
     dma_read_desc_status_valid_next = dma_read_desc_status_valid_reg;
 
     dma_write_desc_dma_addr_next = dma_write_desc_dma_addr_reg;
-    dma_write_desc_ram_addr_next = dma_write_desc_ram_addr_reg;
+    dma_write_desc_ram_addr_imm_next = dma_write_desc_ram_addr_imm_reg;
+    dma_write_desc_imm_en_next = dma_write_desc_imm_en_reg;
     dma_write_desc_len_next = dma_write_desc_len_reg;
     dma_write_desc_tag_next = dma_write_desc_tag_reg;
     dma_write_desc_valid_next = dma_write_desc_valid_reg && !m_axis_dma_write_desc_ready;
@@ -357,10 +369,11 @@ always @* begin
             // single write
             16'h0200: dma_write_desc_dma_addr_next[31:0] = s_axil_ctrl_wdata;
             16'h0204: dma_write_desc_dma_addr_next[63:32] = s_axil_ctrl_wdata;
-            16'h0208: dma_write_desc_ram_addr_next = s_axil_ctrl_wdata;
+            16'h0208: dma_write_desc_ram_addr_imm_next = s_axil_ctrl_wdata;
             16'h0210: dma_write_desc_len_next = s_axil_ctrl_wdata;
             16'h0214: begin
-                dma_write_desc_tag_next = s_axil_ctrl_wdata;
+                dma_write_desc_tag_next = s_axil_ctrl_wdata[23:0];
+                dma_write_desc_imm_en_next = s_axil_ctrl_wdata[31];
                 dma_write_desc_valid_next = 1'b1;
             end
             // block read
@@ -411,6 +424,7 @@ always @* begin
         axil_ctrl_arready_next = 1'b1;
         axil_ctrl_rresp_next = 2'b00;
         axil_ctrl_rvalid_next = 1'b1;
+        axil_ctrl_rdata_next = 32'd0;
 
         case ({s_axil_ctrl_araddr[15:2], 2'b00})
             // control
@@ -441,10 +455,13 @@ always @* begin
             // single write
             16'h0200: axil_ctrl_rdata_next = dma_write_desc_dma_addr_reg;
             16'h0204: axil_ctrl_rdata_next = dma_write_desc_dma_addr_reg >> 32;
-            16'h0208: axil_ctrl_rdata_next = dma_write_desc_ram_addr_reg;
-            16'h020c: axil_ctrl_rdata_next = dma_write_desc_ram_addr_reg >> 32;
+            16'h0208: axil_ctrl_rdata_next = dma_write_desc_ram_addr_imm_reg;
+            16'h020c: axil_ctrl_rdata_next = dma_write_desc_ram_addr_imm_reg >> 32;
             16'h0210: axil_ctrl_rdata_next = dma_write_desc_len_reg;
-            16'h0214: axil_ctrl_rdata_next = dma_write_desc_tag_reg;
+            16'h0214: begin
+                axil_ctrl_rdata_next[23:0] = dma_write_desc_tag_reg;
+                axil_ctrl_rdata_next[31] = dma_write_desc_imm_en_reg;
+            end
             16'h0218: begin
                 axil_ctrl_rdata_next[15:0] = dma_write_desc_status_tag_reg;
                 axil_ctrl_rdata_next[27:24] = dma_write_desc_status_error_reg;
@@ -553,7 +570,8 @@ always @* begin
                 dma_write_block_dma_offset_next = dma_write_block_dma_offset_reg + dma_write_block_dma_stride_reg;
                 dma_write_desc_dma_addr_next = dma_write_block_dma_base_addr_reg + (dma_write_block_dma_offset_reg & dma_write_block_dma_offset_mask_reg);
                 dma_write_block_ram_offset_next = dma_write_block_ram_offset_reg + dma_write_block_ram_stride_reg;
-                dma_write_desc_ram_addr_next = dma_write_block_ram_base_addr_reg + (dma_write_block_ram_offset_reg & dma_write_block_ram_offset_mask_reg);
+                dma_write_desc_ram_addr_imm_next = dma_write_block_ram_base_addr_reg + (dma_write_block_ram_offset_reg & dma_write_block_ram_offset_mask_reg);
+                dma_write_desc_imm_en_next = 1'b0;
                 dma_write_desc_len_next = dma_write_block_len_reg;
                 dma_write_block_count_next = dma_write_block_count_reg - 1;
                 dma_write_desc_tag_next = dma_write_block_count_reg;
@@ -593,7 +611,8 @@ always @(posedge clk) begin
     dma_read_desc_status_valid_reg <= dma_read_desc_status_valid_next;
 
     dma_write_desc_dma_addr_reg <= dma_write_desc_dma_addr_next;
-    dma_write_desc_ram_addr_reg <= dma_write_desc_ram_addr_next;
+    dma_write_desc_ram_addr_imm_reg <= dma_write_desc_ram_addr_imm_next;
+    dma_write_desc_imm_en_reg <= dma_write_desc_imm_en_next;
     dma_write_desc_len_reg <= dma_write_desc_len_next;
     dma_write_desc_tag_reg <= dma_write_desc_tag_next;
     dma_write_desc_valid_reg <= dma_write_desc_valid_next;

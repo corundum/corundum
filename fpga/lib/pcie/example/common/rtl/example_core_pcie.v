@@ -47,6 +47,10 @@ module example_core_pcie #
     parameter TX_SEQ_NUM_WIDTH = 5,
     // TX sequence number tracking enable
     parameter TX_SEQ_NUM_ENABLE = 1,
+    // Immediate enable
+    parameter IMM_ENABLE = 1,
+    // Immediate width
+    parameter IMM_WIDTH = 32,
     // PCIe tag count
     parameter PCIE_TAG_COUNT = 256,
     // Operation table size (read)
@@ -220,6 +224,8 @@ wire                        axis_dma_read_desc_status_valid;
 wire [PCIE_ADDR_WIDTH-1:0]  axis_dma_write_desc_dma_addr;
 wire [RAM_SEL_WIDTH-1:0]    axis_dma_write_desc_ram_sel;
 wire [RAM_ADDR_WIDTH-1:0]   axis_dma_write_desc_ram_addr;
+wire [IMM_WIDTH-1:0]        axis_dma_write_desc_imm;
+wire                        axis_dma_write_desc_imm_en;
 wire [DMA_LEN_WIDTH-1:0]    axis_dma_write_desc_len;
 wire [DMA_TAG_WIDTH-1:0]    axis_dma_write_desc_tag;
 wire                        axis_dma_write_desc_valid;
@@ -629,6 +635,8 @@ dma_if_pcie #(
     .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
     .PCIE_ADDR_WIDTH(PCIE_ADDR_WIDTH),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
+    .IMM_ENABLE(IMM_ENABLE),
+    .IMM_WIDTH(IMM_WIDTH),
     .LEN_WIDTH(DMA_LEN_WIDTH),
     .TAG_WIDTH(DMA_TAG_WIDTH),
     .READ_OP_TABLE_SIZE(READ_OP_TABLE_SIZE),
@@ -716,6 +724,8 @@ dma_if_pcie_inst (
     .s_axis_write_desc_pcie_addr(axis_dma_write_desc_dma_addr),
     .s_axis_write_desc_ram_sel(axis_dma_write_desc_ram_sel),
     .s_axis_write_desc_ram_addr(axis_dma_write_desc_ram_addr),
+    .s_axis_write_desc_imm(axis_dma_write_desc_imm),
+    .s_axis_write_desc_imm_en(axis_dma_write_desc_imm_en),
     .s_axis_write_desc_len(axis_dma_write_desc_len),
     .s_axis_write_desc_tag(axis_dma_write_desc_tag),
     .s_axis_write_desc_valid(axis_dma_write_desc_valid),
@@ -794,6 +804,8 @@ example_core #(
     .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
     .DMA_ADDR_WIDTH(PCIE_ADDR_WIDTH),
+    .DMA_IMM_ENABLE(IMM_ENABLE),
+    .DMA_IMM_WIDTH(IMM_WIDTH),
     .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
     .DMA_TAG_WIDTH(DMA_TAG_WIDTH),
     .RAM_SEL_WIDTH(RAM_SEL_WIDTH),
@@ -854,6 +866,8 @@ core_inst (
     .m_axis_dma_write_desc_dma_addr(axis_dma_write_desc_dma_addr),
     .m_axis_dma_write_desc_ram_sel(axis_dma_write_desc_ram_sel),
     .m_axis_dma_write_desc_ram_addr(axis_dma_write_desc_ram_addr),
+    .m_axis_dma_write_desc_imm(axis_dma_write_desc_imm),
+    .m_axis_dma_write_desc_imm_en(axis_dma_write_desc_imm_en),
     .m_axis_dma_write_desc_len(axis_dma_write_desc_len),
     .m_axis_dma_write_desc_tag(axis_dma_write_desc_tag),
     .m_axis_dma_write_desc_valid(axis_dma_write_desc_valid),

@@ -50,7 +50,7 @@ except ImportError:
         del sys.path[0]
 
 DescBus, DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Desc",
-    signals=["axi_addr", "ram_addr", "ram_sel", "len", "tag", "valid", "ready"]
+    signals=["axi_addr", "ram_addr", "ram_sel", "imm", "imm_en", "len", "tag", "valid", "ready"]
 )
 
 DescStatusBus, DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",
@@ -118,7 +118,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb.dut.enable.value = 1
 
-    for length in list(range(1, ram_byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
+    for length in list(range(0, ram_byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
         # for axi_offset in axi_offsets:
         for axi_offset in list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096)):
             for ram_offset in range(ram_byte_lanes+1):
@@ -153,6 +153,54 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
     await RisingEdge(dut.clk)
 
 
+async def run_test_write_imm(dut, idle_inserter=None, backpressure_inserter=None):
+
+    tb = TB(dut)
+
+    axi_byte_lanes = tb.axi_ram.byte_lanes
+    tag_count = 2**len(tb.write_desc_source.bus.tag)
+
+    cur_tag = 1
+
+    tb.set_idle_generator(idle_inserter)
+    tb.set_backpressure_generator(backpressure_inserter)
+
+    await tb.cycle_reset()
+
+    tb.dut.enable.value = 1
+
+    for length in list(range(1, len(dut.s_axis_write_desc_imm) // 8)):
+        # for axi_offset in axi_offsets:
+        for axi_offset in list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096)):
+            tb.log.info("length %d, axi_offset %d", length, axi_offset)
+            axi_addr = axi_offset+0x1000
+            test_data = bytearray([x % 256 for x in range(length)])
+            imm = int.from_bytes(test_data, 'little')
+
+            tb.axi_ram.write(axi_addr-128, b'\xaa'*(len(test_data)+256))
+
+            tb.log.debug("Immediate: 0x%x", imm)
+
+            desc = DescTransaction(axi_addr=axi_addr, ram_addr=0, ram_sel=0, imm=imm, imm_en=1, len=len(test_data), tag=cur_tag)
+            await tb.write_desc_source.send(desc)
+
+            status = await tb.write_desc_status_sink.recv()
+
+            tb.log.info("status: %s", status)
+
+            assert int(status.tag) == cur_tag
+            assert int(status.error) == 0
+
+            tb.log.debug("%s", tb.axi_ram.hexdump_str((axi_addr & ~0xf)-16, (((axi_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
+
+            assert tb.axi_ram.read(axi_addr-1, len(test_data)+2) == b'\xaa'+test_data+b'\xaa'
+
+            cur_tag = (cur_tag + 1) % tag_count
+
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
+
 def cycle_pause():
     return itertools.cycle([1, 1, 1, 0])
 
@@ -160,6 +208,11 @@ def cycle_pause():
 if cocotb.SIM_NAME:
 
     factory = TestFactory(run_test_write)
+    factory.add_option("idle_inserter", [None, cycle_pause])
+    factory.add_option("backpressure_inserter", [None, cycle_pause])
+    factory.generate_tests()
+
+    factory = TestFactory(run_test_write_imm)
     factory.add_option("idle_inserter", [None, cycle_pause])
     factory.add_option("backpressure_inserter", [None, cycle_pause])
     factory.generate_tests()
@@ -201,6 +254,8 @@ def test_dma_if_axi_wr(request, axi_data_width):
     parameters['RAM_SEG_DATA_WIDTH'] = ram_seg_data_width
     parameters['RAM_SEG_BE_WIDTH'] = ram_seg_be_width
     parameters['RAM_SEG_ADDR_WIDTH'] = ram_seg_addr_width
+    parameters['IMM_ENABLE'] = 1
+    parameters['IMM_WIDTH'] = parameters['AXI_DATA_WIDTH']
     parameters['LEN_WIDTH'] = 16
     parameters['TAG_WIDTH'] = 8
     parameters['OP_TABLE_SIZE'] = 2**parameters['AXI_ID_WIDTH']

@@ -29,13 +29,11 @@ echo 1 > "/sys/bus/pci/devices/$dev/remove"
 
 echo "Performing hot reset of port $port..."
 
-bc=$(setpci -s $port BRIDGE_CONTROL)
+echo "Bridge control:" $(setpci -s $port BRIDGE_CONTROL)
 
-echo "Bridge control:" $bc
-
-setpci -s $port BRIDGE_CONTROL=$(printf "%04x" $((0x$bc | 0x40)))
-sleep 0.01
-setpci -s $port BRIDGE_CONTROL=$bc
+setpci -s $port BRIDGE_CONTROL=40:40
+sleep 0.5
+setpci -s $port BRIDGE_CONTROL=00:40
 sleep 0.5
 
 echo "Rescanning bus..."

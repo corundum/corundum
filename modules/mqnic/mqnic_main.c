@@ -246,6 +246,17 @@ static int mqnic_platform_module_eeprom_get(struct mqnic_dev *mqnic)
 
 static void mqnic_common_remove(struct mqnic_dev *mqnic);
 
+#ifdef CONFIG_AUXILIARY_BUS
+static void mqnic_adev_release(struct device *dev)
+{
+	struct mqnic_adev *mqnic_adev = container_of(dev, struct mqnic_adev, adev.dev);
+
+	if (mqnic_adev->ptr)
+		*mqnic_adev->ptr = NULL;
+	kfree(mqnic_adev);
+}
+#endif
+
 static int mqnic_common_probe(struct mqnic_dev *mqnic)
 {
 	int ret = 0;
@@ -411,10 +422,47 @@ fail_create_if:
 
 	dev_info(dev, "Registered device %s", mqnic->name);
 
+#ifdef CONFIG_AUXILIARY_BUS
+	if (mqnic->app_id) {
+		mqnic->app_adev = kzalloc(sizeof(*mqnic->app_adev), GFP_KERNEL);
+		if (!mqnic->app_adev) {
+			ret = -ENOMEM;
+			goto fail_adev;
+		}
+
+		snprintf(mqnic->app_adev->name, sizeof(mqnic->app_adev->name), "app_%08x", mqnic->app_id);
+
+		mqnic->app_adev->adev.id = mqnic->id;
+		mqnic->app_adev->adev.name = mqnic->app_adev->name;
+		mqnic->app_adev->adev.dev.parent = dev;
+		mqnic->app_adev->adev.dev.release = mqnic_adev_release;
+		mqnic->app_adev->mdev = mqnic;
+		mqnic->app_adev->ptr = &mqnic->app_adev;
+
+		ret = auxiliary_device_init(&mqnic->app_adev->adev);
+		if (ret) {
+			kfree(mqnic->app_adev);
+			mqnic->app_adev = NULL;
+			goto fail_adev;
+		}
+
+		ret = auxiliary_device_add(&mqnic->app_adev->adev);
+		if (ret) {
+			auxiliary_device_uninit(&mqnic->app_adev->adev);
+			mqnic->app_adev = NULL;
+			goto fail_adev;
+		}
+
+		dev_info(dev, "Registered auxiliary bus device " DRIVER_NAME ".%s.%d",
+				mqnic->app_adev->adev.name, mqnic->app_adev->adev.id);
+	}
+#endif
+
 	// probe complete
 	return 0;
 
 	// error handling
+fail_adev:
 fail_miscdev:
 fail_board:
 fail_bar_size:
@@ -426,6 +474,13 @@ fail_rb_init:
 static void mqnic_common_remove(struct mqnic_dev *mqnic)
 {
 	int k = 0;
+
+#ifdef CONFIG_AUXILIARY_BUS
+	if (mqnic->app_adev) {
+		auxiliary_device_delete(&mqnic->app_adev->adev);
+		auxiliary_device_uninit(&mqnic->app_adev->adev);
+	}
+#endif
 
 	if (mqnic->misc_dev.this_device)
 		misc_deregister(&mqnic->misc_dev);

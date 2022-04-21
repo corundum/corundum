@@ -40,6 +40,9 @@
 #ifdef CONFIG_PCI
 #include <linux/pci.h>
 #endif
+#ifdef CONFIG_AUXILIARY_BUS
+#include <linux/auxiliary_bus.h>
+#endif
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
 #include <linux/netdevice.h>
@@ -100,6 +103,15 @@ struct mqnic_irq {
 	struct atomic_notifier_head nh;
 };
 
+#ifdef CONFIG_AUXILIARY_BUS
+struct mqnic_adev {
+	struct auxiliary_device adev;
+	struct mqnic_dev *mdev;
+	struct mqnic_adev **ptr;
+	char name[32];
+};
+#endif
+
 struct mqnic_dev {
 	struct device *dev;
 #ifdef CONFIG_PCI
@@ -134,6 +146,10 @@ struct mqnic_dev {
 	struct list_head dev_list_node;
 
 	struct miscdevice misc_dev;
+
+#ifdef CONFIG_AUXILIARY_BUS
+	struct mqnic_adev *app_adev;
+#endif
 
 	struct reg_block *rb_list;
 	struct reg_block *fw_id_rb;

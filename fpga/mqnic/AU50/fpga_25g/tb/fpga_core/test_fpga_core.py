@@ -639,6 +639,7 @@ def test_fpga_core(request):
     parameters['RX_RAM_SIZE'] = 32768
 
     # Application block configuration
+    parameters['APP_ID'] = 0x00000000
     parameters['APP_ENABLE'] = 0
     parameters['APP_CTRL_ENABLE'] = 1
     parameters['APP_DMA_ENABLE'] = 1

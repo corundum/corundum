@@ -152,6 +152,8 @@ struct mqnic_dev {
 	u32 git_hash;
 	u32 rel_info;
 
+	u32 app_id;
+
 	u32 if_offset;
 	u32 if_count;
 	u32 if_stride;

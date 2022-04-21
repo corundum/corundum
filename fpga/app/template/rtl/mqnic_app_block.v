@@ -64,6 +64,7 @@ module mqnic_app_block #
     parameter PTP_TS_ENABLE = 1,
 
     // Application configuration
+    parameter APP_ID = 32'h12340001,
     parameter APP_CTRL_ENABLE = 1,
     parameter APP_DMA_ENABLE = 1,
     parameter APP_AXIS_DIRECT_ENABLE = 1,
@@ -457,6 +458,14 @@ module mqnic_app_block #
     input  wire                                           jtag_tms,
     input  wire                                           jtag_tck
 );
+
+// check configuration
+initial begin
+    if (APP_ID != 32'h12340001) begin
+        $error("Error: Invalid APP_ID (expected 32'h12340001, got 32'h%x) (instance %m)", APP_ID);
+        $finish;
+    end
+end
 
 /*
  * AXI-Lite slave interface (control from host)

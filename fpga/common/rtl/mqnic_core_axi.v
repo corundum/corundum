@@ -118,6 +118,7 @@ module mqnic_core_axi #
     parameter RX_RAM_SIZE = 32768,
 
     // Application block configuration
+    parameter APP_ID = 32'h00000000,
     parameter APP_ENABLE = 0,
     parameter APP_CTRL_ENABLE = 1,
     parameter APP_DMA_ENABLE = 1,
@@ -645,6 +646,7 @@ mqnic_core #(
     .RX_RAM_SIZE(RX_RAM_SIZE),
 
     // Application block configuration
+    .APP_ID(APP_ID),
     .APP_ENABLE(APP_ENABLE),
     .APP_CTRL_ENABLE(APP_CTRL_ENABLE),
     .APP_DMA_ENABLE(APP_DMA_ENABLE),

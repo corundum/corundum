@@ -253,6 +253,10 @@ Parameters
 
     Receive scratchpad RAM size per interface, default ``32768``.
 
+.. object:: APP_ID
+
+    Application ID, default ``0``.
+
 .. object:: APP_ENABLE
 
     Enable application section, default ``0``.

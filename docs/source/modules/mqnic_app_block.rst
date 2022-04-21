@@ -122,6 +122,10 @@ Parameters
 
     Enable PTP timestamping, default ``1``.
 
+.. object:: APP_ID
+
+    Application ID, default ``0``.
+
 .. object:: APP_CTRL_ENABLE
 
     Enable application section control connection to core NIC registers, default ``1``.

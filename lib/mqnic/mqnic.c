@@ -360,6 +360,7 @@ static int mqnic_try_open_if_name(struct mqnic *dev, const char *if_name)
 struct mqnic *mqnic_open(const char *dev_name)
 {
     struct mqnic *dev = calloc(1, sizeof(struct mqnic));
+    struct reg_block *rb;
 
     if (!dev)
     {
@@ -412,6 +413,12 @@ open:
     time_t build_date = dev->build_date;
     struct tm *tm_info = gmtime(&build_date);
     strftime(dev->build_date_str, sizeof(dev->build_date_str), "%F %T", tm_info);
+
+    rb = find_reg_block(dev->rb_list, MQNIC_RB_APP_INFO_TYPE, MQNIC_RB_APP_INFO_VER, 0);
+
+    if (rb) {
+        dev->app_id = mqnic_reg_read32(rb->regs, MQNIC_RB_APP_INFO_REG_ID);
+    }
 
     dev->phc_rb = find_reg_block(dev->rb_list, MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER, 0);
 
@@ -503,4 +510,6 @@ void mqnic_print_fw_id(struct mqnic *dev)
     printf("Build date: %s UTC (raw 0x%08x)\n", dev->build_date_str, dev->build_date);
     printf("Git hash: %08x\n", dev->git_hash);
     printf("Release info: %08x\n", dev->rel_info);
+    if (dev->app_id)
+        printf("Application ID: 0x%08x\n", dev->app_id);
 }

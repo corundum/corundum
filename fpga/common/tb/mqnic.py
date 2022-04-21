@@ -241,6 +241,10 @@ MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_NS     = 0x54
 MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_SEC_L  = 0x58
 MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_SEC_H  = 0x5C
 
+MQNIC_RB_APP_INFO_TYPE    = 0x0000C004
+MQNIC_RB_APP_INFO_VER     = 0x00000200
+MQNIC_RB_APP_INFO_REG_ID  = 0x0C
+
 MQNIC_QUEUE_BASE_ADDR_REG       = 0x00
 MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG = 0x08
 MQNIC_QUEUE_CPL_QUEUE_INDEX_REG = 0x0C
@@ -1300,6 +1304,8 @@ class Driver:
         self.git_hash = None
         self.rel_info = None
 
+        self.app_id = None
+
         self.if_offset = None
         self.if_count = None
         self.if_stride = None
@@ -1383,6 +1389,12 @@ class Driver:
         self.log.info("Git hash: %08x", self.git_hash)
         self.rel_info = await self.fw_id_rb.read_dword(MQNIC_RB_FW_ID_REG_REL_INFO)
         self.log.info("Release info: %d", self.rel_info)
+
+        rb = self.reg_blocks.find(MQNIC_RB_APP_INFO_TYPE, MQNIC_RB_APP_INFO_VER)
+
+        if rb:
+            self.app_id = await rb.read_dword(MQNIC_RB_APP_INFO_REG_ID)
+            self.log.info("Application ID: 0x%08x", self.app_id)
 
         self.phc_rb = self.reg_blocks.find(MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER)
 

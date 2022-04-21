@@ -118,6 +118,7 @@ module mqnic_core #
     parameter RX_RAM_SIZE = 32768,
 
     // Application block configuration
+    parameter APP_ID = 32'h00000000,
     parameter APP_ENABLE = 0,
     parameter APP_CTRL_ENABLE = 1,
     parameter APP_DMA_ENABLE = 1,
@@ -596,19 +597,24 @@ always @(posedge clk) begin
             // Interface
             8'h40: ctrl_reg_rd_data_reg <= 32'h0000C000;  // Interface: Type
             8'h44: ctrl_reg_rd_data_reg <= 32'h00000100;  // Interface: Version
-            8'h48: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h60 : PHC_RB_BASE_ADDR;  // Interface: Next header
+            8'h48: ctrl_reg_rd_data_reg <= 32'h60;        // Interface: Next header
             8'h4C: ctrl_reg_rd_data_reg <= 32'h0;         // Interface: Offset
             8'h50: ctrl_reg_rd_data_reg <= IF_COUNT;      // Interface: Count
             8'h54: ctrl_reg_rd_data_reg <= 2**AXIL_IF_CTRL_ADDR_WIDTH;  // Interface: Stride
-            8'h58: ctrl_reg_rd_data_reg <= 2**AXIL_CSR_ADDR_WIDTH;  // Interface: CSR offset
+            8'h58: ctrl_reg_rd_data_reg <= 2**AXIL_CSR_ADDR_WIDTH;      // Interface: CSR offset
+            // App info
+            8'h60: ctrl_reg_rd_data_reg <= APP_ENABLE ? 32'h0000C004 : 0;  // App info: Type
+            8'h64: ctrl_reg_rd_data_reg <= APP_ENABLE ? 32'h00000200 : 0;  // App info: Version
+            8'h68: ctrl_reg_rd_data_reg <= 32'h80;                         // App info: Next header
+            8'h6C: ctrl_reg_rd_data_reg <= APP_ENABLE ? APP_ID : 0;        // App info: ID
             // Stats
-            8'h60: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h0000C004 : 0;  // Stats: Type
-            8'h64: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h00000100 : 0;  // Stats: Version
-            8'h68: ctrl_reg_rd_data_reg <= STAT_ENABLE ? PHC_RB_BASE_ADDR : 0;  // Stats: Next header
-            8'h6C: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 2**16 : 0;         // Stats: Offset
-            8'h70: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 2**STAT_ID_WIDTH : 0;  // Stats: Count
-            8'h74: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 8 : 0;             // Stats: Stride
-            8'h78: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h00000000 : 0;  // Stats: Flags
+            8'h80: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h0000C005 : 0;      // Stats: Type
+            8'h84: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h00000100 : 0;      // Stats: Version
+            8'h88: ctrl_reg_rd_data_reg <= PHC_RB_BASE_ADDR;                    // Stats: Next header
+            8'h8C: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 2**16 : 0;             // Stats: Offset
+            8'h90: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 2**STAT_ID_WIDTH : 0;  // Stats: Count
+            8'h94: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 8 : 0;                 // Stats: Stride
+            8'h98: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h00000000 : 0;      // Stats: Flags
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end
@@ -3588,6 +3594,7 @@ if (APP_ENABLE) begin : app
         .PTP_TS_ENABLE(PTP_TS_ENABLE),
 
         // Application configuration
+        .APP_ID(APP_ID),
         .APP_CTRL_ENABLE(APP_CTRL_ENABLE),
         .APP_DMA_ENABLE(APP_DMA_ENABLE),
         .APP_AXIS_DIRECT_ENABLE(APP_AXIS_DIRECT_ENABLE),

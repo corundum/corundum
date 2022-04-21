@@ -527,6 +527,7 @@ def test_mqnic_core_pcie_axi(request, if_count, ports_per_if, axi_data_width,
     parameters['RX_RAM_SIZE'] = 131072
 
     # Application block configuration
+    parameters['APP_ID'] = 0x00000000
     parameters['APP_ENABLE'] = 0
     parameters['APP_CTRL_ENABLE'] = 1
     parameters['APP_DMA_ENABLE'] = 1

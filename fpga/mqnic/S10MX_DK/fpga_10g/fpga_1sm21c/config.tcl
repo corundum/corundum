@@ -135,6 +135,7 @@ dict set params TX_RAM_SIZE "32768"
 dict set params RX_RAM_SIZE "32768"
 
 # Application block configuration
+dict set params APP_ID "32'h00000000"
 dict set params APP_ENABLE "0"
 dict set params APP_CTRL_ENABLE "1"
 dict set params APP_DMA_ENABLE "1"

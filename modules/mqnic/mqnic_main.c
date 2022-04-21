@@ -308,6 +308,13 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 	dev_info(dev, "Git hash: %08x", mqnic->git_hash);
 	dev_info(dev, "Release info: %08x", mqnic->rel_info);
 
+	rb = find_reg_block(mqnic->rb_list, MQNIC_RB_APP_INFO_TYPE, MQNIC_RB_APP_INFO_VER, 0);
+
+	if (rb) {
+		mqnic->app_id = ioread32(rb->regs + MQNIC_RB_APP_INFO_REG_ID);
+		dev_info(dev, "Application ID: 0x%08x", mqnic->app_id);
+	}
+
 	mqnic->phc_rb = find_reg_block(mqnic->rb_list, MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER, 0);
 
 	// Enumerate interfaces

@@ -183,6 +183,20 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 
 	interface->rx_cpl_queue_count = min_t(u32, interface->rx_cpl_queue_count, MQNIC_MAX_RX_CPL_RINGS);
 
+	interface->rx_queue_map_rb = find_reg_block(interface->rb_list, MQNIC_RB_RX_QUEUE_MAP_TYPE, MQNIC_RB_RX_QUEUE_MAP_VER, 0);
+
+	if (!interface->rx_queue_map_rb) {
+		ret = -EIO;
+		dev_err(dev, "RX queue map block not found");
+		goto fail;
+	}
+
+	for (k = 0; k < interface->port_count; k++) {
+		mqnic_interface_set_rx_queue_map_offset(interface, k, 0);
+		mqnic_interface_set_rx_queue_map_rss_mask(interface, k, 0);
+		mqnic_interface_set_rx_queue_map_app_mask(interface, k, 0);
+	}
+
 	// determine desc block size
 	iowrite32(0xf << 8, hw_addr + interface->tx_queue_offset + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 	interface->max_desc_block_size = 1 << ((ioread32(hw_addr + interface->tx_queue_offset + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG) >> 8) & 0xf);
@@ -315,16 +329,6 @@ void mqnic_destroy_interface(struct mqnic_if **interface_ptr)
 	kfree(interface);
 }
 
-u32 mqnic_interface_get_rss_mask(struct mqnic_if *interface)
-{
-	return ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_RSS_MASK);
-}
-
-void mqnic_interface_set_rss_mask(struct mqnic_if *interface, u32 rss_mask)
-{
-	iowrite32(rss_mask, interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_RSS_MASK);
-}
-
 u32 mqnic_interface_get_tx_mtu(struct mqnic_if *interface)
 {
 	return ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_TX_MTU);
@@ -343,4 +347,40 @@ u32 mqnic_interface_get_rx_mtu(struct mqnic_if *interface)
 void mqnic_interface_set_rx_mtu(struct mqnic_if *interface, u32 mtu)
 {
 	iowrite32(mtu, interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_RX_MTU);
+}
+
+u32 mqnic_interface_get_rx_queue_map_offset(struct mqnic_if *interface, int port)
+{
+	return ioread32(interface->rx_queue_map_rb->regs + MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+			MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET);
+}
+
+void mqnic_interface_set_rx_queue_map_offset(struct mqnic_if *interface, int port, u32 val)
+{
+	iowrite32(val, interface->rx_queue_map_rb->regs + MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+			MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET);
+}
+
+u32 mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, int port)
+{
+	return ioread32(interface->rx_queue_map_rb->regs + MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+			MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_RSS_MASK);
+}
+
+void mqnic_interface_set_rx_queue_map_rss_mask(struct mqnic_if *interface, int port, u32 val)
+{
+	iowrite32(val, interface->rx_queue_map_rb->regs + MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+			MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_RSS_MASK);
+}
+
+u32 mqnic_interface_get_rx_queue_map_app_mask(struct mqnic_if *interface, int port)
+{
+	return ioread32(interface->rx_queue_map_rb->regs + MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+			MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK);
+}
+
+void mqnic_interface_set_rx_queue_map_app_mask(struct mqnic_if *interface, int port, u32 val)
+{
+	iowrite32(val, interface->rx_queue_map_rb->regs + MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+			MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK);
 }

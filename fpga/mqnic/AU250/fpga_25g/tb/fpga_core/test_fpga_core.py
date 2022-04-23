@@ -508,6 +508,61 @@ async def run_test_nic(dut):
     assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
     assert Ether(pkt.data).build() == test_pkt.build()
 
+    tb.log.info("Queue mapping offset test")
+
+    data = bytearray([x % 256 for x in range(1024)])
+
+    tb.loopback_enable = True
+
+    for k in range(4):
+        await tb.driver.interfaces[0].set_rx_queue_map_offset(0, k)
+
+        await tb.driver.interfaces[0].start_xmit(data, 0)
+
+        pkt = await tb.driver.interfaces[0].recv()
+
+        tb.log.info("Packet: %s", pkt)
+        assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
+        assert pkt.queue == k
+
+    tb.loopback_enable = False
+
+    await tb.driver.interfaces[0].set_rx_queue_map_offset(0, 0)
+
+    tb.log.info("Queue mapping RSS mask test")
+
+    await tb.driver.interfaces[0].set_rx_queue_map_rss_mask(0, 0x00000003)
+
+    tb.loopback_enable = True
+
+    queues = set()
+
+    for k in range(64):
+        payload = bytes([x % 256 for x in range(256)])
+        eth = Ether(src='5A:51:52:53:54:55', dst='DA:D1:D2:D3:D4:D5')
+        ip = IP(src='192.168.1.100', dst='192.168.1.101')
+        udp = UDP(sport=1, dport=k+0)
+        test_pkt = eth / ip / udp / payload
+
+        test_pkt2 = test_pkt.copy()
+        test_pkt2[UDP].chksum = scapy.utils.checksum(bytes(test_pkt2[UDP]))
+
+        await tb.driver.interfaces[0].start_xmit(test_pkt2.build(), 0, 34, 6)
+
+    for k in range(64):
+        pkt = await tb.driver.interfaces[0].recv()
+
+        tb.log.info("Packet: %s", pkt)
+        assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
+
+        queues.add(pkt.queue)
+
+    assert len(queues) == 4
+
+    tb.loopback_enable = False
+
+    await tb.driver.interfaces[0].set_rx_queue_map_rss_mask(0, 0)
+
     tb.log.info("Multiple small packets")
 
     count = 64
@@ -581,6 +636,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "mqnic_ingress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_ingress.v"),
+        os.path.join(rtl_dir, "common", "mqnic_rx_queue_map.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_clock.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_perout.v"),

@@ -426,6 +426,8 @@ parameter AXIL_SCHED_BASE_ADDR = AXIL_RX_CQM_BASE_ADDR + 2**AXIL_RX_CQM_ADDR_WID
 localparam RB_BASE_ADDR = AXIL_CTRL_BASE_ADDR;
 localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
 
+localparam RX_RB_BASE_ADDR = RB_BASE_ADDR + 16'h100;
+
 localparam SCHED_RB_BASE_ADDR = RB_BASE_ADDR + 16'h1000;
 localparam SCHED_RB_STRIDE = 16'h1000;
 
@@ -899,6 +901,12 @@ reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
+wire if_rx_ctrl_reg_wr_wait;
+wire if_rx_ctrl_reg_wr_ack;
+wire [AXIL_DATA_WIDTH-1:0] if_rx_ctrl_reg_rd_data;
+wire if_rx_ctrl_reg_rd_wait;
+wire if_rx_ctrl_reg_rd_ack;
+
 wire port_ctrl_reg_wr_wait[PORTS-1:0];
 wire port_ctrl_reg_wr_ack[PORTS-1:0];
 wire [AXIL_DATA_WIDTH-1:0] port_ctrl_reg_rd_data[PORTS-1:0];
@@ -920,11 +928,11 @@ assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_cmb;
 integer k;
 
 always @* begin
-    ctrl_reg_wr_wait_cmb = 1'b0;
-    ctrl_reg_wr_ack_cmb = ctrl_reg_wr_ack_reg;
-    ctrl_reg_rd_data_cmb = ctrl_reg_rd_data_reg;
-    ctrl_reg_rd_wait_cmb = 1'b0;
-    ctrl_reg_rd_ack_cmb = ctrl_reg_rd_ack_reg;
+    ctrl_reg_wr_wait_cmb = if_rx_ctrl_reg_wr_wait;
+    ctrl_reg_wr_ack_cmb = ctrl_reg_wr_ack_reg | if_rx_ctrl_reg_wr_ack;
+    ctrl_reg_rd_data_cmb = ctrl_reg_rd_data_reg | if_rx_ctrl_reg_rd_data;
+    ctrl_reg_rd_wait_cmb = if_rx_ctrl_reg_rd_wait;
+    ctrl_reg_rd_ack_cmb = ctrl_reg_rd_ack_reg | if_rx_ctrl_reg_rd_ack;
 
     for (k = 0; k < PORTS; k = k + 1) begin
         ctrl_reg_wr_wait_cmb = ctrl_reg_wr_wait_cmb | port_ctrl_reg_wr_wait[k];
@@ -938,8 +946,6 @@ end
 reg [DMA_CLIENT_LEN_WIDTH-1:0] tx_mtu_reg = MAX_TX_SIZE;
 reg [DMA_CLIENT_LEN_WIDTH-1:0] rx_mtu_reg = MAX_RX_SIZE;
 
-reg [RX_QUEUE_INDEX_WIDTH-1:0] rss_mask_reg = 0;
-
 always @(posedge clk) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
     ctrl_reg_rd_data_reg <= {AXIL_DATA_WIDTH{1'b0}};
@@ -952,7 +958,6 @@ always @(posedge clk) begin
             // Interface control
             RBB+8'h28: tx_mtu_reg <= ctrl_reg_wr_data;                      // IF ctrl: TX MTU
             RBB+8'h2C: rx_mtu_reg <= ctrl_reg_wr_data;                      // IF ctrl: RX MTU
-            RBB+8'h30: rss_mask_reg <= ctrl_reg_wr_data;                    // IF ctrl: RSS mask
             default: ctrl_reg_wr_ack_reg <= 1'b0;
         endcase
     end
@@ -963,7 +968,7 @@ always @(posedge clk) begin
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
             // Interface control
             RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C001;                // IF ctrl: Type
-            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000300;                // IF ctrl: Version
+            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000400;                // IF ctrl: Version
             RBB+8'h08: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h40;          // IF ctrl: Next header
             RBB+8'h0C: begin
                 // IF ctrl: features
@@ -979,7 +984,6 @@ always @(posedge clk) begin
             RBB+8'h24: ctrl_reg_rd_data_reg <= MAX_RX_SIZE;                 // IF ctrl: Max RX MTU
             RBB+8'h28: ctrl_reg_rd_data_reg <= tx_mtu_reg;                  // IF ctrl: TX MTU
             RBB+8'h2C: ctrl_reg_rd_data_reg <= rx_mtu_reg;                  // IF ctrl: RX MTU
-            RBB+8'h30: ctrl_reg_rd_data_reg <= rss_mask_reg;                // IF ctrl: RSS mask
             // Queue manager (Event)
             RBB+8'h40: ctrl_reg_rd_data_reg <= 32'h0000C010;                // Event QM: Type
             RBB+8'h44: ctrl_reg_rd_data_reg <= 32'h00000100;                // Event QM: Version
@@ -1011,7 +1015,7 @@ always @(posedge clk) begin
             // Queue manager (RX CPL)
             RBB+8'hC0: ctrl_reg_rd_data_reg <= 32'h0000C031;                // RX CPL QM: Type
             RBB+8'hC4: ctrl_reg_rd_data_reg <= 32'h00000100;                // RX CPL QM: Version
-            RBB+8'hC8: ctrl_reg_rd_data_reg <= SCHED_RB_BASE_ADDR;          // RX CPL QM: Next header
+            RBB+8'hC8: ctrl_reg_rd_data_reg <= RX_RB_BASE_ADDR;             // RX CPL QM: Next header
             RBB+8'hCC: ctrl_reg_rd_data_reg <= AXIL_RX_CQM_BASE_ADDR;       // RX CPL QM: Offset
             RBB+8'hD0: ctrl_reg_rd_data_reg <= 2**RX_CPL_QUEUE_INDEX_WIDTH; // RX CPL QM: Count
             RBB+8'hD4: ctrl_reg_rd_data_reg <= 32;                          // RX CPL QM: Stride
@@ -1025,8 +1029,6 @@ always @(posedge clk) begin
 
         tx_mtu_reg <= MAX_TX_SIZE;
         rx_mtu_reg <= MAX_RX_SIZE;
-
-        rss_mask_reg <= 0;
     end
 end
 
@@ -2364,6 +2366,11 @@ assign m_axis_data_dma_read_desc_ram_sel = 0;
 
 mqnic_interface_rx #(
     .PORTS(PORTS),
+    .REG_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+    .REG_DATA_WIDTH(AXIL_DATA_WIDTH),
+    .REG_STRB_WIDTH(AXIL_STRB_WIDTH),
+    .RB_BASE_ADDR(RX_RB_BASE_ADDR),
+    .RB_NEXT_PTR(SCHED_RB_BASE_ADDR),
     .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
     .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
     .DMA_TAG_WIDTH(DMA_TAG_WIDTH),
@@ -2408,6 +2415,21 @@ mqnic_interface_rx #(
 interface_rx_inst (
     .clk(clk),
     .rst(rst),
+
+    /*
+     * Control register interface
+     */
+    .ctrl_reg_wr_addr(ctrl_reg_wr_addr),
+    .ctrl_reg_wr_data(ctrl_reg_wr_data),
+    .ctrl_reg_wr_strb(ctrl_reg_wr_strb),
+    .ctrl_reg_wr_en(ctrl_reg_wr_en),
+    .ctrl_reg_wr_wait(if_rx_ctrl_reg_wr_wait),
+    .ctrl_reg_wr_ack(if_rx_ctrl_reg_wr_ack),
+    .ctrl_reg_rd_addr(ctrl_reg_rd_addr),
+    .ctrl_reg_rd_en(ctrl_reg_rd_en),
+    .ctrl_reg_rd_data(if_rx_ctrl_reg_rd_data),
+    .ctrl_reg_rd_wait(if_rx_ctrl_reg_rd_wait),
+    .ctrl_reg_rd_ack(if_rx_ctrl_reg_rd_ack),
 
     /*
      * Descriptor request output
@@ -2504,8 +2526,7 @@ interface_rx_inst (
     /*
      * Configuration
      */
-    .mtu(rx_mtu_reg),
-    .rss_mask(rss_mask_reg)
+    .mtu(rx_mtu_reg)
 );
 
 assign m_axis_data_dma_write_desc_ram_sel = 0;

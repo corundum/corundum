@@ -44,6 +44,16 @@ module mqnic_interface_rx #
 (
     // Number of ports
     parameter PORTS = 1,
+    // Control register interface address width
+    parameter REG_ADDR_WIDTH = 7,
+    // Control register interface data width
+    parameter REG_DATA_WIDTH = 32,
+    // Control register interface byte enable width
+    parameter REG_STRB_WIDTH = (REG_DATA_WIDTH/8),
+    // Register block base address
+    parameter RB_BASE_ADDR = 0,
+    // Register block next block address
+    parameter RB_NEXT_PTR = 0,
     // DMA address width
     parameter DMA_ADDR_WIDTH = 64,
     // DMA length field width
@@ -128,6 +138,21 @@ module mqnic_interface_rx #
 (
     input  wire                                 clk,
     input  wire                                 rst,
+
+    /*
+     * Control register interface
+     */
+    input  wire [REG_ADDR_WIDTH-1:0]            ctrl_reg_wr_addr,
+    input  wire [REG_DATA_WIDTH-1:0]            ctrl_reg_wr_data,
+    input  wire [REG_STRB_WIDTH-1:0]            ctrl_reg_wr_strb,
+    input  wire                                 ctrl_reg_wr_en,
+    output wire                                 ctrl_reg_wr_wait,
+    output wire                                 ctrl_reg_wr_ack,
+    input  wire [REG_ADDR_WIDTH-1:0]            ctrl_reg_rd_addr,
+    input  wire                                 ctrl_reg_rd_en,
+    output wire [REG_DATA_WIDTH-1:0]            ctrl_reg_rd_data,
+    output wire                                 ctrl_reg_rd_wait,
+    output wire                                 ctrl_reg_rd_ack,
 
     /*
      * Descriptor request output
@@ -224,14 +249,20 @@ module mqnic_interface_rx #
     /*
      * Configuration
      */
-    input  wire [DMA_CLIENT_LEN_WIDTH-1:0]      mtu,
-    input  wire [31:0]                          rss_mask
+    input  wire [DMA_CLIENT_LEN_WIDTH-1:0]      mtu
 );
 
 parameter DMA_CLIENT_TAG_WIDTH = $clog2(RX_DESC_TABLE_SIZE);
 parameter DMA_CLIENT_LEN_WIDTH = DMA_LEN_WIDTH;
 
 parameter REQ_TAG_WIDTH = $clog2(RX_DESC_TABLE_SIZE);
+
+localparam RX_HASH_WIDTH = 32;
+localparam RX_HASH_TYPE_WIDTH = 4;
+
+localparam TUSER_HASH_OFFSET = AXIS_RX_USER_WIDTH;
+localparam TUSER_HASH_TYPE_OFFSET = TUSER_HASH_OFFSET + (RX_HASH_ENABLE ? RX_HASH_WIDTH : 0);
+localparam INT_AXIS_RX_USER_WIDTH = TUSER_HASH_TYPE_OFFSET + (RX_HASH_ENABLE ? RX_HASH_TYPE_WIDTH : 0);
 
 wire [AXIS_DESC_DATA_WIDTH-1:0]  rx_fifo_desc_tdata;
 wire [AXIS_DESC_KEEP_WIDTH-1:0]  rx_fifo_desc_tkeep;
@@ -283,16 +314,6 @@ rx_desc_fifo (
     .status_good_frame()
 );
 
-wire [RX_QUEUE_INDEX_WIDTH-1:0] rx_req_queue;
-wire [REQ_TAG_WIDTH-1:0]        rx_req_tag;
-wire                            rx_req_valid;
-wire                            rx_req_ready;
-
-wire [31:0]  rx_hash;
-wire [3:0]   rx_hash_type;
-wire         rx_hash_valid;
-wire         rx_hash_ready;
-
 wire [15:0]  rx_csum;
 wire         rx_csum_valid;
 wire         rx_csum_ready;
@@ -303,16 +324,50 @@ wire [DMA_CLIENT_TAG_WIDTH-1:0]  dma_rx_desc_tag;
 wire                             dma_rx_desc_valid;
 wire                             dma_rx_desc_ready;
 
-wire [DMA_CLIENT_LEN_WIDTH-1:0]  dma_rx_desc_status_len;
-wire [DMA_CLIENT_TAG_WIDTH-1:0]  dma_rx_desc_status_tag;
-wire [AXIS_RX_ID_WIDTH-1:0]      dma_rx_desc_status_id;
-wire [AXIS_RX_DEST_WIDTH-1:0]    dma_rx_desc_status_dest;
-wire [AXIS_RX_USER_WIDTH-1:0]    dma_rx_desc_status_user;
-wire [3:0]                       dma_rx_desc_status_error;
-wire                             dma_rx_desc_status_valid;
+wire [DMA_CLIENT_LEN_WIDTH-1:0]    dma_rx_desc_status_len;
+wire [DMA_CLIENT_TAG_WIDTH-1:0]    dma_rx_desc_status_tag;
+wire [AXIS_RX_ID_WIDTH-1:0]        dma_rx_desc_status_id;
+wire [AXIS_RX_DEST_WIDTH-1:0]      dma_rx_desc_status_dest;
+wire [INT_AXIS_RX_USER_WIDTH-1:0]  dma_rx_desc_status_user;
+wire [3:0]                         dma_rx_desc_status_error;
+wire                               dma_rx_desc_status_valid;
+
+// Generate RX requests
+reg rx_frame_reg = 1'b0;
+reg [5:0] rx_req_cnt_reg = 0;
+
+wire rx_req_valid = rx_req_cnt_reg != 0;
+wire rx_req_ready;
+
+always @(posedge clk) begin
+    if (rx_req_valid && rx_req_ready) begin
+        rx_req_cnt_reg <= rx_req_cnt_reg - 1;
+    end
+
+    if (rx_axis_tready && rx_axis_tvalid) begin
+        if (!rx_frame_reg) begin
+            if (rx_req_valid && rx_req_ready) begin
+                rx_req_cnt_reg <= rx_req_cnt_reg;
+            end else begin
+                rx_req_cnt_reg <= rx_req_cnt_reg + 1;
+            end
+        end
+        rx_frame_reg <= !rx_axis_tlast;
+    end
+
+    if (rst) begin
+        rx_frame_reg <= 1'b0;
+        rx_req_cnt_reg <= 0;
+    end
+end
 
 rx_engine #(
     .PORTS(PORTS),
+    .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
+    .REG_DATA_WIDTH(REG_DATA_WIDTH),
+    .REG_STRB_WIDTH(REG_STRB_WIDTH),
+    .RB_BASE_ADDR(RB_BASE_ADDR),
+    .RB_NEXT_PTR(RB_NEXT_PTR),
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
     .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
     .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
@@ -343,17 +398,31 @@ rx_engine #(
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
     .AXIS_RX_ID_WIDTH(AXIS_RX_ID_WIDTH),
     .AXIS_RX_DEST_WIDTH(AXIS_RX_DEST_WIDTH),
-    .AXIS_RX_USER_WIDTH(AXIS_RX_USER_WIDTH)
+    .AXIS_RX_USER_WIDTH(INT_AXIS_RX_USER_WIDTH)
 )
 rx_engine_inst (
     .clk(clk),
     .rst(rst),
 
     /*
+     * Control register interface
+     */
+    .ctrl_reg_wr_addr(ctrl_reg_wr_addr),
+    .ctrl_reg_wr_data(ctrl_reg_wr_data),
+    .ctrl_reg_wr_strb(ctrl_reg_wr_strb),
+    .ctrl_reg_wr_en(ctrl_reg_wr_en),
+    .ctrl_reg_wr_wait(ctrl_reg_wr_wait),
+    .ctrl_reg_wr_ack(ctrl_reg_wr_ack),
+    .ctrl_reg_rd_addr(ctrl_reg_rd_addr),
+    .ctrl_reg_rd_en(ctrl_reg_rd_en),
+    .ctrl_reg_rd_data(ctrl_reg_rd_data),
+    .ctrl_reg_rd_wait(ctrl_reg_rd_wait),
+    .ctrl_reg_rd_ack(ctrl_reg_rd_ack),
+
+    /*
      * Receive request input (queue index)
      */
-    .s_axis_rx_req_queue(rx_req_queue),
-    .s_axis_rx_req_tag(rx_req_tag),
+    .s_axis_rx_req_tag(0),
     .s_axis_rx_req_valid(rx_req_valid),
     .s_axis_rx_req_ready(rx_req_ready),
 
@@ -449,14 +518,6 @@ rx_engine_inst (
     .s_axis_rx_desc_status_valid(dma_rx_desc_status_valid),
 
     /*
-     * Receive hash input
-     */
-    .s_axis_rx_hash(rx_hash),
-    .s_axis_rx_hash_type(rx_hash_type),
-    .s_axis_rx_hash_valid(rx_hash_valid),
-    .s_axis_rx_hash_ready(rx_hash_ready),
-
-    /*
      * Receive checksum input
      */
     .s_axis_rx_csum(rx_csum),
@@ -510,14 +571,14 @@ dma_psdpram_rx_inst (
     .rd_resp_ready(dma_ram_rd_resp_ready)
 );
 
-wire [AXIS_DATA_WIDTH-1:0]     rx_axis_tdata_int;
-wire [AXIS_KEEP_WIDTH-1:0]     rx_axis_tkeep_int;
-wire                           rx_axis_tvalid_int;
-wire                           rx_axis_tready_int;
-wire                           rx_axis_tlast_int;
-wire [AXIS_RX_ID_WIDTH-1:0]    rx_axis_tid_int;
-wire [AXIS_RX_DEST_WIDTH-1:0]  rx_axis_tdest_int;
-wire [AXIS_RX_USER_WIDTH-1:0]  rx_axis_tuser_int;
+wire [AXIS_DATA_WIDTH-1:0]         rx_axis_tdata_int;
+wire [AXIS_KEEP_WIDTH-1:0]         rx_axis_tkeep_int;
+wire                               rx_axis_tvalid_int;
+wire                               rx_axis_tready_int;
+wire                               rx_axis_tlast_int;
+wire [AXIS_RX_ID_WIDTH-1:0]        rx_axis_tid_int;
+wire [AXIS_RX_DEST_WIDTH-1:0]      rx_axis_tdest_int;
+wire [INT_AXIS_RX_USER_WIDTH-1:0]  rx_axis_tuser_int;
 
 mqnic_ingress #(
     .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
@@ -529,7 +590,8 @@ mqnic_ingress #(
     .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),
     .AXIS_ID_WIDTH(AXIS_RX_ID_WIDTH),
     .AXIS_DEST_WIDTH(AXIS_RX_DEST_WIDTH),
-    .AXIS_USER_WIDTH(AXIS_RX_USER_WIDTH),
+    .S_AXIS_USER_WIDTH(AXIS_RX_USER_WIDTH),
+    .M_AXIS_USER_WIDTH(INT_AXIS_RX_USER_WIDTH),
     .MAX_RX_SIZE(MAX_RX_SIZE)
 )
 ingress_inst (
@@ -561,32 +623,11 @@ ingress_inst (
     .m_axis_tuser(rx_axis_tuser_int),
 
     /*
-     * RX command output
-     */
-    .rx_req_queue(rx_req_queue),
-    .rx_req_tag(rx_req_tag),
-    .rx_req_valid(rx_req_valid),
-    .rx_req_ready(rx_req_ready),
-
-    /*
-     * RX hash output
-     */
-    .rx_hash(rx_hash),
-    .rx_hash_type(rx_hash_type),
-    .rx_hash_valid(rx_hash_valid),
-    .rx_hash_ready(rx_hash_ready),
-
-    /*
      * RX checksum output
      */
     .rx_csum(rx_csum),
     .rx_csum_valid(rx_csum_valid),
-    .rx_csum_ready(rx_csum_ready),
-
-    /*
-     * Configuration
-     */
-    .rss_mask(rss_mask)
+    .rx_csum_ready(rx_csum_ready)
 );
 
 dma_client_axis_sink #(
@@ -604,7 +645,7 @@ dma_client_axis_sink #(
     .AXIS_DEST_ENABLE(1),
     .AXIS_DEST_WIDTH(AXIS_RX_DEST_WIDTH),
     .AXIS_USER_ENABLE(1),
-    .AXIS_USER_WIDTH(AXIS_RX_USER_WIDTH),
+    .AXIS_USER_WIDTH(INT_AXIS_RX_USER_WIDTH),
     .LEN_WIDTH(DMA_CLIENT_LEN_WIDTH),
     .TAG_WIDTH(DMA_CLIENT_TAG_WIDTH)
 )

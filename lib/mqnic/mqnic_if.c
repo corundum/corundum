@@ -155,6 +155,14 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
     if (interface->rx_cpl_queue_count > MQNIC_MAX_RX_CPL_RINGS)
         interface->rx_cpl_queue_count = MQNIC_MAX_RX_CPL_RINGS;
 
+    interface->rx_queue_map_rb = find_reg_block(interface->rb_list, MQNIC_RB_RX_QUEUE_MAP_TYPE, MQNIC_RB_RX_QUEUE_MAP_VER, 0);
+
+    if (!interface->rx_queue_map_rb)
+    {
+        fprintf(stderr, "Error: RX queue map block not found\n");
+        goto fail;
+    }
+
     for (int k = 0; k < interface->sched_block_count; k++)
     {
         struct reg_block *sched_block_rb = find_reg_block(interface->rb_list, MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, k);
@@ -196,4 +204,32 @@ void mqnic_if_close(struct mqnic_if *interface)
         free_reg_block_list(interface->rb_list);
 
     free(interface);
+}
+
+uint32_t mqnic_interface_get_tx_mtu(struct mqnic_if *interface)
+{
+    return mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_TX_MTU);
+}
+
+uint32_t mqnic_interface_get_rx_mtu(struct mqnic_if *interface)
+{
+    return mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_RX_MTU);
+}
+
+uint32_t mqnic_interface_get_rx_queue_map_offset(struct mqnic_if *interface, int port)
+{
+    return mqnic_reg_read32(interface->rx_queue_map_rb->regs, MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+        MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET);
+}
+
+uint32_t mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, int port)
+{
+    return mqnic_reg_read32(interface->rx_queue_map_rb->regs, MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+        MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_RSS_MASK);
+}
+
+uint32_t mqnic_interface_get_rx_queue_map_app_mask(struct mqnic_if *interface, int port)
+{
+    return mqnic_reg_read32(interface->rx_queue_map_rb->regs, MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+        MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK);
 }

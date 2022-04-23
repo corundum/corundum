@@ -365,6 +365,7 @@ struct mqnic_if {
 	struct reg_block *tx_cpl_queue_rb;
 	struct reg_block *rx_queue_rb;
 	struct reg_block *rx_cpl_queue_rb;
+	struct reg_block *rx_queue_map_rb;
 
 	int index;
 
@@ -477,12 +478,16 @@ extern const struct file_operations mqnic_fops;
 int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_ptr,
 		int index, u8 __iomem *hw_addr);
 void mqnic_destroy_interface(struct mqnic_if **interface_ptr);
-u32 mqnic_interface_get_rss_mask(struct mqnic_if *interface);
-void mqnic_interface_set_rss_mask(struct mqnic_if *interface, u32 rss_mask);
 u32 mqnic_interface_get_tx_mtu(struct mqnic_if *interface);
 void mqnic_interface_set_tx_mtu(struct mqnic_if *interface, u32 mtu);
 u32 mqnic_interface_get_rx_mtu(struct mqnic_if *interface);
 void mqnic_interface_set_rx_mtu(struct mqnic_if *interface, u32 mtu);
+u32 mqnic_interface_get_rx_queue_map_offset(struct mqnic_if *interface, int port);
+void mqnic_interface_set_rx_queue_map_offset(struct mqnic_if *interface, int port, u32 val);
+u32 mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, int port);
+void mqnic_interface_set_rx_queue_map_rss_mask(struct mqnic_if *interface, int port, u32 val);
+u32 mqnic_interface_get_rx_queue_map_app_mask(struct mqnic_if *interface, int port);
+void mqnic_interface_set_rx_queue_map_app_mask(struct mqnic_if *interface, int port, u32 val);
 
 // mqnic_netdev.c
 void mqnic_update_stats(struct net_device *ndev);

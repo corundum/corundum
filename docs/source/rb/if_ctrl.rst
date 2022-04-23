@@ -4,7 +4,7 @@
 Interface control register block
 ================================
 
-The interface control register block has a header with type 0x0000C001, version 0x00000300, and contains several interface-level control registers.
+The interface control register block has a header with type 0x0000C001, version 0x00000400, and contains several interface-level control registers.
 
 .. table::
 
@@ -34,8 +34,6 @@ The interface control register block has a header with type 0x0000C001, version 
     RBB+0x28  TX MTU         TX MTU                          RW -
     --------  -------------  ------------------------------  -------------
     RBB+0x2C  RX MTU         RX MTU                          RW -
-    --------  -------------  ------------------------------  -------------
-    RBB+0x30  RSS mask       RSS mask                        RW 0x00000000
     ========  =============  ==============================  =============
 
 See :ref:`rb_overview` for definitions of the standard register block header fields.
@@ -136,16 +134,4 @@ See :ref:`rb_overview` for definitions of the standard register block header fie
         Address   31..24  23..16  15..8   7..0    Reset value
         ========  ======  ======  ======  ======  =============
         RBB+0x2C  RX MTU                          RW -
-        ========  ==============================  =============
-
-.. object:: RSS mask
-
-    The RSS mask field controls which receive queues will be selected by the computed RSS flow hash.
-
-    .. table::
-
-        ========  ======  ======  ======  ======  =============
-        Address   31..24  23..16  15..8   7..0    Reset value
-        ========  ======  ======  ======  ======  =============
-        RBB+0x30  RSS mask                        RW 0x00000000
         ========  ==============================  =============

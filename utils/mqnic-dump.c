@@ -183,9 +183,8 @@ int main(int argc, char *argv[])
     printf("Scheduler block count: %d\n", dev_interface->sched_block_count);
     printf("Max TX MTU: %d\n", dev_interface->max_tx_mtu);
     printf("Max RX MTU: %d\n", dev_interface->max_rx_mtu);
-    printf("TX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_TX_MTU));
-    printf("RX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_RX_MTU));
-    printf("RSS mask: 0x%08x\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_RSS_MASK));
+    printf("TX MTU: %d\n", mqnic_interface_get_tx_mtu(dev_interface));
+    printf("RX MTU: %d\n", mqnic_interface_get_rx_mtu(dev_interface));
 
     printf("Event queue offset: 0x%08x\n", dev_interface->event_queue_offset);
     printf("Event queue count: %d\n", dev_interface->event_queue_count);
@@ -206,6 +205,13 @@ int main(int argc, char *argv[])
     printf("RX completion queue offset: 0x%08x\n", dev_interface->rx_cpl_queue_offset);
     printf("RX completion queue count: %d\n", dev_interface->rx_cpl_queue_count);
     printf("RX completion queue stride: 0x%08x\n", dev_interface->rx_cpl_queue_stride);
+
+    for (int k = 0; k < dev_interface->port_count; k++)
+    {
+        printf("Port %d RX queue map offset: %d\n", k, mqnic_interface_get_rx_queue_map_offset(dev_interface, k));
+        printf("Port %d RX queue map RSS mask: 0x%08x\n", k, mqnic_interface_get_rx_queue_map_rss_mask(dev_interface, k));
+        printf("Port %d RX queue map app mask: 0x%08x\n", k, mqnic_interface_get_rx_queue_map_app_mask(dev_interface, k));
+    }
 
     if (port < 0 || port >= dev_interface->port_count)
     {

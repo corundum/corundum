@@ -47,6 +47,7 @@ VERILOG_SOURCES += ../../rtl/mqnic_egress.v
 VERILOG_SOURCES += ../../rtl/mqnic_ingress.v
 VERILOG_SOURCES += ../../rtl/mqnic_l2_egress.v
 VERILOG_SOURCES += ../../rtl/mqnic_l2_ingress.v
+VERILOG_SOURCES += ../../rtl/mqnic_rx_queue_map.v
 VERILOG_SOURCES += ../../rtl/mqnic_ptp.v
 VERILOG_SOURCES += ../../rtl/mqnic_ptp_clock.v
 VERILOG_SOURCES += ../../rtl/mqnic_ptp_perout.v

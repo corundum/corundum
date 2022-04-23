@@ -94,6 +94,7 @@ struct mqnic_if {
     struct reg_block *tx_cpl_queue_rb;
     struct reg_block *rx_queue_rb;
     struct reg_block *rx_cpl_queue_rb;
+    struct reg_block *rx_queue_map_rb;
 
     uint32_t if_features;
 
@@ -174,6 +175,11 @@ void mqnic_print_fw_id(struct mqnic *dev);
 // mqnic_if.c
 struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs);
 void mqnic_if_close(struct mqnic_if *interface);
+uint32_t mqnic_interface_get_tx_mtu(struct mqnic_if *interface);
+uint32_t mqnic_interface_get_rx_mtu(struct mqnic_if *interface);
+uint32_t mqnic_interface_get_rx_queue_map_offset(struct mqnic_if *interface, int port);
+uint32_t mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, int port);
+uint32_t mqnic_interface_get_rx_queue_map_app_mask(struct mqnic_if *interface, int port);
 
 // mqnic_sched_block.c
 struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int index, struct reg_block *block_rb);

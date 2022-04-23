@@ -21,6 +21,7 @@ SYN_FILES += rtl/common/mqnic_egress.v
 SYN_FILES += rtl/common/mqnic_ingress.v
 SYN_FILES += rtl/common/mqnic_l2_egress.v
 SYN_FILES += rtl/common/mqnic_l2_ingress.v
+SYN_FILES += rtl/common/mqnic_rx_queue_map.v
 SYN_FILES += rtl/common/mqnic_ptp.v
 SYN_FILES += rtl/common/mqnic_ptp_clock.v
 SYN_FILES += rtl/common/mqnic_ptp_perout.v

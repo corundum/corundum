@@ -89,7 +89,7 @@ static int mqnic_start_port(struct net_device *ndev)
 	mqnic_interface_set_rx_mtu(priv->interface, ndev->mtu + ETH_HLEN);
 
 	// configure RSS
-	mqnic_interface_set_rss_mask(priv->interface, 0xffffffff);
+	mqnic_interface_set_rx_queue_map_rss_mask(priv->interface, 0, rounddown_pow_of_two(priv->rx_queue_count)-1);
 
 	// enable first scheduler
 	mqnic_activate_sched_block(priv->sched_block[0]);

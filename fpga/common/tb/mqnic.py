@@ -153,7 +153,7 @@ MQNIC_RB_IF_REG_STRIDE      = 0x14
 MQNIC_RB_IF_REG_CSR_OFFSET  = 0x18
 
 MQNIC_RB_IF_CTRL_TYPE            = 0x0000C001
-MQNIC_RB_IF_CTRL_VER             = 0x00000300
+MQNIC_RB_IF_CTRL_VER             = 0x00000400
 MQNIC_RB_IF_CTRL_REG_FEATURES    = 0x0C
 MQNIC_RB_IF_CTRL_REG_PORT_COUNT  = 0x10
 MQNIC_RB_IF_CTRL_REG_SCHED_COUNT = 0x14
@@ -161,13 +161,21 @@ MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU  = 0x20
 MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU  = 0x24
 MQNIC_RB_IF_CTRL_REG_TX_MTU      = 0x28
 MQNIC_RB_IF_CTRL_REG_RX_MTU      = 0x2C
-MQNIC_RB_IF_CTRL_REG_RSS_MASK    = 0x30
 
 MQNIC_IF_FEATURE_RSS      = (1 << 0)
 MQNIC_IF_FEATURE_PTP_TS   = (1 << 4)
 MQNIC_IF_FEATURE_TX_CSUM  = (1 << 8)
 MQNIC_IF_FEATURE_RX_CSUM  = (1 << 9)
 MQNIC_IF_FEATURE_RX_HASH  = (1 << 10)
+
+MQNIC_RB_RX_QUEUE_MAP_TYPE             = 0x0000C090
+MQNIC_RB_RX_QUEUE_MAP_VER              = 0x00000100
+MQNIC_RB_RX_QUEUE_MAP_REG_PORTS        = 0x0C
+MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET        = 0x10
+MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE        = 0x10
+MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET    = 0x00
+MQNIC_RB_RX_QUEUE_MAP_CH_REG_RSS_MASK  = 0x04
+MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK  = 0x08
 
 MQNIC_RB_EVENT_QM_TYPE        = 0x0000C010
 MQNIC_RB_EVENT_QM_VER         = 0x00000100
@@ -808,6 +816,7 @@ class Interface:
         self.tx_cpl_queue_rb = None
         self.rx_queue_rb = None
         self.rx_cpl_queue_rb = None
+        self.rx_queue_map_rb = None
 
         self.if_features = None
 
@@ -928,6 +937,13 @@ class Interface:
         self.log.info("RX completion queue stride: 0x%08x", self.rx_cpl_queue_stride)
 
         self.rx_cpl_queue_count = min(self.rx_cpl_queue_count, MQNIC_MAX_RX_CPL_RINGS)
+
+        self.rx_queue_map_rb = self.reg_blocks.find(MQNIC_RB_RX_QUEUE_MAP_TYPE, MQNIC_RB_RX_QUEUE_MAP_VER)
+
+        for k in range(self.port_count):
+            await self.set_rx_queue_map_offset(k, 0)
+            await self.set_rx_queue_map_rss_mask(k, 0)
+            await self.set_rx_queue_map_app_mask(k, 0)
 
         self.event_queues = []
 
@@ -1225,8 +1241,29 @@ class Interface:
         await self.if_ctrl_rb.write_dword(MQNIC_RB_IF_CTRL_REG_TX_MTU, mtu)
         await self.if_ctrl_rb.write_dword(MQNIC_RB_IF_CTRL_REG_RX_MTU, mtu)
 
-    async def set_rss_mask(self, mask):
-        await self.if_ctrl_rb.write_dword(MQNIC_RB_IF_CTRL_REG_RSS_MASK, mask)
+    async def get_rx_queue_map_offset(self, port):
+        return await self.rx_queue_map_rb.read_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+            MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET)
+
+    async def set_rx_queue_map_offset(self, port, val):
+        await self.rx_queue_map_rb.write_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+            MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET, val)
+
+    async def get_rx_queue_map_rss_mask(self, port):
+        return await self.rx_queue_map_rb.read_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+            MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_RSS_MASK)
+
+    async def set_rx_queue_map_rss_mask(self, port, val):
+        await self.rx_queue_map_rb.write_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+            MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_RSS_MASK, val)
+
+    async def get_rx_queue_map_app_mask(self, port):
+        return await self.rx_queue_map_rb.read_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+            MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK)
+
+    async def set_rx_queue_map_app_mask(self, port, val):
+        await self.rx_queue_map_rb.write_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+            MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK, val)
 
     async def recv(self):
         if not self.pkt_rx_queue:

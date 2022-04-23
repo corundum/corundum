@@ -330,6 +330,7 @@ class RegBlockList:
 class Packet:
     def __init__(self, data=b''):
         self.data = data
+        self.queue = None
         self.timestamp_s = None
         self.timestamp_ns = None
         self.rx_checksum = None
@@ -337,6 +338,7 @@ class Packet:
     def __repr__(self):
         return (
             f'{type(self).__name__}(data={self.data}, '
+            f'queue={self.queue}, '
             f'timestamp_s={self.timestamp_s}, '
             f'timestamp_ns={self.timestamp_ns}, '
             f'rx_checksum={self.rx_checksum:#06x})'
@@ -1124,6 +1126,7 @@ class Interface:
 
             skb = Packet()
             skb.data = pkt[:length]
+            skb.queue = ring.index
             skb.timestamp_ns = cpl_data[3]
             skb.timestamp_s = cpl_data[4]
             skb.rx_checksum = cpl_data[5]

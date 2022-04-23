@@ -70,12 +70,12 @@ int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_bloc
 	}
 
 	dev_info(dev, "Scheduler block-level register blocks:");
-	for (rb = block->rb_list; rb->type && rb->version; rb++)
+	for (rb = block->rb_list; rb->regs; rb++)
 		dev_info(dev, " type 0x%08x (v %d.%d.%d.%d)", rb->type, rb->version >> 24, 
 				(rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
 	block->sched_count = 0;
-	for (rb = block->rb_list; rb->type && rb->version; rb++) {
+	for (rb = block->rb_list; rb->regs; rb++) {
 		if (rb->type == MQNIC_RB_SCHED_RR_TYPE && rb->version == MQNIC_RB_SCHED_RR_VER) {
 			ret = mqnic_create_scheduler(block, &block->sched[block->sched_count],
 					block->sched_count, rb);

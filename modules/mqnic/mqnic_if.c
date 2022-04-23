@@ -69,7 +69,7 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 	}
 
 	dev_info(dev, "Interface-level register blocks:");
-	for (rb = interface->rb_list; rb->type && rb->version; rb++)
+	for (rb = interface->rb_list; rb->regs; rb++)
 		dev_info(dev, " type 0x%08x (v %d.%d.%d.%d)", rb->type, rb->version >> 24, 
 				(rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 

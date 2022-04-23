@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
         printf("RAM region size: %lu\n", dev->ram_size);
 
     printf("Device-level register blocks:\n");
-    for (struct reg_block *rb = dev->rb_list; rb->type && rb->version; rb++)
+    for (struct reg_block *rb = dev->rb_list; rb->regs; rb++)
         printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
@@ -138,7 +138,7 @@ int main(int argc, char *argv[])
                 mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_NOM_PERIOD_FNS));
 
         ch = 0;
-        for (struct reg_block *rb = dev->rb_list; rb->type && rb->version; rb++)
+        for (struct reg_block *rb = dev->rb_list; rb->regs; rb++)
         {
             if (rb->type == MQNIC_RB_PHC_PEROUT_TYPE && rb->version == MQNIC_RB_PHC_PEROUT_VER)
             {
@@ -174,7 +174,7 @@ int main(int argc, char *argv[])
     }
 
     printf("Interface-level register blocks:\n");
-    for (struct reg_block *rb = dev_interface->rb_list; rb->type && rb->version; rb++)
+    for (struct reg_block *rb = dev_interface->rb_list; rb->regs; rb++)
         printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
@@ -233,13 +233,13 @@ int main(int argc, char *argv[])
     }
 
     printf("Scheduler block-level register blocks:\n");
-    for (struct reg_block *rb = dev_sched_block->rb_list; rb->type && rb->version; rb++)
+    for (struct reg_block *rb = dev_sched_block->rb_list; rb->regs; rb++)
         printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
     printf("Sched count: %d\n", dev_sched_block->sched_count);
 
-    for (struct reg_block *rb = dev_sched_block->rb_list; rb->type && rb->version; rb++)
+    for (struct reg_block *rb = dev_sched_block->rb_list; rb->regs; rb++)
     {
         if (rb->type == MQNIC_RB_SCHED_RR_TYPE && rb->version == MQNIC_RB_SCHED_RR_VER)
         {

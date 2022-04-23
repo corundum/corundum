@@ -274,7 +274,7 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 	}
 
 	dev_info(dev, "Device-level register blocks:");
-	for (rb = mqnic->rb_list; rb->type && rb->version; rb++)
+	for (rb = mqnic->rb_list; rb->regs; rb++)
 		dev_info(dev, " type 0x%08x (v %d.%d.%d.%d)", rb->type, rb->version >> 24, 
 				(rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 

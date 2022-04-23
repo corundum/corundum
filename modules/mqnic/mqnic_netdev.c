@@ -35,6 +35,8 @@
 
 #include "mqnic.h"
 
+#include <linux/version.h>
+
 static int mqnic_start_port(struct net_device *ndev)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
@@ -423,7 +425,11 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 		dev_warn(dev, "Exhausted permanent MAC addresses; using random MAC");
 		eth_hw_addr_random(ndev);
 	} else {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
+		eth_hw_addr_set(ndev, mdev->mac_list[dev_port]);
+#else
 		memcpy(ndev->dev_addr, mdev->mac_list[dev_port], ETH_ALEN);
+#endif
 
 		if (!is_valid_ether_addr(ndev->dev_addr)) {
 			dev_warn(dev, "Invalid MAC address in list; using random MAC");

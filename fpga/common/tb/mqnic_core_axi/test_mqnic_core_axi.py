@@ -490,7 +490,7 @@ def test_mqnic_core_pcie_axi(request, if_count, ports_per_if, axi_data_width,
         os.path.join(rtl_dir, "stats_collect.v"),
         os.path.join(rtl_dir, "stats_pcie_if.v"),
         os.path.join(rtl_dir, "stats_pcie_tlp.v"),
-        os.path.join(rtl_dir, "stats_dma_if_pcie.v"),
+        os.path.join(rtl_dir, "stats_dma_if_axi.v"),
         os.path.join(rtl_dir, "stats_dma_latency.v"),
         os.path.join(rtl_dir, "mqnic_tx_scheduler_block_rr.v"),
         os.path.join(rtl_dir, "tx_scheduler_rr.v"),
@@ -643,7 +643,7 @@ def test_mqnic_core_pcie_axi(request, if_count, ports_per_if, axi_data_width,
     # Statistics counter subsystem
     parameters['STAT_ENABLE'] = 1
     parameters['STAT_DMA_ENABLE'] = 1
-    parameters['STAT_PCIE_ENABLE'] = 1
+    parameters['STAT_AXI_ENABLE'] = 1
     parameters['STAT_INC_WIDTH'] = 24
     parameters['STAT_ID_WIDTH'] = 12
 

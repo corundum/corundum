@@ -156,6 +156,7 @@ module fpga #
     // Statistics counter subsystem
     parameter STAT_ENABLE = 1,
     parameter STAT_DMA_ENABLE = 1,
+    parameter STAT_AXI_ENABLE = 1,
     parameter STAT_INC_WIDTH = 24,
     parameter STAT_ID_WIDTH = 12
 )
@@ -807,6 +808,7 @@ fpga_core #(
     // Statistics counter subsystem
     .STAT_ENABLE(STAT_ENABLE),
     .STAT_DMA_ENABLE(STAT_DMA_ENABLE),
+    .STAT_AXI_ENABLE(STAT_AXI_ENABLE),
     .STAT_INC_WIDTH(STAT_INC_WIDTH),
     .STAT_ID_WIDTH(STAT_ID_WIDTH)
 )

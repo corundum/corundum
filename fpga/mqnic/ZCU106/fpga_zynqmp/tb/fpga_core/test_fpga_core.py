@@ -373,6 +373,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "rb_drp.v"),
         os.path.join(rtl_dir, "common", "stats_counter.v"),
         os.path.join(rtl_dir, "common", "stats_collect.v"),
+        os.path.join(rtl_dir, "common", "stats_dma_if_axi.v"),
         os.path.join(rtl_dir, "common", "stats_dma_latency.v"),
         os.path.join(rtl_dir, "common", "mqnic_tx_scheduler_block_rr.v"),
         os.path.join(rtl_dir, "common", "tx_scheduler_rr.v"),
@@ -522,6 +523,7 @@ def test_fpga_core(request):
     # Statistics counter subsystem
     parameters['STAT_ENABLE'] = 1
     parameters['STAT_DMA_ENABLE'] = 1
+    parameters['STAT_AXI_ENABLE'] = 1
     parameters['STAT_INC_WIDTH'] = 24
     parameters['STAT_ID_WIDTH'] = 12
 

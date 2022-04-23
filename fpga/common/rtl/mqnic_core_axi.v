@@ -442,6 +442,35 @@ wire                       dma_write_desc_status_valid;
 
 wire                       dma_enable = 1;
 
+wire [$clog2(AXI_DMA_READ_OP_TABLE_SIZE)-1:0] stat_rd_op_start_tag;
+wire [DMA_LEN_WIDTH-1:0] stat_rd_op_start_len;
+wire stat_rd_op_start_valid;
+wire [$clog2(AXI_DMA_READ_OP_TABLE_SIZE)-1:0] stat_rd_op_finish_tag;
+wire [3:0] stat_rd_op_finish_status;
+wire stat_rd_op_finish_valid;
+wire [$clog2(AXI_DMA_READ_OP_TABLE_SIZE)-1:0] stat_rd_req_start_tag;
+wire [12:0] stat_rd_req_start_len;
+wire stat_rd_req_start_valid;
+wire [$clog2(AXI_DMA_READ_OP_TABLE_SIZE)-1:0] stat_rd_req_finish_tag;
+wire [3:0] stat_rd_req_finish_status;
+wire stat_rd_req_finish_valid;
+wire stat_rd_op_table_full;
+wire stat_rd_tx_stall;
+wire [$clog2(AXI_DMA_WRITE_OP_TABLE_SIZE)-1:0] stat_wr_op_start_tag;
+wire [DMA_LEN_WIDTH-1:0] stat_wr_op_start_len;
+wire stat_wr_op_start_valid;
+wire [$clog2(AXI_DMA_WRITE_OP_TABLE_SIZE)-1:0] stat_wr_op_finish_tag;
+wire [3:0] stat_wr_op_finish_status;
+wire stat_wr_op_finish_valid;
+wire [$clog2(AXI_DMA_WRITE_OP_TABLE_SIZE)-1:0] stat_wr_req_start_tag;
+wire [12:0] stat_wr_req_start_len;
+wire stat_wr_req_start_valid;
+wire [$clog2(AXI_DMA_WRITE_OP_TABLE_SIZE)-1:0] stat_wr_req_finish_tag;
+wire [3:0] stat_wr_req_finish_status;
+wire stat_wr_req_finish_valid;
+wire stat_wr_op_table_full;
+wire stat_wr_tx_stall;
+
 dma_if_axi #(
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
     .AXI_ADDR_WIDTH(AXI_ADDR_WIDTH),
@@ -566,8 +595,182 @@ dma_if_axi_inst (
      * Configuration
      */
     .read_enable(dma_enable),
-    .write_enable(dma_enable)
+    .write_enable(dma_enable),
+
+    /*
+     * Statistics
+     */
+    .stat_rd_op_start_tag(stat_rd_op_start_tag),
+    .stat_rd_op_start_len(stat_rd_op_start_len),
+    .stat_rd_op_start_valid(stat_rd_op_start_valid),
+    .stat_rd_op_finish_tag(stat_rd_op_finish_tag),
+    .stat_rd_op_finish_status(stat_rd_op_finish_status),
+    .stat_rd_op_finish_valid(stat_rd_op_finish_valid),
+    .stat_rd_req_start_tag(stat_rd_req_start_tag),
+    .stat_rd_req_start_len(stat_rd_req_start_len),
+    .stat_rd_req_start_valid(stat_rd_req_start_valid),
+    .stat_rd_req_finish_tag(stat_rd_req_finish_tag),
+    .stat_rd_req_finish_status(stat_rd_req_finish_status),
+    .stat_rd_req_finish_valid(stat_rd_req_finish_valid),
+    .stat_rd_op_table_full(stat_rd_op_table_full),
+    .stat_rd_tx_stall(stat_rd_tx_stall),
+    .stat_wr_op_start_tag(stat_wr_op_start_tag),
+    .stat_wr_op_start_len(stat_wr_op_start_len),
+    .stat_wr_op_start_valid(stat_wr_op_start_valid),
+    .stat_wr_op_finish_tag(stat_wr_op_finish_tag),
+    .stat_wr_op_finish_status(stat_wr_op_finish_status),
+    .stat_wr_op_finish_valid(stat_wr_op_finish_valid),
+    .stat_wr_req_start_tag(stat_wr_req_start_tag),
+    .stat_wr_req_start_len(stat_wr_req_start_len),
+    .stat_wr_req_start_valid(stat_wr_req_start_valid),
+    .stat_wr_req_finish_tag(stat_wr_req_finish_tag),
+    .stat_wr_req_finish_status(stat_wr_req_finish_status),
+    .stat_wr_req_finish_valid(stat_wr_req_finish_valid),
+    .stat_wr_op_table_full(stat_wr_op_table_full),
+    .stat_wr_tx_stall(stat_wr_tx_stall)
 );
+
+wire [STAT_INC_WIDTH-1:0]  axis_stat_tdata;
+wire [STAT_ID_WIDTH-1:0]   axis_stat_tid;
+wire                       axis_stat_tvalid;
+wire                       axis_stat_tready;
+
+wire [STAT_INC_WIDTH-1:0]  axis_stat_axi_tdata = 0;
+wire [STAT_ID_WIDTH-1:0]   axis_stat_axi_tid = 0;
+wire                       axis_stat_axi_tvalid = 0;
+wire                       axis_stat_axi_tready;
+
+wire [STAT_INC_WIDTH-1:0]  axis_stat_dma_tdata;
+wire [STAT_ID_WIDTH-1:0]   axis_stat_dma_tid;
+wire                       axis_stat_dma_tvalid;
+wire                       axis_stat_dma_tready;
+
+generate
+
+if (STAT_ENABLE && STAT_DMA_ENABLE) begin : stats_dma_if_axi
+
+    stats_dma_if_axi #(
+        .LEN_WIDTH(DMA_LEN_WIDTH),
+        .READ_OP_TABLE_SIZE(AXI_DMA_READ_OP_TABLE_SIZE),
+        .WRITE_OP_TABLE_SIZE(AXI_DMA_WRITE_OP_TABLE_SIZE),
+        .STAT_INC_WIDTH(STAT_INC_WIDTH),
+        .STAT_ID_WIDTH(5),
+        .UPDATE_PERIOD(1024)
+    )
+    stats_dma_if_axi_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * Statistics from dma_if_axi
+         */
+        .stat_rd_op_start_tag(stat_rd_op_start_tag),
+        .stat_rd_op_start_len(stat_rd_op_start_len),
+        .stat_rd_op_start_valid(stat_rd_op_start_valid),
+        .stat_rd_op_finish_tag(stat_rd_op_finish_tag),
+        .stat_rd_op_finish_status(stat_rd_op_finish_status),
+        .stat_rd_op_finish_valid(stat_rd_op_finish_valid),
+        .stat_rd_req_start_tag(stat_rd_req_start_tag),
+        .stat_rd_req_start_len(stat_rd_req_start_len),
+        .stat_rd_req_start_valid(stat_rd_req_start_valid),
+        .stat_rd_req_finish_tag(stat_rd_req_finish_tag),
+        .stat_rd_req_finish_status(stat_rd_req_finish_status),
+        .stat_rd_req_finish_valid(stat_rd_req_finish_valid),
+        .stat_rd_op_table_full(stat_rd_op_table_full),
+        .stat_rd_tx_stall(stat_rd_tx_stall),
+        .stat_wr_op_start_tag(stat_wr_op_start_tag),
+        .stat_wr_op_start_len(stat_wr_op_start_len),
+        .stat_wr_op_start_valid(stat_wr_op_start_valid),
+        .stat_wr_op_finish_tag(stat_wr_op_finish_tag),
+        .stat_wr_op_finish_status(stat_wr_op_finish_status),
+        .stat_wr_op_finish_valid(stat_wr_op_finish_valid),
+        .stat_wr_req_start_tag(stat_wr_req_start_tag),
+        .stat_wr_req_start_len(stat_wr_req_start_len),
+        .stat_wr_req_start_valid(stat_wr_req_start_valid),
+        .stat_wr_req_finish_tag(stat_wr_req_finish_tag),
+        .stat_wr_req_finish_status(stat_wr_req_finish_status),
+        .stat_wr_req_finish_valid(stat_wr_req_finish_valid),
+        .stat_wr_op_table_full(stat_wr_op_table_full),
+        .stat_wr_tx_stall(stat_wr_tx_stall),
+
+        /*
+         * Statistics output
+         */
+        .m_axis_stat_tdata(axis_stat_dma_tdata),
+        .m_axis_stat_tid(axis_stat_dma_tid[4:0]),
+        .m_axis_stat_tvalid(axis_stat_dma_tvalid),
+        .m_axis_stat_tready(axis_stat_dma_tready),
+
+        /*
+         * Control inputs
+         */
+        .update(1'b0)
+    );
+
+    assign axis_stat_dma_tid[STAT_ID_WIDTH-1:5] = 1;
+
+end else begin
+
+    assign axis_stat_dma_tdata = 0;
+    assign axis_stat_dma_tid = 0;
+    assign axis_stat_dma_tvalid = 0;
+
+end
+
+if (STAT_ENABLE && (STAT_DMA_ENABLE || STAT_AXI_ENABLE)) begin : stats_mux
+
+    axis_arb_mux #(
+        .S_COUNT(3),
+        .DATA_WIDTH(STAT_INC_WIDTH),
+        .KEEP_ENABLE(0),
+        .ID_ENABLE(1),
+        .S_ID_WIDTH(STAT_ID_WIDTH),
+        .M_ID_WIDTH(STAT_ID_WIDTH),
+        .DEST_ENABLE(0),
+        .USER_ENABLE(0),
+        .LAST_ENABLE(0),
+        .ARB_TYPE_ROUND_ROBIN(1),
+        .ARB_LSB_HIGH_PRIORITY(1)
+    )
+    axis_stat_mux_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * AXI Stream inputs
+         */
+        .s_axis_tdata({axis_stat_dma_tdata, axis_stat_axi_tdata, s_axis_stat_tdata}),
+        .s_axis_tkeep(0),
+        .s_axis_tvalid({axis_stat_dma_tvalid, axis_stat_axi_tvalid, s_axis_stat_tvalid}),
+        .s_axis_tready({axis_stat_dma_tready, axis_stat_axi_tready, s_axis_stat_tready}),
+        .s_axis_tlast(0),
+        .s_axis_tid({axis_stat_dma_tid, axis_stat_axi_tid, s_axis_stat_tid}),
+        .s_axis_tdest(0),
+        .s_axis_tuser(0),
+
+        /*
+         * AXI Stream output
+         */
+        .m_axis_tdata(axis_stat_tdata),
+        .m_axis_tkeep(),
+        .m_axis_tvalid(axis_stat_tvalid),
+        .m_axis_tready(axis_stat_tready),
+        .m_axis_tlast(),
+        .m_axis_tid(axis_stat_tid),
+        .m_axis_tdest(),
+        .m_axis_tuser()
+    );
+
+end else begin
+
+    assign axis_stat_tdata = s_axis_stat_tdata;
+    assign axis_stat_tid = s_axis_stat_tid;
+    assign axis_stat_tvalid = s_axis_stat_tvalid;
+    assign s_axis_stat_tready = axis_stat_tready;
+
+end
+
+endgenerate
 
 mqnic_core #(
     // FW and board IDs
@@ -904,10 +1107,10 @@ core_inst (
     /*
      * Statistics input
      */
-    .s_axis_stat_tdata(s_axis_stat_tdata),
-    .s_axis_stat_tid(s_axis_stat_tid),
-    .s_axis_stat_tvalid(s_axis_stat_tvalid),
-    .s_axis_stat_tready(s_axis_stat_tready),
+    .s_axis_stat_tdata(axis_stat_tdata),
+    .s_axis_stat_tid(axis_stat_tid),
+    .s_axis_stat_tvalid(axis_stat_tvalid),
+    .s_axis_stat_tready(axis_stat_tready),
 
     /*
      * GPIO

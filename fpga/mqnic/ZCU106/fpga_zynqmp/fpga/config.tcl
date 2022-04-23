@@ -183,6 +183,8 @@ dict set params AXIS_ETH_RX_FIFO_PIPELINE "2"
 
 # Statistics counter subsystem
 dict set params STAT_ENABLE "1"
+dict set params STAT_DMA_ENABLE "1"
+dict set params STAT_AXI_ENABLE "1"
 dict set params STAT_INC_WIDTH "24"
 dict set params STAT_ID_WIDTH "12"
 

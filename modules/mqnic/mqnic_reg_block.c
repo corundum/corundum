@@ -101,7 +101,7 @@ struct reg_block *find_reg_block(struct reg_block *list, u32 type, u32 version, 
 {
 	struct reg_block *rb = list;
 
-	while (rb->type && rb->version && rb->regs) {
+	while (rb->regs) {
 		if (rb->type == type && (!version || rb->version == version)) {
 			if (index > 0)
 				index--;

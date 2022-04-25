@@ -1,5 +1,7 @@
 ifneq ($(KERNELRELEASE),)
 
+KBUILD_EXTRA_SYMBOLS=$(src)/../mqnic/Module.symvers
+
 ccflags-y += -I$(src)/../mqnic/
 
 # object files to build

@@ -58,7 +58,7 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
     }
 
     // Enumerate registers
-    interface->rb_list = enumerate_reg_block_list(interface->regs, dev->if_csr_offset, interface->regs_size);
+    interface->rb_list = mqnic_enumerate_reg_block_list(interface->regs, dev->if_csr_offset, interface->regs_size);
 
     if (!interface->rb_list)
     {
@@ -66,7 +66,7 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
         goto fail;
     }
 
-    interface->if_ctrl_rb = find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_TYPE, MQNIC_RB_IF_CTRL_VER, 0);
+    interface->if_ctrl_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_TYPE, MQNIC_RB_IF_CTRL_VER, 0);
 
     if (!interface->if_ctrl_rb)
     {
@@ -80,7 +80,7 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
     interface->max_tx_mtu = mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU);
     interface->max_rx_mtu = mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU);
 
-    interface->event_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_EVENT_QM_TYPE, MQNIC_RB_EVENT_QM_VER, 0);
+    interface->event_queue_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_EVENT_QM_TYPE, MQNIC_RB_EVENT_QM_VER, 0);
 
     if (!interface->event_queue_rb)
     {
@@ -95,7 +95,7 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
     if (interface->event_queue_count > MQNIC_MAX_EVENT_RINGS)
         interface->event_queue_count = MQNIC_MAX_EVENT_RINGS;
 
-    interface->tx_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_TX_QM_TYPE, MQNIC_RB_TX_QM_VER, 0);
+    interface->tx_queue_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_TX_QM_TYPE, MQNIC_RB_TX_QM_VER, 0);
 
     if (!interface->tx_queue_rb)
     {
@@ -110,7 +110,7 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
     if (interface->tx_queue_count > MQNIC_MAX_TX_RINGS)
         interface->tx_queue_count = MQNIC_MAX_TX_RINGS;
 
-    interface->tx_cpl_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_TX_CQM_TYPE, MQNIC_RB_TX_CQM_VER, 0);
+    interface->tx_cpl_queue_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_TX_CQM_TYPE, MQNIC_RB_TX_CQM_VER, 0);
 
     if (!interface->tx_cpl_queue_rb)
     {
@@ -125,7 +125,7 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
     if (interface->tx_cpl_queue_count > MQNIC_MAX_TX_CPL_RINGS)
         interface->tx_cpl_queue_count = MQNIC_MAX_TX_CPL_RINGS;
 
-    interface->rx_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_RX_QM_TYPE, MQNIC_RB_RX_QM_VER, 0);
+    interface->rx_queue_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_QM_TYPE, MQNIC_RB_RX_QM_VER, 0);
 
     if (!interface->rx_queue_rb)
     {
@@ -140,7 +140,7 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
     if (interface->rx_queue_count > MQNIC_MAX_RX_RINGS)
         interface->rx_queue_count = MQNIC_MAX_RX_RINGS;
 
-    interface->rx_cpl_queue_rb = find_reg_block(interface->rb_list, MQNIC_RB_RX_CQM_TYPE, MQNIC_RB_RX_CQM_VER, 0);
+    interface->rx_cpl_queue_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_CQM_TYPE, MQNIC_RB_RX_CQM_VER, 0);
 
     if (!interface->rx_cpl_queue_rb)
     {
@@ -155,7 +155,7 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
     if (interface->rx_cpl_queue_count > MQNIC_MAX_RX_CPL_RINGS)
         interface->rx_cpl_queue_count = MQNIC_MAX_RX_CPL_RINGS;
 
-    interface->rx_queue_map_rb = find_reg_block(interface->rb_list, MQNIC_RB_RX_QUEUE_MAP_TYPE, MQNIC_RB_RX_QUEUE_MAP_VER, 0);
+    interface->rx_queue_map_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_QUEUE_MAP_TYPE, MQNIC_RB_RX_QUEUE_MAP_VER, 0);
 
     if (!interface->rx_queue_map_rb)
     {
@@ -165,7 +165,7 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
 
     for (int k = 0; k < interface->sched_block_count; k++)
     {
-        struct reg_block *sched_block_rb = find_reg_block(interface->rb_list, MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, k);
+        struct mqnic_reg_block *sched_block_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, k);
         struct mqnic_sched_block *sched_block;
 
         if (!sched_block_rb)
@@ -201,7 +201,7 @@ void mqnic_if_close(struct mqnic_if *interface)
     }
 
     if (interface->rb_list)
-        free_reg_block_list(interface->rb_list);
+        mqnic_free_reg_block_list(interface->rb_list);
 
     free(interface);
 }

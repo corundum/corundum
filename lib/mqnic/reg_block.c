@@ -38,10 +38,10 @@ either expressed or implied, of The Regents of the University of California.
 #include <stdlib.h>
 #include <stdio.h>
 
-struct reg_block *enumerate_reg_block_list(volatile uint8_t *base, size_t offset, size_t size)
+struct mqnic_reg_block *mqnic_enumerate_reg_block_list(volatile uint8_t *base, size_t offset, size_t size)
 {
     int max_count = 8;
-    struct reg_block *reg_block_list = calloc(max_count, sizeof(struct reg_block));
+    struct mqnic_reg_block *reg_block_list = calloc(max_count, sizeof(struct mqnic_reg_block));
     int count = 0;
 
     volatile uint8_t *ptr;
@@ -86,9 +86,9 @@ struct reg_block *enumerate_reg_block_list(volatile uint8_t *base, size_t offset
 
         if (count >= max_count)
         {
-            struct reg_block *tmp;
+            struct mqnic_reg_block *tmp;
             max_count += 4;
-            tmp = realloc(reg_block_list, max_count * sizeof(struct reg_block));
+            tmp = realloc(reg_block_list, max_count * sizeof(struct mqnic_reg_block));
             if (!tmp)
                 goto fail;
             reg_block_list = tmp;
@@ -101,9 +101,9 @@ fail:
     return NULL;
 }
 
-struct reg_block *find_reg_block(struct reg_block *list, uint32_t type, uint32_t version, int index)
+struct mqnic_reg_block *mqnic_find_reg_block(struct mqnic_reg_block *list, uint32_t type, uint32_t version, int index)
 {
-    struct reg_block *rb = list;
+    struct mqnic_reg_block *rb = list;
 
     while (rb->regs)
     {
@@ -125,7 +125,7 @@ struct reg_block *find_reg_block(struct reg_block *list, uint32_t type, uint32_t
     return NULL;
 }
 
-void free_reg_block_list(struct reg_block *list)
+void mqnic_free_reg_block_list(struct mqnic_reg_block *list)
 {
     free(list);
 }

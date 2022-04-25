@@ -281,7 +281,7 @@ static int mqnic_try_open(struct mqnic *dev, const char *fmt, ...)
         goto fail_reset;
     }
 
-    dev->rb_list = enumerate_reg_block_list(dev->regs, 0, dev->regs_size);
+    dev->rb_list = mqnic_enumerate_reg_block_list(dev->regs, 0, dev->regs_size);
 
     if (!dev->rb_list)
     {
@@ -290,7 +290,7 @@ static int mqnic_try_open(struct mqnic *dev, const char *fmt, ...)
     }
 
     // Read ID registers
-    dev->fw_id_rb = find_reg_block(dev->rb_list, MQNIC_RB_FW_ID_TYPE, MQNIC_RB_FW_ID_VER, 0);
+    dev->fw_id_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_FW_ID_TYPE, MQNIC_RB_FW_ID_VER, 0);
 
     if (!dev->fw_id_rb)
     {
@@ -302,7 +302,7 @@ static int mqnic_try_open(struct mqnic *dev, const char *fmt, ...)
 
 fail_enum:
     if (dev->rb_list)
-        free_reg_block_list(dev->rb_list);
+        mqnic_free_reg_block_list(dev->rb_list);
 fail_reset:
 fail_mmap_regs:
     if (dev->ram)
@@ -360,7 +360,7 @@ static int mqnic_try_open_if_name(struct mqnic *dev, const char *if_name)
 struct mqnic *mqnic_open(const char *dev_name)
 {
     struct mqnic *dev = calloc(1, sizeof(struct mqnic));
-    struct reg_block *rb;
+    struct mqnic_reg_block *rb;
 
     if (!dev)
     {
@@ -414,16 +414,16 @@ open:
     struct tm *tm_info = gmtime(&build_date);
     strftime(dev->build_date_str, sizeof(dev->build_date_str), "%F %T", tm_info);
 
-    rb = find_reg_block(dev->rb_list, MQNIC_RB_APP_INFO_TYPE, MQNIC_RB_APP_INFO_VER, 0);
+    rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_APP_INFO_TYPE, MQNIC_RB_APP_INFO_VER, 0);
 
     if (rb) {
         dev->app_id = mqnic_reg_read32(rb->regs, MQNIC_RB_APP_INFO_REG_ID);
     }
 
-    dev->phc_rb = find_reg_block(dev->rb_list, MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER, 0);
+    dev->phc_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER, 0);
 
     // Enumerate interfaces
-    dev->if_rb = find_reg_block(dev->rb_list, MQNIC_RB_IF_TYPE, MQNIC_RB_IF_VER, 0);
+    dev->if_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_IF_TYPE, MQNIC_RB_IF_VER, 0);
 
     if (!dev->if_rb)
     {
@@ -477,7 +477,7 @@ void mqnic_close(struct mqnic *dev)
     }
 
     if (dev->rb_list)
-        free_reg_block_list(dev->rb_list);
+        mqnic_free_reg_block_list(dev->rb_list);
 
     if (dev->ram)
         munmap((void *)dev->ram, dev->ram_size);

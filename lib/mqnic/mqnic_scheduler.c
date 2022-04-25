@@ -36,7 +36,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <stdio.h>
 #include <stdlib.h>
 
-struct mqnic_sched *mqnic_sched_open(struct mqnic_sched_block *block, int index, struct reg_block *rb)
+struct mqnic_sched *mqnic_sched_open(struct mqnic_sched_block *block, int index, struct mqnic_reg_block *rb)
 {
     struct mqnic_sched *sched = calloc(1, sizeof(struct mqnic_sched));
 

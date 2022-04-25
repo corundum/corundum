@@ -52,7 +52,7 @@ struct mqnic_sched {
 
     int index;
 
-    struct reg_block *rb;
+    struct mqnic_reg_block *rb;
 
     uint32_t type;
     uint32_t offset;
@@ -72,7 +72,7 @@ struct mqnic_sched_block {
     size_t regs_size;
     volatile uint8_t *regs;
 
-    struct reg_block *rb_list;
+    struct mqnic_reg_block *rb_list;
 
     uint32_t sched_count;
     struct mqnic_sched *sched[MQNIC_MAX_SCHED];
@@ -87,14 +87,14 @@ struct mqnic_if {
     volatile uint8_t *regs;
     volatile uint8_t *csr_regs;
 
-    struct reg_block *rb_list;
-    struct reg_block *if_ctrl_rb;
-    struct reg_block *event_queue_rb;
-    struct reg_block *tx_queue_rb;
-    struct reg_block *tx_cpl_queue_rb;
-    struct reg_block *rx_queue_rb;
-    struct reg_block *rx_cpl_queue_rb;
-    struct reg_block *rx_queue_map_rb;
+    struct mqnic_reg_block *rb_list;
+    struct mqnic_reg_block *if_ctrl_rb;
+    struct mqnic_reg_block *event_queue_rb;
+    struct mqnic_reg_block *tx_queue_rb;
+    struct mqnic_reg_block *tx_cpl_queue_rb;
+    struct mqnic_reg_block *rx_queue_rb;
+    struct mqnic_reg_block *rx_cpl_queue_rb;
+    struct mqnic_reg_block *rx_queue_map_rb;
 
     uint32_t if_features;
 
@@ -137,10 +137,10 @@ struct mqnic {
     size_t ram_size;
     volatile uint8_t *ram;
 
-    struct reg_block *rb_list;
-    struct reg_block *fw_id_rb;
-    struct reg_block *if_rb;
-    struct reg_block *phc_rb;
+    struct mqnic_reg_block *rb_list;
+    struct mqnic_reg_block *fw_id_rb;
+    struct mqnic_reg_block *if_rb;
+    struct mqnic_reg_block *phc_rb;
 
     uint32_t fpga_id;
     const char *fpga_part;
@@ -182,11 +182,11 @@ uint32_t mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, i
 uint32_t mqnic_interface_get_rx_queue_map_app_mask(struct mqnic_if *interface, int port);
 
 // mqnic_sched_block.c
-struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int index, struct reg_block *block_rb);
+struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int index, struct mqnic_reg_block *block_rb);
 void mqnic_sched_block_close(struct mqnic_sched_block *block);
 
 // mqnic_scheduler.c
-struct mqnic_sched *mqnic_sched_open(struct mqnic_sched_block *block, int index, struct reg_block *rb);
+struct mqnic_sched *mqnic_sched_open(struct mqnic_sched_block *block, int index, struct mqnic_reg_block *rb);
 void mqnic_sched_close(struct mqnic_sched *sched);
 
 #endif /* MQNIC_H */

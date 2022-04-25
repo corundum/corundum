@@ -47,14 +47,14 @@ static void usage(char *name)
         name);
 }
 
-uint32_t mqnic_alveo_bmc_reg_read(struct reg_block *rb, uint32_t reg)
+uint32_t mqnic_alveo_bmc_reg_read(struct mqnic_reg_block *rb, uint32_t reg)
 {
     mqnic_reg_write32(rb->regs, MQNIC_RB_ALVEO_BMC_REG_ADDR, reg);
     mqnic_reg_read32(rb->regs, MQNIC_RB_ALVEO_BMC_REG_DATA); // dummy read
     return mqnic_reg_read32(rb->regs, MQNIC_RB_ALVEO_BMC_REG_DATA);
 }
 
-void mqnic_alveo_bmc_reg_write(struct reg_block *rb, uint32_t reg, uint32_t val)
+void mqnic_alveo_bmc_reg_write(struct mqnic_reg_block *rb, uint32_t reg, uint32_t val)
 {
     mqnic_reg_write32(rb->regs, MQNIC_RB_ALVEO_BMC_REG_ADDR, reg);
     mqnic_reg_write32(rb->regs, MQNIC_RB_ALVEO_BMC_REG_DATA, val);
@@ -123,7 +123,7 @@ struct sensor_channel alveo_bmc_sensors[] = {
     {0, "", ""}
 };
 
-int mqnic_gecko_bmc_read(struct reg_block *rb)
+int mqnic_gecko_bmc_read(struct mqnic_reg_block *rb)
 {
     uint32_t val;
     int timeout = 20000;
@@ -157,7 +157,7 @@ int mqnic_gecko_bmc_read(struct reg_block *rb)
     return -1;
 }
 
-int mqnic_gecko_bmc_write(struct reg_block *rb, uint16_t cmd, uint32_t data)
+int mqnic_gecko_bmc_write(struct mqnic_reg_block *rb, uint16_t cmd, uint32_t data)
 {
     int ret;
     ret = mqnic_gecko_bmc_read(rb);
@@ -171,7 +171,7 @@ int mqnic_gecko_bmc_write(struct reg_block *rb, uint16_t cmd, uint32_t data)
     return 0;
 }
 
-int mqnic_gecko_bmc_query(struct reg_block *rb, uint16_t cmd, uint32_t data)
+int mqnic_gecko_bmc_query(struct mqnic_reg_block *rb, uint16_t cmd, uint32_t data)
 {
     int ret;
 
@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
 
     char *device = NULL;
     struct mqnic *dev;
-    struct reg_block *bmc_rb;
+    struct mqnic_reg_block *bmc_rb;
 
     name = strrchr(argv[0], '/');
     name = name ? 1+name : argv[0];
@@ -237,7 +237,7 @@ int main(int argc, char *argv[])
 
     mqnic_print_fw_id(dev);
 
-    if ((bmc_rb = find_reg_block(dev->rb_list, MQNIC_RB_ALVEO_BMC_TYPE, MQNIC_RB_ALVEO_BMC_VER, 0)))
+    if ((bmc_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_ALVEO_BMC_TYPE, MQNIC_RB_ALVEO_BMC_VER, 0)))
     {
         printf("Detected Xilinx Alveo board with MSP430 BMC\n");
 
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
             printf("\n");
         }
     }
-    else if ((bmc_rb = find_reg_block(dev->rb_list, MQNIC_RB_GECKO_BMC_TYPE, MQNIC_RB_GECKO_BMC_VER, 0)))
+    else if ((bmc_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_GECKO_BMC_TYPE, MQNIC_RB_GECKO_BMC_VER, 0)))
     {
         printf("Detected Silicom board with Gecko BMC\n");
 

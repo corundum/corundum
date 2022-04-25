@@ -566,7 +566,7 @@ int main(int argc, char *argv[])
 
     struct mqnic *dev = NULL;
 
-    struct reg_block *flash_rb = NULL;
+    struct mqnic_reg_block *flash_rb = NULL;
 
     struct flash_device *pri_flash = NULL;
     struct flash_device *sec_flash = NULL;
@@ -678,7 +678,7 @@ int main(int argc, char *argv[])
     size_t segment_size = 0;
     size_t segment_offset = 0;
 
-    if ((flash_rb = find_reg_block(dev->rb_list, MQNIC_RB_SPI_FLASH_TYPE, 0, 0)))
+    if ((flash_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_SPI_FLASH_TYPE, 0, 0)))
     {
         uint32_t reg_val;
 
@@ -768,7 +768,7 @@ int main(int argc, char *argv[])
             flash_size = pri_flash->size;
         }
     }
-    else if ((flash_rb = find_reg_block(dev->rb_list, MQNIC_RB_BPI_FLASH_TYPE, 0, 0)))
+    else if ((flash_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_BPI_FLASH_TYPE, 0, 0)))
     {
         uint32_t reg_val;
 

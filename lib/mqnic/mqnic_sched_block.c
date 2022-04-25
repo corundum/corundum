@@ -36,7 +36,7 @@ either expressed or implied, of The Regents of the University of California.
 #include <stdio.h>
 #include <stdlib.h>
 
-struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int index, struct reg_block *block_rb)
+struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int index, struct mqnic_reg_block *block_rb)
 {
     struct mqnic_sched_block *block = calloc(1, sizeof(struct mqnic_sched_block));
 
@@ -50,7 +50,7 @@ struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int
 
     block->index = index;
 
-    block->rb_list = enumerate_reg_block_list(interface->regs, offset, interface->regs_size);
+    block->rb_list = mqnic_enumerate_reg_block_list(interface->regs, offset, interface->regs_size);
 
     if (!block->rb_list)
     {
@@ -59,7 +59,7 @@ struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int
     }
 
     block->sched_count = 0;
-    for (struct reg_block *rb = block->rb_list; rb->type && rb->version; rb++)
+    for (struct mqnic_reg_block *rb = block->rb_list; rb->type && rb->version; rb++)
     {
         if (rb->type == MQNIC_RB_SCHED_RR_TYPE && rb->version == MQNIC_RB_SCHED_RR_VER)
         {
@@ -94,7 +94,7 @@ void mqnic_sched_block_close(struct mqnic_sched_block *block)
     }
 
     if (block->rb_list)
-        free_reg_block_list(block->rb_list);
+        mqnic_free_reg_block_list(block->rb_list);
 
     free(block);
 }

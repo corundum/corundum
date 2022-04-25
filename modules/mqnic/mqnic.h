@@ -58,6 +58,14 @@
 
 #include "mqnic_hw.h"
 
+#ifdef CONFIG_OF
+/* platform driver OF-related definitions */
+#define MQNIC_PROP_MAC_ADDR_INC_BYTE "mac-address-increment-byte"
+#define MQNIC_PROP_MAC_ADDR_INC "mac-address-increment"
+#define MQNIC_PROP_MAC_ADDR_LOCAL "mac-address-local"
+#define MQNIC_PROP_MODULE_EEPROM "module-eeproms"
+#endif
+
 extern unsigned int mqnic_num_ev_queue_entries;
 extern unsigned int mqnic_num_tx_queue_entries;
 extern unsigned int mqnic_num_rx_queue_entries;

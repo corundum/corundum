@@ -96,6 +96,7 @@ fail:
 	kfree(reg_block_list);
 	return NULL;
 }
+EXPORT_SYMBOL(mqnic_enumerate_reg_block_list);
 
 struct mqnic_reg_block *mqnic_find_reg_block(struct mqnic_reg_block *list, u32 type, u32 version, int index)
 {
@@ -114,8 +115,10 @@ struct mqnic_reg_block *mqnic_find_reg_block(struct mqnic_reg_block *list, u32 t
 
 	return NULL;
 }
+EXPORT_SYMBOL(mqnic_find_reg_block);
 
 void mqnic_free_reg_block_list(struct mqnic_reg_block *list)
 {
 	kfree(list);
 }
+EXPORT_SYMBOL(mqnic_free_reg_block_list);

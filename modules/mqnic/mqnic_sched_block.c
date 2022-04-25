@@ -127,6 +127,7 @@ int mqnic_activate_sched_block(struct mqnic_sched_block *block)
 
 	return 0;
 }
+EXPORT_SYMBOL(mqnic_activate_sched_block);
 
 void mqnic_deactivate_sched_block(struct mqnic_sched_block *block)
 {
@@ -137,3 +138,4 @@ void mqnic_deactivate_sched_block(struct mqnic_sched_block *block)
 		if (block->sched[k])
 			mqnic_scheduler_disable(block->sched[k]);
 }
+EXPORT_SYMBOL(mqnic_deactivate_sched_block);

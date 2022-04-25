@@ -74,9 +74,9 @@ struct mqnic_i2c_bus *mqnic_i2c_bus_create(struct mqnic_dev *mqnic, int index)
 	struct mqnic_i2c_bus *bus;
 	struct i2c_algo_bit_data *algo;
 	struct i2c_adapter *adapter;
-	struct reg_block *rb;
+	struct mqnic_reg_block *rb;
 
-	rb = find_reg_block(mqnic->rb_list, MQNIC_RB_I2C_TYPE, MQNIC_RB_I2C_VER, index);
+	rb = mqnic_find_reg_block(mqnic->rb_list, MQNIC_RB_I2C_TYPE, MQNIC_RB_I2C_VER, index);
 
 	if (!rb)
 		return NULL;

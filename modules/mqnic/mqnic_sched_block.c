@@ -36,11 +36,11 @@
 #include "mqnic.h"
 
 int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_block **block_ptr,
-		int index, struct reg_block *block_rb)
+		int index, struct mqnic_reg_block *block_rb)
 {
 	struct device *dev = interface->dev;
 	struct mqnic_sched_block *block;
-	struct reg_block *rb;
+	struct mqnic_reg_block *rb;
 	u32 offset;
 	int ret = 0;
 
@@ -61,7 +61,7 @@ int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_bloc
 
 	offset = ioread32(block_rb->regs + MQNIC_RB_SCHED_BLOCK_REG_OFFSET);
 
-	block->rb_list = enumerate_reg_block_list(interface->hw_addr, offset, interface->hw_regs_size - offset);
+	block->rb_list = mqnic_enumerate_reg_block_list(interface->hw_addr, offset, interface->hw_regs_size - offset);
 
 	if (!block->rb_list) {
 		ret = -EIO;
@@ -110,7 +110,7 @@ void mqnic_destroy_sched_block(struct mqnic_sched_block **block_ptr)
 			mqnic_destroy_scheduler(&block->sched[k]);
 
 	if (block->rb_list)
-		free_reg_block_list(block->rb_list);
+		mqnic_free_reg_block_list(block->rb_list);
 
 	*block_ptr = NULL;
 	kfree(block);

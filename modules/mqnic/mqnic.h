@@ -73,7 +73,7 @@ extern unsigned int mqnic_num_rx_queue_entries;
 struct mqnic_dev;
 struct mqnic_if;
 
-struct reg_block {
+struct mqnic_reg_block {
 	u32 type;
 	u32 version;
 	u8 __iomem *regs;
@@ -159,10 +159,10 @@ struct mqnic_dev {
 	struct mqnic_adev *app_adev;
 #endif
 
-	struct reg_block *rb_list;
-	struct reg_block *fw_id_rb;
-	struct reg_block *if_rb;
-	struct reg_block *phc_rb;
+	struct mqnic_reg_block *rb_list;
+	struct mqnic_reg_block *fw_id_rb;
+	struct mqnic_reg_block *if_rb;
+	struct mqnic_reg_block *phc_rb;
 
 	int dev_port_max;
 	int dev_port_limit;
@@ -335,7 +335,7 @@ struct mqnic_sched {
 	struct mqnic_if *interface;
 	struct mqnic_sched_block *sched_block;
 
-	struct reg_block *rb;
+	struct mqnic_reg_block *rb;
 
 	int index;
 
@@ -351,8 +351,8 @@ struct mqnic_sched_block {
 	struct device *dev;
 	struct mqnic_if *interface;
 
-	struct reg_block *block_rb;
-	struct reg_block *rb_list;
+	struct mqnic_reg_block *block_rb;
+	struct mqnic_reg_block *rb_list;
 
 	int index;
 
@@ -366,14 +366,14 @@ struct mqnic_if {
 	struct device *dev;
 	struct mqnic_dev *mdev;
 
-	struct reg_block *rb_list;
-	struct reg_block *if_ctrl_rb;
-	struct reg_block *event_queue_rb;
-	struct reg_block *tx_queue_rb;
-	struct reg_block *tx_cpl_queue_rb;
-	struct reg_block *rx_queue_rb;
-	struct reg_block *rx_cpl_queue_rb;
-	struct reg_block *rx_queue_map_rb;
+	struct mqnic_reg_block *rb_list;
+	struct mqnic_reg_block *if_ctrl_rb;
+	struct mqnic_reg_block *event_queue_rb;
+	struct mqnic_reg_block *tx_queue_rb;
+	struct mqnic_reg_block *tx_cpl_queue_rb;
+	struct mqnic_reg_block *rx_queue_rb;
+	struct mqnic_reg_block *rx_cpl_queue_rb;
+	struct mqnic_reg_block *rx_queue_map_rb;
 
 	int index;
 
@@ -470,9 +470,9 @@ struct mqnic_priv {
 // mqnic_main.c
 
 // mqnic_reg_block.c
-struct reg_block *enumerate_reg_block_list(u8 __iomem *base, size_t offset, size_t size);
-struct reg_block *find_reg_block(struct reg_block *list, u32 type, u32 version, int index);
-void free_reg_block_list(struct reg_block *list);
+struct mqnic_reg_block *mqnic_enumerate_reg_block_list(u8 __iomem *base, size_t offset, size_t size);
+struct mqnic_reg_block *mqnic_find_reg_block(struct mqnic_reg_block *list, u32 type, u32 version, int index);
+void mqnic_free_reg_block_list(struct mqnic_reg_block *list);
 
 // mqnic_irq.c
 int mqnic_irq_init_pcie(struct mqnic_dev *mdev);
@@ -505,14 +505,14 @@ void mqnic_destroy_netdev(struct net_device **ndev_ptr);
 
 // mqnic_sched_block.c
 int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_block **block_ptr,
-		int index, struct reg_block *rb);
+		int index, struct mqnic_reg_block *rb);
 void mqnic_destroy_sched_block(struct mqnic_sched_block **block_ptr);
 int mqnic_activate_sched_block(struct mqnic_sched_block *block);
 void mqnic_deactivate_sched_block(struct mqnic_sched_block *block);
 
 // mqnic_scheduler.c
 int mqnic_create_scheduler(struct mqnic_sched_block *block, struct mqnic_sched **sched_ptr,
-		int index, struct reg_block *rb);
+		int index, struct mqnic_reg_block *rb);
 void mqnic_destroy_scheduler(struct mqnic_sched **sched_ptr);
 int mqnic_scheduler_enable(struct mqnic_sched *sched);
 void mqnic_scheduler_disable(struct mqnic_sched *sched);

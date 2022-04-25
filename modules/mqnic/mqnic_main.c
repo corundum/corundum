@@ -261,13 +261,13 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 {
 	int ret = 0;
 	struct device *dev = mqnic->dev;
-	struct reg_block *rb;
+	struct mqnic_reg_block *rb;
 	struct rtc_time tm;
 
 	int k = 0, l = 0;
 
 	// Enumerate registers
-	mqnic->rb_list = enumerate_reg_block_list(mqnic->hw_addr, 0, mqnic->hw_regs_size);
+	mqnic->rb_list = mqnic_enumerate_reg_block_list(mqnic->hw_addr, 0, mqnic->hw_regs_size);
 	if (!mqnic->rb_list) {
 		dev_err(dev, "Failed to enumerate blocks");
 		return -EIO;
@@ -279,7 +279,7 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 				(rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
 	// Read ID registers
-	mqnic->fw_id_rb = find_reg_block(mqnic->rb_list, MQNIC_RB_FW_ID_TYPE, MQNIC_RB_FW_ID_VER, 0);
+	mqnic->fw_id_rb = mqnic_find_reg_block(mqnic->rb_list, MQNIC_RB_FW_ID_TYPE, MQNIC_RB_FW_ID_VER, 0);
 
 	if (!mqnic->fw_id_rb) {
 		ret = -EIO;
@@ -319,17 +319,17 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 	dev_info(dev, "Git hash: %08x", mqnic->git_hash);
 	dev_info(dev, "Release info: %08x", mqnic->rel_info);
 
-	rb = find_reg_block(mqnic->rb_list, MQNIC_RB_APP_INFO_TYPE, MQNIC_RB_APP_INFO_VER, 0);
+	rb = mqnic_find_reg_block(mqnic->rb_list, MQNIC_RB_APP_INFO_TYPE, MQNIC_RB_APP_INFO_VER, 0);
 
 	if (rb) {
 		mqnic->app_id = ioread32(rb->regs + MQNIC_RB_APP_INFO_REG_ID);
 		dev_info(dev, "Application ID: 0x%08x", mqnic->app_id);
 	}
 
-	mqnic->phc_rb = find_reg_block(mqnic->rb_list, MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER, 0);
+	mqnic->phc_rb = mqnic_find_reg_block(mqnic->rb_list, MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER, 0);
 
 	// Enumerate interfaces
-	mqnic->if_rb = find_reg_block(mqnic->rb_list, MQNIC_RB_IF_TYPE, MQNIC_RB_IF_VER, 0);
+	mqnic->if_rb = mqnic_find_reg_block(mqnic->rb_list, MQNIC_RB_IF_TYPE, MQNIC_RB_IF_VER, 0);
 
 	if (!mqnic->if_rb) {
 		ret = -EIO;
@@ -498,7 +498,7 @@ static void mqnic_common_remove(struct mqnic_dev *mqnic)
 		mqnic_board_deinit(mqnic);
 	}
 	if (mqnic->rb_list)
-		free_reg_block_list(mqnic->rb_list);
+		mqnic_free_reg_block_list(mqnic->rb_list);
 }
 
 #ifdef CONFIG_PCI

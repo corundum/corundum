@@ -155,12 +155,12 @@ static int mqnic_phc_adjtime(struct ptp_clock_info *ptp, s64 delta)
 static int mqnic_phc_perout(struct ptp_clock_info *ptp, int on, struct ptp_perout_request *perout)
 {
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
-	struct reg_block *rb;
+	struct mqnic_reg_block *rb;
 
 	u64 start_sec, period_sec, width_sec;
 	u32 start_nsec, period_nsec, width_nsec;
 
-	rb = find_reg_block(mdev->rb_list, MQNIC_RB_PHC_PEROUT_TYPE,
+	rb = mqnic_find_reg_block(mdev->rb_list, MQNIC_RB_PHC_PEROUT_TYPE,
 			MQNIC_RB_PHC_PEROUT_VER, perout->index);
 
 	if (!rb)
@@ -243,7 +243,7 @@ static void mqnic_phc_set_from_system_clock(struct ptp_clock_info *ptp)
 void mqnic_register_phc(struct mqnic_dev *mdev)
 {
 	int perout_ch_count = 0;
-	struct reg_block *rb;
+	struct mqnic_reg_block *rb;
 
 	if (!mdev->phc_rb) {
 		dev_warn(mdev->dev, "PTP clock not present");
@@ -256,7 +256,7 @@ void mqnic_register_phc(struct mqnic_dev *mdev)
 	}
 
 	// count PTP period output channels
-	while ((rb = find_reg_block(mdev->rb_list, MQNIC_RB_PHC_PEROUT_TYPE,
+	while ((rb = mqnic_find_reg_block(mdev->rb_list, MQNIC_RB_PHC_PEROUT_TYPE,
 			MQNIC_RB_PHC_PEROUT_VER, perout_ch_count))) {
 		perout_ch_count++;
 	}

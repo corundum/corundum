@@ -36,7 +36,7 @@
 #include "mqnic.h"
 
 int mqnic_create_scheduler(struct mqnic_sched_block *block, struct mqnic_sched **sched_ptr,
-		int index, struct reg_block *rb)
+		int index, struct mqnic_reg_block *rb)
 {
 	struct device *dev = block->dev;
 	struct mqnic_sched *sched;

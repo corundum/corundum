@@ -1,6 +1,6 @@
 /*
 
-Copyright 2021, The Regents of the University of California.
+Copyright 2021-2022, The Regents of the University of California.
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -42,219 +42,184 @@ either expressed or implied, of The Regents of the University of California.
  */
 module mqnic_interface_tx #
 (
-    // Number of ports
+    // Structural configuration
     parameter PORTS = 1,
-    // DMA address width
-    parameter DMA_ADDR_WIDTH = 64,
-    // DMA length field width
-    parameter DMA_LEN_WIDTH = 16,
-    // DMA tag field width
-    parameter DMA_TAG_WIDTH = 8,
-    // Transmit request tag field width
-    parameter REQ_TAG_WIDTH = 8,
-    // Descriptor request tag field width
-    parameter DESC_REQ_TAG_WIDTH = 8,
-    // Queue request tag field width
-    parameter QUEUE_REQ_TAG_WIDTH = 8,
-    // Queue operation tag field width
-    parameter QUEUE_OP_TAG_WIDTH = 8,
-    // Transmit queue index width
-    parameter TX_QUEUE_INDEX_WIDTH = 8,
-    // Max queue index width
-    parameter QUEUE_INDEX_WIDTH = TX_QUEUE_INDEX_WIDTH,
-    // Transmit completion queue index width
-    parameter TX_CPL_QUEUE_INDEX_WIDTH = 8,
-    // Max completion queue index width
-    parameter CPL_QUEUE_INDEX_WIDTH = TX_CPL_QUEUE_INDEX_WIDTH,
-    // Transmit descriptor table size (number of in-flight operations)
-    parameter TX_DESC_TABLE_SIZE = 16,
-    // Width of descriptor table field for tracking outstanding DMA operations
-    parameter DESC_TABLE_DMA_OP_COUNT_WIDTH = 4,
-    // Max number of in-flight descriptor requests (transmit)
-    parameter TX_MAX_DESC_REQ = 16,
-    // Transmit descriptor FIFO size
-    parameter TX_DESC_FIFO_SIZE = TX_MAX_DESC_REQ*8,
-    // Scheduler operation table size
-    parameter TX_SCHEDULER_OP_TABLE_SIZE = 32,
-    // Scheduler pipeline setting
-    parameter TX_SCHEDULER_PIPELINE = 3,
-    // Scheduler TDMA index width
-    parameter TDMA_INDEX_WIDTH = 8,
-    // Interrupt number width
-    parameter INT_WIDTH = 8,
-    // Queue element pointer width
-    parameter QUEUE_PTR_WIDTH = 16,
-    // Queue log size field width
-    parameter LOG_QUEUE_SIZE_WIDTH = 4,
-    // Log desc block size field width
-    parameter LOG_BLOCK_SIZE_WIDTH = 2,
-    // Enable PTP timestamping
-    parameter PTP_TS_ENABLE = 1,
-    // PTP timestamp width
+
+    // PTP configuration
     parameter PTP_TS_WIDTH = 96,
-    // PTP tag width
     parameter PTP_TAG_WIDTH = 16,
-    // Enable TX checksum offload
-    parameter TX_CHECKSUM_ENABLE = 1,
-    // DMA RAM address width
-    parameter RAM_ADDR_WIDTH = 18,
-    // DMA RAM segment count
-    parameter SEG_COUNT = 2,
-    // DMA RAM segment data width
-    parameter SEG_DATA_WIDTH = 64,
-    // DMA RAM segment byte enable width
-    parameter SEG_BE_WIDTH = SEG_DATA_WIDTH/8,
-    // DMA RAM segment address width
-    parameter SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(SEG_COUNT*SEG_BE_WIDTH),
-    // DMA RAM pipeline stages
-    parameter RAM_PIPELINE = 2,
-    // Width of AXI stream interfaces in bits
-    parameter AXIS_DATA_WIDTH = 256,
-    // AXI stream tkeep signal width (words per cycle)
-    parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
-    // AXI stream tid signal width
-    parameter AXIS_TX_ID_WIDTH = TX_QUEUE_INDEX_WIDTH,
-    // AXI stream tdest signal width
-    parameter AXIS_TX_DEST_WIDTH = $clog2(PORTS)+4,
-    // AXI stream tuser signal width
-    parameter AXIS_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
-    // Max transmit packet size
-    parameter MAX_TX_SIZE = 2048,
-    // DMA TX RAM size
-    parameter TX_RAM_SIZE = 8*MAX_TX_SIZE,
-    // Descriptor size (in bytes)
+
+    // Queue manager configuration (interface)
+    parameter TX_QUEUE_INDEX_WIDTH = 13,
+    parameter QUEUE_INDEX_WIDTH = TX_QUEUE_INDEX_WIDTH,
+    parameter TX_CPL_QUEUE_INDEX_WIDTH = TX_QUEUE_INDEX_WIDTH,
+    parameter CPL_QUEUE_INDEX_WIDTH = TX_CPL_QUEUE_INDEX_WIDTH,
+    parameter QUEUE_PTR_WIDTH = 16,
+    parameter LOG_QUEUE_SIZE_WIDTH = 4,
+    parameter LOG_BLOCK_SIZE_WIDTH = 2,
+
+    // Descriptor management
+    parameter TX_MAX_DESC_REQ = 16,
+    parameter TX_DESC_FIFO_SIZE = TX_MAX_DESC_REQ*8,
     parameter DESC_SIZE = 16,
-    // Descriptor size (in bytes)
     parameter CPL_SIZE = 32,
-    // Width of AXI stream descriptor interfaces in bits
     parameter AXIS_DESC_DATA_WIDTH = DESC_SIZE*8,
-    // AXI stream descriptor tkeep signal width (words per cycle)
-    parameter AXIS_DESC_KEEP_WIDTH = AXIS_DESC_DATA_WIDTH/8
+    parameter AXIS_DESC_KEEP_WIDTH = AXIS_DESC_DATA_WIDTH/8,
+    parameter REQ_TAG_WIDTH = 8,
+    parameter DESC_REQ_TAG_WIDTH = 8,
+    parameter QUEUE_REQ_TAG_WIDTH = 8,
+    parameter QUEUE_OP_TAG_WIDTH = 8,
+
+    // TX and RX engine configuration (port)
+    parameter TX_DESC_TABLE_SIZE = 32,
+    parameter DESC_TABLE_DMA_OP_COUNT_WIDTH = 4,
+
+    // Timestamping configuration (port)
+    parameter PTP_TS_ENABLE = 1,
+    parameter TX_PTP_TS_FIFO_DEPTH = 32,
+
+    // Interface configuration (port)
+    parameter TX_CHECKSUM_ENABLE = 1,
+    parameter TX_FIFO_DEPTH = 32768,
+    parameter MAX_TX_SIZE = 9214,
+    parameter TX_RAM_SIZE = 32768,
+
+    // DMA interface configuration
+    parameter DMA_ADDR_WIDTH = 64,
+    parameter DMA_LEN_WIDTH = 16,
+    parameter DMA_TAG_WIDTH = 16,
+    parameter RAM_ADDR_WIDTH = $clog2(TX_RAM_SIZE),
+    parameter RAM_SEG_COUNT = 2,
+    parameter RAM_SEG_DATA_WIDTH = 256*2/RAM_SEG_COUNT,
+    parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
+    parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH),
+    parameter RAM_PIPELINE = 2,
+
+    // Streaming interface configuration
+    parameter AXIS_DATA_WIDTH = 512*2**$clog2(PORTS),
+    parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
+    parameter AXIS_TX_ID_WIDTH = TX_QUEUE_INDEX_WIDTH,
+    parameter AXIS_TX_DEST_WIDTH = $clog2(PORTS)+4,
+    parameter AXIS_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1
 )
 (
-    input  wire                                 clk,
-    input  wire                                 rst,
+    input  wire                                         clk,
+    input  wire                                         rst,
 
     /*
      * Transmit request input (queue index)
      */
-    input  wire [QUEUE_INDEX_WIDTH-1:0]         s_axis_tx_req_queue,
-    input  wire [REQ_TAG_WIDTH-1:0]             s_axis_tx_req_tag,
-    input  wire [AXIS_TX_DEST_WIDTH-1:0]        s_axis_tx_req_dest,
-    input  wire                                 s_axis_tx_req_valid,
-    output wire                                 s_axis_tx_req_ready,
+    input  wire [QUEUE_INDEX_WIDTH-1:0]                 s_axis_tx_req_queue,
+    input  wire [REQ_TAG_WIDTH-1:0]                     s_axis_tx_req_tag,
+    input  wire [AXIS_TX_DEST_WIDTH-1:0]                s_axis_tx_req_dest,
+    input  wire                                         s_axis_tx_req_valid,
+    output wire                                         s_axis_tx_req_ready,
 
     /*
      * Transmit request status output
      */
-    output wire [DMA_CLIENT_LEN_WIDTH-1:0]      m_axis_tx_req_status_len,
-    output wire [REQ_TAG_WIDTH-1:0]             m_axis_tx_req_status_tag,
-    output wire                                 m_axis_tx_req_status_valid,
+    output wire [DMA_CLIENT_LEN_WIDTH-1:0]              m_axis_tx_req_status_len,
+    output wire [REQ_TAG_WIDTH-1:0]                     m_axis_tx_req_status_tag,
+    output wire                                         m_axis_tx_req_status_valid,
 
     /*
      * Descriptor request output
      */
-    output wire [QUEUE_INDEX_WIDTH-1:0]         m_axis_desc_req_queue,
-    output wire [DESC_REQ_TAG_WIDTH-1:0]        m_axis_desc_req_tag,
-    output wire                                 m_axis_desc_req_valid,
-    input  wire                                 m_axis_desc_req_ready,
+    output wire [QUEUE_INDEX_WIDTH-1:0]                 m_axis_desc_req_queue,
+    output wire [DESC_REQ_TAG_WIDTH-1:0]                m_axis_desc_req_tag,
+    output wire                                         m_axis_desc_req_valid,
+    input  wire                                         m_axis_desc_req_ready,
 
     /*
      * Descriptor request status input
      */
-    input  wire [QUEUE_INDEX_WIDTH-1:0]         s_axis_desc_req_status_queue,
-    input  wire [QUEUE_PTR_WIDTH-1:0]           s_axis_desc_req_status_ptr,
-    input  wire [CPL_QUEUE_INDEX_WIDTH-1:0]     s_axis_desc_req_status_cpl,
-    input  wire [DESC_REQ_TAG_WIDTH-1:0]        s_axis_desc_req_status_tag,
-    input  wire                                 s_axis_desc_req_status_empty,
-    input  wire                                 s_axis_desc_req_status_error,
-    input  wire                                 s_axis_desc_req_status_valid,
+    input  wire [QUEUE_INDEX_WIDTH-1:0]                 s_axis_desc_req_status_queue,
+    input  wire [QUEUE_PTR_WIDTH-1:0]                   s_axis_desc_req_status_ptr,
+    input  wire [CPL_QUEUE_INDEX_WIDTH-1:0]             s_axis_desc_req_status_cpl,
+    input  wire [DESC_REQ_TAG_WIDTH-1:0]                s_axis_desc_req_status_tag,
+    input  wire                                         s_axis_desc_req_status_empty,
+    input  wire                                         s_axis_desc_req_status_error,
+    input  wire                                         s_axis_desc_req_status_valid,
 
     /*
      * Descriptor data input
      */
-    input  wire [AXIS_DESC_DATA_WIDTH-1:0]      s_axis_desc_tdata,
-    input  wire [AXIS_DESC_KEEP_WIDTH-1:0]      s_axis_desc_tkeep,
-    input  wire                                 s_axis_desc_tvalid,
-    output wire                                 s_axis_desc_tready,
-    input  wire                                 s_axis_desc_tlast,
-    input  wire [DESC_REQ_TAG_WIDTH-1:0]        s_axis_desc_tid,
-    input  wire                                 s_axis_desc_tuser,
+    input  wire [AXIS_DESC_DATA_WIDTH-1:0]              s_axis_desc_tdata,
+    input  wire [AXIS_DESC_KEEP_WIDTH-1:0]              s_axis_desc_tkeep,
+    input  wire                                         s_axis_desc_tvalid,
+    output wire                                         s_axis_desc_tready,
+    input  wire                                         s_axis_desc_tlast,
+    input  wire [DESC_REQ_TAG_WIDTH-1:0]                s_axis_desc_tid,
+    input  wire                                         s_axis_desc_tuser,
 
     /*
      * Completion request output
      */
-    output wire [QUEUE_INDEX_WIDTH-1:0]         m_axis_cpl_req_queue,
-    output wire [DESC_REQ_TAG_WIDTH-1:0]        m_axis_cpl_req_tag,
-    output wire [CPL_SIZE*8-1:0]                m_axis_cpl_req_data,
-    output wire                                 m_axis_cpl_req_valid,
-    input  wire                                 m_axis_cpl_req_ready,
+    output wire [QUEUE_INDEX_WIDTH-1:0]                 m_axis_cpl_req_queue,
+    output wire [DESC_REQ_TAG_WIDTH-1:0]                m_axis_cpl_req_tag,
+    output wire [CPL_SIZE*8-1:0]                        m_axis_cpl_req_data,
+    output wire                                         m_axis_cpl_req_valid,
+    input  wire                                         m_axis_cpl_req_ready,
 
     /*
      * Completion request status input
      */
-    input  wire [DESC_REQ_TAG_WIDTH-1:0]        s_axis_cpl_req_status_tag,
-    input  wire                                 s_axis_cpl_req_status_full,
-    input  wire                                 s_axis_cpl_req_status_error,
-    input  wire                                 s_axis_cpl_req_status_valid,
+    input  wire [DESC_REQ_TAG_WIDTH-1:0]                s_axis_cpl_req_status_tag,
+    input  wire                                         s_axis_cpl_req_status_full,
+    input  wire                                         s_axis_cpl_req_status_error,
+    input  wire                                         s_axis_cpl_req_status_valid,
 
     /*
      * DMA read descriptor output (data)
      */
-    output wire [DMA_ADDR_WIDTH-1:0]            m_axis_dma_read_desc_dma_addr,
-    output wire [RAM_ADDR_WIDTH-1:0]            m_axis_dma_read_desc_ram_addr,
-    output wire [DMA_LEN_WIDTH-1:0]             m_axis_dma_read_desc_len,
-    output wire [DMA_TAG_WIDTH-1:0]             m_axis_dma_read_desc_tag,
-    output wire                                 m_axis_dma_read_desc_valid,
-    input  wire                                 m_axis_dma_read_desc_ready,
+    output wire [DMA_ADDR_WIDTH-1:0]                    m_axis_dma_read_desc_dma_addr,
+    output wire [RAM_ADDR_WIDTH-1:0]                    m_axis_dma_read_desc_ram_addr,
+    output wire [DMA_LEN_WIDTH-1:0]                     m_axis_dma_read_desc_len,
+    output wire [DMA_TAG_WIDTH-1:0]                     m_axis_dma_read_desc_tag,
+    output wire                                         m_axis_dma_read_desc_valid,
+    input  wire                                         m_axis_dma_read_desc_ready,
 
     /*
      * DMA read descriptor status input (data)
      */
-    input  wire [DMA_TAG_WIDTH-1:0]             s_axis_dma_read_desc_status_tag,
-    input  wire [3:0]                           s_axis_dma_read_desc_status_error,
-    input  wire                                 s_axis_dma_read_desc_status_valid,
+    input  wire [DMA_TAG_WIDTH-1:0]                     s_axis_dma_read_desc_status_tag,
+    input  wire [3:0]                                   s_axis_dma_read_desc_status_error,
+    input  wire                                         s_axis_dma_read_desc_status_valid,
 
     /*
      * RAM interface (data)
      */
-    input  wire [SEG_COUNT*SEG_BE_WIDTH-1:0]    dma_ram_wr_cmd_be,
-    input  wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]  dma_ram_wr_cmd_addr,
-    input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]  dma_ram_wr_cmd_data,
-    input  wire [SEG_COUNT-1:0]                 dma_ram_wr_cmd_valid,
-    output wire [SEG_COUNT-1:0]                 dma_ram_wr_cmd_ready,
-    output wire [SEG_COUNT-1:0]                 dma_ram_wr_done,
+    input  wire [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]    dma_ram_wr_cmd_be,
+    input  wire [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  dma_ram_wr_cmd_addr,
+    input  wire [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  dma_ram_wr_cmd_data,
+    input  wire [RAM_SEG_COUNT-1:0]                     dma_ram_wr_cmd_valid,
+    output wire [RAM_SEG_COUNT-1:0]                     dma_ram_wr_cmd_ready,
+    output wire [RAM_SEG_COUNT-1:0]                     dma_ram_wr_done,
 
     /*
      * Transmit data output
      */
-    output wire [AXIS_DATA_WIDTH-1:0]           tx_axis_tdata,
-    output wire [AXIS_KEEP_WIDTH-1:0]           tx_axis_tkeep,
-    output wire                                 tx_axis_tvalid,
-    input  wire                                 tx_axis_tready,
-    output wire                                 tx_axis_tlast,
-    output wire [AXIS_TX_ID_WIDTH-1:0]          tx_axis_tid,
-    output wire [AXIS_TX_DEST_WIDTH-1:0]        tx_axis_tdest,
-    output wire [AXIS_TX_USER_WIDTH-1:0]        tx_axis_tuser,
+    output wire [AXIS_DATA_WIDTH-1:0]                   m_axis_tx_tdata,
+    output wire [AXIS_KEEP_WIDTH-1:0]                   m_axis_tx_tkeep,
+    output wire                                         m_axis_tx_tvalid,
+    input  wire                                         m_axis_tx_tready,
+    output wire                                         m_axis_tx_tlast,
+    output wire [AXIS_TX_ID_WIDTH-1:0]                  m_axis_tx_tid,
+    output wire [AXIS_TX_DEST_WIDTH-1:0]                m_axis_tx_tdest,
+    output wire [AXIS_TX_USER_WIDTH-1:0]                m_axis_tx_tuser,
 
     /*
      * Transmit timestamp input
      */
-    input  wire [PTP_TS_WIDTH-1:0]              s_axis_tx_ptp_ts,
-    input  wire [PTP_TAG_WIDTH-1:0]             s_axis_tx_ptp_ts_tag,
-    input  wire                                 s_axis_tx_ptp_ts_valid,
-    output wire                                 s_axis_tx_ptp_ts_ready,
-
-    /*
-     * PTP clock
-     */
-    input  wire [95:0]                          ptp_ts_96,
-    input  wire                                 ptp_ts_step,
+    input  wire [PTP_TS_WIDTH-1:0]                      s_axis_tx_ptp_ts,
+    input  wire [PTP_TAG_WIDTH-1:0]                     s_axis_tx_ptp_ts_tag,
+    input  wire                                         s_axis_tx_ptp_ts_valid,
+    output wire                                         s_axis_tx_ptp_ts_ready,
 
     /*
      * Configuration
      */
-    input  wire [DMA_CLIENT_LEN_WIDTH-1:0]      mtu
+    input  wire [DMA_CLIENT_LEN_WIDTH-1:0]              mtu
 );
 
 parameter DMA_CLIENT_TAG_WIDTH = $clog2(TX_DESC_TABLE_SIZE);
@@ -348,7 +313,7 @@ tx_engine #(
     .MAX_TX_SIZE(MAX_TX_SIZE),
     .TX_BUFFER_OFFSET(0),
     .TX_BUFFER_SIZE(TX_RAM_SIZE),
-    .TX_BUFFER_STEP_SIZE(SEG_COUNT*SEG_BE_WIDTH),
+    .TX_BUFFER_STEP_SIZE(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH),
     .DESC_SIZE(DESC_SIZE),
     .CPL_SIZE(CPL_SIZE),
     .MAX_DESC_REQ(TX_MAX_DESC_REQ),
@@ -488,19 +453,19 @@ tx_engine_inst (
     .enable(1'b1)
 );
 
-wire [SEG_COUNT*SEG_ADDR_WIDTH-1:0]  dma_ram_rd_cmd_addr_int;
-wire [SEG_COUNT-1:0]                 dma_ram_rd_cmd_valid_int;
-wire [SEG_COUNT-1:0]                 dma_ram_rd_cmd_ready_int;
-wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]  dma_ram_rd_resp_data_int;
-wire [SEG_COUNT-1:0]                 dma_ram_rd_resp_valid_int;
-wire [SEG_COUNT-1:0]                 dma_ram_rd_resp_ready_int;
+wire [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  dma_ram_rd_cmd_addr_int;
+wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_cmd_valid_int;
+wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_cmd_ready_int;
+wire [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  dma_ram_rd_resp_data_int;
+wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_resp_valid_int;
+wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_resp_ready_int;
 
 dma_psdpram #(
     .SIZE(TX_RAM_SIZE),
-    .SEG_COUNT(SEG_COUNT),
-    .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
-    .SEG_BE_WIDTH(SEG_BE_WIDTH),
-    .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
+    .SEG_COUNT(RAM_SEG_COUNT),
+    .SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
+    .SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
+    .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
     .PIPELINE(RAM_PIPELINE)
 )
 dma_psdpram_tx_inst (
@@ -539,10 +504,10 @@ wire [AXIS_TX_USER_WIDTH-1:0]  tx_axis_tuser_int;
 
 dma_client_axis_source #(
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
-    .SEG_COUNT(SEG_COUNT),
-    .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
-    .SEG_ADDR_WIDTH(SEG_ADDR_WIDTH),
-    .SEG_BE_WIDTH(SEG_BE_WIDTH),
+    .SEG_COUNT(RAM_SEG_COUNT),
+    .SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
+    .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
+    .SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
     .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
     .AXIS_KEEP_ENABLE(AXIS_KEEP_WIDTH > 1),
     .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),
@@ -635,14 +600,14 @@ egress_inst (
     /*
      * Transmit data output
      */
-    .m_axis_tdata(tx_axis_tdata),
-    .m_axis_tkeep(tx_axis_tkeep),
-    .m_axis_tvalid(tx_axis_tvalid),
-    .m_axis_tready(tx_axis_tready),
-    .m_axis_tlast(tx_axis_tlast),
-    .m_axis_tid(tx_axis_tid),
-    .m_axis_tdest(tx_axis_tdest),
-    .m_axis_tuser(tx_axis_tuser),
+    .m_axis_tdata(m_axis_tx_tdata),
+    .m_axis_tkeep(m_axis_tx_tkeep),
+    .m_axis_tvalid(m_axis_tx_tvalid),
+    .m_axis_tready(m_axis_tx_tready),
+    .m_axis_tlast(m_axis_tx_tlast),
+    .m_axis_tid(m_axis_tx_tid),
+    .m_axis_tdest(m_axis_tx_tdest),
+    .m_axis_tuser(m_axis_tx_tuser),
 
     /*
      * Transmit checksum command

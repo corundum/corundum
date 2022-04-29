@@ -197,7 +197,7 @@ class TB(object):
         # Ethernet
         self.port_mac = []
 
-        eth_int_if_width = len(dut.core_pcie_inst.core_inst.iface[0].port[0].rx_async_fifo_inst.m_axis_tdata)
+        eth_int_if_width = len(dut.core_pcie_inst.core_inst.m_axis_tx_tdata) / len(dut.core_pcie_inst.core_inst.m_axis_tx_tvalid)
         eth_clock_period = 6.4
         eth_speed = 10e9
 
@@ -215,25 +215,25 @@ class TB(object):
             eth_speed = 100e9
 
         for iface in dut.core_pcie_inst.core_inst.iface:
-            for port in iface.port:
-                cocotb.start_soon(Clock(port.port_rx_clk, eth_clock_period, units="ns").start())
-                cocotb.start_soon(Clock(port.port_tx_clk, eth_clock_period, units="ns").start())
+            for k in range(len(iface.port)):
+                cocotb.start_soon(Clock(iface.port[k].port_rx_clk, eth_clock_period, units="ns").start())
+                cocotb.start_soon(Clock(iface.port[k].port_tx_clk, eth_clock_period, units="ns").start())
 
-                port.port_rx_rst.setimmediatevalue(0)
-                port.port_tx_rst.setimmediatevalue(0)
+                iface.port[k].port_rx_rst.setimmediatevalue(0)
+                iface.port[k].port_tx_rst.setimmediatevalue(0)
 
                 mac = EthMac(
-                    tx_clk=port.port_tx_clk,
-                    tx_rst=port.port_tx_rst,
-                    tx_bus=AxiStreamBus.from_prefix(port, "axis_tx"),
-                    tx_ptp_time=port.ptp.tx_ptp_cdc_inst.output_ts,
-                    tx_ptp_ts=port.ptp.axis_tx_ptp_ts,
-                    tx_ptp_ts_tag=port.ptp.axis_tx_ptp_ts_tag,
-                    tx_ptp_ts_valid=port.ptp.axis_tx_ptp_ts_valid,
-                    rx_clk=port.port_rx_clk,
-                    rx_rst=port.port_rx_rst,
-                    rx_bus=AxiStreamBus.from_prefix(port, "axis_rx"),
-                    rx_ptp_time=port.ptp.rx_ptp_cdc_inst.output_ts,
+                    tx_clk=iface.port[k].port_tx_clk,
+                    tx_rst=iface.port[k].port_tx_rst,
+                    tx_bus=AxiStreamBus.from_prefix(iface.interface_inst.port[k].port_tx_inst, "m_axis_tx"),
+                    tx_ptp_time=iface.port[k].ptp.tx_ptp_cdc_inst.output_ts,
+                    tx_ptp_ts=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_ptp_ts,
+                    tx_ptp_ts_tag=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_ptp_ts_tag,
+                    tx_ptp_ts_valid=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_ptp_ts_valid,
+                    rx_clk=iface.port[k].port_rx_clk,
+                    rx_rst=iface.port[k].port_rx_rst,
+                    rx_bus=AxiStreamBus.from_prefix(iface.interface_inst.port[k].port_rx_inst, "s_axis_rx"),
+                    rx_ptp_time=iface.port[k].ptp.rx_ptp_cdc_inst.output_ts,
                     ifg=12, speed=eth_speed
                 )
 
@@ -582,6 +582,8 @@ def test_mqnic_core_pcie_s10(request, if_count, ports_per_if, pcie_data_width,
         os.path.join(rtl_dir, "mqnic_ingress.v"),
         os.path.join(rtl_dir, "mqnic_l2_egress.v"),
         os.path.join(rtl_dir, "mqnic_l2_ingress.v"),
+        os.path.join(rtl_dir, "mqnic_port_tx.v"),
+        os.path.join(rtl_dir, "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "mqnic_rx_queue_map.v"),
         os.path.join(rtl_dir, "mqnic_ptp.v"),
         os.path.join(rtl_dir, "mqnic_ptp_clock.v"),

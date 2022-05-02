@@ -44,12 +44,9 @@ module mqnic_port_rx #
 (
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_TAG_WIDTH = 16,
 
-    // Timestamping configuration (port)
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
-
-    // Interface configuration (port)
     parameter MAX_RX_SIZE = 9214,
 
     // Application block configuration

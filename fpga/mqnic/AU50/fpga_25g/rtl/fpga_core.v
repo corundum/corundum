@@ -60,7 +60,6 @@ module fpga_core #
 
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_TAG_WIDTH = 16,
     parameter PTP_PERIOD_NS_WIDTH = 4,
     parameter PTP_OFFSET_NS_WIDTH = 32,
     parameter PTP_FNS_WIDTH = 32,
@@ -74,7 +73,7 @@ module fpga_core #
     parameter IF_PTP_PERIOD_NS = 6'h6,
     parameter IF_PTP_PERIOD_FNS = 16'h6666,
 
-    // Queue manager configuration (interface)
+    // Queue manager configuration
     parameter EVENT_QUEUE_OP_TABLE_SIZE = 32,
     parameter TX_QUEUE_OP_TABLE_SIZE = 32,
     parameter RX_QUEUE_OP_TABLE_SIZE = 32,
@@ -91,21 +90,19 @@ module fpga_core #
     parameter TX_CPL_QUEUE_PIPELINE = TX_QUEUE_PIPELINE,
     parameter RX_CPL_QUEUE_PIPELINE = RX_QUEUE_PIPELINE,
 
-    // TX and RX engine configuration (port)
+    // TX and RX engine configuration
     parameter TX_DESC_TABLE_SIZE = 32,
     parameter RX_DESC_TABLE_SIZE = 32,
 
-    // Scheduler configuration (port)
+    // Scheduler configuration
     parameter TX_SCHEDULER_OP_TABLE_SIZE = TX_DESC_TABLE_SIZE,
     parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE,
     parameter TDMA_INDEX_WIDTH = 6,
 
-    // Timestamping configuration (port)
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
-    parameter TX_PTP_TS_FIFO_DEPTH = 32,
-    parameter RX_PTP_TS_FIFO_DEPTH = 32,
-
-    // Interface configuration (port)
+    parameter TX_CPL_FIFO_DEPTH = 32,
+    parameter TX_TAG_WIDTH = 16,
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_RSS_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
@@ -171,7 +168,7 @@ module fpga_core #
     parameter AXIS_ETH_DATA_WIDTH = XGMII_DATA_WIDTH,
     parameter AXIS_ETH_KEEP_WIDTH = AXIS_ETH_DATA_WIDTH/8,
     parameter AXIS_ETH_SYNC_DATA_WIDTH = AXIS_ETH_DATA_WIDTH,
-    parameter AXIS_ETH_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
+    parameter AXIS_ETH_TX_USER_WIDTH = TX_TAG_WIDTH + 1,
     parameter AXIS_ETH_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1,
     parameter AXIS_ETH_TX_PIPELINE = 4,
     parameter AXIS_ETH_TX_FIFO_PIPELINE = 4,
@@ -715,7 +712,7 @@ wire [PORT_COUNT-1:0]                         axis_eth_tx_tlast;
 wire [PORT_COUNT*AXIS_ETH_TX_USER_WIDTH-1:0]  axis_eth_tx_tuser;
 
 wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            axis_eth_tx_ptp_ts;
-wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]           axis_eth_tx_ptp_ts_tag;
+wire [PORT_COUNT*TX_TAG_WIDTH-1:0]            axis_eth_tx_ptp_ts_tag;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_valid;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_ready;
 
@@ -800,7 +797,7 @@ generate
             .TX_PTP_TS_ENABLE(PTP_TS_ENABLE),
             .TX_PTP_TS_WIDTH(PTP_TS_WIDTH),
             .TX_PTP_TAG_ENABLE(PTP_TS_ENABLE),
-            .TX_PTP_TAG_WIDTH(PTP_TAG_WIDTH),
+            .TX_PTP_TAG_WIDTH(TX_TAG_WIDTH),
             .RX_PTP_TS_ENABLE(PTP_TS_ENABLE),
             .RX_PTP_TS_WIDTH(PTP_TS_WIDTH),
             .TX_USER_WIDTH(AXIS_ETH_TX_USER_WIDTH),
@@ -833,7 +830,7 @@ generate
             .tx_ptp_ts(eth_tx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
             .rx_ptp_ts(eth_rx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
             .tx_axis_ptp_ts(axis_eth_tx_ptp_ts[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
-            .tx_axis_ptp_ts_tag(axis_eth_tx_ptp_ts_tag[n*PTP_TAG_WIDTH +: PTP_TAG_WIDTH]),
+            .tx_axis_ptp_ts_tag(axis_eth_tx_ptp_ts_tag[n*TX_TAG_WIDTH +: TX_TAG_WIDTH]),
             .tx_axis_ptp_ts_valid(axis_eth_tx_ptp_ts_valid[n +: 1]),
 
             .tx_error_underflow(),
@@ -867,7 +864,6 @@ mqnic_core_pcie_us #(
 
     // PTP configuration
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
-    .PTP_TAG_WIDTH(PTP_TAG_WIDTH),
     .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
     .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
     .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
@@ -880,7 +876,7 @@ mqnic_core_pcie_us #(
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
 
-    // Queue manager configuration (interface)
+    // Queue manager configuration
     .EVENT_QUEUE_OP_TABLE_SIZE(EVENT_QUEUE_OP_TABLE_SIZE),
     .TX_QUEUE_OP_TABLE_SIZE(TX_QUEUE_OP_TABLE_SIZE),
     .RX_QUEUE_OP_TABLE_SIZE(RX_QUEUE_OP_TABLE_SIZE),
@@ -897,21 +893,20 @@ mqnic_core_pcie_us #(
     .TX_CPL_QUEUE_PIPELINE(TX_CPL_QUEUE_PIPELINE),
     .RX_CPL_QUEUE_PIPELINE(RX_CPL_QUEUE_PIPELINE),
 
-    // TX and RX engine configuration (port)
+    // TX and RX engine configuration
     .TX_DESC_TABLE_SIZE(TX_DESC_TABLE_SIZE),
     .RX_DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
 
-    // Scheduler configuration (port)
+    // Scheduler configuration
     .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
     .TX_SCHEDULER_PIPELINE(TX_SCHEDULER_PIPELINE),
     .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
 
-    // Timestamping configuration (port)
+    // Interface configuration
     .PTP_TS_ENABLE(PTP_TS_ENABLE),
-    .TX_PTP_TS_FIFO_DEPTH(TX_PTP_TS_FIFO_DEPTH),
-    .RX_PTP_TS_FIFO_DEPTH(RX_PTP_TS_FIFO_DEPTH),
-
-    // Interface configuration (port)
+    .TX_CPL_ENABLE(PTP_TS_ENABLE),
+    .TX_CPL_FIFO_DEPTH(TX_CPL_FIFO_DEPTH),
+    .TX_TAG_WIDTH(TX_TAG_WIDTH),
     .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
     .RX_RSS_ENABLE(RX_RSS_ENABLE),
     .RX_HASH_ENABLE(RX_HASH_ENABLE),
@@ -1169,10 +1164,10 @@ core_inst (
     .m_axis_eth_tx_tlast(axis_eth_tx_tlast),
     .m_axis_eth_tx_tuser(axis_eth_tx_tuser),
 
-    .s_axis_eth_tx_ptp_ts(axis_eth_tx_ptp_ts),
-    .s_axis_eth_tx_ptp_ts_tag(axis_eth_tx_ptp_ts_tag),
-    .s_axis_eth_tx_ptp_ts_valid(axis_eth_tx_ptp_ts_valid),
-    .s_axis_eth_tx_ptp_ts_ready(axis_eth_tx_ptp_ts_ready),
+    .s_axis_eth_tx_cpl_ts(axis_eth_tx_ptp_ts),
+    .s_axis_eth_tx_cpl_tag(axis_eth_tx_ptp_ts_tag),
+    .s_axis_eth_tx_cpl_valid(axis_eth_tx_ptp_ts_valid),
+    .s_axis_eth_tx_cpl_ready(axis_eth_tx_ptp_ts_ready),
 
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),

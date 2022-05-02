@@ -44,13 +44,12 @@ module mqnic_port_tx #
 (
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_TAG_WIDTH = 16,
 
-    // Timestamping configuration (port)
+    // Port configuration
     parameter PTP_TS_ENABLE = 1,
-    parameter TX_PTP_TS_FIFO_DEPTH = 32,
-
-    // Interface configuration (port)
+    parameter TX_CPL_ENABLE = 1,
+    parameter TX_CPL_FIFO_DEPTH = 32,
+    parameter TX_TAG_WIDTH = 16,
     parameter MAX_TX_SIZE = 9214,
 
     // Application block configuration
@@ -60,7 +59,7 @@ module mqnic_port_tx #
     // Streaming interface configuration
     parameter AXIS_DATA_WIDTH = 256,
     parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
-    parameter AXIS_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
+    parameter AXIS_TX_USER_WIDTH = TX_TAG_WIDTH + 1,
     parameter AXIS_TX_PIPELINE = 0,
     parameter AXIS_TX_FIFO_PIPELINE = 2,
     parameter AXIS_TX_TS_PIPELINE = 0,
@@ -82,10 +81,10 @@ module mqnic_port_tx #
     input  wire                                s_axis_if_tx_tlast,
     input  wire [AXIS_SYNC_TX_USER_WIDTH-1:0]  s_axis_if_tx_tuser,
 
-    output wire [PTP_TS_WIDTH-1:0]             m_axis_if_tx_ptp_ts,
-    output wire [PTP_TAG_WIDTH-1:0]            m_axis_if_tx_ptp_ts_tag,
-    output wire                                m_axis_if_tx_ptp_ts_valid,
-    input  wire                                m_axis_if_tx_ptp_ts_ready,
+    output wire [PTP_TS_WIDTH-1:0]             m_axis_if_tx_cpl_ts,
+    output wire [TX_TAG_WIDTH-1:0]             m_axis_if_tx_cpl_tag,
+    output wire                                m_axis_if_tx_cpl_valid,
+    input  wire                                m_axis_if_tx_cpl_ready,
 
     /*
      * Application section datapath interface (synchronous MAC interface)
@@ -104,15 +103,15 @@ module mqnic_port_tx #
     input  wire                                s_axis_app_sync_tx_tlast,
     input  wire [AXIS_SYNC_TX_USER_WIDTH-1:0]  s_axis_app_sync_tx_tuser,
 
-    output wire [PTP_TS_WIDTH-1:0]             m_axis_app_sync_tx_ptp_ts,
-    output wire [PTP_TAG_WIDTH-1:0]            m_axis_app_sync_tx_ptp_ts_tag,
-    output wire                                m_axis_app_sync_tx_ptp_ts_valid,
-    input  wire                                m_axis_app_sync_tx_ptp_ts_ready,
+    output wire [PTP_TS_WIDTH-1:0]             m_axis_app_sync_tx_cpl_ts,
+    output wire [TX_TAG_WIDTH-1:0]             m_axis_app_sync_tx_cpl_tag,
+    output wire                                m_axis_app_sync_tx_cpl_valid,
+    input  wire                                m_axis_app_sync_tx_cpl_ready,
 
-    input  wire [PTP_TS_WIDTH-1:0]             s_axis_app_sync_tx_ptp_ts,
-    input  wire [PTP_TAG_WIDTH-1:0]            s_axis_app_sync_tx_ptp_ts_tag,
-    input  wire                                s_axis_app_sync_tx_ptp_ts_valid,
-    output wire                                s_axis_app_sync_tx_ptp_ts_ready,
+    input  wire [PTP_TS_WIDTH-1:0]             s_axis_app_sync_tx_cpl_ts,
+    input  wire [TX_TAG_WIDTH-1:0]             s_axis_app_sync_tx_cpl_tag,
+    input  wire                                s_axis_app_sync_tx_cpl_valid,
+    output wire                                s_axis_app_sync_tx_cpl_ready,
 
     /*
      * Application section datapath interface (direct MAC interface)
@@ -131,15 +130,15 @@ module mqnic_port_tx #
     input  wire                                s_axis_app_direct_tx_tlast,
     input  wire [AXIS_TX_USER_WIDTH-1:0]       s_axis_app_direct_tx_tuser,
 
-    output wire [PTP_TS_WIDTH-1:0]             m_axis_app_direct_tx_ptp_ts,
-    output wire [PTP_TAG_WIDTH-1:0]            m_axis_app_direct_tx_ptp_ts_tag,
-    output wire                                m_axis_app_direct_tx_ptp_ts_valid,
-    input  wire                                m_axis_app_direct_tx_ptp_ts_ready,
+    output wire [PTP_TS_WIDTH-1:0]             m_axis_app_direct_tx_cpl_ts,
+    output wire [TX_TAG_WIDTH-1:0]             m_axis_app_direct_tx_cpl_tag,
+    output wire                                m_axis_app_direct_tx_cpl_valid,
+    input  wire                                m_axis_app_direct_tx_cpl_ready,
 
-    input  wire [PTP_TS_WIDTH-1:0]             s_axis_app_direct_tx_ptp_ts,
-    input  wire [PTP_TAG_WIDTH-1:0]            s_axis_app_direct_tx_ptp_ts_tag,
-    input  wire                                s_axis_app_direct_tx_ptp_ts_valid,
-    output wire                                s_axis_app_direct_tx_ptp_ts_ready,
+    input  wire [PTP_TS_WIDTH-1:0]             s_axis_app_direct_tx_cpl_ts,
+    input  wire [TX_TAG_WIDTH-1:0]             s_axis_app_direct_tx_cpl_tag,
+    input  wire                                s_axis_app_direct_tx_cpl_valid,
+    output wire                                s_axis_app_direct_tx_cpl_ready,
 
     /*
      * Transmit data output
@@ -154,183 +153,192 @@ module mqnic_port_tx #
     output wire                                m_axis_tx_tlast,
     output wire [AXIS_TX_USER_WIDTH-1:0]       m_axis_tx_tuser,
 
-    input  wire [PTP_TS_WIDTH-1:0]             s_axis_tx_ptp_ts,
-    input  wire [PTP_TAG_WIDTH-1:0]            s_axis_tx_ptp_ts_tag,
-    input  wire                                s_axis_tx_ptp_ts_valid,
-    output wire                                s_axis_tx_ptp_ts_ready
+    input  wire [PTP_TS_WIDTH-1:0]             s_axis_tx_cpl_ts,
+    input  wire [TX_TAG_WIDTH-1:0]             s_axis_tx_cpl_tag,
+    input  wire                                s_axis_tx_cpl_valid,
+    output wire                                s_axis_tx_cpl_ready
 );
+
+initial begin
+    if (PTP_TS_ENABLE) begin
+        if (!TX_CPL_ENABLE) begin
+            $error("Error: PTP timestamping requires TX completions to be enabled (instance %m)");
+            $finish;
+        end
+    end
+end
 
 generate
 
-if (PTP_TS_ENABLE) begin: ptp
+// TX completion FIFO
+wire [PTP_TS_WIDTH-1:0] axis_tx_in_cpl_ts;
+wire [TX_TAG_WIDTH-1:0] axis_tx_in_cpl_tag;
+wire axis_tx_in_cpl_valid;
+wire axis_tx_in_cpl_ready;
 
-    // PTP TS FIFO (TX)
-    wire [PTP_TS_WIDTH-1:0] axis_tx_in_ptp_ts;
-    wire [PTP_TAG_WIDTH-1:0] axis_tx_in_ptp_ts_tag;
-    wire axis_tx_in_ptp_ts_valid;
-    wire axis_tx_in_ptp_ts_ready;
+wire [PTP_TS_WIDTH-1:0] axis_tx_fifo_cpl_ts;
+wire [TX_TAG_WIDTH-1:0] axis_tx_fifo_cpl_tag;
+wire axis_tx_fifo_cpl_valid;
+wire axis_tx_fifo_cpl_ready;
 
-    wire [PTP_TS_WIDTH-1:0] axis_tx_fifo_ptp_ts;
-    wire [PTP_TAG_WIDTH-1:0] axis_tx_fifo_ptp_ts_tag;
-    wire axis_tx_fifo_ptp_ts_valid;
-    wire axis_tx_fifo_ptp_ts_ready;
+wire [PTP_TS_WIDTH-1:0] axis_tx_pipe_cpl_ts;
+wire [TX_TAG_WIDTH-1:0] axis_tx_pipe_cpl_tag;
+wire axis_tx_pipe_cpl_valid;
+wire axis_tx_pipe_cpl_ready;
 
-    wire [PTP_TS_WIDTH-1:0] axis_tx_pipe_ptp_ts;
-    wire [PTP_TAG_WIDTH-1:0] axis_tx_pipe_ptp_ts_tag;
-    wire axis_tx_pipe_ptp_ts_valid;
-    wire axis_tx_pipe_ptp_ts_ready;
+if (APP_AXIS_DIRECT_ENABLE) begin
 
-    if (APP_AXIS_DIRECT_ENABLE) begin
+    if (TX_CPL_ENABLE) begin
 
-        assign m_axis_app_direct_tx_ptp_ts = s_axis_tx_ptp_ts;
-        assign m_axis_app_direct_tx_ptp_ts_tag = s_axis_tx_ptp_ts_tag;
-        assign m_axis_app_direct_tx_ptp_ts_valid = s_axis_tx_ptp_ts_valid;
-        assign s_axis_tx_ptp_ts_ready = m_axis_app_direct_tx_ptp_ts_ready;
-
-        assign axis_tx_in_ptp_ts = s_axis_app_direct_tx_ptp_ts;
-        assign axis_tx_in_ptp_ts_tag = s_axis_app_direct_tx_ptp_ts_tag;
-        assign axis_tx_in_ptp_ts_valid = s_axis_app_direct_tx_ptp_ts_valid;
-        assign s_axis_app_direct_tx_ptp_ts_ready = axis_tx_in_ptp_ts_ready;
+        assign m_axis_app_direct_tx_cpl_ts = PTP_TS_ENABLE ? s_axis_tx_cpl_ts : 0;
+        assign m_axis_app_direct_tx_cpl_tag = s_axis_tx_cpl_tag;
+        assign m_axis_app_direct_tx_cpl_valid = s_axis_tx_cpl_valid;
+        assign s_axis_tx_cpl_ready = m_axis_app_direct_tx_cpl_ready;
 
     end else begin
 
-        assign m_axis_app_direct_tx_ptp_ts = 0;
-        assign m_axis_app_direct_tx_ptp_ts_tag = 0;
-        assign m_axis_app_direct_tx_ptp_ts_valid = 0;
-
-        assign s_axis_app_direct_tx_ptp_ts_ready = 0;
-
-        assign axis_tx_in_ptp_ts = s_axis_tx_ptp_ts;
-        assign axis_tx_in_ptp_ts_tag = s_axis_tx_ptp_ts_tag;
-        assign axis_tx_in_ptp_ts_valid = s_axis_tx_ptp_ts_valid;
-        assign s_axis_tx_ptp_ts_ready = axis_tx_in_ptp_ts_ready;
+        assign m_axis_app_direct_tx_cpl_ts = 0;
+        assign m_axis_app_direct_tx_cpl_tag = m_axis_tx_tuser[1 +: TX_TAG_WIDTH];
+        assign m_axis_app_direct_tx_cpl_valid = m_axis_tx_tvalid && m_axis_tx_tready && m_axis_tx_tlast;
+        assign s_axis_tx_cpl_ready = 1'b1;
 
     end
 
-    axis_async_fifo #(
-        .DEPTH(TX_PTP_TS_FIFO_DEPTH),
-        .DATA_WIDTH(PTP_TS_WIDTH),
-        .KEEP_ENABLE(0),
-        .LAST_ENABLE(0),
-        .ID_ENABLE(1),
-        .ID_WIDTH(PTP_TAG_WIDTH),
-        .DEST_ENABLE(0),
-        .USER_ENABLE(0),
-        .FRAME_FIFO(0)
-    )
-    tx_ptp_ts_fifo_inst (
-        // AXI input
-        .s_clk(tx_clk),
-        .s_rst(tx_rst),
-        .s_axis_tdata(axis_tx_in_ptp_ts),
-        .s_axis_tkeep(0),
-        .s_axis_tvalid(axis_tx_in_ptp_ts_valid),
-        .s_axis_tready(axis_tx_in_ptp_ts_ready),
-        .s_axis_tlast(0),
-        .s_axis_tid(axis_tx_in_ptp_ts_tag),
-        .s_axis_tdest(0),
-        .s_axis_tuser(0),
-
-        // AXI output
-        .m_clk(clk),
-        .m_rst(rst),
-        .m_axis_tdata(axis_tx_fifo_ptp_ts),
-        .m_axis_tkeep(),
-        .m_axis_tvalid(axis_tx_fifo_ptp_ts_valid),
-        .m_axis_tready(axis_tx_fifo_ptp_ts_ready),
-        .m_axis_tlast(),
-        .m_axis_tid(axis_tx_fifo_ptp_ts_tag),
-        .m_axis_tdest(),
-        .m_axis_tuser(),
-
-        // Status
-        .s_status_overflow(),
-        .s_status_bad_frame(),
-        .s_status_good_frame(),
-        .m_status_overflow(),
-        .m_status_bad_frame(),
-        .m_status_good_frame()
-    );
-
-    axis_pipeline_fifo #(
-        .DATA_WIDTH(PTP_TS_WIDTH),
-        .KEEP_ENABLE(0),
-        .LAST_ENABLE(0),
-        .ID_ENABLE(1),
-        .ID_WIDTH(PTP_TAG_WIDTH),
-        .DEST_ENABLE(0),
-        .USER_ENABLE(0),
-        .LENGTH(AXIS_TX_TS_PIPELINE)
-    )
-    tx_ptp_ts_pipeline_fifo_inst (
-        .clk(clk),
-        .rst(rst),
-
-        // AXI input
-        .s_axis_tdata(axis_tx_fifo_ptp_ts),
-        .s_axis_tkeep(0),
-        .s_axis_tvalid(axis_tx_fifo_ptp_ts_valid),
-        .s_axis_tready(axis_tx_fifo_ptp_ts_ready),
-        .s_axis_tlast(0),
-        .s_axis_tid(axis_tx_fifo_ptp_ts_tag),
-        .s_axis_tdest(0),
-        .s_axis_tuser(0),
-
-        // AXI output
-        .m_axis_tdata(axis_tx_pipe_ptp_ts),
-        .m_axis_tkeep(),
-        .m_axis_tvalid(axis_tx_pipe_ptp_ts_valid),
-        .m_axis_tready(axis_tx_pipe_ptp_ts_ready),
-        .m_axis_tlast(),
-        .m_axis_tid(axis_tx_pipe_ptp_ts_tag),
-        .m_axis_tdest(),
-        .m_axis_tuser()
-    );
-
-    if (APP_AXIS_SYNC_ENABLE) begin
-
-        assign m_axis_app_sync_tx_ptp_ts = axis_tx_pipe_ptp_ts;
-        assign m_axis_app_sync_tx_ptp_ts_tag = axis_tx_pipe_ptp_ts_tag;
-        assign m_axis_app_sync_tx_ptp_ts_valid = axis_tx_pipe_ptp_ts_valid;
-        assign axis_tx_pipe_ptp_ts_ready = m_axis_app_sync_tx_ptp_ts_ready;
-
-        assign m_axis_if_tx_ptp_ts = s_axis_app_sync_tx_ptp_ts;
-        assign m_axis_if_tx_ptp_ts_tag = s_axis_app_sync_tx_ptp_ts_tag;
-        assign m_axis_if_tx_ptp_ts_valid = s_axis_app_sync_tx_ptp_ts_valid;
-        assign s_axis_app_sync_tx_ptp_ts_ready = m_axis_if_tx_ptp_ts_ready;
-
-    end else begin
-
-        assign m_axis_app_sync_tx_ptp_ts = 0;
-        assign m_axis_app_sync_tx_ptp_ts_tag = 0;
-        assign m_axis_app_sync_tx_ptp_ts_valid = 0;
-
-        assign s_axis_app_sync_tx_ptp_ts_ready = 0;
-
-        assign m_axis_if_tx_ptp_ts = axis_tx_pipe_ptp_ts;
-        assign m_axis_if_tx_ptp_ts_tag = axis_tx_pipe_ptp_ts_tag;
-        assign m_axis_if_tx_ptp_ts_valid = axis_tx_pipe_ptp_ts_valid;
-        assign axis_tx_pipe_ptp_ts_ready = m_axis_if_tx_ptp_ts_ready;
-
-    end
+    assign axis_tx_in_cpl_ts = PTP_TS_ENABLE ? s_axis_app_direct_tx_cpl_ts : 0;
+    assign axis_tx_in_cpl_tag = s_axis_app_direct_tx_cpl_tag;
+    assign axis_tx_in_cpl_valid = s_axis_app_direct_tx_cpl_valid;
+    assign s_axis_app_direct_tx_cpl_ready = axis_tx_in_cpl_ready;
 
 end else begin
 
-    assign m_axis_app_direct_tx_ptp_ts = 0;
-    assign m_axis_app_direct_tx_ptp_ts_tag = 0;
-    assign m_axis_app_direct_tx_ptp_ts_valid = 0;
+    assign m_axis_app_direct_tx_cpl_ts = 0;
+    assign m_axis_app_direct_tx_cpl_tag = 0;
+    assign m_axis_app_direct_tx_cpl_valid = 0;
 
-    assign s_axis_app_direct_tx_ptp_ts_ready = 0;
+    assign s_axis_app_direct_tx_cpl_ready = 0;
 
-    assign m_axis_app_sync_tx_ptp_ts = 0;
-    assign m_axis_app_sync_tx_ptp_ts_tag = 0;
-    assign m_axis_app_sync_tx_ptp_ts_valid = 0;
+    if (TX_CPL_ENABLE) begin
 
-    assign s_axis_app_sync_tx_ptp_ts_ready = 0;
+        assign axis_tx_in_cpl_ts = PTP_TS_ENABLE ? s_axis_tx_cpl_ts : 0;
+        assign axis_tx_in_cpl_tag = s_axis_tx_cpl_tag;
+        assign axis_tx_in_cpl_valid = s_axis_tx_cpl_valid;
+        assign s_axis_tx_cpl_ready = axis_tx_in_cpl_ready;
+        
+    end else begin
 
-    assign m_axis_if_tx_ptp_ts = 0;
-    assign m_axis_if_tx_ptp_ts_tag = 0;
-    assign m_axis_if_tx_ptp_ts_valid[m] = 0;
+        assign axis_tx_in_cpl_ts = 0;
+        assign axis_tx_in_cpl_tag = m_axis_tx_tuser[1 +: TX_TAG_WIDTH];
+        assign axis_tx_in_cpl_valid = m_axis_tx_tvalid && m_axis_tx_tready && m_axis_tx_tlast;
+        assign s_axis_tx_cpl_ready = 1'b1;
+
+    end
+
+end
+
+axis_async_fifo #(
+    .DEPTH(TX_CPL_FIFO_DEPTH),
+    .DATA_WIDTH(PTP_TS_WIDTH),
+    .KEEP_ENABLE(0),
+    .LAST_ENABLE(0),
+    .ID_ENABLE(1),
+    .ID_WIDTH(TX_TAG_WIDTH),
+    .DEST_ENABLE(0),
+    .USER_ENABLE(0),
+    .FRAME_FIFO(0)
+)
+tx_cpl_fifo_inst (
+    // AXI input
+    .s_clk(tx_clk),
+    .s_rst(tx_rst),
+    .s_axis_tdata(axis_tx_in_cpl_ts),
+    .s_axis_tkeep(0),
+    .s_axis_tvalid(axis_tx_in_cpl_valid),
+    .s_axis_tready(axis_tx_in_cpl_ready),
+    .s_axis_tlast(0),
+    .s_axis_tid(axis_tx_in_cpl_tag),
+    .s_axis_tdest(0),
+    .s_axis_tuser(0),
+
+    // AXI output
+    .m_clk(clk),
+    .m_rst(rst),
+    .m_axis_tdata(axis_tx_fifo_cpl_ts),
+    .m_axis_tkeep(),
+    .m_axis_tvalid(axis_tx_fifo_cpl_valid),
+    .m_axis_tready(axis_tx_fifo_cpl_ready),
+    .m_axis_tlast(),
+    .m_axis_tid(axis_tx_fifo_cpl_tag),
+    .m_axis_tdest(),
+    .m_axis_tuser(),
+
+    // Status
+    .s_status_overflow(),
+    .s_status_bad_frame(),
+    .s_status_good_frame(),
+    .m_status_overflow(),
+    .m_status_bad_frame(),
+    .m_status_good_frame()
+);
+
+axis_pipeline_fifo #(
+    .DATA_WIDTH(PTP_TS_WIDTH),
+    .KEEP_ENABLE(0),
+    .LAST_ENABLE(0),
+    .ID_ENABLE(1),
+    .ID_WIDTH(TX_TAG_WIDTH),
+    .DEST_ENABLE(0),
+    .USER_ENABLE(0),
+    .LENGTH(AXIS_TX_TS_PIPELINE)
+)
+tx_cpl_pipeline_fifo_inst (
+    .clk(clk),
+    .rst(rst),
+
+    // AXI input
+    .s_axis_tdata(axis_tx_fifo_cpl_ts),
+    .s_axis_tkeep(0),
+    .s_axis_tvalid(axis_tx_fifo_cpl_valid),
+    .s_axis_tready(axis_tx_fifo_cpl_ready),
+    .s_axis_tlast(0),
+    .s_axis_tid(axis_tx_fifo_cpl_tag),
+    .s_axis_tdest(0),
+    .s_axis_tuser(0),
+
+    // AXI output
+    .m_axis_tdata(axis_tx_pipe_cpl_ts),
+    .m_axis_tkeep(),
+    .m_axis_tvalid(axis_tx_pipe_cpl_valid),
+    .m_axis_tready(axis_tx_pipe_cpl_ready),
+    .m_axis_tlast(),
+    .m_axis_tid(axis_tx_pipe_cpl_tag),
+    .m_axis_tdest(),
+    .m_axis_tuser()
+);
+
+if (APP_AXIS_SYNC_ENABLE) begin
+
+    assign m_axis_app_sync_tx_cpl_ts = PTP_TS_ENABLE ? axis_tx_pipe_cpl_ts : 0;
+    assign m_axis_app_sync_tx_cpl_tag = axis_tx_pipe_cpl_tag;
+    assign m_axis_app_sync_tx_cpl_valid = axis_tx_pipe_cpl_valid;
+    assign axis_tx_pipe_cpl_ready = m_axis_app_sync_tx_cpl_ready;
+
+    assign m_axis_if_tx_cpl_ts = PTP_TS_ENABLE ? s_axis_app_sync_tx_cpl_ts : 0;
+    assign m_axis_if_tx_cpl_tag = s_axis_app_sync_tx_cpl_tag;
+    assign m_axis_if_tx_cpl_valid = s_axis_app_sync_tx_cpl_valid;
+    assign s_axis_app_sync_tx_cpl_ready = m_axis_if_tx_cpl_ready;
+
+end else begin
+
+    assign m_axis_app_sync_tx_cpl_ts = 0;
+    assign m_axis_app_sync_tx_cpl_tag = 0;
+    assign m_axis_app_sync_tx_cpl_valid = 0;
+
+    assign s_axis_app_sync_tx_cpl_ready = 0;
+
+    assign m_axis_if_tx_cpl_ts = PTP_TS_ENABLE ? axis_tx_pipe_cpl_ts : 0;
+    assign m_axis_if_tx_cpl_tag = axis_tx_pipe_cpl_tag;
+    assign m_axis_if_tx_cpl_valid = axis_tx_pipe_cpl_valid;
+    assign axis_tx_pipe_cpl_ready = m_axis_if_tx_cpl_ready;
 
 end
 

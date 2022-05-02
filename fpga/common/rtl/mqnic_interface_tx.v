@@ -47,9 +47,8 @@ module mqnic_interface_tx #
 
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_TAG_WIDTH = 16,
 
-    // Queue manager configuration (interface)
+    // Queue manager configuration
     parameter TX_QUEUE_INDEX_WIDTH = 13,
     parameter QUEUE_INDEX_WIDTH = TX_QUEUE_INDEX_WIDTH,
     parameter TX_CPL_QUEUE_INDEX_WIDTH = TX_QUEUE_INDEX_WIDTH,
@@ -70,17 +69,14 @@ module mqnic_interface_tx #
     parameter QUEUE_REQ_TAG_WIDTH = 8,
     parameter QUEUE_OP_TAG_WIDTH = 8,
 
-    // TX and RX engine configuration (port)
+    // TX and RX engine configuration
     parameter TX_DESC_TABLE_SIZE = 32,
     parameter DESC_TABLE_DMA_OP_COUNT_WIDTH = 4,
 
-    // Timestamping configuration (port)
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
-    parameter TX_PTP_TS_FIFO_DEPTH = 32,
-
-    // Interface configuration (port)
+    parameter TX_TAG_WIDTH = $clog2(TX_DESC_TABLE_SIZE)+1,
     parameter TX_CHECKSUM_ENABLE = 1,
-    parameter TX_FIFO_DEPTH = 32768,
     parameter MAX_TX_SIZE = 9214,
     parameter TX_RAM_SIZE = 32768,
 
@@ -100,7 +96,7 @@ module mqnic_interface_tx #
     parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
     parameter AXIS_TX_ID_WIDTH = TX_QUEUE_INDEX_WIDTH,
     parameter AXIS_TX_DEST_WIDTH = $clog2(PORTS)+4,
-    parameter AXIS_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1
+    parameter AXIS_TX_USER_WIDTH = TX_TAG_WIDTH + 1
 )
 (
     input  wire                                         clk,
@@ -209,12 +205,12 @@ module mqnic_interface_tx #
     output wire [AXIS_TX_USER_WIDTH-1:0]                m_axis_tx_tuser,
 
     /*
-     * Transmit timestamp input
+     * Transmit completion input
      */
-    input  wire [PTP_TS_WIDTH-1:0]                      s_axis_tx_ptp_ts,
-    input  wire [PTP_TAG_WIDTH-1:0]                     s_axis_tx_ptp_ts_tag,
-    input  wire                                         s_axis_tx_ptp_ts_valid,
-    output wire                                         s_axis_tx_ptp_ts_ready,
+    input  wire [PTP_TS_WIDTH-1:0]                      s_axis_tx_cpl_ts,
+    input  wire [TX_TAG_WIDTH-1:0]                      s_axis_tx_cpl_tag,
+    input  wire                                         s_axis_tx_cpl_valid,
+    output wire                                         s_axis_tx_cpl_ready,
 
     /*
      * Configuration
@@ -321,7 +317,7 @@ tx_engine #(
     .AXIS_DESC_KEEP_WIDTH(AXIS_DESC_KEEP_WIDTH),
     .PTP_TS_ENABLE(PTP_TS_ENABLE),
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
-    .PTP_TAG_WIDTH(PTP_TAG_WIDTH),
+    .TX_TAG_WIDTH(TX_TAG_WIDTH),
     .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
     .AXIS_TX_ID_WIDTH(AXIS_TX_ID_WIDTH),
     .AXIS_TX_DEST_WIDTH(AXIS_TX_DEST_WIDTH),
@@ -440,12 +436,12 @@ tx_engine_inst (
     .m_axis_tx_csum_cmd_ready(tx_csum_cmd_ready),
 
     /*
-     * Transmit timestamp input
+     * Transmit completion input
      */
-    .s_axis_tx_ptp_ts(s_axis_tx_ptp_ts),
-    .s_axis_tx_ptp_ts_tag(s_axis_tx_ptp_ts_tag),
-    .s_axis_tx_ptp_ts_valid(s_axis_tx_ptp_ts_valid),
-    .s_axis_tx_ptp_ts_ready(s_axis_tx_ptp_ts_ready),
+    .s_axis_tx_cpl_ts(s_axis_tx_cpl_ts),
+    .s_axis_tx_cpl_tag(s_axis_tx_cpl_tag),
+    .s_axis_tx_cpl_valid(s_axis_tx_cpl_valid),
+    .s_axis_tx_cpl_ready(s_axis_tx_cpl_ready),
 
     /*
      * Configuration

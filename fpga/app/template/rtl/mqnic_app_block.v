@@ -51,7 +51,6 @@ module mqnic_app_block #
 
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_TAG_WIDTH = 16,
     parameter PTP_PERIOD_NS_WIDTH = 4,
     parameter PTP_OFFSET_NS_WIDTH = 32,
     parameter PTP_FNS_WIDTH = 32,
@@ -61,7 +60,12 @@ module mqnic_app_block #
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
+
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
+    parameter TX_TAG_WIDTH = 16,
+    parameter MAX_TX_SIZE = 9214,
+    parameter MAX_RX_SIZE = 9214,
 
     // Application configuration
     parameter APP_ID = 32'h12340001,
@@ -101,7 +105,7 @@ module mqnic_app_block #
     // Ethernet interface configuration (direct, async)
     parameter AXIS_DATA_WIDTH = 512,
     parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
-    parameter AXIS_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
+    parameter AXIS_TX_USER_WIDTH = TX_TAG_WIDTH + 1,
     parameter AXIS_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1,
     parameter AXIS_RX_USE_READY = 0,
 
@@ -319,15 +323,15 @@ module mqnic_app_block #
     output wire [PORT_COUNT-1:0]                          m_axis_direct_tx_tlast,
     output wire [PORT_COUNT*AXIS_TX_USER_WIDTH-1:0]       m_axis_direct_tx_tuser,
 
-    input  wire [PORT_COUNT*PTP_TS_WIDTH-1:0]             s_axis_direct_tx_ptp_ts,
-    input  wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]            s_axis_direct_tx_ptp_ts_tag,
-    input  wire [PORT_COUNT-1:0]                          s_axis_direct_tx_ptp_ts_valid,
-    output wire [PORT_COUNT-1:0]                          s_axis_direct_tx_ptp_ts_ready,
+    input  wire [PORT_COUNT*PTP_TS_WIDTH-1:0]             s_axis_direct_tx_cpl_ts,
+    input  wire [PORT_COUNT*TX_TAG_WIDTH-1:0]             s_axis_direct_tx_cpl_tag,
+    input  wire [PORT_COUNT-1:0]                          s_axis_direct_tx_cpl_valid,
+    output wire [PORT_COUNT-1:0]                          s_axis_direct_tx_cpl_ready,
 
-    output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]             m_axis_direct_tx_ptp_ts,
-    output wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]            m_axis_direct_tx_ptp_ts_tag,
-    output wire [PORT_COUNT-1:0]                          m_axis_direct_tx_ptp_ts_valid,
-    input  wire [PORT_COUNT-1:0]                          m_axis_direct_tx_ptp_ts_ready,
+    output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]             m_axis_direct_tx_cpl_ts,
+    output wire [PORT_COUNT*TX_TAG_WIDTH-1:0]             m_axis_direct_tx_cpl_tag,
+    output wire [PORT_COUNT-1:0]                          m_axis_direct_tx_cpl_valid,
+    input  wire [PORT_COUNT-1:0]                          m_axis_direct_tx_cpl_ready,
 
     input  wire [PORT_COUNT-1:0]                          direct_rx_clk,
     input  wire [PORT_COUNT-1:0]                          direct_rx_rst,
@@ -363,15 +367,15 @@ module mqnic_app_block #
     output wire [PORT_COUNT-1:0]                          m_axis_sync_tx_tlast,
     output wire [PORT_COUNT*AXIS_SYNC_TX_USER_WIDTH-1:0]  m_axis_sync_tx_tuser,
 
-    input  wire [PORT_COUNT*PTP_TS_WIDTH-1:0]             s_axis_sync_tx_ptp_ts,
-    input  wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]            s_axis_sync_tx_ptp_ts_tag,
-    input  wire [PORT_COUNT-1:0]                          s_axis_sync_tx_ptp_ts_valid,
-    output wire [PORT_COUNT-1:0]                          s_axis_sync_tx_ptp_ts_ready,
+    input  wire [PORT_COUNT*PTP_TS_WIDTH-1:0]             s_axis_sync_tx_cpl_ts,
+    input  wire [PORT_COUNT*TX_TAG_WIDTH-1:0]             s_axis_sync_tx_cpl_tag,
+    input  wire [PORT_COUNT-1:0]                          s_axis_sync_tx_cpl_valid,
+    output wire [PORT_COUNT-1:0]                          s_axis_sync_tx_cpl_ready,
 
-    output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]             m_axis_sync_tx_ptp_ts,
-    output wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]            m_axis_sync_tx_ptp_ts_tag,
-    output wire [PORT_COUNT-1:0]                          m_axis_sync_tx_ptp_ts_valid,
-    input  wire [PORT_COUNT-1:0]                          m_axis_sync_tx_ptp_ts_ready,
+    output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]             m_axis_sync_tx_cpl_ts,
+    output wire [PORT_COUNT*TX_TAG_WIDTH-1:0]             m_axis_sync_tx_cpl_tag,
+    output wire [PORT_COUNT-1:0]                          m_axis_sync_tx_cpl_valid,
+    input  wire [PORT_COUNT-1:0]                          m_axis_sync_tx_cpl_ready,
 
     input  wire [PORT_COUNT*AXIS_SYNC_DATA_WIDTH-1:0]     s_axis_sync_rx_tdata,
     input  wire [PORT_COUNT*AXIS_SYNC_KEEP_WIDTH-1:0]     s_axis_sync_rx_tkeep,
@@ -408,15 +412,15 @@ module mqnic_app_block #
     output wire [IF_COUNT*AXIS_IF_TX_DEST_WIDTH-1:0]      m_axis_if_tx_tdest,
     output wire [IF_COUNT*AXIS_IF_TX_USER_WIDTH-1:0]      m_axis_if_tx_tuser,
 
-    input  wire [IF_COUNT*PTP_TS_WIDTH-1:0]               s_axis_if_tx_ptp_ts,
-    input  wire [IF_COUNT*PTP_TAG_WIDTH-1:0]              s_axis_if_tx_ptp_ts_tag,
-    input  wire [IF_COUNT-1:0]                            s_axis_if_tx_ptp_ts_valid,
-    output wire [IF_COUNT-1:0]                            s_axis_if_tx_ptp_ts_ready,
+    input  wire [IF_COUNT*PTP_TS_WIDTH-1:0]               s_axis_if_tx_cpl_ts,
+    input  wire [IF_COUNT*TX_TAG_WIDTH-1:0]               s_axis_if_tx_cpl_tag,
+    input  wire [IF_COUNT-1:0]                            s_axis_if_tx_cpl_valid,
+    output wire [IF_COUNT-1:0]                            s_axis_if_tx_cpl_ready,
 
-    output wire [IF_COUNT*PTP_TS_WIDTH-1:0]               m_axis_if_tx_ptp_ts,
-    output wire [IF_COUNT*PTP_TAG_WIDTH-1:0]              m_axis_if_tx_ptp_ts_tag,
-    output wire [IF_COUNT-1:0]                            m_axis_if_tx_ptp_ts_valid,
-    input  wire [IF_COUNT-1:0]                            m_axis_if_tx_ptp_ts_ready,
+    output wire [IF_COUNT*PTP_TS_WIDTH-1:0]               m_axis_if_tx_cpl_ts,
+    output wire [IF_COUNT*TX_TAG_WIDTH-1:0]               m_axis_if_tx_cpl_tag,
+    output wire [IF_COUNT-1:0]                            m_axis_if_tx_cpl_valid,
+    input  wire [IF_COUNT-1:0]                            m_axis_if_tx_cpl_ready,
 
     input  wire [IF_COUNT*AXIS_IF_DATA_WIDTH-1:0]         s_axis_if_rx_tdata,
     input  wire [IF_COUNT*AXIS_IF_KEEP_WIDTH-1:0]         s_axis_if_rx_tkeep,
@@ -526,10 +530,10 @@ assign s_axis_direct_tx_tready = m_axis_direct_tx_tready;
 assign m_axis_direct_tx_tlast = s_axis_direct_tx_tlast;
 assign m_axis_direct_tx_tuser = s_axis_direct_tx_tuser;
 
-assign m_axis_direct_tx_ptp_ts = s_axis_direct_tx_ptp_ts;
-assign m_axis_direct_tx_ptp_ts_tag = s_axis_direct_tx_ptp_ts_tag;
-assign m_axis_direct_tx_ptp_ts_valid = s_axis_direct_tx_ptp_ts_valid;
-assign s_axis_direct_tx_ptp_ts_ready = m_axis_direct_tx_ptp_ts_ready;
+assign m_axis_direct_tx_cpl_ts = s_axis_direct_tx_cpl_ts;
+assign m_axis_direct_tx_cpl_tag = s_axis_direct_tx_cpl_tag;
+assign m_axis_direct_tx_cpl_valid = s_axis_direct_tx_cpl_valid;
+assign s_axis_direct_tx_cpl_ready = m_axis_direct_tx_cpl_ready;
 
 assign m_axis_direct_rx_tdata = s_axis_direct_rx_tdata;
 assign m_axis_direct_rx_tkeep = s_axis_direct_rx_tkeep;
@@ -548,10 +552,10 @@ assign s_axis_sync_tx_tready = m_axis_sync_tx_tready;
 assign m_axis_sync_tx_tlast = s_axis_sync_tx_tlast;
 assign m_axis_sync_tx_tuser = s_axis_sync_tx_tuser;
 
-assign m_axis_sync_tx_ptp_ts = s_axis_sync_tx_ptp_ts;
-assign m_axis_sync_tx_ptp_ts_tag = s_axis_sync_tx_ptp_ts_tag;
-assign m_axis_sync_tx_ptp_ts_valid = s_axis_sync_tx_ptp_ts_valid;
-assign s_axis_sync_tx_ptp_ts_ready = m_axis_sync_tx_ptp_ts_ready;
+assign m_axis_sync_tx_cpl_ts = s_axis_sync_tx_cpl_ts;
+assign m_axis_sync_tx_cpl_tag = s_axis_sync_tx_cpl_tag;
+assign m_axis_sync_tx_cpl_valid = s_axis_sync_tx_cpl_valid;
+assign s_axis_sync_tx_cpl_ready = m_axis_sync_tx_cpl_ready;
 
 assign m_axis_sync_rx_tdata = s_axis_sync_rx_tdata;
 assign m_axis_sync_rx_tkeep = s_axis_sync_rx_tkeep;
@@ -572,10 +576,10 @@ assign m_axis_if_tx_tid = s_axis_if_tx_tid;
 assign m_axis_if_tx_tdest = s_axis_if_tx_tdest;
 assign m_axis_if_tx_tuser = s_axis_if_tx_tuser;
 
-assign m_axis_if_tx_ptp_ts = s_axis_if_tx_ptp_ts;
-assign m_axis_if_tx_ptp_ts_tag = s_axis_if_tx_ptp_ts_tag;
-assign m_axis_if_tx_ptp_ts_valid = s_axis_if_tx_ptp_ts_valid;
-assign s_axis_if_tx_ptp_ts_ready = m_axis_if_tx_ptp_ts_ready;
+assign m_axis_if_tx_cpl_ts = s_axis_if_tx_cpl_ts;
+assign m_axis_if_tx_cpl_tag = s_axis_if_tx_cpl_tag;
+assign m_axis_if_tx_cpl_valid = s_axis_if_tx_cpl_valid;
+assign s_axis_if_tx_cpl_ready = m_axis_if_tx_cpl_ready;
 
 assign m_axis_if_rx_tdata = s_axis_if_rx_tdata;
 assign m_axis_if_rx_tkeep = s_axis_if_rx_tkeep;

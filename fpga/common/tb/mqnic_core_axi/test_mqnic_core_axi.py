@@ -117,14 +117,14 @@ class TB(object):
                     tx_clk=iface.port[k].port_tx_clk,
                     tx_rst=iface.port[k].port_tx_rst,
                     tx_bus=AxiStreamBus.from_prefix(iface.interface_inst.port[k].port_tx_inst, "m_axis_tx"),
-                    tx_ptp_time=iface.port[k].ptp.tx_ptp_cdc_inst.output_ts,
-                    tx_ptp_ts=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_ptp_ts,
-                    tx_ptp_ts_tag=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_ptp_ts_tag,
-                    tx_ptp_ts_valid=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_ptp_ts_valid,
+                    tx_ptp_time=iface.port[k].port_tx_ptp_ts_96,
+                    tx_ptp_ts=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_cpl_ts,
+                    tx_ptp_ts_tag=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_cpl_tag,
+                    tx_ptp_ts_valid=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_cpl_valid,
                     rx_clk=iface.port[k].port_rx_clk,
                     rx_rst=iface.port[k].port_rx_rst,
                     rx_bus=AxiStreamBus.from_prefix(iface.interface_inst.port[k].port_rx_inst, "s_axis_rx"),
-                    rx_ptp_time=iface.port[k].ptp.rx_ptp_cdc_inst.output_ts,
+                    rx_ptp_time=iface.port[k].port_rx_ptp_ts_96,
                     ifg=12, speed=eth_speed
                 )
 
@@ -445,14 +445,15 @@ pcie_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'pcie', 'rtl'))
 
 
 @pytest.mark.parametrize(("if_count", "ports_per_if", "axi_data_width",
-        "axis_data_width", "axis_sync_data_width"), [
-            (1, 1, 128, 64, 64),
-            (2, 1, 128, 64, 64),
-            (1, 2, 128, 64, 64),
-            (1, 1, 128, 64, 128),
+        "axis_data_width", "axis_sync_data_width", "ptp_ts_enable"), [
+            (1, 1, 128, 64, 64, 1),
+            (1, 1, 128, 64, 64, 0),
+            (2, 1, 128, 64, 64, 1),
+            (1, 2, 128, 64, 64, 1),
+            (1, 1, 128, 64, 128, 1),
         ])
 def test_mqnic_core_pcie_axi(request, if_count, ports_per_if, axi_data_width,
-        axis_data_width, axis_sync_data_width):
+        axis_data_width, axis_sync_data_width, ptp_ts_enable):
     dut = "mqnic_core_axi"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -549,7 +550,7 @@ def test_mqnic_core_pcie_axi(request, if_count, ports_per_if, axi_data_width,
     parameters['PTP_PEROUT_ENABLE'] = 0
     parameters['PTP_PEROUT_COUNT'] = 1
 
-    # Queue manager configuration (interface)
+    # Queue manager configuration
     parameters['EVENT_QUEUE_OP_TABLE_SIZE'] = 32
     parameters['TX_QUEUE_OP_TABLE_SIZE'] = 32
     parameters['RX_QUEUE_OP_TABLE_SIZE'] = 32
@@ -566,21 +567,20 @@ def test_mqnic_core_pcie_axi(request, if_count, ports_per_if, axi_data_width,
     parameters['TX_CPL_QUEUE_PIPELINE'] = parameters['TX_QUEUE_PIPELINE']
     parameters['RX_CPL_QUEUE_PIPELINE'] = parameters['RX_QUEUE_PIPELINE']
 
-    # TX and RX engine configuration (port)
+    # TX and RX engine configuration
     parameters['TX_DESC_TABLE_SIZE'] = 32
     parameters['RX_DESC_TABLE_SIZE'] = 32
 
-    # Scheduler configuration (port)
+    # Scheduler configuration
     parameters['TX_SCHEDULER_OP_TABLE_SIZE'] = parameters['TX_DESC_TABLE_SIZE']
     parameters['TX_SCHEDULER_PIPELINE'] = parameters['TX_QUEUE_PIPELINE']
     parameters['TDMA_INDEX_WIDTH'] = 6
 
-    # Timestamping configuration (port)
-    parameters['PTP_TS_ENABLE'] = 1
-    parameters['TX_PTP_TS_FIFO_DEPTH'] = 32
-    parameters['RX_PTP_TS_FIFO_DEPTH'] = 32
-
-    # Interface configuration (port)
+    # Interface configuration
+    parameters['PTP_TS_ENABLE'] = ptp_ts_enable
+    parameters['TX_CPL_ENABLE'] = parameters['PTP_TS_ENABLE']
+    parameters['TX_CPL_FIFO_DEPTH'] = 32
+    parameters['TX_TAG_WIDTH'] = 16
     parameters['TX_CHECKSUM_ENABLE'] = 1
     parameters['RX_RSS_ENABLE'] = 1
     parameters['RX_HASH_ENABLE'] = 1

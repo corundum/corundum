@@ -92,7 +92,7 @@ dict set params PTP_PORT_CDC_PIPELINE "0"
 dict set params PTP_PEROUT_ENABLE "1"
 dict set params PTP_PEROUT_COUNT "1"
 
-# Queue manager configuration (interface)
+# Queue manager configuration
 dict set params EVENT_QUEUE_OP_TABLE_SIZE "32"
 dict set params TX_QUEUE_OP_TABLE_SIZE "32"
 dict set params RX_QUEUE_OP_TABLE_SIZE "32"
@@ -109,21 +109,18 @@ dict set params RX_QUEUE_PIPELINE [expr 3+([dict get $params RX_QUEUE_INDEX_WIDT
 dict set params TX_CPL_QUEUE_PIPELINE [dict get $params TX_QUEUE_PIPELINE]
 dict set params RX_CPL_QUEUE_PIPELINE [dict get $params RX_QUEUE_PIPELINE]
 
-# TX and RX engine configuration (port)
+# TX and RX engine configuration
 dict set params TX_DESC_TABLE_SIZE "32"
 dict set params RX_DESC_TABLE_SIZE "32"
 
-# Scheduler configuration (port)
+# Scheduler configuration
 dict set params TX_SCHEDULER_OP_TABLE_SIZE [dict get $params TX_DESC_TABLE_SIZE]
 dict set params TX_SCHEDULER_PIPELINE [dict get $params TX_QUEUE_PIPELINE]
 dict set params TDMA_INDEX_WIDTH "6"
 
-# Timestamping configuration (port)
+# Interface configuration
 dict set params PTP_TS_ENABLE "1"
-dict set params TX_PTP_TS_FIFO_DEPTH "32"
-dict set params RX_PTP_TS_FIFO_DEPTH "32"
-
-# Interface configuration (port)
+dict set params TX_CPL_FIFO_DEPTH "32"
 dict set params TX_CHECKSUM_ENABLE "1"
 dict set params RX_RSS_ENABLE "1"
 dict set params RX_HASH_ENABLE "1"

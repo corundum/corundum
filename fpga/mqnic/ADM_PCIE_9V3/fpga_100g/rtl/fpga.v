@@ -64,7 +64,7 @@ module fpga #
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
 
-    // Queue manager configuration (interface)
+    // Queue manager configuration
     parameter EVENT_QUEUE_OP_TABLE_SIZE = 32,
     parameter TX_QUEUE_OP_TABLE_SIZE = 32,
     parameter RX_QUEUE_OP_TABLE_SIZE = 32,
@@ -81,21 +81,18 @@ module fpga #
     parameter TX_CPL_QUEUE_PIPELINE = TX_QUEUE_PIPELINE,
     parameter RX_CPL_QUEUE_PIPELINE = RX_QUEUE_PIPELINE,
 
-    // TX and RX engine configuration (port)
+    // TX and RX engine configuration
     parameter TX_DESC_TABLE_SIZE = 32,
     parameter RX_DESC_TABLE_SIZE = 32,
 
-    // Scheduler configuration (port)
+    // Scheduler configuration
     parameter TX_SCHEDULER_OP_TABLE_SIZE = TX_DESC_TABLE_SIZE,
     parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE,
     parameter TDMA_INDEX_WIDTH = 6,
 
-    // Timestamping configuration (port)
+    // Timestamping configuration
     parameter PTP_TS_ENABLE = 1,
-    parameter TX_PTP_TS_FIFO_DEPTH = 32,
-    parameter RX_PTP_TS_FIFO_DEPTH = 32,
-
-    // Interface configuration (port)
+    parameter TX_CPL_FIFO_DEPTH = 32,
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_RSS_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
@@ -261,6 +258,9 @@ parameter PTP_PERIOD_FNS = 32'd0;
 parameter PTP_USE_SAMPLE_CLOCK = 0;
 parameter PTP_SEPARATE_RX_CLOCK = 1;
 
+// Interface configuration
+parameter TX_TAG_WIDTH = 16;
+
 // PCIe interface configuration
 parameter MSI_COUNT = 32;
 
@@ -268,7 +268,7 @@ parameter MSI_COUNT = 32;
 parameter AXIS_ETH_DATA_WIDTH = 512;
 parameter AXIS_ETH_KEEP_WIDTH = AXIS_ETH_DATA_WIDTH/8;
 parameter AXIS_ETH_SYNC_DATA_WIDTH = AXIS_ETH_DATA_WIDTH;
-parameter AXIS_ETH_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1;
+parameter AXIS_ETH_TX_USER_WIDTH = TX_TAG_WIDTH + 1;
 parameter AXIS_ETH_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1;
 
 // Clock and reset
@@ -1688,7 +1688,6 @@ fpga_core #(
 
     // PTP configuration
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
-    .PTP_TAG_WIDTH(PTP_TAG_WIDTH),
     .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
     .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
     .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
@@ -1701,7 +1700,7 @@ fpga_core #(
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
 
-    // Queue manager configuration (interface)
+    // Queue manager configuration
     .EVENT_QUEUE_OP_TABLE_SIZE(EVENT_QUEUE_OP_TABLE_SIZE),
     .TX_QUEUE_OP_TABLE_SIZE(TX_QUEUE_OP_TABLE_SIZE),
     .RX_QUEUE_OP_TABLE_SIZE(RX_QUEUE_OP_TABLE_SIZE),
@@ -1718,21 +1717,19 @@ fpga_core #(
     .TX_CPL_QUEUE_PIPELINE(TX_CPL_QUEUE_PIPELINE),
     .RX_CPL_QUEUE_PIPELINE(RX_CPL_QUEUE_PIPELINE),
 
-    // TX and RX engine configuration (port)
+    // TX and RX engine configuration
     .TX_DESC_TABLE_SIZE(TX_DESC_TABLE_SIZE),
     .RX_DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
 
-    // Scheduler configuration (port)
+    // Scheduler configuration
     .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
     .TX_SCHEDULER_PIPELINE(TX_SCHEDULER_PIPELINE),
     .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
 
-    // Timestamping configuration (port)
+    // Interface configuration
     .PTP_TS_ENABLE(PTP_TS_ENABLE),
-    .TX_PTP_TS_FIFO_DEPTH(TX_PTP_TS_FIFO_DEPTH),
-    .RX_PTP_TS_FIFO_DEPTH(RX_PTP_TS_FIFO_DEPTH),
-
-    // Interface configuration (port)
+    .TX_CPL_FIFO_DEPTH(TX_CPL_FIFO_DEPTH),
+    .TX_TAG_WIDTH(TX_TAG_WIDTH),
     .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
     .RX_RSS_ENABLE(RX_RSS_ENABLE),
     .RX_HASH_ENABLE(RX_HASH_ENABLE),

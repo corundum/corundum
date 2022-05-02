@@ -669,7 +669,7 @@ def test_fpga_core(request):
     parameters['PTP_PEROUT_ENABLE'] = 0
     parameters['PTP_PEROUT_COUNT'] = 1
 
-    # Queue manager configuration (interface)
+    # Queue manager configuration
     parameters['EVENT_QUEUE_OP_TABLE_SIZE'] = 32
     parameters['TX_QUEUE_OP_TABLE_SIZE'] = 32
     parameters['RX_QUEUE_OP_TABLE_SIZE'] = 32
@@ -686,21 +686,18 @@ def test_fpga_core(request):
     parameters['TX_CPL_QUEUE_PIPELINE'] = parameters['TX_QUEUE_PIPELINE']
     parameters['RX_CPL_QUEUE_PIPELINE'] = parameters['RX_QUEUE_PIPELINE']
 
-    # TX and RX engine configuration (port)
+    # TX and RX engine configuration
     parameters['TX_DESC_TABLE_SIZE'] = 32
     parameters['RX_DESC_TABLE_SIZE'] = 32
 
-    # Scheduler configuration (port)
+    # Scheduler configuration
     parameters['TX_SCHEDULER_OP_TABLE_SIZE'] = parameters['TX_DESC_TABLE_SIZE']
     parameters['TX_SCHEDULER_PIPELINE'] = parameters['TX_QUEUE_PIPELINE']
     parameters['TDMA_INDEX_WIDTH'] = 6
 
-    # Timestamping configuration (port)
+    # Interface configuration
     parameters['PTP_TS_ENABLE'] = 1
-    parameters['TX_PTP_TS_FIFO_DEPTH'] = 32
-    parameters['RX_PTP_TS_FIFO_DEPTH'] = 32
-
-    # Interface configuration (port)
+    parameters['TX_CPL_FIFO_DEPTH'] = 32
     parameters['TX_CHECKSUM_ENABLE'] = 1
     parameters['RX_RSS_ENABLE'] = 1
     parameters['RX_HASH_ENABLE'] = 1

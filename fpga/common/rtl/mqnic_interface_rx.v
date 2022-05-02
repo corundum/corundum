@@ -47,7 +47,6 @@ module mqnic_interface_rx #
 
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_TAG_WIDTH = 16,
 
     // Queue manager configuration (interface)
     parameter RX_QUEUE_INDEX_WIDTH = 8,
@@ -69,18 +68,15 @@ module mqnic_interface_rx #
     parameter QUEUE_REQ_TAG_WIDTH = 8,
     parameter QUEUE_OP_TAG_WIDTH = 8,
 
-    // TX and RX engine configuration (port)
+    // TX and RX engine configuration
     parameter RX_DESC_TABLE_SIZE = 32,
     parameter DESC_TABLE_DMA_OP_COUNT_WIDTH = 4,
 
-    // Timestamping configuration (port)
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
-
-    // Interface configuration (port)
     parameter RX_RSS_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
-    parameter RX_FIFO_DEPTH = 32768,
     parameter MAX_RX_SIZE = 9214,
     parameter RX_RAM_SIZE = 32768,
 

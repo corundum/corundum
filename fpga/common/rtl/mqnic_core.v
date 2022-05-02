@@ -61,7 +61,6 @@ module mqnic_core #
 
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_TAG_WIDTH = 16,
     parameter PTP_PERIOD_NS_WIDTH = 4,
     parameter PTP_OFFSET_NS_WIDTH = 32,
     parameter PTP_FNS_WIDTH = 32,
@@ -74,7 +73,7 @@ module mqnic_core #
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
 
-    // Queue manager configuration (interface)
+    // Queue manager configuration
     parameter EVENT_QUEUE_OP_TABLE_SIZE = 32,
     parameter TX_QUEUE_OP_TABLE_SIZE = 32,
     parameter RX_QUEUE_OP_TABLE_SIZE = 32,
@@ -91,21 +90,20 @@ module mqnic_core #
     parameter TX_CPL_QUEUE_PIPELINE = TX_QUEUE_PIPELINE,
     parameter RX_CPL_QUEUE_PIPELINE = RX_QUEUE_PIPELINE,
 
-    // TX and RX engine configuration (port)
+    // TX and RX engine configuration
     parameter TX_DESC_TABLE_SIZE = 32,
     parameter RX_DESC_TABLE_SIZE = 32,
 
-    // Scheduler configuration (port)
+    // Scheduler configuration
     parameter TX_SCHEDULER_OP_TABLE_SIZE = TX_DESC_TABLE_SIZE,
     parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE,
     parameter TDMA_INDEX_WIDTH = 6,
 
-    // Timestamping configuration (port)
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
-    parameter TX_PTP_TS_FIFO_DEPTH = 32,
-    parameter RX_PTP_TS_FIFO_DEPTH = 32,
-
-    // Interface configuration (port)
+    parameter TX_CPL_ENABLE = PTP_TS_ENABLE,
+    parameter TX_CPL_FIFO_DEPTH = 32,
+    parameter TX_TAG_WIDTH = $clog2(TX_DESC_TABLE_SIZE)+1,
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_RSS_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
@@ -165,7 +163,7 @@ module mqnic_core #
     parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
     parameter AXIS_SYNC_DATA_WIDTH = AXIS_DATA_WIDTH,
     parameter AXIS_IF_DATA_WIDTH = AXIS_SYNC_DATA_WIDTH*2**$clog2(PORTS_PER_IF),
-    parameter AXIS_TX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1,
+    parameter AXIS_TX_USER_WIDTH = TX_TAG_WIDTH + 1,
     parameter AXIS_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1,
     parameter AXIS_RX_USE_READY = 0,
     parameter AXIS_TX_PIPELINE = 0,
@@ -355,10 +353,10 @@ module mqnic_core #
     output wire [PORT_COUNT-1:0]                        m_axis_tx_tlast,
     output wire [PORT_COUNT*AXIS_TX_USER_WIDTH-1:0]     m_axis_tx_tuser,
 
-    input  wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           s_axis_tx_ptp_ts,
-    input  wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          s_axis_tx_ptp_ts_tag,
-    input  wire [PORT_COUNT-1:0]                        s_axis_tx_ptp_ts_valid,
-    output wire [PORT_COUNT-1:0]                        s_axis_tx_ptp_ts_ready,
+    input  wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           s_axis_tx_cpl_ts,
+    input  wire [PORT_COUNT*TX_TAG_WIDTH-1:0]           s_axis_tx_cpl_tag,
+    input  wire [PORT_COUNT-1:0]                        s_axis_tx_cpl_valid,
+    output wire [PORT_COUNT-1:0]                        s_axis_tx_cpl_ready,
 
     input  wire [PORT_COUNT-1:0]                        rx_clk,
     input  wire [PORT_COUNT-1:0]                        rx_rst,
@@ -2070,15 +2068,15 @@ wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_tready;
 wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_tlast;
 wire [PORT_COUNT*AXIS_TX_USER_WIDTH-1:0]     app_m_axis_direct_tx_tuser;
 
-wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_s_axis_direct_tx_ptp_ts;
-wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_s_axis_direct_tx_ptp_ts_tag;
-wire [PORT_COUNT-1:0]                        app_s_axis_direct_tx_ptp_ts_valid;
-wire [PORT_COUNT-1:0]                        app_s_axis_direct_tx_ptp_ts_ready;
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_s_axis_direct_tx_cpl_ts;
+wire [PORT_COUNT*TX_TAG_WIDTH-1:0]           app_s_axis_direct_tx_cpl_tag;
+wire [PORT_COUNT-1:0]                        app_s_axis_direct_tx_cpl_valid;
+wire [PORT_COUNT-1:0]                        app_s_axis_direct_tx_cpl_ready;
 
-wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_m_axis_direct_tx_ptp_ts;
-wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_m_axis_direct_tx_ptp_ts_tag;
-wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_ptp_ts_valid;
-wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_ptp_ts_ready;
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_m_axis_direct_tx_cpl_ts;
+wire [PORT_COUNT*TX_TAG_WIDTH-1:0]           app_m_axis_direct_tx_cpl_tag;
+wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_cpl_valid;
+wire [PORT_COUNT-1:0]                        app_m_axis_direct_tx_cpl_ready;
 
 wire [PORT_COUNT-1:0]                        app_direct_rx_clk;
 wire [PORT_COUNT-1:0]                        app_direct_rx_rst;
@@ -2111,15 +2109,15 @@ wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_tready;
 wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_tlast;
 wire [PORT_COUNT*AXIS_TX_USER_WIDTH-1:0]     app_m_axis_sync_tx_tuser;
 
-wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_s_axis_sync_tx_ptp_ts;
-wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_s_axis_sync_tx_ptp_ts_tag;
-wire [PORT_COUNT-1:0]                        app_s_axis_sync_tx_ptp_ts_valid;
-wire [PORT_COUNT-1:0]                        app_s_axis_sync_tx_ptp_ts_ready;
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_s_axis_sync_tx_cpl_ts;
+wire [PORT_COUNT*TX_TAG_WIDTH-1:0]           app_s_axis_sync_tx_cpl_tag;
+wire [PORT_COUNT-1:0]                        app_s_axis_sync_tx_cpl_valid;
+wire [PORT_COUNT-1:0]                        app_s_axis_sync_tx_cpl_ready;
 
-wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_m_axis_sync_tx_ptp_ts;
-wire [PORT_COUNT*PTP_TAG_WIDTH-1:0]          app_m_axis_sync_tx_ptp_ts_tag;
-wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_ptp_ts_valid;
-wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_ptp_ts_ready;
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           app_m_axis_sync_tx_cpl_ts;
+wire [PORT_COUNT*TX_TAG_WIDTH-1:0]           app_m_axis_sync_tx_cpl_tag;
+wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_cpl_valid;
+wire [PORT_COUNT-1:0]                        app_m_axis_sync_tx_cpl_ready;
 
 wire [PORT_COUNT*AXIS_SYNC_DATA_WIDTH-1:0]   app_s_axis_sync_rx_tdata;
 wire [PORT_COUNT*AXIS_SYNC_KEEP_WIDTH-1:0]   app_s_axis_sync_rx_tkeep;
@@ -2153,15 +2151,15 @@ wire [IF_COUNT*AXIS_IF_TX_ID_WIDTH-1:0]      app_m_axis_if_tx_tid;
 wire [IF_COUNT*AXIS_IF_TX_DEST_WIDTH-1:0]    app_m_axis_if_tx_tdest;
 wire [IF_COUNT*AXIS_IF_TX_USER_WIDTH-1:0]    app_m_axis_if_tx_tuser;
 
-wire [IF_COUNT*PTP_TS_WIDTH-1:0]             app_s_axis_if_tx_ptp_ts;
-wire [IF_COUNT*PTP_TAG_WIDTH-1:0]            app_s_axis_if_tx_ptp_ts_tag;
-wire [IF_COUNT-1:0]                          app_s_axis_if_tx_ptp_ts_valid;
-wire [IF_COUNT-1:0]                          app_s_axis_if_tx_ptp_ts_ready;
+wire [IF_COUNT*PTP_TS_WIDTH-1:0]             app_s_axis_if_tx_cpl_ts;
+wire [IF_COUNT*TX_TAG_WIDTH-1:0]             app_s_axis_if_tx_cpl_tag;
+wire [IF_COUNT-1:0]                          app_s_axis_if_tx_cpl_valid;
+wire [IF_COUNT-1:0]                          app_s_axis_if_tx_cpl_ready;
 
-wire [IF_COUNT*PTP_TS_WIDTH-1:0]             app_m_axis_if_tx_ptp_ts;
-wire [IF_COUNT*PTP_TAG_WIDTH-1:0]            app_m_axis_if_tx_ptp_ts_tag;
-wire [IF_COUNT-1:0]                          app_m_axis_if_tx_ptp_ts_valid;
-wire [IF_COUNT-1:0]                          app_m_axis_if_tx_ptp_ts_ready;
+wire [IF_COUNT*PTP_TS_WIDTH-1:0]             app_m_axis_if_tx_cpl_ts;
+wire [IF_COUNT*TX_TAG_WIDTH-1:0]             app_m_axis_if_tx_cpl_tag;
+wire [IF_COUNT-1:0]                          app_m_axis_if_tx_cpl_valid;
+wire [IF_COUNT-1:0]                          app_m_axis_if_tx_cpl_ready;
 
 wire [IF_COUNT*AXIS_IF_DATA_WIDTH-1:0]       app_s_axis_if_rx_tdata;
 wire [IF_COUNT*AXIS_IF_KEEP_WIDTH-1:0]       app_s_axis_if_rx_tkeep;
@@ -2199,9 +2197,8 @@ generate
 
             // PTP configuration
             .PTP_TS_WIDTH(PTP_TS_WIDTH),
-            .PTP_TAG_WIDTH(PTP_TAG_WIDTH),
 
-            // Queue manager configuration (interface)
+            // Queue manager configuration
             .EVENT_QUEUE_OP_TABLE_SIZE(EVENT_QUEUE_OP_TABLE_SIZE),
             .TX_QUEUE_OP_TABLE_SIZE(TX_QUEUE_OP_TABLE_SIZE),
             .RX_QUEUE_OP_TABLE_SIZE(RX_QUEUE_OP_TABLE_SIZE),
@@ -2227,20 +2224,20 @@ generate
             .RX_MAX_DESC_REQ(16),
             .RX_DESC_FIFO_SIZE(16*8),
 
-            // TX and RX engine configuration (port)
+            // TX and RX engine configuration
             .TX_DESC_TABLE_SIZE(TX_DESC_TABLE_SIZE),
             .RX_DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
 
-            // Scheduler configuration (port)
+            // Scheduler configuration
             .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
             .TX_SCHEDULER_PIPELINE(TX_SCHEDULER_PIPELINE),
             .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
 
-            // Timestamping configuration (port)
+            // Interface configuration
             .PTP_TS_ENABLE(PTP_TS_ENABLE),
-            .TX_PTP_TS_FIFO_DEPTH(TX_PTP_TS_FIFO_DEPTH),
-
-            // Interface configuration (port)
+            .TX_CPL_ENABLE(TX_CPL_ENABLE),
+            .TX_CPL_FIFO_DEPTH(TX_CPL_FIFO_DEPTH),
+            .TX_TAG_WIDTH(TX_TAG_WIDTH),
             .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
             .RX_RSS_ENABLE(RX_RSS_ENABLE),
             .RX_HASH_ENABLE(RX_HASH_ENABLE),
@@ -2489,15 +2486,15 @@ generate
             .s_axis_app_if_tx_tdest(app_m_axis_if_tx_tdest[n*AXIS_IF_TX_DEST_WIDTH +: AXIS_IF_TX_DEST_WIDTH]),
             .s_axis_app_if_tx_tuser(app_m_axis_if_tx_tuser[n*AXIS_IF_TX_USER_WIDTH +: AXIS_IF_TX_USER_WIDTH]),
 
-            .m_axis_app_if_tx_ptp_ts(app_s_axis_if_tx_ptp_ts[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
-            .m_axis_app_if_tx_ptp_ts_tag(app_s_axis_if_tx_ptp_ts_tag[n*PTP_TAG_WIDTH +: PTP_TAG_WIDTH]),
-            .m_axis_app_if_tx_ptp_ts_valid(app_s_axis_if_tx_ptp_ts_valid[n +: 1]),
-            .m_axis_app_if_tx_ptp_ts_ready(app_s_axis_if_tx_ptp_ts_ready[n +: 1]),
+            .m_axis_app_if_tx_cpl_ts(app_s_axis_if_tx_cpl_ts[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
+            .m_axis_app_if_tx_cpl_tag(app_s_axis_if_tx_cpl_tag[n*TX_TAG_WIDTH +: TX_TAG_WIDTH]),
+            .m_axis_app_if_tx_cpl_valid(app_s_axis_if_tx_cpl_valid[n +: 1]),
+            .m_axis_app_if_tx_cpl_ready(app_s_axis_if_tx_cpl_ready[n +: 1]),
 
-            .s_axis_app_if_tx_ptp_ts(app_m_axis_if_tx_ptp_ts[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
-            .s_axis_app_if_tx_ptp_ts_tag(app_m_axis_if_tx_ptp_ts_tag[n*PTP_TAG_WIDTH +: PTP_TAG_WIDTH]),
-            .s_axis_app_if_tx_ptp_ts_valid(app_m_axis_if_tx_ptp_ts_valid[n +: 1]),
-            .s_axis_app_if_tx_ptp_ts_ready(app_m_axis_if_tx_ptp_ts_ready[n +: 1]),
+            .s_axis_app_if_tx_cpl_ts(app_m_axis_if_tx_cpl_ts[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
+            .s_axis_app_if_tx_cpl_tag(app_m_axis_if_tx_cpl_tag[n*TX_TAG_WIDTH +: TX_TAG_WIDTH]),
+            .s_axis_app_if_tx_cpl_valid(app_m_axis_if_tx_cpl_valid[n +: 1]),
+            .s_axis_app_if_tx_cpl_ready(app_m_axis_if_tx_cpl_ready[n +: 1]),
 
             .m_axis_app_if_rx_tdata(app_s_axis_if_rx_tdata[n*AXIS_IF_DATA_WIDTH +: AXIS_IF_DATA_WIDTH]),
             .m_axis_app_if_rx_tkeep(app_s_axis_if_rx_tkeep[n*AXIS_IF_KEEP_WIDTH +: AXIS_IF_KEEP_WIDTH]),
@@ -2534,15 +2531,15 @@ generate
             .s_axis_app_sync_tx_tlast(app_m_axis_sync_tx_tlast[n*PORTS_PER_IF +: PORTS_PER_IF]),
             .s_axis_app_sync_tx_tuser(app_m_axis_sync_tx_tuser[n*PORTS_PER_IF*AXIS_TX_USER_WIDTH +: PORTS_PER_IF*AXIS_TX_USER_WIDTH]),
 
-            .m_axis_app_sync_tx_ptp_ts(app_s_axis_sync_tx_ptp_ts[n*PORTS_PER_IF*PTP_TS_WIDTH +: PORTS_PER_IF*PTP_TS_WIDTH]),
-            .m_axis_app_sync_tx_ptp_ts_tag(app_s_axis_sync_tx_ptp_ts_tag[n*PORTS_PER_IF*PTP_TAG_WIDTH +: PORTS_PER_IF*PTP_TAG_WIDTH]),
-            .m_axis_app_sync_tx_ptp_ts_valid(app_s_axis_sync_tx_ptp_ts_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
-            .m_axis_app_sync_tx_ptp_ts_ready(app_s_axis_sync_tx_ptp_ts_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .m_axis_app_sync_tx_cpl_ts(app_s_axis_sync_tx_cpl_ts[n*PORTS_PER_IF*PTP_TS_WIDTH +: PORTS_PER_IF*PTP_TS_WIDTH]),
+            .m_axis_app_sync_tx_cpl_tag(app_s_axis_sync_tx_cpl_tag[n*PORTS_PER_IF*TX_TAG_WIDTH +: PORTS_PER_IF*TX_TAG_WIDTH]),
+            .m_axis_app_sync_tx_cpl_valid(app_s_axis_sync_tx_cpl_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .m_axis_app_sync_tx_cpl_ready(app_s_axis_sync_tx_cpl_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
 
-            .s_axis_app_sync_tx_ptp_ts(app_m_axis_sync_tx_ptp_ts[n*PORTS_PER_IF*PTP_TS_WIDTH +: PORTS_PER_IF*PTP_TS_WIDTH]),
-            .s_axis_app_sync_tx_ptp_ts_tag(app_m_axis_sync_tx_ptp_ts_tag[n*PORTS_PER_IF*PTP_TAG_WIDTH +: PORTS_PER_IF*PTP_TAG_WIDTH]),
-            .s_axis_app_sync_tx_ptp_ts_valid(app_m_axis_sync_tx_ptp_ts_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
-            .s_axis_app_sync_tx_ptp_ts_ready(app_m_axis_sync_tx_ptp_ts_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .s_axis_app_sync_tx_cpl_ts(app_m_axis_sync_tx_cpl_ts[n*PORTS_PER_IF*PTP_TS_WIDTH +: PORTS_PER_IF*PTP_TS_WIDTH]),
+            .s_axis_app_sync_tx_cpl_tag(app_m_axis_sync_tx_cpl_tag[n*PORTS_PER_IF*TX_TAG_WIDTH +: PORTS_PER_IF*TX_TAG_WIDTH]),
+            .s_axis_app_sync_tx_cpl_valid(app_m_axis_sync_tx_cpl_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .s_axis_app_sync_tx_cpl_ready(app_m_axis_sync_tx_cpl_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
 
             .m_axis_app_sync_rx_tdata(app_s_axis_sync_rx_tdata[n*PORTS_PER_IF*AXIS_SYNC_DATA_WIDTH +: PORTS_PER_IF*AXIS_SYNC_DATA_WIDTH]),
             .m_axis_app_sync_rx_tkeep(app_s_axis_sync_rx_tkeep[n*PORTS_PER_IF*AXIS_SYNC_KEEP_WIDTH +: PORTS_PER_IF*AXIS_SYNC_KEEP_WIDTH]),
@@ -2575,15 +2572,15 @@ generate
             .s_axis_app_direct_tx_tlast(app_m_axis_direct_tx_tlast[n*PORTS_PER_IF +: PORTS_PER_IF]),
             .s_axis_app_direct_tx_tuser(app_m_axis_direct_tx_tuser[n*PORTS_PER_IF*AXIS_TX_USER_WIDTH +: PORTS_PER_IF*AXIS_TX_USER_WIDTH]),
 
-            .m_axis_app_direct_tx_ptp_ts(app_s_axis_direct_tx_ptp_ts[n*PORTS_PER_IF*PTP_TS_WIDTH +: PORTS_PER_IF*PTP_TS_WIDTH]),
-            .m_axis_app_direct_tx_ptp_ts_tag(app_s_axis_direct_tx_ptp_ts_tag[n*PORTS_PER_IF*PTP_TAG_WIDTH +: PORTS_PER_IF*PTP_TAG_WIDTH]),
-            .m_axis_app_direct_tx_ptp_ts_valid(app_s_axis_direct_tx_ptp_ts_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
-            .m_axis_app_direct_tx_ptp_ts_ready(app_s_axis_direct_tx_ptp_ts_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .m_axis_app_direct_tx_cpl_ts(app_s_axis_direct_tx_cpl_ts[n*PORTS_PER_IF*PTP_TS_WIDTH +: PORTS_PER_IF*PTP_TS_WIDTH]),
+            .m_axis_app_direct_tx_cpl_tag(app_s_axis_direct_tx_cpl_tag[n*PORTS_PER_IF*TX_TAG_WIDTH +: PORTS_PER_IF*TX_TAG_WIDTH]),
+            .m_axis_app_direct_tx_cpl_valid(app_s_axis_direct_tx_cpl_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .m_axis_app_direct_tx_cpl_ready(app_s_axis_direct_tx_cpl_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
 
-            .s_axis_app_direct_tx_ptp_ts(app_m_axis_direct_tx_ptp_ts[n*PORTS_PER_IF*PTP_TS_WIDTH +: PORTS_PER_IF*PTP_TS_WIDTH]),
-            .s_axis_app_direct_tx_ptp_ts_tag(app_m_axis_direct_tx_ptp_ts_tag[n*PORTS_PER_IF*PTP_TAG_WIDTH +: PORTS_PER_IF*PTP_TAG_WIDTH]),
-            .s_axis_app_direct_tx_ptp_ts_valid(app_m_axis_direct_tx_ptp_ts_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
-            .s_axis_app_direct_tx_ptp_ts_ready(app_m_axis_direct_tx_ptp_ts_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .s_axis_app_direct_tx_cpl_ts(app_m_axis_direct_tx_cpl_ts[n*PORTS_PER_IF*PTP_TS_WIDTH +: PORTS_PER_IF*PTP_TS_WIDTH]),
+            .s_axis_app_direct_tx_cpl_tag(app_m_axis_direct_tx_cpl_tag[n*PORTS_PER_IF*TX_TAG_WIDTH +: PORTS_PER_IF*TX_TAG_WIDTH]),
+            .s_axis_app_direct_tx_cpl_valid(app_m_axis_direct_tx_cpl_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .s_axis_app_direct_tx_cpl_ready(app_m_axis_direct_tx_cpl_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
 
             .m_axis_app_direct_rx_tdata(app_s_axis_direct_rx_tdata[n*PORTS_PER_IF*AXIS_DATA_WIDTH +: PORTS_PER_IF*AXIS_DATA_WIDTH]),
             .m_axis_app_direct_rx_tkeep(app_s_axis_direct_rx_tkeep[n*PORTS_PER_IF*AXIS_KEEP_WIDTH +: PORTS_PER_IF*AXIS_KEEP_WIDTH]),
@@ -2612,10 +2609,10 @@ generate
             .m_axis_tx_tlast(m_axis_tx_tlast[n*PORTS_PER_IF +: PORTS_PER_IF]),
             .m_axis_tx_tuser(m_axis_tx_tuser[n*PORTS_PER_IF*AXIS_TX_USER_WIDTH +: PORTS_PER_IF*AXIS_TX_USER_WIDTH]),
 
-            .s_axis_tx_ptp_ts(s_axis_tx_ptp_ts[n*PORTS_PER_IF*PTP_TS_WIDTH +: PORTS_PER_IF*PTP_TS_WIDTH]),
-            .s_axis_tx_ptp_ts_tag(s_axis_tx_ptp_ts_tag[n*PORTS_PER_IF*PTP_TAG_WIDTH +: PORTS_PER_IF*PTP_TAG_WIDTH]),
-            .s_axis_tx_ptp_ts_valid(s_axis_tx_ptp_ts_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
-            .s_axis_tx_ptp_ts_ready(s_axis_tx_ptp_ts_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .s_axis_tx_cpl_ts(s_axis_tx_cpl_ts[n*PORTS_PER_IF*PTP_TS_WIDTH +: PORTS_PER_IF*PTP_TS_WIDTH]),
+            .s_axis_tx_cpl_tag(s_axis_tx_cpl_tag[n*PORTS_PER_IF*TX_TAG_WIDTH +: PORTS_PER_IF*TX_TAG_WIDTH]),
+            .s_axis_tx_cpl_valid(s_axis_tx_cpl_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .s_axis_tx_cpl_ready(s_axis_tx_cpl_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
 
             /*
              * Receive data input
@@ -2665,6 +2662,12 @@ generate
             assign app_direct_rx_clk[n*PORTS_PER_IF+m] = port_rx_clk;
             assign app_direct_rx_rst[n*PORTS_PER_IF+m] = port_rx_rst;
 
+            wire [PTP_TS_WIDTH-1:0] port_rx_ptp_ts_96;
+            wire port_rx_ptp_ts_step;
+
+            wire [PTP_TS_WIDTH-1:0] port_tx_ptp_ts_96;
+            wire port_tx_ptp_ts_step;
+
             if (PTP_TS_ENABLE) begin: ptp
 
                 // PTP CDC logic
@@ -2683,8 +2686,8 @@ generate
                     .sample_clk(ptp_sample_clk),
                     .input_ts(ptp_ts_96),
                     .input_ts_step(ptp_ts_step),
-                    .output_ts(tx_ptp_ts_96[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
-                    .output_ts_step(tx_ptp_ts_step[n*PORTS_PER_IF+m]),
+                    .output_ts(port_tx_ptp_ts_96),
+                    .output_ts_step(port_tx_ptp_ts_step),
                     .output_pps(),
                     .locked()
                 );
@@ -2704,21 +2707,27 @@ generate
                     .sample_clk(ptp_sample_clk),
                     .input_ts(ptp_ts_96),
                     .input_ts_step(ptp_ts_step),
-                    .output_ts(rx_ptp_ts_96[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
-                    .output_ts_step(rx_ptp_ts_step[n*PORTS_PER_IF+m]),
+                    .output_ts(port_rx_ptp_ts_96),
+                    .output_ts_step(port_rx_ptp_ts_step),
                     .output_pps(),
                     .locked()
                 );
 
             end else begin
 
-                assign tx_ptp_ts_96[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {PTP_TS_WIDTH{1'b0}};
-                assign tx_ptp_ts_step[n*PORTS_PER_IF+m] = 1'b0;
+                assign port_tx_ptp_ts_96 = 0;
+                assign port_tx_ptp_ts_step = 1'b0;
 
-                assign rx_ptp_ts_96[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {PTP_TS_WIDTH{1'b0}};
-                assign rx_ptp_ts_step[n*PORTS_PER_IF+m] = 1'b0;
+                assign port_rx_ptp_ts_96 = 0;
+                assign port_rx_ptp_ts_step = 1'b0;
 
             end
+
+            assign tx_ptp_ts_96[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = port_tx_ptp_ts_96;
+            assign tx_ptp_ts_step[n*PORTS_PER_IF+m] = port_tx_ptp_ts_step;
+
+            assign rx_ptp_ts_96[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = port_rx_ptp_ts_96;
+            assign rx_ptp_ts_step[n*PORTS_PER_IF+m] = port_rx_ptp_ts_step;
 
         end
 
@@ -2740,7 +2749,6 @@ if (APP_ENABLE) begin : app
 
         // PTP configuration
         .PTP_TS_WIDTH(PTP_TS_WIDTH),
-        .PTP_TAG_WIDTH(PTP_TAG_WIDTH),
         .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
         .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
         .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
@@ -2750,7 +2758,12 @@ if (APP_ENABLE) begin : app
         .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
         .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
         .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
+
+        // Interface configuration
         .PTP_TS_ENABLE(PTP_TS_ENABLE),
+        .TX_TAG_WIDTH(TX_TAG_WIDTH),
+        .MAX_TX_SIZE(MAX_TX_SIZE),
+        .MAX_RX_SIZE(MAX_RX_SIZE),
 
         // Application configuration
         .APP_ID(APP_ID),
@@ -3006,15 +3019,15 @@ if (APP_ENABLE) begin : app
         .m_axis_direct_tx_tlast(app_m_axis_direct_tx_tlast),
         .m_axis_direct_tx_tuser(app_m_axis_direct_tx_tuser),
 
-        .s_axis_direct_tx_ptp_ts(app_s_axis_direct_tx_ptp_ts),
-        .s_axis_direct_tx_ptp_ts_tag(app_s_axis_direct_tx_ptp_ts_tag),
-        .s_axis_direct_tx_ptp_ts_valid(app_s_axis_direct_tx_ptp_ts_valid),
-        .s_axis_direct_tx_ptp_ts_ready(app_s_axis_direct_tx_ptp_ts_ready),
+        .s_axis_direct_tx_cpl_ts(app_s_axis_direct_tx_cpl_ts),
+        .s_axis_direct_tx_cpl_tag(app_s_axis_direct_tx_cpl_tag),
+        .s_axis_direct_tx_cpl_valid(app_s_axis_direct_tx_cpl_valid),
+        .s_axis_direct_tx_cpl_ready(app_s_axis_direct_tx_cpl_ready),
 
-        .m_axis_direct_tx_ptp_ts(app_m_axis_direct_tx_ptp_ts),
-        .m_axis_direct_tx_ptp_ts_tag(app_m_axis_direct_tx_ptp_ts_tag),
-        .m_axis_direct_tx_ptp_ts_valid(app_m_axis_direct_tx_ptp_ts_valid),
-        .m_axis_direct_tx_ptp_ts_ready(app_m_axis_direct_tx_ptp_ts_ready),
+        .m_axis_direct_tx_cpl_ts(app_m_axis_direct_tx_cpl_ts),
+        .m_axis_direct_tx_cpl_tag(app_m_axis_direct_tx_cpl_tag),
+        .m_axis_direct_tx_cpl_valid(app_m_axis_direct_tx_cpl_valid),
+        .m_axis_direct_tx_cpl_ready(app_m_axis_direct_tx_cpl_ready),
 
         .direct_rx_clk(app_direct_rx_clk),
         .direct_rx_rst(app_direct_rx_rst),
@@ -3050,15 +3063,15 @@ if (APP_ENABLE) begin : app
         .m_axis_sync_tx_tlast(app_m_axis_sync_tx_tlast),
         .m_axis_sync_tx_tuser(app_m_axis_sync_tx_tuser),
 
-        .s_axis_sync_tx_ptp_ts(app_s_axis_sync_tx_ptp_ts),
-        .s_axis_sync_tx_ptp_ts_tag(app_s_axis_sync_tx_ptp_ts_tag),
-        .s_axis_sync_tx_ptp_ts_valid(app_s_axis_sync_tx_ptp_ts_valid),
-        .s_axis_sync_tx_ptp_ts_ready(app_s_axis_sync_tx_ptp_ts_ready),
+        .s_axis_sync_tx_cpl_ts(app_s_axis_sync_tx_cpl_ts),
+        .s_axis_sync_tx_cpl_tag(app_s_axis_sync_tx_cpl_tag),
+        .s_axis_sync_tx_cpl_valid(app_s_axis_sync_tx_cpl_valid),
+        .s_axis_sync_tx_cpl_ready(app_s_axis_sync_tx_cpl_ready),
 
-        .m_axis_sync_tx_ptp_ts(app_m_axis_sync_tx_ptp_ts),
-        .m_axis_sync_tx_ptp_ts_tag(app_m_axis_sync_tx_ptp_ts_tag),
-        .m_axis_sync_tx_ptp_ts_valid(app_m_axis_sync_tx_ptp_ts_valid),
-        .m_axis_sync_tx_ptp_ts_ready(app_m_axis_sync_tx_ptp_ts_ready),
+        .m_axis_sync_tx_cpl_ts(app_m_axis_sync_tx_cpl_ts),
+        .m_axis_sync_tx_cpl_tag(app_m_axis_sync_tx_cpl_tag),
+        .m_axis_sync_tx_cpl_valid(app_m_axis_sync_tx_cpl_valid),
+        .m_axis_sync_tx_cpl_ready(app_m_axis_sync_tx_cpl_ready),
 
         .s_axis_sync_rx_tdata(app_s_axis_sync_rx_tdata),
         .s_axis_sync_rx_tkeep(app_s_axis_sync_rx_tkeep),
@@ -3095,15 +3108,15 @@ if (APP_ENABLE) begin : app
         .m_axis_if_tx_tdest(app_m_axis_if_tx_tdest),
         .m_axis_if_tx_tuser(app_m_axis_if_tx_tuser),
 
-        .s_axis_if_tx_ptp_ts(app_s_axis_if_tx_ptp_ts),
-        .s_axis_if_tx_ptp_ts_tag(app_s_axis_if_tx_ptp_ts_tag),
-        .s_axis_if_tx_ptp_ts_valid(app_s_axis_if_tx_ptp_ts_valid),
-        .s_axis_if_tx_ptp_ts_ready(app_s_axis_if_tx_ptp_ts_ready),
+        .s_axis_if_tx_cpl_ts(app_s_axis_if_tx_cpl_ts),
+        .s_axis_if_tx_cpl_tag(app_s_axis_if_tx_cpl_tag),
+        .s_axis_if_tx_cpl_valid(app_s_axis_if_tx_cpl_valid),
+        .s_axis_if_tx_cpl_ready(app_s_axis_if_tx_cpl_ready),
 
-        .m_axis_if_tx_ptp_ts(app_m_axis_if_tx_ptp_ts),
-        .m_axis_if_tx_ptp_ts_tag(app_m_axis_if_tx_ptp_ts_tag),
-        .m_axis_if_tx_ptp_ts_valid(app_m_axis_if_tx_ptp_ts_valid),
-        .m_axis_if_tx_ptp_ts_ready(app_m_axis_if_tx_ptp_ts_ready),
+        .m_axis_if_tx_cpl_ts(app_m_axis_if_tx_cpl_ts),
+        .m_axis_if_tx_cpl_tag(app_m_axis_if_tx_cpl_tag),
+        .m_axis_if_tx_cpl_valid(app_m_axis_if_tx_cpl_valid),
+        .m_axis_if_tx_cpl_ready(app_m_axis_if_tx_cpl_ready),
 
         .s_axis_if_rx_tdata(app_s_axis_if_rx_tdata),
         .s_axis_if_rx_tkeep(app_s_axis_if_rx_tkeep),
@@ -3221,11 +3234,11 @@ end else begin
     assign app_m_axis_direct_tx_tlast = 0;
     assign app_m_axis_direct_tx_tuser = 0;
 
-    assign app_s_axis_direct_tx_ptp_ts_ready = 0;
+    assign app_s_axis_direct_tx_cpl_ready = 0;
 
-    assign app_m_axis_direct_tx_ptp_ts = 0;
-    assign app_m_axis_direct_tx_ptp_ts_tag = 0;
-    assign app_m_axis_direct_tx_ptp_ts_valid = 0;
+    assign app_m_axis_direct_tx_cpl_ts = 0;
+    assign app_m_axis_direct_tx_cpl_tag = 0;
+    assign app_m_axis_direct_tx_cpl_valid = 0;
 
     assign app_s_axis_direct_rx_tready = 0;
 
@@ -3243,11 +3256,11 @@ end else begin
     assign app_m_axis_sync_tx_tlast = 0;
     assign app_m_axis_sync_tx_tuser = 0;
 
-    assign app_s_axis_sync_tx_ptp_ts_ready = 0;
+    assign app_s_axis_sync_tx_cpl_ready = 0;
 
-    assign app_m_axis_sync_tx_ptp_ts = 0;
-    assign app_m_axis_sync_tx_ptp_ts_tag = 0;
-    assign app_m_axis_sync_tx_ptp_ts_valid = 0;
+    assign app_m_axis_sync_tx_cpl_ts = 0;
+    assign app_m_axis_sync_tx_cpl_tag = 0;
+    assign app_m_axis_sync_tx_cpl_valid = 0;
 
     assign app_s_axis_sync_rx_tready = 0;
 
@@ -3267,11 +3280,11 @@ end else begin
     assign app_m_axis_if_tx_tdest = 0;
     assign app_m_axis_if_tx_tuser = 0;
 
-    assign app_s_axis_if_tx_ptp_ts_ready = 0;
+    assign app_s_axis_if_tx_cpl_ready = 0;
 
-    assign app_m_axis_if_tx_ptp_ts = 0;
-    assign app_m_axis_if_tx_ptp_ts_tag = 0;
-    assign app_m_axis_if_tx_ptp_ts_valid = 0;
+    assign app_m_axis_if_tx_cpl_ts = 0;
+    assign app_m_axis_if_tx_cpl_tag = 0;
+    assign app_m_axis_if_tx_cpl_valid = 0;
 
     assign app_s_axis_if_rx_tready = 0;
 

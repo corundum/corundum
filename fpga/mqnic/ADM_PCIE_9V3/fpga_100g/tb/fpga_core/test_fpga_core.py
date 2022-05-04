@@ -305,6 +305,9 @@ class TB(object):
             ifg=12, speed=100e9
         )
 
+        dut.qsfp_0_rx_status.setimmediatevalue(1)
+        dut.qsfp_1_rx_status.setimmediatevalue(1)
+
         dut.user_sw.setimmediatevalue(0)
 
         dut.qsfp_0_modprs_l.setimmediatevalue(0)
@@ -580,12 +583,13 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "mqnic_interface.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_tx.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_rx.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_tx.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "common", "mqnic_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_ingress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_ingress.v"),
-        os.path.join(rtl_dir, "common", "mqnic_port_tx.v"),
-        os.path.join(rtl_dir, "common", "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "common", "mqnic_rx_queue_map.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_clock.v"),

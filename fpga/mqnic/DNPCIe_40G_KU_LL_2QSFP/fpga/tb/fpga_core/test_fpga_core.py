@@ -283,6 +283,11 @@ class TB(object):
         cocotb.start_soon(Clock(dut.qsfp0_tx_clk_4, 6.4, units="ns").start())
         self.qsfp0_4_sink = XgmiiSink(dut.qsfp0_txd_4, dut.qsfp0_txc_4, dut.qsfp0_tx_clk_4, dut.qsfp0_tx_rst_4)
 
+        dut.qsfp0_rx_status_1.setimmediatevalue(1)
+        dut.qsfp0_rx_status_2.setimmediatevalue(1)
+        dut.qsfp0_rx_status_3.setimmediatevalue(1)
+        dut.qsfp0_rx_status_4.setimmediatevalue(1)
+
         cocotb.start_soon(Clock(dut.qsfp0_drp_clk, 8, units="ns").start())
         dut.qsfp0_drp_rst.setimmediatevalue(0)
         dut.qsfp0_drp_do.setimmediatevalue(0)
@@ -318,6 +323,11 @@ class TB(object):
         self.qsfp1_4_source = XgmiiSource(dut.qsfp1_rxd_4, dut.qsfp1_rxc_4, dut.qsfp1_rx_clk_4, dut.qsfp1_rx_rst_4)
         cocotb.start_soon(Clock(dut.qsfp1_tx_clk_4, 6.4, units="ns").start())
         self.qsfp1_4_sink = XgmiiSink(dut.qsfp1_txd_4, dut.qsfp1_txc_4, dut.qsfp1_tx_clk_4, dut.qsfp1_tx_rst_4)
+
+        dut.qsfp1_rx_status_1.setimmediatevalue(1)
+        dut.qsfp1_rx_status_2.setimmediatevalue(1)
+        dut.qsfp1_rx_status_3.setimmediatevalue(1)
+        dut.qsfp1_rx_status_4.setimmediatevalue(1)
 
         cocotb.start_soon(Clock(dut.qsfp1_drp_clk, 8, units="ns").start())
         dut.qsfp1_drp_rst.setimmediatevalue(0)
@@ -616,12 +626,13 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "mqnic_interface.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_tx.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_rx.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_tx.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "common", "mqnic_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_ingress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_ingress.v"),
-        os.path.join(rtl_dir, "common", "mqnic_port_tx.v"),
-        os.path.join(rtl_dir, "common", "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "common", "mqnic_rx_queue_map.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_clock.v"),

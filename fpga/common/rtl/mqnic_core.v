@@ -358,6 +358,8 @@ module mqnic_core #
     input  wire [PORT_COUNT-1:0]                        s_axis_tx_cpl_valid,
     output wire [PORT_COUNT-1:0]                        s_axis_tx_cpl_ready,
 
+    input  wire [PORT_COUNT-1:0]                        tx_status,
+
     input  wire [PORT_COUNT-1:0]                        rx_clk,
     input  wire [PORT_COUNT-1:0]                        rx_rst,
 
@@ -372,6 +374,8 @@ module mqnic_core #
     output wire [PORT_COUNT-1:0]                        s_axis_rx_tready,
     input  wire [PORT_COUNT-1:0]                        s_axis_rx_tlast,
     input  wire [PORT_COUNT*AXIS_RX_USER_WIDTH-1:0]     s_axis_rx_tuser,
+
+    input  wire [PORT_COUNT-1:0]                        rx_status,
 
     /*
      * Statistics increment input
@@ -601,12 +605,12 @@ always @(posedge clk) begin
             8'h54: ctrl_reg_rd_data_reg <= 2**AXIL_IF_CTRL_ADDR_WIDTH;  // Interface: Stride
             8'h58: ctrl_reg_rd_data_reg <= 2**AXIL_CSR_ADDR_WIDTH;      // Interface: CSR offset
             // App info
-            8'h60: ctrl_reg_rd_data_reg <= APP_ENABLE ? 32'h0000C004 : 0;  // App info: Type
+            8'h60: ctrl_reg_rd_data_reg <= APP_ENABLE ? 32'h0000C005 : 0;  // App info: Type
             8'h64: ctrl_reg_rd_data_reg <= APP_ENABLE ? 32'h00000200 : 0;  // App info: Version
             8'h68: ctrl_reg_rd_data_reg <= 32'h80;                         // App info: Next header
             8'h6C: ctrl_reg_rd_data_reg <= APP_ENABLE ? APP_ID : 0;        // App info: ID
             // Stats
-            8'h80: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h0000C005 : 0;      // Stats: Type
+            8'h80: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h0000C006 : 0;      // Stats: Type
             8'h84: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h00000100 : 0;      // Stats: Version
             8'h88: ctrl_reg_rd_data_reg <= PHC_RB_BASE_ADDR;                    // Stats: Next header
             8'h8C: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 2**16 : 0;             // Stats: Offset
@@ -2614,6 +2618,8 @@ generate
             .s_axis_tx_cpl_valid(s_axis_tx_cpl_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
             .s_axis_tx_cpl_ready(s_axis_tx_cpl_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
 
+            .tx_status(tx_status[n*PORTS_PER_IF +: PORTS_PER_IF]),
+
             /*
              * Receive data input
              */
@@ -2626,6 +2632,8 @@ generate
             .s_axis_rx_tready(s_axis_rx_tready[n*PORTS_PER_IF +: PORTS_PER_IF]),
             .s_axis_rx_tlast(s_axis_rx_tlast[n*PORTS_PER_IF +: PORTS_PER_IF]),
             .s_axis_rx_tuser(s_axis_rx_tuser[n*PORTS_PER_IF*AXIS_RX_USER_WIDTH +: PORTS_PER_IF*AXIS_RX_USER_WIDTH]),
+
+            .rx_status(rx_status[n*PORTS_PER_IF +: PORTS_PER_IF]),
 
             /*
              * PTP clock

@@ -1536,6 +1536,8 @@ core_inst (
     .sfp_1_rx_rst(sfp_1_rx_rst_int),
     .sfp_1_rxd(sfp_1_rxd_int),
     .sfp_1_rxc(sfp_1_rxc_int),
+    .sfp_1_rx_status(sfp_1_rx_block_lock),
+
     .sfp_2_tx_clk(sfp_2_tx_clk_int),
     .sfp_2_tx_rst(sfp_2_tx_rst_int),
     .sfp_2_txd(sfp_2_txd_int),
@@ -1544,6 +1546,8 @@ core_inst (
     .sfp_2_rx_rst(sfp_2_rx_rst_int),
     .sfp_2_rxd(sfp_2_rxd_int),
     .sfp_2_rxc(sfp_2_rxc_int),
+    .sfp_2_rx_status(sfp_2_rx_block_lock),
+
     .sfp_3_tx_clk(sfp_3_tx_clk_int),
     .sfp_3_tx_rst(sfp_3_tx_rst_int),
     .sfp_3_txd(sfp_3_txd_int),
@@ -1552,6 +1556,8 @@ core_inst (
     .sfp_3_rx_rst(sfp_3_rx_rst_int),
     .sfp_3_rxd(sfp_3_rxd_int),
     .sfp_3_rxc(sfp_3_rxc_int),
+    .sfp_3_rx_status(sfp_3_rx_block_lock),
+
     .sfp_4_tx_clk(sfp_4_tx_clk_int),
     .sfp_4_tx_rst(sfp_4_tx_rst_int),
     .sfp_4_txd(sfp_4_txd_int),
@@ -1560,6 +1566,7 @@ core_inst (
     .sfp_4_rx_rst(sfp_4_rx_rst_int),
     .sfp_4_rxd(sfp_4_rxd_int),
     .sfp_4_rxc(sfp_4_rxc_int),
+    .sfp_4_rx_status(sfp_4_rx_block_lock),
 
     .sfp_1_mod_detect(sfp_1_mod_detect_int),
     .sfp_2_mod_detect(sfp_2_mod_detect_int),

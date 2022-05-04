@@ -1256,6 +1256,8 @@ core_inst (
     .sfp_1_rxd(sfp_1_rxd_int),
     .sfp_1_rxc(sfp_1_rxc_int),
 
+    .sfp_1_rx_status(sfp_1_rx_block_lock),
+
     .sfp_2_tx_clk(sfp_2_tx_clk_int),
     .sfp_2_tx_rst(sfp_2_tx_rst_int),
     .sfp_2_txd(sfp_2_txd_int),
@@ -1264,6 +1266,8 @@ core_inst (
     .sfp_2_rx_rst(sfp_2_rx_rst_int),
     .sfp_2_rxd(sfp_2_rxd_int),
     .sfp_2_rxc(sfp_2_rxc_int),
+
+    .sfp_2_rx_status(sfp_2_rx_block_lock),
 
     .sfp_drp_clk(sfp_drp_clk),
     .sfp_drp_rst(sfp_drp_rst),

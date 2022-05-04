@@ -35,107 +35,84 @@
 
 #include "mqnic.h"
 
-int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_block **block_ptr,
-		int index, struct mqnic_reg_block *block_rb)
+int mqnic_create_port(struct mqnic_if *interface, struct mqnic_port **port_ptr,
+		int index, struct mqnic_reg_block *port_rb)
 {
 	struct device *dev = interface->dev;
-	struct mqnic_sched_block *block;
+	struct mqnic_port *port;
 	struct mqnic_reg_block *rb;
 	u32 offset;
 	int ret = 0;
 
-	block = kzalloc(sizeof(*block), GFP_KERNEL);
-	if (!block)
+	port = kzalloc(sizeof(*port), GFP_KERNEL);
+	if (!port)
 		return -ENOMEM;
 
-	*block_ptr = block;
+	*port_ptr = port;
 
-	block->dev = dev;
-	block->interface = interface;
+	port->dev = dev;
+	port->interface = interface;
 
-	block->index = index;
+	port->index = index;
 
-	block->tx_queue_count = interface->tx_queue_count;
+	port->port_rb = port_rb;
 
-	block->block_rb = block_rb;
+	offset = ioread32(port_rb->regs + MQNIC_RB_SCHED_BLOCK_REG_OFFSET);
 
-	offset = ioread32(block_rb->regs + MQNIC_RB_SCHED_BLOCK_REG_OFFSET);
+	port->rb_list = mqnic_enumerate_reg_block_list(interface->hw_addr, offset, interface->hw_regs_size - offset);
 
-	block->rb_list = mqnic_enumerate_reg_block_list(interface->hw_addr, offset, interface->hw_regs_size - offset);
-
-	if (!block->rb_list) {
+	if (!port->rb_list) {
 		ret = -EIO;
 		dev_err(dev, "Failed to enumerate blocks");
 		goto fail;
 	}
 
-	dev_info(dev, "Scheduler block-level register blocks:");
-	for (rb = block->rb_list; rb->regs; rb++)
+	dev_info(dev, "Port-level register blocks:");
+	for (rb = port->rb_list; rb->regs; rb++)
 		dev_info(dev, " type 0x%08x (v %d.%d.%d.%d)", rb->type, rb->version >> 24,
 				(rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
-	block->sched_count = 0;
-	for (rb = block->rb_list; rb->regs; rb++) {
-		if (rb->type == MQNIC_RB_SCHED_RR_TYPE && rb->version == MQNIC_RB_SCHED_RR_VER) {
-			ret = mqnic_create_scheduler(block, &block->sched[block->sched_count],
-					block->sched_count, rb);
+	port->port_ctrl_rb = mqnic_find_reg_block(port->rb_list, MQNIC_RB_PORT_CTRL_TYPE, MQNIC_RB_PORT_CTRL_VER, 0);
 
-			if (ret)
-				goto fail;
-
-			block->sched_count++;
-		}
+	if (!port->port_ctrl_rb) {
+		ret = -EIO;
+		dev_err(dev, "Port control register block not found");
+		goto fail;
 	}
 
-	dev_info(dev, "Scheduler count: %d", block->sched_count);
+	port->port_features = ioread32(port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_FEATURES);
 
-	mqnic_deactivate_sched_block(block);
+	dev_info(dev, "Port features: 0x%08x", port->port_features);
+
+	dev_info(dev, "Port TX status: 0x%08x", mqnic_port_get_tx_status(port));
+	dev_info(dev, "Port RX status: 0x%08x", mqnic_port_get_rx_status(port));
 
 	return 0;
 
 fail:
-	mqnic_destroy_sched_block(block_ptr);
+	mqnic_destroy_port(port_ptr);
 	return ret;
 }
 
-void mqnic_destroy_sched_block(struct mqnic_sched_block **block_ptr)
+void mqnic_destroy_port(struct mqnic_port **port_ptr)
 {
-	struct mqnic_sched_block *block = *block_ptr;
-	int k;
+	struct mqnic_port *port = *port_ptr;
 
-	mqnic_deactivate_sched_block(block);
+	if (port->rb_list)
+		mqnic_free_reg_block_list(port->rb_list);
 
-	for (k = 0; k < ARRAY_SIZE(block->sched); k++)
-		if (block->sched[k])
-			mqnic_destroy_scheduler(&block->sched[k]);
-
-	if (block->rb_list)
-		mqnic_free_reg_block_list(block->rb_list);
-
-	*block_ptr = NULL;
-	kfree(block);
+	*port_ptr = NULL;
+	kfree(port);
 }
 
-int mqnic_activate_sched_block(struct mqnic_sched_block *block)
+u32 mqnic_port_get_tx_status(struct mqnic_port *port)
 {
-	int k;
-
-	// enable schedulers
-	for (k = 0; k < ARRAY_SIZE(block->sched); k++)
-		if (block->sched[k])
-			mqnic_scheduler_enable(block->sched[k]);
-
-	return 0;
+	return ioread32(port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_TX_STATUS);
 }
-EXPORT_SYMBOL(mqnic_activate_sched_block);
+EXPORT_SYMBOL(mqnic_port_get_tx_status);
 
-void mqnic_deactivate_sched_block(struct mqnic_sched_block *block)
+u32 mqnic_port_get_rx_status(struct mqnic_port *port)
 {
-	int k;
-
-	// disable schedulers
-	for (k = 0; k < ARRAY_SIZE(block->sched); k++)
-		if (block->sched[k])
-			mqnic_scheduler_disable(block->sched[k]);
+	return ioread32(port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_RX_STATUS);
 }
-EXPORT_SYMBOL(mqnic_deactivate_sched_block);
+EXPORT_SYMBOL(mqnic_port_get_rx_status);

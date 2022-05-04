@@ -1557,6 +1557,7 @@ core_inst (
     .qsfp_rx_ptp_clk(qsfp_rx_ptp_clk_int),
     .qsfp_rx_ptp_rst(qsfp_rx_ptp_rst_int),
     .qsfp_rx_ptp_time(qsfp_rx_ptp_time_int),
+    .qsfp_rx_status(qsfp_rx_status),
 
     /*
      * QSPI flash

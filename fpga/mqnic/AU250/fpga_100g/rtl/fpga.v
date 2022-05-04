@@ -2067,6 +2067,7 @@ core_inst (
     .qsfp0_rx_ptp_clk(qsfp0_rx_ptp_clk_int),
     .qsfp0_rx_ptp_rst(qsfp0_rx_ptp_rst_int),
     .qsfp0_rx_ptp_time(qsfp0_rx_ptp_time_int),
+    .qsfp0_rx_status(qsfp0_rx_status),
 
     .qsfp1_tx_clk(qsfp1_tx_clk_int),
     .qsfp1_tx_rst(qsfp1_tx_rst_int),
@@ -2090,6 +2091,7 @@ core_inst (
     .qsfp1_rx_ptp_clk(qsfp1_rx_ptp_clk_int),
     .qsfp1_rx_ptp_rst(qsfp1_rx_ptp_rst_int),
     .qsfp1_rx_ptp_time(qsfp1_rx_ptp_time_int),
+    .qsfp1_rx_status(qsfp1_rx_status),
 
     /*
      * QSPI flash

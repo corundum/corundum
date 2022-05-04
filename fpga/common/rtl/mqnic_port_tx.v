@@ -45,7 +45,7 @@ module mqnic_port_tx #
     // PTP configuration
     parameter PTP_TS_WIDTH = 96,
 
-    // Port configuration
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
     parameter TX_CPL_ENABLE = 1,
     parameter TX_CPL_FIFO_DEPTH = 32,

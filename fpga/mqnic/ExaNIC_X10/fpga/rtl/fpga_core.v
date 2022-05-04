@@ -291,6 +291,7 @@ module fpga_core #
     input  wire                               sfp_1_rx_rst,
     input  wire [XGMII_DATA_WIDTH-1:0]        sfp_1_rxd,
     input  wire [XGMII_CTRL_WIDTH-1:0]        sfp_1_rxc,
+    input  wire                               sfp_1_rx_status,
 
     input  wire                               sfp_2_tx_clk,
     input  wire                               sfp_2_tx_rst,
@@ -300,6 +301,7 @@ module fpga_core #
     input  wire                               sfp_2_rx_rst,
     input  wire [XGMII_DATA_WIDTH-1:0]        sfp_2_rxd,
     input  wire [XGMII_CTRL_WIDTH-1:0]        sfp_2_rxc,
+    input  wire                               sfp_2_rx_status,
 
     input  wire                               sfp_drp_clk,
     input  wire                               sfp_drp_rst,
@@ -733,6 +735,8 @@ wire [PORT_COUNT*TX_TAG_WIDTH-1:0]            axis_eth_tx_ptp_ts_tag;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_valid;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_ready;
 
+wire [PORT_COUNT-1:0]                         eth_tx_status;
+
 wire [PORT_COUNT-1:0]                         eth_rx_clk;
 wire [PORT_COUNT-1:0]                         eth_rx_rst;
 
@@ -745,6 +749,8 @@ wire [PORT_COUNT-1:0]                         axis_eth_rx_tvalid;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tready;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tlast;
 wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  axis_eth_rx_tuser;
+
+wire [PORT_COUNT-1:0]                         eth_rx_status;
 
 wire [PORT_COUNT-1:0]                   port_xgmii_tx_clk;
 wire [PORT_COUNT-1:0]                   port_xgmii_tx_rst;
@@ -775,22 +781,26 @@ mqnic_port_map_phy_xgmii_inst (
     .phy_xgmii_tx_rst({sfp_2_tx_rst, sfp_1_tx_rst}),
     .phy_xgmii_txd({sfp_2_txd, sfp_1_txd}),
     .phy_xgmii_txc({sfp_2_txc, sfp_1_txc}),
+    .phy_tx_status(2'b11),
 
     .phy_xgmii_rx_clk({sfp_2_rx_clk, sfp_1_rx_clk}),
     .phy_xgmii_rx_rst({sfp_2_rx_rst, sfp_1_rx_rst}),
     .phy_xgmii_rxd({sfp_2_rxd, sfp_1_rxd}),
     .phy_xgmii_rxc({sfp_2_rxc, sfp_1_rxc}),
+    .phy_rx_status({sfp_2_rx_status, sfp_1_rx_status}),
 
     // towards MAC
     .port_xgmii_tx_clk(port_xgmii_tx_clk),
     .port_xgmii_tx_rst(port_xgmii_tx_rst),
     .port_xgmii_txd(port_xgmii_txd),
     .port_xgmii_txc(port_xgmii_txc),
+    .port_tx_status(eth_tx_status),
 
     .port_xgmii_rx_clk(port_xgmii_rx_clk),
     .port_xgmii_rx_rst(port_xgmii_rx_rst),
     .port_xgmii_rxd(port_xgmii_rxd),
-    .port_xgmii_rxc(port_xgmii_rxc)
+    .port_xgmii_rxc(port_xgmii_rxc),
+    .port_rx_status(eth_rx_status)
 );
 
 generate
@@ -1186,6 +1196,8 @@ core_inst (
     .s_axis_eth_tx_cpl_valid(axis_eth_tx_ptp_ts_valid),
     .s_axis_eth_tx_cpl_ready(axis_eth_tx_ptp_ts_ready),
 
+    .eth_tx_status(eth_tx_status),
+
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),
 
@@ -1200,6 +1212,8 @@ core_inst (
     .s_axis_eth_rx_tready(axis_eth_rx_tready),
     .s_axis_eth_rx_tlast(axis_eth_rx_tlast),
     .s_axis_eth_rx_tuser(axis_eth_rx_tuser),
+
+    .eth_rx_status(eth_rx_status),
 
     /*
      * Statistics input

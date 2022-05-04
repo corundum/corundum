@@ -115,7 +115,7 @@ int main(int argc, char *argv[])
 
     printf("Device-level register blocks:\n");
     for (struct mqnic_reg_block *rb = dev->rb_list; rb->regs; rb++)
-        printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 
+        printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24,
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
     mqnic_print_fw_id(dev);
@@ -175,7 +175,7 @@ int main(int argc, char *argv[])
 
     printf("Interface-level register blocks:\n");
     for (struct mqnic_reg_block *rb = dev_interface->rb_list; rb->regs; rb++)
-        printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 
+        printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24,
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
     printf("IF features: 0x%08x\n", dev_interface->if_features);
@@ -220,6 +220,24 @@ int main(int argc, char *argv[])
         goto err;
     }
 
+    struct mqnic_port *dev_port = dev_interface->ports[port];
+
+    if (!dev_port)
+    {
+        fprintf(stderr, "Invalid port\n");
+        ret = -1;
+        goto err;
+    }
+
+    printf("Port-level register blocks:\n");
+    for (struct mqnic_reg_block *rb = dev_port->rb_list; rb->regs; rb++)
+        printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24,
+                (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
+
+    printf("Port features: 0x%08x\n", dev_port->port_features);
+    printf("Port TX status: 0x%08x\n", mqnic_port_get_tx_status(dev_port));
+    printf("Port RX status: 0x%08x\n", mqnic_port_get_rx_status(dev_port));
+
     sched_block = port;
 
     if (sched_block < 0 || sched_block >= dev_interface->sched_block_count)
@@ -240,7 +258,7 @@ int main(int argc, char *argv[])
 
     printf("Scheduler block-level register blocks:\n");
     for (struct mqnic_reg_block *rb = dev_sched_block->rb_list; rb->regs; rb++)
-        printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24, 
+        printf(" type 0x%08x (v %d.%d.%d.%d)\n", rb->type, rb->version >> 24,
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
     printf("Sched count: %d\n", dev_sched_block->sched_count);

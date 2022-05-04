@@ -207,8 +207,18 @@ MQNIC_RB_RX_CQM_REG_OFFSET  = 0x0C
 MQNIC_RB_RX_CQM_REG_COUNT   = 0x10
 MQNIC_RB_RX_CQM_REG_STRIDE  = 0x14
 
-MQNIC_RB_SCHED_BLOCK_TYPE        = 0x0000C003
-MQNIC_RB_SCHED_BLOCK_VER         = 0x00000100
+MQNIC_RB_PORT_TYPE        = 0x0000C002
+MQNIC_RB_PORT_VER         = 0x00000200
+MQNIC_RB_PORT_REG_OFFSET  = 0x0C
+
+MQNIC_RB_PORT_CTRL_TYPE           = 0x0000C003
+MQNIC_RB_PORT_CTRL_VER            = 0x00000200
+MQNIC_RB_PORT_CTRL_REG_FEATURES   = 0x0C
+MQNIC_RB_PORT_CTRL_REG_TX_STATUS  = 0x10
+MQNIC_RB_PORT_CTRL_REG_RX_STATUS  = 0x14
+
+MQNIC_RB_SCHED_BLOCK_TYPE        = 0x0000C004
+MQNIC_RB_SCHED_BLOCK_VER         = 0x00000300
 MQNIC_RB_SCHED_BLOCK_REG_OFFSET  = 0x0C
 
 MQNIC_RB_SCHED_RR_TYPE           = 0x0000C040
@@ -249,7 +259,7 @@ MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_NS     = 0x54
 MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_SEC_L  = 0x58
 MQNIC_RB_TDMA_SCH_REG_ACTIVE_PERIOD_SEC_H  = 0x5C
 
-MQNIC_RB_APP_INFO_TYPE    = 0x0000C004
+MQNIC_RB_APP_INFO_TYPE    = 0x0000C005
 MQNIC_RB_APP_INFO_VER     = 0x00000200
 MQNIC_RB_APP_INFO_REG_ID  = 0x0C
 
@@ -800,6 +810,38 @@ class SchedulerBlock:
         self.log.info("Scheduler count: %d", self.sched_count)
 
 
+class Port:
+    def __init__(self, interface, index, rb):
+        self.interface = interface
+        self.log = interface.log
+        self.driver = interface.driver
+        self.index = index
+
+        self.port_rb = rb
+        self.reg_blocks = RegBlockList()
+        self.port_ctrl_rb = None
+
+        self.port_features = None
+
+    async def init(self):
+        # Read ID registers
+
+        offset = await self.port_rb.read_dword(MQNIC_RB_PORT_REG_OFFSET)
+        await self.reg_blocks.enumerate_reg_blocks(self.port_rb.parent, offset)
+
+        self.port_ctrl_rb = self.reg_blocks.find(MQNIC_RB_PORT_CTRL_TYPE, MQNIC_RB_PORT_CTRL_VER)
+
+        self.port_features = await self.port_ctrl_rb.read_dword(MQNIC_RB_PORT_CTRL_REG_FEATURES)
+
+        self.log.info("Port features: 0x%08x", self.port_features)
+
+    async def get_tx_status(self, port):
+        return await self.port_ctrl_rb.read_dword(MQNIC_RB_PORT_CTRL_REG_TX_STATUS)
+
+    async def get_rx_status(self, port):
+        return await self.port_ctrl_rb.read_dword(MQNIC_RB_PORT_CTRL_REG_RX_STATUS)
+
+
 class Interface:
     def __init__(self, driver, index, hw_regs):
         self.driver = driver
@@ -848,6 +890,7 @@ class Interface:
         self.tx_cpl_queues = []
         self.rx_queues = []
         self.rx_cpl_queues = []
+        self.ports = []
         self.sched_blocks = []
 
         self.interrupt_running = False
@@ -952,6 +995,7 @@ class Interface:
         self.rx_queues = []
         self.rx_cpl_queues = []
         self.ports = []
+        self.sched_blocks = []
 
         for k in range(self.event_queue_count):
             q = EqRing(self, 1024, MQNIC_EVENT_SIZE, self.index,
@@ -982,6 +1026,13 @@ class Interface:
                     self.hw_regs.create_window(self.rx_cpl_queue_offset + k*self.rx_cpl_queue_stride, self.rx_cpl_queue_stride))
             await q.init()
             self.rx_cpl_queues.append(q)
+
+        for k in range(self.port_count):
+            rb = self.reg_blocks.find(MQNIC_RB_PORT_TYPE, MQNIC_RB_PORT_VER, index=k)
+
+            p = Port(self, k, rb)
+            await p.init()
+            self.ports.append(p)
 
         for k in range(self.sched_block_count):
             rb = self.reg_blocks.find(MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, index=k)

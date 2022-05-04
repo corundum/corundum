@@ -209,8 +209,8 @@ always @(posedge clk) begin
         ctrl_reg_rd_ack_reg <= 1'b1;
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
             // Scheduler block
-            RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C003;          // Sched block: Type
-            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000100;          // Sched block: Version
+            RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C004;          // Sched block: Type
+            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000300;          // Sched block: Version
             RBB+8'h08: ctrl_reg_rd_data_reg <= RB_NEXT_PTR;           // Sched block: Next header
             RBB+8'h0C: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h10;    // Sched block: Offset
             // Round-robin scheduler

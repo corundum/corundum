@@ -60,22 +60,26 @@ module mqnic_port_map_phy_xgmii #
     input  wire [PHY_COUNT-1:0]                    phy_xgmii_tx_rst,
     output wire [PHY_COUNT*XGMII_DATA_WIDTH-1:0]   phy_xgmii_txd,
     output wire [PHY_COUNT*XGMII_CTRL_WIDTH-1:0]   phy_xgmii_txc,
+    input  wire [PHY_COUNT-1:0]                    phy_tx_status,
 
     input  wire [PHY_COUNT-1:0]                    phy_xgmii_rx_clk,
     input  wire [PHY_COUNT-1:0]                    phy_xgmii_rx_rst,
     input  wire [PHY_COUNT*XGMII_DATA_WIDTH-1:0]   phy_xgmii_rxd,
     input  wire [PHY_COUNT*XGMII_CTRL_WIDTH-1:0]   phy_xgmii_rxc,
+    input  wire [PHY_COUNT-1:0]                    phy_rx_status,
 
     // towards MAC
     output wire [PORT_COUNT-1:0]                   port_xgmii_tx_clk,
     output wire [PORT_COUNT-1:0]                   port_xgmii_tx_rst,
     input  wire [PORT_COUNT*XGMII_DATA_WIDTH-1:0]  port_xgmii_txd,
     input  wire [PORT_COUNT*XGMII_CTRL_WIDTH-1:0]  port_xgmii_txc,
+    output wire [PORT_COUNT-1:0]                   port_tx_status,
 
     output wire [PORT_COUNT-1:0]                   port_xgmii_rx_clk,
     output wire [PORT_COUNT-1:0]                   port_xgmii_rx_rst,
     output wire [PORT_COUNT*XGMII_DATA_WIDTH-1:0]  port_xgmii_rxd,
-    output wire [PORT_COUNT*XGMII_CTRL_WIDTH-1:0]  port_xgmii_rxc
+    output wire [PORT_COUNT*XGMII_CTRL_WIDTH-1:0]  port_xgmii_rxc,
+    output wire [PORT_COUNT-1:0]                   port_rx_status
 );
 
 initial begin
@@ -160,11 +164,15 @@ generate
             assign phy_xgmii_txd[n*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = port_xgmii_txd[IND[n*8 +: 8]*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
             assign phy_xgmii_txc[n*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = port_xgmii_txc[IND[n*8 +: 8]*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
 
+            assign port_tx_status[IND[n*8 +: 8]] = phy_tx_status[n];
+
             assign port_xgmii_rx_clk[IND[n*8 +: 8]] = phy_xgmii_rx_clk[n];
             assign port_xgmii_rx_rst[IND[n*8 +: 8]] = phy_xgmii_rx_rst[n];
 
             assign port_xgmii_rxd[IND[n*8 +: 8]*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH] = phy_xgmii_rxd[n*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH];
             assign port_xgmii_rxc[IND[n*8 +: 8]*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH] = phy_xgmii_rxc[n*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH];
+
+            assign port_rx_status[IND[n*8 +: 8]] = phy_rx_status[n];
         end else begin
             initial begin
                 $display("Phy %d skipped", n);

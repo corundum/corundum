@@ -69,13 +69,22 @@ struct mqnic_sched_block {
 
     int index;
 
-    size_t regs_size;
-    volatile uint8_t *regs;
-
     struct mqnic_reg_block *rb_list;
 
     uint32_t sched_count;
     struct mqnic_sched *sched[MQNIC_MAX_SCHED];
+};
+
+struct mqnic_port {
+    struct mqnic *mqnic;
+    struct mqnic_if *interface;
+
+    int index;
+
+    struct mqnic_reg_block *rb_list;
+    struct mqnic_reg_block *port_ctrl_rb;
+
+    uint32_t port_features;
 };
 
 struct mqnic_if {
@@ -119,6 +128,8 @@ struct mqnic_if {
     uint32_t rx_cpl_queue_stride;
 
     uint32_t port_count;
+    struct mqnic_port *ports[MQNIC_MAX_PORTS];
+
     uint32_t sched_block_count;
     struct mqnic_sched_block *sched_blocks[MQNIC_MAX_PORTS];
 };
@@ -180,6 +191,12 @@ uint32_t mqnic_interface_get_rx_mtu(struct mqnic_if *interface);
 uint32_t mqnic_interface_get_rx_queue_map_offset(struct mqnic_if *interface, int port);
 uint32_t mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, int port);
 uint32_t mqnic_interface_get_rx_queue_map_app_mask(struct mqnic_if *interface, int port);
+
+// mqnic_port.c
+struct mqnic_port *mqnic_port_open(struct mqnic_if *interface, int index, struct mqnic_reg_block *port_rb);
+void mqnic_port_close(struct mqnic_port *port);
+uint32_t mqnic_port_get_tx_status(struct mqnic_port *port);
+uint32_t mqnic_port_get_rx_status(struct mqnic_port *port);
 
 // mqnic_sched_block.c
 struct mqnic_sched_block *mqnic_sched_block_open(struct mqnic_if *interface, int index, struct mqnic_reg_block *block_rb);

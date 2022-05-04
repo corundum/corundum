@@ -465,6 +465,8 @@ module mqnic_interface #
     input  wire [PORTS-1:0]                             s_axis_tx_cpl_valid,
     output wire [PORTS-1:0]                             s_axis_tx_cpl_ready,
 
+    input  wire [PORTS-1:0]                             tx_status,
+
     /*
      * Receive data input
      */
@@ -477,6 +479,8 @@ module mqnic_interface #
     output wire [PORTS-1:0]                             s_axis_rx_tready,
     input  wire [PORTS-1:0]                             s_axis_rx_tlast,
     input  wire [PORTS*AXIS_RX_USER_WIDTH-1:0]          s_axis_rx_tuser,
+
+    input  wire [PORTS-1:0]                             rx_status,
 
     /*
      * PTP clock
@@ -547,7 +551,10 @@ localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
 
 localparam RX_RB_BASE_ADDR = RB_BASE_ADDR + 16'h100;
 
-localparam SCHED_RB_BASE_ADDR = RB_BASE_ADDR + 16'h1000;
+localparam PORT_RB_BASE_ADDR = RB_BASE_ADDR + 16'h1000;
+localparam PORT_RB_STRIDE = 16'h1000;
+
+localparam SCHED_RB_BASE_ADDR = (PORT_RB_BASE_ADDR + PORT_RB_STRIDE*PORTS);
 localparam SCHED_RB_STRIDE = 16'h1000;
 
 // parameter sizing helpers
@@ -1032,6 +1039,12 @@ wire [AXIL_DATA_WIDTH-1:0] sched_ctrl_reg_rd_data[SCHEDULERS-1:0];
 wire sched_ctrl_reg_rd_wait[SCHEDULERS-1:0];
 wire sched_ctrl_reg_rd_ack[SCHEDULERS-1:0];
 
+wire port_ctrl_reg_wr_wait[PORTS-1:0];
+wire port_ctrl_reg_wr_ack[PORTS-1:0];
+wire [AXIL_DATA_WIDTH-1:0] port_ctrl_reg_rd_data[PORTS-1:0];
+wire port_ctrl_reg_rd_wait[PORTS-1:0];
+wire port_ctrl_reg_rd_ack[PORTS-1:0];
+
 reg ctrl_reg_wr_wait_cmb;
 reg ctrl_reg_wr_ack_cmb;
 reg [AXIL_DATA_WIDTH-1:0] ctrl_reg_rd_data_cmb;
@@ -1059,6 +1072,14 @@ always @* begin
         ctrl_reg_rd_data_cmb = ctrl_reg_rd_data_cmb | sched_ctrl_reg_rd_data[k];
         ctrl_reg_rd_wait_cmb = ctrl_reg_rd_wait_cmb | sched_ctrl_reg_rd_wait[k];
         ctrl_reg_rd_ack_cmb = ctrl_reg_rd_ack_cmb | sched_ctrl_reg_rd_ack[k];
+    end
+
+    for (k = 0; k < PORTS; k = k + 1) begin
+        ctrl_reg_wr_wait_cmb = ctrl_reg_wr_wait_cmb | port_ctrl_reg_wr_wait[k];
+        ctrl_reg_wr_ack_cmb = ctrl_reg_wr_ack_cmb | port_ctrl_reg_wr_ack[k];
+        ctrl_reg_rd_data_cmb = ctrl_reg_rd_data_cmb | port_ctrl_reg_rd_data[k];
+        ctrl_reg_rd_wait_cmb = ctrl_reg_rd_wait_cmb | port_ctrl_reg_rd_wait[k];
+        ctrl_reg_rd_ack_cmb = ctrl_reg_rd_ack_cmb | port_ctrl_reg_rd_ack[k];
     end
 end
 
@@ -2566,7 +2587,7 @@ mqnic_interface_rx #(
     .REG_DATA_WIDTH(REG_DATA_WIDTH),
     .REG_STRB_WIDTH(REG_STRB_WIDTH),
     .RB_BASE_ADDR(RX_RB_BASE_ADDR),
-    .RB_NEXT_PTR(SCHED_RB_BASE_ADDR),
+    .RB_NEXT_PTR(PORT_RB_BASE_ADDR),
 
     // Streaming interface configuration
     .AXIS_DATA_WIDTH(AXIS_IF_DATA_WIDTH),
@@ -3008,7 +3029,7 @@ end
 
 for (n = 0; n < PORTS; n = n + 1) begin : port
 
-    mqnic_port_tx #(
+    mqnic_port #(
         // PTP configuration
         .PTP_TS_WIDTH(PTP_TS_WIDTH),
 
@@ -3018,25 +3039,53 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .TX_CPL_FIFO_DEPTH(TX_CPL_FIFO_DEPTH),
         .TX_TAG_WIDTH(TX_TAG_WIDTH),
         .MAX_TX_SIZE(MAX_TX_SIZE),
+        .MAX_RX_SIZE(MAX_RX_SIZE),
 
         // Application block configuration
         .APP_AXIS_DIRECT_ENABLE(APP_AXIS_DIRECT_ENABLE),
         .APP_AXIS_SYNC_ENABLE(APP_AXIS_SYNC_ENABLE),
 
+        // Register interface configuration
+        .REG_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+        .REG_DATA_WIDTH(AXIL_DATA_WIDTH),
+        .REG_STRB_WIDTH(AXIL_STRB_WIDTH),
+        .RB_BASE_ADDR(PORT_RB_BASE_ADDR + PORT_RB_STRIDE*n),
+        .RB_NEXT_PTR(n < PORTS-1 ? PORT_RB_BASE_ADDR + PORT_RB_STRIDE*(n+1) : SCHED_RB_BASE_ADDR),
+
         // Streaming interface configuration
         .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
         .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),
         .AXIS_TX_USER_WIDTH(AXIS_TX_USER_WIDTH),
+        .AXIS_RX_USER_WIDTH(AXIS_RX_USER_WIDTH),
+        .AXIS_RX_USE_READY(AXIS_RX_USE_READY),
         .AXIS_TX_PIPELINE(AXIS_TX_PIPELINE),
         .AXIS_TX_FIFO_PIPELINE(AXIS_TX_FIFO_PIPELINE),
         .AXIS_TX_TS_PIPELINE(AXIS_TX_TS_PIPELINE),
+        .AXIS_RX_PIPELINE(AXIS_RX_PIPELINE),
+        .AXIS_RX_FIFO_PIPELINE(AXIS_RX_FIFO_PIPELINE),
         .AXIS_SYNC_DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
         .AXIS_SYNC_KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
-        .AXIS_SYNC_TX_USER_WIDTH(AXIS_SYNC_TX_USER_WIDTH)
+        .AXIS_SYNC_TX_USER_WIDTH(AXIS_SYNC_TX_USER_WIDTH),
+        .AXIS_SYNC_RX_USER_WIDTH(AXIS_SYNC_RX_USER_WIDTH)
     )
-    port_tx_inst (
+    port_inst (
         .clk(clk),
         .rst(rst),
+
+        /*
+         * Control register interface
+         */
+        .ctrl_reg_wr_addr(ctrl_reg_wr_addr),
+        .ctrl_reg_wr_data(ctrl_reg_wr_data),
+        .ctrl_reg_wr_strb(ctrl_reg_wr_strb),
+        .ctrl_reg_wr_en(ctrl_reg_wr_en),
+        .ctrl_reg_wr_wait(port_ctrl_reg_wr_wait[n]),
+        .ctrl_reg_wr_ack(port_ctrl_reg_wr_ack[n]),
+        .ctrl_reg_rd_addr(ctrl_reg_rd_addr),
+        .ctrl_reg_rd_en(ctrl_reg_rd_en),
+        .ctrl_reg_rd_data(port_ctrl_reg_rd_data[n]),
+        .ctrl_reg_rd_wait(port_ctrl_reg_rd_wait[n]),
+        .ctrl_reg_rd_ack(port_ctrl_reg_rd_ack[n]),
 
         /*
          * Transmit data from interface FIFO
@@ -3052,6 +3101,16 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .m_axis_if_tx_cpl_tag(axis_if_tx_cpl_tag[n*TX_TAG_WIDTH +: TX_TAG_WIDTH]),
         .m_axis_if_tx_cpl_valid(axis_if_tx_cpl_valid[n +: 1]),
         .m_axis_if_tx_cpl_ready(axis_if_tx_cpl_ready[n +: 1]),
+
+        /*
+         * Receive data to interface FIFO
+         */
+        .m_axis_if_rx_tdata(axis_if_rx_fifo_tdata[n*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH]),
+        .m_axis_if_rx_tkeep(axis_if_rx_fifo_tkeep[n*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH]),
+        .m_axis_if_rx_tvalid(axis_if_rx_fifo_tvalid[n +: 1]),
+        .m_axis_if_rx_tready(axis_if_rx_fifo_tready[n +: 1]),
+        .m_axis_if_rx_tlast(axis_if_rx_fifo_tlast[n +: 1]),
+        .m_axis_if_rx_tuser(axis_if_rx_fifo_tuser[n*AXIS_SYNC_RX_USER_WIDTH +: AXIS_SYNC_RX_USER_WIDTH]),
 
         /*
          * Application section datapath interface (synchronous MAC interface)
@@ -3080,6 +3139,20 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .s_axis_app_sync_tx_cpl_valid(s_axis_app_sync_tx_cpl_valid[n +: 1]),
         .s_axis_app_sync_tx_cpl_ready(s_axis_app_sync_tx_cpl_ready[n +: 1]),
 
+        .m_axis_app_sync_rx_tdata(m_axis_app_sync_rx_tdata[n*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH]),
+        .m_axis_app_sync_rx_tkeep(m_axis_app_sync_rx_tkeep[n*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH]),
+        .m_axis_app_sync_rx_tvalid(m_axis_app_sync_rx_tvalid[n +: 1]),
+        .m_axis_app_sync_rx_tready(m_axis_app_sync_rx_tready[n +: 1]),
+        .m_axis_app_sync_rx_tlast(m_axis_app_sync_rx_tlast[n +: 1]),
+        .m_axis_app_sync_rx_tuser(m_axis_app_sync_rx_tuser[n*AXIS_SYNC_RX_USER_WIDTH +: AXIS_SYNC_RX_USER_WIDTH]),
+
+        .s_axis_app_sync_rx_tdata(s_axis_app_sync_rx_tdata[n*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH]),
+        .s_axis_app_sync_rx_tkeep(s_axis_app_sync_rx_tkeep[n*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH]),
+        .s_axis_app_sync_rx_tvalid(s_axis_app_sync_rx_tvalid[n +: 1]),
+        .s_axis_app_sync_rx_tready(s_axis_app_sync_rx_tready[n +: 1]),
+        .s_axis_app_sync_rx_tlast(s_axis_app_sync_rx_tlast[n +: 1]),
+        .s_axis_app_sync_rx_tuser(s_axis_app_sync_rx_tuser[n*AXIS_SYNC_RX_USER_WIDTH +: AXIS_SYNC_RX_USER_WIDTH]),
+
         /*
          * Application section datapath interface (direct MAC interface)
          */
@@ -3107,6 +3180,20 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .s_axis_app_direct_tx_cpl_valid(s_axis_app_direct_tx_cpl_valid[n +: 1]),
         .s_axis_app_direct_tx_cpl_ready(s_axis_app_direct_tx_cpl_ready[n +: 1]),
 
+        .m_axis_app_direct_rx_tdata(m_axis_app_direct_rx_tdata[n*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
+        .m_axis_app_direct_rx_tkeep(m_axis_app_direct_rx_tkeep[n*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
+        .m_axis_app_direct_rx_tvalid(m_axis_app_direct_rx_tvalid[n +: 1]),
+        .m_axis_app_direct_rx_tready(m_axis_app_direct_rx_tready[n +: 1]),
+        .m_axis_app_direct_rx_tlast(m_axis_app_direct_rx_tlast[n +: 1]),
+        .m_axis_app_direct_rx_tuser(m_axis_app_direct_rx_tuser[n*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH]),
+
+        .s_axis_app_direct_rx_tdata(s_axis_app_direct_rx_tdata[n*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
+        .s_axis_app_direct_rx_tkeep(s_axis_app_direct_rx_tkeep[n*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
+        .s_axis_app_direct_rx_tvalid(s_axis_app_direct_rx_tvalid[n +: 1]),
+        .s_axis_app_direct_rx_tready(s_axis_app_direct_rx_tready[n +: 1]),
+        .s_axis_app_direct_rx_tlast(s_axis_app_direct_rx_tlast[n +: 1]),
+        .s_axis_app_direct_rx_tuser(s_axis_app_direct_rx_tuser[n*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH]),
+
         /*
          * Transmit data output
          */
@@ -3123,79 +3210,9 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .s_axis_tx_cpl_ts(s_axis_tx_cpl_ts[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
         .s_axis_tx_cpl_tag(s_axis_tx_cpl_tag[n*TX_TAG_WIDTH +: TX_TAG_WIDTH]),
         .s_axis_tx_cpl_valid(s_axis_tx_cpl_valid[n +: 1]),
-        .s_axis_tx_cpl_ready(s_axis_tx_cpl_ready[n +: 1])
-    );
+        .s_axis_tx_cpl_ready(s_axis_tx_cpl_ready[n +: 1]),
 
-    mqnic_port_rx #(
-        // PTP configuration
-        .PTP_TS_WIDTH(PTP_TS_WIDTH),
-
-        // Interface configuration
-        .PTP_TS_ENABLE(PTP_TS_ENABLE),
-        .MAX_RX_SIZE(MAX_RX_SIZE),
-
-        // Application block configuration
-        .APP_AXIS_DIRECT_ENABLE(APP_AXIS_DIRECT_ENABLE),
-        .APP_AXIS_SYNC_ENABLE(APP_AXIS_SYNC_ENABLE),
-
-        // Streaming interface configuration
-        .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),
-        .AXIS_KEEP_WIDTH(AXIS_KEEP_WIDTH),
-        .AXIS_RX_USER_WIDTH(AXIS_RX_USER_WIDTH),
-        .AXIS_RX_USE_READY(AXIS_RX_USE_READY),
-        .AXIS_RX_PIPELINE(AXIS_RX_PIPELINE),
-        .AXIS_RX_FIFO_PIPELINE(AXIS_RX_FIFO_PIPELINE),
-        .AXIS_SYNC_DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
-        .AXIS_SYNC_KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
-        .AXIS_SYNC_RX_USER_WIDTH(AXIS_SYNC_RX_USER_WIDTH)
-    )
-    port_rx_inst (
-        .clk(clk),
-        .rst(rst),
-
-        /*
-         * Receive data to interface FIFO
-         */
-        .m_axis_if_rx_tdata(axis_if_rx_fifo_tdata[n*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH]),
-        .m_axis_if_rx_tkeep(axis_if_rx_fifo_tkeep[n*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH]),
-        .m_axis_if_rx_tvalid(axis_if_rx_fifo_tvalid[n +: 1]),
-        .m_axis_if_rx_tready(axis_if_rx_fifo_tready[n +: 1]),
-        .m_axis_if_rx_tlast(axis_if_rx_fifo_tlast[n +: 1]),
-        .m_axis_if_rx_tuser(axis_if_rx_fifo_tuser[n*AXIS_SYNC_RX_USER_WIDTH +: AXIS_SYNC_RX_USER_WIDTH]),
-
-        /*
-         * Application section datapath interface (synchronous MAC interface)
-         */
-        .m_axis_app_sync_rx_tdata(m_axis_app_sync_rx_tdata[n*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH]),
-        .m_axis_app_sync_rx_tkeep(m_axis_app_sync_rx_tkeep[n*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH]),
-        .m_axis_app_sync_rx_tvalid(m_axis_app_sync_rx_tvalid[n +: 1]),
-        .m_axis_app_sync_rx_tready(m_axis_app_sync_rx_tready[n +: 1]),
-        .m_axis_app_sync_rx_tlast(m_axis_app_sync_rx_tlast[n +: 1]),
-        .m_axis_app_sync_rx_tuser(m_axis_app_sync_rx_tuser[n*AXIS_SYNC_RX_USER_WIDTH +: AXIS_SYNC_RX_USER_WIDTH]),
-
-        .s_axis_app_sync_rx_tdata(s_axis_app_sync_rx_tdata[n*AXIS_SYNC_DATA_WIDTH +: AXIS_SYNC_DATA_WIDTH]),
-        .s_axis_app_sync_rx_tkeep(s_axis_app_sync_rx_tkeep[n*AXIS_SYNC_KEEP_WIDTH +: AXIS_SYNC_KEEP_WIDTH]),
-        .s_axis_app_sync_rx_tvalid(s_axis_app_sync_rx_tvalid[n +: 1]),
-        .s_axis_app_sync_rx_tready(s_axis_app_sync_rx_tready[n +: 1]),
-        .s_axis_app_sync_rx_tlast(s_axis_app_sync_rx_tlast[n +: 1]),
-        .s_axis_app_sync_rx_tuser(s_axis_app_sync_rx_tuser[n*AXIS_SYNC_RX_USER_WIDTH +: AXIS_SYNC_RX_USER_WIDTH]),
-
-        /*
-         * Application section datapath interface (direct MAC interface)
-         */
-        .m_axis_app_direct_rx_tdata(m_axis_app_direct_rx_tdata[n*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
-        .m_axis_app_direct_rx_tkeep(m_axis_app_direct_rx_tkeep[n*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
-        .m_axis_app_direct_rx_tvalid(m_axis_app_direct_rx_tvalid[n +: 1]),
-        .m_axis_app_direct_rx_tready(m_axis_app_direct_rx_tready[n +: 1]),
-        .m_axis_app_direct_rx_tlast(m_axis_app_direct_rx_tlast[n +: 1]),
-        .m_axis_app_direct_rx_tuser(m_axis_app_direct_rx_tuser[n*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH]),
-
-        .s_axis_app_direct_rx_tdata(s_axis_app_direct_rx_tdata[n*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH]),
-        .s_axis_app_direct_rx_tkeep(s_axis_app_direct_rx_tkeep[n*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH]),
-        .s_axis_app_direct_rx_tvalid(s_axis_app_direct_rx_tvalid[n +: 1]),
-        .s_axis_app_direct_rx_tready(s_axis_app_direct_rx_tready[n +: 1]),
-        .s_axis_app_direct_rx_tlast(s_axis_app_direct_rx_tlast[n +: 1]),
-        .s_axis_app_direct_rx_tuser(s_axis_app_direct_rx_tuser[n*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH]),
+        .tx_status(tx_status[n +: 1]),
 
         /*
          * Receive data input
@@ -3208,7 +3225,9 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .s_axis_rx_tvalid(s_axis_rx_tvalid[n +: 1]),
         .s_axis_rx_tready(s_axis_rx_tready[n +: 1]),
         .s_axis_rx_tlast(s_axis_rx_tlast[n +: 1]),
-        .s_axis_rx_tuser(s_axis_rx_tuser[n*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH])
+        .s_axis_rx_tuser(s_axis_rx_tuser[n*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH]),
+
+        .rx_status(rx_status[n +: 1])
     );
 
 end

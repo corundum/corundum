@@ -295,6 +295,8 @@ module fpga_core #
     input  wire                               qsfp0_rx_ptp_rst,
     output wire [79:0]                        qsfp0_rx_ptp_time,
 
+    input  wire                               qsfp0_rx_status,
+
     input  wire                               qsfp1_tx_clk,
     input  wire                               qsfp1_tx_rst,
 
@@ -310,8 +312,6 @@ module fpga_core #
     input  wire [15:0]                        qsfp1_tx_ptp_ts_tag,
     input  wire                               qsfp1_tx_ptp_ts_valid,
 
-    input  wire                               qsfp1_rx_ptp_clk,
-    input  wire                               qsfp1_rx_ptp_rst,
     input  wire                               qsfp1_rx_clk,
     input  wire                               qsfp1_rx_rst,
 
@@ -321,7 +321,11 @@ module fpga_core #
     input  wire                               qsfp1_rx_axis_tlast,
     input  wire [80+1-1:0]                    qsfp1_rx_axis_tuser,
 
+    input  wire                               qsfp1_rx_ptp_clk,
+    input  wire                               qsfp1_rx_ptp_rst,
     output wire [79:0]                        qsfp1_rx_ptp_time,
+
+    input  wire                               qsfp1_rx_status,
 
     /*
      * QSPI flash
@@ -568,6 +572,8 @@ wire [PORT_COUNT*TX_TAG_WIDTH-1:0]            axis_eth_tx_ptp_ts_tag;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_valid;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_ready;
 
+wire [PORT_COUNT-1:0]                         eth_tx_status;
+
 wire [PORT_COUNT-1:0]                         eth_rx_clk;
 wire [PORT_COUNT-1:0]                         eth_rx_rst;
 
@@ -582,6 +588,8 @@ wire [PORT_COUNT-1:0]                         axis_eth_rx_tvalid;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tready;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tlast;
 wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  axis_eth_rx_tuser;
+
+wire [PORT_COUNT-1:0]                         eth_rx_status;
 
 wire [PTP_TS_WIDTH-1:0] qsfp0_tx_ptp_time_int;
 wire [PTP_TS_WIDTH-1:0] qsfp1_tx_ptp_time_int;
@@ -630,6 +638,8 @@ mqnic_port_map_mac_axis_inst (
     .s_axis_mac_tx_ptp_ts_valid({qsfp1_tx_ptp_ts_valid, qsfp0_tx_ptp_ts_valid}),
     .s_axis_mac_tx_ptp_ts_ready(),
 
+    .mac_tx_status(2'b11),
+
     .mac_rx_clk({qsfp1_rx_clk, qsfp0_rx_clk}),
     .mac_rx_rst({qsfp1_rx_rst, qsfp0_rx_rst}),
 
@@ -644,6 +654,8 @@ mqnic_port_map_mac_axis_inst (
     .s_axis_mac_rx_tready(),
     .s_axis_mac_rx_tlast({qsfp1_rx_axis_tlast, qsfp0_rx_axis_tlast}),
     .s_axis_mac_rx_tuser({{qsfp1_rx_axis_tuser[80:1], 16'd0, qsfp1_rx_axis_tuser[0]}, {qsfp0_rx_axis_tuser[80:1], 16'd0, qsfp0_rx_axis_tuser[0]}}),
+
+    .mac_rx_status({qsfp1_rx_status, qsfp0_rx_status}),
 
     // towards datapath
     .tx_clk(eth_tx_clk),
@@ -664,6 +676,8 @@ mqnic_port_map_mac_axis_inst (
     .m_axis_tx_ptp_ts_valid(axis_eth_tx_ptp_ts_valid),
     .m_axis_tx_ptp_ts_ready(axis_eth_tx_ptp_ts_ready),
 
+    .tx_status(eth_tx_status),
+
     .rx_clk(eth_rx_clk),
     .rx_rst(eth_rx_rst),
 
@@ -677,7 +691,9 @@ mqnic_port_map_mac_axis_inst (
     .m_axis_rx_tvalid(axis_eth_rx_tvalid),
     .m_axis_rx_tready(axis_eth_rx_tready),
     .m_axis_rx_tlast(axis_eth_rx_tlast),
-    .m_axis_rx_tuser(axis_eth_rx_tuser)
+    .m_axis_rx_tuser(axis_eth_rx_tuser),
+
+    .rx_status(eth_rx_status)
 );
 
 mqnic_core_pcie_us #(
@@ -1005,6 +1021,8 @@ core_inst (
     .s_axis_eth_tx_cpl_valid(axis_eth_tx_ptp_ts_valid),
     .s_axis_eth_tx_cpl_ready(axis_eth_tx_ptp_ts_ready),
 
+    .eth_tx_status(eth_tx_status),
+
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),
 
@@ -1019,6 +1037,8 @@ core_inst (
     .s_axis_eth_rx_tready(axis_eth_rx_tready),
     .s_axis_eth_rx_tlast(axis_eth_rx_tlast),
     .s_axis_eth_rx_tuser(axis_eth_rx_tuser),
+
+    .eth_rx_status(eth_rx_status),
 
     /*
      * Statistics input

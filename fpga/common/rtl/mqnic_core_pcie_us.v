@@ -367,6 +367,8 @@ module mqnic_core_pcie_us #
     input  wire [PORT_COUNT-1:0]                         s_axis_eth_tx_cpl_valid,
     output wire [PORT_COUNT-1:0]                         s_axis_eth_tx_cpl_ready,
 
+    input  wire [PORT_COUNT-1:0]                         eth_tx_status,
+
     input  wire [PORT_COUNT-1:0]                         eth_rx_clk,
     input  wire [PORT_COUNT-1:0]                         eth_rx_rst,
 
@@ -381,6 +383,8 @@ module mqnic_core_pcie_us #
     output wire [PORT_COUNT-1:0]                         s_axis_eth_rx_tready,
     input  wire [PORT_COUNT-1:0]                         s_axis_eth_rx_tlast,
     input  wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  s_axis_eth_rx_tuser,
+
+    input  wire [PORT_COUNT-1:0]                         eth_rx_status,
 
     /*
      * Statistics increment input
@@ -991,6 +995,8 @@ core_pcie_inst (
     .s_axis_tx_cpl_valid(s_axis_eth_tx_cpl_valid),
     .s_axis_tx_cpl_ready(s_axis_eth_tx_cpl_ready),
 
+    .tx_status(eth_tx_status),
+
     .rx_clk(eth_rx_clk),
     .rx_rst(eth_rx_rst),
 
@@ -1005,6 +1011,8 @@ core_pcie_inst (
     .s_axis_rx_tready(s_axis_eth_rx_tready),
     .s_axis_rx_tlast(s_axis_eth_rx_tlast),
     .s_axis_rx_tuser(s_axis_eth_rx_tuser),
+
+    .rx_status(eth_rx_status),
 
     /*
      * Statistics input

@@ -287,6 +287,8 @@ class TB(object):
             ifg=12, speed=100e9
         )
 
+        dut.qsfp_rx_status.setimmediatevalue(1)
+
         dut.qspi_dq_i.setimmediatevalue(0)
 
         self.cms_ram = AxiLiteRam(AxiLiteBus.from_prefix(dut, "m_axil_cms"), dut.m_axil_cms_clk, dut.m_axil_cms_rst, size=256*1024)
@@ -530,12 +532,13 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "mqnic_interface.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_tx.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_rx.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_tx.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "common", "mqnic_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_ingress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_ingress.v"),
-        os.path.join(rtl_dir, "common", "mqnic_port_tx.v"),
-        os.path.join(rtl_dir, "common", "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "common", "mqnic_rx_queue_map.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_clock.v"),

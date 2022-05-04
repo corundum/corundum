@@ -70,7 +70,7 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 
 	dev_info(dev, "Interface-level register blocks:");
 	for (rb = interface->rb_list; rb->regs; rb++)
-		dev_info(dev, " type 0x%08x (v %d.%d.%d.%d)", rb->type, rb->version >> 24, 
+		dev_info(dev, " type 0x%08x (v %d.%d.%d.%d)", rb->type, rb->version >> 24,
 				(rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
 	interface->if_ctrl_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_IF_CTRL_TYPE, MQNIC_RB_IF_CTRL_VER, 0);
@@ -252,6 +252,22 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 			goto fail;
 	}
 
+	// create ports
+	for (k = 0; k < interface->port_count; k++) {
+		struct mqnic_reg_block *port_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_PORT_TYPE, MQNIC_RB_PORT_VER, k);
+
+		if (!port_rb) {
+			ret = -EIO;
+			dev_err(dev, "Port index %d not found", k);
+			goto fail;
+		}
+
+		ret = mqnic_create_port(interface, &interface->port[k],
+				k, port_rb);
+		if (ret)
+			goto fail;
+	}
+
 	// create schedulers
 	for (k = 0; k < interface->sched_block_count; k++) {
 		struct mqnic_reg_block *sched_block_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, k);
@@ -321,6 +337,11 @@ void mqnic_destroy_interface(struct mqnic_if **interface_ptr)
 	for (k = 0; k < ARRAY_SIZE(interface->sched_block); k++)
 		if (interface->sched_block[k])
 			mqnic_destroy_sched_block(&interface->sched_block[k]);
+
+	// free ports
+	for (k = 0; k < ARRAY_SIZE(interface->port); k++)
+		if (interface->port[k])
+			mqnic_destroy_port(&interface->port[k]);
 
 	if (interface->rb_list)
 		mqnic_free_reg_block_list(interface->rb_list);

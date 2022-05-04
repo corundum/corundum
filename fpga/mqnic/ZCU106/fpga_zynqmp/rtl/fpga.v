@@ -932,6 +932,7 @@ core_inst (
     .sfp0_rxc(sfp0_rxc_int),
     .sfp0_rx_prbs31_enable(sfp0_rx_prbs31_enable_int),
     .sfp0_rx_error_count(sfp0_rx_error_count_int),
+    .sfp0_rx_status(sfp0_rx_block_lock),
     .sfp0_tx_disable_b(sfp0_tx_disable_b),
 
     .sfp1_tx_clk(sfp1_tx_clk_int),
@@ -945,6 +946,7 @@ core_inst (
     .sfp1_rxc(sfp1_rxc_int),
     .sfp1_rx_prbs31_enable(sfp1_rx_prbs31_enable_int),
     .sfp1_rx_error_count(sfp1_rx_error_count_int),
+    .sfp1_rx_status(sfp1_rx_block_lock),
     .sfp1_tx_disable_b(sfp1_tx_disable_b),
 
     .sfp_drp_clk(sfp_drp_clk),

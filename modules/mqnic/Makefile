@@ -7,6 +7,7 @@ mqnic-y += mqnic_reg_block.o
 mqnic-y += mqnic_irq.o
 mqnic-y += mqnic_dev.o
 mqnic-y += mqnic_if.o
+mqnic-y += mqnic_port.o
 mqnic-y += mqnic_netdev.o
 mqnic-y += mqnic_sched_block.o
 mqnic-y += mqnic_scheduler.o

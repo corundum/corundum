@@ -347,6 +347,19 @@ struct mqnic_sched {
 	u8 __iomem *hw_addr;
 };
 
+struct mqnic_port {
+	struct device *dev;
+	struct mqnic_if *interface;
+
+	struct mqnic_reg_block *port_rb;
+	struct mqnic_reg_block *rb_list;
+	struct mqnic_reg_block *port_ctrl_rb;
+
+	int index;
+
+	u32 port_features;
+};
+
 struct mqnic_sched_block {
 	struct device *dev;
 	struct mqnic_if *interface;
@@ -412,8 +425,9 @@ struct mqnic_if {
 	struct mqnic_cq_ring *rx_cpl_ring[MQNIC_MAX_RX_CPL_RINGS];
 
 	u32 port_count;
-	u32 sched_block_count;
+	struct mqnic_port *port[MQNIC_MAX_PORTS];
 
+	u32 sched_block_count;
 	struct mqnic_sched_block *sched_block[MQNIC_MAX_PORTS];
 
 	u32 max_desc_block_size;
@@ -496,6 +510,13 @@ u32 mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, int po
 void mqnic_interface_set_rx_queue_map_rss_mask(struct mqnic_if *interface, int port, u32 val);
 u32 mqnic_interface_get_rx_queue_map_app_mask(struct mqnic_if *interface, int port);
 void mqnic_interface_set_rx_queue_map_app_mask(struct mqnic_if *interface, int port, u32 val);
+
+// mqnic_port.c
+int mqnic_create_port(struct mqnic_if *interface, struct mqnic_port **port_ptr,
+		int index, struct mqnic_reg_block *port_rb);
+void mqnic_destroy_port(struct mqnic_port **port_ptr);
+u32 mqnic_port_get_tx_status(struct mqnic_port *port);
+u32 mqnic_port_get_rx_status(struct mqnic_port *port);
 
 // mqnic_netdev.c
 void mqnic_update_stats(struct net_device *ndev);

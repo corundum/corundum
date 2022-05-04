@@ -289,6 +289,11 @@ class TB(object):
         cocotb.start_soon(Clock(dut.qsfp_tx_clk_4, 2.56, units="ns").start())
         self.qsfp_4_sink = XgmiiSink(dut.qsfp_txd_4, dut.qsfp_txc_4, dut.qsfp_tx_clk_4, dut.qsfp_tx_rst_4)
 
+        dut.qsfp_rx_status_1.setimmediatevalue(1)
+        dut.qsfp_rx_status_2.setimmediatevalue(1)
+        dut.qsfp_rx_status_3.setimmediatevalue(1)
+        dut.qsfp_rx_status_4.setimmediatevalue(1)
+
         cocotb.start_soon(Clock(dut.qsfp_drp_clk, 8, units="ns").start())
         dut.qsfp_drp_rst.setimmediatevalue(0)
         dut.qsfp_drp_do.setimmediatevalue(0)
@@ -546,12 +551,13 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "mqnic_interface.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_tx.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_rx.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_tx.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "common", "mqnic_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_ingress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_ingress.v"),
-        os.path.join(rtl_dir, "common", "mqnic_port_tx.v"),
-        os.path.join(rtl_dir, "common", "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "common", "mqnic_rx_queue_map.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_clock.v"),

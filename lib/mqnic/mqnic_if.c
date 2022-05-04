@@ -163,6 +163,22 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
         goto fail;
     }
 
+    for (int k = 0; k < interface->port_count; k++)
+    {
+        struct mqnic_reg_block *port_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_PORT_TYPE, MQNIC_RB_PORT_VER, k);
+        struct mqnic_port *port;
+
+        if (!port_rb)
+            goto fail;
+
+        port = mqnic_port_open(interface, k, port_rb);
+
+        if (!port)
+            goto fail;
+
+        interface->ports[k] = port;
+    }
+
     for (int k = 0; k < interface->sched_block_count; k++)
     {
         struct mqnic_reg_block *sched_block_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, k);
@@ -198,6 +214,15 @@ void mqnic_if_close(struct mqnic_if *interface)
 
         mqnic_sched_block_close(interface->sched_blocks[k]);
         interface->sched_blocks[k] = NULL;
+    }
+
+    for (int k = 0; k < interface->port_count; k++)
+    {
+        if (!interface->ports[k])
+            continue;
+
+        mqnic_port_close(interface->ports[k]);
+        interface->ports[k] = NULL;
     }
 
     if (interface->rb_list)

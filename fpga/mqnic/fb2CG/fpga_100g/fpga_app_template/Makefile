@@ -16,12 +16,13 @@ SYN_FILES += rtl/common/mqnic_core.v
 SYN_FILES += rtl/common/mqnic_interface.v
 SYN_FILES += rtl/common/mqnic_interface_tx.v
 SYN_FILES += rtl/common/mqnic_interface_rx.v
+SYN_FILES += rtl/common/mqnic_port.v
+SYN_FILES += rtl/common/mqnic_port_tx.v
+SYN_FILES += rtl/common/mqnic_port_rx.v
 SYN_FILES += rtl/common/mqnic_egress.v
 SYN_FILES += rtl/common/mqnic_ingress.v
 SYN_FILES += rtl/common/mqnic_l2_egress.v
 SYN_FILES += rtl/common/mqnic_l2_ingress.v
-SYN_FILES += rtl/common/mqnic_port_tx.v
-SYN_FILES += rtl/common/mqnic_port_rx.v
 SYN_FILES += rtl/common/mqnic_rx_queue_map.v
 SYN_FILES += rtl/common/mqnic_ptp.v
 SYN_FILES += rtl/common/mqnic_ptp_clock.v
@@ -113,6 +114,7 @@ XDC_FILES += led.tcl
 XDC_FILES += lib/axis/syn/vivado/axis_async_fifo.tcl
 XDC_FILES += lib/axis/syn/vivado/sync_reset.tcl
 XDC_FILES += lib/eth/syn/vivado/ptp_clock_cdc.tcl
+XDC_FILES += ../../../common/syn/vivado/mqnic_port.tcl
 
 # IP
 IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl

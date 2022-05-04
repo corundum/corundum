@@ -305,6 +305,7 @@ module fpga_core #
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_0_rxc_0,
     output wire                               qsfp_0_rx_prbs31_enable_0,
     input  wire [6:0]                         qsfp_0_rx_error_count_0,
+    input  wire                               qsfp_0_rx_status_0,
     input  wire                               qsfp_0_tx_clk_1,
     input  wire                               qsfp_0_tx_rst_1,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_0_txd_1,
@@ -316,6 +317,7 @@ module fpga_core #
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_0_rxc_1,
     output wire                               qsfp_0_rx_prbs31_enable_1,
     input  wire [6:0]                         qsfp_0_rx_error_count_1,
+    input  wire                               qsfp_0_rx_status_1,
     input  wire                               qsfp_0_tx_clk_2,
     input  wire                               qsfp_0_tx_rst_2,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_0_txd_2,
@@ -327,6 +329,7 @@ module fpga_core #
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_0_rxc_2,
     output wire                               qsfp_0_rx_prbs31_enable_2,
     input  wire [6:0]                         qsfp_0_rx_error_count_2,
+    input  wire                               qsfp_0_rx_status_2,
     input  wire                               qsfp_0_tx_clk_3,
     input  wire                               qsfp_0_tx_rst_3,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_0_txd_3,
@@ -338,6 +341,7 @@ module fpga_core #
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_0_rxc_3,
     output wire                               qsfp_0_rx_prbs31_enable_3,
     input  wire [6:0]                         qsfp_0_rx_error_count_3,
+    input  wire                               qsfp_0_rx_status_3,
 
     input  wire                               qsfp_0_drp_clk,
     input  wire                               qsfp_0_drp_rst,
@@ -370,6 +374,7 @@ module fpga_core #
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_1_rxc_0,
     output wire                               qsfp_1_rx_prbs31_enable_0,
     input  wire [6:0]                         qsfp_1_rx_error_count_0,
+    input  wire                               qsfp_1_rx_status_0,
     input  wire                               qsfp_1_tx_clk_1,
     input  wire                               qsfp_1_tx_rst_1,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_1_txd_1,
@@ -381,6 +386,7 @@ module fpga_core #
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_1_rxc_1,
     output wire                               qsfp_1_rx_prbs31_enable_1,
     input  wire [6:0]                         qsfp_1_rx_error_count_1,
+    input  wire                               qsfp_1_rx_status_1,
     input  wire                               qsfp_1_tx_clk_2,
     input  wire                               qsfp_1_tx_rst_2,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_1_txd_2,
@@ -392,6 +398,7 @@ module fpga_core #
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_1_rxc_2,
     output wire                               qsfp_1_rx_prbs31_enable_2,
     input  wire [6:0]                         qsfp_1_rx_error_count_2,
+    input  wire                               qsfp_1_rx_status_2,
     input  wire                               qsfp_1_tx_clk_3,
     input  wire                               qsfp_1_tx_rst_3,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_1_txd_3,
@@ -403,6 +410,7 @@ module fpga_core #
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_1_rxc_3,
     output wire                               qsfp_1_rx_prbs31_enable_3,
     input  wire [6:0]                         qsfp_1_rx_error_count_3,
+    input  wire                               qsfp_1_rx_status_3,
 
     input  wire                               qsfp_1_drp_clk,
     input  wire                               qsfp_1_drp_rst,
@@ -943,6 +951,8 @@ wire [PORT_COUNT*TX_TAG_WIDTH-1:0]            axis_eth_tx_ptp_ts_tag;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_valid;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_ready;
 
+wire [PORT_COUNT-1:0]                         eth_tx_status;
+
 wire [PORT_COUNT-1:0]                         eth_rx_clk;
 wire [PORT_COUNT-1:0]                         eth_rx_rst;
 
@@ -955,6 +965,8 @@ wire [PORT_COUNT-1:0]                         axis_eth_rx_tvalid;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tready;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tlast;
 wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  axis_eth_rx_tuser;
+
+wire [PORT_COUNT-1:0]                         eth_rx_status;
 
 wire [PORT_COUNT-1:0]                   port_xgmii_tx_clk;
 wire [PORT_COUNT-1:0]                   port_xgmii_tx_rst;
@@ -985,22 +997,26 @@ mqnic_port_map_phy_xgmii_inst (
     .phy_xgmii_tx_rst({qsfp_1_tx_rst_3, qsfp_1_tx_rst_2, qsfp_1_tx_rst_1, qsfp_1_tx_rst_0, qsfp_0_tx_rst_3, qsfp_0_tx_rst_2, qsfp_0_tx_rst_1, qsfp_0_tx_rst_0}),
     .phy_xgmii_txd({qsfp_1_txd_3, qsfp_1_txd_2, qsfp_1_txd_1, qsfp_1_txd_0, qsfp_0_txd_3, qsfp_0_txd_2, qsfp_0_txd_1, qsfp_0_txd_0}),
     .phy_xgmii_txc({qsfp_1_txc_3, qsfp_1_txc_2, qsfp_1_txc_1, qsfp_1_txc_0, qsfp_0_txc_3, qsfp_0_txc_2, qsfp_0_txc_1, qsfp_0_txc_0}),
+    .phy_tx_status(8'hff),
 
     .phy_xgmii_rx_clk({qsfp_1_rx_clk_3, qsfp_1_rx_clk_2, qsfp_1_rx_clk_1, qsfp_1_rx_clk_0, qsfp_0_rx_clk_3, qsfp_0_rx_clk_2, qsfp_0_rx_clk_1, qsfp_0_rx_clk_0}),
     .phy_xgmii_rx_rst({qsfp_1_rx_rst_3, qsfp_1_rx_rst_2, qsfp_1_rx_rst_1, qsfp_1_rx_rst_0, qsfp_0_rx_rst_3, qsfp_0_rx_rst_2, qsfp_0_rx_rst_1, qsfp_0_rx_rst_0}),
     .phy_xgmii_rxd({qsfp_1_rxd_3, qsfp_1_rxd_2, qsfp_1_rxd_1, qsfp_1_rxd_0, qsfp_0_rxd_3, qsfp_0_rxd_2, qsfp_0_rxd_1, qsfp_0_rxd_0}),
     .phy_xgmii_rxc({qsfp_1_rxc_3, qsfp_1_rxc_2, qsfp_1_rxc_1, qsfp_1_rxc_0, qsfp_0_rxc_3, qsfp_0_rxc_2, qsfp_0_rxc_1, qsfp_0_rxc_0}),
+    .phy_rx_status({qsfp_1_rx_status_3, qsfp_1_rx_status_2, qsfp_1_rx_status_1, qsfp_1_rx_status_0, qsfp_0_rx_status_3, qsfp_0_rx_status_2, qsfp_0_rx_status_1, qsfp_0_rx_status_0}),
 
     // towards MAC
     .port_xgmii_tx_clk(port_xgmii_tx_clk),
     .port_xgmii_tx_rst(port_xgmii_tx_rst),
     .port_xgmii_txd(port_xgmii_txd),
     .port_xgmii_txc(port_xgmii_txc),
+    .port_tx_status(eth_tx_status),
 
     .port_xgmii_rx_clk(port_xgmii_rx_clk),
     .port_xgmii_rx_rst(port_xgmii_rx_rst),
     .port_xgmii_rxd(port_xgmii_rxd),
-    .port_xgmii_rxc(port_xgmii_rxc)
+    .port_xgmii_rxc(port_xgmii_rxc),
+    .port_rx_status(eth_rx_status)
 );
 
 generate
@@ -1396,6 +1412,8 @@ core_inst (
     .s_axis_eth_tx_cpl_valid(axis_eth_tx_ptp_ts_valid),
     .s_axis_eth_tx_cpl_ready(axis_eth_tx_ptp_ts_ready),
 
+    .eth_tx_status(eth_tx_status),
+
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),
 
@@ -1410,6 +1428,8 @@ core_inst (
     .s_axis_eth_rx_tready(axis_eth_rx_tready),
     .s_axis_eth_rx_tlast(axis_eth_rx_tlast),
     .s_axis_eth_rx_tuser(axis_eth_rx_tuser),
+
+    .eth_rx_status(eth_rx_status),
 
     /*
      * Statistics input

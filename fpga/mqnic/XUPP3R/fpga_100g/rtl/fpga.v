@@ -2779,6 +2779,8 @@ core_inst (
     .qsfp0_rx_ptp_rst(qsfp0_rx_ptp_rst_int),
     .qsfp0_rx_ptp_time(qsfp0_rx_ptp_time_int),
 
+    .qsfp0_rx_status(qsfp0_rx_status),
+
     .qsfp0_modprsl(qsfp0_modprsl_int),
     .qsfp0_resetl(qsfp0_resetl),
     .qsfp0_intl(qsfp0_intl_int),
@@ -2814,6 +2816,8 @@ core_inst (
     .qsfp1_rx_ptp_clk(qsfp1_rx_ptp_clk_int),
     .qsfp1_rx_ptp_rst(qsfp1_rx_ptp_rst_int),
     .qsfp1_rx_ptp_time(qsfp1_rx_ptp_time_int),
+
+    .qsfp1_rx_status(qsfp1_rx_status),
 
     .qsfp1_modprsl(qsfp1_modprsl_int),
     .qsfp1_resetl(qsfp1_resetl),
@@ -2851,6 +2855,8 @@ core_inst (
     .qsfp2_rx_ptp_rst(qsfp2_rx_ptp_rst_int),
     .qsfp2_rx_ptp_time(qsfp2_rx_ptp_time_int),
 
+    .qsfp2_rx_status(qsfp2_rx_status),
+
     .qsfp2_modprsl(qsfp2_modprsl_int),
     .qsfp2_resetl(qsfp2_resetl),
     .qsfp2_intl(qsfp2_intl_int),
@@ -2886,6 +2892,8 @@ core_inst (
     .qsfp3_rx_ptp_clk(qsfp3_rx_ptp_clk_int),
     .qsfp3_rx_ptp_rst(qsfp3_rx_ptp_rst_int),
     .qsfp3_rx_ptp_time(qsfp3_rx_ptp_time_int),
+
+    .qsfp3_rx_status(qsfp3_rx_status),
 
     .qsfp3_modprsl(qsfp3_modprsl_int),
     .qsfp3_resetl(qsfp3_resetl),

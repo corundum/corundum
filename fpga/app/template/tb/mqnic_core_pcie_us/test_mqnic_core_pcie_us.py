@@ -300,19 +300,22 @@ class TB(object):
                 mac = EthMac(
                     tx_clk=iface.port[k].port_tx_clk,
                     tx_rst=iface.port[k].port_tx_rst,
-                    tx_bus=AxiStreamBus.from_prefix(iface.interface_inst.port[k].port_tx_inst, "m_axis_tx"),
+                    tx_bus=AxiStreamBus.from_prefix(iface.interface_inst.port[k].port_inst.port_tx_inst, "m_axis_tx"),
                     tx_ptp_time=iface.port[k].port_tx_ptp_ts_96,
-                    tx_ptp_ts=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_cpl_ts,
-                    tx_ptp_ts_tag=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_cpl_tag,
-                    tx_ptp_ts_valid=iface.interface_inst.port[k].port_tx_inst.s_axis_tx_cpl_valid,
+                    tx_ptp_ts=iface.interface_inst.port[k].port_inst.port_tx_inst.s_axis_tx_cpl_ts,
+                    tx_ptp_ts_tag=iface.interface_inst.port[k].port_inst.port_tx_inst.s_axis_tx_cpl_tag,
+                    tx_ptp_ts_valid=iface.interface_inst.port[k].port_inst.port_tx_inst.s_axis_tx_cpl_valid,
                     rx_clk=iface.port[k].port_rx_clk,
                     rx_rst=iface.port[k].port_rx_rst,
-                    rx_bus=AxiStreamBus.from_prefix(iface.interface_inst.port[k].port_rx_inst, "s_axis_rx"),
+                    rx_bus=AxiStreamBus.from_prefix(iface.interface_inst.port[k].port_inst.port_rx_inst, "s_axis_rx"),
                     rx_ptp_time=iface.port[k].port_rx_ptp_ts_96,
                     ifg=12, speed=eth_speed
                 )
 
                 self.port_mac.append(mac)
+
+        dut.eth_tx_status.setimmediatevalue(2**len(dut.core_pcie_inst.core_inst.m_axis_tx_tvalid)-1)
+        dut.eth_rx_status.setimmediatevalue(2**len(dut.core_pcie_inst.core_inst.m_axis_tx_tvalid)-1)
 
         dut.ctrl_reg_wr_wait.setimmediatevalue(0)
         dut.ctrl_reg_wr_ack.setimmediatevalue(0)
@@ -660,12 +663,13 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
         os.path.join(rtl_dir, "common", "mqnic_interface.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_tx.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_rx.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_tx.v"),
+        os.path.join(rtl_dir, "common", "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "common", "mqnic_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_ingress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_egress.v"),
         os.path.join(rtl_dir, "common", "mqnic_l2_ingress.v"),
-        os.path.join(rtl_dir, "common", "mqnic_port_tx.v"),
-        os.path.join(rtl_dir, "common", "mqnic_port_rx.v"),
         os.path.join(rtl_dir, "common", "mqnic_rx_queue_map.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_clock.v"),

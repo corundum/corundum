@@ -4,16 +4,16 @@
 Scheduler block register block
 ==============================
 
-The scheduler block register block has a header with type 0x0000C003, version 0x00000100, and indicates the offset to the scheduler block control registers.
+The scheduler block register block has a header with type 0x0000C004, version 0x00000300, and indicates the offset to the scheduler block control registers.
 
 .. table::
 
     ========  =============  ======  ======  ======  ======  =============
     Address   Field          31..24  23..16  15..8   7..0    Reset value
     ========  =============  ======  ======  ======  ======  =============
-    RBB+0x00  Type           Vendor ID       Type            RO 0x0000C003
+    RBB+0x00  Type           Vendor ID       Type            RO 0x0000C004
     --------  -------------  --------------  --------------  -------------
-    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000100
+    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000300
     --------  -------------  ------  ------  ------  ------  -------------
     RBB+0x08  Next pointer   Pointer to next register block  RO -
     --------  -------------  ------------------------------  -------------

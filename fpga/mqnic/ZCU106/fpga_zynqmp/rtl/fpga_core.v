@@ -299,6 +299,7 @@ module fpga_core #
     input  wire [7:0]                           sfp0_rxc,
     output wire                                 sfp0_rx_prbs31_enable,
     input  wire [6:0]                           sfp0_rx_error_count,
+    input  wire                                 sfp0_rx_status,
     output wire                                 sfp0_tx_disable_b,
 
     input  wire                                 sfp1_tx_clk,
@@ -312,16 +313,17 @@ module fpga_core #
     input  wire [7:0]                           sfp1_rxc,
     output wire                                 sfp1_rx_prbs31_enable,
     input  wire [6:0]                           sfp1_rx_error_count,
+    input  wire                                 sfp1_rx_status,
     output wire                                 sfp1_tx_disable_b,
 
-    input  wire                               sfp_drp_clk,
-    input  wire                               sfp_drp_rst,
-    output wire [23:0]                        sfp_drp_addr,
-    output wire [15:0]                        sfp_drp_di,
-    output wire                               sfp_drp_en,
-    output wire                               sfp_drp_we,
-    input  wire [15:0]                        sfp_drp_do,
-    input  wire                               sfp_drp_rdy
+    input  wire                                 sfp_drp_clk,
+    input  wire                                 sfp_drp_rst,
+    output wire [23:0]                          sfp_drp_addr,
+    output wire [15:0]                          sfp_drp_di,
+    output wire                                 sfp_drp_en,
+    output wire                                 sfp_drp_we,
+    input  wire [15:0]                          sfp_drp_do,
+    input  wire                                 sfp_drp_rdy
 );
 
 parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF;
@@ -579,6 +581,8 @@ wire [PORT_COUNT*TX_TAG_WIDTH-1:0]            axis_eth_tx_ptp_ts_tag;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_valid;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_ready;
 
+wire [PORT_COUNT-1:0]                         eth_tx_status;
+
 wire [PORT_COUNT-1:0]                         eth_rx_clk;
 wire [PORT_COUNT-1:0]                         eth_rx_rst;
 
@@ -591,6 +595,8 @@ wire [PORT_COUNT-1:0]                         axis_eth_rx_tvalid;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tready;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tlast;
 wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  axis_eth_rx_tuser;
+
+wire [PORT_COUNT-1:0]                         eth_rx_status;
 
 wire [PORT_COUNT-1:0]                   port_xgmii_tx_clk;
 wire [PORT_COUNT-1:0]                   port_xgmii_tx_rst;
@@ -621,22 +627,26 @@ mqnic_port_map_phy_xgmii_inst (
     .phy_xgmii_tx_rst({sfp1_tx_rst, sfp0_tx_rst}),
     .phy_xgmii_txd({sfp1_txd, sfp0_txd}),
     .phy_xgmii_txc({sfp1_txc, sfp0_txc}),
+    .phy_tx_status(2'b11),
 
     .phy_xgmii_rx_clk({sfp1_rx_clk, sfp0_rx_clk}),
     .phy_xgmii_rx_rst({sfp1_rx_rst, sfp0_rx_rst}),
     .phy_xgmii_rxd({sfp1_rxd, sfp0_rxd}),
     .phy_xgmii_rxc({sfp1_rxc, sfp0_rxc}),
+    .phy_rx_status({sfp1_rx_status, sfp0_rx_status}),
 
     // towards MAC
     .port_xgmii_tx_clk(port_xgmii_tx_clk),
     .port_xgmii_tx_rst(port_xgmii_tx_rst),
     .port_xgmii_txd(port_xgmii_txd),
     .port_xgmii_txc(port_xgmii_txc),
+    .port_tx_status(eth_tx_status),
 
     .port_xgmii_rx_clk(port_xgmii_rx_clk),
     .port_xgmii_rx_rst(port_xgmii_rx_rst),
     .port_xgmii_rxd(port_xgmii_rxd),
-    .port_xgmii_rxc(port_xgmii_rxc)
+    .port_xgmii_rxc(port_xgmii_rxc),
+    .port_rx_status(eth_rx_status)
 );
 
 generate
@@ -1008,6 +1018,8 @@ core_inst (
     .s_axis_tx_cpl_valid(axis_eth_tx_ptp_ts_valid),
     .s_axis_tx_cpl_ready(axis_eth_tx_ptp_ts_ready),
 
+    .tx_status(eth_tx_status),
+
     .rx_clk(eth_rx_clk),
     .rx_rst(eth_rx_rst),
 
@@ -1022,6 +1034,8 @@ core_inst (
     .s_axis_rx_tready(axis_eth_rx_tready),
     .s_axis_rx_tlast(axis_eth_rx_tlast),
     .s_axis_rx_tuser(axis_eth_rx_tuser),
+
+    .rx_status(eth_rx_status),
 
     /*
      * Statistics input

@@ -128,14 +128,20 @@ int main(int argc, char *argv[])
     if (dev->phc_rb)
     {
         int ch;
+        uint32_t ns;
+        uint32_t fns;
 
         printf("PHC time: %ld.%09d s\n", mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_SEC_L) +
                 (((int64_t)mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_SEC_H)) << 32),
                 mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_NS));
-        printf("PHC period:     %d ns 0x%08x fns\n", mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_PERIOD_NS),
-                mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_PERIOD_FNS));
-        printf("PHC nom period: %d ns 0x%08x fns\n", mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_NOM_PERIOD_NS),
-                mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_NOM_PERIOD_FNS));
+
+        ns = mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_PERIOD_NS);
+        fns = mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_PERIOD_FNS);
+        printf("PHC period:     %d.%09ld ns (raw 0x%x ns 0x%08x fns)\n", ns, ((uint64_t)fns * 1000000000) >> 32, ns, fns);
+
+        ns = mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_NOM_PERIOD_NS);
+        fns = mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_NOM_PERIOD_FNS);
+        printf("PHC nom period: %d.%09ld ns (raw 0x%x ns 0x%08x fns)\n", ns, ((uint64_t)fns * 1000000000) >> 32, ns, fns);
 
         ch = 0;
         for (struct mqnic_reg_block *rb = dev->rb_list; rb->regs; rb++)

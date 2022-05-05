@@ -350,7 +350,11 @@ static const struct net_device_ops mqnic_netdev_ops = {
 	.ndo_get_stats64 = mqnic_get_stats64,
 	.ndo_validate_addr = eth_validate_addr,
 	.ndo_change_mtu = mqnic_change_mtu,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
+	.ndo_eth_ioctl = mqnic_ioctl,
+#else
 	.ndo_do_ioctl = mqnic_ioctl,
+#endif
 };
 
 int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr,

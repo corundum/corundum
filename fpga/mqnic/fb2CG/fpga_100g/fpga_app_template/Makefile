@@ -52,6 +52,7 @@ SYN_FILES += rtl/common/stats_dma_latency.v
 SYN_FILES += rtl/common/mqnic_tx_scheduler_block_rr.v
 SYN_FILES += rtl/common/tx_scheduler_rr.v
 SYN_FILES += rtl/common/cmac_pad.v
+SYN_FILES += rtl/common/cmac_ts_insert.v
 
 SYN_FILES += app/template/rtl/mqnic_app_block.v
 SYN_FILES += lib/axi/rtl/axil_ram.v

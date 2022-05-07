@@ -42,12 +42,11 @@ either expressed or implied, of The Regents of the University of California.
  */
 module mqnic_ptp #
 (
-    parameter PTP_PERIOD_NS_WIDTH = 4,
-    parameter PTP_OFFSET_NS_WIDTH = 32,
-    parameter PTP_FNS_WIDTH = 32,
-    parameter PTP_PERIOD_NS = 4'd4,
-    parameter PTP_PERIOD_FNS = 32'd0,
+    parameter PTP_CLK_PERIOD_NS_NUM = 4,
+    parameter PTP_CLK_PERIOD_NS_DENOM = 1,
     parameter PTP_CLOCK_PIPELINE = 0,
+    parameter PTP_CLOCK_CDC_PIPELINE = 0,
+    parameter PTP_USE_SAMPLE_CLOCK = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
     parameter REG_ADDR_WIDTH = 7+(PTP_PEROUT_ENABLE ? $clog2((PTP_PEROUT_COUNT+1)/2) + 1 : 0),
@@ -78,9 +77,15 @@ module mqnic_ptp #
     /*
      * PTP clock
      */
+    input  wire                         ptp_clk,
+    input  wire                         ptp_rst,
+    input  wire                         ptp_sample_clk,
     output wire                         ptp_pps,
     output wire [95:0]                  ptp_ts_96,
     output wire                         ptp_ts_step,
+    output wire                         ptp_sync_pps,
+    output wire [95:0]                  ptp_sync_ts_96,
+    output wire                         ptp_sync_ts_step,
     output wire [PTP_PEROUT_COUNT-1:0]  ptp_perout_locked,
     output wire [PTP_PEROUT_COUNT-1:0]  ptp_perout_error,
     output wire [PTP_PEROUT_COUNT-1:0]  ptp_perout_pulse
@@ -149,12 +154,11 @@ always @* begin
 end
 
 mqnic_ptp_clock #(
-    .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
-    .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
-    .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
-    .PTP_PERIOD_NS(PTP_PERIOD_NS),
-    .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
+    .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
+    .PTP_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
+    .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
+    .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
     .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
@@ -185,9 +189,15 @@ ptp_clock_inst (
     /*
      * PTP clock
      */
+    .ptp_clk(ptp_clk),
+    .ptp_rst(ptp_rst),
+    .ptp_sample_clk(ptp_sample_clk),
     .ptp_pps(ptp_pps),
     .ptp_ts_96(ptp_ts_96),
-    .ptp_ts_step(ptp_ts_step)
+    .ptp_ts_step(ptp_ts_step),
+    .ptp_sync_pps(ptp_sync_pps),
+    .ptp_sync_ts_96(ptp_sync_ts_96),
+    .ptp_sync_ts_step(ptp_sync_ts_step)
 );
 
 generate
@@ -227,8 +237,8 @@ if (PTP_PEROUT_ENABLE) begin
             /*
              * PTP clock
              */
-            .ptp_ts_96(ptp_ts_96),
-            .ptp_ts_step(ptp_ts_step),
+            .ptp_ts_96(ptp_sync_ts_96),
+            .ptp_ts_step(ptp_sync_ts_step),
             .ptp_perout_locked(ptp_perout_locked[n]),
             .ptp_perout_error(ptp_perout_error[n]),
             .ptp_perout_pulse(ptp_perout_pulse[n])

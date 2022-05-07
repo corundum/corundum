@@ -42,12 +42,11 @@ either expressed or implied, of The Regents of the University of California.
  */
 module mqnic_ptp_clock #
 (
-    parameter PTP_PERIOD_NS_WIDTH = 4,
-    parameter PTP_OFFSET_NS_WIDTH = 32,
-    parameter PTP_FNS_WIDTH = 32,
-    parameter PTP_PERIOD_NS = 4'd4,
-    parameter PTP_PERIOD_FNS = 32'd0,
+    parameter PTP_CLK_PERIOD_NS_NUM = 4,
+    parameter PTP_CLK_PERIOD_NS_DENOM = 1,
     parameter PTP_CLOCK_PIPELINE = 0,
+    parameter PTP_CLOCK_CDC_PIPELINE = 0,
+    parameter PTP_USE_SAMPLE_CLOCK = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
     parameter REG_ADDR_WIDTH = 7,
@@ -78,10 +77,26 @@ module mqnic_ptp_clock #
     /*
      * PTP clock
      */
+    input  wire                       ptp_clk,
+    input  wire                       ptp_rst,
+    input  wire                       ptp_sample_clk,
     output wire                       ptp_pps,
     output wire [95:0]                ptp_ts_96,
-    output wire                       ptp_ts_step
+    output wire                       ptp_ts_step,
+    output wire                       ptp_sync_pps,
+    output wire [95:0]                ptp_sync_ts_96,
+    output wire                       ptp_sync_ts_step
 );
+
+parameter PTP_FNS_WIDTH = 32;
+
+parameter PTP_CLK_PERIOD_NS = PTP_CLK_PERIOD_NS_NUM / PTP_CLK_PERIOD_NS_DENOM;
+parameter PTP_CLK_PERIOD_NS_REM = PTP_CLK_PERIOD_NS_NUM - PTP_CLK_PERIOD_NS*PTP_CLK_PERIOD_NS_DENOM;
+parameter PTP_CLK_PERIOD_FNS = (PTP_CLK_PERIOD_NS_REM * {32'd1, {PTP_FNS_WIDTH{1'b0}}}) / PTP_CLK_PERIOD_NS_DENOM;
+parameter PTP_CLK_PERIOD_FNS_REM = (PTP_CLK_PERIOD_NS_REM * {32'd1, {PTP_FNS_WIDTH{1'b0}}}) - PTP_CLK_PERIOD_FNS*PTP_CLK_PERIOD_NS_DENOM;
+
+parameter PTP_PERIOD_NS_WIDTH = $clog2(PTP_CLK_PERIOD_NS+1) + 2;
+parameter PTP_OFFSET_NS_WIDTH = 32;
 
 localparam RBB = RB_BASE_ADDR & {REG_ADDR_WIDTH{1'b1}};
 
@@ -116,8 +131,8 @@ reg reg_rd_ack_reg = 1'b0;
 reg [95:0] get_ptp_ts_96_reg = 0;
 reg [95:0] set_ptp_ts_96_reg = 0;
 reg set_ptp_ts_96_valid_reg = 0;
-reg [PTP_PERIOD_NS_WIDTH-1:0] set_ptp_period_ns_reg = 0;
-reg [PTP_FNS_WIDTH-1:0] set_ptp_period_fns_reg = 0;
+reg [PTP_PERIOD_NS_WIDTH-1:0] set_ptp_period_ns_reg = PTP_CLK_PERIOD_NS;
+reg [PTP_FNS_WIDTH-1:0] set_ptp_period_fns_reg = PTP_CLK_PERIOD_FNS;
 reg set_ptp_period_valid_reg = 0;
 reg [PTP_OFFSET_NS_WIDTH-1:0] set_ptp_offset_ns_reg = 0;
 reg [PTP_FNS_WIDTH-1:0] set_ptp_offset_fns_reg = 0;
@@ -136,10 +151,6 @@ always @(posedge clk) begin
     reg_rd_data_reg <= 0;
     reg_rd_ack_reg <= 1'b0;
 
-    set_ptp_ts_96_valid_reg <= 1'b0;
-    set_ptp_period_valid_reg <= 1'b0;
-    set_ptp_offset_valid_reg <= 1'b0;
-
     if (reg_wr_en && !reg_wr_ack_reg) begin
         // write operation
         reg_wr_ack_reg <= 1'b1;
@@ -151,20 +162,20 @@ always @(posedge clk) begin
             RBB+7'h3C: begin
                 // PTP set sec h
                 set_ptp_ts_96_reg[95:80] <= reg_wr_data;
-                set_ptp_ts_96_valid_reg <= 1'b1;
+                set_ptp_ts_96_valid_reg <= !set_ptp_ts_96_valid_reg;
             end
             RBB+7'h40: set_ptp_period_fns_reg <= reg_wr_data; // PTP period fns
             RBB+7'h44: begin
                 // PTP period ns
                 set_ptp_period_ns_reg <= reg_wr_data;
-                set_ptp_period_valid_reg <= 1'b1;
+                set_ptp_period_valid_reg <= !set_ptp_period_valid_reg;
             end
             RBB+7'h50: set_ptp_offset_fns_reg <= reg_wr_data; // PTP offset fns
             RBB+7'h54: set_ptp_offset_ns_reg <= reg_wr_data;  // PTP offset ns
             RBB+7'h58: begin
                 // PTP offset count
                 set_ptp_offset_count_reg <= reg_wr_data;
-                set_ptp_offset_valid_reg <= 1'b1;
+                set_ptp_offset_valid_reg <= !set_ptp_offset_valid_reg;
             end
             default: reg_wr_ack_reg <= 1'b0;
         endcase
@@ -185,14 +196,14 @@ always @(posedge clk) begin
                 reg_rd_data_reg[23:16] <= 0;
                 reg_rd_data_reg[31:24] <= 0;
             end
-            RBB+7'h10: reg_rd_data_reg <= ptp_ts_96[15:0];    // PTP cur fns
-            RBB+7'h14: reg_rd_data_reg <= ptp_ts_96[45:16];   // PTP cur ns
-            RBB+7'h18: reg_rd_data_reg <= ptp_ts_96[79:48];   // PTP cur sec l
-            RBB+7'h1C: reg_rd_data_reg <= ptp_ts_96[95:80];   // PTP cur sec h
+            RBB+7'h10: reg_rd_data_reg <= ptp_sync_ts_96[15:0];    // PTP cur fns
+            RBB+7'h14: reg_rd_data_reg <= ptp_sync_ts_96[45:16];   // PTP cur ns
+            RBB+7'h18: reg_rd_data_reg <= ptp_sync_ts_96[79:48];   // PTP cur sec l
+            RBB+7'h1C: reg_rd_data_reg <= ptp_sync_ts_96[95:80];   // PTP cur sec h
             RBB+7'h20: begin
                 // PTP get fns
-                get_ptp_ts_96_reg <= ptp_ts_96;
-                reg_rd_data_reg <= ptp_ts_96[15:0];
+                get_ptp_ts_96_reg <= ptp_sync_ts_96;
+                reg_rd_data_reg <= ptp_sync_ts_96[15:0];
             end
             RBB+7'h24: reg_rd_data_reg <= get_ptp_ts_96_reg[45:16]; // PTP get ns
             RBB+7'h28: reg_rd_data_reg <= get_ptp_ts_96_reg[79:48]; // PTP get sec l
@@ -203,8 +214,8 @@ always @(posedge clk) begin
             RBB+7'h3C: reg_rd_data_reg <= set_ptp_ts_96_reg[95:80]; // PTP set sec h
             RBB+7'h40: reg_rd_data_reg <= set_ptp_period_fns_reg;   // PTP period fns
             RBB+7'h44: reg_rd_data_reg <= set_ptp_period_ns_reg;    // PTP period ns
-            RBB+7'h48: reg_rd_data_reg <= PTP_PERIOD_FNS;           // PTP nom period fns
-            RBB+7'h4C: reg_rd_data_reg <= PTP_PERIOD_NS;            // PTP nom period ns
+            RBB+7'h48: reg_rd_data_reg <= PTP_CLK_PERIOD_FNS;       // PTP nom period fns
+            RBB+7'h4C: reg_rd_data_reg <= PTP_CLK_PERIOD_NS;        // PTP nom period ns
             RBB+7'h50: reg_rd_data_reg <= set_ptp_offset_fns_reg;   // PTP offset fns
             RBB+7'h54: reg_rd_data_reg <= set_ptp_offset_ns_reg;    // PTP offset ns
             RBB+7'h58: reg_rd_data_reg <= set_ptp_offset_count_reg; // PTP offset count
@@ -216,7 +227,45 @@ always @(posedge clk) begin
     if (rst) begin
         reg_wr_ack_reg <= 1'b0;
         reg_rd_ack_reg <= 1'b0;
+
+        set_ptp_period_ns_reg <= PTP_CLK_PERIOD_NS;
+        set_ptp_period_fns_reg <= PTP_CLK_PERIOD_FNS;
     end
+end
+
+(* shreg_extract = "no" *)
+reg set_ptp_ts_96_valid_sync_1_reg = 1'b0;
+(* shreg_extract = "no" *)
+reg set_ptp_ts_96_valid_sync_2_reg = 1'b0;
+(* shreg_extract = "no" *)
+reg set_ptp_ts_96_valid_sync_3_reg = 1'b0;
+
+(* shreg_extract = "no" *)
+reg set_ptp_period_valid_sync_1_reg = 1'b0;
+(* shreg_extract = "no" *)
+reg set_ptp_period_valid_sync_2_reg = 1'b0;
+(* shreg_extract = "no" *)
+reg set_ptp_period_valid_sync_3_reg = 1'b0;
+
+(* shreg_extract = "no" *)
+reg set_ptp_offset_valid_sync_1_reg = 1'b0;
+(* shreg_extract = "no" *)
+reg set_ptp_offset_valid_sync_2_reg = 1'b0;
+(* shreg_extract = "no" *)
+reg set_ptp_offset_valid_sync_3_reg = 1'b0;
+
+always @(posedge ptp_clk) begin
+    set_ptp_ts_96_valid_sync_1_reg <= set_ptp_ts_96_valid_reg;
+    set_ptp_ts_96_valid_sync_2_reg <= set_ptp_ts_96_valid_sync_1_reg;
+    set_ptp_ts_96_valid_sync_3_reg <= set_ptp_ts_96_valid_sync_2_reg;
+
+    set_ptp_period_valid_sync_1_reg <= set_ptp_period_valid_reg;
+    set_ptp_period_valid_sync_2_reg <= set_ptp_period_valid_sync_1_reg;
+    set_ptp_period_valid_sync_3_reg <= set_ptp_period_valid_sync_2_reg;
+
+    set_ptp_offset_valid_sync_1_reg <= set_ptp_offset_valid_reg;
+    set_ptp_offset_valid_sync_2_reg <= set_ptp_offset_valid_sync_1_reg;
+    set_ptp_offset_valid_sync_3_reg <= set_ptp_offset_valid_sync_2_reg;
 end
 
 // PTP clock
@@ -224,20 +273,23 @@ ptp_clock #(
     .PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
     .OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
     .FNS_WIDTH(PTP_FNS_WIDTH),
-    .PERIOD_NS(PTP_PERIOD_NS),
-    .PERIOD_FNS(PTP_PERIOD_FNS),
+    .PERIOD_NS(PTP_CLK_PERIOD_NS),
+    .PERIOD_FNS(PTP_CLK_PERIOD_FNS),
     .DRIFT_ENABLE(0),
+    .DRIFT_NS(0),
+    .DRIFT_FNS(PTP_CLK_PERIOD_FNS_REM),
+    .DRIFT_RATE(PTP_CLK_PERIOD_NS_DENOM),
     .PIPELINE_OUTPUT(PTP_CLOCK_PIPELINE)
 )
 ptp_clock_inst (
-    .clk(clk),
-    .rst(rst),
+    .clk(ptp_clk),
+    .rst(ptp_rst),
 
     /*
      * Timestamp inputs for synchronization
      */
     .input_ts_96(set_ptp_ts_96_reg),
-    .input_ts_96_valid(set_ptp_ts_96_valid_reg),
+    .input_ts_96_valid(set_ptp_ts_96_valid_sync_2_reg ^ set_ptp_ts_96_valid_sync_3_reg),
     .input_ts_64(0),
     .input_ts_64_valid(1'b0),
 
@@ -246,7 +298,7 @@ ptp_clock_inst (
      */
     .input_period_ns(set_ptp_period_ns_reg),
     .input_period_fns(set_ptp_period_fns_reg),
-    .input_period_valid(set_ptp_period_valid_reg),
+    .input_period_valid(set_ptp_period_valid_sync_2_reg ^ set_ptp_period_valid_sync_3_reg),
 
     /*
      * Offset adjustment
@@ -254,8 +306,8 @@ ptp_clock_inst (
     .input_adj_ns(set_ptp_offset_ns_reg),
     .input_adj_fns(set_ptp_offset_fns_reg),
     .input_adj_count(set_ptp_offset_count_reg),
-    .input_adj_valid(set_ptp_offset_valid_reg),
-    .input_adj_active(set_ptp_offset_active),
+    .input_adj_valid(set_ptp_offset_valid_sync_2_reg ^ set_ptp_offset_valid_sync_3_reg),
+    // .input_adj_active(set_ptp_offset_active),
 
     /*
      * Drift adjustment
@@ -276,6 +328,28 @@ ptp_clock_inst (
      * PPS output
      */
     .output_pps(ptp_pps)
+);
+
+// sync to core clock domain
+ptp_clock_cdc #(
+    .TS_WIDTH(96),
+    .NS_WIDTH(PTP_PERIOD_NS_WIDTH),
+    .FNS_WIDTH(16),
+    .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PIPELINE_OUTPUT(PTP_CLOCK_CDC_PIPELINE)
+)
+ptp_cdc_inst (
+    .input_clk(ptp_clk),
+    .input_rst(ptp_rst),
+    .output_clk(clk),
+    .output_rst(rst),
+    .sample_clk(ptp_sample_clk),
+    .input_ts(ptp_ts_96),
+    .input_ts_step(ptp_ts_step),
+    .output_ts(ptp_sync_ts_96),
+    .output_ts_step(ptp_sync_ts_step),
+    .output_pps(ptp_sync_pps),
+    .locked()
 );
 
 endmodule

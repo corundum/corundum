@@ -125,6 +125,7 @@ XDC_FILES += lib/axis/syn/vivado/axis_async_fifo.tcl
 XDC_FILES += lib/axis/syn/vivado/sync_reset.tcl
 XDC_FILES += lib/eth/syn/vivado/ptp_clock_cdc.tcl
 XDC_FILES += ../../../common/syn/vivado/mqnic_port.tcl
+XDC_FILES += ../../../common/syn/vivado/mqnic_ptp_clock.tcl
 
 # IP
 IP_TCL_FILES = ip/pcie3_7x_0.tcl

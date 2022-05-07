@@ -60,6 +60,7 @@ module fpga #
 
     // PTP configuration
     parameter PTP_CLOCK_PIPELINE = 0,
+    parameter PTP_CLOCK_CDC_PIPELINE = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
@@ -326,14 +327,10 @@ module fpga #
 );
 
 // PTP configuration
+parameter PTP_CLK_PERIOD_NS_NUM = 512;
+parameter PTP_CLK_PERIOD_NS_DENOM = 165;
 parameter PTP_TS_WIDTH = 96;
-parameter PTP_TAG_WIDTH = 16;
-parameter PTP_PERIOD_NS_WIDTH = 4;
-parameter PTP_OFFSET_NS_WIDTH = 32;
-parameter PTP_FNS_WIDTH = 32;
-parameter PTP_PERIOD_NS = 4'd4;
-parameter PTP_PERIOD_FNS = 32'd0;
-parameter PTP_USE_SAMPLE_CLOCK = 0;
+parameter PTP_USE_SAMPLE_CLOCK = 1;
 parameter IF_PTP_PERIOD_NS = 6'h6;
 parameter IF_PTP_PERIOD_FNS = 16'h6666;
 
@@ -1829,6 +1826,14 @@ qsfp3_phy_quad_inst (
     .phy_4_rx_prbs31_enable(qsfp3_rx_prbs31_enable_4_int)
 );
 
+wire ptp_clk;
+wire ptp_rst;
+wire ptp_sample_clk;
+
+assign ptp_clk = qsfp0_mgt_refclk_b0_bufg;
+assign ptp_rst = qsfp0_rst;
+assign ptp_sample_clk = clk_125mhz_int;
+
 fpga_core #(
     // FW and board IDs
     .FPGA_ID(FPGA_ID),
@@ -1847,13 +1852,11 @@ fpga_core #(
     .PORT_MASK(PORT_MASK),
 
     // PTP configuration
+    .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
+    .PTP_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
-    .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
-    .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
-    .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
-    .PTP_PERIOD_NS(PTP_PERIOD_NS),
-    .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
+    .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
@@ -1971,6 +1974,13 @@ core_inst (
      */
     .clk_250mhz(pcie_user_clk),
     .rst_250mhz(pcie_user_reset),
+
+    /*
+     * PTP clock
+     */
+    .ptp_clk(ptp_clk),
+    .ptp_rst(ptp_rst),
+    .ptp_sample_clk(ptp_sample_clk),
 
     /*
      * GPIO

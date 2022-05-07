@@ -59,14 +59,12 @@ module fpga_core #
     parameter PORT_MASK = 0,
 
     // PTP configuration
+    parameter PTP_CLK_PERIOD_NS_NUM = 32,
+    parameter PTP_CLK_PERIOD_NS_DENOM = 5,
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_PERIOD_NS_WIDTH = 4,
-    parameter PTP_OFFSET_NS_WIDTH = 32,
-    parameter PTP_FNS_WIDTH = 32,
-    parameter PTP_PERIOD_NS = 4'd4,
-    parameter PTP_PERIOD_FNS = 32'd0,
     parameter PTP_CLOCK_PIPELINE = 0,
-    parameter PTP_USE_SAMPLE_CLOCK = 0,
+    parameter PTP_CLOCK_CDC_PIPELINE = 0,
+    parameter PTP_USE_SAMPLE_CLOCK = 1,
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 1,
     parameter PTP_PEROUT_COUNT = 1,
@@ -190,6 +188,13 @@ module fpga_core #
      */
     input  wire                               clk_250mhz,
     input  wire                               rst_250mhz,
+
+    /*
+     * PTP clock
+     */
+    input  wire                               ptp_clk,
+    input  wire                               ptp_rst,
+    input  wire                               ptp_sample_clk,
 
     /*
      * GPIO
@@ -485,6 +490,9 @@ wire                             axil_csr_rready;
 wire [PTP_TS_WIDTH-1:0]     ptp_ts_96;
 wire                        ptp_ts_step;
 wire                        ptp_pps;
+wire [PTP_TS_WIDTH-1:0]     ptp_sync_ts_96;
+wire                        ptp_sync_ts_step;
+wire                        ptp_sync_pps;
 
 wire [PTP_PEROUT_COUNT-1:0] ptp_perout_locked;
 wire [PTP_PEROUT_COUNT-1:0] ptp_perout_error;
@@ -810,9 +818,9 @@ qsfp2_rb_drp_inst (
 reg [26:0] pps_led_counter_reg = 0;
 reg pps_led_reg = 0;
 
-always @(posedge clk_250mhz) begin
+always @(posedge ptp_clk) begin
     if (ptp_pps) begin
-        pps_led_counter_reg <= 125000000;
+        pps_led_counter_reg <= 78125000;
     end else if (pps_led_counter_reg > 0) begin
         pps_led_counter_reg <= pps_led_counter_reg - 1;
     end
@@ -865,8 +873,8 @@ tdma_ber_inst (
     .s_axil_rresp(axil_csr_rresp),
     .s_axil_rvalid(axil_csr_rvalid),
     .s_axil_rready(axil_csr_rready),
-    .ptp_ts_96(ptp_ts_96),
-    .ptp_ts_step(ptp_ts_step)
+    .ptp_ts_96(ptp_sync_ts_96),
+    .ptp_ts_step(ptp_sync_ts_step)
 );
 
 assign pmod0[0] = ptp_perout_pulse;
@@ -1050,13 +1058,11 @@ mqnic_core_pcie_us #(
     .PORT_COUNT(PORT_COUNT),
 
     // PTP configuration
+    .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
+    .PTP_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
-    .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
-    .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
-    .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
-    .PTP_PERIOD_NS(PTP_PERIOD_NS),
-    .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
+    .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
     .PTP_SEPARATE_RX_CLOCK(0),
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
@@ -1327,10 +1333,15 @@ core_inst (
     /*
      * PTP clock
      */
-    .ptp_sample_clk(clk_250mhz),
+    .ptp_clk(ptp_clk),
+    .ptp_rst(ptp_rst),
+    .ptp_sample_clk(ptp_sample_clk),
     .ptp_pps(ptp_pps),
     .ptp_ts_96(ptp_ts_96),
     .ptp_ts_step(ptp_ts_step),
+    .ptp_sync_pps(ptp_sync_pps),
+    .ptp_sync_ts_96(ptp_sync_ts_96),
+    .ptp_sync_ts_step(ptp_sync_ts_step),
     .ptp_perout_locked(ptp_perout_locked),
     .ptp_perout_error(ptp_perout_error),
     .ptp_perout_pulse(ptp_perout_pulse),

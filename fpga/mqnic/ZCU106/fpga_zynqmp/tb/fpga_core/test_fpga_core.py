@@ -83,6 +83,10 @@ class TB(object):
 
         self.driver = mqnic.Driver()
 
+        cocotb.start_soon(Clock(dut.ptp_clk, 6.4, units="ns").start())
+        dut.ptp_rst.setimmediatevalue(0)
+        cocotb.start_soon(Clock(dut.ptp_sample_clk, 8, units="ns").start())
+
         # Ethernet
         cocotb.start_soon(Clock(dut.sfp0_rx_clk, 6.4, units="ns").start())
         self.sfp0_source = XgmiiSource(dut.sfp0_rxd, dut.sfp0_rxc, dut.sfp0_rx_clk, dut.sfp0_rx_rst)
@@ -118,6 +122,7 @@ class TB(object):
     async def init(self):
 
         self.dut.rst_300mhz.setimmediatevalue(0)
+        self.dut.ptp_rst.setimmediatevalue(0)
         self.dut.sfp0_rx_rst.setimmediatevalue(0)
         self.dut.sfp0_tx_rst.setimmediatevalue(0)
         self.dut.sfp1_rx_rst.setimmediatevalue(0)
@@ -127,6 +132,7 @@ class TB(object):
         await RisingEdge(self.dut.clk_300mhz)
 
         self.dut.rst_300mhz.value = 1
+        self.dut.ptp_rst.setimmediatevalue(1)
         self.dut.sfp0_rx_rst.setimmediatevalue(1)
         self.dut.sfp0_tx_rst.setimmediatevalue(1)
         self.dut.sfp1_rx_rst.setimmediatevalue(1)
@@ -136,6 +142,7 @@ class TB(object):
         await RisingEdge(self.dut.clk_300mhz)
 
         self.dut.rst_300mhz.value = 0
+        self.dut.ptp_rst.setimmediatevalue(0)
         self.dut.sfp0_rx_rst.setimmediatevalue(0)
         self.dut.sfp0_tx_rst.setimmediatevalue(0)
         self.dut.sfp1_rx_rst.setimmediatevalue(0)
@@ -438,8 +445,11 @@ def test_fpga_core(request):
     parameters['PORT_MASK'] = 0
 
     # PTP configuration
+    parameters['PTP_CLK_PERIOD_NS_NUM'] = 32
+    parameters['PTP_CLK_PERIOD_NS_DENOM'] = 5
     parameters['PTP_CLOCK_PIPELINE'] = 0
-    parameters['PTP_USE_SAMPLE_CLOCK'] = 0
+    parameters['PTP_CLOCK_CDC_PIPELINE'] = 0
+    parameters['PTP_USE_SAMPLE_CLOCK'] = 1
     parameters['PTP_PORT_CDC_PIPELINE'] = 0
     parameters['PTP_PEROUT_ENABLE'] = 1
     parameters['PTP_PEROUT_COUNT'] = 1

@@ -122,6 +122,7 @@ IP_TCL_FILES += ip/pcie.tcl
 IP_TCL_FILES += ip/eth_xcvr.tcl
 IP_TCL_FILES += ip/eth_xcvr_pll.tcl
 IP_TCL_FILES += ip/eth_xcvr_reset.tcl
+IP_TCL_FILES += ip/ref_div.tcl
 
 # QSF files
 QSF_FILES = fpga.qsf

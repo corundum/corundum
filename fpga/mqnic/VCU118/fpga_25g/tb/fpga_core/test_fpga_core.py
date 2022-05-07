@@ -268,6 +268,10 @@ class TB(object):
         if hasattr(dut.core_inst.core_pcie_inst, 'pcie_app_ctrl'):
             self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
+        cocotb.start_soon(Clock(dut.ptp_clk, 6.4, units="ns").start())
+        dut.ptp_rst.setimmediatevalue(0)
+        cocotb.start_soon(Clock(dut.ptp_sample_clk, 8, units="ns").start())
+
         # Ethernet
         cocotb.start_soon(Clock(dut.qsfp1_rx_clk_1, 2.56, units="ns").start())
         self.qsfp1_1_source = XgmiiSource(dut.qsfp1_rxd_1, dut.qsfp1_rxc_1, dut.qsfp1_rx_clk_1, dut.qsfp1_rx_rst_1)
@@ -363,6 +367,7 @@ class TB(object):
 
     async def init(self):
 
+        self.dut.ptp_rst.setimmediatevalue(0)
         self.dut.qsfp1_rx_rst_1.setimmediatevalue(0)
         self.dut.qsfp1_tx_rst_1.setimmediatevalue(0)
         self.dut.qsfp1_rx_rst_2.setimmediatevalue(0)
@@ -383,6 +388,7 @@ class TB(object):
         await RisingEdge(self.dut.clk_250mhz)
         await RisingEdge(self.dut.clk_250mhz)
 
+        self.dut.ptp_rst.setimmediatevalue(1)
         self.dut.qsfp1_rx_rst_1.setimmediatevalue(1)
         self.dut.qsfp1_tx_rst_1.setimmediatevalue(1)
         self.dut.qsfp1_rx_rst_2.setimmediatevalue(1)
@@ -406,6 +412,7 @@ class TB(object):
         await RisingEdge(self.dut.clk_250mhz)
         await RisingEdge(self.dut.clk_250mhz)
 
+        self.dut.ptp_rst.setimmediatevalue(0)
         self.dut.qsfp1_rx_rst_1.setimmediatevalue(0)
         self.dut.qsfp1_tx_rst_1.setimmediatevalue(0)
         self.dut.qsfp1_rx_rst_2.setimmediatevalue(0)
@@ -748,8 +755,11 @@ def test_fpga_core(request):
     parameters['PORT_MASK'] = 0
 
     # PTP configuration
+    parameters['PTP_CLK_PERIOD_NS_NUM'] = 32
+    parameters['PTP_CLK_PERIOD_NS_DENOM'] = 5
     parameters['PTP_CLOCK_PIPELINE'] = 0
-    parameters['PTP_USE_SAMPLE_CLOCK'] = 0
+    parameters['PTP_CLOCK_CDC_PIPELINE'] = 0
+    parameters['PTP_USE_SAMPLE_CLOCK'] = 1
     parameters['PTP_PORT_CDC_PIPELINE'] = 0
     parameters['PTP_PEROUT_ENABLE'] = 1
     parameters['PTP_PEROUT_COUNT'] = 1

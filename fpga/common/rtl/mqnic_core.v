@@ -60,13 +60,11 @@ module mqnic_core #
     parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF,
 
     // PTP configuration
+    parameter PTP_CLK_PERIOD_NS_NUM = 4,
+    parameter PTP_CLK_PERIOD_NS_DENOM = 1,
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_PERIOD_NS_WIDTH = 4,
-    parameter PTP_OFFSET_NS_WIDTH = 32,
-    parameter PTP_FNS_WIDTH = 32,
-    parameter PTP_PERIOD_NS = 4'd4,
-    parameter PTP_PERIOD_FNS = 32'd0,
     parameter PTP_CLOCK_PIPELINE = 0,
+    parameter PTP_CLOCK_CDC_PIPELINE = 0,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
     parameter PTP_SEPARATE_RX_CLOCK = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
@@ -329,10 +327,15 @@ module mqnic_core #
     /*
      * PTP clock
      */
+    input  wire                                         ptp_clk,
+    input  wire                                         ptp_rst,
     input  wire                                         ptp_sample_clk,
     output wire                                         ptp_pps,
     output wire [PTP_TS_WIDTH-1:0]                      ptp_ts_96,
     output wire                                         ptp_ts_step,
+    output wire                                         ptp_sync_pps,
+    output wire [PTP_TS_WIDTH-1:0]                      ptp_sync_ts_96,
+    output wire                                         ptp_sync_ts_step,
     output wire [PTP_PEROUT_COUNT-1:0]                  ptp_perout_locked,
     output wire [PTP_PEROUT_COUNT-1:0]                  ptp_perout_error,
     output wire [PTP_PEROUT_COUNT-1:0]                  ptp_perout_pulse,
@@ -628,12 +631,11 @@ always @(posedge clk) begin
 end
 
 mqnic_ptp #(
-    .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
-    .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
-    .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
-    .PTP_PERIOD_NS(PTP_PERIOD_NS),
-    .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
+    .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
+    .PTP_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
+    .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
+    .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
     .REG_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
@@ -664,9 +666,15 @@ mqnic_ptp_inst (
     /*
      * PTP clock
      */
+    .ptp_clk(ptp_clk),
+    .ptp_rst(ptp_rst),
+    .ptp_sample_clk(ptp_sample_clk),
     .ptp_pps(ptp_pps),
     .ptp_ts_96(ptp_ts_96),
     .ptp_ts_step(ptp_ts_step),
+    .ptp_sync_pps(ptp_sync_pps),
+    .ptp_sync_ts_96(ptp_sync_ts_96),
+    .ptp_sync_ts_step(ptp_sync_ts_step),
     .ptp_perout_locked(ptp_perout_locked),
     .ptp_perout_error(ptp_perout_error),
     .ptp_perout_pulse(ptp_perout_pulse)
@@ -2638,8 +2646,8 @@ generate
             /*
              * PTP clock
              */
-            .ptp_ts_96(ptp_ts_96),
-            .ptp_ts_step(ptp_ts_step),
+            .ptp_ts_96(ptp_sync_ts_96),
+            .ptp_ts_step(ptp_sync_ts_step),
 
             /*
              * MSI interrupts
@@ -2681,14 +2689,14 @@ generate
                 // PTP CDC logic
                 ptp_clock_cdc #(
                     .TS_WIDTH(PTP_TS_WIDTH),
-                    .NS_WIDTH(PTP_PERIOD_NS_WIDTH),
+                    .NS_WIDTH(6),
                     .FNS_WIDTH(16),
                     .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
                     .PIPELINE_OUTPUT(PTP_PORT_CDC_PIPELINE)
                 )
                 tx_ptp_cdc_inst (
-                    .input_clk(clk),
-                    .input_rst(rst),
+                    .input_clk(ptp_clk),
+                    .input_rst(ptp_rst),
                     .output_clk(port_tx_clk),
                     .output_rst(port_tx_rst),
                     .sample_clk(ptp_sample_clk),
@@ -2702,14 +2710,14 @@ generate
 
                 ptp_clock_cdc #(
                     .TS_WIDTH(PTP_TS_WIDTH),
-                    .NS_WIDTH(PTP_PERIOD_NS_WIDTH),
+                    .NS_WIDTH(6),
                     .FNS_WIDTH(16),
                     .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
                     .PIPELINE_OUTPUT(PTP_PORT_CDC_PIPELINE)
                 )
                 rx_ptp_cdc_inst (
-                    .input_clk(clk),
-                    .input_rst(rst),
+                    .input_clk(ptp_clk),
+                    .input_rst(ptp_rst),
                     .output_clk(PTP_SEPARATE_RX_CLOCK ? port_rx_ptp_clk : port_rx_clk),
                     .output_rst(PTP_SEPARATE_RX_CLOCK ? port_rx_ptp_rst : port_rx_rst),
                     .sample_clk(ptp_sample_clk),
@@ -2756,12 +2764,9 @@ if (APP_ENABLE) begin : app
         .PORT_COUNT(PORT_COUNT),
 
         // PTP configuration
+        .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
+        .PTP_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
         .PTP_TS_WIDTH(PTP_TS_WIDTH),
-        .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
-        .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
-        .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
-        .PTP_PERIOD_NS(PTP_PERIOD_NS),
-        .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
         .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
         .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
         .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
@@ -2999,10 +3004,15 @@ if (APP_ENABLE) begin : app
         /*
          * PTP clock
          */
+        .ptp_clk(ptp_clk),
+        .ptp_rst(ptp_rst),
         .ptp_sample_clk(ptp_sample_clk),
         .ptp_pps(ptp_pps),
         .ptp_ts_96(ptp_ts_96),
         .ptp_ts_step(ptp_ts_step),
+        .ptp_sync_pps(ptp_sync_pps),
+        .ptp_sync_ts_96(ptp_sync_ts_96),
+        .ptp_sync_ts_step(ptp_sync_ts_step),
         .ptp_perout_locked(ptp_perout_locked),
         .ptp_perout_error(ptp_perout_error),
         .ptp_perout_pulse(ptp_perout_pulse),

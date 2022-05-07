@@ -50,12 +50,9 @@ module mqnic_app_block #
     parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF,
 
     // PTP configuration
+    parameter PTP_CLK_PERIOD_NS_NUM = 4,
+    parameter PTP_CLK_PERIOD_NS_DENOM = 1,
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_PERIOD_NS_WIDTH = 4,
-    parameter PTP_OFFSET_NS_WIDTH = 32,
-    parameter PTP_FNS_WIDTH = 32,
-    parameter PTP_PERIOD_NS = 4'd4,
-    parameter PTP_PERIOD_FNS = 32'd0,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 0,
@@ -295,10 +292,15 @@ module mqnic_app_block #
     /*
      * PTP clock
      */
+    input  wire                                           ptp_clk,
+    input  wire                                           ptp_rst,
     input  wire                                           ptp_sample_clk,
     input  wire                                           ptp_pps,
     input  wire [PTP_TS_WIDTH-1:0]                        ptp_ts_96,
     input  wire                                           ptp_ts_step,
+    input  wire                                           ptp_sync_pps,
+    input  wire [PTP_TS_WIDTH-1:0]                        ptp_sync_ts_96,
+    input  wire                                           ptp_sync_ts_step,
     input  wire [PTP_PEROUT_COUNT-1:0]                    ptp_perout_locked,
     input  wire [PTP_PEROUT_COUNT-1:0]                    ptp_perout_error,
     input  wire [PTP_PEROUT_COUNT-1:0]                    ptp_perout_pulse,

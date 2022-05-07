@@ -60,6 +60,7 @@ module fpga #
 
     // PTP configuration
     parameter PTP_CLOCK_PIPELINE = 0,
+    parameter PTP_CLOCK_CDC_PIPELINE = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 1,
     parameter PTP_PEROUT_COUNT = 1,
@@ -193,14 +194,10 @@ module fpga #
 );
 
 // PTP configuration
+parameter PTP_CLK_PERIOD_NS_NUM = 32;
+parameter PTP_CLK_PERIOD_NS_DENOM = 5;
 parameter PTP_TS_WIDTH = 96;
-parameter PTP_TAG_WIDTH = 16;
-parameter PTP_PERIOD_NS_WIDTH = 4;
-parameter PTP_OFFSET_NS_WIDTH = 32;
-parameter PTP_FNS_WIDTH = 32;
-parameter PTP_PERIOD_NS = 4'h3;
-parameter PTP_PERIOD_FNS = 32'h55555555;
-parameter PTP_USE_SAMPLE_CLOCK = 0;
+parameter PTP_USE_SAMPLE_CLOCK = 1;
 parameter IF_PTP_PERIOD_NS = 6'h6;
 parameter IF_PTP_PERIOD_FNS = 16'h6666;
 
@@ -681,6 +678,14 @@ sfp_phy_quad_inst (
     .phy_2_rx_prbs31_enable(sfp1_rx_prbs31_enable_int)
 );
 
+wire ptp_clk;
+wire ptp_rst;
+wire ptp_sample_clk;
+
+assign ptp_clk = sfp_mgt_refclk_0_bufg;
+assign ptp_rst = sfp_rst;
+assign ptp_sample_clk = clk_125mhz_int;
+
 fpga_core #(
     // FW and board IDs
     .FPGA_ID(FPGA_ID),
@@ -699,13 +704,11 @@ fpga_core #(
     .PORT_MASK(PORT_MASK),
 
     // PTP configuration
+    .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
+    .PTP_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
-    .PTP_PERIOD_NS_WIDTH(PTP_PERIOD_NS_WIDTH),
-    .PTP_OFFSET_NS_WIDTH(PTP_OFFSET_NS_WIDTH),
-    .PTP_FNS_WIDTH(PTP_FNS_WIDTH),
-    .PTP_PERIOD_NS(PTP_PERIOD_NS),
-    .PTP_PERIOD_FNS(PTP_PERIOD_FNS),
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
+    .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
@@ -816,6 +819,13 @@ core_inst (
      */
     .clk_300mhz(zynq_pl_clk),
     .rst_300mhz(zynq_pl_reset),
+
+    /*
+     * PTP clock
+     */
+    .ptp_clk(ptp_clk),
+    .ptp_rst(ptp_rst),
+    .ptp_sample_clk(ptp_sample_clk),
 
     /*
      * GPIO

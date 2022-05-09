@@ -1,4 +1,4 @@
-# XDC constraints for the ExaNIC X10
+# XDC constraints for the Cisco Nexus K35-S
 # part: xcku035-fbva676-2-e
 
 # General configuration

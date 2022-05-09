@@ -16,8 +16,8 @@ Corundum currently supports devices from both Xilinx and Intel, on boards from s
 
 *  Alpha Data ADM-PCIE-9V3 (Xilinx Virtex UltraScale+ XCVU3P)
 *  Dini Group DNPCIe_40G_KU_LL_2QSFP (Xilinx Kintex UltraScale XCKU040)
-*  Exablaze ExaNIC X10/Cisco Nexus K35-S (Xilinx Kintex UltraScale XCKU035)
-*  Exablaze ExaNIC X25/Cisco Nexus K3P-S (Xilinx Kintex UltraScale+ XCKU3P)
+*  Cisco Nexus K35-S (Xilinx Kintex UltraScale XCKU035)
+*  Cisco Nexus K3P-S (Xilinx Kintex UltraScale+ XCKU3P)
 *  Silicom fb2CG\@KU15P (Xilinx Kintex UltraScale+ XCKU15P)
 *  NetFPGA SUME (Xilinx Virtex 7 XC7V690T)
 *  BittWare XUP-P3R (Xilinx Virtex UltraScale+ XCVU9P)

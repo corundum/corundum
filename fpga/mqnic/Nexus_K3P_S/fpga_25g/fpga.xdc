@@ -1,4 +1,4 @@
-# XDC constraints for the ExaNIC X25
+# XDC constraints for the Cisco Nexus K3P-S
 # part: xcku3p-ffvb676-2-e
 
 # General configuration

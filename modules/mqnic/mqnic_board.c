@@ -471,8 +471,8 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		init_mac_list_from_eeprom_base_hex(mqnic, mqnic->eeprom_i2c_client, 4, MQNIC_MAX_IF);
 
 		break;
-	case MQNIC_BOARD_ID_EXANIC_X10:
-	case MQNIC_BOARD_ID_EXANIC_X25:
+	case MQNIC_BOARD_ID_NEXUS_K35_S:
+	case MQNIC_BOARD_ID_NEXUS_K3P_S:
 	case MQNIC_BOARD_ID_ADM_PCIE_9V3:
 
 		request_module("at24");

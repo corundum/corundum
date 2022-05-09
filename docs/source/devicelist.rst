@@ -20,6 +20,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     Dini Group    DNPCIe_40G_KU_LL_2QSFP   XCKU040-2FFVA1156E    0x17df1a00
     Cisco         Nexus K35-S              XCKU035-2FBVA676E     0x1ce40003
     Cisco         Nexus K3P-S              XCKU3P-2FFVB676E      0x1ce40009
+    Cisco         Nexus K3P-Q              XCKU3P-2FFVB676E      0x1ce4000a
     Silicom       fb2CG\@KU15P             XCKU15P-2FFVE1760E    0x1c2ca00e
     Digilent      NetFPGA SUME             XC7V690T-3FFG1761     0x10ee7028
     BittWare      XUP-P3R                  XCVU9P-2FLGB2104E     0x12ba9823
@@ -44,6 +45,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     DNPCIe_40G_KU_LL_2QSFP   Gen 3 x8   2x QSFP+    4 GB DDR4 2400 (512M x72)        \-
     Nexus K35-S              Gen 3 x8   2x SFP+     \-                               \-
     Nexus K3P-S              Gen 3 x8   2x SFP28    4 GB DDR4 (1G x32)               \-
+    Nexus K3P-Q              Gen 3 x8   2x QSFP28   8 GB DDR4 (1G x72)               \-
     fb2CG\@KU15P             Gen 3 x16  2x QSFP28   16 GB DDR4 2400 (4x 512M x72)    \-
     NetFPGA SUME             Gen 3 x8   4x SFP+     8 GB DDR3 1866 (2x 512M x64)     \-
     XUP-P3R                  Gen 3 x16  4x QSFP28   4x DDR4 2400 DIMM (4x x72)       \-
@@ -68,6 +70,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     DNPCIe_40G_KU_LL_2QSFP   Y             N :sup:`3`    Y
     Nexus K35-S              N :sup:`3`    Y             Y
     Nexus K3P-S              N :sup:`3`    Y             Y
+    Nexus K3P-Q              Y             Y             Y
     fb2CG\@KU15P             Y             Y             Y
     NetFPGA SUME             Y             N :sup:`7`    N :sup:`8`
     XUP-P3R                  Y             Y             Y
@@ -107,6 +110,8 @@ This section details PCIe form-factor targets, which interface with a separate h
     Nexus K35-S              mqnic/fpga/fpga              2x1   256/2K   10G   RR
     Nexus K3P-S              mqnic/fpga_25g/fpga          2x1   256/8K   25G   RR
     Nexus K3P-S              mqnic/fpga_25g/fpga_10g      2x1   256/8K   10G   RR
+    Nexus K3P-Q              mqnic/fpga_25g/fpga          2x1   256/8K   25G   RR
+    Nexus K3P-Q              mqnic/fpga_25g/fpga_10g      2x1   256/8K   10G   RR
     fb2CG\@KU15P             mqnic/fpga_25g/fpga          2x1   256/8K   25G   RR
     fb2CG\@KU15P             mqnic/fpga_25g/fpga_10g      2x1   256/8K   10G   RR
     fb2CG\@KU15P             mqnic/fpga_25g/fpga_tdma     2x1   256/256  25G   TDMA

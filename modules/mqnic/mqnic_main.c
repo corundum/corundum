@@ -59,6 +59,13 @@ MODULE_PARM_DESC(num_tx_queue_entries, "number of entries to allocate per transm
 module_param_named(num_rx_queue_entries, mqnic_num_rx_queue_entries, uint, 0444);
 MODULE_PARM_DESC(num_rx_queue_entries, "number of entries to allocate per receive queue (default: 1024)");
 
+unsigned int mqnic_link_status_poll = MQNIC_LINK_STATUS_POLL_MS;
+
+module_param_named(link_status_poll, mqnic_link_status_poll, uint, 0444);
+MODULE_PARM_DESC(link_status_poll,
+		 "link status polling interval, in ms (default: 1000; 0 to turn off)");
+
+
 #ifdef CONFIG_PCI
 static const struct pci_device_id mqnic_pci_id_table[] = {
 	{PCI_DEVICE(0x1234, 0x1001)},

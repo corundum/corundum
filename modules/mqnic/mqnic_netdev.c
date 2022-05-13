@@ -133,21 +133,23 @@ static int mqnic_stop_port(struct net_device *ndev)
 
 	// deactivate TX queues
 	for (k = 0; k < min(priv->tx_queue_count, priv->tx_cpl_queue_count); k++) {
+		napi_disable(&priv->tx_cpl_ring[k]->napi);
+
 		mqnic_deactivate_tx_ring(priv->tx_ring[k]);
 
 		mqnic_deactivate_cq_ring(priv->tx_cpl_ring[k]);
 
-		napi_disable(&priv->tx_cpl_ring[k]->napi);
 		netif_napi_del(&priv->tx_cpl_ring[k]->napi);
 	}
 
 	// deactivate RX queues
 	for (k = 0; k < min(priv->rx_queue_count, priv->rx_cpl_queue_count); k++) {
+		napi_disable(&priv->rx_cpl_ring[k]->napi);
+
 		mqnic_deactivate_rx_ring(priv->rx_ring[k]);
 
 		mqnic_deactivate_cq_ring(priv->rx_cpl_ring[k]);
 
-		napi_disable(&priv->rx_cpl_ring[k]->napi);
 		netif_napi_del(&priv->rx_cpl_ring[k]->napi);
 	}
 

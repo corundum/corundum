@@ -342,6 +342,7 @@ static int mqnic_get_module_eeprom_by_page(struct net_device *ndev,
 
 const struct ethtool_ops mqnic_ethtool_ops = {
 	.get_drvinfo = mqnic_get_drvinfo,
+	.get_link = ethtool_op_get_link,
 	.get_ts_info = mqnic_get_ts_info,
 	.get_module_info = mqnic_get_module_info,
 	.get_module_eeprom = mqnic_get_module_eeprom,

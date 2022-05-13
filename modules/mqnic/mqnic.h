@@ -49,6 +49,7 @@
 #include <linux/etherdevice.h>
 #include <linux/net_tstamp.h>
 #include <linux/ptp_clock_kernel.h>
+#include <linux/timer.h>
 
 #include <linux/i2c.h>
 #include <linux/i2c-algo-bit.h>
@@ -66,9 +67,14 @@
 #define MQNIC_PROP_MODULE_EEPROM "module-eeproms"
 #endif
 
+// default interval to poll port TX/RX status, in ms
+#define MQNIC_LINK_STATUS_POLL_MS 1000
+
 extern unsigned int mqnic_num_ev_queue_entries;
 extern unsigned int mqnic_num_tx_queue_entries;
 extern unsigned int mqnic_num_rx_queue_entries;
+
+extern unsigned int mqnic_link_status_poll;
 
 struct mqnic_dev;
 struct mqnic_if;
@@ -455,6 +461,9 @@ struct mqnic_priv {
 	bool port_up;
 
 	u32 if_features;
+
+	unsigned int link_status;
+	struct timer_list link_status_timer;
 
 	u32 event_queue_count;
 	struct mqnic_eq_ring *event_ring[MQNIC_MAX_EVENT_RINGS];

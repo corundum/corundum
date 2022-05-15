@@ -155,18 +155,41 @@ function run_meas()
     logdir="$base_logdir/n$iperf_count/$test_type/$rep/"
     mkdir -p $logdir
 
-    case "$test_type" in
-        tx) iperf_test="" ;;
-        rx) iperf_test="-R" ;;
-        txrx) iperf_test="--bidir" ;;
-    esac
-
     # start clients
-    for i in $(seq 1 $iperf_count); do
-        echo Starting iperf3 instance $i on port $(($base_port+i))
-        echo -n > "$logdir/iperf-client-$i.log"
-        $netns_cmd $numa_cmd iperf3 -p $(($base_port+i)) -P $iperf_p -c $ip -f k -t 12 --logfile "$logdir/iperf-client-$i.log" $iperf_args $iperf_test &
-    done
+    case "$test_type" in
+        tx)
+            for i in $(seq 1 $iperf_count); do
+                port=$(($base_port+i))
+                logfile="$logdir/iperf-client-tx-$i.log"
+                echo Starting iperf3 TX instance $i on port $port
+                echo -n > "$logfile"
+                $netns_cmd $numa_cmd iperf3 -p $port -P $iperf_p -c $ip -f k -t 12 --logfile "$logfile" $iperf_args &
+            done
+            ;;
+        rx)
+            for i in $(seq 1 $iperf_count); do
+                port=$(($base_port+i))
+                logfile="$logdir/iperf-client-rx-$i.log"
+                echo Starting iperf3 RX instance $i on port $port
+                echo -n > "$logfile"
+                $netns_cmd $numa_cmd iperf3 -p $port -P $iperf_p -c $ip -f k -t 12 --logfile "$logfile" -R $iperf_args &
+            done
+            ;;
+        txrx)
+            for i in $(seq 1 $iperf_count); do
+                port=$(($base_port+i))
+                logfile="$logdir/iperf-client-tx-$i.log"
+                echo Starting iperf3 TX instance $i on port $port
+                echo -n > "$logfile"
+                $netns_cmd $numa_cmd iperf3 -p $port -P $iperf_p -c $ip -f k -t 12 --logfile "$logfile" $iperf_args &
+                port=$(($base_port+$iperf_count+i))
+                logfile="$logdir/iperf-client-rx-$i.log"
+                echo Starting iperf3 RX instance $i on port $port
+                echo -n > "$logfile"
+                $netns_cmd $numa_cmd iperf3 -p $port -P $iperf_p -c $ip -f k -t 12 --logfile "$logfile" -R $iperf_args &
+            done
+            ;;
+    esac
 
     sleep 1
 
@@ -193,30 +216,23 @@ function run_meas()
     rmt_txkbps=0
     rmt_txretr=0
     rmt_rxkbps=0
-    for file in $logdir/iperf-client-*.log; do
+    shopt -s nullglob
+    for file in $logdir/iperf-client-tx-*.log; do
         sender=$(cat $file | tr -s ' ' | grep "\[SUM\]" | grep sender)
         receiver=$(cat $file | tr -s ' ' | grep "\[SUM\]" | grep receiver)
 
-        case "$test_type" in
-            tx)
-                lcl_txkbps=$(($lcl_txkbps + $(echo "$sender" | cut -d ' ' -f 6)))
-                lcl_txretr=$(($lcl_txretr + $(echo "$sender" | cut -d ' ' -f 8)))
-                rmt_rxkbps=$(($rmt_rxkbps + $(echo "$receiver" | cut -d ' ' -f 6)))
-                ;;
-            rx)
-                rmt_txkbps=$(($rmt_txkbps + $(echo "$sender" | cut -d ' ' -f 6)))
-                rmt_txretr=$(($rmt_txretr + $(echo "$sender" | cut -d ' ' -f 8)))
-                lcl_rxkbps=$(($lcl_rxkbps + $(echo "$receiver" | cut -d ' ' -f 6)))
-                ;;
-            txrx)
-                lcl_txkbps=$(($lcl_txkbps + $(echo "$sender" | grep "\[TX-C\]" | cut -d ' ' -f 6)))
-                lcl_txretr=$(($lcl_txretr + $(echo "$sender" | grep "\[TX-C\]" | cut -d ' ' -f 8)))
-                rmt_rxkbps=$(($rmt_rxkbps + $(echo "$receiver" | grep "\[TX-C\]" | cut -d ' ' -f 6)))
-                rmt_txkbps=$(($rmt_txkbps + $(echo "$sender" | grep "\[RX-C\]" | cut -d ' ' -f 6)))
-                rmt_txretr=$(($rmt_txretr + $(echo "$sender" | grep "\[RX-C\]" | cut -d ' ' -f 8)))
-                lcl_rxkbps=$(($lcl_rxkbps + $(echo "$receiver" | grep "\[RX-C\]" | cut -d ' ' -f 6)))
-                ;;
-        esac
+        lcl_txkbps=$(($lcl_txkbps + $(echo "$sender" | cut -d ' ' -f 6)))
+        lcl_txretr=$(($lcl_txretr + $(echo "$sender" | cut -d ' ' -f 8)))
+        rmt_rxkbps=$(($rmt_rxkbps + $(echo "$receiver" | cut -d ' ' -f 6)))
+    done
+    shopt -s nullglob
+    for file in $logdir/iperf-client-rx-*.log; do
+        sender=$(cat $file | tr -s ' ' | grep "\[SUM\]" | grep sender)
+        receiver=$(cat $file | tr -s ' ' | grep "\[SUM\]" | grep receiver)
+
+        rmt_txkbps=$(($rmt_txkbps + $(echo "$sender" | cut -d ' ' -f 6)))
+        rmt_txretr=$(($rmt_txretr + $(echo "$sender" | cut -d ' ' -f 8)))
+        lcl_rxkbps=$(($lcl_rxkbps + $(echo "$receiver" | cut -d ' ' -f 6)))
     done
 
     if_stat=$(grep "$netdev:" "$logdir/proc_net_dev.log" | tr -s ' ' | cut -d ' ' -f 2- | sed -n '1p;$p' | awk 'NR==1{for(i=1;i<=NF;i++){col[i]=$i};next}{for(i=1;i<=NF;i++){printf "%s ",$i-col[i];col[i]=$i};print ""}')

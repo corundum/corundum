@@ -136,7 +136,7 @@ for i in $(seq 1 $iperf_count); do
 done
 
 if [ ! -z $ptp4l ]; then
-    $netns_cmd ptp4l -i $netdev -m --masterOnly=1 --logSyncInterval=-3 &
+    $netns_cmd ptp4l -i $netdev -m --masterOnly=1 --tx_timestamp_timeout=10 --logSyncInterval=-3 &
 fi
 
 wait

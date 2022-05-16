@@ -251,8 +251,8 @@ assign m_axis_cq_tvalid = m_axis_cq_tvalid_reg;
 assign m_axis_cq_tlast  = {M_COUNT{m_axis_cq_tlast_reg}};
 assign m_axis_cq_tuser  = {M_COUNT{m_axis_cq_tuser_reg}};
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign m_axis_cq_tready_int_early = (m_axis_cq_tready & m_axis_cq_tvalid) || (!temp_m_axis_cq_tvalid_reg && (!m_axis_cq_tvalid || !m_axis_cq_tvalid_int));
+// enable ready input next cycle if output is ready or if both output registers are empty
+assign m_axis_cq_tready_int_early = (m_axis_cq_tready & m_axis_cq_tvalid) || (!temp_m_axis_cq_tvalid_reg && !m_axis_cq_tvalid_reg);
 
 always @* begin
     // transfer sink ready state to source

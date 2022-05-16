@@ -204,8 +204,8 @@ assign out_tlp_valid     = out_tlp_valid_reg;
 assign out_tlp_sop       = out_tlp_sop_reg;
 assign out_tlp_eop       = out_tlp_eop_reg;
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign out_tlp_ready_int_early = out_tlp_ready || (!temp_out_tlp_valid_reg && (!out_tlp_valid_reg || !out_tlp_valid_int));
+// enable ready input next cycle if output is ready or if both output registers are empty
+assign out_tlp_ready_int_early = out_tlp_ready || (!temp_out_tlp_valid_reg && !out_tlp_valid_reg);
 
 always @* begin
     // transfer sink ready state to source

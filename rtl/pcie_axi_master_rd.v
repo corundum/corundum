@@ -913,8 +913,8 @@ assign tx_cpl_tlp_valid  = tx_cpl_tlp_valid_reg;
 assign tx_cpl_tlp_sop    = tx_cpl_tlp_sop_reg;
 assign tx_cpl_tlp_eop    = tx_cpl_tlp_eop_reg;
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign tx_cpl_tlp_ready_int_early = tx_cpl_tlp_ready || (!temp_tx_cpl_tlp_valid_reg && (!tx_cpl_tlp_valid_reg || !tx_cpl_tlp_valid_int));
+// enable ready input next cycle if output is ready or if both output registers are empty
+assign tx_cpl_tlp_ready_int_early = tx_cpl_tlp_ready || (!temp_tx_cpl_tlp_valid_reg && !tx_cpl_tlp_valid_reg);
 
 always @* begin
     // transfer sink ready state to source

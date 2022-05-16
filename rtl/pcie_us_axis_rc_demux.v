@@ -199,8 +199,8 @@ assign m_axis_rc_tvalid = m_axis_rc_tvalid_reg;
 assign m_axis_rc_tlast  = {M_COUNT{m_axis_rc_tlast_reg}};
 assign m_axis_rc_tuser  = {M_COUNT{m_axis_rc_tuser_reg}};
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign m_axis_rc_tready_int_early = (m_axis_rc_tready & m_axis_rc_tvalid) || (!temp_m_axis_rc_tvalid_reg && (!m_axis_rc_tvalid || !m_axis_rc_tvalid_int));
+// enable ready input next cycle if output is ready or if both output registers are empty
+assign m_axis_rc_tready_int_early = (m_axis_rc_tready & m_axis_rc_tvalid) || (!temp_m_axis_rc_tvalid_reg && !m_axis_rc_tvalid_reg);
 
 always @* begin
     // transfer sink ready state to source

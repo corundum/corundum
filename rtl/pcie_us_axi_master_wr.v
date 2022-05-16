@@ -647,15 +647,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        m_axi_wvalid_reg <= 1'b0;
-        m_axi_wready_int_reg <= 1'b0;
-        temp_m_axi_wvalid_reg <= 1'b0;
-    end else begin
-        m_axi_wvalid_reg <= m_axi_wvalid_next;
-        m_axi_wready_int_reg <= m_axi_wready_int_early;
-        temp_m_axi_wvalid_reg <= temp_m_axi_wvalid_next;
-    end
+    m_axi_wvalid_reg <= m_axi_wvalid_next;
+    m_axi_wready_int_reg <= m_axi_wready_int_early;
+    temp_m_axi_wvalid_reg <= temp_m_axi_wvalid_next;
 
     // datapath
     if (store_axi_w_int_to_output) begin
@@ -672,6 +666,12 @@ always @(posedge clk) begin
         temp_m_axi_wdata_reg <= m_axi_wdata_int;
         temp_m_axi_wstrb_reg <= m_axi_wstrb_int;
         temp_m_axi_wlast_reg <= m_axi_wlast_int;
+    end
+
+    if (rst) begin
+        m_axi_wvalid_reg <= 1'b0;
+        m_axi_wready_int_reg <= 1'b0;
+        temp_m_axi_wvalid_reg <= 1'b0;
     end
 end
 

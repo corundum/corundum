@@ -215,15 +215,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        m_axis_desc_valid_reg <= 1'b0;
-        m_axis_desc_ready_int_reg <= 1'b0;
-        temp_m_axis_desc_valid_reg <= 1'b0;
-    end else begin
-        m_axis_desc_valid_reg <= m_axis_desc_valid_next;
-        m_axis_desc_ready_int_reg <= m_axis_desc_ready_int_early;
-        temp_m_axis_desc_valid_reg <= temp_m_axis_desc_valid_next;
-    end
+    m_axis_desc_valid_reg <= m_axis_desc_valid_next;
+    m_axis_desc_ready_int_reg <= m_axis_desc_ready_int_early;
+    temp_m_axis_desc_valid_reg <= temp_m_axis_desc_valid_next;
 
     // datapath
     if (store_axis_int_to_output) begin
@@ -243,6 +237,12 @@ always @(posedge clk) begin
         temp_m_axis_desc_axi_addr_reg <= m_axis_desc_axi_addr_int;
         temp_m_axis_desc_len_reg <= m_axis_desc_len_int;
         temp_m_axis_desc_tag_reg <= m_axis_desc_tag_int;
+    end
+
+    if (rst) begin
+        m_axis_desc_valid_reg <= 1'b0;
+        m_axis_desc_ready_int_reg <= 1'b0;
+        temp_m_axis_desc_valid_reg <= 1'b0;
     end
 end
 

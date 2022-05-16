@@ -280,15 +280,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        out_tlp_valid_reg <= {PORTS{1'b0}};
-        out_tlp_ready_int_reg <= 1'b0;
-        temp_out_tlp_valid_reg <= 1'b0;
-    end else begin
-        out_tlp_valid_reg <= out_tlp_valid_next;
-        out_tlp_ready_int_reg <= out_tlp_ready_int_early;
-        temp_out_tlp_valid_reg <= temp_out_tlp_valid_next;
-    end
+    out_tlp_valid_reg <= out_tlp_valid_next;
+    out_tlp_ready_int_reg <= out_tlp_ready_int_early;
+    temp_out_tlp_valid_reg <= temp_out_tlp_valid_next;
 
     // datapath
     if (store_int_to_output) begin
@@ -320,6 +314,12 @@ always @(posedge clk) begin
         temp_out_tlp_error_reg <= out_tlp_error_int;
         temp_out_tlp_sop_reg <= out_tlp_sop_int;
         temp_out_tlp_eop_reg <= out_tlp_eop_int;
+    end
+
+    if (rst) begin
+        out_tlp_valid_reg <= {PORTS{1'b0}};
+        out_tlp_ready_int_reg <= 1'b0;
+        temp_out_tlp_valid_reg <= 1'b0;
     end
 end
 

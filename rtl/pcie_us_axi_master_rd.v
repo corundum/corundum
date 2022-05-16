@@ -1156,15 +1156,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        m_axis_cc_tvalid_reg <= 1'b0;
-        m_axis_cc_tready_int_reg <= 1'b0;
-        temp_m_axis_cc_tvalid_reg <= 1'b0;
-    end else begin
-        m_axis_cc_tvalid_reg <= m_axis_cc_tvalid_next;
-        m_axis_cc_tready_int_reg <= m_axis_cc_tready_int_early;
-        temp_m_axis_cc_tvalid_reg <= temp_m_axis_cc_tvalid_next;
-    end
+    m_axis_cc_tvalid_reg <= m_axis_cc_tvalid_next;
+    m_axis_cc_tready_int_reg <= m_axis_cc_tready_int_early;
+    temp_m_axis_cc_tvalid_reg <= temp_m_axis_cc_tvalid_next;
 
     // datapath
     if (store_axis_cc_int_to_output) begin
@@ -1184,6 +1178,12 @@ always @(posedge clk) begin
         temp_m_axis_cc_tkeep_reg <= m_axis_cc_tkeep_int;
         temp_m_axis_cc_tlast_reg <= m_axis_cc_tlast_int;
         temp_m_axis_cc_tuser_reg <= m_axis_cc_tuser_int;
+    end
+
+    if (rst) begin
+        m_axis_cc_tvalid_reg <= 1'b0;
+        m_axis_cc_tready_int_reg <= 1'b0;
+        temp_m_axis_cc_tvalid_reg <= 1'b0;
     end
 end
 

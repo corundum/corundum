@@ -945,15 +945,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        tx_cpl_tlp_valid_reg <= 1'b0;
-        tx_cpl_tlp_ready_int_reg <= 1'b0;
-        temp_tx_cpl_tlp_valid_reg <= 1'b0;
-    end else begin
-        tx_cpl_tlp_valid_reg <= tx_cpl_tlp_valid_next;
-        tx_cpl_tlp_ready_int_reg <= tx_cpl_tlp_ready_int_early;
-        temp_tx_cpl_tlp_valid_reg <= temp_tx_cpl_tlp_valid_next;
-    end
+    tx_cpl_tlp_valid_reg <= tx_cpl_tlp_valid_next;
+    tx_cpl_tlp_ready_int_reg <= tx_cpl_tlp_ready_int_early;
+    temp_tx_cpl_tlp_valid_reg <= temp_tx_cpl_tlp_valid_next;
 
     // datapath
     if (store_axis_int_to_output) begin
@@ -976,6 +970,12 @@ always @(posedge clk) begin
         temp_tx_cpl_tlp_hdr_reg <= tx_cpl_tlp_hdr_int;
         temp_tx_cpl_tlp_sop_reg <= tx_cpl_tlp_sop_int;
         temp_tx_cpl_tlp_eop_reg <= tx_cpl_tlp_eop_int;
+    end
+
+    if (rst) begin
+        tx_cpl_tlp_valid_reg <= 1'b0;
+        tx_cpl_tlp_ready_int_reg <= 1'b0;
+        temp_tx_cpl_tlp_valid_reg <= 1'b0;
     end
 end
 

@@ -296,8 +296,8 @@ assign m_eth_payload_axis_tvalid = m_eth_payload_axis_tvalid_reg;
 assign m_eth_payload_axis_tlast = m_eth_payload_axis_tlast_reg;
 assign m_eth_payload_axis_tuser = m_eth_payload_axis_tuser_reg;
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign m_eth_payload_axis_tready_int_early = m_eth_payload_axis_tready || (!temp_m_eth_payload_axis_tvalid_reg && (!m_eth_payload_axis_tvalid_reg || !m_eth_payload_axis_tvalid_int));
+// enable ready input next cycle if output is ready or if both output registers are empty
+assign m_eth_payload_axis_tready_int_early = m_eth_payload_axis_tready || (!temp_m_eth_payload_axis_tvalid_reg && !m_eth_payload_axis_tvalid_reg);
 
 always @* begin
     // transfer sink ready state to source
@@ -328,15 +328,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        m_eth_payload_axis_tvalid_reg <= 1'b0;
-        m_eth_payload_axis_tready_int_reg <= 1'b0;
-        temp_m_eth_payload_axis_tvalid_reg <= 1'b0;
-    end else begin
-        m_eth_payload_axis_tvalid_reg <= m_eth_payload_axis_tvalid_next;
-        m_eth_payload_axis_tready_int_reg <= m_eth_payload_axis_tready_int_early;
-        temp_m_eth_payload_axis_tvalid_reg <= temp_m_eth_payload_axis_tvalid_next;
-    end
+    m_eth_payload_axis_tvalid_reg <= m_eth_payload_axis_tvalid_next;
+    m_eth_payload_axis_tready_int_reg <= m_eth_payload_axis_tready_int_early;
+    temp_m_eth_payload_axis_tvalid_reg <= temp_m_eth_payload_axis_tvalid_next;
 
     // datapath
     if (store_eth_payload_int_to_output) begin
@@ -356,6 +350,12 @@ always @(posedge clk) begin
         temp_m_eth_payload_axis_tkeep_reg <= m_eth_payload_axis_tkeep_int;
         temp_m_eth_payload_axis_tlast_reg <= m_eth_payload_axis_tlast_int;
         temp_m_eth_payload_axis_tuser_reg <= m_eth_payload_axis_tuser_int;
+    end
+
+    if (rst) begin
+        m_eth_payload_axis_tvalid_reg <= 1'b0;
+        m_eth_payload_axis_tready_int_reg <= 1'b0;
+        temp_m_eth_payload_axis_tvalid_reg <= 1'b0;
     end
 end
 

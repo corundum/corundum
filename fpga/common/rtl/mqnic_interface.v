@@ -963,16 +963,16 @@ end
 
 // control registers
 wire [REG_ADDR_WIDTH-1:0]  ctrl_reg_wr_addr;
-wire [REG_DATA_WIDTH-1:0]       ctrl_reg_wr_data;
-wire [REG_STRB_WIDTH-1:0]       ctrl_reg_wr_strb;
-wire                             ctrl_reg_wr_en;
-wire                             ctrl_reg_wr_wait;
-wire                             ctrl_reg_wr_ack;
+wire [REG_DATA_WIDTH-1:0]  ctrl_reg_wr_data;
+wire [REG_STRB_WIDTH-1:0]  ctrl_reg_wr_strb;
+wire                       ctrl_reg_wr_en;
+wire                       ctrl_reg_wr_wait;
+wire                       ctrl_reg_wr_ack;
 wire [REG_ADDR_WIDTH-1:0]  ctrl_reg_rd_addr;
-wire                             ctrl_reg_rd_en;
-wire [REG_DATA_WIDTH-1:0]       ctrl_reg_rd_data;
-wire                             ctrl_reg_rd_wait;
-wire                             ctrl_reg_rd_ack;
+wire                       ctrl_reg_rd_en;
+wire [REG_DATA_WIDTH-1:0]  ctrl_reg_rd_data;
+wire                       ctrl_reg_rd_wait;
+wire                       ctrl_reg_rd_ack;
 
 axil_reg_if #(
     .DATA_WIDTH(REG_DATA_WIDTH),

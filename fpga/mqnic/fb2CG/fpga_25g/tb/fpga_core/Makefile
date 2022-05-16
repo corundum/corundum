@@ -194,7 +194,7 @@ export PARAM_RX_FIFO_DEPTH ?= 32768
 export PARAM_MAX_TX_SIZE ?= 9214
 export PARAM_MAX_RX_SIZE ?= 9214
 export PARAM_TX_RAM_SIZE ?= 32768
-export PARAM_RX_RAM_SIZE ?= 32768
+export PARAM_RX_RAM_SIZE ?= 131072
 
 # Application block configuration
 export PARAM_APP_ID ?= $(shell echo $$((16#00000000)) )

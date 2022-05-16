@@ -702,7 +702,7 @@ def test_fpga_core(request):
     parameters['MAX_TX_SIZE'] = 9214
     parameters['MAX_RX_SIZE'] = 9214
     parameters['TX_RAM_SIZE'] = 32768
-    parameters['RX_RAM_SIZE'] = 32768
+    parameters['RX_RAM_SIZE'] = 131072
 
     # Application block configuration
     parameters['APP_ID'] = 0x00000000

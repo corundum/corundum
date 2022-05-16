@@ -185,8 +185,8 @@ assign m_axis_req_tag   = m_axis_req_tag_reg;
 assign m_axis_req_dest  = m_axis_req_dest_reg;
 assign m_axis_req_valid = m_axis_req_valid_reg;
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign m_axis_req_ready_int_early = m_axis_req_ready || (!temp_m_axis_req_valid_reg && (!m_axis_req_valid_reg || !m_axis_req_valid_int));
+// enable ready input next cycle if output is ready or if both output registers are empty
+assign m_axis_req_ready_int_early = m_axis_req_ready || (!temp_m_axis_req_valid_reg && !m_axis_req_valid_reg);
 
 always @* begin
     // transfer sink ready state to source

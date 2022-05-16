@@ -185,15 +185,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        m_axis_event_valid_reg <= 1'b0;
-        m_axis_event_ready_int_reg <= 1'b0;
-        temp_m_axis_event_valid_reg <= 1'b0;
-    end else begin
-        m_axis_event_valid_reg <= m_axis_event_valid_next;
-        m_axis_event_ready_int_reg <= m_axis_event_ready_int_early;
-        temp_m_axis_event_valid_reg <= temp_m_axis_event_valid_next;
-    end
+    m_axis_event_valid_reg <= m_axis_event_valid_next;
+    m_axis_event_ready_int_reg <= m_axis_event_ready_int_early;
+    temp_m_axis_event_valid_reg <= temp_m_axis_event_valid_next;
 
     // datapath
     if (store_axis_int_to_output) begin
@@ -210,6 +204,12 @@ always @(posedge clk) begin
         temp_m_axis_event_queue_reg <= m_axis_event_queue_int;
         temp_m_axis_event_type_reg <= m_axis_event_type_int;
         temp_m_axis_event_source_reg <= m_axis_event_source_int;
+    end
+
+    if (rst) begin
+        m_axis_event_valid_reg <= 1'b0;
+        m_axis_event_ready_int_reg <= 1'b0;
+        temp_m_axis_event_valid_reg <= 1'b0;
     end
 end
 

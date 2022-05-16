@@ -118,6 +118,12 @@ wire [PORTS-1:0] grant;
 wire grant_valid;
 wire [CL_PORTS-1:0] grant_encoded;
 
+// input registers to pipeline arbitration delay
+reg [PORTS*QUEUE_INDEX_WIDTH-1:0] s_axis_req_queue_reg = 0;
+reg [PORTS*S_REQ_TAG_WIDTH-1:0]   s_axis_req_tag_reg = 0;
+reg [PORTS*DEST_WIDTH-1:0]        s_axis_req_dest_reg = 0;
+reg [PORTS-1:0]                   s_axis_req_valid_reg = 0;
+
 // internal datapath
 reg  [QUEUE_INDEX_WIDTH-1:0] m_axis_req_queue_int;
 reg  [M_REQ_TAG_WIDTH-1:0]   m_axis_req_tag_int;
@@ -126,13 +132,13 @@ reg                          m_axis_req_valid_int;
 reg                          m_axis_req_ready_int_reg = 1'b0;
 wire                         m_axis_req_ready_int_early;
 
-assign s_axis_req_ready = (m_axis_req_ready_int_reg && grant_valid) << grant_encoded;
+assign s_axis_req_ready = ~s_axis_req_valid_reg | ({PORTS{m_axis_req_ready_int_reg}} & grant);
 
 // mux for incoming packet
-wire [QUEUE_INDEX_WIDTH-1:0] current_s_desc_queue = s_axis_req_queue[grant_encoded*QUEUE_INDEX_WIDTH +: QUEUE_INDEX_WIDTH];
-wire [S_REQ_TAG_WIDTH-1:0]   current_s_desc_tag   = s_axis_req_tag[grant_encoded*S_REQ_TAG_WIDTH +: S_REQ_TAG_WIDTH];
-wire [DEST_WIDTH-1:0]        current_s_desc_data  = s_axis_req_dest[grant_encoded*DEST_WIDTH +: DEST_WIDTH];
-wire                         current_s_desc_valid = s_axis_req_valid[grant_encoded];
+wire [QUEUE_INDEX_WIDTH-1:0] current_s_desc_queue = s_axis_req_queue_reg[grant_encoded*QUEUE_INDEX_WIDTH +: QUEUE_INDEX_WIDTH];
+wire [S_REQ_TAG_WIDTH-1:0]   current_s_desc_tag   = s_axis_req_tag_reg[grant_encoded*S_REQ_TAG_WIDTH +: S_REQ_TAG_WIDTH];
+wire [DEST_WIDTH-1:0]        current_s_desc_data  = s_axis_req_dest_reg[grant_encoded*DEST_WIDTH +: DEST_WIDTH];
+wire                         current_s_desc_valid = s_axis_req_valid_reg[grant_encoded];
 wire                         current_s_desc_ready = s_axis_req_ready[grant_encoded];
 
 // arbiter instance
@@ -153,8 +159,8 @@ arb_inst (
     .grant_encoded(grant_encoded)
 );
 
-assign request = s_axis_req_valid & ~grant;
-assign acknowledge = grant & s_axis_req_valid & s_axis_req_ready;
+assign request = (s_axis_req_valid_reg & ~grant) | (s_axis_req_valid & grant);
+assign acknowledge = grant & s_axis_req_valid_reg & {PORTS{m_axis_req_ready_int_reg}};
 
 always @* begin
     // pass through selected packet data
@@ -162,6 +168,24 @@ always @* begin
     m_axis_req_tag_int   = {grant_encoded, current_s_desc_tag};
     m_axis_req_dest_int  = current_s_desc_data;
     m_axis_req_valid_int = current_s_desc_valid && m_axis_req_ready_int_reg && grant_valid;
+end
+
+integer i;
+
+always @(posedge clk) begin
+    // register inputs
+    for (i = 0; i < PORTS; i = i + 1) begin
+        if (s_axis_req_ready[i]) begin
+            s_axis_req_queue_reg[i*QUEUE_INDEX_WIDTH +: QUEUE_INDEX_WIDTH] <= s_axis_req_queue[i*QUEUE_INDEX_WIDTH +: QUEUE_INDEX_WIDTH];
+            s_axis_req_tag_reg[i*S_REQ_TAG_WIDTH +: S_REQ_TAG_WIDTH] <= s_axis_req_tag[i*S_REQ_TAG_WIDTH +: S_REQ_TAG_WIDTH];
+            s_axis_req_dest_reg[i*DEST_WIDTH +: DEST_WIDTH] <= s_axis_req_dest[i*DEST_WIDTH +: DEST_WIDTH];
+            s_axis_req_valid_reg[i] <= s_axis_req_valid[i];
+       end
+    end
+
+    if (rst) begin
+        s_axis_req_valid_reg <= 0;
+    end
 end
 
 // output datapath logic

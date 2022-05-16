@@ -1821,8 +1821,8 @@ assign m_axi_wstrb = m_axi_wstrb_reg;
 assign m_axi_wvalid = m_axi_wvalid_reg;
 assign m_axi_wlast = m_axi_wlast_reg;
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign m_axi_wready_int_early = m_axi_wready || (!temp_m_axi_wvalid_reg && (!m_axi_wvalid_reg || !m_axi_wvalid_int));
+// enable ready input next cycle if output is ready or if both output registers are empty
+assign m_axi_wready_int_early = m_axi_wready || (!temp_m_axi_wvalid_reg && !m_axi_wvalid_reg);
 
 always @* begin
     // transfer sink ready state to source
@@ -1853,15 +1853,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        m_axi_wvalid_reg <= 1'b0;
-        m_axi_wready_int_reg <= 1'b0;
-        temp_m_axi_wvalid_reg <= 1'b0;
-    end else begin
-        m_axi_wvalid_reg <= m_axi_wvalid_next;
-        m_axi_wready_int_reg <= m_axi_wready_int_early;
-        temp_m_axi_wvalid_reg <= temp_m_axi_wvalid_next;
-    end
+    m_axi_wvalid_reg <= m_axi_wvalid_next;
+    m_axi_wready_int_reg <= m_axi_wready_int_early;
+    temp_m_axi_wvalid_reg <= temp_m_axi_wvalid_next;
 
     // datapath
     if (store_axi_w_int_to_output) begin
@@ -1878,6 +1872,12 @@ always @(posedge clk) begin
         temp_m_axi_wdata_reg <= m_axi_wdata_int;
         temp_m_axi_wstrb_reg <= m_axi_wstrb_int;
         temp_m_axi_wlast_reg <= m_axi_wlast_int;
+    end
+
+    if (rst) begin
+        m_axi_wvalid_reg <= 1'b0;
+        m_axi_wready_int_reg <= 1'b0;
+        temp_m_axi_wvalid_reg <= 1'b0;
     end
 end
 

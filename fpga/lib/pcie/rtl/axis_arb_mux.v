@@ -40,11 +40,13 @@ module axis_arb_mux #
     // Propagate tkeep signal
     parameter KEEP_ENABLE = (DATA_WIDTH>8),
     // tkeep signal width (words per cycle)
-    parameter KEEP_WIDTH = (DATA_WIDTH/8),
+    parameter KEEP_WIDTH = ((DATA_WIDTH+7)/8),
     // Propagate tid signal
     parameter ID_ENABLE = 0,
-    // tid signal width
-    parameter ID_WIDTH = 8,
+    // input tid signal width
+    parameter S_ID_WIDTH = 8,
+    // output tid signal width
+    parameter M_ID_WIDTH = S_ID_WIDTH+$clog2(S_COUNT),
     // Propagate tdest signal
     parameter DEST_ENABLE = 0,
     // tdest signal width
@@ -53,6 +55,10 @@ module axis_arb_mux #
     parameter USER_ENABLE = 1,
     // tuser signal width
     parameter USER_WIDTH = 1,
+    // Propagate tlast signal
+    parameter LAST_ENABLE = 1,
+    // Update tid with routing information
+    parameter UPDATE_TID = 0,
     // select round robin arbitration
     parameter ARB_TYPE_ROUND_ROBIN = 0,
     // LSB priority selection
@@ -65,29 +71,46 @@ module axis_arb_mux #
     /*
      * AXI Stream inputs
      */
-    input  wire [S_COUNT*DATA_WIDTH-1:0] s_axis_tdata,
-    input  wire [S_COUNT*KEEP_WIDTH-1:0] s_axis_tkeep,
-    input  wire [S_COUNT-1:0]            s_axis_tvalid,
-    output wire [S_COUNT-1:0]            s_axis_tready,
-    input  wire [S_COUNT-1:0]            s_axis_tlast,
-    input  wire [S_COUNT*ID_WIDTH-1:0]   s_axis_tid,
-    input  wire [S_COUNT*DEST_WIDTH-1:0] s_axis_tdest,
-    input  wire [S_COUNT*USER_WIDTH-1:0] s_axis_tuser,
+    input  wire [S_COUNT*DATA_WIDTH-1:0]  s_axis_tdata,
+    input  wire [S_COUNT*KEEP_WIDTH-1:0]  s_axis_tkeep,
+    input  wire [S_COUNT-1:0]             s_axis_tvalid,
+    output wire [S_COUNT-1:0]             s_axis_tready,
+    input  wire [S_COUNT-1:0]             s_axis_tlast,
+    input  wire [S_COUNT*S_ID_WIDTH-1:0]  s_axis_tid,
+    input  wire [S_COUNT*DEST_WIDTH-1:0]  s_axis_tdest,
+    input  wire [S_COUNT*USER_WIDTH-1:0]  s_axis_tuser,
 
     /*
      * AXI Stream output
      */
-    output wire [DATA_WIDTH-1:0]         m_axis_tdata,
-    output wire [KEEP_WIDTH-1:0]         m_axis_tkeep,
-    output wire                          m_axis_tvalid,
-    input  wire                          m_axis_tready,
-    output wire                          m_axis_tlast,
-    output wire [ID_WIDTH-1:0]           m_axis_tid,
-    output wire [DEST_WIDTH-1:0]         m_axis_tdest,
-    output wire [USER_WIDTH-1:0]         m_axis_tuser
+    output wire [DATA_WIDTH-1:0]          m_axis_tdata,
+    output wire [KEEP_WIDTH-1:0]          m_axis_tkeep,
+    output wire                           m_axis_tvalid,
+    input  wire                           m_axis_tready,
+    output wire                           m_axis_tlast,
+    output wire [M_ID_WIDTH-1:0]          m_axis_tid,
+    output wire [DEST_WIDTH-1:0]          m_axis_tdest,
+    output wire [USER_WIDTH-1:0]          m_axis_tuser
 );
 
 parameter CL_S_COUNT = $clog2(S_COUNT);
+
+parameter S_ID_WIDTH_INT = S_ID_WIDTH > 0 ? S_ID_WIDTH : 1;
+
+// check configuration
+initial begin
+    if (UPDATE_TID) begin
+        if (!ID_ENABLE) begin
+            $error("Error: UPDATE_TID set requires ID_ENABLE set (instance %m)");
+            $finish;
+        end
+
+        if (M_ID_WIDTH < CL_S_COUNT) begin
+            $error("Error: M_ID_WIDTH too small for port count (instance %m)");
+            $finish;
+        end
+    end
+end
 
 wire [S_COUNT-1:0] request;
 wire [S_COUNT-1:0] acknowledge;
@@ -95,28 +118,37 @@ wire [S_COUNT-1:0] grant;
 wire grant_valid;
 wire [CL_S_COUNT-1:0] grant_encoded;
 
+// input registers to pipeline arbitration delay
+reg [S_COUNT*DATA_WIDTH-1:0] s_axis_tdata_reg = 0;
+reg [S_COUNT*KEEP_WIDTH-1:0] s_axis_tkeep_reg = 0;
+reg [S_COUNT-1:0]            s_axis_tvalid_reg = 0;
+reg [S_COUNT-1:0]            s_axis_tlast_reg = 0;
+reg [S_COUNT*S_ID_WIDTH-1:0] s_axis_tid_reg = 0;
+reg [S_COUNT*DEST_WIDTH-1:0] s_axis_tdest_reg = 0;
+reg [S_COUNT*USER_WIDTH-1:0] s_axis_tuser_reg = 0;
+
 // internal datapath
 reg  [DATA_WIDTH-1:0] m_axis_tdata_int;
 reg  [KEEP_WIDTH-1:0] m_axis_tkeep_int;
 reg                   m_axis_tvalid_int;
 reg                   m_axis_tready_int_reg = 1'b0;
 reg                   m_axis_tlast_int;
-reg  [ID_WIDTH-1:0]   m_axis_tid_int;
+reg  [M_ID_WIDTH-1:0] m_axis_tid_int;
 reg  [DEST_WIDTH-1:0] m_axis_tdest_int;
 reg  [USER_WIDTH-1:0] m_axis_tuser_int;
 wire                  m_axis_tready_int_early;
 
-assign s_axis_tready = (m_axis_tready_int_reg && grant_valid) << grant_encoded;
+assign s_axis_tready = ~s_axis_tvalid_reg | ({S_COUNT{m_axis_tready_int_reg}} & grant);
 
 // mux for incoming packet
-wire [DATA_WIDTH-1:0] current_s_tdata  = s_axis_tdata[grant_encoded*DATA_WIDTH +: DATA_WIDTH];
-wire [KEEP_WIDTH-1:0] current_s_tkeep  = s_axis_tkeep[grant_encoded*KEEP_WIDTH +: KEEP_WIDTH];
-wire                  current_s_tvalid = s_axis_tvalid[grant_encoded];
+wire [DATA_WIDTH-1:0] current_s_tdata  = s_axis_tdata_reg[grant_encoded*DATA_WIDTH +: DATA_WIDTH];
+wire [KEEP_WIDTH-1:0] current_s_tkeep  = s_axis_tkeep_reg[grant_encoded*KEEP_WIDTH +: KEEP_WIDTH];
+wire                  current_s_tvalid = s_axis_tvalid_reg[grant_encoded];
 wire                  current_s_tready = s_axis_tready[grant_encoded];
-wire                  current_s_tlast  = s_axis_tlast[grant_encoded];
-wire [ID_WIDTH-1:0]   current_s_tid    = s_axis_tid[grant_encoded*ID_WIDTH +: ID_WIDTH];
-wire [DEST_WIDTH-1:0] current_s_tdest  = s_axis_tdest[grant_encoded*DEST_WIDTH +: DEST_WIDTH];
-wire [USER_WIDTH-1:0] current_s_tuser  = s_axis_tuser[grant_encoded*USER_WIDTH +: USER_WIDTH];
+wire                  current_s_tlast  = s_axis_tlast_reg[grant_encoded];
+wire [S_ID_WIDTH-1:0] current_s_tid    = s_axis_tid_reg[grant_encoded*S_ID_WIDTH +: S_ID_WIDTH_INT];
+wire [DEST_WIDTH-1:0] current_s_tdest  = s_axis_tdest_reg[grant_encoded*DEST_WIDTH +: DEST_WIDTH];
+wire [USER_WIDTH-1:0] current_s_tuser  = s_axis_tuser_reg[grant_encoded*USER_WIDTH +: USER_WIDTH];
 
 // arbiter instance
 arbiter #(
@@ -136,8 +168,8 @@ arb_inst (
     .grant_encoded(grant_encoded)
 );
 
-assign request = s_axis_tvalid & ~grant;
-assign acknowledge = grant & s_axis_tvalid & s_axis_tready & s_axis_tlast;
+assign request = (s_axis_tvalid_reg & ~grant) | (s_axis_tvalid & grant);
+assign acknowledge = grant & s_axis_tvalid_reg & {S_COUNT{m_axis_tready_int_reg}} & (LAST_ENABLE ? s_axis_tlast_reg : {S_COUNT{1'b1}});
 
 always @* begin
     // pass through selected packet data
@@ -146,8 +178,32 @@ always @* begin
     m_axis_tvalid_int = current_s_tvalid && m_axis_tready_int_reg && grant_valid;
     m_axis_tlast_int  = current_s_tlast;
     m_axis_tid_int    = current_s_tid;
+    if (UPDATE_TID && S_COUNT > 1) begin
+        m_axis_tid_int[M_ID_WIDTH-1:M_ID_WIDTH-CL_S_COUNT] = grant_encoded;
+    end
     m_axis_tdest_int  = current_s_tdest;
     m_axis_tuser_int  = current_s_tuser;
+end
+
+integer i;
+
+always @(posedge clk) begin
+    // register inputs
+    for (i = 0; i < S_COUNT; i = i + 1) begin
+        if (s_axis_tready[i]) begin
+            s_axis_tdata_reg[i*DATA_WIDTH +: DATA_WIDTH] <= s_axis_tdata[i*DATA_WIDTH +: DATA_WIDTH];
+            s_axis_tkeep_reg[i*KEEP_WIDTH +: KEEP_WIDTH] <= s_axis_tkeep[i*KEEP_WIDTH +: KEEP_WIDTH];
+            s_axis_tvalid_reg[i] <= s_axis_tvalid[i];
+            s_axis_tlast_reg[i] <= s_axis_tlast[i];
+            s_axis_tid_reg[i*S_ID_WIDTH +: S_ID_WIDTH_INT] <= s_axis_tid[i*S_ID_WIDTH +: S_ID_WIDTH_INT];
+            s_axis_tdest_reg[i*DEST_WIDTH +: DEST_WIDTH] <= s_axis_tdest[i*DEST_WIDTH +: DEST_WIDTH];
+            s_axis_tuser_reg[i*USER_WIDTH +: USER_WIDTH] <= s_axis_tuser[i*USER_WIDTH +: USER_WIDTH];
+        end
+    end
+
+    if (rst) begin
+        s_axis_tvalid_reg <= 0;
+    end
 end
 
 // output datapath logic
@@ -155,7 +211,7 @@ reg [DATA_WIDTH-1:0] m_axis_tdata_reg  = {DATA_WIDTH{1'b0}};
 reg [KEEP_WIDTH-1:0] m_axis_tkeep_reg  = {KEEP_WIDTH{1'b0}};
 reg                  m_axis_tvalid_reg = 1'b0, m_axis_tvalid_next;
 reg                  m_axis_tlast_reg  = 1'b0;
-reg [ID_WIDTH-1:0]   m_axis_tid_reg    = {ID_WIDTH{1'b0}};
+reg [M_ID_WIDTH-1:0] m_axis_tid_reg    = {M_ID_WIDTH{1'b0}};
 reg [DEST_WIDTH-1:0] m_axis_tdest_reg  = {DEST_WIDTH{1'b0}};
 reg [USER_WIDTH-1:0] m_axis_tuser_reg  = {USER_WIDTH{1'b0}};
 
@@ -163,7 +219,7 @@ reg [DATA_WIDTH-1:0] temp_m_axis_tdata_reg  = {DATA_WIDTH{1'b0}};
 reg [KEEP_WIDTH-1:0] temp_m_axis_tkeep_reg  = {KEEP_WIDTH{1'b0}};
 reg                  temp_m_axis_tvalid_reg = 1'b0, temp_m_axis_tvalid_next;
 reg                  temp_m_axis_tlast_reg  = 1'b0;
-reg [ID_WIDTH-1:0]   temp_m_axis_tid_reg    = {ID_WIDTH{1'b0}};
+reg [M_ID_WIDTH-1:0] temp_m_axis_tid_reg    = {M_ID_WIDTH{1'b0}};
 reg [DEST_WIDTH-1:0] temp_m_axis_tdest_reg  = {DEST_WIDTH{1'b0}};
 reg [USER_WIDTH-1:0] temp_m_axis_tuser_reg  = {USER_WIDTH{1'b0}};
 
@@ -175,13 +231,13 @@ reg store_axis_temp_to_output;
 assign m_axis_tdata  = m_axis_tdata_reg;
 assign m_axis_tkeep  = KEEP_ENABLE ? m_axis_tkeep_reg : {KEEP_WIDTH{1'b1}};
 assign m_axis_tvalid = m_axis_tvalid_reg;
-assign m_axis_tlast  = m_axis_tlast_reg;
-assign m_axis_tid    = ID_ENABLE   ? m_axis_tid_reg   : {ID_WIDTH{1'b0}};
+assign m_axis_tlast  = LAST_ENABLE ? m_axis_tlast_reg : 1'b1;
+assign m_axis_tid    = ID_ENABLE   ? m_axis_tid_reg   : {M_ID_WIDTH{1'b0}};
 assign m_axis_tdest  = DEST_ENABLE ? m_axis_tdest_reg : {DEST_WIDTH{1'b0}};
 assign m_axis_tuser  = USER_ENABLE ? m_axis_tuser_reg : {USER_WIDTH{1'b0}};
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign m_axis_tready_int_early = m_axis_tready || (!temp_m_axis_tvalid_reg && (!m_axis_tvalid_reg || !m_axis_tvalid_int));
+// enable ready input next cycle if output is ready or if both output registers are empty
+assign m_axis_tready_int_early = m_axis_tready || (!temp_m_axis_tvalid_reg && !m_axis_tvalid_reg);
 
 always @* begin
     // transfer sink ready state to source
@@ -212,15 +268,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        m_axis_tvalid_reg <= 1'b0;
-        m_axis_tready_int_reg <= 1'b0;
-        temp_m_axis_tvalid_reg <= 1'b0;
-    end else begin
-        m_axis_tvalid_reg <= m_axis_tvalid_next;
-        m_axis_tready_int_reg <= m_axis_tready_int_early;
-        temp_m_axis_tvalid_reg <= temp_m_axis_tvalid_next;
-    end
+    m_axis_tvalid_reg <= m_axis_tvalid_next;
+    m_axis_tready_int_reg <= m_axis_tready_int_early;
+    temp_m_axis_tvalid_reg <= temp_m_axis_tvalid_next;
 
     // datapath
     if (store_axis_int_to_output) begin
@@ -246,6 +296,12 @@ always @(posedge clk) begin
         temp_m_axis_tid_reg   <= m_axis_tid_int;
         temp_m_axis_tdest_reg <= m_axis_tdest_int;
         temp_m_axis_tuser_reg <= m_axis_tuser_int;
+    end
+
+    if (rst) begin
+        m_axis_tvalid_reg <= 1'b0;
+        m_axis_tready_int_reg <= 1'b0;
+        temp_m_axis_tvalid_reg <= 1'b0;
     end
 end
 

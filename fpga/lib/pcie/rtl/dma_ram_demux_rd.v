@@ -185,8 +185,8 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     assign seg_ram_rd_cmd_addr = {PORTS{seg_ram_rd_cmd_addr_reg}};
     assign seg_ram_rd_cmd_valid = seg_ram_rd_cmd_valid_reg;
 
-    // enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-    assign seg_ram_rd_cmd_ready_int_early = (seg_ram_rd_cmd_ready & seg_ram_rd_cmd_valid_reg) || (!temp_seg_ram_rd_cmd_valid_reg && (!seg_ram_rd_cmd_valid_reg || !seg_ram_rd_cmd_valid_int));
+    // enable ready input next cycle if output is ready or if both output registers are empty
+    assign seg_ram_rd_cmd_ready_int_early = (seg_ram_rd_cmd_ready & seg_ram_rd_cmd_valid) || (!temp_seg_ram_rd_cmd_valid_reg && !seg_ram_rd_cmd_valid_reg);
 
     always @* begin
         // transfer sink ready state to source
@@ -217,15 +217,9 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     end
 
     always @(posedge clk) begin
-        if (rst) begin
-            seg_ram_rd_cmd_valid_reg <= {PORTS{1'b0}};
-            seg_ram_rd_cmd_ready_int_reg <= 1'b0;
-            temp_seg_ram_rd_cmd_valid_reg <= {PORTS{1'b0}};
-        end else begin
-            seg_ram_rd_cmd_valid_reg <= seg_ram_rd_cmd_valid_next;
-            seg_ram_rd_cmd_ready_int_reg <= seg_ram_rd_cmd_ready_int_early;
-            temp_seg_ram_rd_cmd_valid_reg <= temp_seg_ram_rd_cmd_valid_next;
-        end
+        seg_ram_rd_cmd_valid_reg <= seg_ram_rd_cmd_valid_next;
+        seg_ram_rd_cmd_ready_int_reg <= seg_ram_rd_cmd_ready_int_early;
+        temp_seg_ram_rd_cmd_valid_reg <= temp_seg_ram_rd_cmd_valid_next;
 
         // datapath
         if (store_axis_resp_int_to_output) begin
@@ -239,6 +233,12 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
         if (store_axis_resp_int_to_temp) begin
             temp_seg_ram_rd_cmd_sel_reg <= seg_ram_rd_cmd_sel_int;
             temp_seg_ram_rd_cmd_addr_reg <= seg_ram_rd_cmd_addr_int;
+        end
+
+        if (rst) begin
+            seg_ram_rd_cmd_valid_reg <= {PORTS{1'b0}};
+            seg_ram_rd_cmd_ready_int_reg <= 1'b0;
+            temp_seg_ram_rd_cmd_valid_reg <= {PORTS{1'b0}};
         end
     end
 

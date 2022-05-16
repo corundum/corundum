@@ -107,6 +107,17 @@ wire [PORTS-1:0] grant;
 wire grant_valid;
 wire [CL_PORTS-1:0] grant_encoded;
 
+// input registers to pipeline arbitration delay
+reg [PORTS*TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  in_tlp_data_reg = 0;
+reg [PORTS*TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  in_tlp_strb_reg = 0;
+reg [PORTS*TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   in_tlp_hdr_reg = 0;
+reg [PORTS*TLP_SEG_COUNT*3-1:0]                   in_tlp_bar_id_reg = 0;
+reg [PORTS*TLP_SEG_COUNT*8-1:0]                   in_tlp_func_num_reg = 0;
+reg [PORTS*TLP_SEG_COUNT*4-1:0]                   in_tlp_error_reg = 0;
+reg [PORTS*TLP_SEG_COUNT-1:0]                     in_tlp_valid_reg = 0;
+reg [PORTS*TLP_SEG_COUNT-1:0]                     in_tlp_sop_reg = 0;
+reg [PORTS*TLP_SEG_COUNT-1:0]                     in_tlp_eop_reg = 0;
+
 // internal datapath
 reg  [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  out_tlp_data_int;
 reg  [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  out_tlp_strb_int;
@@ -120,18 +131,18 @@ reg  [TLP_SEG_COUNT-1:0]                     out_tlp_eop_int;
 reg                                          out_tlp_ready_int_reg = 1'b0;
 wire                                         out_tlp_ready_int_early;
 
-assign in_tlp_ready = (out_tlp_ready_int_reg && grant_valid) << grant_encoded;
+assign in_tlp_ready = ~in_tlp_valid_reg | ({PORTS{out_tlp_ready_int_reg}} & grant);
 
 // mux for incoming packet
-wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  current_in_tlp_data     = in_tlp_data[grant_encoded*TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH +: TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH];
-wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  current_in_tlp_strb     = in_tlp_strb[grant_encoded*TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH +: TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH];
-wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   current_in_tlp_hdr      = in_tlp_hdr[grant_encoded*TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH +: TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH];
-wire [TLP_SEG_COUNT*3-1:0]                   current_in_tlp_bar_id   = in_tlp_bar_id[grant_encoded*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3];
-wire [TLP_SEG_COUNT*8-1:0]                   current_in_tlp_func_num = in_tlp_func_num[grant_encoded*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8];
-wire [TLP_SEG_COUNT*4-1:0]                   current_in_tlp_error    = in_tlp_error[grant_encoded*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4];
-wire [TLP_SEG_COUNT-1:0]                     current_in_tlp_valid    = in_tlp_valid[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
-wire [TLP_SEG_COUNT-1:0]                     current_in_tlp_sop      = in_tlp_sop[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
-wire [TLP_SEG_COUNT-1:0]                     current_in_tlp_eop      = in_tlp_eop[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
+wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  current_in_tlp_data     = in_tlp_data_reg[grant_encoded*TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH +: TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH];
+wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  current_in_tlp_strb     = in_tlp_strb_reg[grant_encoded*TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH +: TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH];
+wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   current_in_tlp_hdr      = in_tlp_hdr_reg[grant_encoded*TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH +: TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH];
+wire [TLP_SEG_COUNT*3-1:0]                   current_in_tlp_bar_id   = in_tlp_bar_id_reg[grant_encoded*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3];
+wire [TLP_SEG_COUNT*8-1:0]                   current_in_tlp_func_num = in_tlp_func_num_reg[grant_encoded*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8];
+wire [TLP_SEG_COUNT*4-1:0]                   current_in_tlp_error    = in_tlp_error_reg[grant_encoded*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4];
+wire [TLP_SEG_COUNT-1:0]                     current_in_tlp_valid    = in_tlp_valid_reg[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
+wire [TLP_SEG_COUNT-1:0]                     current_in_tlp_sop      = in_tlp_sop_reg[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
+wire [TLP_SEG_COUNT-1:0]                     current_in_tlp_eop      = in_tlp_eop_reg[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
 wire                                         current_in_tlp_ready    = in_tlp_ready[grant_encoded];
 
 // arbiter instance
@@ -152,8 +163,8 @@ arb_inst (
     .grant_encoded(grant_encoded)
 );
 
-assign request = in_tlp_valid & ~grant;
-assign acknowledge = grant & in_tlp_valid & in_tlp_ready & in_tlp_eop;
+assign request = (in_tlp_valid_reg & ~grant) | (in_tlp_valid & grant);
+assign acknowledge = grant & in_tlp_valid_reg & {PORTS{out_tlp_ready_int_reg}} & in_tlp_eop_reg;
 
 always @* begin
     // pass through selected packet data
@@ -163,9 +174,32 @@ always @* begin
     out_tlp_bar_id_int  = current_in_tlp_bar_id;
     out_tlp_func_num_int  = current_in_tlp_func_num;
     out_tlp_error_int  = current_in_tlp_error;
-    out_tlp_valid_int = out_tlp_ready_int_reg && grant_valid ? current_in_tlp_valid : 0;
+    out_tlp_valid_int = current_in_tlp_valid && out_tlp_ready_int_reg && grant_valid;
     out_tlp_sop_int  = current_in_tlp_sop;
     out_tlp_eop_int  = current_in_tlp_eop;
+end
+
+integer i;
+
+always @(posedge clk) begin
+    // register inputs
+    for (i = 0; i < PORTS; i = i + 1) begin
+        if (in_tlp_ready[i]) begin
+            in_tlp_data_reg[i*TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH +: TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH] <= in_tlp_data[i*TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH +: TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH];
+            in_tlp_strb_reg[i*TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH +: TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH] <= in_tlp_strb[i*TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH +: TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH];
+            in_tlp_hdr_reg[i*TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH +: TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH] <= in_tlp_hdr[i*TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH +: TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH];
+            in_tlp_bar_id_reg[i*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3] <= in_tlp_bar_id[i*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3];
+            in_tlp_func_num_reg[i*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8] <= in_tlp_func_num[i*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8];
+            in_tlp_error_reg[i*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4] <= in_tlp_error[i*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4];
+            in_tlp_valid_reg[i*TLP_SEG_COUNT +: TLP_SEG_COUNT] <= in_tlp_valid[i*TLP_SEG_COUNT +: TLP_SEG_COUNT];
+            in_tlp_sop_reg[i*TLP_SEG_COUNT +: TLP_SEG_COUNT] <= in_tlp_sop[i*TLP_SEG_COUNT +: TLP_SEG_COUNT];
+            in_tlp_eop_reg[i*TLP_SEG_COUNT +: TLP_SEG_COUNT] <= in_tlp_eop[i*TLP_SEG_COUNT +: TLP_SEG_COUNT];
+        end
+    end
+
+    if (rst) begin
+        in_tlp_valid_reg <= 0;
+    end
 end
 
 // output datapath logic
@@ -204,8 +238,8 @@ assign out_tlp_valid     = out_tlp_valid_reg;
 assign out_tlp_sop       = out_tlp_sop_reg;
 assign out_tlp_eop       = out_tlp_eop_reg;
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign out_tlp_ready_int_early = out_tlp_ready || (!temp_out_tlp_valid_reg && (!out_tlp_valid_reg || !out_tlp_valid_int));
+// enable ready input next cycle if output is ready or if both output registers are empty
+assign out_tlp_ready_int_early = out_tlp_ready || (!temp_out_tlp_valid_reg && !out_tlp_valid_reg);
 
 always @* begin
     // transfer sink ready state to source
@@ -236,15 +270,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        out_tlp_valid_reg <= 1'b0;
-        out_tlp_ready_int_reg <= 1'b0;
-        temp_out_tlp_valid_reg <= 1'b0;
-    end else begin
-        out_tlp_valid_reg <= out_tlp_valid_next;
-        out_tlp_ready_int_reg <= out_tlp_ready_int_early;
-        temp_out_tlp_valid_reg <= temp_out_tlp_valid_next;
-    end
+    out_tlp_valid_reg <= out_tlp_valid_next;
+    out_tlp_ready_int_reg <= out_tlp_ready_int_early;
+    temp_out_tlp_valid_reg <= temp_out_tlp_valid_next;
 
     // datapath
     if (store_axis_int_to_output) begin
@@ -276,6 +304,12 @@ always @(posedge clk) begin
         temp_out_tlp_error_reg <= out_tlp_error_int;
         temp_out_tlp_sop_reg <= out_tlp_sop_int;
         temp_out_tlp_eop_reg <= out_tlp_eop_int;
+    end
+
+    if (rst) begin
+        out_tlp_valid_reg <= 1'b0;
+        out_tlp_ready_int_reg <= 1'b0;
+        temp_out_tlp_valid_reg <= 1'b0;
     end
 end
 

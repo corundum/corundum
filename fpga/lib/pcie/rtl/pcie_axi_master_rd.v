@@ -913,8 +913,8 @@ assign tx_cpl_tlp_valid  = tx_cpl_tlp_valid_reg;
 assign tx_cpl_tlp_sop    = tx_cpl_tlp_sop_reg;
 assign tx_cpl_tlp_eop    = tx_cpl_tlp_eop_reg;
 
-// enable ready input next cycle if output is ready or the temp reg will not be filled on the next cycle (output reg empty or no input)
-assign tx_cpl_tlp_ready_int_early = tx_cpl_tlp_ready || (!temp_tx_cpl_tlp_valid_reg && (!tx_cpl_tlp_valid_reg || !tx_cpl_tlp_valid_int));
+// enable ready input next cycle if output is ready or if both output registers are empty
+assign tx_cpl_tlp_ready_int_early = tx_cpl_tlp_ready || (!temp_tx_cpl_tlp_valid_reg && !tx_cpl_tlp_valid_reg);
 
 always @* begin
     // transfer sink ready state to source
@@ -945,15 +945,9 @@ always @* begin
 end
 
 always @(posedge clk) begin
-    if (rst) begin
-        tx_cpl_tlp_valid_reg <= 1'b0;
-        tx_cpl_tlp_ready_int_reg <= 1'b0;
-        temp_tx_cpl_tlp_valid_reg <= 1'b0;
-    end else begin
-        tx_cpl_tlp_valid_reg <= tx_cpl_tlp_valid_next;
-        tx_cpl_tlp_ready_int_reg <= tx_cpl_tlp_ready_int_early;
-        temp_tx_cpl_tlp_valid_reg <= temp_tx_cpl_tlp_valid_next;
-    end
+    tx_cpl_tlp_valid_reg <= tx_cpl_tlp_valid_next;
+    tx_cpl_tlp_ready_int_reg <= tx_cpl_tlp_ready_int_early;
+    temp_tx_cpl_tlp_valid_reg <= temp_tx_cpl_tlp_valid_next;
 
     // datapath
     if (store_axis_int_to_output) begin
@@ -976,6 +970,12 @@ always @(posedge clk) begin
         temp_tx_cpl_tlp_hdr_reg <= tx_cpl_tlp_hdr_int;
         temp_tx_cpl_tlp_sop_reg <= tx_cpl_tlp_sop_int;
         temp_tx_cpl_tlp_eop_reg <= tx_cpl_tlp_eop_int;
+    end
+
+    if (rst) begin
+        tx_cpl_tlp_valid_reg <= 1'b0;
+        tx_cpl_tlp_ready_int_reg <= 1'b0;
+        temp_tx_cpl_tlp_valid_reg <= 1'b0;
     end
 end
 

@@ -462,7 +462,9 @@ fail_create_if:
 	return 0;
 
 	// error handling
+#ifdef CONFIG_AUXILIARY_BUS
 fail_adev:
+#endif
 fail_miscdev:
 fail_board:
 fail_bar_size:

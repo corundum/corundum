@@ -708,7 +708,9 @@ wire [15:0] sfp_drp_do;
 wire        sfp_drp_rdy;
 
 wire sfp0_rx_block_lock;
+wire sfp0_rx_status;
 wire sfp1_rx_block_lock;
+wire sfp1_rx_status;
 
 wire sfp_gtpowergood;
 
@@ -797,6 +799,7 @@ sfp_phy_quad_inst (
     .phy_1_rx_sequence_error(),
     .phy_1_rx_block_lock(sfp0_rx_block_lock),
     .phy_1_rx_high_ber(),
+    .phy_1_rx_status(sfp0_rx_status),
     .phy_1_tx_prbs31_enable(sfp0_tx_prbs31_enable_int),
     .phy_1_rx_prbs31_enable(sfp0_rx_prbs31_enable_int),
 
@@ -814,6 +817,7 @@ sfp_phy_quad_inst (
     .phy_2_rx_sequence_error(),
     .phy_2_rx_block_lock(sfp1_rx_block_lock),
     .phy_2_rx_high_ber(),
+    .phy_2_rx_status(sfp1_rx_status),
     .phy_2_tx_prbs31_enable(sfp1_tx_prbs31_enable_int),
     .phy_2_rx_prbs31_enable(sfp1_rx_prbs31_enable_int)
 );
@@ -1088,7 +1092,7 @@ core_inst (
     .sfp0_rxc(sfp0_rxc_int),
     .sfp0_rx_prbs31_enable(sfp0_rx_prbs31_enable_int),
     .sfp0_rx_error_count(sfp0_rx_error_count_int),
-    .sfp0_rx_status(sfp0_rx_block_lock),
+    .sfp0_rx_status(sfp0_rx_status),
     .sfp0_tx_disable_b(sfp0_tx_disable_b),
 
     .sfp1_tx_clk(sfp1_tx_clk_int),
@@ -1102,7 +1106,7 @@ core_inst (
     .sfp1_rxc(sfp1_rxc_int),
     .sfp1_rx_prbs31_enable(sfp1_rx_prbs31_enable_int),
     .sfp1_rx_error_count(sfp1_rx_error_count_int),
-    .sfp1_rx_status(sfp1_rx_block_lock),
+    .sfp1_rx_status(sfp1_rx_status),
     .sfp1_tx_disable_b(sfp1_tx_disable_b),
 
     .sfp_drp_clk(sfp_drp_clk),

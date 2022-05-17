@@ -146,6 +146,7 @@ module eth_xcvr_phy_10g_gty_wrapper #
     output wire                   phy_rx_sequence_error,
     output wire                   phy_rx_block_lock,
     output wire                   phy_rx_high_ber,
+    output wire                   phy_rx_status,
     input  wire                   phy_tx_prbs31_enable,
     input  wire                   phy_rx_prbs31_enable
 );
@@ -217,11 +218,14 @@ reg phy_rx_block_lock_reg = 1'b0;
 reg phy_rx_block_lock_sync_1_reg = 1'b0, phy_rx_block_lock_sync_2_reg = 1'b0;
 reg phy_rx_high_ber_reg = 1'b0;
 reg phy_rx_high_ber_sync_1_reg = 1'b0, phy_rx_high_ber_sync_2_reg = 1'b0;
+reg phy_rx_status_reg = 1'b0;
+reg phy_rx_status_sync_1_reg = 1'b0, phy_rx_status_sync_2_reg = 1'b0;
 
 always @(posedge gt_rxusrclk2) begin
     phy_rx_reset_req_sync_1_reg <= phy_rx_reset_req_sync_1_reg ^ phy_rx_reset_req;
     phy_rx_block_lock_reg <= phy_rx_block_lock;
     phy_rx_high_ber_reg <= phy_rx_high_ber;
+    phy_rx_status_reg <= phy_rx_status;
 end
 
 always @(posedge drp_clk) begin
@@ -232,6 +236,8 @@ always @(posedge drp_clk) begin
     phy_rx_block_lock_sync_2_reg <= phy_rx_block_lock_sync_1_reg;
     phy_rx_high_ber_sync_1_reg <= phy_rx_high_ber_reg;
     phy_rx_high_ber_sync_2_reg <= phy_rx_high_ber_sync_1_reg;
+    phy_rx_status_sync_1_reg <= phy_rx_status_reg;
+    phy_rx_status_sync_2_reg <= phy_rx_status_sync_1_reg;
 end
 
 // QPLL0 reset and power down
@@ -910,6 +916,7 @@ always @(posedge drp_clk) begin
                         drp_do_reg[0] <= rx_reset_done_reg;
                         drp_do_reg[8] <= phy_rx_block_lock_sync_2_reg;
                         drp_do_reg[9] <= phy_rx_high_ber_sync_2_reg;
+                        drp_do_reg[10] <= phy_rx_status_sync_2_reg;
                     end
                     16'h8101: begin
                         drp_do_reg[0] <= phy_rx_reset_req_en_drp_reg;
@@ -1559,6 +1566,7 @@ phy_inst (
     .rx_sequence_error(phy_rx_sequence_error),
     .rx_block_lock(phy_rx_block_lock),
     .rx_high_ber(phy_rx_high_ber),
+    .rx_status(phy_rx_status),
     .tx_prbs31_enable(phy_tx_prbs31_enable),
     .rx_prbs31_enable(phy_rx_prbs31_enable)
 );

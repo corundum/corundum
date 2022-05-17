@@ -996,9 +996,13 @@ wire [15:0] qsfp_0_drp_do;
 wire        qsfp_0_drp_rdy;
 
 wire qsfp_0_rx_block_lock_0;
+wire qsfp_0_rx_status_0;
 wire qsfp_0_rx_block_lock_1;
+wire qsfp_0_rx_status_1;
 wire qsfp_0_rx_block_lock_2;
+wire qsfp_0_rx_status_2;
 wire qsfp_0_rx_block_lock_3;
+wire qsfp_0_rx_status_3;
 
 wire qsfp_0_gtpowergood;
 
@@ -1088,6 +1092,7 @@ qsfp_0_phy_quad_inst (
     .phy_1_rx_sequence_error(),
     .phy_1_rx_block_lock(qsfp_0_rx_block_lock_0),
     .phy_1_rx_high_ber(),
+    .phy_1_rx_status(qsfp_0_rx_status_0),
     .phy_1_tx_prbs31_enable(qsfp_0_tx_prbs31_enable_0_int),
     .phy_1_rx_prbs31_enable(qsfp_0_rx_prbs31_enable_0_int),
 
@@ -1105,6 +1110,7 @@ qsfp_0_phy_quad_inst (
     .phy_2_rx_sequence_error(),
     .phy_2_rx_block_lock(qsfp_0_rx_block_lock_1),
     .phy_2_rx_high_ber(),
+    .phy_2_rx_status(qsfp_0_rx_status_1),
     .phy_2_tx_prbs31_enable(qsfp_0_tx_prbs31_enable_1_int),
     .phy_2_rx_prbs31_enable(qsfp_0_rx_prbs31_enable_1_int),
 
@@ -1122,6 +1128,7 @@ qsfp_0_phy_quad_inst (
     .phy_3_rx_sequence_error(),
     .phy_3_rx_block_lock(qsfp_0_rx_block_lock_2),
     .phy_3_rx_high_ber(),
+    .phy_3_rx_status(qsfp_0_rx_status_2),
     .phy_3_tx_prbs31_enable(qsfp_0_tx_prbs31_enable_2_int),
     .phy_3_rx_prbs31_enable(qsfp_0_rx_prbs31_enable_2_int),
 
@@ -1139,6 +1146,7 @@ qsfp_0_phy_quad_inst (
     .phy_4_rx_sequence_error(),
     .phy_4_rx_block_lock(qsfp_0_rx_block_lock_3),
     .phy_4_rx_high_ber(),
+    .phy_4_rx_status(qsfp_0_rx_status_3),
     .phy_4_tx_prbs31_enable(qsfp_0_tx_prbs31_enable_3_int),
     .phy_4_rx_prbs31_enable(qsfp_0_rx_prbs31_enable_3_int)
 );
@@ -1199,9 +1207,13 @@ wire [15:0] qsfp_1_drp_do;
 wire        qsfp_1_drp_rdy;
 
 wire qsfp_1_rx_block_lock_0;
+wire qsfp_1_rx_status_0;
 wire qsfp_1_rx_block_lock_1;
+wire qsfp_1_rx_status_1;
 wire qsfp_1_rx_block_lock_2;
+wire qsfp_1_rx_status_2;
 wire qsfp_1_rx_block_lock_3;
+wire qsfp_1_rx_status_3;
 
 wire qsfp_1_gtpowergood;
 
@@ -1291,6 +1303,7 @@ qsfp_1_phy_quad_inst (
     .phy_1_rx_sequence_error(),
     .phy_1_rx_block_lock(qsfp_1_rx_block_lock_0),
     .phy_1_rx_high_ber(),
+    .phy_1_rx_status(qsfp_1_rx_status_0),
     .phy_1_tx_prbs31_enable(qsfp_1_tx_prbs31_enable_0_int),
     .phy_1_rx_prbs31_enable(qsfp_1_rx_prbs31_enable_0_int),
 
@@ -1308,6 +1321,7 @@ qsfp_1_phy_quad_inst (
     .phy_2_rx_sequence_error(),
     .phy_2_rx_block_lock(qsfp_1_rx_block_lock_1),
     .phy_2_rx_high_ber(),
+    .phy_2_rx_status(qsfp_1_rx_status_1),
     .phy_2_tx_prbs31_enable(qsfp_1_tx_prbs31_enable_1_int),
     .phy_2_rx_prbs31_enable(qsfp_1_rx_prbs31_enable_1_int),
 
@@ -1325,6 +1339,7 @@ qsfp_1_phy_quad_inst (
     .phy_3_rx_sequence_error(),
     .phy_3_rx_block_lock(qsfp_1_rx_block_lock_2),
     .phy_3_rx_high_ber(),
+    .phy_3_rx_status(qsfp_1_rx_status_2),
     .phy_3_tx_prbs31_enable(qsfp_1_tx_prbs31_enable_2_int),
     .phy_3_rx_prbs31_enable(qsfp_1_rx_prbs31_enable_2_int),
 
@@ -1342,6 +1357,7 @@ qsfp_1_phy_quad_inst (
     .phy_4_rx_sequence_error(),
     .phy_4_rx_block_lock(qsfp_1_rx_block_lock_3),
     .phy_4_rx_high_ber(),
+    .phy_4_rx_status(qsfp_1_rx_status_3),
     .phy_4_tx_prbs31_enable(qsfp_1_tx_prbs31_enable_3_int),
     .phy_4_rx_prbs31_enable(qsfp_1_rx_prbs31_enable_3_int)
 );
@@ -1354,14 +1370,14 @@ assign ptp_clk = qsfp_0_mgt_refclk_bufg;
 assign ptp_rst = qsfp_0_rst;
 assign ptp_sample_clk = clk_125mhz_int;
 
-assign led_green[0] = qsfp_0_rx_block_lock_0;
-assign led_green[1] = qsfp_0_rx_block_lock_1;
-assign led_green[2] = qsfp_0_rx_block_lock_2;
-assign led_green[3] = qsfp_0_rx_block_lock_3;
-assign led_green[4] = qsfp_1_rx_block_lock_0;
-assign led_green[5] = qsfp_1_rx_block_lock_1;
-assign led_green[6] = qsfp_1_rx_block_lock_2;
-assign led_green[7] = qsfp_1_rx_block_lock_3;
+assign led_green[0] = qsfp_0_rx_status_0;
+assign led_green[1] = qsfp_0_rx_status_1;
+assign led_green[2] = qsfp_0_rx_status_2;
+assign led_green[3] = qsfp_0_rx_status_3;
+assign led_green[4] = qsfp_1_rx_status_0;
+assign led_green[5] = qsfp_1_rx_status_1;
+assign led_green[6] = qsfp_1_rx_status_2;
+assign led_green[7] = qsfp_1_rx_status_3;
 
 fpga_core #(
     // FW and board IDs
@@ -1629,7 +1645,7 @@ core_inst (
     .qsfp_0_rxc_0(qsfp_0_rxc_0_int),
     .qsfp_0_rx_prbs31_enable_0(qsfp_0_rx_prbs31_enable_0_int),
     .qsfp_0_rx_error_count_0(qsfp_0_rx_error_count_0_int),
-    .qsfp_0_rx_status_0(qsfp_0_rx_block_lock_0),
+    .qsfp_0_rx_status_0(qsfp_0_rx_status_0),
     .qsfp_0_tx_clk_1(qsfp_0_tx_clk_1_int),
     .qsfp_0_tx_rst_1(qsfp_0_tx_rst_1_int),
     .qsfp_0_txd_1(qsfp_0_txd_1_int),
@@ -1641,7 +1657,7 @@ core_inst (
     .qsfp_0_rxc_1(qsfp_0_rxc_1_int),
     .qsfp_0_rx_prbs31_enable_1(qsfp_0_rx_prbs31_enable_1_int),
     .qsfp_0_rx_error_count_1(qsfp_0_rx_error_count_1_int),
-    .qsfp_0_rx_status_1(qsfp_0_rx_block_lock_1),
+    .qsfp_0_rx_status_1(qsfp_0_rx_status_1),
     .qsfp_0_tx_clk_2(qsfp_0_tx_clk_2_int),
     .qsfp_0_tx_rst_2(qsfp_0_tx_rst_2_int),
     .qsfp_0_txd_2(qsfp_0_txd_2_int),
@@ -1653,7 +1669,7 @@ core_inst (
     .qsfp_0_rxc_2(qsfp_0_rxc_2_int),
     .qsfp_0_rx_prbs31_enable_2(qsfp_0_rx_prbs31_enable_2_int),
     .qsfp_0_rx_error_count_2(qsfp_0_rx_error_count_2_int),
-    .qsfp_0_rx_status_2(qsfp_0_rx_block_lock_2),
+    .qsfp_0_rx_status_2(qsfp_0_rx_status_2),
     .qsfp_0_tx_clk_3(qsfp_0_tx_clk_3_int),
     .qsfp_0_tx_rst_3(qsfp_0_tx_rst_3_int),
     .qsfp_0_txd_3(qsfp_0_txd_3_int),
@@ -1665,7 +1681,7 @@ core_inst (
     .qsfp_0_rxc_3(qsfp_0_rxc_3_int),
     .qsfp_0_rx_prbs31_enable_3(qsfp_0_rx_prbs31_enable_3_int),
     .qsfp_0_rx_error_count_3(qsfp_0_rx_error_count_3_int),
-    .qsfp_0_rx_status_3(qsfp_0_rx_block_lock_3),
+    .qsfp_0_rx_status_3(qsfp_0_rx_status_3),
     .qsfp_0_drp_clk(qsfp_0_drp_clk),
     .qsfp_0_drp_rst(qsfp_0_drp_rst),
     .qsfp_0_drp_addr(qsfp_0_drp_addr),
@@ -1695,7 +1711,7 @@ core_inst (
     .qsfp_1_rxc_0(qsfp_1_rxc_0_int),
     .qsfp_1_rx_prbs31_enable_0(qsfp_1_rx_prbs31_enable_0_int),
     .qsfp_1_rx_error_count_0(qsfp_1_rx_error_count_0_int),
-    .qsfp_1_rx_status_0(qsfp_1_rx_block_lock_0),
+    .qsfp_1_rx_status_0(qsfp_1_rx_status_0),
     .qsfp_1_tx_clk_1(qsfp_1_tx_clk_1_int),
     .qsfp_1_tx_rst_1(qsfp_1_tx_rst_1_int),
     .qsfp_1_txd_1(qsfp_1_txd_1_int),
@@ -1707,7 +1723,7 @@ core_inst (
     .qsfp_1_rxc_1(qsfp_1_rxc_1_int),
     .qsfp_1_rx_prbs31_enable_1(qsfp_1_rx_prbs31_enable_1_int),
     .qsfp_1_rx_error_count_1(qsfp_1_rx_error_count_1_int),
-    .qsfp_1_rx_status_1(qsfp_1_rx_block_lock_1),
+    .qsfp_1_rx_status_1(qsfp_1_rx_status_1),
     .qsfp_1_tx_clk_2(qsfp_1_tx_clk_2_int),
     .qsfp_1_tx_rst_2(qsfp_1_tx_rst_2_int),
     .qsfp_1_txd_2(qsfp_1_txd_2_int),
@@ -1719,7 +1735,7 @@ core_inst (
     .qsfp_1_rxc_2(qsfp_1_rxc_2_int),
     .qsfp_1_rx_prbs31_enable_2(qsfp_1_rx_prbs31_enable_2_int),
     .qsfp_1_rx_error_count_2(qsfp_1_rx_error_count_2_int),
-    .qsfp_1_rx_status_2(qsfp_1_rx_block_lock_2),
+    .qsfp_1_rx_status_2(qsfp_1_rx_status_2),
     .qsfp_1_tx_clk_3(qsfp_1_tx_clk_3_int),
     .qsfp_1_tx_rst_3(qsfp_1_tx_rst_3_int),
     .qsfp_1_txd_3(qsfp_1_txd_3_int),
@@ -1731,7 +1747,7 @@ core_inst (
     .qsfp_1_rxc_3(qsfp_1_rxc_3_int),
     .qsfp_1_rx_prbs31_enable_3(qsfp_1_rx_prbs31_enable_3_int),
     .qsfp_1_rx_error_count_3(qsfp_1_rx_error_count_3_int),
-    .qsfp_1_rx_status_3(qsfp_1_rx_block_lock_3),
+    .qsfp_1_rx_status_3(qsfp_1_rx_status_3),
     .qsfp_1_drp_clk(qsfp_1_drp_clk),
     .qsfp_1_drp_rst(qsfp_1_drp_rst),
     .qsfp_1_drp_addr(qsfp_1_drp_addr),

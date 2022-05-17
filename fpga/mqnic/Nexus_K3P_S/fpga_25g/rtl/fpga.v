@@ -917,7 +917,9 @@ wire [15:0] sfp_drp_do;
 wire        sfp_drp_rdy;
 
 wire sfp_1_rx_block_lock;
+wire sfp_1_rx_status;
 wire sfp_2_rx_block_lock;
+wire sfp_2_rx_status;
 
 wire sfp_gtpowergood;
 
@@ -1012,6 +1014,7 @@ sfp_phy_quad_inst (
     .phy_1_rx_sequence_error(),
     .phy_1_rx_block_lock(sfp_1_rx_block_lock),
     .phy_1_rx_high_ber(),
+    .phy_1_rx_status(sfp_1_rx_status),
     .phy_1_tx_prbs31_enable(sfp_1_tx_prbs31_enable_int),
     .phy_1_rx_prbs31_enable(sfp_1_rx_prbs31_enable_int),
 
@@ -1029,6 +1032,7 @@ sfp_phy_quad_inst (
     .phy_2_rx_sequence_error(),
     .phy_2_rx_block_lock(sfp_2_rx_block_lock),
     .phy_2_rx_high_ber(),
+    .phy_2_rx_status(sfp_2_rx_status),
     .phy_2_tx_prbs31_enable(sfp_2_tx_prbs31_enable_int),
     .phy_2_rx_prbs31_enable(sfp_2_rx_prbs31_enable_int)
 );
@@ -1041,9 +1045,9 @@ assign ptp_clk = sfp_mgt_refclk_bufg;
 assign ptp_rst = sfp_rst;
 assign ptp_sample_clk = clk_125mhz_int;
 
-assign sfp_1_led[0] = sfp_1_rx_block_lock;
+assign sfp_1_led[0] = sfp_1_rx_status;
 assign sfp_1_led[1] = 1'b0;
-assign sfp_2_led[0] = sfp_2_rx_block_lock;
+assign sfp_2_led[0] = sfp_2_rx_status;
 assign sfp_2_led[1] = 1'b0;
 
 fpga_core #(
@@ -1300,7 +1304,7 @@ core_inst (
     .sfp_1_rx_prbs31_enable(sfp_1_rx_prbs31_enable_int),
     .sfp_1_rx_error_count(sfp_1_rx_error_count_int),
 
-    .sfp_1_rx_status(sfp_1_rx_block_lock),
+    .sfp_1_rx_status(sfp_1_rx_status),
 
     .sfp_2_tx_clk(sfp_2_tx_clk_int),
     .sfp_2_tx_rst(sfp_2_tx_rst_int),
@@ -1314,7 +1318,7 @@ core_inst (
     .sfp_2_rx_prbs31_enable(sfp_2_rx_prbs31_enable_int),
     .sfp_2_rx_error_count(sfp_2_rx_error_count_int),
 
-    .sfp_2_rx_status(sfp_2_rx_block_lock),
+    .sfp_2_rx_status(sfp_2_rx_status),
 
     .sfp_drp_clk(sfp_drp_clk),
     .sfp_drp_rst(sfp_drp_rst),

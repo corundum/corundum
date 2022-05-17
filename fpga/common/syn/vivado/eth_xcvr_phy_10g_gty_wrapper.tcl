@@ -78,4 +78,5 @@ foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == eth_xcvr_phy_10g_gty_wr
     constrain_sync_chain $inst "phy_rx_reset_req_sync_1_reg_reg" "phy_rx_reset_req_sync_2_reg_reg" "phy_rx_reset_req_sync_3_reg_reg"
     constrain_sync_chain $inst "phy_rx_block_lock_reg_reg" "phy_rx_block_lock_sync_1_reg_reg" "phy_rx_block_lock_sync_2_reg_reg"
     constrain_sync_chain $inst "phy_rx_high_ber_reg_reg" "phy_rx_high_ber_sync_1_reg_reg" "phy_rx_high_ber_sync_2_reg_reg"
+    constrain_sync_chain $inst "phy_rx_status_reg_reg" "phy_rx_status_sync_1_reg_reg" "phy_rx_status_sync_2_reg_reg"
 }

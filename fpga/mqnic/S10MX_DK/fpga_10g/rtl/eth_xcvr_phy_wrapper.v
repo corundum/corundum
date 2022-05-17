@@ -72,7 +72,8 @@ module eth_xcvr_phy_wrapper (
     output wire [63:0] phy_xgmii_rxd,
     output wire [7:0]  phy_xgmii_rxc,
     output wire        phy_rx_block_lock,
-    output wire        phy_rx_high_ber
+    output wire        phy_rx_high_ber,
+    output wire        phy_rx_status
 );
 
 wire xcvr_tx_clk;
@@ -168,7 +169,8 @@ phy_inst (
     .serdes_rx_hdr(phy_rx_hdr),
     .serdes_rx_bitslip(xcvr_rx_bitslip),
     .rx_block_lock(phy_rx_block_lock),
-    .rx_high_ber(phy_rx_high_ber)
+    .rx_high_ber(phy_rx_high_ber),
+    .rx_status(phy_rx_status)
 );
 
 endmodule

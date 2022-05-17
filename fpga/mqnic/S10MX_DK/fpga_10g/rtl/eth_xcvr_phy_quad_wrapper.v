@@ -57,6 +57,7 @@ module eth_xcvr_phy_quad_wrapper (
     output wire [7:0]  phy_1_xgmii_rxc,
     output wire        phy_1_rx_block_lock,
     output wire        phy_1_rx_high_ber,
+    output wire        phy_1_rx_status,
     output wire        phy_2_tx_clk,
     output wire        phy_2_tx_rst,
     input  wire [63:0] phy_2_xgmii_txd,
@@ -67,6 +68,7 @@ module eth_xcvr_phy_quad_wrapper (
     output wire [7:0]  phy_2_xgmii_rxc,
     output wire        phy_2_rx_block_lock,
     output wire        phy_2_rx_high_ber,
+    output wire        phy_2_rx_status,
     output wire        phy_3_tx_clk,
     output wire        phy_3_tx_rst,
     input  wire [63:0] phy_3_xgmii_txd,
@@ -77,6 +79,7 @@ module eth_xcvr_phy_quad_wrapper (
     output wire [7:0]  phy_3_xgmii_rxc,
     output wire        phy_3_rx_block_lock,
     output wire        phy_3_rx_high_ber,
+    output wire        phy_3_rx_status,
     output wire        phy_4_tx_clk,
     output wire        phy_4_tx_rst,
     input  wire [63:0] phy_4_xgmii_txd,
@@ -86,7 +89,8 @@ module eth_xcvr_phy_quad_wrapper (
     output wire [63:0] phy_4_xgmii_rxd,
     output wire [7:0]  phy_4_xgmii_rxc,
     output wire        phy_4_rx_block_lock,
-    output wire        phy_4_rx_high_ber
+    output wire        phy_4_rx_high_ber,
+    output wire        phy_4_rx_status
 );
 
 wire xcvr_pll_locked;
@@ -169,7 +173,8 @@ eth_xcvr_phy_wrapper eth_xcvr_phy_1 (
     .phy_xgmii_rxd(phy_1_xgmii_rxd),
     .phy_xgmii_rxc(phy_1_xgmii_rxc),
     .phy_rx_block_lock(phy_1_rx_block_lock),
-    .phy_rx_high_ber(phy_1_rx_high_ber)
+    .phy_rx_high_ber(phy_1_rx_high_ber),
+    .phy_rx_status(phy_1_rx_status)
 );
 
 eth_xcvr_phy_wrapper eth_xcvr_phy_2 (
@@ -204,7 +209,8 @@ eth_xcvr_phy_wrapper eth_xcvr_phy_2 (
     .phy_xgmii_rxd(phy_2_xgmii_rxd),
     .phy_xgmii_rxc(phy_2_xgmii_rxc),
     .phy_rx_block_lock(phy_2_rx_block_lock),
-    .phy_rx_high_ber(phy_2_rx_high_ber)
+    .phy_rx_high_ber(phy_2_rx_high_ber),
+    .phy_rx_status(phy_2_rx_status)
 );
 
 eth_xcvr_phy_wrapper eth_xcvr_phy_3 (
@@ -239,7 +245,8 @@ eth_xcvr_phy_wrapper eth_xcvr_phy_3 (
     .phy_xgmii_rxd(phy_3_xgmii_rxd),
     .phy_xgmii_rxc(phy_3_xgmii_rxc),
     .phy_rx_block_lock(phy_3_rx_block_lock),
-    .phy_rx_high_ber(phy_3_rx_high_ber)
+    .phy_rx_high_ber(phy_3_rx_high_ber),
+    .phy_rx_status(phy_3_rx_status)
 );
 
 eth_xcvr_phy_wrapper eth_xcvr_phy_4 (
@@ -274,7 +281,8 @@ eth_xcvr_phy_wrapper eth_xcvr_phy_4 (
     .phy_xgmii_rxd(phy_4_xgmii_rxd),
     .phy_xgmii_rxc(phy_4_xgmii_rxc),
     .phy_rx_block_lock(phy_4_rx_block_lock),
-    .phy_rx_high_ber(phy_4_rx_high_ber)
+    .phy_rx_high_ber(phy_4_rx_high_ber),
+    .phy_rx_status(phy_4_rx_status)
 );
 
 endmodule

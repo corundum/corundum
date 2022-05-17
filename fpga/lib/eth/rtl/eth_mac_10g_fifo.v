@@ -221,11 +221,11 @@ end
 // PTP timestamping
 generate
 
-if (TX_PTP_TS_ENABLE) begin
+if (TX_PTP_TS_ENABLE) begin : tx_ptp
     
     ptp_clock_cdc #(
         .TS_WIDTH(PTP_TS_WIDTH),
-        .NS_WIDTH(4),
+        .NS_WIDTH(6),
         .FNS_WIDTH(16),
         .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK)
     )
@@ -255,10 +255,9 @@ if (TX_PTP_TS_ENABLE) begin
         .FRAME_FIFO(0)
     )
     tx_ptp_ts_fifo (
-        .async_rst(logic_rst | tx_rst),
-
         // AXI input
         .s_clk(tx_clk),
+        .s_rst(tx_rst),
         .s_axis_tdata(tx_axis_ptp_ts_96),
         .s_axis_tkeep(0),
         .s_axis_tvalid(tx_axis_ptp_ts_valid),
@@ -270,6 +269,7 @@ if (TX_PTP_TS_ENABLE) begin
 
         // AXI output
         .m_clk(logic_clk),
+        .m_rst(logic_rst),
         .m_axis_tdata(m_axis_tx_ptp_ts_96),
         .m_axis_tkeep(),
         .m_axis_tvalid(m_axis_tx_ptp_ts_valid),
@@ -298,11 +298,11 @@ end else begin
 
 end
 
-if (RX_PTP_TS_ENABLE) begin
+if (RX_PTP_TS_ENABLE) begin : rx_ptp
 
     ptp_clock_cdc #(
         .TS_WIDTH(PTP_TS_WIDTH),
-        .NS_WIDTH(4),
+        .NS_WIDTH(6),
         .FNS_WIDTH(16),
         .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK)
     )

@@ -52,6 +52,9 @@ module fpga #
     parameter GIT_HASH = 32'hdce357bf,
     parameter RELEASE_INFO = 32'h00000000,
 
+    // Board configuration
+    parameter TDMA_BER_ENABLE = 0,
+
     // Structural configuration
     parameter IF_COUNT = 2,
     parameter PORTS_PER_IF = 1,
@@ -1496,6 +1499,9 @@ fpga_core #(
     .BUILD_DATE(BUILD_DATE),
     .GIT_HASH(GIT_HASH),
     .RELEASE_INFO(RELEASE_INFO),
+
+    // Board configuration
+    .TDMA_BER_ENABLE(TDMA_BER_ENABLE),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),

@@ -80,6 +80,9 @@ dict set params BUILD_DATE  "32'd${build_date}"
 dict set params GIT_HASH  "32'h${git_hash}"
 dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
 
+# Board configuration
+dict set params TDMA_BER_ENABLE "0"
+
 # Transceiver configuration
 set eth_xcvr_freerun_freq {125}
 set eth_xcvr_line_rate {25.78125}

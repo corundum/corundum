@@ -52,6 +52,9 @@ module fpga_core #
     parameter GIT_HASH = 32'hdce357bf,
     parameter RELEASE_INFO = 32'h00000000,
 
+    // Board configuration
+    parameter TDMA_BER_ENABLE = 0,
+
     // Structural configuration
     parameter IF_COUNT = 2,
     parameter PORTS_PER_IF = 1,
@@ -745,53 +748,68 @@ always @(posedge ptp_clk) begin
     pps_led_reg <= pps_led_counter_reg > 0;
 end
 
-// BER tester
-tdma_ber #(
-    .COUNT(2),
-    .INDEX_WIDTH(6),
-    .SLICE_WIDTH(5),
-    .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(8+6+$clog2(2)),
-    .AXIL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
-    .SCHEDULE_START_S(0),
-    .SCHEDULE_START_NS(0),
-    .SCHEDULE_PERIOD_S(0),
-    .SCHEDULE_PERIOD_NS(1000000),
-    .TIMESLOT_PERIOD_S(0),
-    .TIMESLOT_PERIOD_NS(100000),
-    .ACTIVE_PERIOD_S(0),
-    .ACTIVE_PERIOD_NS(90000)
-)
-tdma_ber_inst (
-    .clk(clk_250mhz),
-    .rst(rst_250mhz),
-    .phy_tx_clk({sfp_2_tx_clk, sfp_1_tx_clk}),
-    .phy_rx_clk({sfp_2_rx_clk, sfp_1_rx_clk}),
-    .phy_rx_error_count({sfp_2_rx_error_count, sfp_1_rx_error_count}),
-    .phy_tx_prbs31_enable({sfp_2_tx_prbs31_enable, sfp_1_tx_prbs31_enable}),
-    .phy_rx_prbs31_enable({sfp_2_rx_prbs31_enable, sfp_1_rx_prbs31_enable}),
-    .s_axil_awaddr(axil_csr_awaddr),
-    .s_axil_awprot(axil_csr_awprot),
-    .s_axil_awvalid(axil_csr_awvalid),
-    .s_axil_awready(axil_csr_awready),
-    .s_axil_wdata(axil_csr_wdata),
-    .s_axil_wstrb(axil_csr_wstrb),
-    .s_axil_wvalid(axil_csr_wvalid),
-    .s_axil_wready(axil_csr_wready),
-    .s_axil_bresp(axil_csr_bresp),
-    .s_axil_bvalid(axil_csr_bvalid),
-    .s_axil_bready(axil_csr_bready),
-    .s_axil_araddr(axil_csr_araddr),
-    .s_axil_arprot(axil_csr_arprot),
-    .s_axil_arvalid(axil_csr_arvalid),
-    .s_axil_arready(axil_csr_arready),
-    .s_axil_rdata(axil_csr_rdata),
-    .s_axil_rresp(axil_csr_rresp),
-    .s_axil_rvalid(axil_csr_rvalid),
-    .s_axil_rready(axil_csr_rready),
-    .ptp_ts_96(ptp_sync_ts_96),
-    .ptp_ts_step(ptp_sync_ts_step)
-);
+generate
+
+if (TDMA_BER_ENABLE) begin
+
+    // BER tester
+    tdma_ber #(
+        .COUNT(2),
+        .INDEX_WIDTH(6),
+        .SLICE_WIDTH(5),
+        .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+        .AXIL_ADDR_WIDTH(8+6+$clog2(2)),
+        .AXIL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+        .SCHEDULE_START_S(0),
+        .SCHEDULE_START_NS(0),
+        .SCHEDULE_PERIOD_S(0),
+        .SCHEDULE_PERIOD_NS(1000000),
+        .TIMESLOT_PERIOD_S(0),
+        .TIMESLOT_PERIOD_NS(100000),
+        .ACTIVE_PERIOD_S(0),
+        .ACTIVE_PERIOD_NS(90000)
+    )
+    tdma_ber_inst (
+        .clk(clk_250mhz),
+        .rst(rst_250mhz),
+        .phy_tx_clk({sfp_2_tx_clk, sfp_1_tx_clk}),
+        .phy_rx_clk({sfp_2_rx_clk, sfp_1_rx_clk}),
+        .phy_rx_error_count({sfp_2_rx_error_count, sfp_1_rx_error_count}),
+        .phy_tx_prbs31_enable({sfp_2_tx_prbs31_enable, sfp_1_tx_prbs31_enable}),
+        .phy_rx_prbs31_enable({sfp_2_rx_prbs31_enable, sfp_1_rx_prbs31_enable}),
+        .s_axil_awaddr(axil_csr_awaddr),
+        .s_axil_awprot(axil_csr_awprot),
+        .s_axil_awvalid(axil_csr_awvalid),
+        .s_axil_awready(axil_csr_awready),
+        .s_axil_wdata(axil_csr_wdata),
+        .s_axil_wstrb(axil_csr_wstrb),
+        .s_axil_wvalid(axil_csr_wvalid),
+        .s_axil_wready(axil_csr_wready),
+        .s_axil_bresp(axil_csr_bresp),
+        .s_axil_bvalid(axil_csr_bvalid),
+        .s_axil_bready(axil_csr_bready),
+        .s_axil_araddr(axil_csr_araddr),
+        .s_axil_arprot(axil_csr_arprot),
+        .s_axil_arvalid(axil_csr_arvalid),
+        .s_axil_arready(axil_csr_arready),
+        .s_axil_rdata(axil_csr_rdata),
+        .s_axil_rresp(axil_csr_rresp),
+        .s_axil_rvalid(axil_csr_rvalid),
+        .s_axil_rready(axil_csr_rready),
+        .ptp_ts_96(ptp_sync_ts_96),
+        .ptp_ts_step(ptp_sync_ts_step)
+    );
+
+end else begin
+
+    assign sfp_1_tx_prbs31_enable = 1'b0;
+    assign sfp_1_rx_prbs31_enable = 1'b0;
+    assign sfp_2_tx_prbs31_enable = 1'b0;
+    assign sfp_2_rx_prbs31_enable = 1'b0;
+
+end
+
+endgenerate
 
 assign sma_out = ptp_perout_pulse;
 assign sma_out_en = 1'b0;
@@ -1074,7 +1092,7 @@ mqnic_core_pcie_us #(
     .AXIL_CTRL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
     .AXIL_IF_CTRL_ADDR_WIDTH(AXIL_IF_CTRL_ADDR_WIDTH),
     .AXIL_CSR_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
-    .AXIL_CSR_PASSTHROUGH_ENABLE(1),
+    .AXIL_CSR_PASSTHROUGH_ENABLE(TDMA_BER_ENABLE),
     .RB_NEXT_PTR(RB_BASE_ADDR),
 
     // AXI lite interface configuration (application control)

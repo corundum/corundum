@@ -291,7 +291,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		mqnic->mod_i2c_client_count = 1;
 
 		// read MACs from EEPROM
-		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0, MQNIC_MAX_IF);
+		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0x20, MQNIC_MAX_IF);
 
 		break;
 	case MQNIC_BOARD_ID_VCU118:
@@ -339,7 +339,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		mqnic->mod_i2c_client_count = 2;
 
 		// read MACs from EEPROM
-		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0, MQNIC_MAX_IF);
+		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0x20, MQNIC_MAX_IF);
 
 		break;
 	case MQNIC_BOARD_ID_VCU1525:
@@ -372,7 +372,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		mqnic->mod_i2c_client_count = 2;
 
 		// read MACs from EEPROM
-		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0, MQNIC_MAX_IF);
+		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0x20, MQNIC_MAX_IF);
 
 		break;
 	case MQNIC_BOARD_ID_ZCU106:
@@ -428,7 +428,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		mqnic->mod_i2c_client_count = 2;
 
 		// read MACs from EEPROM
-		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0, MQNIC_MAX_IF);
+		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0x20, MQNIC_MAX_IF);
 
 		break;
 	case MQNIC_BOARD_ID_XUPP3R:

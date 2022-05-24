@@ -35,8 +35,8 @@ On the transmit path, data flows as follows:
 6. ``s_axis_sync_tx``: data is presented to the application section
 7. ``m_axis_sync_tx``: data is returned from the application section
 8. Data passes through per-port transmit async FIFO module and is transferred to MAC TX clock domain
-9. ``s_axis_sync_tx``: data is presented to the application section
-10. ``m_axis_sync_tx``: data is returned from the application section
+9. ``s_axis_direct_tx``: data is presented to the application section
+10. ``m_axis_direct_tx``: data is returned from the application section
 11. :ref:`mod_mqnic_l2_egress`: layer 2 egress processing
 12. :ref:`mod_mqnic_core`: data leaves through transmit streaming interfaces
 
@@ -44,8 +44,8 @@ On the receive path, data flows as follows:
 
 1. :ref:`mod_mqnic_core`: data enters through receive streaming interfaces
 2. :ref:`mod_mqnic_l2_ingress`: layer 2 ingress processing
-3. ``s_axis_sync_rx``: data is presented to the application section
-4. ``m_axis_sync_rx``: data is returned from the application section
+3. ``s_axis_direct_rx``: data is presented to the application section
+4. ``m_axis_direct_rx``: data is returned from the application section
 5. Data passes through per-port receive async FIFO module and is transferred to core clock domain
 6. ``s_axis_sync_rx``: data is presented to the application section
 7. ``m_axis_sync_rx``: data is returned from the application section
@@ -74,33 +74,17 @@ Parameters
 
     Total port count, must be set to ``IF_COUNT*PORTS_PER_IF``.
 
+.. object:: PTP_CLK_PERIOD_NS_NUM
+
+    Numerator of PTP clock period in ns, default ``4``.
+
+.. object:: PTP_CLK_PERIOD_NS_DENOM
+
+    Denominator of PTP clock period in ns, default ``1``.
+
 .. object:: PTP_TS_WIDTH
 
     PTP timestamp width, must be ``96``.
-
-.. object:: PTP_TAG_WIDTH
-
-    PTP tag signal width, default ``16``.
-
-.. object:: PTP_PERIOD_NS_WIDTH
-
-    PTP period ns field width, default ``4``.
-
-.. object:: PTP_OFFSET_NS_WIDTH
-
-    PTP offset ns field width, default ``32``.
-
-.. object:: PTP_FNS_WIDTH
-
-    PTP fractional ns field width, default ``32``.
-
-.. object:: PTP_PERIOD_NS
-
-    PTP nominal period, ns portion ``4'd4``.
-
-.. object:: PTP_PERIOD_FNS
-
-    PTP nominal period, fractional ns portion ``32'd0``.
 
 .. object:: PTP_USE_SAMPLE_CLOCK
 
@@ -121,6 +105,18 @@ Parameters
 .. object:: PTP_TS_ENABLE
 
     Enable PTP timestamping, default ``1``.
+
+.. object:: TX_TAG_WIDTH
+
+    Transmit tag signal width, default ``16``.
+
+.. object:: MAX_TX_SIZE
+
+    Maximum packet size on transmit path, default ``9214``.
+
+.. object:: MAX_RX_SIZE
+
+    Maximum packet size on receive path, default ``9214``.
 
 .. object:: APP_ID
 
@@ -240,7 +236,7 @@ Parameters
 
 .. object:: AXIS_TX_USER_WIDTH
 
-    Asynchronous streaming transmit interface ``tuser`` signal width, default ``(PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1``.
+    Asynchronous streaming transmit interface ``tuser`` signal width, default ``TX_TAG_WIDTH + 1``.
 
 .. object:: AXIS_RX_USER_WIDTH
 
@@ -588,10 +584,15 @@ Ports
         =================  ===  ================  ===================
         Signal             Dir  Width             Description
         =================  ===  ================  ===================
+        ptp_clk            in   1                 PTP clock
+        ptp_rst            in   1                 PTP reset
         ptp_sample_clk     in   1                 PTP sample clock
-        ptp_pps            in   1                 PTP pulse-per-second
-        ptp_ts_96          in   PTP_TS_WIDTH      current PTP time
-        ptp_ts_step        in   1                 PTP clock step
+        ptp_pps            in   1                 PTP pulse-per-second (synchronous to ptp_clk)
+        ptp_ts_96          in   PTP_TS_WIDTH      current PTP time (synchronous to ptp_clk)
+        ptp_ts_step        in   1                 PTP clock step (synchronous to ptp_clk)
+        ptp_sync_pps       in   1                 PTP pulse-per-second (synchronous to clk)
+        ptp_sync_ts_96     in   PTP_TS_WIDTH      current PTP time (synchronous to clk)
+        ptp_sync_ts_step   in   1                 PTP clock step (synchronous to clk)
         ptp_perout_locked  in   PTP_PEROUT_COUNT  PTP period output locked
         ptp_perout_error   in   PTP_PEROUT_COUNT  PTP period output error
         ptp_perout_pulse   in   PTP_PEROUT_COUNT  PTP period output pulse
@@ -646,7 +647,7 @@ Ports
         Bit              Name       Width          Description
         ===============  =========  =============  =============
         0                bad_frame  1              Invalid frame
-        PTP_TAG_WIDTH:1  ptp_tag    PTP_TAG_WIDTH  PTP tag
+        TX_TAG_WIDTH:1   tx_tag     TX_TAG_WIDTH   Transmit tag
         ===============  =========  =============  =============
 
 .. object:: m_axis_direct_tx
@@ -674,10 +675,10 @@ Ports
         Bit              Name       Width          Description
         ===============  =========  =============  =============
         0                bad_frame  1              Invalid frame
-        PTP_TAG_WIDTH:1  ptp_tag    PTP_TAG_WIDTH  PTP tag
+        TX_TAG_WIDTH:1   tx_tag     TX_TAG_WIDTH   Transmit tag
         ===============  =========  =============  =============
 
-.. object:: s_axis_direct_tx_ptp_ts
+.. object:: s_axis_direct_tx_cpl
 
     Transmit PTP timestamp from MAC, one AXI stream interface per port.
 
@@ -686,13 +687,13 @@ Ports
         =============================  ===  ========================  ===================
         Signal                         Dir  Width                     Description
         =============================  ===  ========================  ===================
-        s_axis_direct_tx_ptp_ts        in   PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
-        s_axis_direct_tx_ptp_ts_tag    in   PORT_COUNT*PTP_TAG_WIDTH  PTP timestamp tag
-        s_axis_direct_tx_ptp_ts_valid  in   PORT_COUNT                PTP timestamp valid
-        s_axis_direct_tx_ptp_ts_ready  out  PORT_COUNT                PTP timestamp ready
+        s_axis_direct_tx_cpl_ts        in   PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
+        s_axis_direct_tx_cpl_tag       in   PORT_COUNT*TX_TAG_WIDTH   Transmit tag
+        s_axis_direct_tx_cpl_valid     in   PORT_COUNT                Transmit completion valid
+        s_axis_direct_tx_cpl_ready     out  PORT_COUNT                Transmit completion ready
         =============================  ===  ========================  ===================
 
-.. object:: m_axis_direct_tx_ptp_ts
+.. object:: m_axis_direct_tx_cpl
 
     Transmit PTP timestamp towards core logic, one AXI stream interface per port.
 
@@ -701,10 +702,10 @@ Ports
         =============================  ===  ========================  ===================
         Signal                         Dir  Width                     Description
         =============================  ===  ========================  ===================
-        s_axis_direct_tx_ptp_ts        out  PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
-        s_axis_direct_tx_ptp_ts_tag    out  PORT_COUNT*PTP_TAG_WIDTH  PTP timestamp tag
-        s_axis_direct_tx_ptp_ts_valid  out  PORT_COUNT                PTP timestamp valid
-        s_axis_direct_tx_ptp_ts_ready  in   PORT_COUNT                PTP timestamp ready
+        s_axis_direct_tx_cpl_ts        out  PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
+        s_axis_direct_tx_cpl_tag       out  PORT_COUNT*TX_TAG_WIDTH   Transmit tag
+        s_axis_direct_tx_cpl_valid     out  PORT_COUNT                Transmit completion valid
+        s_axis_direct_tx_cpl_ready     in   PORT_COUNT                Transmit completion ready
         =============================  ===  ========================  ===================
 
 .. object:: direct_rx_clk
@@ -812,7 +813,7 @@ Ports
         Bit              Name       Width          Description
         ===============  =========  =============  =============
         0                bad_frame  1              Invalid frame
-        PTP_TAG_WIDTH:1  ptp_tag    PTP_TAG_WIDTH  PTP tag
+        TX_TAG_WIDTH:1   tx_tag     TX_TAG_WIDTH   Transmit tag
         ===============  =========  =============  =============
 
 .. object:: m_axis_sync_tx
@@ -840,10 +841,10 @@ Ports
         Bit              Name       Width          Description
         ===============  =========  =============  =============
         0                bad_frame  1              Invalid frame
-        PTP_TAG_WIDTH:1  ptp_tag    PTP_TAG_WIDTH  PTP tag
+        TX_TAG_WIDTH:1   tx_tag     TX_TAG_WIDTH   Transmit tag
         ===============  =========  =============  =============
 
-.. object:: s_axis_sync_tx_ptp_ts
+.. object:: s_axis_sync_tx_cpl
 
     Transmit PTP timestamp from MAC, one AXI stream interface per port.
 
@@ -852,13 +853,13 @@ Ports
         ===========================  ===  ========================  ===================
         Signal                       Dir  Width                     Description
         ===========================  ===  ========================  ===================
-        s_axis_sync_tx_ptp_ts        in   PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
-        s_axis_sync_tx_ptp_ts_tag    in   PORT_COUNT*PTP_TAG_WIDTH  PTP timestamp tag
-        s_axis_sync_tx_ptp_ts_valid  in   PORT_COUNT                PTP timestamp valid
-        s_axis_sync_tx_ptp_ts_ready  out  PORT_COUNT                PTP timestamp ready
+        s_axis_sync_tx_cpl_ts        in   PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
+        s_axis_sync_tx_cpl_tag       in   PORT_COUNT*TX_TAG_WIDTH   Transmit tag
+        s_axis_sync_tx_cpl_valid     in   PORT_COUNT                Transmit completion valid
+        s_axis_sync_tx_cpl_ready     out  PORT_COUNT                Transmit completion ready
         ===========================  ===  ========================  ===================
 
-.. object:: m_axis_sync_tx_ptp_ts
+.. object:: m_axis_sync_tx_cpl
 
     Transmit PTP timestamp towards core logic, one AXI stream interface per port.
 
@@ -867,10 +868,10 @@ Ports
         ===========================  ===  ========================  ===================
         Signal                       Dir  Width                     Description
         ===========================  ===  ========================  ===================
-        s_axis_sync_tx_ptp_ts        out  PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
-        s_axis_sync_tx_ptp_ts_tag    out  PORT_COUNT*PTP_TAG_WIDTH  PTP timestamp tag
-        s_axis_sync_tx_ptp_ts_valid  out  PORT_COUNT                PTP timestamp valid
-        s_axis_sync_tx_ptp_ts_ready  in   PORT_COUNT                PTP timestamp ready
+        s_axis_sync_tx_cpl_ts        out  PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
+        s_axis_sync_tx_cpl_tag       out  PORT_COUNT*TX_TAG_WIDTH   Transmit tag
+        s_axis_sync_tx_cpl_valid     out  PORT_COUNT                Transmit completion valid
+        s_axis_sync_tx_cpl_ready     in   PORT_COUNT                Transmit completion ready
         ===========================  ===  ========================  ===================
 
 .. object:: s_axis_sync_rx
@@ -956,7 +957,7 @@ Ports
         Bit              Name       Width          Description
         ===============  =========  =============  =============
         0                bad_frame  1              Invalid frame
-        PTP_TAG_WIDTH:1  ptp_tag    PTP_TAG_WIDTH  PTP tag
+        TX_TAG_WIDTH:1   tx_tag     TX_TAG_WIDTH   Transmit tag
         ===============  =========  =============  =============
 
 .. object:: m_axis_if_tx
@@ -986,10 +987,10 @@ Ports
         Bit              Name       Width          Description
         ===============  =========  =============  =============
         0                bad_frame  1              Invalid frame
-        PTP_TAG_WIDTH:1  ptp_tag    PTP_TAG_WIDTH  PTP tag
+        TX_TAG_WIDTH:1   tx_tag     TX_TAG_WIDTH   Transmit tag
         ===============  =========  =============  =============
 
-.. object:: s_axis_if_tx_ptp_ts
+.. object:: s_axis_if_tx_cpl
 
     Transmit PTP timestamp from MAC, one AXI stream interface per interface.
 
@@ -998,13 +999,13 @@ Ports
         =========================  ===  ========================  ===================
         Signal                     Dir  Width                     Description
         =========================  ===  ========================  ===================
-        s_axis_if_tx_ptp_ts        in   PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
-        s_axis_if_tx_ptp_ts_tag    in   PORT_COUNT*PTP_TAG_WIDTH  PTP timestamp tag
-        s_axis_if_tx_ptp_ts_valid  in   PORT_COUNT                PTP timestamp valid
-        s_axis_if_tx_ptp_ts_ready  out  PORT_COUNT                PTP timestamp ready
+        s_axis_if_tx_cpl_ts        in   PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
+        s_axis_if_tx_cpl_tag       in   PORT_COUNT*TX_TAG_WIDTH   Transmit tag
+        s_axis_if_tx_cpl_valid     in   PORT_COUNT                Transmit completion valid
+        s_axis_if_tx_cpl_ready     out  PORT_COUNT                Transmit completion ready
         =========================  ===  ========================  ===================
 
-.. object:: m_axis_if_tx_ptp_ts
+.. object:: m_axis_if_tx_cpl
 
     Transmit PTP timestamp towards core logic, one AXI stream interface per interface.
 
@@ -1013,10 +1014,10 @@ Ports
         =========================  ===  ========================  ===================
         Signal                     Dir  Width                     Description
         =========================  ===  ========================  ===================
-        s_axis_if_tx_ptp_ts        out  PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
-        s_axis_if_tx_ptp_ts_tag    out  PORT_COUNT*PTP_TAG_WIDTH  PTP timestamp tag
-        s_axis_if_tx_ptp_ts_valid  out  PORT_COUNT                PTP timestamp valid
-        s_axis_if_tx_ptp_ts_ready  in   PORT_COUNT                PTP timestamp ready
+        s_axis_if_tx_cpl_ts        out  PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
+        s_axis_if_tx_cpl_tag       out  PORT_COUNT*TX_TAG_WIDTH   Transmit tag
+        s_axis_if_tx_cpl_valid     out  PORT_COUNT                Transmit completion valid
+        s_axis_if_tx_cpl_ready     in   PORT_COUNT                Transmit completion ready
         =========================  ===  ========================  ===================
 
 .. object:: s_axis_if_rx

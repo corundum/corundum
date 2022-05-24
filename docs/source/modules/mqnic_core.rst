@@ -69,37 +69,25 @@ Parameters
 
     Total port count, must be set to ``IF_COUNT*PORTS_PER_IF``.
 
+.. object:: PTP_CLK_PERIOD_NS_NUM
+
+    Numerator of PTP clock period in ns, default ``4``.
+
+.. object:: PTP_CLK_PERIOD_NS_DENOM
+
+    Denominator of PTP clock period in ns, default ``1``.
+
 .. object:: PTP_TS_WIDTH
 
     PTP timestamp width, must be ``96``.
 
-.. object:: PTP_TAG_WIDTH
-
-    PTP tag signal width, default ``16``.
-
-.. object:: PTP_PERIOD_NS_WIDTH
-
-    PTP period ns field width, default ``4``.
-
-.. object:: PTP_OFFSET_NS_WIDTH
-
-    PTP offset ns field width, default ``32``.
-
-.. object:: PTP_FNS_WIDTH
-
-    PTP fractional ns field width, default ``32``.
-
-.. object:: PTP_PERIOD_NS
-
-    PTP nominal period, ns portion, default ``4'd4``.
-
-.. object:: PTP_PERIOD_FNS
-
-    PTP nominal period, fractional ns portion, default ``32'd0``.
-
 .. object:: PTP_CLOCK_PIPELINE
 
     Output pipeline stages on PTP clock module, default ``0``.
+
+.. object:: PTP_CLOCK_CDC_PIPELINE
+
+    Output pipeline stages on PTP clock CDC module, default ``0``.
 
 .. object:: PTP_USE_SAMPLE_CLOCK
 
@@ -179,7 +167,7 @@ Parameters
 
 .. object:: RX_CPL_QUEUE_PIPELINE
 
-    Receive completion queue maanger pipeline stages, default ``RX_QUEUE_PIPELINE``.  Tune for best usage of block RAM cascade registers for specified queue count.
+    Receive completion queue manager pipeline stages, default ``RX_QUEUE_PIPELINE``.  Tune for best usage of block RAM cascade registers for specified queue count.
 
 .. object:: TX_DESC_TABLE_SIZE
 
@@ -205,13 +193,17 @@ Parameters
 
     Enable PTP timestamping, default ``1``.
 
-.. object:: TX_PTP_TS_FIFO_DEPTH
+.. object:: TX_CPL_ENABLE
 
-    Depth of TX PTP timestamp FIFO, default ``32``.
+    Enable transmit completions from MAC, default ``1``.
 
-.. object:: RX_PTP_TS_FIFO_DEPTH
+.. object:: TX_CPL_FIFO_DEPTH
 
-    Depth of RX PTP timestamp FIFO, default ``32``.
+    Depth of transmit completion FIFO, default ``32``.
+
+.. object:: TX_TAG_WIDTH
+
+    Transmit tag signal width, default ``$clog2(TX_DESC_TABLE_SIZE)+1``.
 
 .. object:: TX_CHECKSUM_ENABLE
 
@@ -407,7 +399,7 @@ Parameters
 
 .. object:: AXIS_TX_USER_WIDTH
 
-    Transmit streaming interface ``tuser`` signal width, default ``(PTP_TS_ENABLE ? PTP_TAG_WIDTH : 0) + 1``.
+    Transmit streaming interface ``tuser`` signal width, default ``TX_TAG_WIDTH + 1``.
 
 .. object:: AXIS_RX_USER_WIDTH
 
@@ -700,10 +692,15 @@ Ports
         =================  ===  ================  ===================
         Signal             Dir  Width             Description
         =================  ===  ================  ===================
+        ptp_clk            in   1                 PTP clock
+        ptp_rst            in   1                 PTP reset
         ptp_sample_clk     in   1                 PTP sample clock
-        ptp_pps            out  1                 PTP pulse-per-second
-        ptp_ts_96          out  PTP_TS_WIDTH      current PTP time
-        ptp_ts_step        out  1                 PTP clock step
+        ptp_pps            out  1                 PTP pulse-per-second (synchronous to ptp_clk)
+        ptp_ts_96          out  PTP_TS_WIDTH      current PTP time (synchronous to ptp_clk)
+        ptp_ts_step        out  1                 PTP clock step (synchronous to ptp_clk)
+        ptp_sync_pps       out  1                 PTP pulse-per-second (synchronous to clk)
+        ptp_sync_ts_96     out  PTP_TS_WIDTH      current PTP time (synchronous to clk)
+        ptp_sync_ts_step   out  1                 PTP clock step (synchronous to clk)
         ptp_perout_locked  out  PTP_PEROUT_COUNT  PTP period output locked
         ptp_perout_error   out  PTP_PEROUT_COUNT  PTP period output error
         ptp_perout_pulse   out  PTP_PEROUT_COUNT  PTP period output pulse
@@ -771,23 +768,35 @@ Ports
         Bit              Name       Width          Description
         ===============  =========  =============  =============
         0                bad_frame  1              Invalid frame
-        PTP_TAG_WIDTH:1  ptp_tag    PTP_TAG_WIDTH  PTP tag
+        TX_TAG_WIDTH:1   tx_tag     TX_TAG_WIDTH   Transmit tag
         ===============  =========  =============  =============
 
-.. object:: s_axis_tx_ptp_ts
+.. object:: s_axis_tx_cpl
 
-    Transmit PTP timestamp, one AXI stream interface per port.
+    Transmit completion, one AXI stream interface per port.
 
     .. table::
 
         ======================  ===  ========================  ===================
         Signal                  Dir  Width                     Description
         ======================  ===  ========================  ===================
-        s_axis_tx_ptp_ts        in   PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
-        s_axis_tx_ptp_ts_tag    in   PORT_COUNT*PTP_TAG_WIDTH  PTP timestamp tag
-        s_axis_tx_ptp_ts_valid  in   PORT_COUNT                PTP timestamp valid
-        s_axis_tx_ptp_ts_ready  out  PORT_COUNT                PTP timestamp ready
+        s_axis_tx_cpl_ts        in   PORT_COUNT*PTP_TS_WIDTH   PTP timestamp
+        s_axis_tx_cpl_tag       in   PORT_COUNT*TX_TAG_WIDTH   Transmit tag
+        s_axis_tx_cpl_valid     in   PORT_COUNT                Transmit completion valid
+        s_axis_tx_cpl_ready     out  PORT_COUNT                Transmit completion ready
         ======================  ===  ========================  ===================
+
+.. object:: tx_status
+
+    Transmit link status inputs, one per port
+
+    .. table::
+
+        =========  ===  ==========  ==================
+        Signal     Dir  Width       Description
+        =========  ===  ==========  ==================
+        tx_status  in   PORT_COUNT  Transmit link status
+        =========  ===  ==========  ==================
 
 .. object:: rx_clk
 
@@ -855,6 +864,18 @@ Ports
         0               bad_frame  1             Invalid frame
         PTP_TS_WIDTH:1  ptp_ts     PTP_TS_WIDTH  PTP timestamp
         ==============  =========  ============  =============
+
+.. object:: rx_status
+
+    Receive link status inputs, one per port
+
+    .. table::
+
+        =========  ===  ==========  ==================
+        Signal     Dir  Width       Description
+        =========  ===  ==========  ==================
+        rx_status  in   PORT_COUNT  Receive link status
+        =========  ===  ==========  ==================
 
 .. object:: s_axis_stat
 

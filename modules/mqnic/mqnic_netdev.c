@@ -99,11 +99,13 @@ static int mqnic_start_port(struct net_device *ndev)
 	netif_tx_start_all_queues(ndev);
 	netif_device_attach(ndev);
 
-	if (mqnic_link_status_poll)
+	if (mqnic_link_status_poll) {
+		priv->link_status = 0;
 		mod_timer(&priv->link_status_timer,
 				jiffies + msecs_to_jiffies(mqnic_link_status_poll));
-	else
+	} else {
 		netif_carrier_on(ndev);
+	}
 
 	return 0;
 }
@@ -542,10 +544,8 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 		ndev->max_mtu = min(interface->max_tx_mtu, interface->max_rx_mtu) - ETH_HLEN;
 
 	netif_carrier_off(ndev);
-	if (mqnic_link_status_poll) {
-		priv->link_status = false;
+	if (mqnic_link_status_poll)
 		timer_setup(&priv->link_status_timer, mqnic_link_status_timeout, 0);
-	}
 
 	ret = register_netdev(ndev);
 	if (ret) {

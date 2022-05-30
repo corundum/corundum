@@ -82,6 +82,42 @@ class TB(object):
             # pcie_link_width=2,
             # pld_clk_frequency=250e6,
             l_tile=False,
+            pf_count=1,
+            max_payload_size=1024,
+            enable_extended_tag=True,
+
+            pf0_msi_enable=True,
+            pf0_msi_count=32,
+            pf1_msi_enable=False,
+            pf1_msi_count=1,
+            pf2_msi_enable=False,
+            pf2_msi_count=1,
+            pf3_msi_enable=False,
+            pf3_msi_count=1,
+            pf0_msix_enable=False,
+            pf0_msix_table_size=0,
+            pf0_msix_table_bir=0,
+            pf0_msix_table_offset=0x00000000,
+            pf0_msix_pba_bir=0,
+            pf0_msix_pba_offset=0x00000000,
+            pf1_msix_enable=False,
+            pf1_msix_table_size=0,
+            pf1_msix_table_bir=0,
+            pf1_msix_table_offset=0x00000000,
+            pf1_msix_pba_bir=0,
+            pf1_msix_pba_offset=0x00000000,
+            pf2_msix_enable=False,
+            pf2_msix_table_size=0,
+            pf2_msix_table_bir=0,
+            pf2_msix_table_offset=0x00000000,
+            pf2_msix_pba_bir=0,
+            pf2_msix_pba_offset=0x00000000,
+            pf3_msix_enable=False,
+            pf3_msix_table_size=0,
+            pf3_msix_table_bir=0,
+            pf3_msix_table_offset=0x00000000,
+            pf3_msix_pba_bir=0,
+            pf3_msix_pba_offset=0x00000000,
 
             # signals
             # Clock and reset
@@ -188,8 +224,6 @@ class TB(object):
 
         self.driver = mqnic.Driver()
 
-        self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
-
         self.dev.functions[0].configure_bar(0, 2**len(dut.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
         if hasattr(dut.core_pcie_inst, 'pcie_app_ctrl'):
             self.dev.functions[0].configure_bar(2, 2**len(dut.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
@@ -288,7 +322,7 @@ class TB(object):
 
         self.dut.ptp_rst.setimmediatevalue(0)
 
-        await self.rc.enumerate(enable_bus_mastering=True, configure_msi=True)
+        await self.rc.enumerate()
 
     async def _run_loopback(self):
         while True:
@@ -308,7 +342,7 @@ async def run_test_nic(dut):
     await tb.init()
 
     tb.log.info("Init driver")
-    await tb.driver.init_pcie_dev(tb.rc, tb.dev.functions[0].pcie_id)
+    await tb.driver.init_pcie_dev(tb.rc.find_device(tb.dev.functions[0].pcie_id))
     for interface in tb.driver.interfaces:
         await interface.open()
 

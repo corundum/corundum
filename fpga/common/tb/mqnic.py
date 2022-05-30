@@ -377,7 +377,6 @@ class EqRing:
         self.interface = interface
         self.log = interface.log
         self.driver = interface.driver
-        self.rc = interface.driver.rc
         self.log_size = size.bit_length() - 1
         self.size = 2**self.log_size
         self.size_mask = self.size-1
@@ -479,7 +478,6 @@ class CqRing:
         self.interface = interface
         self.log = interface.log
         self.driver = interface.driver
-        self.rc = interface.driver.rc
         self.log_size = size.bit_length() - 1
         self.size = 2**self.log_size
         self.size_mask = self.size-1
@@ -547,7 +545,6 @@ class TxRing:
         self.interface = interface
         self.log = interface.log
         self.driver = interface.driver
-        self.rc = interface.driver.rc
         self.log_queue_size = size.bit_length() - 1
         self.log_desc_block_size = int(stride/MQNIC_DESC_SIZE).bit_length() - 1
         self.desc_block_size = 2**self.log_desc_block_size
@@ -632,7 +629,6 @@ class RxRing:
         self.interface = interface
         self.log = interface.log
         self.driver = interface.driver
-        self.rc = interface.driver.rc
         self.log_queue_size = size.bit_length() - 1
         self.log_desc_block_size = int(stride/MQNIC_DESC_SIZE).bit_length() - 1
         self.desc_block_size = 2**self.log_desc_block_size
@@ -1367,10 +1363,7 @@ class Driver:
     def __init__(self):
         self.log = SimLog("cocotb.mqnic")
 
-        self.rc = None
-        self.dev_id = None
-        self.rc_tree_ent = None
-
+        self.dev = None
         self.pool = None
 
         self.hw_regs = None
@@ -1412,24 +1405,26 @@ class Driver:
         self.allocated_packets = []
         self.free_packets = deque()
 
-    async def init_pcie_dev(self, rc, dev_id):
+    async def init_pcie_dev(self, dev):
         assert not self.initialized
         self.initialized = True
 
-        self.rc = rc
-        self.dev_id = dev_id
-        self.rc_tree_ent = self.rc.tree.find_child_dev(dev_id)
+        self.dev = dev
 
-        self.pool = self.rc.mem_pool
+        self.pool = self.dev.rc.mem_pool
 
-        self.hw_regs = self.rc_tree_ent.bar_window[0]
-        self.app_hw_regs = self.rc_tree_ent.bar_window[2]
-        self.ram_hw_regs = self.rc_tree_ent.bar_window[4]
+        await self.dev.enable_device()
+        await self.dev.set_master()
+        await self.dev.alloc_irq_vectors(1, MQNIC_MAX_EVENT_RINGS)
+
+        self.hw_regs = self.dev.bar_window[0]
+        self.app_hw_regs = self.dev.bar_window[2]
+        self.ram_hw_regs = self.dev.bar_window[4]
 
         # set up MSI
         for index in range(32):
             irq = Interrupt(index, self.interrupt_handler)
-            self.rc.msi_register_callback(self.dev_id, irq.interrupt, index)
+            self.dev.request_irq(index, irq.interrupt)
             self.irq_list.append(irq)
 
         await self.init_common()

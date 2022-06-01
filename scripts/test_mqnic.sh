@@ -39,6 +39,7 @@ iperf_repeats=1
 iperf_p=4
 dest_ip=
 iperf_base_port=9000
+mtu=
 
 utils_path=../utils/
 mqnic_fw=$utils_path/mqnic-fw
@@ -59,6 +60,12 @@ while getopts i:n:P:c:p:r:-: option; do
                     ;;
                 netns=*)
                     netns=${OPTARG#*=}
+                    ;;
+                mtu)
+                    mtu="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                mtu=*)
+                    mtu=${OPTARG#*=}
                     ;;
                 logdir)
                     base_logdir="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
@@ -111,6 +118,11 @@ fi
 if [ ! -z "$ifaddr" ]; then
     echo "Adding address '$ifaddr' to '$netdev'"
     $netns_cmd ip addr add $ifaddr dev $netdev
+fi
+
+if [ ! -z "$mtu" ]; then
+    echo "Changing MTU to $mtu on '$netdev'"
+    $netns_cmd ip link set mtu $mtu dev $netdev
 fi
 
 function cleanup()

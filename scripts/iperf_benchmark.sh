@@ -37,6 +37,7 @@ netdev=
 ifaddr=
 netns=
 base_port=9000
+mtu=
 base_logdir=./logs/
 
 while getopts i:n:P:c:p:r:-: option; do
@@ -54,6 +55,12 @@ while getopts i:n:P:c:p:r:-: option; do
                     ;;
                 netns=*)
                     netns=${OPTARG#*=}
+                    ;;
+                mtu)
+                    mtu="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
+                    ;;
+                mtu=*)
+                    mtu=${OPTARG#*=}
                     ;;
                 logdir)
                     base_logdir="${!OPTIND}"; OPTIND=$(( $OPTIND + 1 ))
@@ -122,6 +129,11 @@ fi
 if [ ! -z "$ifaddr" ]; then
     echo "Adding address '$ifaddr' to '$netdev'"
     $netns_cmd ip addr add $ifaddr dev $netdev
+fi
+
+if [ ! -z "$mtu" ]; then
+    echo "Changing MTU to $mtu on '$netdev'"
+    $netns_cmd ip link set mtu $mtu dev $netdev
 fi
 
 function cleanup()

@@ -192,8 +192,13 @@ echo "Build date: $build_date"
 echo "Git hash: $git_hash"
 echo "Release info: $release_info"
 
+echo "PCIe information from lspci"
+pci_id=$(basename $($netns_cmd readlink /sys/class/net/$netdev/device))
+lspci -vvv -s $pci_id | tee $logdir/lspci.log 2>&1
+
 echo "CPU information from lscpu"
 lscpu | tee $logdir/lscpu.log 2>&1
+cpu_model=$(cat /proc/cpuinfo | grep name | head -1 | cut -d: -f 2 | xargs)
 
 echo "Link information from iproute2"
 $netns_cmd ip link show dev $netdev | tee $logdir/iproute2_link.log 2>&1
@@ -273,6 +278,7 @@ fi
 if [ $link_ok -ne 0 ]; then
     echo "Link partner NIC MAC address from iproute2"
     $netns_cmd ip neigh show $dest_ip | tee $logdir/iproute2_neigh.log 2>&1
+    remote_mac=$($netns_cmd ip neigh show $dest_ip | cut -d' ' -f 5)
 fi
 
 
@@ -403,10 +409,8 @@ echo
     echo
     echo "Date: $(date)"
     echo
-
     echo "Design information"
     echo
-
     echo "  FPGA ID: $fpga_id"
     echo "  FPGA part: $fpga_part"
     echo "  FW ID: $fw_id"
@@ -417,7 +421,14 @@ echo
     echo "  Git hash: $git_hash"
     echo "  Release info: $release_info"
     echo
-
+    echo "  PCI ID: $pci_id"
+    echo "  MAC address: $mac"
+    echo
+    echo "Test setup"
+    echo
+    echo "  CPU: $cpu_model"
+    echo "  Remote MAC address: $remote_mac"
+    echo
     echo "Test results"
     echo
 

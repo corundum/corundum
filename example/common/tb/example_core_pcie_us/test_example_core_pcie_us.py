@@ -248,7 +248,7 @@ class TB(object):
             cfg_interrupt_msi_tph_present=dut.cfg_interrupt_msi_tph_present,
             cfg_interrupt_msi_tph_type=dut.cfg_interrupt_msi_tph_type,
             # cfg_interrupt_msi_tph_st_tag=dut.cfg_interrupt_msi_tph_st_tag,
-            # cfg_interrupt_msi_function_number=dut.cfg_interrupt_msi_function_number,
+            cfg_interrupt_msi_function_number=dut.cfg_interrupt_msi_function_number,
 
             # Configuration Extend Interface
             # cfg_ext_read_received

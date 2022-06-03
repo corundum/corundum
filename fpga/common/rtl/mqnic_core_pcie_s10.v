@@ -150,7 +150,9 @@ module mqnic_core_pcie_s10 #
     parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 2**TX_SEQ_NUM_WIDTH,
     parameter PCIE_DMA_WRITE_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
     parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 1,
-    parameter MSI_COUNT = 32,
+
+    // Interrupt configuration
+    parameter IRQ_INDEX_WIDTH = EVENT_QUEUE_INDEX_WIDTH,
 
     // AXI lite interface configuration (control)
     parameter AXIL_CTRL_DATA_WIDTH = 32,
@@ -227,15 +229,6 @@ module mqnic_core_pcie_s10 #
     input  wire [SEG_COUNT-1:0]                          tx_data_cdts_consumed,
     input  wire [SEG_COUNT*2-1:0]                        tx_cdts_type,
     input  wire [SEG_COUNT*1-1:0]                        tx_cdts_data_value,
-
-    /*
-     * H-Tile/L-Tile MSI interrupt interface
-     */
-    output wire                                          app_msi_req,
-    input  wire                                          app_msi_ack,
-    output wire [2:0]                                    app_msi_tc,
-    output wire [4:0]                                    app_msi_num,
-    output wire [1:0]                                    app_msi_func_num,
 
     /*
      * H-Tile/L-Tile configuration interface
@@ -414,6 +407,14 @@ wire [TLP_SEG_COUNT-1:0]                      pcie_tx_cpl_tlp_sop;
 wire [TLP_SEG_COUNT-1:0]                      pcie_tx_cpl_tlp_eop;
 wire                                          pcie_tx_cpl_tlp_ready;
 
+wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]   pcie_tx_msix_wr_req_tlp_data;
+wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]   pcie_tx_msix_wr_req_tlp_strb;
+wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    pcie_tx_msix_wr_req_tlp_hdr;
+wire [TLP_SEG_COUNT-1:0]                      pcie_tx_msix_wr_req_tlp_valid;
+wire [TLP_SEG_COUNT-1:0]                      pcie_tx_msix_wr_req_tlp_sop;
+wire [TLP_SEG_COUNT-1:0]                      pcie_tx_msix_wr_req_tlp_eop;
+wire                                          pcie_tx_msix_wr_req_tlp_ready;
+
 wire [7:0]   pcie_tx_fc_ph_av;
 wire [11:0]  pcie_tx_fc_pd_av;
 wire [7:0]   pcie_tx_fc_nph_av;
@@ -422,8 +423,8 @@ wire [F_COUNT-1:0] ext_tag_enable;
 wire [7:0] bus_num;
 wire [F_COUNT*3-1:0] max_read_request_size;
 wire [F_COUNT*3-1:0] max_payload_size;
-
-wire [MSI_COUNT-1:0] msi_irq;
+wire [F_COUNT-1:0] msix_enable;
+wire [F_COUNT-1:0] msix_mask;
 
 pcie_s10_if #(
     .SEG_COUNT(SEG_COUNT),
@@ -439,8 +440,7 @@ pcie_s10_if #(
     .VF_COUNT(0),
     .F_COUNT(PF_COUNT+VF_COUNT),
     .IO_BAR_INDEX(5),
-    .MSI_ENABLE(1),
-    .MSI_COUNT(MSI_COUNT)
+    .MSI_ENABLE(0)
 )
 pcie_s10_if_inst (
     .clk(clk),
@@ -487,11 +487,11 @@ pcie_s10_if_inst (
     /*
      * H-Tile/L-Tile MSI interrupt interface
      */
-    .app_msi_req(app_msi_req),
-    .app_msi_ack(app_msi_ack),
-    .app_msi_tc(app_msi_tc),
-    .app_msi_num(app_msi_num),
-    .app_msi_func_num(app_msi_func_num),
+    .app_msi_req(),
+    .app_msi_ack(1'b0),
+    .app_msi_tc(),
+    .app_msi_num(),
+    .app_msi_func_num(),
 
     /*
      * H-Tile/L-Tile configuration interface
@@ -569,6 +569,17 @@ pcie_s10_if_inst (
     .tx_cpl_tlp_ready(pcie_tx_cpl_tlp_ready),
 
     /*
+     * TLP input (write request from MSI)
+     */
+    .tx_msi_wr_req_tlp_data(pcie_tx_msix_wr_req_tlp_data),
+    .tx_msi_wr_req_tlp_strb(pcie_tx_msix_wr_req_tlp_strb),
+    .tx_msi_wr_req_tlp_hdr(pcie_tx_msix_wr_req_tlp_hdr),
+    .tx_msi_wr_req_tlp_valid(pcie_tx_msix_wr_req_tlp_valid),
+    .tx_msi_wr_req_tlp_sop(pcie_tx_msix_wr_req_tlp_sop),
+    .tx_msi_wr_req_tlp_eop(pcie_tx_msix_wr_req_tlp_eop),
+    .tx_msi_wr_req_tlp_ready(pcie_tx_msix_wr_req_tlp_ready),
+
+    /*
      * Flow control
      */
     .tx_fc_ph_av(pcie_tx_fc_ph_av),
@@ -585,11 +596,13 @@ pcie_s10_if_inst (
     .bus_num(bus_num),
     .max_read_request_size(max_read_request_size),
     .max_payload_size(max_payload_size),
+    .msix_enable(msix_enable),
+    .msix_mask(msix_mask),
 
     /*
      * MSI request inputs
      */
-    .msi_irq(msi_irq)
+    .msi_irq(32'd0)
 );
 
 mqnic_core_pcie #(
@@ -702,7 +715,9 @@ mqnic_core_pcie #(
     .PCIE_DMA_WRITE_TX_FC_ENABLE(PCIE_DMA_WRITE_TX_FC_ENABLE),
     .TLP_FORCE_64_BIT_ADDR(0),
     .CHECK_BUS_NUMBER(1),
-    .MSI_COUNT(MSI_COUNT),
+
+    // Interrupt configuration
+    .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),
 
     // AXI lite interface configuration (control)
     .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
@@ -811,6 +826,17 @@ core_pcie_inst (
     .pcie_tx_cpl_tlp_ready(pcie_tx_cpl_tlp_ready),
 
     /*
+     * TLP output (MSI-X write request)
+     */
+    .pcie_tx_msix_wr_req_tlp_data(pcie_tx_msix_wr_req_tlp_data),
+    .pcie_tx_msix_wr_req_tlp_strb(pcie_tx_msix_wr_req_tlp_strb),
+    .pcie_tx_msix_wr_req_tlp_hdr(pcie_tx_msix_wr_req_tlp_hdr),
+    .pcie_tx_msix_wr_req_tlp_valid(pcie_tx_msix_wr_req_tlp_valid),
+    .pcie_tx_msix_wr_req_tlp_sop(pcie_tx_msix_wr_req_tlp_sop),
+    .pcie_tx_msix_wr_req_tlp_eop(pcie_tx_msix_wr_req_tlp_eop),
+    .pcie_tx_msix_wr_req_tlp_ready(pcie_tx_msix_wr_req_tlp_ready),
+
+    /*
      * Flow control credits
      */
     .pcie_tx_fc_ph_av(pcie_tx_fc_ph_av),
@@ -824,6 +850,8 @@ core_pcie_inst (
     .ext_tag_enable(ext_tag_enable),
     .max_read_request_size(max_read_request_size),
     .max_payload_size(max_payload_size),
+    .msix_enable(msix_enable),
+    .msix_mask(msix_mask),
 
     /*
      * PCIe error outputs
@@ -868,11 +896,6 @@ core_pcie_inst (
     .ctrl_reg_rd_data(ctrl_reg_rd_data),
     .ctrl_reg_rd_wait(ctrl_reg_rd_wait),
     .ctrl_reg_rd_ack(ctrl_reg_rd_ack),
-
-    /*
-     * MSI request outputs
-     */
-    .msi_irq(msi_irq),
 
     /*
      * PTP clock

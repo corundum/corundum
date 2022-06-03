@@ -38,7 +38,7 @@
 
 #include <linux/types.h>
 
-#define MQNIC_MAX_IRQ 32
+#define MQNIC_MAX_IRQ 256
 
 #define MQNIC_MAX_IF 8
 #define MQNIC_MAX_PORTS 8

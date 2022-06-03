@@ -62,7 +62,7 @@ except ImportError:
 
 
 class TB(object):
-    def __init__(self, dut):
+    def __init__(self, dut, msix_count=32):
         self.dut = dut
 
         self.log = SimLog("cocotb.tb")
@@ -84,7 +84,7 @@ class TB(object):
             max_payload_size=1024,
             enable_extended_tag=True,
 
-            pf0_msi_enable=True,
+            pf0_msi_enable=False,
             pf0_msi_count=32,
             pf1_msi_enable=False,
             pf1_msi_count=1,
@@ -92,12 +92,12 @@ class TB(object):
             pf2_msi_count=1,
             pf3_msi_enable=False,
             pf3_msi_count=1,
-            pf0_msix_enable=False,
-            pf0_msix_table_size=0,
+            pf0_msix_enable=True,
+            pf0_msix_table_size=msix_count-1,
             pf0_msix_table_bir=0,
-            pf0_msix_table_offset=0x00000000,
+            pf0_msix_table_offset=0x00010000,
             pf0_msix_pba_bir=0,
-            pf0_msix_pba_offset=0x00000000,
+            pf0_msix_pba_offset=0x00018000,
             pf1_msix_enable=False,
             pf1_msix_table_size=0,
             pf1_msix_table_bir=0,
@@ -173,11 +173,11 @@ class TB(object):
             # app_xfer_pending=dut.app_xfer_pending,
 
             # Interrupt interface
-            app_msi_req=dut.app_msi_req,
-            app_msi_ack=dut.app_msi_ack,
-            app_msi_tc=dut.app_msi_tc,
-            app_msi_num=dut.app_msi_num,
-            app_msi_func_num=dut.app_msi_func_num,
+            # app_msi_req=dut.app_msi_req,
+            # app_msi_ack=dut.app_msi_ack,
+            # app_msi_tc=dut.app_msi_tc,
+            # app_msi_num=dut.app_msi_num,
+            # app_msi_func_num=dut.app_msi_func_num,
             # app_int_sts=dut.app_int_sts,
 
             # Error interface
@@ -397,7 +397,7 @@ class TB(object):
 @cocotb.test()
 async def run_test_nic(dut):
 
-    tb = TB(dut)
+    tb = TB(dut, msix_count=2**len(dut.core_inst.core_pcie_inst.irq_index))
 
     await tb.init()
 
@@ -662,6 +662,7 @@ def test_fpga_core(request):
         os.path.join(pcie_rtl_dir, "pcie_tlp_demux.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_demux_bar.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_mux.v"),
+        os.path.join(pcie_rtl_dir, "pcie_msix.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_rd.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_wr.v"),
@@ -678,7 +679,6 @@ def test_fpga_core(request):
         os.path.join(pcie_rtl_dir, "pcie_s10_if_rx.v"),
         os.path.join(pcie_rtl_dir, "pcie_s10_if_tx.v"),
         os.path.join(pcie_rtl_dir, "pcie_s10_cfg.v"),
-        os.path.join(pcie_rtl_dir, "pcie_s10_msi.v"),
         os.path.join(pcie_rtl_dir, "pulse_merge.v"),
     ]
 
@@ -706,7 +706,7 @@ def test_fpga_core(request):
     parameters['RX_QUEUE_OP_TABLE_SIZE'] = 32
     parameters['TX_CPL_QUEUE_OP_TABLE_SIZE'] = parameters['TX_QUEUE_OP_TABLE_SIZE']
     parameters['RX_CPL_QUEUE_OP_TABLE_SIZE'] = parameters['RX_QUEUE_OP_TABLE_SIZE']
-    parameters['EVENT_QUEUE_INDEX_WIDTH'] = 5
+    parameters['EVENT_QUEUE_INDEX_WIDTH'] = 6
     parameters['TX_QUEUE_INDEX_WIDTH'] = 13
     parameters['RX_QUEUE_INDEX_WIDTH'] = 8
     parameters['TX_CPL_QUEUE_INDEX_WIDTH'] = parameters['TX_QUEUE_INDEX_WIDTH']
@@ -772,6 +772,9 @@ def test_fpga_core(request):
     parameters['PCIE_DMA_WRITE_OP_TABLE_SIZE'] = 16
     parameters['PCIE_DMA_WRITE_TX_LIMIT'] = 3
     parameters['PCIE_DMA_WRITE_TX_FC_ENABLE'] = 1
+
+    # Interrupt configuration
+    parameters['IRQ_INDEX_WIDTH'] = parameters['EVENT_QUEUE_INDEX_WIDTH']
 
     # AXI lite interface configuration (control)
     parameters['AXIL_CTRL_DATA_WIDTH'] = 32

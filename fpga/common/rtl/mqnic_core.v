@@ -140,7 +140,10 @@ module mqnic_core #
     parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH),
     parameter RAM_PIPELINE = 2,
 
-    parameter MSI_COUNT = 32,
+    // Interrupt configuration
+    parameter IRQ_INDEX_WIDTH = EVENT_QUEUE_INDEX_WIDTH,
+    parameter MSIX_ENABLE = 0,
+    parameter AXIL_MSIX_ADDR_WIDTH = 16,
 
     // AXI lite interface configuration (control)
     parameter AXIL_CTRL_DATA_WIDTH = 32,
@@ -249,6 +252,29 @@ module mqnic_core #
     output wire                                         m_axil_csr_rready,
 
     /*
+     * AXI-Lite master interface (MSI-X)
+     */
+    output wire [AXIL_MSIX_ADDR_WIDTH-1:0]              m_axil_msix_awaddr,
+    output wire [2:0]                                   m_axil_msix_awprot,
+    output wire                                         m_axil_msix_awvalid,
+    input  wire                                         m_axil_msix_awready,
+    output wire [AXIL_CTRL_DATA_WIDTH-1:0]              m_axil_msix_wdata,
+    output wire [AXIL_CTRL_STRB_WIDTH-1:0]              m_axil_msix_wstrb,
+    output wire                                         m_axil_msix_wvalid,
+    input  wire                                         m_axil_msix_wready,
+    input  wire [1:0]                                   m_axil_msix_bresp,
+    input  wire                                         m_axil_msix_bvalid,
+    output wire                                         m_axil_msix_bready,
+    output wire [AXIL_MSIX_ADDR_WIDTH-1:0]              m_axil_msix_araddr,
+    output wire [2:0]                                   m_axil_msix_arprot,
+    output wire                                         m_axil_msix_arvalid,
+    input  wire                                         m_axil_msix_arready,
+    input  wire [AXIL_CTRL_DATA_WIDTH-1:0]              m_axil_msix_rdata,
+    input  wire [1:0]                                   m_axil_msix_rresp,
+    input  wire                                         m_axil_msix_rvalid,
+    output wire                                         m_axil_msix_rready,
+
+    /*
      * Control register interface
      */
     output wire [AXIL_CSR_ADDR_WIDTH-1:0]               ctrl_reg_wr_addr,
@@ -320,9 +346,11 @@ module mqnic_core #
     input  wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_resp_ready,
 
     /*
-     * MSI request outputs
+     * Interrupt request output
      */
-    output wire [MSI_COUNT-1:0]                         msi_irq,
+    output wire [IRQ_INDEX_WIDTH-1:0]                   irq_index,
+    output wire                                         irq_valid,
+    input  wire                                         irq_ready,
 
     /*
      * PTP clock
@@ -616,7 +644,7 @@ always @(posedge clk) begin
             8'h80: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h0000C006 : 0;      // Stats: Type
             8'h84: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h00000100 : 0;      // Stats: Version
             8'h88: ctrl_reg_rd_data_reg <= PHC_RB_BASE_ADDR;                    // Stats: Next header
-            8'h8C: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 2**16 : 0;             // Stats: Offset
+            8'h8C: ctrl_reg_rd_data_reg <= STAT_ENABLE ? (MSIX_ENABLE ? 2 : 1)*2**16 : 0;  // Stats: Offset
             8'h90: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 2**STAT_ID_WIDTH : 0;  // Stats: Count
             8'h94: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 8 : 0;                 // Stats: Stride
             8'h98: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h00000000 : 0;      // Stats: Flags
@@ -857,13 +885,17 @@ wire [IF_COUNT-1:0]                       axil_if_csr_rvalid;
 wire [IF_COUNT-1:0]                       axil_if_csr_rready;
 
 localparam CSR_XBAR_CSR_OFFSET = 0;
-localparam CSR_XBAR_STAT_OFFSET = CSR_XBAR_CSR_OFFSET + 1;
+localparam CSR_XBAR_MSIX_OFFSET = CSR_XBAR_CSR_OFFSET + 1;
+localparam CSR_XBAR_STAT_OFFSET = CSR_XBAR_MSIX_OFFSET + (MSIX_ENABLE ? 1 : 0);
 localparam CSR_XBAR_PASSTHROUGH_OFFSET = CSR_XBAR_STAT_OFFSET + (STAT_ENABLE ? 1 : 0);
 localparam CSR_XBAR_M_COUNT = CSR_XBAR_PASSTHROUGH_OFFSET + (AXIL_CSR_PASSTHROUGH_ENABLE ? 1 : 0);
 
 function [CSR_XBAR_M_COUNT*32-1:0] calcCsrXbarWidths(input [31:0] dummy);
     begin
         calcCsrXbarWidths[CSR_XBAR_CSR_OFFSET*32 +: 32] = 16;
+        if (MSIX_ENABLE) begin
+            calcCsrXbarWidths[CSR_XBAR_MSIX_OFFSET*32 +: 32] = 16;
+        end
         if (STAT_ENABLE) begin
             calcCsrXbarWidths[CSR_XBAR_STAT_OFFSET*32 +: 32] = 16;
         end
@@ -914,6 +946,44 @@ assign axil_csr_xbar_rdata[CSR_XBAR_CSR_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL
 assign axil_csr_xbar_rresp[CSR_XBAR_CSR_OFFSET*2 +: 2] = axil_csr_rresp;
 assign axil_csr_xbar_rvalid[CSR_XBAR_CSR_OFFSET +: 1] = axil_csr_rvalid;
 assign axil_csr_rready = axil_csr_xbar_rready[CSR_XBAR_CSR_OFFSET +: 1];
+
+if (MSIX_ENABLE) begin
+
+    assign m_axil_msix_awaddr = axil_csr_xbar_awaddr[CSR_XBAR_MSIX_OFFSET*AXIL_CSR_ADDR_WIDTH +: AXIL_CSR_ADDR_WIDTH];
+    assign m_axil_msix_awprot = axil_csr_xbar_awprot[CSR_XBAR_MSIX_OFFSET*3 +: 3];
+    assign m_axil_msix_awvalid = axil_csr_xbar_awvalid[CSR_XBAR_MSIX_OFFSET +: 1];
+    assign axil_csr_xbar_awready[CSR_XBAR_MSIX_OFFSET +: 1] = m_axil_msix_awready;
+    assign m_axil_msix_wdata = axil_csr_xbar_wdata[CSR_XBAR_MSIX_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH];
+    assign m_axil_msix_wstrb = axil_csr_xbar_wstrb[CSR_XBAR_MSIX_OFFSET*AXIL_CTRL_STRB_WIDTH +: AXIL_CTRL_STRB_WIDTH];
+    assign m_axil_msix_wvalid = axil_csr_xbar_wvalid[CSR_XBAR_MSIX_OFFSET +: 1];
+    assign axil_csr_xbar_wready[CSR_XBAR_MSIX_OFFSET +: 1] = m_axil_msix_wready;
+    assign axil_csr_xbar_bresp[CSR_XBAR_MSIX_OFFSET*2 +: 2] = m_axil_msix_bresp;
+    assign axil_csr_xbar_bvalid[CSR_XBAR_MSIX_OFFSET +: 1] = m_axil_msix_bvalid;
+    assign m_axil_msix_bready = axil_csr_xbar_bready[CSR_XBAR_MSIX_OFFSET +: 1];
+    assign m_axil_msix_araddr = axil_csr_xbar_araddr[CSR_XBAR_MSIX_OFFSET*AXIL_CSR_ADDR_WIDTH +: AXIL_CSR_ADDR_WIDTH];
+    assign m_axil_msix_arprot = axil_csr_xbar_arprot[CSR_XBAR_MSIX_OFFSET*3 +: 3];
+    assign m_axil_msix_arvalid = axil_csr_xbar_arvalid[CSR_XBAR_MSIX_OFFSET +: 1];
+    assign axil_csr_xbar_arready[CSR_XBAR_MSIX_OFFSET +: 1] = m_axil_msix_arready;
+    assign axil_csr_xbar_rdata[CSR_XBAR_MSIX_OFFSET*AXIL_CTRL_DATA_WIDTH +: AXIL_CTRL_DATA_WIDTH] = m_axil_msix_rdata;
+    assign axil_csr_xbar_rresp[CSR_XBAR_MSIX_OFFSET*2 +: 2] = m_axil_msix_rresp;
+    assign axil_csr_xbar_rvalid[CSR_XBAR_MSIX_OFFSET +: 1] = m_axil_msix_rvalid;
+    assign m_axil_msix_rready = axil_csr_xbar_rready[CSR_XBAR_MSIX_OFFSET +: 1];
+
+end else begin
+
+    assign m_axil_msix_awaddr = 0;
+    assign m_axil_msix_awprot = 0;
+    assign m_axil_msix_awvalid = 0;
+    assign m_axil_msix_wdata = 0;
+    assign m_axil_msix_wstrb = 0;
+    assign m_axil_msix_wvalid = 0;
+    assign m_axil_msix_bready = 0;
+    assign m_axil_msix_araddr = 0;
+    assign m_axil_msix_arprot = 0;
+    assign m_axil_msix_arvalid = 0;
+    assign m_axil_msix_rready = 0;
+
+end
 
 if (STAT_ENABLE) begin
 
@@ -2048,19 +2118,63 @@ end
 
 endgenerate
 
-wire [MSI_COUNT-1:0] if_msi_irq[IF_COUNT-1:0];
-reg [MSI_COUNT-1:0] msi_irq_cmb = 0;
+wire [IF_COUNT*IRQ_INDEX_WIDTH-1:0]  if_irq_index;
+wire [IF_COUNT-1:0]                  if_irq_valid;
+wire [IF_COUNT-1:0]                  if_irq_ready;
 
-assign msi_irq = msi_irq_cmb;
+generate
 
-integer k;
+if (IF_COUNT > 1) begin : irq_mux
 
-always @* begin
-    msi_irq_cmb = 0;
-    for (k = 0; k < IF_COUNT; k = k + 1) begin
-        msi_irq_cmb = msi_irq_cmb | if_msi_irq[k];
-    end
+    axis_arb_mux #(
+        .S_COUNT(IF_COUNT),
+        .DATA_WIDTH(IRQ_INDEX_WIDTH),
+        .KEEP_ENABLE(0),
+        .ID_ENABLE(0),
+        .DEST_ENABLE(0),
+        .USER_ENABLE(0),
+        .LAST_ENABLE(0),
+        .ARB_TYPE_ROUND_ROBIN(1),
+        .ARB_LSB_HIGH_PRIORITY(1)
+    )
+    axis_irq_mux_inst (
+        .clk(clk),
+        .rst(rst),
+
+        /*
+         * AXI Stream inputs
+         */
+        .s_axis_tdata(if_irq_index),
+        .s_axis_tkeep(0),
+        .s_axis_tvalid(if_irq_valid),
+        .s_axis_tready(if_irq_ready),
+        .s_axis_tlast(0),
+        .s_axis_tid(0),
+        .s_axis_tdest(0),
+        .s_axis_tuser(0),
+
+        /*
+         * AXI Stream output
+         */
+        .m_axis_tdata(irq_index),
+        .m_axis_tkeep(),
+        .m_axis_tvalid(irq_valid),
+        .m_axis_tready(irq_ready),
+        .m_axis_tlast(),
+        .m_axis_tid(),
+        .m_axis_tdest(),
+        .m_axis_tuser()
+    );
+
+end else begin
+
+    assign irq_index = if_irq_index;
+    assign irq_valid = if_irq_valid;
+    assign if_irq_ready = irq_ready;
+
 end
+
+endgenerate
 
 // streaming connections to application
 wire [PORT_COUNT-1:0]                        app_direct_tx_clk;
@@ -2280,7 +2394,8 @@ generate
             .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
             .RAM_PIPELINE(RAM_PIPELINE),
 
-            .MSI_COUNT(MSI_COUNT),
+            // Interrupt configuration
+            .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),
 
             // AXI lite interface configuration
             .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
@@ -2650,9 +2765,11 @@ generate
             .ptp_ts_step(ptp_sync_ts_step),
 
             /*
-             * MSI interrupts
+             * Interrupt request output
              */
-            .msi_irq(if_msi_irq[n])
+            .irq_index(if_irq_index[n*IRQ_INDEX_WIDTH +: IRQ_INDEX_WIDTH]),
+            .irq_valid(if_irq_valid[n +: 1]),
+            .irq_ready(if_irq_ready[n +: 1])
         );
 
         for (m = 0; m < PORTS_PER_IF; m = m + 1) begin : port

@@ -6,7 +6,7 @@ proc do_create_pcie {} {
 	create_system pcie
 	set_project_property DEVICE {1SM21CHU1F53E1VG}
 	set_project_property DEVICE_FAMILY {Stratix 10}
-	set_project_property HIDE_FROM_IP_CATALOG {true}
+	set_project_property HIDE_FROM_IP_CATALOG {false}
 	set_use_testbench_naming_pattern 0 {}
 
 	# add HDL parameters
@@ -62,15 +62,15 @@ proc do_create_pcie {} {
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_eq_eieos_cnt_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_expansion_base_address_register_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_loopback_enable_hwtcl} {0}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msi_multiple_msg_cap_hwtcl} {32}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msi_multiple_msg_cap_hwtcl} {1}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msix_bir_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msix_pba_hwtcl} {0}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msix_pba_offset_hwtcl} {0.0}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msix_table_offset_hwtcl} {0.0}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msix_table_size_hwtcl} {0}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msix_pba_offset_hwtcl} {12288.0}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msix_table_offset_hwtcl} {8192.0}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msix_table_size_hwtcl} {31}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_msix_table_size_vfcomm_cs2_hwtcl} {0}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_type0_device_id_hwtcl} {1}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_type0_vendor_id_hwtcl} {4097}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_type0_device_id_hwtcl} {4097}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pci_type0_vendor_id_hwtcl} {4660}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pcie_cap_ep_l0s_accpt_latency_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pcie_cap_ep_l1_accpt_latency_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pcie_cap_ext_tag_supp_hwtcl} {1}
@@ -82,7 +82,7 @@ proc do_create_pcie {} {
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pcie_cap_slot_power_limit_scale_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pcie_cap_slot_power_limit_value_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_pcie_slot_imp_hwtcl} {0}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_revision_id_hwtcl} {1}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_revision_id_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_sriov_sup_page_size_user_hwtcl} {4KB, 8KB, 64KB, 256KB, 1MB, 4MB}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_sriov_vf_bar0_address_width_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_sriov_vf_bar0_type_hwtcl} {Disabled}
@@ -97,8 +97,8 @@ proc do_create_pcie {} {
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_sriov_vf_bar5_address_width_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_sriov_vf_bar5_type_hwtcl} {Disabled}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_sriov_vf_device_id_hwtcl} {0}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_subsys_dev_id_hwtcl} {1313}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_subsys_vendor_id_hwtcl} {6538}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_subsys_dev_id_hwtcl} {1}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_subsys_vendor_id_hwtcl} {4466}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_tph_req_cap_st_table_loc_1_hwtcl} {ST table not present}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_tph_req_cap_st_table_loc_1_vfcomm_cs2_hwtcl} {ST table not present}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {pf0_tph_req_cap_st_table_size_hwtcl} {0}
@@ -276,8 +276,8 @@ proc do_create_pcie {} {
 	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_ep_native_hwtcl} {Native}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_maxpayload_size_hwtcl} {1024}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_pf0_ats_cap_enable_hwtcl} {0}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_pf0_msi_enable_hwtcl} {1}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_pf0_msix_enable_hwtcl} {0}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_pf0_msi_enable_hwtcl} {0}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_pf0_msix_enable_hwtcl} {1}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_pf0_tph_cap_enable_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_pf1_ats_cap_enable_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_pf1_msi_enable_hwtcl} {0}

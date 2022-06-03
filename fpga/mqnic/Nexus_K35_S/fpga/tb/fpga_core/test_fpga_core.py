@@ -63,7 +63,7 @@ except ImportError:
 
 
 class TB(object):
-    def __init__(self, dut):
+    def __init__(self, dut, msix_count=32):
         self.dut = dut
 
         self.log = SimLog("cocotb.tb")
@@ -91,16 +91,16 @@ class TB(object):
             enable_sriov=False,
             enable_extended_configuration=False,
 
-            pf0_msi_enable=True,
+            pf0_msi_enable=False,
             pf0_msi_count=32,
             pf1_msi_enable=False,
             pf1_msi_count=1,
-            pf0_msix_enable=False,
-            pf0_msix_table_size=0,
+            pf0_msix_enable=True,
+            pf0_msix_table_size=msix_count-1,
             pf0_msix_table_bir=0,
-            pf0_msix_table_offset=0x00000000,
+            pf0_msix_table_offset=0x00010000,
             pf0_msix_pba_bir=0,
-            pf0_msix_pba_offset=0x00000000,
+            pf0_msix_pba_offset=0x00018000,
             pf1_msix_enable=False,
             pf1_msix_table_size=0,
             pf1_msix_table_bir=0,
@@ -227,32 +227,32 @@ class TB(object):
             # cfg_interrupt_int
             # cfg_interrupt_sent
             # cfg_interrupt_pending
-            cfg_interrupt_msi_enable=dut.cfg_interrupt_msi_enable,
-            cfg_interrupt_msi_vf_enable=dut.cfg_interrupt_msi_vf_enable,
-            cfg_interrupt_msi_mmenable=dut.cfg_interrupt_msi_mmenable,
-            cfg_interrupt_msi_mask_update=dut.cfg_interrupt_msi_mask_update,
-            cfg_interrupt_msi_data=dut.cfg_interrupt_msi_data,
-            cfg_interrupt_msi_select=dut.cfg_interrupt_msi_select,
-            cfg_interrupt_msi_int=dut.cfg_interrupt_msi_int,
-            cfg_interrupt_msi_pending_status=dut.cfg_interrupt_msi_pending_status,
-            cfg_interrupt_msi_pending_status_data_enable=dut.cfg_interrupt_msi_pending_status_data_enable,
-            cfg_interrupt_msi_pending_status_function_num=dut.cfg_interrupt_msi_pending_status_function_num,
-            cfg_interrupt_msi_sent=dut.cfg_interrupt_msi_sent,
-            cfg_interrupt_msi_fail=dut.cfg_interrupt_msi_fail,
-            # cfg_interrupt_msix_enable
-            # cfg_interrupt_msix_mask
-            # cfg_interrupt_msix_vf_enable
-            # cfg_interrupt_msix_vf_mask
-            # cfg_interrupt_msix_address
-            # cfg_interrupt_msix_data
-            # cfg_interrupt_msix_int
-            # cfg_interrupt_msix_sent
-            # cfg_interrupt_msix_fail
-            cfg_interrupt_msi_attr=dut.cfg_interrupt_msi_attr,
-            cfg_interrupt_msi_tph_present=dut.cfg_interrupt_msi_tph_present,
-            cfg_interrupt_msi_tph_type=dut.cfg_interrupt_msi_tph_type,
-            # cfg_interrupt_msi_tph_st_tag=dut.cfg_interrupt_msi_tph_st_tag,
-            # cfg_interrupt_msi_function_number=dut.cfg_interrupt_msi_function_number,
+            # cfg_interrupt_msi_enable
+            # cfg_interrupt_msi_vf_enable
+            # cfg_interrupt_msi_mmenable
+            # cfg_interrupt_msi_mask_update
+            # cfg_interrupt_msi_data
+            # cfg_interrupt_msi_select
+            # cfg_interrupt_msi_int
+            # cfg_interrupt_msi_pending_status
+            # cfg_interrupt_msi_pending_status_data_enable
+            # cfg_interrupt_msi_pending_status_function_num
+            # cfg_interrupt_msi_sent
+            # cfg_interrupt_msi_fail
+            cfg_interrupt_msix_enable=dut.cfg_interrupt_msix_enable,
+            cfg_interrupt_msix_mask=dut.cfg_interrupt_msix_mask,
+            cfg_interrupt_msix_vf_enable=dut.cfg_interrupt_msix_vf_enable,
+            cfg_interrupt_msix_vf_mask=dut.cfg_interrupt_msix_vf_mask,
+            cfg_interrupt_msix_address=dut.cfg_interrupt_msix_address,
+            cfg_interrupt_msix_data=dut.cfg_interrupt_msix_data,
+            cfg_interrupt_msix_int=dut.cfg_interrupt_msix_int,
+            cfg_interrupt_msix_sent=dut.cfg_interrupt_msix_sent,
+            cfg_interrupt_msix_fail=dut.cfg_interrupt_msix_fail,
+            # cfg_interrupt_msi_attr
+            # cfg_interrupt_msi_tph_present
+            # cfg_interrupt_msi_tph_type
+            # cfg_interrupt_msi_tph_st_tag
+            cfg_interrupt_msi_function_number=dut.cfg_interrupt_msi_function_number,
 
             # Configuration Extend Interface
             # cfg_ext_read_received
@@ -362,7 +362,7 @@ class TB(object):
 @cocotb.test()
 async def run_test_nic(dut):
 
-    tb = TB(dut)
+    tb = TB(dut, msix_count=2**len(dut.core_inst.core_pcie_inst.irq_index))
 
     await tb.init()
 
@@ -628,6 +628,7 @@ def test_fpga_core(request):
         os.path.join(pcie_rtl_dir, "pcie_tlp_demux.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_demux_bar.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_mux.v"),
+        os.path.join(pcie_rtl_dir, "pcie_msix.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_rd.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_wr.v"),
@@ -646,7 +647,6 @@ def test_fpga_core(request):
         os.path.join(pcie_rtl_dir, "pcie_us_if_cc.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_if_cq.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_cfg.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_msi.v"),
         os.path.join(pcie_rtl_dir, "pulse_merge.v"),
     ]
 
@@ -737,6 +737,9 @@ def test_fpga_core(request):
     parameters['PCIE_DMA_WRITE_OP_TABLE_SIZE'] = 8
     parameters['PCIE_DMA_WRITE_TX_LIMIT'] = 3
     parameters['PCIE_DMA_WRITE_TX_FC_ENABLE'] = 1
+
+    # Interrupt configuration
+    parameters['IRQ_INDEX_WIDTH'] = parameters['EVENT_QUEUE_INDEX_WIDTH']
 
     # AXI lite interface configuration (control)
     parameters['AXIL_CTRL_DATA_WIDTH'] = 32

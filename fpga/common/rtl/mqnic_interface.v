@@ -119,7 +119,8 @@ module mqnic_interface #
     parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH),
     parameter RAM_PIPELINE = 2,
 
-    parameter MSI_COUNT = 32,
+    // Interrupt configuration
+    parameter IRQ_INDEX_WIDTH = 8,
 
     // AXI lite interface configuration
     parameter AXIL_DATA_WIDTH = 32,
@@ -489,9 +490,11 @@ module mqnic_interface #
     input  wire                                         ptp_ts_step,
 
     /*
-     * MSI interrupts
+     * Interrupt request output
      */
-    output wire [MSI_COUNT-1:0]                         msi_irq
+    output wire [IRQ_INDEX_WIDTH-1:0]                   irq_index,
+    output wire                                         irq_valid,
+    input  wire                                         irq_ready
 );
 
 parameter DESC_SIZE = 16;
@@ -503,8 +506,6 @@ parameter AXIS_DESC_KEEP_WIDTH = AXIS_DESC_DATA_WIDTH/8;
 
 parameter EVENT_SOURCE_WIDTH = 16;
 parameter EVENT_TYPE_WIDTH = 16;
-
-parameter INT_WIDTH = $clog2(MSI_COUNT);
 
 parameter MAX_DESC_TABLE_SIZE = TX_DESC_TABLE_SIZE > RX_DESC_TABLE_SIZE ? TX_DESC_TABLE_SIZE : RX_DESC_TABLE_SIZE;
 
@@ -946,20 +947,48 @@ wire [EVENT_SOURCE_WIDTH-1:0]       rx_event_source;
 wire                                rx_event_valid;
 
 // interrupts
-wire [INT_WIDTH-1:0] event_int;
-wire event_int_valid;
+wire [IRQ_INDEX_WIDTH-1:0]  event_irq_index;
+wire                        event_irq_valid;
 
-reg [31:0] msi_irq_reg = 0;
+axis_fifo #(
+    .DEPTH(128),
+    .DATA_WIDTH(IRQ_INDEX_WIDTH),
+    .KEEP_ENABLE(0),
+    .LAST_ENABLE(0),
+    .ID_ENABLE(0),
+    .DEST_ENABLE(0),
+    .USER_ENABLE(0),
+    .FRAME_FIFO(0)
+)
+irq_fifo (
+    .clk(clk),
+    .rst(rst),
 
-assign msi_irq = msi_irq_reg;
+    // AXI input
+    .s_axis_tdata(event_irq_index),
+    .s_axis_tkeep(0),
+    .s_axis_tvalid(event_irq_valid),
+    .s_axis_tready(),
+    .s_axis_tlast(0),
+    .s_axis_tid(0),
+    .s_axis_tdest(0),
+    .s_axis_tuser(0),
 
-always @(posedge clk) begin
-    msi_irq_reg <= 0;
+    // AXI output
+    .m_axis_tdata(irq_index),
+    .m_axis_tkeep(),
+    .m_axis_tvalid(irq_valid),
+    .m_axis_tready(irq_ready),
+    .m_axis_tlast(),
+    .m_axis_tid(),
+    .m_axis_tdest(),
+    .m_axis_tuser(),
 
-    if (event_int_valid) begin
-        msi_irq_reg <= 1'b1 << event_int;
-    end
-end
+    // Status
+    .status_overflow(),
+    .status_bad_frame(),
+    .status_good_frame()
+);
 
 // control registers
 wire [REG_ADDR_WIDTH-1:0]  ctrl_reg_wr_addr;
@@ -1237,7 +1266,7 @@ cpl_queue_manager #(
     .OP_TABLE_SIZE(EVENT_QUEUE_OP_TABLE_SIZE),
     .OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
     .QUEUE_INDEX_WIDTH(EVENT_QUEUE_INDEX_WIDTH),
-    .EVENT_WIDTH(INT_WIDTH),
+    .EVENT_WIDTH(IRQ_INDEX_WIDTH),
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
     .LOG_QUEUE_SIZE_WIDTH(LOG_QUEUE_SIZE_WIDTH),
     .CPL_SIZE(EVENT_SIZE),
@@ -1282,9 +1311,9 @@ event_queue_manager_inst (
     /*
      * Event output
      */
-    .m_axis_event(event_int),
+    .m_axis_event(event_irq_index),
     .m_axis_event_source(),
-    .m_axis_event_valid(event_int_valid),
+    .m_axis_event_valid(event_irq_valid),
 
     /*
      * AXI-Lite slave interface

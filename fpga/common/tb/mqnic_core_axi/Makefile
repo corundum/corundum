@@ -202,7 +202,7 @@ export PARAM_AXI_DMA_USE_ID ?= 1
 export PARAM_AXI_DMA_READ_OP_TABLE_SIZE ?= $(shell echo "$$(( 1 << $(PARAM_AXI_ID_WIDTH) ))" )
 export PARAM_AXI_DMA_WRITE_OP_TABLE_SIZE ?= $(shell echo "$$(( 1 << $(PARAM_AXI_ID_WIDTH) ))" )
 
-# Interrupts
+# Interrupt configuration
 export PARAM_IRQ_COUNT ?= 32
 
 # AXI lite interface configuration (control)

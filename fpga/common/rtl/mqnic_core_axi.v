@@ -144,7 +144,7 @@ module mqnic_core_axi #
     parameter AXI_DMA_READ_OP_TABLE_SIZE = 2**(AXI_ID_WIDTH),
     parameter AXI_DMA_WRITE_OP_TABLE_SIZE = 2**(AXI_ID_WIDTH),
 
-    // Interrupts
+    // Interrupt configuration
     parameter IRQ_COUNT = 32,
 
     // AXI lite interface configuration (control)
@@ -402,6 +402,8 @@ parameter RAM_SEG_DATA_WIDTH = AXI_DATA_WIDTH*2/RAM_SEG_COUNT;
 parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8;
 parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH);
 
+parameter IRQ_INDEX_WIDTH = $clog2(IRQ_COUNT);
+
 // DMA connections
 wire [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0]       dma_ram_wr_cmd_sel;
 wire [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]    dma_ram_wr_cmd_be;
@@ -417,6 +419,24 @@ wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_cmd_ready;
 wire [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  dma_ram_rd_resp_data;
 wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_resp_valid;
 wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_resp_ready;
+
+// Interrupts
+wire [IRQ_INDEX_WIDTH-1:0]  irq_index;
+wire                        irq_valid;
+wire                        irq_ready;
+
+reg [IRQ_COUNT-1:0] irq_reg;
+
+always @(posedge clk) begin
+    irq_reg <= 0;
+
+    if (irq_valid) begin
+        irq_reg <= 1 << irq_index;
+    end
+end
+
+assign irq = irq_reg;
+assign irq_ready = 1'b1;
 
 // DMA control
 wire [DMA_ADDR_WIDTH-1:0]  dma_read_desc_dma_addr;
@@ -874,7 +894,9 @@ mqnic_core #(
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
     .RAM_PIPELINE(RAM_PIPELINE),
 
-    .MSI_COUNT(IRQ_COUNT),
+    // Interrupt configuration
+    .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),
+    .MSIX_ENABLE(0),
 
     // AXI lite interface configuration (control)
     .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
@@ -1054,9 +1076,11 @@ core_inst (
     .dma_ram_rd_resp_ready(dma_ram_rd_resp_ready),
 
     /*
-     * MSI request outputs
+     * Interrupt request output
      */
-    .msi_irq(irq),
+    .irq_index(irq_index),
+    .irq_valid(irq_valid),
+    .irq_ready(irq_ready),
 
     /*
      * PTP clock

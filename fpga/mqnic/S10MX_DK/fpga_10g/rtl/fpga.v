@@ -138,6 +138,9 @@ module fpga #
     parameter PCIE_DMA_WRITE_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
     parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 1,
 
+    // Interrupt configuration
+    parameter IRQ_INDEX_WIDTH = EVENT_QUEUE_INDEX_WIDTH,
+
     // AXI lite interface configuration (control)
     parameter AXIL_CTRL_DATA_WIDTH = 32,
     parameter AXIL_CTRL_ADDR_WIDTH = 24,
@@ -216,9 +219,6 @@ parameter IF_PTP_PERIOD_FNS = 16'h6666;
 // Interface configuration
 parameter TX_TAG_WIDTH = 16;
 
-// PCIe interface configuration
-parameter MSI_COUNT = 32;
-
 // Ethernet interface configuration
 parameter XGMII_DATA_WIDTH = 64;
 parameter XGMII_CTRL_WIDTH = XGMII_DATA_WIDTH/8;
@@ -283,12 +283,6 @@ wire [SEG_COUNT-1:0]                  tx_data_cdts_consumed;
 wire [SEG_COUNT*2-1:0]                tx_cdts_type;
 wire [SEG_COUNT*1-1:0]                tx_cdts_data_value;
 
-wire                                  app_msi_req;
-wire                                  app_msi_ack;
-wire [2:0]                            app_msi_tc;
-wire [4:0]                            app_msi_num;
-wire [1:0]                            app_msi_func_num;
-
 wire [31:0]                           tl_cfg_ctl;
 wire [4:0]                            tl_cfg_add;
 wire [1:0]                            tl_cfg_func;
@@ -328,12 +322,12 @@ pcie pcie_hip_inst (
     .tx_cplh_cdts              (tx_cplh_cdts),
     .tx_ph_cdts                (tx_ph_cdts),
     .tx_nph_cdts               (tx_nph_cdts),
-    .app_msi_req               (app_msi_req),
-    .app_msi_ack               (app_msi_ack),
-    .app_msi_tc                (app_msi_tc),
-    .app_msi_num               (app_msi_num),
+    .app_msi_req               (1'b0),
+    .app_msi_ack               (),
+    .app_msi_tc                (3'd0),
+    .app_msi_num               (5'd0),
     .app_int_sts               (4'd0),
-    .app_msi_func_num          (app_msi_func_num),
+    .app_msi_func_num          (2'd0),
     .int_status                (),
     .int_status_common         (),
     .derr_cor_ext_rpl          (),
@@ -969,7 +963,9 @@ fpga_core #(
     .PCIE_DMA_WRITE_OP_TABLE_SIZE(PCIE_DMA_WRITE_OP_TABLE_SIZE),
     .PCIE_DMA_WRITE_TX_LIMIT(PCIE_DMA_WRITE_TX_LIMIT),
     .PCIE_DMA_WRITE_TX_FC_ENABLE(PCIE_DMA_WRITE_TX_FC_ENABLE),
-    .MSI_COUNT(MSI_COUNT),
+
+    // Interrupt configuration
+    .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),
 
     // AXI lite interface configuration (control)
     .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
@@ -1051,12 +1047,6 @@ core_inst (
     .tx_data_cdts_consumed(tx_data_cdts_consumed),
     .tx_cdts_type(tx_cdts_type),
     .tx_cdts_data_value(tx_cdts_data_value),
-
-    .app_msi_req(app_msi_req),
-    .app_msi_ack(app_msi_ack),
-    .app_msi_tc(app_msi_tc),
-    .app_msi_num(app_msi_num),
-    .app_msi_func_num(app_msi_func_num),
 
     .tl_cfg_ctl(tl_cfg_ctl),
     .tl_cfg_add(tl_cfg_add),

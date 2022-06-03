@@ -98,7 +98,7 @@ dict set params TX_QUEUE_OP_TABLE_SIZE "32"
 dict set params RX_QUEUE_OP_TABLE_SIZE "32"
 dict set params TX_CPL_QUEUE_OP_TABLE_SIZE [dict get $params TX_QUEUE_OP_TABLE_SIZE]
 dict set params RX_CPL_QUEUE_OP_TABLE_SIZE [dict get $params RX_QUEUE_OP_TABLE_SIZE]
-dict set params EVENT_QUEUE_INDEX_WIDTH "5"
+dict set params EVENT_QUEUE_INDEX_WIDTH "6"
 dict set params TX_QUEUE_INDEX_WIDTH "10"
 dict set params RX_QUEUE_INDEX_WIDTH "8"
 dict set params TX_CPL_QUEUE_INDEX_WIDTH [dict get $params TX_QUEUE_INDEX_WIDTH]
@@ -161,6 +161,9 @@ dict set params PCIE_DMA_WRITE_OP_TABLE_SIZE "16"
 dict set params PCIE_DMA_WRITE_TX_LIMIT "3"
 dict set params PCIE_DMA_WRITE_TX_FC_ENABLE "1"
 
+# Interrupt configuration
+dict set params IRQ_INDEX_WIDTH [dict get $params EVENT_QUEUE_INDEX_WIDTH]
+
 # AXI lite interface configuration (control)
 dict set params AXIL_CTRL_DATA_WIDTH "32"
 dict set params AXIL_CTRL_ADDR_WIDTH "24"
@@ -191,12 +194,16 @@ set fp [open "update_ip_${pcie_ip}.tcl" "w"]
 puts $fp "package require qsys"
 puts $fp "load_system ip/${pcie_ip}.ip"
 
+# PCIe IDs
 puts $fp "set_instance_parameter_value ${pcie} {pf0_pci_type0_device_id_hwtcl} {$pcie_device_id}"
 puts $fp "set_instance_parameter_value ${pcie} {pf0_pci_type0_vendor_id_hwtcl} {$pcie_vendor_id}"
 puts $fp "set_instance_parameter_value ${pcie} {pf0_class_code_hwtcl} {$pcie_class_code}"
 puts $fp "set_instance_parameter_value ${pcie} {pf0_revision_id_hwtcl} {$pcie_revision_id}"
 puts $fp "set_instance_parameter_value ${pcie} {pf0_subsys_dev_id_hwtcl} {$pcie_subsystem_device_id}"
 puts $fp "set_instance_parameter_value ${pcie} {pf0_subsys_vendor_id_hwtcl} {$pcie_subsystem_vendor_id}"
+
+# PCIe IP core configuration
+puts $fp "set_instance_parameter_value ${pcie} {pf0_pci_msix_table_size_hwtcl} {[expr 2**[dict get $params IRQ_INDEX_WIDTH]-1]}"
 
 # configure BAR settings
 proc configure_bar {fp pcie pf bar aperture} {

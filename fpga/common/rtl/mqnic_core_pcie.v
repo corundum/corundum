@@ -153,7 +153,9 @@ module mqnic_core_pcie #
     parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 0,
     parameter TLP_FORCE_64_BIT_ADDR = 0,
     parameter CHECK_BUS_NUMBER = 1,
-    parameter MSI_COUNT = 32,
+
+    // Interrupt configuration
+    parameter IRQ_INDEX_WIDTH = EVENT_QUEUE_INDEX_WIDTH,
 
     // AXI lite interface configuration (control)
     parameter AXIL_CTRL_DATA_WIDTH = 32,
@@ -262,6 +264,17 @@ module mqnic_core_pcie #
     input  wire                                          pcie_tx_cpl_tlp_ready,
 
     /*
+     * TLP output (MSI-X write request)
+     */
+    output wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]   pcie_tx_msix_wr_req_tlp_data,
+    output wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]   pcie_tx_msix_wr_req_tlp_strb,
+    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    pcie_tx_msix_wr_req_tlp_hdr,
+    output wire [TLP_SEG_COUNT-1:0]                      pcie_tx_msix_wr_req_tlp_valid,
+    output wire [TLP_SEG_COUNT-1:0]                      pcie_tx_msix_wr_req_tlp_sop,
+    output wire [TLP_SEG_COUNT-1:0]                      pcie_tx_msix_wr_req_tlp_eop,
+    input  wire                                          pcie_tx_msix_wr_req_tlp_ready,
+
+    /*
      * Flow control credits
      */
     input  wire [7:0]                                    pcie_tx_fc_ph_av,
@@ -275,6 +288,8 @@ module mqnic_core_pcie #
     input  wire [F_COUNT-1:0]                            ext_tag_enable,
     input  wire [F_COUNT*3-1:0]                          max_read_request_size,
     input  wire [F_COUNT*3-1:0]                          max_payload_size,
+    input  wire [F_COUNT-1:0]                            msix_enable,
+    input  wire [F_COUNT-1:0]                            msix_mask,
 
     /*
      * PCIe error outputs
@@ -319,11 +334,6 @@ module mqnic_core_pcie #
     input  wire [AXIL_CTRL_DATA_WIDTH-1:0]               ctrl_reg_rd_data,
     input  wire                                          ctrl_reg_rd_wait,
     input  wire                                          ctrl_reg_rd_ack,
-
-    /*
-     * MSI request outputs
-     */
-    output wire [MSI_COUNT-1:0]                          msi_irq,
 
     /*
      * PTP clock
@@ -413,6 +423,7 @@ parameter RAM_SEG_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH*2/RAM_SEG_COUNT;
 parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8;
 parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH);
 
+parameter AXIL_MSIX_ADDR_WIDTH = 16;
 parameter AXIL_APP_CTRL_STRB_WIDTH = (AXIL_APP_CTRL_DATA_WIDTH/8);
 
 // PCIe connections
@@ -471,6 +482,26 @@ wire [1:0]                       axil_ctrl_rresp;
 wire                             axil_ctrl_rvalid;
 wire                             axil_ctrl_rready;
 
+wire [AXIL_MSIX_ADDR_WIDTH-1:0]  axil_msix_awaddr;
+wire [2:0]                       axil_msix_awprot;
+wire                             axil_msix_awvalid;
+wire                             axil_msix_awready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_msix_wdata;
+wire [AXIL_CTRL_STRB_WIDTH-1:0]  axil_msix_wstrb;
+wire                             axil_msix_wvalid;
+wire                             axil_msix_wready;
+wire [1:0]                       axil_msix_bresp;
+wire                             axil_msix_bvalid;
+wire                             axil_msix_bready;
+wire [AXIL_MSIX_ADDR_WIDTH-1:0]  axil_msix_araddr;
+wire [2:0]                       axil_msix_arprot;
+wire                             axil_msix_arvalid;
+wire                             axil_msix_arready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_msix_rdata;
+wire [1:0]                       axil_msix_rresp;
+wire                             axil_msix_rvalid;
+wire                             axil_msix_rready;
+
 wire [AXIL_APP_CTRL_ADDR_WIDTH-1:0]  axil_app_ctrl_awaddr;
 wire [2:0]                           axil_app_ctrl_awprot;
 wire                                 axil_app_ctrl_awvalid;
@@ -506,6 +537,11 @@ wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_cmd_ready;
 wire [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  dma_ram_rd_resp_data;
 wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_resp_valid;
 wire [RAM_SEG_COUNT-1:0]                     dma_ram_rd_resp_ready;
+
+// Interrupts
+wire [IRQ_INDEX_WIDTH-1:0]  irq_index;
+wire                        irq_valid;
+wire                        irq_ready;
 
 // Error handling
 wire [2:0] pcie_error_uncor_int;
@@ -1076,6 +1112,70 @@ dma_if_pcie_inst (
     .stat_wr_tx_stall(stat_wr_tx_stall)
 );
 
+pcie_msix #(
+    .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),
+    .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_MSIX_ADDR_WIDTH),
+    .AXIL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
+    .TLP_SEG_STRB_WIDTH(TLP_SEG_STRB_WIDTH),
+    .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH),
+    .TLP_FORCE_64_BIT_ADDR(TLP_FORCE_64_BIT_ADDR)
+)
+pcie_msix_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * AXI lite interface for MSI-X tables
+     */
+    .s_axil_awaddr(axil_msix_awaddr),
+    .s_axil_awprot(axil_msix_awprot),
+    .s_axil_awvalid(axil_msix_awvalid),
+    .s_axil_awready(axil_msix_awready),
+    .s_axil_wdata(axil_msix_wdata),
+    .s_axil_wstrb(axil_msix_wstrb),
+    .s_axil_wvalid(axil_msix_wvalid),
+    .s_axil_wready(axil_msix_wready),
+    .s_axil_bresp(axil_msix_bresp),
+    .s_axil_bvalid(axil_msix_bvalid),
+    .s_axil_bready(axil_msix_bready),
+    .s_axil_araddr(axil_msix_araddr),
+    .s_axil_arprot(axil_msix_arprot),
+    .s_axil_arvalid(axil_msix_arvalid),
+    .s_axil_arready(axil_msix_arready),
+    .s_axil_rdata(axil_msix_rdata),
+    .s_axil_rresp(axil_msix_rresp),
+    .s_axil_rvalid(axil_msix_rvalid),
+    .s_axil_rready(axil_msix_rready),
+
+    /*
+     * Interrupt request input
+     */
+    .irq_index(irq_index),
+    .irq_valid(irq_valid),
+    .irq_ready(irq_ready),
+
+    /*
+     * Memory write TLP output
+     */
+    .tx_wr_req_tlp_data(pcie_tx_msix_wr_req_tlp_data),
+    .tx_wr_req_tlp_strb(pcie_tx_msix_wr_req_tlp_strb),
+    .tx_wr_req_tlp_hdr(pcie_tx_msix_wr_req_tlp_hdr),
+    .tx_wr_req_tlp_valid(pcie_tx_msix_wr_req_tlp_valid),
+    .tx_wr_req_tlp_sop(pcie_tx_msix_wr_req_tlp_sop),
+    .tx_wr_req_tlp_eop(pcie_tx_msix_wr_req_tlp_eop),
+    .tx_wr_req_tlp_ready(pcie_tx_msix_wr_req_tlp_ready),
+
+    /*
+     * Configuration
+     */
+    .requester_id({bus_num, 5'd0, 3'd0}),
+    .msix_enable(msix_enable),
+    .msix_mask(msix_mask)
+);
+
 pulse_merge #(
     .INPUT_WIDTH(3),
     .COUNT_WIDTH(4)
@@ -1425,7 +1525,10 @@ mqnic_core #(
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
     .RAM_PIPELINE(RAM_PIPELINE),
 
-    .MSI_COUNT(MSI_COUNT),
+    // Interrupt configuration
+    .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),
+    .MSIX_ENABLE(1),
+    .AXIL_MSIX_ADDR_WIDTH(AXIL_MSIX_ADDR_WIDTH),
 
     // AXI lite interface configuration (control)
     .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
@@ -1572,6 +1675,29 @@ core_inst (
     .m_axil_csr_rready(m_axil_csr_rready),
 
     /*
+     * AXI-Lite master interface (MSI-X)
+     */
+    .m_axil_msix_awaddr(axil_msix_awaddr),
+    .m_axil_msix_awprot(axil_msix_awprot),
+    .m_axil_msix_awvalid(axil_msix_awvalid),
+    .m_axil_msix_awready(axil_msix_awready),
+    .m_axil_msix_wdata(axil_msix_wdata),
+    .m_axil_msix_wstrb(axil_msix_wstrb),
+    .m_axil_msix_wvalid(axil_msix_wvalid),
+    .m_axil_msix_wready(axil_msix_wready),
+    .m_axil_msix_bresp(axil_msix_bresp),
+    .m_axil_msix_bvalid(axil_msix_bvalid),
+    .m_axil_msix_bready(axil_msix_bready),
+    .m_axil_msix_araddr(axil_msix_araddr),
+    .m_axil_msix_arprot(axil_msix_arprot),
+    .m_axil_msix_arvalid(axil_msix_arvalid),
+    .m_axil_msix_arready(axil_msix_arready),
+    .m_axil_msix_rdata(axil_msix_rdata),
+    .m_axil_msix_rresp(axil_msix_rresp),
+    .m_axil_msix_rvalid(axil_msix_rvalid),
+    .m_axil_msix_rready(axil_msix_rready),
+
+    /*
      * Control register interface
      */
     .ctrl_reg_wr_addr(ctrl_reg_wr_addr),
@@ -1605,9 +1731,11 @@ core_inst (
     .dma_ram_rd_resp_ready(dma_ram_rd_resp_ready),
 
     /*
-     * MSI request outputs
+     * Interrupt request output
      */
-    .msi_irq(msi_irq),
+    .irq_index(irq_index),
+    .irq_valid(irq_valid),
+    .irq_ready(irq_ready),
 
     /*
      * PTP clock

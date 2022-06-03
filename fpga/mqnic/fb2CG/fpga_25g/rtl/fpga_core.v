@@ -153,7 +153,9 @@ module fpga_core #
     parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 16,
     parameter PCIE_DMA_WRITE_TX_LIMIT = 3,
     parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 1,
-    parameter MSI_COUNT = 32,
+
+    // Interrupt configuration
+    parameter IRQ_INDEX_WIDTH = EVENT_QUEUE_INDEX_WIDTH,
 
     // AXI lite interface configuration (control)
     parameter AXIL_CTRL_DATA_WIDTH = 32,
@@ -279,22 +281,18 @@ module fpga_core #
     input  wire [11:0]                        cfg_fc_cpld,
     output wire [2:0]                         cfg_fc_sel,
 
-    input  wire [3:0]                         cfg_interrupt_msi_enable,
-    input  wire [11:0]                        cfg_interrupt_msi_mmenable,
-    input  wire                               cfg_interrupt_msi_mask_update,
-    input  wire [31:0]                        cfg_interrupt_msi_data,
-    output wire [3:0]                         cfg_interrupt_msi_select,
-    output wire [31:0]                        cfg_interrupt_msi_int,
-    output wire [31:0]                        cfg_interrupt_msi_pending_status,
-    output wire                               cfg_interrupt_msi_pending_status_data_enable,
-    output wire [3:0]                         cfg_interrupt_msi_pending_status_function_num,
-    input  wire                               cfg_interrupt_msi_sent,
-    input  wire                               cfg_interrupt_msi_fail,
-    output wire [2:0]                         cfg_interrupt_msi_attr,
-    output wire                               cfg_interrupt_msi_tph_present,
-    output wire [1:0]                         cfg_interrupt_msi_tph_type,
-    output wire [8:0]                         cfg_interrupt_msi_tph_st_tag,
-    output wire [3:0]                         cfg_interrupt_msi_function_number,
+    input  wire [3:0]                         cfg_interrupt_msix_enable,
+    input  wire [3:0]                         cfg_interrupt_msix_mask,
+    input  wire [251:0]                       cfg_interrupt_msix_vf_enable,
+    input  wire [251:0]                       cfg_interrupt_msix_vf_mask,
+    output wire [63:0]                        cfg_interrupt_msix_address,
+    output wire [31:0]                        cfg_interrupt_msix_data,
+    output wire                               cfg_interrupt_msix_int,
+    output wire [1:0]                         cfg_interrupt_msix_vec_pending,
+    input  wire                               cfg_interrupt_msix_vec_pending_status,
+    input  wire                               cfg_interrupt_msix_sent,
+    input  wire                               cfg_interrupt_msix_fail,
+    output wire [7:0]                         cfg_interrupt_msi_function_number,
 
     output wire                               status_error_cor,
     output wire                               status_error_uncor,
@@ -1235,7 +1233,9 @@ mqnic_core_pcie_us #(
     .PCIE_DMA_WRITE_OP_TABLE_SIZE(PCIE_DMA_WRITE_OP_TABLE_SIZE),
     .PCIE_DMA_WRITE_TX_LIMIT(PCIE_DMA_WRITE_TX_LIMIT),
     .PCIE_DMA_WRITE_TX_FC_ENABLE(PCIE_DMA_WRITE_TX_FC_ENABLE),
-    .MSI_COUNT(MSI_COUNT),
+
+    // Interrupt configuration
+    .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),
 
     // AXI lite interface configuration (control)
     .AXIL_CTRL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
@@ -1354,22 +1354,17 @@ core_inst (
     /*
      * Interrupt interface
      */
-    .cfg_interrupt_msi_enable(cfg_interrupt_msi_enable),
-    .cfg_interrupt_msi_vf_enable(8'd0),
-    .cfg_interrupt_msi_mmenable(cfg_interrupt_msi_mmenable),
-    .cfg_interrupt_msi_mask_update(cfg_interrupt_msi_mask_update),
-    .cfg_interrupt_msi_data(cfg_interrupt_msi_data),
-    .cfg_interrupt_msi_select(cfg_interrupt_msi_select),
-    .cfg_interrupt_msi_int(cfg_interrupt_msi_int),
-    .cfg_interrupt_msi_pending_status(cfg_interrupt_msi_pending_status),
-    .cfg_interrupt_msi_pending_status_data_enable(cfg_interrupt_msi_pending_status_data_enable),
-    .cfg_interrupt_msi_pending_status_function_num(cfg_interrupt_msi_pending_status_function_num),
-    .cfg_interrupt_msi_sent(cfg_interrupt_msi_sent),
-    .cfg_interrupt_msi_fail(cfg_interrupt_msi_fail),
-    .cfg_interrupt_msi_attr(cfg_interrupt_msi_attr),
-    .cfg_interrupt_msi_tph_present(cfg_interrupt_msi_tph_present),
-    .cfg_interrupt_msi_tph_type(cfg_interrupt_msi_tph_type),
-    .cfg_interrupt_msi_tph_st_tag(cfg_interrupt_msi_tph_st_tag),
+    .cfg_interrupt_msix_enable(cfg_interrupt_msix_enable),
+    .cfg_interrupt_msix_mask(cfg_interrupt_msix_mask),
+    .cfg_interrupt_msix_vf_enable(cfg_interrupt_msix_vf_enable),
+    .cfg_interrupt_msix_vf_mask(cfg_interrupt_msix_vf_mask),
+    .cfg_interrupt_msix_address(cfg_interrupt_msix_address),
+    .cfg_interrupt_msix_data(cfg_interrupt_msix_data),
+    .cfg_interrupt_msix_int(cfg_interrupt_msix_int),
+    .cfg_interrupt_msix_vec_pending(cfg_interrupt_msix_vec_pending),
+    .cfg_interrupt_msix_vec_pending_status(cfg_interrupt_msix_vec_pending_status),
+    .cfg_interrupt_msix_sent(cfg_interrupt_msix_sent),
+    .cfg_interrupt_msix_fail(cfg_interrupt_msix_fail),
     .cfg_interrupt_msi_function_number(cfg_interrupt_msi_function_number),
 
     /*

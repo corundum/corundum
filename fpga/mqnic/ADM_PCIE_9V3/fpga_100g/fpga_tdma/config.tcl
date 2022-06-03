@@ -99,7 +99,7 @@ dict set params TX_QUEUE_OP_TABLE_SIZE "32"
 dict set params RX_QUEUE_OP_TABLE_SIZE "32"
 dict set params TX_CPL_QUEUE_OP_TABLE_SIZE [dict get $params TX_QUEUE_OP_TABLE_SIZE]
 dict set params RX_CPL_QUEUE_OP_TABLE_SIZE [dict get $params RX_QUEUE_OP_TABLE_SIZE]
-dict set params EVENT_QUEUE_INDEX_WIDTH "5"
+dict set params EVENT_QUEUE_INDEX_WIDTH "6"
 dict set params TX_QUEUE_INDEX_WIDTH "8"
 dict set params RX_QUEUE_INDEX_WIDTH "8"
 dict set params TX_CPL_QUEUE_INDEX_WIDTH [dict get $params TX_QUEUE_INDEX_WIDTH]
@@ -160,6 +160,9 @@ dict set params PCIE_DMA_WRITE_OP_TABLE_SIZE "16"
 dict set params PCIE_DMA_WRITE_TX_LIMIT "3"
 dict set params PCIE_DMA_WRITE_TX_FC_ENABLE "1"
 
+# Interrupt configuration
+dict set params IRQ_INDEX_WIDTH [dict get $params EVENT_QUEUE_INDEX_WIDTH]
+
 # AXI lite interface configuration (control)
 dict set params AXIL_CTRL_DATA_WIDTH "32"
 dict set params AXIL_CTRL_ADDR_WIDTH "24"
@@ -192,6 +195,9 @@ set_property CONFIG.PF0_CLASS_CODE [format "%06x" $pcie_class_code] $pcie
 set_property CONFIG.PF0_REVISION_ID [format "%02x" $pcie_revision_id] $pcie
 set_property CONFIG.PF0_SUBSYSTEM_VENDOR_ID [format "%04x" $pcie_subsystem_vendor_id] $pcie
 set_property CONFIG.PF0_SUBSYSTEM_ID [format "%04x" $pcie_subsystem_device_id] $pcie
+
+# PCIe IP core configuration
+set_property CONFIG.PF0_MSIX_CAP_TABLE_SIZE [format "%03x" [expr 2**[dict get $params IRQ_INDEX_WIDTH]-1]] $pcie
 
 # Internal interface settings
 dict set params AXIS_PCIE_DATA_WIDTH [regexp -all -inline -- {[0-9]+} [get_property CONFIG.axisten_if_width $pcie]]

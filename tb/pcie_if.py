@@ -34,6 +34,7 @@ from cocotb_bus.bus import Bus
 from cocotbext.pcie.core import Device
 from cocotbext.pcie.core.utils import PcieId
 from cocotbext.pcie.core.tlp import Tlp, TlpType, CplStatus
+from cocotbext.pcie.core.caps import MsiCapability, MsixCapability
 
 
 class BaseBus(Bus):
@@ -697,6 +698,42 @@ class PcieIfDevice(Device):
     def __init__(self,
             # configuration options
             force_64bit_addr=False,
+            pf_count=1,
+            max_payload_size=128,
+            enable_extended_tag=False,
+
+            pf0_msi_enable=False,
+            pf0_msi_count=1,
+            pf1_msi_enable=False,
+            pf1_msi_count=1,
+            pf2_msi_enable=False,
+            pf2_msi_count=1,
+            pf3_msi_enable=False,
+            pf3_msi_count=1,
+            pf0_msix_enable=False,
+            pf0_msix_table_size=0,
+            pf0_msix_table_bir=0,
+            pf0_msix_table_offset=0x00000000,
+            pf0_msix_pba_bir=0,
+            pf0_msix_pba_offset=0x00000000,
+            pf1_msix_enable=False,
+            pf1_msix_table_size=0,
+            pf1_msix_table_bir=0,
+            pf1_msix_table_offset=0x00000000,
+            pf1_msix_pba_bir=0,
+            pf1_msix_pba_offset=0x00000000,
+            pf2_msix_enable=False,
+            pf2_msix_table_size=0,
+            pf2_msix_table_bir=0,
+            pf2_msix_table_offset=0x00000000,
+            pf2_msix_pba_bir=0,
+            pf2_msix_pba_offset=0x00000000,
+            pf3_msix_enable=False,
+            pf3_msix_table_size=0,
+            pf3_msix_table_bir=0,
+            pf3_msix_table_offset=0x00000000,
+            pf3_msix_pba_bir=0,
+            pf3_msix_pba_offset=0x00000000,
 
             # signals
             # Clock and reset
@@ -710,6 +747,7 @@ class PcieIfDevice(Device):
             # Requester interfaces
             tx_rd_req_tlp_bus=None,
             tx_wr_req_tlp_bus=None,
+            tx_msi_wr_req_tlp_bus=None,
             rx_cpl_tlp_bus=None,
 
             rd_req_tx_seq_num=None,
@@ -756,6 +794,42 @@ class PcieIfDevice(Device):
         self.dw = None
 
         self.force_64bit_addr = force_64bit_addr
+        self.pf_count = pf_count
+        self.max_payload_size = max_payload_size
+        self.enable_extended_tag = enable_extended_tag
+
+        self.pf0_msi_enable = pf0_msi_enable
+        self.pf0_msi_count = pf0_msi_count
+        self.pf1_msi_enable = pf1_msi_enable
+        self.pf1_msi_count = pf1_msi_count
+        self.pf2_msi_enable = pf2_msi_enable
+        self.pf2_msi_count = pf2_msi_count
+        self.pf3_msi_enable = pf3_msi_enable
+        self.pf3_msi_count = pf3_msi_count
+        self.pf0_msix_enable = pf0_msix_enable
+        self.pf0_msix_table_size = pf0_msix_table_size
+        self.pf0_msix_table_bir = pf0_msix_table_bir
+        self.pf0_msix_table_offset = pf0_msix_table_offset
+        self.pf0_msix_pba_bir = pf0_msix_pba_bir
+        self.pf0_msix_pba_offset = pf0_msix_pba_offset
+        self.pf1_msix_enable = pf1_msix_enable
+        self.pf1_msix_table_size = pf1_msix_table_size
+        self.pf1_msix_table_bir = pf1_msix_table_bir
+        self.pf1_msix_table_offset = pf1_msix_table_offset
+        self.pf1_msix_pba_bir = pf1_msix_pba_bir
+        self.pf1_msix_pba_offset = pf1_msix_pba_offset
+        self.pf2_msix_enable = pf2_msix_enable
+        self.pf2_msix_table_size = pf2_msix_table_size
+        self.pf2_msix_table_bir = pf2_msix_table_bir
+        self.pf2_msix_table_offset = pf2_msix_table_offset
+        self.pf2_msix_pba_bir = pf2_msix_pba_bir
+        self.pf2_msix_pba_offset = pf2_msix_pba_offset
+        self.pf3_msix_enable = pf3_msix_enable
+        self.pf3_msix_table_size = pf3_msix_table_size
+        self.pf3_msix_table_bir = pf3_msix_table_bir
+        self.pf3_msix_table_offset = pf3_msix_table_offset
+        self.pf3_msix_pba_bir = pf3_msix_pba_bir
+        self.pf3_msix_pba_offset = pf3_msix_pba_offset
 
         self.rx_cpl_queue = Queue()
         self.rx_req_queue = Queue()
@@ -786,6 +860,7 @@ class PcieIfDevice(Device):
         # Requester interfaces
         self.tx_rd_req_tlp_sink = None
         self.tx_wr_req_tlp_sink = None
+        self.tx_msi_wr_req_tlp_sink = None
         self.rx_cpl_tlp_source = None
 
         if tx_rd_req_tlp_bus is not None:
@@ -797,6 +872,10 @@ class PcieIfDevice(Device):
             self.tx_wr_req_tlp_sink = PcieIfSink(tx_wr_req_tlp_bus, self.clk, self.rst)
             self.tx_wr_req_tlp_sink.queue_occupancy_limit_frames = 2
             self.dw = self.tx_wr_req_tlp_sink.width
+
+        if tx_msi_wr_req_tlp_bus is not None:
+            self.tx_msi_wr_req_tlp_sink = PcieIfSink(tx_msi_wr_req_tlp_bus, self.clk, self.rst)
+            self.tx_msi_wr_req_tlp_sink.queue_occupancy_limit_frames = 2
 
         if rx_cpl_tlp_bus is not None:
             self.rx_cpl_tlp_source = PcieIfSource(rx_cpl_tlp_bus, self.clk, self.rst)
@@ -836,8 +915,115 @@ class PcieIfDevice(Device):
         self.tx_fc_cplh_cons = init_signal(tx_fc_cplh_cons, 8, 0)
         self.tx_fc_cpld_cons = init_signal(tx_fc_cpld_cons, 12, 0)
 
+        self.log.info("PCIe interface model configuration:")
+        self.log.info("  PF count: %d", self.pf_count)
+        self.log.info("  Max payload size: %d", self.max_payload_size)
+        self.log.info("  Enable extended tag: %s", self.enable_extended_tag)
+        self.log.info("  Enable PF0 MSI: %s", self.pf0_msi_enable)
+        self.log.info("  PF0 MSI vector count: %d", self.pf0_msi_count)
+        self.log.info("  Enable PF1 MSI: %s", self.pf1_msi_enable)
+        self.log.info("  PF1 MSI vector count: %d", self.pf1_msi_count)
+        self.log.info("  Enable PF2 MSI: %s", self.pf2_msi_enable)
+        self.log.info("  PF2 MSI vector count: %d", self.pf2_msi_count)
+        self.log.info("  Enable PF3 MSI: %s", self.pf3_msi_enable)
+        self.log.info("  PF3 MSI vector count: %d", self.pf3_msi_count)
+        self.log.info("  Enable PF0 MSIX: %s", self.pf0_msix_enable)
+        self.log.info("  PF0 MSIX table size: %d", self.pf0_msix_table_size)
+        self.log.info("  PF0 MSIX table BIR: %d", self.pf0_msix_table_bir)
+        self.log.info("  PF0 MSIX table offset: 0x%08x", self.pf0_msix_table_offset)
+        self.log.info("  PF0 MSIX PBA BIR: %d", self.pf0_msix_pba_bir)
+        self.log.info("  PF0 MSIX PBA offset: 0x%08x", self.pf0_msix_pba_offset)
+        self.log.info("  Enable PF1 MSIX: %s", self.pf1_msix_enable)
+        self.log.info("  PF1 MSIX table size: %d", self.pf1_msix_table_size)
+        self.log.info("  PF1 MSIX table BIR: %d", self.pf1_msix_table_bir)
+        self.log.info("  PF1 MSIX table offset: 0x%08x", self.pf1_msix_table_offset)
+        self.log.info("  PF1 MSIX PBA BIR: %d", self.pf1_msix_pba_bir)
+        self.log.info("  PF1 MSIX PBA offset: 0x%08x", self.pf1_msix_pba_offset)
+        self.log.info("  Enable PF2 MSIX: %s", self.pf2_msix_enable)
+        self.log.info("  PF2 MSIX table size: %d", self.pf2_msix_table_size)
+        self.log.info("  PF2 MSIX table BIR: %d", self.pf2_msix_table_bir)
+        self.log.info("  PF2 MSIX table offset: 0x%08x", self.pf2_msix_table_offset)
+        self.log.info("  PF2 MSIX PBA BIR: %d", self.pf2_msix_pba_bir)
+        self.log.info("  PF2 MSIX PBA offset: 0x%08x", self.pf2_msix_pba_offset)
+        self.log.info("  Enable PF3 MSIX: %s", self.pf3_msix_enable)
+        self.log.info("  PF3 MSIX table size: %d", self.pf3_msix_table_size)
+        self.log.info("  PF3 MSIX table BIR: %d", self.pf3_msix_table_bir)
+        self.log.info("  PF3 MSIX table offset: 0x%08x", self.pf3_msix_table_offset)
+        self.log.info("  PF3 MSIX PBA BIR: %d", self.pf3_msix_pba_bir)
+        self.log.info("  PF3 MSIX PBA offset: 0x%08x", self.pf3_msix_pba_offset)
+
         # configure functions
+
         self.make_function()
+
+        if self.pf0_msi_enable:
+            self.functions[0].msi_cap = MsiCapability()
+            self.functions[0].register_capability(self.functions[0].msi_cap)
+            self.functions[0].msi_cap.msi_multiple_message_capable = (self.pf0_msi_count-1).bit_length()
+
+        if self.pf0_msix_enable:
+            self.functions[0].msix_cap = MsixCapability()
+            self.functions[0].register_capability(self.functions[0].msix_cap)
+            self.functions[0].msix_cap.msix_table_size = self.pf0_msix_table_size
+            self.functions[0].msix_cap.msix_table_bar_indicator_register = self.pf0_msix_table_bir
+            self.functions[0].msix_cap.msix_table_offset = self.pf0_msix_table_offset
+            self.functions[0].msix_cap.msix_pba_bar_indicator_register = self.pf0_msix_pba_bir
+            self.functions[0].msix_cap.msix_pba_offset = self.pf0_msix_pba_offset
+
+        if self.pf_count > 1:
+            self.make_function()
+
+            if self.pf1_msi_enable:
+                self.functions[1].msi_cap = MsiCapability()
+                self.functions[1].register_capability(self.functions[1].msi_cap)
+                self.functions[1].msi_cap.msi_multiple_message_capable = (self.pf1_msi_count-1).bit_length()
+
+            if self.pf1_msix_enable:
+                self.functions[1].msix_cap = MsixCapability()
+                self.functions[1].register_capability(self.functions[1].msix_cap)
+                self.functions[1].msix_cap.msix_table_size = self.pf1_msix_table_size
+                self.functions[1].msix_cap.msix_table_bar_indicator_register = self.pf1_msix_table_bir
+                self.functions[1].msix_cap.msix_table_offset = self.pf1_msix_table_offset
+                self.functions[1].msix_cap.msix_pba_bar_indicator_register = self.pf1_msix_pba_bir
+                self.functions[1].msix_cap.msix_pba_offset = self.pf1_msix_pba_offset
+
+        if self.pf_count > 2:
+            self.make_function()
+
+            if self.pf2_msi_enable:
+                self.functions[2].msi_cap = MsiCapability()
+                self.functions[2].register_capability(self.functions[2].msi_cap)
+                self.functions[2].msi_cap.msi_multiple_message_capable = (self.pf2_msi_count-2).bit_length()
+
+            if self.pf2_msix_enable:
+                self.functions[2].msix_cap = MsixCapability()
+                self.functions[2].register_capability(self.functions[2].msix_cap)
+                self.functions[2].msix_cap.msix_table_size = self.pf2_msix_table_size
+                self.functions[2].msix_cap.msix_table_bar_indicator_register = self.pf2_msix_table_bir
+                self.functions[2].msix_cap.msix_table_offset = self.pf2_msix_table_offset
+                self.functions[2].msix_cap.msix_pba_bar_indicator_register = self.pf2_msix_pba_bir
+                self.functions[2].msix_cap.msix_pba_offset = self.pf2_msix_pba_offset
+
+        if self.pf_count > 3:
+            self.make_function()
+
+            if self.pf3_msi_enable:
+                self.functions[3].msi_cap = MsiCapability()
+                self.functions[3].register_capability(self.functions[3].msi_cap)
+                self.functions[3].msi_cap.msi_multiple_message_capable = (self.pf3_msi_count-3).bit_length()
+
+            if self.pf3_msix_enable:
+                self.functions[3].msix_cap = MsixCapability()
+                self.functions[3].register_capability(self.functions[3].msix_cap)
+                self.functions[3].msix_cap.msix_table_size = self.pf3_msix_table_size
+                self.functions[3].msix_cap.msix_table_bar_indicator_register = self.pf3_msix_table_bir
+                self.functions[3].msix_cap.msix_table_offset = self.pf3_msix_table_offset
+                self.functions[3].msix_cap.msix_pba_bar_indicator_register = self.pf3_msix_pba_bir
+                self.functions[3].msix_cap.msix_pba_offset = self.pf3_msix_pba_offset
+
+        for f in self.functions:
+            f.pcie_cap.max_payload_size_supported = (self.max_payload_size//128-1).bit_length()
+            f.pcie_cap.extended_tag_supported = self.enable_extended_tag
 
         # fork coroutines
 
@@ -853,6 +1039,8 @@ class PcieIfDevice(Device):
         if self.tx_wr_req_tlp_sink:
             cocotb.start_soon(self._run_tx_wr_req_logic())
             cocotb.start_soon(self._run_wr_req_tx_seq_num_logic())
+        if self.tx_msi_wr_req_tlp_sink:
+            cocotb.start_soon(self._run_tx_msi_wr_req_logic())
         cocotb.start_soon(self._run_cfg_status_logic())
         cocotb.start_soon(self._run_fc_logic())
 
@@ -1022,6 +1210,12 @@ class PcieIfDevice(Device):
             elif not self.wr_req_tx_seq_num_queue.empty():
                 self.wr_req_tx_seq_num_queue.get_nowait()
 
+    async def _run_tx_msi_wr_req_logic(self):
+        while True:
+            frame = await self.tx_msi_wr_req_tlp_sink.recv()
+            tlp = frame.to_tlp()
+            await self.send(tlp)
+
     async def _run_cfg_status_logic(self):
         while True:
             await RisingEdge(self.clk)
@@ -1094,6 +1288,7 @@ class PcieIfTestDevice:
             # Requester interfaces
             tx_rd_req_tlp_bus=None,
             tx_wr_req_tlp_bus=None,
+            tx_msi_wr_req_tlp_bus=None,
             rx_cpl_tlp_bus=None,
 
             rd_req_tx_seq_num=None,
@@ -1155,6 +1350,7 @@ class PcieIfTestDevice:
         # Requester interfaces
         self.tx_rd_req_tlp_source = None
         self.tx_wr_req_tlp_source = None
+        self.tx_msi_wr_req_tlp_source = None
         self.rx_cpl_tlp_sink = None
 
         if tx_rd_req_tlp_bus is not None:
@@ -1166,6 +1362,10 @@ class PcieIfTestDevice:
             self.tx_wr_req_tlp_source = PcieIfSource(tx_wr_req_tlp_bus, self.clk, self.rst)
             self.tx_wr_req_tlp_source.queue_occupancy_limit_frames = 2
             self.dw = self.tx_wr_req_tlp_source.width
+
+        if tx_msi_wr_req_tlp_bus is not None:
+            self.tx_msi_wr_req_tlp_source = PcieIfSource(tx_msi_wr_req_tlp_bus, self.clk, self.rst)
+            self.tx_msi_wr_req_tlp_source.queue_occupancy_limit_frames = 2
 
         if rx_cpl_tlp_bus is not None:
             self.rx_cpl_tlp_sink = PcieIfSink(rx_cpl_tlp_bus, self.clk, self.rst)
@@ -1415,6 +1615,34 @@ class PcieIfTestDevice:
                 break
 
         return data[:length]
+
+    async def issue_msi_interrupt(self, addr, data):
+        data = data.to_bytes(4, 'little')
+        n = 0
+
+        while True:
+            tlp = Tlp()
+            if addr > 0xffffffff:
+                tlp.fmt_type = TlpType.MEM_WRITE_64
+            else:
+                tlp.fmt_type = TlpType.MEM_WRITE
+            tlp.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
+
+            first_pad = addr % 4
+            byte_length = len(data)-n
+            # max payload size
+            byte_length = min(byte_length, (128 << self.dev_max_payload)-first_pad)
+            # 4k address align
+            byte_length = min(byte_length, 0x1000 - (addr & 0xfff))
+            tlp.set_addr_be_data(addr, data[n:n+byte_length])
+
+            await self.tx_msi_wr_req_tlp_source.send(PcieIfFrame.from_tlp(tlp, self.force_64bit_addr))
+
+            n += byte_length
+            addr += byte_length
+
+            if n >= len(data):
+                break
 
     async def _run_rx_req_tlp(self):
         while True:

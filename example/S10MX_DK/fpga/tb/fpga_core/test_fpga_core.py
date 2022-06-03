@@ -51,6 +51,42 @@ class TB(object):
             # pcie_link_width=8,
             # pld_clk_frequency=250e6,
             l_tile=False,
+            pf_count=1,
+            max_payload_size=1024,
+            enable_extended_tag=True,
+
+            pf0_msi_enable=True,
+            pf0_msi_count=32,
+            pf1_msi_enable=False,
+            pf1_msi_count=1,
+            pf2_msi_enable=False,
+            pf2_msi_count=1,
+            pf3_msi_enable=False,
+            pf3_msi_count=1,
+            pf0_msix_enable=False,
+            pf0_msix_table_size=0,
+            pf0_msix_table_bir=0,
+            pf0_msix_table_offset=0x00000000,
+            pf0_msix_pba_bir=0,
+            pf0_msix_pba_offset=0x00000000,
+            pf1_msix_enable=False,
+            pf1_msix_table_size=0,
+            pf1_msix_table_bir=0,
+            pf1_msix_table_offset=0x00000000,
+            pf1_msix_pba_bir=0,
+            pf1_msix_pba_offset=0x00000000,
+            pf2_msix_enable=False,
+            pf2_msix_table_size=0,
+            pf2_msix_table_bir=0,
+            pf2_msix_table_offset=0x00000000,
+            pf2_msix_pba_bir=0,
+            pf2_msix_pba_offset=0x00000000,
+            pf3_msix_enable=False,
+            pf3_msix_table_size=0,
+            pf3_msix_table_bir=0,
+            pf3_msix_table_offset=0x00000000,
+            pf3_msix_pba_bir=0,
+            pf3_msix_pba_offset=0x00000000,
 
             # signals
             # Clock and reset
@@ -153,8 +189,6 @@ class TB(object):
 
         self.rc.make_port().connect(self.dev)
 
-        self.dev.functions[0].msi_multiple_message_capable = 5
-
         self.dev.functions[0].configure_bar(0, 2**len(dut.example_core_pcie_s10_inst.core_pcie_inst.axil_ctrl_awaddr))
         self.dev.functions[0].configure_bar(2, 2**len(dut.example_core_pcie_s10_inst.core_pcie_inst.axi_ram_awaddr))
 
@@ -163,7 +197,12 @@ class TB(object):
         await FallingEdge(self.dut.rst)
         await Timer(100, 'ns')
 
-        await self.rc.enumerate(enable_bus_mastering=True, configure_msi=True)
+        await self.rc.enumerate()
+
+        dev = self.rc.find_device(self.dev.functions[0].pcie_id)
+        await dev.enable_device()
+        await dev.set_master()
+        await dev.alloc_irq_vectors(32, 32)
 
 
 @cocotb.test()
@@ -176,8 +215,10 @@ async def run_test(dut):
     mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
     mem_base = mem.get_absolute_address(0)
 
-    dev_pf0_bar0 = tb.rc.tree[0][0].bar_window[0]
-    dev_pf0_bar2 = tb.rc.tree[0][0].bar_window[2]
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+
+    dev_pf0_bar0 = dev.bar_window[0]
+    dev_pf0_bar2 = dev.bar_window[2]
 
     tb.log.info("Test memory write to BAR 2")
 

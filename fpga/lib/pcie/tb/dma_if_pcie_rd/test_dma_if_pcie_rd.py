@@ -162,7 +162,11 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.cycle_reset()
 
-    await tb.rc.enumerate(enable_bus_mastering=True)
+    await tb.rc.enumerate()
+
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+    await dev.set_master()
 
     mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
     mem_base = mem.get_absolute_address(0)
@@ -217,7 +221,11 @@ async def run_test_read_errors(dut, idle_inserter=None, backpressure_inserter=No
 
     await tb.cycle_reset()
 
-    await tb.rc.enumerate(enable_bus_mastering=True)
+    await tb.rc.enumerate()
+
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+    await dev.set_master()
 
     mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
     mem_base = mem.get_absolute_address(0)

@@ -134,13 +134,17 @@ async def run_test(dut):
 
     await tb.cycle_reset()
 
-    await tb.rc.enumerate(enable_bus_mastering=True, configure_msi=True)
+    await tb.rc.enumerate()
 
     mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
     mem_base = mem.get_absolute_address(0)
 
-    dev_pf0_bar0 = tb.rc.tree[0][0].bar_window[0]
-    dev_pf0_bar2 = tb.rc.tree[0][0].bar_window[2]
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+    await dev.set_master()
+
+    dev_pf0_bar0 = dev.bar_window[0]
+    dev_pf0_bar2 = dev.bar_window[2]
 
     tb.dut.bus_num.value = tb.dev.bus_num
 

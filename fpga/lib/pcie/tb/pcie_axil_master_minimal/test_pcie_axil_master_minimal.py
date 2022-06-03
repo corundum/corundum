@@ -153,7 +153,10 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+
+    dev_bar0 = dev.bar_window[0]
 
     tb.dut.completer_id.value = int(tb.dev.functions[0].pcie_id)
 
@@ -192,7 +195,10 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+
+    dev_bar0 = dev.bar_window[0]
 
     tb.dut.completer_id.value = int(tb.dev.functions[0].pcie_id)
 
@@ -231,8 +237,11 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
-    dev_bar1 = tb.rc.tree[0][0].bar_window[1]
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+
+    dev_bar0 = dev.bar_window[0]
+    dev_bar1 = dev.bar_window[1]
 
     tb.dut.completer_id.value = int(tb.dev.functions[0].pcie_id)
 

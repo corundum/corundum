@@ -339,6 +339,17 @@ pcie_s10_if_inst (
     .tx_cpl_tlp_ready(pcie_tx_cpl_tlp_ready),
 
     /*
+     * TLP input (write request from MSI)
+     */
+    .tx_msi_wr_req_tlp_data(0),
+    .tx_msi_wr_req_tlp_strb(0),
+    .tx_msi_wr_req_tlp_hdr(0),
+    .tx_msi_wr_req_tlp_valid(0),
+    .tx_msi_wr_req_tlp_sop(0),
+    .tx_msi_wr_req_tlp_eop(0),
+    .tx_msi_wr_req_tlp_ready(),
+
+    /*
      * Flow control
      */
     .tx_fc_ph_av(pcie_tx_fc_ph_av),
@@ -355,6 +366,8 @@ pcie_s10_if_inst (
     .bus_num(bus_num),
     .max_read_request_size(max_read_request_size),
     .max_payload_size(max_payload_size),
+    .msix_enable(),
+    .msix_mask(),
 
     /*
      * MSI request inputs

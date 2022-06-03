@@ -50,7 +50,7 @@ except ImportError:
 
 
 class TB(object):
-    def __init__(self, dut):
+    def __init__(self, dut, msix=False):
         self.dut = dut
 
         self.log = logging.getLogger("cocotb.tb")
@@ -65,6 +65,42 @@ class TB(object):
             # pcie_link_width=2,
             # pld_clk_frequency=250e6,
             l_tile=False,
+            pf_count=1,
+            max_payload_size=1024,
+            enable_extended_tag=True,
+
+            pf0_msi_enable=True,
+            pf0_msi_count=32,
+            pf1_msi_enable=False,
+            pf1_msi_count=1,
+            pf2_msi_enable=False,
+            pf2_msi_count=1,
+            pf3_msi_enable=False,
+            pf3_msi_count=1,
+            pf0_msix_enable=msix,
+            pf0_msix_table_size=63,
+            pf0_msix_table_bir=4,
+            pf0_msix_table_offset=0x00000000,
+            pf0_msix_pba_bir=4,
+            pf0_msix_pba_offset=0x00008000,
+            pf1_msix_enable=False,
+            pf1_msix_table_size=0,
+            pf1_msix_table_bir=0,
+            pf1_msix_table_offset=0x00000000,
+            pf1_msix_pba_bir=0,
+            pf1_msix_pba_offset=0x00000000,
+            pf2_msix_enable=False,
+            pf2_msix_table_size=0,
+            pf2_msix_table_bir=0,
+            pf2_msix_table_offset=0x00000000,
+            pf2_msix_pba_bir=0,
+            pf2_msix_pba_offset=0x00000000,
+            pf3_msix_enable=False,
+            pf3_msix_table_size=0,
+            pf3_msix_table_bir=0,
+            pf3_msix_table_offset=0x00000000,
+            pf3_msix_pba_bir=0,
+            pf3_msix_pba_offset=0x00000000,
 
             # signals
             # Clock and reset
@@ -182,13 +218,13 @@ class TB(object):
             wr_req_tx_seq_num_valid=dut.m_axis_wr_req_tx_seq_num_valid,
 
             rx_cpl_tlp_bus=PcieIfRxBus.from_prefix(dut, "rx_cpl_tlp"),
+
+            tx_msi_wr_req_tlp_bus=PcieIfTxBus.from_prefix(dut, "tx_msi_wr_req_tlp"),
         )
 
         self.dev.log.setLevel(logging.DEBUG)
 
         self.rc.make_port().connect(self.dev)
-
-        self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
 
         self.dev.functions[0].configure_bar(0, 1024*1024)
         self.test_dev.add_mem_region(1024*1024)
@@ -196,6 +232,8 @@ class TB(object):
         self.test_dev.add_prefetchable_mem_region(1024*1024)
         self.dev.functions[0].configure_bar(3, 1024, False, False, True)
         self.test_dev.add_io_region(1024)
+        self.dev.functions[0].configure_bar(4, 64*1024)
+        self.test_dev.add_mem_region(64*1024)
 
         self.dut.msi_irq.setimmediatevalue(0)
 
@@ -223,15 +261,18 @@ async def run_test_mem(dut, idle_inserter=None, backpressure_inserter=None):
     await FallingEdge(dut.rst)
     await Timer(100, 'ns')
 
-    await tb.rc.enumerate(enable_bus_mastering=True, configure_msi=True)
+    await tb.rc.enumerate()
+
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
 
     tb.test_dev.dev_max_payload = tb.dev.functions[0].pcie_cap.max_payload_size
     tb.test_dev.dev_max_read_req = tb.dev.functions[0].pcie_cap.max_read_request_size
     tb.test_dev.dev_bus_num = tb.dev.bus_num
 
-    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
-    dev_bar1 = tb.rc.tree[0][0].bar_window[1]
-    dev_bar3 = tb.rc.tree[0][0].bar_window[3]
+    dev_bar0 = dev.bar_window[0]
+    dev_bar1 = dev.bar_window[1]
+    dev_bar3 = dev.bar_window[3]
 
     for length in list(range(0, 8)):
         for offset in list(range(8)):
@@ -287,7 +328,11 @@ async def run_test_dma(dut, idle_inserter=None, backpressure_inserter=None):
     await FallingEdge(dut.rst)
     await Timer(100, 'ns')
 
-    await tb.rc.enumerate(enable_bus_mastering=True, configure_msi=True)
+    await tb.rc.enumerate()
+
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+    await dev.set_master()
 
     tb.test_dev.dev_max_payload = tb.dev.functions[0].pcie_cap.max_payload_size
     tb.test_dev.dev_max_read_req = tb.dev.functions[0].pcie_cap.max_read_request_size
@@ -333,7 +378,11 @@ async def run_test_dma_errors(dut, idle_inserter=None, backpressure_inserter=Non
     await FallingEdge(dut.rst)
     await Timer(100, 'ns')
 
-    await tb.rc.enumerate(enable_bus_mastering=True, configure_msi=True)
+    await tb.rc.enumerate()
+
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+    await dev.set_master()
 
     mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
     mem_base = mem.get_absolute_address(0)
@@ -383,7 +432,12 @@ async def run_test_msi(dut, idle_inserter=None, backpressure_inserter=None):
     await FallingEdge(dut.rst)
     await Timer(100, 'ns')
 
-    await tb.rc.enumerate(enable_bus_mastering=True, configure_msi=True)
+    await tb.rc.enumerate()
+
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+    await dev.set_master()
+    await dev.alloc_irq_vectors(32, 32)
 
     for k in range(32):
         tb.log.info("Send MSI %d", k)
@@ -393,7 +447,40 @@ async def run_test_msi(dut, idle_inserter=None, backpressure_inserter=None):
         await RisingEdge(dut.clk)
         tb.dut.msi_irq.value = 0
 
-        event = tb.rc.msi_get_event(tb.dev.functions[0].pcie_id, k)
+        event = dev.msi_vectors[k].event
+        event.clear()
+        await event.wait()
+
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
+
+async def run_test_msix(dut, idle_inserter=None, backpressure_inserter=None):
+
+    tb = TB(dut, msix=True)
+
+    tb.set_idle_generator(idle_inserter)
+    tb.set_backpressure_generator(backpressure_inserter)
+
+    await FallingEdge(dut.rst)
+    await Timer(100, 'ns')
+
+    await tb.rc.enumerate()
+
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+    await dev.set_master()
+    await dev.alloc_irq_vectors(64, 64)
+
+    for k in range(64):
+        tb.log.info("Send MSI %d", k)
+
+        addr = int.from_bytes(tb.test_dev.regions[4][1][16*k+0:16*k+8], 'little')
+        data = int.from_bytes(tb.test_dev.regions[4][1][16*k+8:16*k+12], 'little')
+
+        await tb.test_dev.issue_msi_interrupt(addr, data)
+
+        event = dev.msi_vectors[k].event
         event.clear()
         await event.wait()
 
@@ -411,13 +498,17 @@ async def run_test_fifos(dut, idle_inserter=None, backpressure_inserter=None):
     await FallingEdge(dut.rst)
     await Timer(100, 'ns')
 
-    await tb.rc.enumerate(enable_bus_mastering=True, configure_msi=True)
+    await tb.rc.enumerate()
+
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+    await dev.set_master()
 
     tb.test_dev.dev_max_payload = tb.dev.functions[0].pcie_cap.max_payload_size
     tb.test_dev.dev_max_read_req = tb.dev.functions[0].pcie_cap.max_read_request_size
     tb.test_dev.dev_bus_num = tb.dev.bus_num
 
-    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
+    dev_bar0 = dev.bar_window[0]
 
     test_data = bytearray([x for x in range(256)])
 
@@ -442,6 +533,7 @@ if cocotb.SIM_NAME:
                 run_test_dma,
                 run_test_dma_errors,
                 run_test_msi,
+                run_test_msix,
             ]:
 
         factory = TestFactory(test)

@@ -74,16 +74,47 @@ class TB(object):
             cq_cc_straddle=False,
             rq_rc_straddle=False,
             rc_4tlp_straddle=False,
-            enable_pf1=False,
+            pf_count=1,
+            max_payload_size=1024,
             enable_client_tag=True,
-            enable_extended_tag=False,
+            enable_extended_tag=True,
             enable_parity=False,
             enable_rx_msg_interface=False,
             enable_sriov=False,
             enable_extended_configuration=False,
 
-            enable_pf0_msi=True,
-            enable_pf1_msi=False,
+            pf0_msi_enable=True,
+            pf0_msi_count=32,
+            pf1_msi_enable=False,
+            pf1_msi_count=1,
+            pf2_msi_enable=False,
+            pf2_msi_count=1,
+            pf3_msi_enable=False,
+            pf3_msi_count=1,
+            pf0_msix_enable=False,
+            pf0_msix_table_size=0,
+            pf0_msix_table_bir=0,
+            pf0_msix_table_offset=0x00000000,
+            pf0_msix_pba_bir=0,
+            pf0_msix_pba_offset=0x00000000,
+            pf1_msix_enable=False,
+            pf1_msix_table_size=0,
+            pf1_msix_table_bir=0,
+            pf1_msix_table_offset=0x00000000,
+            pf1_msix_pba_bir=0,
+            pf1_msix_pba_offset=0x00000000,
+            pf2_msix_enable=False,
+            pf2_msix_table_size=0,
+            pf2_msix_table_bir=0,
+            pf2_msix_table_offset=0x00000000,
+            pf2_msix_pba_bir=0,
+            pf2_msix_pba_offset=0x00000000,
+            pf3_msix_enable=False,
+            pf3_msix_table_size=0,
+            pf3_msix_table_bir=0,
+            pf3_msix_table_offset=0x00000000,
+            pf3_msix_pba_bir=0,
+            pf3_msix_pba_offset=0x00000000,
 
             # signals
             user_clk=dut.clk,
@@ -151,8 +182,11 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
-    dev_bar1 = tb.rc.tree[0][0].bar_window[1]
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+
+    dev_bar0 = dev.bar_window[0]
+    dev_bar1 = dev.bar_window[1]
 
     for length in range(0, 5):
         for pcie_offset in range(4-length+1):
@@ -189,8 +223,11 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
-    dev_bar1 = tb.rc.tree[0][0].bar_window[1]
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+
+    dev_bar0 = dev.bar_window[0]
+    dev_bar1 = dev.bar_window[1]
 
     for length in range(0, 5):
         for pcie_offset in range(4-length+1):
@@ -228,8 +265,11 @@ async def run_test_io_write(dut, idle_inserter=None, backpressure_inserter=None)
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
-    dev_bar1 = tb.rc.tree[0][0].bar_window[1]
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+
+    dev_bar0 = dev.bar_window[0]
+    dev_bar1 = dev.bar_window[1]
 
     for length in range(1, 5):
         for pcie_offset in range(4-length+1):
@@ -264,8 +304,11 @@ async def run_test_io_read(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
-    dev_bar1 = tb.rc.tree[0][0].bar_window[1]
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+
+    dev_bar0 = dev.bar_window[0]
+    dev_bar1 = dev.bar_window[1]
 
     for length in range(1, 5):
         for pcie_offset in range(4-length+1):
@@ -303,8 +346,11 @@ async def run_test_bad_ops(dut, idle_inserter=None, backpressure_inserter=None):
 
     await tb.rc.enumerate()
 
-    dev_bar0 = tb.rc.tree[0][0].bar_window[0]
-    dev_bar1 = tb.rc.tree[0][0].bar_window[1]
+    dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
+    await dev.enable_device()
+
+    dev_bar0 = dev.bar_window[0]
+    dev_bar1 = dev.bar_window[1]
 
     tb.log.info("Test bad write")
 

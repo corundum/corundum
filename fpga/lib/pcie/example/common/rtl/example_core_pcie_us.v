@@ -166,7 +166,7 @@ module example_core_pcie_us #
     output wire                                cfg_interrupt_msi_tph_present,
     output wire [1:0]                          cfg_interrupt_msi_tph_type,
     output wire [8:0]                          cfg_interrupt_msi_tph_st_tag,
-    output wire [3:0]                          cfg_interrupt_msi_function_number,
+    output wire [7:0]                          cfg_interrupt_msi_function_number,
 
     /*
      * Configuration
@@ -267,6 +267,7 @@ pcie_us_if #(
     .READ_EXT_TAG_ENABLE(1),
     .READ_MAX_READ_REQ_SIZE(1),
     .READ_MAX_PAYLOAD_SIZE(1),
+    .MSIX_ENABLE(0),
     .MSI_ENABLE(1),
     .MSI_COUNT(MSI_COUNT)
 )

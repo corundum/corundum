@@ -192,6 +192,17 @@ module pcie_s10_if #
     output wire                                         tx_cpl_tlp_ready,
 
     /*
+     * TLP input (write request from MSI)
+     */
+    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  tx_msi_wr_req_tlp_data,
+    input  wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  tx_msi_wr_req_tlp_strb,
+    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   tx_msi_wr_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                     tx_msi_wr_req_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                     tx_msi_wr_req_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                     tx_msi_wr_req_tlp_eop,
+    output wire                                         tx_msi_wr_req_tlp_ready,
+
+    /*
      * Flow control
      */
     output wire [7:0]                                   tx_fc_ph_av,
@@ -208,6 +219,8 @@ module pcie_s10_if #
     output wire [7:0]                                   bus_num,
     output wire [F_COUNT*3-1:0]                         max_read_request_size,
     output wire [F_COUNT*3-1:0]                         max_payload_size,
+    output wire [F_COUNT*3-1:0]                         msix_enable,
+    output wire [F_COUNT*3-1:0]                         msix_mask,
 
     /*
      * MSI request inputs
@@ -336,7 +349,18 @@ pcie_s10_if_tx_inst (
     .tx_cpl_tlp_valid(tx_cpl_tlp_valid),
     .tx_cpl_tlp_sop(tx_cpl_tlp_sop),
     .tx_cpl_tlp_eop(tx_cpl_tlp_eop),
-    .tx_cpl_tlp_ready(tx_cpl_tlp_ready)
+    .tx_cpl_tlp_ready(tx_cpl_tlp_ready),
+
+    /*
+     * TLP input (write request from MSI)
+     */
+    .tx_msi_wr_req_tlp_data(tx_msi_wr_req_tlp_data),
+    .tx_msi_wr_req_tlp_strb(tx_msi_wr_req_tlp_strb),
+    .tx_msi_wr_req_tlp_hdr(tx_msi_wr_req_tlp_hdr),
+    .tx_msi_wr_req_tlp_valid(tx_msi_wr_req_tlp_valid),
+    .tx_msi_wr_req_tlp_sop(tx_msi_wr_req_tlp_sop),
+    .tx_msi_wr_req_tlp_eop(tx_msi_wr_req_tlp_eop),
+    .tx_msi_wr_req_tlp_ready(tx_msi_wr_req_tlp_ready)
 );
 
 pcie_s10_cfg #(
@@ -397,8 +421,8 @@ pcie_s10_cfg_inst (
     .cfg_send_nf_err(),
     .cfg_send_cor_err(),
     .cfg_aer_irq_msg_num(),
-    .cfg_msix_func_mask(),
-    .cfg_msix_enable(),
+    .cfg_msix_func_mask(msix_mask),
+    .cfg_msix_enable(msix_enable),
     .cfg_multiple_msi_enable(cfg_multiple_msi_enable),
     .cfg_64bit_msi(),
     .cfg_msi_enable(cfg_msi_enable),

@@ -103,7 +103,18 @@ module pcie_s10_if_tx #
     input  wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_valid,
     input  wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_sop,
     input  wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_eop,
-    output wire                                         tx_cpl_tlp_ready
+    output wire                                         tx_cpl_tlp_ready,
+
+    /*
+     * TLP input (write request from MSI)
+     */
+    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  tx_msi_wr_req_tlp_data,
+    input  wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  tx_msi_wr_req_tlp_strb,
+    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   tx_msi_wr_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                     tx_msi_wr_req_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                     tx_msi_wr_req_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                     tx_msi_wr_req_tlp_eop,
+    output wire                                         tx_msi_wr_req_tlp_ready
 );
 
 parameter TLP_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH;
@@ -171,6 +182,7 @@ reg [TLP_SEG_COUNT-1:0] cpl_tlp_eop_reg = 0, cpl_tlp_eop_next;
 reg tx_rd_req_tlp_ready_reg = 1'b0, tx_rd_req_tlp_ready_next;
 reg tx_wr_req_tlp_ready_reg = 1'b0, tx_wr_req_tlp_ready_next;
 reg tx_cpl_tlp_ready_reg = 1'b0, tx_cpl_tlp_ready_next;
+reg tx_msi_wr_req_tlp_ready_reg = 1'b0, tx_msi_wr_req_tlp_ready_next;
 
 reg [SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]  m_axis_rd_req_tx_seq_num_reg = 0, m_axis_rd_req_tx_seq_num_next;
 reg [SEG_COUNT-1:0]                   m_axis_rd_req_tx_seq_num_valid_reg = 0, m_axis_rd_req_tx_seq_num_valid_next;
@@ -187,6 +199,7 @@ reg [1:0] tx_st_ready_delay_reg = 0;
 assign tx_rd_req_tlp_ready = tx_rd_req_tlp_ready_reg;
 assign tx_wr_req_tlp_ready = tx_wr_req_tlp_ready_reg;
 assign tx_cpl_tlp_ready = tx_cpl_tlp_ready_reg;
+assign tx_msi_wr_req_tlp_ready = tx_msi_wr_req_tlp_ready_reg;
 
 assign m_axis_rd_req_tx_seq_num = m_axis_rd_req_tx_seq_num_reg;
 assign m_axis_rd_req_tx_seq_num_valid = m_axis_rd_req_tx_seq_num_valid_reg;
@@ -265,6 +278,10 @@ reg [SEG_COUNT*SEG_DATA_WIDTH-1:0] cpl_fifo_rd_data_reg = 0, cpl_fifo_rd_data_ne
 reg [SEG_COUNT-1:0] cpl_fifo_rd_eop_reg = 0, cpl_fifo_rd_eop_next;
 reg [SEG_COUNT-1:0] cpl_fifo_rd_valid_reg = 0, cpl_fifo_rd_valid_next;
 
+// MSI write request register
+reg [SEG_DATA_WIDTH-1:0] msi_wr_req_data_reg = 0, msi_wr_req_data_next;
+reg msi_wr_req_valid_reg = 0, msi_wr_req_valid_next;
+
 // Read request processing
 always @* begin
     tx_rd_req_tlp_ready_next = 1'b0;
@@ -306,7 +323,7 @@ always @* begin
     wr_req_fifo_wr_seq = tx_wr_req_tlp_seq;
     wr_req_fifo_we = 0;
 
-    // combine header and payload, merge in read request TLPs
+    // combine header and payload
     case (wr_req_state_reg)
         WR_REQ_STATE_IDLE: begin
             // idle state
@@ -402,7 +419,7 @@ always @* begin
     cpl_fifo_wr_valid = 1;
     cpl_fifo_we = 0;
 
-    // combine header and payload, merge in read request TLPs
+    // combine header and payload
     case (cpl_state_reg)
         CPL_STATE_IDLE: begin
             // idle state
@@ -490,12 +507,23 @@ always @* begin
     cpl_fifo_rd_eop_next = cpl_fifo_rd_eop_reg;
     cpl_fifo_rd_valid_next = cpl_fifo_rd_valid_reg;
 
-    // combine header and payload, merge in read request TLPs
+    msi_wr_req_data_next = msi_wr_req_data_reg;
+    msi_wr_req_valid_next = msi_wr_req_valid_reg;
+
+    // arbitrate across all sources
     case (tlp_output_state_reg)
         TLP_OUTPUT_STATE_IDLE: begin
             // idle state
 
-            if (cpl_fifo_rd_valid_reg && tx_st_ready_delay_reg[1]) begin
+            if (msi_wr_req_valid_reg && tx_st_ready_delay_reg[1]) begin
+                // transfer MSI write request
+                tx_st_data_next = msi_wr_req_data_reg;
+                tx_st_sop_next = 1;
+                tx_st_eop_next = 1;
+                tx_st_valid_next = 1;
+
+                msi_wr_req_valid_next = 0;
+            end else if (cpl_fifo_rd_valid_reg && tx_st_ready_delay_reg[1]) begin
                 // transfer completion
                 tx_st_data_next = cpl_fifo_rd_data_reg;
                 tx_st_sop_next = 1;
@@ -615,6 +643,22 @@ always @* begin
         cpl_fifo_rd_valid_next = cpl_fifo_valid[cpl_fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
         cpl_fifo_rd_ptr_next = cpl_fifo_rd_ptr_reg + 1;
     end
+
+    tx_msi_wr_req_tlp_ready_next = 1'b0;
+
+    if (!msi_wr_req_valid_reg && tx_msi_wr_req_tlp_valid) begin
+        msi_wr_req_data_next[31:0] = tx_msi_wr_req_tlp_hdr[127:96];
+        msi_wr_req_data_next[63:32] = tx_msi_wr_req_tlp_hdr[95:64];
+        msi_wr_req_data_next[95:64] = tx_msi_wr_req_tlp_hdr[63:32];
+        if (tx_msi_wr_req_tlp_hdr[125]) begin
+            msi_wr_req_data_next[127:96] = tx_msi_wr_req_tlp_hdr[31:0];
+            msi_wr_req_data_next[SEG_COUNT*SEG_DATA_WIDTH-1:128] = tx_msi_wr_req_tlp_data;
+        end else begin
+            msi_wr_req_data_next[SEG_COUNT*SEG_DATA_WIDTH-1:96] = tx_msi_wr_req_tlp_data;
+        end
+        msi_wr_req_valid_next = 1'b1;
+        tx_msi_wr_req_tlp_ready_next = 1'b1;
+    end
 end
 
 always @(posedge clk) begin
@@ -633,6 +677,7 @@ always @(posedge clk) begin
     tx_rd_req_tlp_ready_reg <= tx_rd_req_tlp_ready_next;
     tx_wr_req_tlp_ready_reg <= tx_wr_req_tlp_ready_next;
     tx_cpl_tlp_ready_reg <= tx_cpl_tlp_ready_next;
+    tx_msi_wr_req_tlp_ready_reg <= tx_msi_wr_req_tlp_ready_next;
 
     m_axis_rd_req_tx_seq_num_reg <= m_axis_rd_req_tx_seq_num_next;
     m_axis_rd_req_tx_seq_num_valid_reg <= m_axis_rd_req_tx_seq_num_valid_next;
@@ -697,6 +742,9 @@ always @(posedge clk) begin
 
     cpl_fifo_watermark_reg <= $unsigned(cpl_fifo_wr_ptr_cur_reg - cpl_fifo_rd_ptr_reg) >= 2**FIFO_ADDR_WIDTH-4;
 
+    msi_wr_req_data_reg <= msi_wr_req_data_next;
+    msi_wr_req_valid_reg <= msi_wr_req_valid_next;
+
     if (rst) begin
         wr_req_state_reg <= WR_REQ_STATE_IDLE;
         cpl_state_reg <= CPL_STATE_IDLE;
@@ -705,6 +753,7 @@ always @(posedge clk) begin
         tx_rd_req_tlp_ready_reg <= 1'b0;
         tx_wr_req_tlp_ready_reg <= 1'b0;
         tx_cpl_tlp_ready_reg <= 1'b0;
+        tx_msi_wr_req_tlp_ready_reg <= 1'b0;
 
         m_axis_rd_req_tx_seq_num_valid_reg <= 0;
         m_axis_wr_req_tx_seq_num_valid_reg <= 0;
@@ -725,6 +774,8 @@ always @(posedge clk) begin
         cpl_fifo_wr_ptr_cur_reg <= 0;
         cpl_fifo_rd_ptr_reg <= 0;
         cpl_fifo_rd_valid_reg <= 0;
+
+        msi_wr_req_valid_reg <= 0;
     end
 end
 

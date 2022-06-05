@@ -33,16 +33,16 @@ THE SOFTWARE.
  */
 module pcie_axi_master_rd #
 (
+    // TLP data width
+    parameter TLP_DATA_WIDTH = 256,
+    // TLP strobe width
+    parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
+    // TLP header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
-    // TLP segment data width
-    parameter TLP_SEG_DATA_WIDTH = 256,
-    // TLP segment strobe width
-    parameter TLP_SEG_STRB_WIDTH = TLP_SEG_DATA_WIDTH/32,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128,
     // Width of AXI data bus in bits
-    parameter AXI_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH,
+    parameter AXI_DATA_WIDTH = TLP_DATA_WIDTH,
     // Width of AXI address bus in bits
     parameter AXI_ADDR_WIDTH = 64,
     // Width of AXI wstrb (width of data bus in words)
@@ -55,60 +55,60 @@ module pcie_axi_master_rd #
     parameter TLP_FORCE_64_BIT_ADDR = 0
 )
 (
-    input  wire                                         clk,
-    input  wire                                         rst,
+    input  wire                                    clk,
+    input  wire                                    rst,
 
     /*
      * TLP input (request)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   rx_req_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_eop,
-    output wire                                         rx_req_tlp_ready,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_eop,
+    output wire                                    rx_req_tlp_ready,
 
     /*
      * TLP output (completion)
      */
-    output wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  tx_cpl_tlp_data,
-    output wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  tx_cpl_tlp_strb,
-    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   tx_cpl_tlp_hdr,
-    output wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_valid,
-    output wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_sop,
-    output wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_eop,
-    input  wire                                         tx_cpl_tlp_ready,
+    output wire [TLP_DATA_WIDTH-1:0]               tx_cpl_tlp_data,
+    output wire [TLP_STRB_WIDTH-1:0]               tx_cpl_tlp_strb,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  tx_cpl_tlp_hdr,
+    output wire [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_valid,
+    output wire [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_sop,
+    output wire [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_eop,
+    input  wire                                    tx_cpl_tlp_ready,
 
     /*
      * AXI master interface
      */
-    output wire [AXI_ID_WIDTH-1:0]                      m_axi_arid,
-    output wire [AXI_ADDR_WIDTH-1:0]                    m_axi_araddr,
-    output wire [7:0]                                   m_axi_arlen,
-    output wire [2:0]                                   m_axi_arsize,
-    output wire [1:0]                                   m_axi_arburst,
-    output wire                                         m_axi_arlock,
-    output wire [3:0]                                   m_axi_arcache,
-    output wire [2:0]                                   m_axi_arprot,
-    output wire                                         m_axi_arvalid,
-    input  wire                                         m_axi_arready,
-    input  wire [AXI_ID_WIDTH-1:0]                      m_axi_rid,
-    input  wire [AXI_DATA_WIDTH-1:0]                    m_axi_rdata,
-    input  wire [1:0]                                   m_axi_rresp,
-    input  wire                                         m_axi_rlast,
-    input  wire                                         m_axi_rvalid,
-    output wire                                         m_axi_rready,
+    output wire [AXI_ID_WIDTH-1:0]                 m_axi_arid,
+    output wire [AXI_ADDR_WIDTH-1:0]               m_axi_araddr,
+    output wire [7:0]                              m_axi_arlen,
+    output wire [2:0]                              m_axi_arsize,
+    output wire [1:0]                              m_axi_arburst,
+    output wire                                    m_axi_arlock,
+    output wire [3:0]                              m_axi_arcache,
+    output wire [2:0]                              m_axi_arprot,
+    output wire                                    m_axi_arvalid,
+    input  wire                                    m_axi_arready,
+    input  wire [AXI_ID_WIDTH-1:0]                 m_axi_rid,
+    input  wire [AXI_DATA_WIDTH-1:0]               m_axi_rdata,
+    input  wire [1:0]                              m_axi_rresp,
+    input  wire                                    m_axi_rlast,
+    input  wire                                    m_axi_rvalid,
+    output wire                                    m_axi_rready,
 
     /*
      * Configuration
      */
-    input  wire [15:0]                                  completer_id,
-    input  wire [2:0]                                   max_payload_size,
+    input  wire [15:0]                             completer_id,
+    input  wire [2:0]                              max_payload_size,
 
     /*
      * Status
      */
-    output wire                                         status_error_cor,
-    output wire                                         status_error_uncor
+    output wire                                    status_error_cor,
+    output wire                                    status_error_uncor
 );
 
 parameter AXI_WORD_WIDTH = AXI_STRB_WIDTH;
@@ -118,8 +118,6 @@ parameter AXI_MAX_BURST_SIZE = AXI_MAX_BURST_LEN*AXI_WORD_WIDTH;
 
 parameter PAYLOAD_MAX = AXI_MAX_BURST_SIZE < 4096 ? $clog2(AXI_MAX_BURST_SIZE/128) : 5;
 
-parameter TLP_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH;
-parameter TLP_STRB_WIDTH = TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH;
 parameter TLP_DATA_WIDTH_BYTES = TLP_DATA_WIDTH/8;
 parameter TLP_DATA_WIDTH_DWORDS = TLP_DATA_WIDTH/32;
 
@@ -132,7 +130,7 @@ initial begin
         $finish;
     end
 
-    if (TLP_SEG_HDR_WIDTH != 128) begin
+    if (TLP_HDR_WIDTH != 128) begin
         $error("Error: TLP segment header width must be 128 (instance %m)");
         $finish;
     end
@@ -142,7 +140,7 @@ initial begin
         $finish;
     end
 
-    if (AXI_DATA_WIDTH != TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH) begin
+    if (AXI_DATA_WIDTH != TLP_DATA_WIDTH) begin
         $error("Error: AXI interface width must match PCIe interface width (instance %m)");
         $finish;
     end
@@ -274,14 +272,14 @@ reg status_error_cor_reg = 1'b0, status_error_cor_next;
 reg status_error_uncor_reg = 1'b0, status_error_uncor_next;
 
 // internal datapath
-reg  [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  tx_cpl_tlp_data_int;
-reg  [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  tx_cpl_tlp_strb_int;
-reg  [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   tx_cpl_tlp_hdr_int;
-reg  [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_valid_int;
-reg  [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_sop_int;
-reg  [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_eop_int;
-reg                                          tx_cpl_tlp_ready_int_reg = 1'b0;
-wire                                         tx_cpl_tlp_ready_int_early;
+reg  [TLP_DATA_WIDTH-1:0]               tx_cpl_tlp_data_int;
+reg  [TLP_STRB_WIDTH-1:0]               tx_cpl_tlp_strb_int;
+reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  tx_cpl_tlp_hdr_int;
+reg  [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_valid_int;
+reg  [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_sop_int;
+reg  [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_eop_int;
+reg                                     tx_cpl_tlp_ready_int_reg = 1'b0;
+wire                                    tx_cpl_tlp_ready_int_early;
 
 assign rx_req_tlp_ready = rx_req_tlp_ready_reg;
 
@@ -887,19 +885,19 @@ always @(posedge clk) begin
 end
 
 // output datapath logic
-reg [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  tx_cpl_tlp_data_reg = 0;
-reg [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  tx_cpl_tlp_strb_reg = 0;
-reg [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   tx_cpl_tlp_hdr_reg = 0;
-reg [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_valid_reg = 0, tx_cpl_tlp_valid_next;
-reg [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_sop_reg = 0;
-reg [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_eop_reg = 0;
+reg [TLP_DATA_WIDTH-1:0]               tx_cpl_tlp_data_reg = 0;
+reg [TLP_STRB_WIDTH-1:0]               tx_cpl_tlp_strb_reg = 0;
+reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  tx_cpl_tlp_hdr_reg = 0;
+reg [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_valid_reg = 0, tx_cpl_tlp_valid_next;
+reg [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_sop_reg = 0;
+reg [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_eop_reg = 0;
 
-reg [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  temp_tx_cpl_tlp_data_reg = 0;
-reg [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  temp_tx_cpl_tlp_strb_reg = 0;
-reg [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   temp_tx_cpl_tlp_hdr_reg = 0;
-reg [TLP_SEG_COUNT-1:0]                     temp_tx_cpl_tlp_valid_reg = 0, temp_tx_cpl_tlp_valid_next;
-reg [TLP_SEG_COUNT-1:0]                     temp_tx_cpl_tlp_sop_reg = 0;
-reg [TLP_SEG_COUNT-1:0]                     temp_tx_cpl_tlp_eop_reg = 0;
+reg [TLP_DATA_WIDTH-1:0]               temp_tx_cpl_tlp_data_reg = 0;
+reg [TLP_STRB_WIDTH-1:0]               temp_tx_cpl_tlp_strb_reg = 0;
+reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  temp_tx_cpl_tlp_hdr_reg = 0;
+reg [TLP_SEG_COUNT-1:0]                temp_tx_cpl_tlp_valid_reg = 0, temp_tx_cpl_tlp_valid_next;
+reg [TLP_SEG_COUNT-1:0]                temp_tx_cpl_tlp_sop_reg = 0;
+reg [TLP_SEG_COUNT-1:0]                temp_tx_cpl_tlp_eop_reg = 0;
 
 // datapath control
 reg store_axis_int_to_output;

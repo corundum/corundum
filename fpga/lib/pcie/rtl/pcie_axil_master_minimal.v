@@ -33,14 +33,14 @@ THE SOFTWARE.
  */
 module pcie_axil_master_minimal #
 (
+    // TLP data width
+    parameter TLP_DATA_WIDTH = 256,
+    // TLP strobe width
+    parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
+    // TLP header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
-    // TLP segment data width
-    parameter TLP_SEG_DATA_WIDTH = 256,
-    // TLP segment strobe width
-    parameter TLP_SEG_STRB_WIDTH = TLP_SEG_DATA_WIDTH/32,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128,
     // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
     // Width of AXI lite address bus in bits
@@ -51,67 +51,65 @@ module pcie_axil_master_minimal #
     parameter TLP_FORCE_64_BIT_ADDR = 0
 )
 (
-    input  wire                                         clk,
-    input  wire                                         rst,
+    input  wire                                    clk,
+    input  wire                                    rst,
 
     /*
      * TLP input (request)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  rx_req_tlp_data,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   rx_req_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_eop,
-    output wire                                         rx_req_tlp_ready,
+    input  wire [TLP_DATA_WIDTH-1:0]               rx_req_tlp_data,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_eop,
+    output wire                                    rx_req_tlp_ready,
 
     /*
      * TLP output (completion)
      */
-    output wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  tx_cpl_tlp_data,
-    output wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  tx_cpl_tlp_strb,
-    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   tx_cpl_tlp_hdr,
-    output wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_valid,
-    output wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_sop,
-    output wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_eop,
-    input  wire                                         tx_cpl_tlp_ready,
+    output wire [TLP_DATA_WIDTH-1:0]               tx_cpl_tlp_data,
+    output wire [TLP_STRB_WIDTH-1:0]               tx_cpl_tlp_strb,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  tx_cpl_tlp_hdr,
+    output wire [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_valid,
+    output wire [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_sop,
+    output wire [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_eop,
+    input  wire                                    tx_cpl_tlp_ready,
 
     /*
      * AXI Lite Master output
      */
-    output wire [AXIL_ADDR_WIDTH-1:0]                   m_axil_awaddr,
-    output wire [2:0]                                   m_axil_awprot,
-    output wire                                         m_axil_awvalid,
-    input  wire                                         m_axil_awready,
-    output wire [AXIL_DATA_WIDTH-1:0]                   m_axil_wdata,
-    output wire [AXIL_STRB_WIDTH-1:0]                   m_axil_wstrb,
-    output wire                                         m_axil_wvalid,
-    input  wire                                         m_axil_wready,
-    input  wire [1:0]                                   m_axil_bresp,
-    input  wire                                         m_axil_bvalid,
-    output wire                                         m_axil_bready,
-    output wire [AXIL_ADDR_WIDTH-1:0]                   m_axil_araddr,
-    output wire [2:0]                                   m_axil_arprot,
-    output wire                                         m_axil_arvalid,
-    input  wire                                         m_axil_arready,
-    input  wire [AXIL_DATA_WIDTH-1:0]                   m_axil_rdata,
-    input  wire [1:0]                                   m_axil_rresp,
-    input  wire                                         m_axil_rvalid,
-    output wire                                         m_axil_rready,
+    output wire [AXIL_ADDR_WIDTH-1:0]              m_axil_awaddr,
+    output wire [2:0]                              m_axil_awprot,
+    output wire                                    m_axil_awvalid,
+    input  wire                                    m_axil_awready,
+    output wire [AXIL_DATA_WIDTH-1:0]              m_axil_wdata,
+    output wire [AXIL_STRB_WIDTH-1:0]              m_axil_wstrb,
+    output wire                                    m_axil_wvalid,
+    input  wire                                    m_axil_wready,
+    input  wire [1:0]                              m_axil_bresp,
+    input  wire                                    m_axil_bvalid,
+    output wire                                    m_axil_bready,
+    output wire [AXIL_ADDR_WIDTH-1:0]              m_axil_araddr,
+    output wire [2:0]                              m_axil_arprot,
+    output wire                                    m_axil_arvalid,
+    input  wire                                    m_axil_arready,
+    input  wire [AXIL_DATA_WIDTH-1:0]              m_axil_rdata,
+    input  wire [1:0]                              m_axil_rresp,
+    input  wire                                    m_axil_rvalid,
+    output wire                                    m_axil_rready,
 
     /*
      * Configuration
      */
-    input  wire [15:0]                                  completer_id,
+    input  wire [15:0]                             completer_id,
 
     /*
      * Status
      */
-    output wire                                         status_error_cor,
-    output wire                                         status_error_uncor
+    output wire                                    status_error_cor,
+    output wire                                    status_error_uncor
 );
 
-parameter TLP_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH;
-parameter TLP_STRB_WIDTH = TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH;
 parameter TLP_DATA_WIDTH_BYTES = TLP_DATA_WIDTH/8;
 parameter TLP_DATA_WIDTH_DWORDS = TLP_DATA_WIDTH/32;
 
@@ -124,7 +122,7 @@ initial begin
         $finish;
     end
 
-    if (TLP_SEG_HDR_WIDTH != 128) begin
+    if (TLP_HDR_WIDTH != 128) begin
         $error("Error: TLP segment header width must be 128 (instance %m)");
         $finish;
     end
@@ -238,9 +236,9 @@ reg resp_fifo_rd_valid_reg = 1'b0, resp_fifo_rd_valid_next;
 
 reg rx_req_tlp_ready_reg = 1'b0, rx_req_tlp_ready_next;
 
-reg [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0] tx_cpl_tlp_data_reg = 0, tx_cpl_tlp_data_next;
-reg [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0] tx_cpl_tlp_strb_reg = 0, tx_cpl_tlp_strb_next;
-reg [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0] tx_cpl_tlp_hdr_reg = 0, tx_cpl_tlp_hdr_next;
+reg [TLP_DATA_WIDTH-1:0] tx_cpl_tlp_data_reg = 0, tx_cpl_tlp_data_next;
+reg [TLP_STRB_WIDTH-1:0] tx_cpl_tlp_strb_reg = 0, tx_cpl_tlp_strb_next;
+reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0] tx_cpl_tlp_hdr_reg = 0, tx_cpl_tlp_hdr_next;
 reg [TLP_SEG_COUNT-1:0] tx_cpl_tlp_valid_reg = 0, tx_cpl_tlp_valid_next;
 
 reg [AXIL_ADDR_WIDTH-1:0] m_axil_addr_reg = {AXIL_ADDR_WIDTH{1'b0}}, m_axil_addr_next;

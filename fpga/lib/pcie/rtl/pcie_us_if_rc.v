@@ -41,43 +41,41 @@ module pcie_us_if_rc #
     parameter AXIS_PCIE_RC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 75 : 161,
     // PCIe AXI stream RQ tuser signal width
     parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 60 : 137,
+    // TLP data width
+    parameter TLP_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
+    // TLP strobe width
+    parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
+    // TLP header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
-    parameter TLP_SEG_COUNT = 1,
-    // TLP segment data width
-    parameter TLP_SEG_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH/TLP_SEG_COUNT,
-    // TLP segment strobe width
-    parameter TLP_SEG_STRB_WIDTH = TLP_SEG_DATA_WIDTH/32,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128
+    parameter TLP_SEG_COUNT = 1
 )
 (
-    input  wire                                         clk,
-    input  wire                                         rst,
+    input  wire                                    clk,
+    input  wire                                    rst,
 
     /*
      * AXI input (RC)
      */
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]              s_axis_rc_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]              s_axis_rc_tkeep,
-    input  wire                                         s_axis_rc_tvalid,
-    output wire                                         s_axis_rc_tready,
-    input  wire                                         s_axis_rc_tlast,
-    input  wire [AXIS_PCIE_RC_USER_WIDTH-1:0]           s_axis_rc_tuser,
+    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]         s_axis_rc_tdata,
+    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]         s_axis_rc_tkeep,
+    input  wire                                    s_axis_rc_tvalid,
+    output wire                                    s_axis_rc_tready,
+    input  wire                                    s_axis_rc_tlast,
+    input  wire [AXIS_PCIE_RC_USER_WIDTH-1:0]      s_axis_rc_tuser,
 
     /*
      * TLP output (completion to DMA)
      */
-    output wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  rx_cpl_tlp_data,
-    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   rx_cpl_tlp_hdr,
-    output wire [TLP_SEG_COUNT*4-1:0]                   rx_cpl_tlp_error,
-    output wire [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_valid,
-    output wire [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_sop,
-    output wire [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_eop,
-    input  wire                                         rx_cpl_tlp_ready
+    output wire [TLP_DATA_WIDTH-1:0]               rx_cpl_tlp_data,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_cpl_tlp_hdr,
+    output wire [TLP_SEG_COUNT*4-1:0]              rx_cpl_tlp_error,
+    output wire [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_valid,
+    output wire [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_sop,
+    output wire [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_eop,
+    input  wire                                    rx_cpl_tlp_ready
 );
 
-parameter TLP_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH;
-parameter TLP_STRB_WIDTH = TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH;
 parameter TLP_DATA_WIDTH_BYTES = TLP_DATA_WIDTH/8;
 parameter TLP_DATA_WIDTH_DWORDS = TLP_DATA_WIDTH/32;
 
@@ -112,12 +110,12 @@ initial begin
         $finish;
     end
 
-    if (TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH != AXIS_PCIE_DATA_WIDTH) begin
+    if (TLP_DATA_WIDTH != AXIS_PCIE_DATA_WIDTH) begin
         $error("Error: Interface widths must match (instance %m)");
         $finish;
     end
 
-    if (TLP_SEG_HDR_WIDTH != 128) begin
+    if (TLP_HDR_WIDTH != 128) begin
         $error("Error: TLP segment header width must be 128 (instance %m)");
         $finish;
     end
@@ -158,8 +156,8 @@ localparam [3:0]
     PCIE_ERROR_FLR = 4'd8,
     PCIE_ERROR_TIMEOUT = 4'd15;
 
-reg [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0] rx_cpl_tlp_data_reg = 0, rx_cpl_tlp_data_next;
-reg [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0] rx_cpl_tlp_hdr_reg = 0, rx_cpl_tlp_hdr_next;
+reg [TLP_DATA_WIDTH-1:0] rx_cpl_tlp_data_reg = 0, rx_cpl_tlp_data_next;
+reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0] rx_cpl_tlp_hdr_reg = 0, rx_cpl_tlp_hdr_next;
 reg [TLP_SEG_COUNT*4-1:0] rx_cpl_tlp_error_reg = 0, rx_cpl_tlp_error_next;
 reg [TLP_SEG_COUNT-1:0] rx_cpl_tlp_valid_reg = 0, rx_cpl_tlp_valid_next;
 reg [TLP_SEG_COUNT-1:0] rx_cpl_tlp_sop_reg = 0, rx_cpl_tlp_sop_next;

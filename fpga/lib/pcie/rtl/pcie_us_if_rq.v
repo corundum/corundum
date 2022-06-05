@@ -41,14 +41,14 @@ module pcie_us_if_rq #
     parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 60 : 137,
     // RQ sequence number width
     parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
+    // TLP data width
+    parameter TLP_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
+    // TLP strobe width
+    parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
+    // TLP header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
-    // TLP segment data width
-    parameter TLP_SEG_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH/TLP_SEG_COUNT,
-    // TLP segment strobe width
-    parameter TLP_SEG_STRB_WIDTH = TLP_SEG_DATA_WIDTH/32,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128,
     // TX sequence number count
     parameter TX_SEQ_NUM_COUNT = AXIS_PCIE_DATA_WIDTH < 512 ? 1 : 2,
     // TX sequence number width
@@ -79,7 +79,7 @@ module pcie_us_if_rq #
     /*
      * TLP input (read request from DMA)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    tx_rd_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        tx_rd_req_tlp_hdr,
     input  wire [TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]     tx_rd_req_tlp_seq,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_rd_req_tlp_valid,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_rd_req_tlp_sop,
@@ -95,9 +95,9 @@ module pcie_us_if_rq #
     /*
      * TLP input (write request from DMA)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]   tx_wr_req_tlp_data,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]   tx_wr_req_tlp_strb,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    tx_wr_req_tlp_hdr,
+    input  wire [TLP_DATA_WIDTH-1:0]                     tx_wr_req_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                     tx_wr_req_tlp_strb,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        tx_wr_req_tlp_hdr,
     input  wire [TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]     tx_wr_req_tlp_seq,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_wr_req_tlp_valid,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_wr_req_tlp_sop,
@@ -111,8 +111,6 @@ module pcie_us_if_rq #
     output wire [TX_SEQ_NUM_COUNT-1:0]                   m_axis_wr_req_tx_seq_num_valid
 );
 
-parameter TLP_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH;
-parameter TLP_STRB_WIDTH = TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH;
 parameter TLP_DATA_WIDTH_BYTES = TLP_DATA_WIDTH/8;
 parameter TLP_DATA_WIDTH_DWORDS = TLP_DATA_WIDTH/32;
 
@@ -172,12 +170,12 @@ initial begin
         $finish;
     end
 
-    if (TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH != AXIS_PCIE_DATA_WIDTH) begin
+    if (TLP_DATA_WIDTH != AXIS_PCIE_DATA_WIDTH) begin
         $error("Error: Interface widths must match (instance %m)");
         $finish;
     end
 
-    if (TLP_SEG_HDR_WIDTH != 128) begin
+    if (TLP_HDR_WIDTH != 128) begin
         $error("Error: TLP segment header width must be 128 (instance %m)");
         $finish;
     end
@@ -245,8 +243,8 @@ localparam [1:0]
 
 reg [1:0] tlp_output_state_reg = TLP_OUTPUT_STATE_IDLE, tlp_output_state_next;
 
-reg [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0] out_tlp_data_reg = 0, out_tlp_data_next;
-reg [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0] out_tlp_strb_reg = 0, out_tlp_strb_next;
+reg [TLP_DATA_WIDTH-1:0] out_tlp_data_reg = 0, out_tlp_data_next;
+reg [TLP_STRB_WIDTH-1:0] out_tlp_strb_reg = 0, out_tlp_strb_next;
 reg [TLP_SEG_COUNT-1:0] out_tlp_eop_reg = 0, out_tlp_eop_next;
 
 reg [127:0] tlp_header_data_rd;

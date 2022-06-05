@@ -76,8 +76,10 @@ class TB(object):
             # pcie_link_width=2,
             # user_clk_frequency=250e6,
             alignment="dword",
-            cq_cc_straddle=False,
-            rq_rc_straddle=False,
+            cq_straddle=False,
+            cc_straddle=False,
+            rq_straddle=False,
+            rc_straddle=False,
             rc_4tlp_straddle=False,
             pf_count=1,
             max_payload_size=1024,
@@ -355,26 +357,18 @@ def test_dma_if_pcie_us_rd(request, axis_pcie_data_width, pcie_offset):
 
     parameters = {}
 
-    # segmented interface parameters
-    ram_sel_width = 2
-    ram_addr_width = 16
-    seg_count = max(2, axis_pcie_data_width*2 // 128)
-    seg_data_width = axis_pcie_data_width*2 // seg_count
-    seg_be_width = seg_data_width // 8
-    seg_addr_width = ram_addr_width - (seg_count*seg_be_width-1).bit_length()
-
     parameters['AXIS_PCIE_DATA_WIDTH'] = axis_pcie_data_width
     parameters['AXIS_PCIE_KEEP_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH'] // 32
     parameters['AXIS_PCIE_RQ_USER_WIDTH'] = 62 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 137
     parameters['AXIS_PCIE_RC_USER_WIDTH'] = 75 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 161
     parameters['RQ_SEQ_NUM_WIDTH'] = 4 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 6
     parameters['RQ_SEQ_NUM_ENABLE'] = 1
-    parameters['RAM_SEL_WIDTH'] = ram_sel_width
-    parameters['RAM_ADDR_WIDTH'] = ram_addr_width
-    parameters['SEG_COUNT'] = seg_count
-    parameters['SEG_DATA_WIDTH'] = seg_data_width
-    parameters['SEG_BE_WIDTH'] = seg_be_width
-    parameters['SEG_ADDR_WIDTH'] = seg_addr_width
+    parameters['RAM_SEL_WIDTH'] = 2
+    parameters['RAM_ADDR_WIDTH'] = 16
+    parameters['SEG_COUNT'] = max(2, parameters['AXIS_PCIE_DATA_WIDTH']*2 // 128)
+    parameters['SEG_DATA_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH']*2 // parameters['SEG_COUNT']
+    parameters['SEG_BE_WIDTH'] = parameters['SEG_DATA_WIDTH'] // 8
+    parameters['SEG_ADDR_WIDTH'] = parameters['RAM_ADDR_WIDTH'] - (parameters['SEG_COUNT']*parameters['SEG_BE_WIDTH']-1).bit_length()
     parameters['PCIE_ADDR_WIDTH'] = 64
     parameters['PCIE_TAG_COUNT'] = 64 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 256
     parameters['LEN_WIDTH'] = 20

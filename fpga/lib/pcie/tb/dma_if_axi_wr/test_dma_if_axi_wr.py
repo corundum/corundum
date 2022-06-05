@@ -50,7 +50,8 @@ except ImportError:
         del sys.path[0]
 
 DescBus, DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Desc",
-    signals=["axi_addr", "ram_addr", "ram_sel", "imm", "imm_en", "len", "tag", "valid", "ready"]
+    signals=["axi_addr", "ram_addr", "ram_sel", "len", "tag", "valid", "ready"],
+    optional_signals=["imm", "imm_en"]
 )
 
 DescStatusBus, DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",
@@ -119,7 +120,6 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
     tb.dut.enable.value = 1
 
     for length in list(range(0, ram_byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
-        # for axi_offset in axi_offsets:
         for axi_offset in list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096)):
             for ram_offset in range(ram_byte_lanes+1):
                 tb.log.info("length %d, axi_offset %d, ram_offset %d", length, axi_offset, ram_offset)
@@ -170,7 +170,6 @@ async def run_test_write_imm(dut, idle_inserter=None, backpressure_inserter=None
     tb.dut.enable.value = 1
 
     for length in list(range(1, len(dut.s_axis_write_desc_imm) // 8)):
-        # for axi_offset in axi_offsets:
         for axi_offset in list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096)):
             tb.log.info("length %d, axi_offset %d", length, axi_offset)
             axi_addr = axi_offset+0x1000
@@ -207,15 +206,12 @@ def cycle_pause():
 
 if cocotb.SIM_NAME:
 
-    factory = TestFactory(run_test_write)
-    factory.add_option("idle_inserter", [None, cycle_pause])
-    factory.add_option("backpressure_inserter", [None, cycle_pause])
-    factory.generate_tests()
+    for test in [run_test_write, run_test_write_imm]:
 
-    factory = TestFactory(run_test_write_imm)
-    factory.add_option("idle_inserter", [None, cycle_pause])
-    factory.add_option("backpressure_inserter", [None, cycle_pause])
-    factory.generate_tests()
+        factory = TestFactory(test)
+        factory.add_option("idle_inserter", [None, cycle_pause])
+        factory.add_option("backpressure_inserter", [None, cycle_pause])
+        factory.generate_tests()
 
 
 # cocotb-test
@@ -236,24 +232,16 @@ def test_dma_if_axi_wr(request, axi_data_width):
 
     parameters = {}
 
-    # segmented interface parameters
-    ram_sel_width = 2
-    ram_addr_width = 16
-    ram_seg_count = 2
-    ram_seg_data_width = axi_data_width*2 // ram_seg_count
-    ram_seg_be_width = ram_seg_data_width // 8
-    ram_seg_addr_width = ram_addr_width - (ram_seg_count*ram_seg_be_width-1).bit_length()
-
     parameters['AXI_DATA_WIDTH'] = axi_data_width
     parameters['AXI_ADDR_WIDTH'] = 16
     parameters['AXI_STRB_WIDTH'] = parameters['AXI_DATA_WIDTH'] // 8
     parameters['AXI_ID_WIDTH'] = 8
-    parameters['RAM_SEL_WIDTH'] = ram_sel_width
-    parameters['RAM_ADDR_WIDTH'] = ram_addr_width
-    parameters['RAM_SEG_COUNT'] = ram_seg_count
-    parameters['RAM_SEG_DATA_WIDTH'] = ram_seg_data_width
-    parameters['RAM_SEG_BE_WIDTH'] = ram_seg_be_width
-    parameters['RAM_SEG_ADDR_WIDTH'] = ram_seg_addr_width
+    parameters['RAM_SEL_WIDTH'] = 2
+    parameters['RAM_ADDR_WIDTH'] = 16
+    parameters['RAM_SEG_COUNT'] = 2
+    parameters['RAM_SEG_DATA_WIDTH'] = parameters['AXI_DATA_WIDTH']*2 // parameters['RAM_SEG_COUNT']
+    parameters['RAM_SEG_BE_WIDTH'] = parameters['RAM_SEG_DATA_WIDTH'] // 8
+    parameters['RAM_SEG_ADDR_WIDTH'] = parameters['RAM_ADDR_WIDTH'] - (parameters['RAM_SEG_COUNT']*parameters['RAM_SEG_BE_WIDTH']-1).bit_length()
     parameters['IMM_ENABLE'] = 1
     parameters['IMM_WIDTH'] = parameters['AXI_DATA_WIDTH']
     parameters['LEN_WIDTH'] = 16

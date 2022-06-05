@@ -66,8 +66,10 @@ class TB(object):
             # pcie_link_width=2,
             # user_clk_frequency=250e6,
             alignment="dword",
-            cq_cc_straddle=False,
-            rq_rc_straddle=False,
+            cq_straddle=False,
+            cc_straddle=False,
+            rq_straddle=False,
+            rc_straddle=False,
             rc_4tlp_straddle=False,
             pf_count=1,
             max_payload_size=1024,
@@ -610,11 +612,6 @@ def test_pcie_us_if(request, axis_pcie_data_width):
 
     parameters = {}
 
-    # segmented interface parameters
-    tlp_seg_count = 1
-    tlp_seg_data_width = axis_pcie_data_width // tlp_seg_count
-    tlp_seg_strb_width = tlp_seg_data_width // 32
-
     parameters['AXIS_PCIE_DATA_WIDTH'] = axis_pcie_data_width
     parameters['AXIS_PCIE_KEEP_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH'] // 32
     parameters['AXIS_PCIE_RQ_USER_WIDTH'] = 62 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 137
@@ -622,10 +619,10 @@ def test_pcie_us_if(request, axis_pcie_data_width):
     parameters['AXIS_PCIE_CQ_USER_WIDTH'] = 88 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 183
     parameters['AXIS_PCIE_CC_USER_WIDTH'] = 33 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 81
     parameters['RQ_SEQ_NUM_WIDTH'] = 4 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 6
-    parameters['TLP_SEG_COUNT'] = tlp_seg_count
-    parameters['TLP_SEG_DATA_WIDTH'] = tlp_seg_data_width
-    parameters['TLP_SEG_STRB_WIDTH'] = tlp_seg_strb_width
-    parameters['TLP_SEG_HDR_WIDTH'] = 128
+    parameters['TLP_DATA_WIDTH'] = axis_pcie_data_width
+    parameters['TLP_STRB_WIDTH'] = parameters['TLP_DATA_WIDTH'] // 32
+    parameters['TLP_HDR_WIDTH'] = 128
+    parameters['TLP_SEG_COUNT'] = 1
     parameters['TX_SEQ_NUM_COUNT'] = 1 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 2
     parameters['TX_SEQ_NUM_WIDTH'] = parameters['RQ_SEQ_NUM_WIDTH']-1
     parameters['PF_COUNT'] = 1

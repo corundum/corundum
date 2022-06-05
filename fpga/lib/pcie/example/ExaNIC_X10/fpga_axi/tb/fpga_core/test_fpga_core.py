@@ -53,7 +53,7 @@ class TB(object):
             pcie_link_width=8,
             user_clk_frequency=250e6,
             alignment="dword",
-            straddle=False,
+            rc_straddle=False,
             pf_count=1,
             max_payload_size=1024,
             enable_client_tag=True,

@@ -190,21 +190,14 @@ def test_dma_client_axis_sink(request, ram_data_width, axis_data_width):
 
     parameters = {}
 
-    # segmented interface parameters
-    ram_addr_width = 16
-    seg_count = max(2, ram_data_width // 128)
-    seg_data_width = ram_data_width // seg_count
-    seg_be_width = seg_data_width // 8
-    seg_addr_width = ram_addr_width - (seg_count*seg_be_width-1).bit_length()
-
-    parameters['RAM_ADDR_WIDTH'] = ram_addr_width
-    parameters['SEG_COUNT'] = seg_count
-    parameters['SEG_DATA_WIDTH'] = seg_data_width
-    parameters['SEG_BE_WIDTH'] = seg_be_width
-    parameters['SEG_ADDR_WIDTH'] = seg_addr_width
+    parameters['RAM_ADDR_WIDTH'] = 16
+    parameters['SEG_COUNT'] = max(2, parameters['RAM_ADDR_WIDTH'] // 128)
+    parameters['SEG_DATA_WIDTH'] = ram_data_width // parameters['SEG_COUNT']
+    parameters['SEG_BE_WIDTH'] = parameters['SEG_DATA_WIDTH'] // 8
+    parameters['SEG_ADDR_WIDTH'] = parameters['RAM_ADDR_WIDTH'] - (parameters['SEG_COUNT']*parameters['SEG_BE_WIDTH']-1).bit_length()
     parameters['AXIS_DATA_WIDTH'] = axis_data_width
-    parameters['AXIS_KEEP_ENABLE'] = int(axis_data_width > 8)
-    parameters['AXIS_KEEP_WIDTH'] = axis_data_width // 8
+    parameters['AXIS_KEEP_ENABLE'] = int(parameters['AXIS_DATA_WIDTH'] > 8)
+    parameters['AXIS_KEEP_WIDTH'] = parameters['AXIS_DATA_WIDTH'] // 8
     parameters['AXIS_LAST_ENABLE'] = 1
     parameters['AXIS_ID_ENABLE'] = 1
     parameters['AXIS_ID_WIDTH'] = 8

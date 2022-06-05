@@ -571,18 +571,13 @@ def test_pcie_s10_if(request, data_width, l_tile):
 
     parameters = {}
 
-    # segmented interface parameters
-    tlp_seg_count = 1
-    tlp_seg_data_width = data_width // tlp_seg_count
-    tlp_seg_strb_width = tlp_seg_data_width // 32
-
     parameters['SEG_COUNT'] = 2 if data_width == 512 else 1
     parameters['SEG_DATA_WIDTH'] = data_width // parameters['SEG_COUNT']
     parameters['SEG_EMPTY_WIDTH'] = ((parameters['SEG_DATA_WIDTH'] // 32) - 1).bit_length()
-    parameters['TLP_SEG_COUNT'] = tlp_seg_count
-    parameters['TLP_SEG_DATA_WIDTH'] = tlp_seg_data_width
-    parameters['TLP_SEG_STRB_WIDTH'] = tlp_seg_strb_width
-    parameters['TLP_SEG_HDR_WIDTH'] = 128
+    parameters['TLP_DATA_WIDTH'] = data_width
+    parameters['TLP_STRB_WIDTH'] = parameters['TLP_DATA_WIDTH'] // 32
+    parameters['TLP_HDR_WIDTH'] = 128
+    parameters['TLP_SEG_COUNT'] = 1
     parameters['TX_SEQ_NUM_WIDTH'] = 6
     parameters['L_TILE'] = l_tile
     parameters['PF_COUNT'] = 1

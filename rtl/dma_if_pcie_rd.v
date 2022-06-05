@@ -33,12 +33,12 @@ THE SOFTWARE.
  */
 module dma_if_pcie_rd #
 (
+    // TLP data width
+    parameter TLP_DATA_WIDTH = 256,
+    // TLP header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
-    // TLP segment data width
-    parameter TLP_SEG_DATA_WIDTH = 256,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128,
     // TX sequence number count
     parameter TX_SEQ_NUM_COUNT = 1,
     // TX sequence number width
@@ -83,8 +83,8 @@ module dma_if_pcie_rd #
     /*
      * TLP input (completion)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]   rx_cpl_tlp_data,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    rx_cpl_tlp_hdr,
+    input  wire [TLP_DATA_WIDTH-1:0]                     rx_cpl_tlp_data,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        rx_cpl_tlp_hdr,
     input  wire [TLP_SEG_COUNT*4-1:0]                    rx_cpl_tlp_error,
     input  wire [TLP_SEG_COUNT-1:0]                      rx_cpl_tlp_valid,
     input  wire [TLP_SEG_COUNT-1:0]                      rx_cpl_tlp_sop,
@@ -94,7 +94,7 @@ module dma_if_pcie_rd #
     /*
      * TLP output (read request)
      */
-    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    tx_rd_req_tlp_hdr,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        tx_rd_req_tlp_hdr,
     output wire [TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]     tx_rd_req_tlp_seq,
     output wire [TLP_SEG_COUNT-1:0]                      tx_rd_req_tlp_valid,
     output wire [TLP_SEG_COUNT-1:0]                      tx_rd_req_tlp_sop,
@@ -182,7 +182,6 @@ parameter RAM_DATA_WIDTH = RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH;
 parameter RAM_WORD_WIDTH = RAM_SEG_BE_WIDTH;
 parameter RAM_WORD_SIZE = RAM_SEG_DATA_WIDTH/RAM_WORD_WIDTH;
 
-parameter TLP_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH;
 parameter TLP_DATA_WIDTH_BYTES = TLP_DATA_WIDTH/8;
 parameter TLP_DATA_WIDTH_DWORDS = TLP_DATA_WIDTH/32;
 
@@ -212,7 +211,7 @@ initial begin
         $finish;
     end
 
-    if (TLP_SEG_HDR_WIDTH != 128) begin
+    if (TLP_HDR_WIDTH != 128) begin
         $error("Error: TLP segment header width must be 128 (instance %m)");
         $finish;
     end
@@ -408,7 +407,7 @@ reg inc_active_tx;
 
 reg rx_cpl_tlp_ready_reg = 1'b0, rx_cpl_tlp_ready_next;
 
-reg [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0] tx_rd_req_tlp_hdr_reg = 0, tx_rd_req_tlp_hdr_next;
+reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0] tx_rd_req_tlp_hdr_reg = 0, tx_rd_req_tlp_hdr_next;
 reg [TLP_SEG_COUNT-1:0] tx_rd_req_tlp_valid_reg = 0, tx_rd_req_tlp_valid_next;
 
 reg s_axis_read_desc_ready_reg = 1'b0, s_axis_read_desc_ready_next;

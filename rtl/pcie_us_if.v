@@ -47,14 +47,14 @@ module pcie_us_if #
     parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
     // RQ sequence number width
     parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
+    // TLP data width
+    parameter TLP_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
+    // TLP strobe width
+    parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
+    // TLP header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
-    // TLP segment data width
-    parameter TLP_SEG_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH/TLP_SEG_COUNT,
-    // TLP segment strobe width
-    parameter TLP_SEG_STRB_WIDTH = TLP_SEG_DATA_WIDTH/32,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128,
     // TX sequence number count
     parameter TX_SEQ_NUM_COUNT = AXIS_PCIE_DATA_WIDTH < 512 ? 1 : 2,
     // TX sequence number width
@@ -188,8 +188,8 @@ module pcie_us_if #
     /*
      * TLP output (request to BAR)
      */
-    output wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]   rx_req_tlp_data,
-    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    rx_req_tlp_hdr,
+    output wire [TLP_DATA_WIDTH-1:0]                     rx_req_tlp_data,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        rx_req_tlp_hdr,
     output wire [TLP_SEG_COUNT*3-1:0]                    rx_req_tlp_bar_id,
     output wire [TLP_SEG_COUNT*8-1:0]                    rx_req_tlp_func_num,
     output wire [TLP_SEG_COUNT-1:0]                      rx_req_tlp_valid,
@@ -200,8 +200,8 @@ module pcie_us_if #
     /*
      * TLP output (completion to DMA)
      */
-    output wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]   rx_cpl_tlp_data,
-    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    rx_cpl_tlp_hdr,
+    output wire [TLP_DATA_WIDTH-1:0]                     rx_cpl_tlp_data,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        rx_cpl_tlp_hdr,
     output wire [TLP_SEG_COUNT*4-1:0]                    rx_cpl_tlp_error,
     output wire [TLP_SEG_COUNT-1:0]                      rx_cpl_tlp_valid,
     output wire [TLP_SEG_COUNT-1:0]                      rx_cpl_tlp_sop,
@@ -211,7 +211,7 @@ module pcie_us_if #
     /*
      * TLP input (read request from DMA)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    tx_rd_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        tx_rd_req_tlp_hdr,
     input  wire [TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]     tx_rd_req_tlp_seq,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_rd_req_tlp_valid,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_rd_req_tlp_sop,
@@ -227,9 +227,9 @@ module pcie_us_if #
     /*
      * TLP input (write request from DMA)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]   tx_wr_req_tlp_data,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]   tx_wr_req_tlp_strb,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    tx_wr_req_tlp_hdr,
+    input  wire [TLP_DATA_WIDTH-1:0]                     tx_wr_req_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                     tx_wr_req_tlp_strb,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        tx_wr_req_tlp_hdr,
     input  wire [TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]     tx_wr_req_tlp_seq,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_wr_req_tlp_valid,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_wr_req_tlp_sop,
@@ -245,9 +245,9 @@ module pcie_us_if #
     /*
      * TLP input (completion from BAR)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]   tx_cpl_tlp_data,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]   tx_cpl_tlp_strb,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    tx_cpl_tlp_hdr,
+    input  wire [TLP_DATA_WIDTH-1:0]                     tx_cpl_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                     tx_cpl_tlp_strb,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        tx_cpl_tlp_hdr,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_cpl_tlp_valid,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_cpl_tlp_sop,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_cpl_tlp_eop,
@@ -256,9 +256,9 @@ module pcie_us_if #
     /*
      * TLP input (write request from MSI-X)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]   tx_msix_wr_req_tlp_data,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]   tx_msix_wr_req_tlp_strb,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]    tx_msix_wr_req_tlp_hdr,
+    input  wire [TLP_DATA_WIDTH-1:0]                     tx_msix_wr_req_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                     tx_msix_wr_req_tlp_strb,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        tx_msix_wr_req_tlp_hdr,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_msix_wr_req_tlp_valid,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_msix_wr_req_tlp_sop,
     input  wire [TLP_SEG_COUNT-1:0]                      tx_msix_wr_req_tlp_eop,
@@ -293,10 +293,10 @@ pcie_us_if_rc #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
     .AXIS_PCIE_RC_USER_WIDTH(AXIS_PCIE_RC_USER_WIDTH),
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
-    .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
-    .TLP_SEG_STRB_WIDTH(TLP_SEG_STRB_WIDTH),
-    .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH)
+    .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
+    .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(TLP_SEG_COUNT)
 )
 pcie_us_if_rc_inst
 (
@@ -330,10 +330,10 @@ pcie_us_if_rq #(
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
     .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
     .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
+    .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
+    .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
     .TLP_SEG_COUNT(TLP_SEG_COUNT),
-    .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
-    .TLP_SEG_STRB_WIDTH(TLP_SEG_STRB_WIDTH),
-    .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH),
     .TX_SEQ_NUM_COUNT(TX_SEQ_NUM_COUNT),
     .TX_SEQ_NUM_WIDTH(TX_SEQ_NUM_WIDTH)
 )
@@ -399,10 +399,10 @@ pcie_us_if_cq #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
     .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
-    .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
-    .TLP_SEG_STRB_WIDTH(TLP_SEG_STRB_WIDTH),
-    .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH)
+    .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
+    .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(TLP_SEG_COUNT)
 )
 pcie_us_if_cq_inst
 (
@@ -436,10 +436,10 @@ pcie_us_if_cc #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
     .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
-    .TLP_SEG_DATA_WIDTH(TLP_SEG_DATA_WIDTH),
-    .TLP_SEG_STRB_WIDTH(TLP_SEG_STRB_WIDTH),
-    .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH)
+    .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
+    .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(TLP_SEG_COUNT)
 )
 pcie_us_if_cc_inst
 (

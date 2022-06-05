@@ -39,14 +39,14 @@ module pcie_s10_if_rx #
     parameter SEG_DATA_WIDTH = 256,
     // H-Tile/L-Tile AVST segment empty signal width
     parameter SEG_EMPTY_WIDTH = $clog2(SEG_DATA_WIDTH/32),
+    // TLP data width
+    parameter TLP_DATA_WIDTH = SEG_COUNT*SEG_DATA_WIDTH,
+    // TLP strobe width
+    parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
+    // TLP header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
-    // TLP segment data width
-    parameter TLP_SEG_DATA_WIDTH = (SEG_COUNT*SEG_DATA_WIDTH)/TLP_SEG_COUNT,
-    // TLP segment strobe width
-    parameter TLP_SEG_STRB_WIDTH = TLP_SEG_DATA_WIDTH/32,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128,
     // IO bar index
     // rx_st_bar_range = 6 is mapped to IO_BAR_INDEX on rx_req_tlp_bar_id
     parameter IO_BAR_INDEX = 5
@@ -70,8 +70,8 @@ module pcie_s10_if_rx #
     /*
      * TLP output (request to BAR)
      */
-    output wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  rx_req_tlp_data,
-    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   rx_req_tlp_hdr,
+    output wire [TLP_DATA_WIDTH-1:0]                    rx_req_tlp_data,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]       rx_req_tlp_hdr,
     output wire [TLP_SEG_COUNT*3-1:0]                   rx_req_tlp_bar_id,
     output wire [TLP_SEG_COUNT*8-1:0]                   rx_req_tlp_func_num,
     output wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_valid,
@@ -82,8 +82,8 @@ module pcie_s10_if_rx #
     /*
      * TLP output (completion to DMA)
      */
-    output wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  rx_cpl_tlp_data,
-    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   rx_cpl_tlp_hdr,
+    output wire [TLP_DATA_WIDTH-1:0]                    rx_cpl_tlp_data,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]       rx_cpl_tlp_hdr,
     output wire [TLP_SEG_COUNT*4-1:0]                   rx_cpl_tlp_error,
     output wire [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_valid,
     output wire [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_sop,
@@ -111,12 +111,12 @@ initial begin
         $finish;
     end
 
-    if (TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH != SEG_COUNT*SEG_DATA_WIDTH) begin
+    if (TLP_DATA_WIDTH != SEG_COUNT*SEG_DATA_WIDTH) begin
         $error("Error: Interface widths must match (instance %m)");
         $finish;
     end
 
-    if (TLP_SEG_HDR_WIDTH != 128) begin
+    if (TLP_HDR_WIDTH != 128) begin
         $error("Error: TLP segment header width must be 128 (instance %m)");
         $finish;
     end
@@ -134,16 +134,16 @@ reg payload_offset_reg = 0, payload_offset_next;
 reg cpl_reg = 1'b0, cpl_next;
 
 // internal datapath
-reg  [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  rx_req_tlp_data_int;
-reg  [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   rx_req_tlp_hdr_int;
-reg  [TLP_SEG_COUNT*3-1:0]                   rx_req_tlp_bar_id_int;
-reg  [TLP_SEG_COUNT*8-1:0]                   rx_req_tlp_func_num_int;
-reg  [TLP_SEG_COUNT-1:0]                     rx_req_tlp_sop_int;
-reg  [TLP_SEG_COUNT-1:0]                     rx_req_tlp_eop_int;
-wire                                         rx_req_tlp_ready_int;
-reg  [TLP_SEG_COUNT-1:0]                     rx_req_tlp_valid_int;
-wire                                         rx_cpl_tlp_ready_int;
-reg  [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_valid_int;
+reg  [TLP_DATA_WIDTH-1:0]               rx_req_tlp_data_int;
+reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_req_tlp_hdr_int;
+reg  [TLP_SEG_COUNT*3-1:0]              rx_req_tlp_bar_id_int;
+reg  [TLP_SEG_COUNT*8-1:0]              rx_req_tlp_func_num_int;
+reg  [TLP_SEG_COUNT-1:0]                rx_req_tlp_sop_int;
+reg  [TLP_SEG_COUNT-1:0]                rx_req_tlp_eop_int;
+wire                                    rx_req_tlp_ready_int;
+reg  [TLP_SEG_COUNT-1:0]                rx_req_tlp_valid_int;
+wire                                    rx_cpl_tlp_ready_int;
+reg  [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_valid_int;
 
 reg [SEG_COUNT*SEG_DATA_WIDTH-1:0]  rx_st_data_int_reg = 0, rx_st_data_int_next;
 reg [SEG_COUNT*SEG_EMPTY_WIDTH-1:0] rx_st_empty_int_reg = 0, rx_st_empty_int_next;
@@ -318,13 +318,13 @@ always @(posedge clk) begin
 end
 
 // output datapath logic (request TLP)
-reg  [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  rx_req_tlp_data_reg = 0;
-reg  [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   rx_req_tlp_hdr_reg = 0;
-reg  [TLP_SEG_COUNT*3-1:0]                   rx_req_tlp_bar_id_reg = 0;
-reg  [TLP_SEG_COUNT*8-1:0]                   rx_req_tlp_func_num_reg = 0;
-reg  [TLP_SEG_COUNT-1:0]                     rx_req_tlp_valid_reg = 0;
-reg  [TLP_SEG_COUNT-1:0]                     rx_req_tlp_sop_reg = 0;
-reg  [TLP_SEG_COUNT-1:0]                     rx_req_tlp_eop_reg = 0;
+reg  [TLP_DATA_WIDTH-1:0]               rx_req_tlp_data_reg = 0;
+reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_req_tlp_hdr_reg = 0;
+reg  [TLP_SEG_COUNT*3-1:0]              rx_req_tlp_bar_id_reg = 0;
+reg  [TLP_SEG_COUNT*8-1:0]              rx_req_tlp_func_num_reg = 0;
+reg  [TLP_SEG_COUNT-1:0]                rx_req_tlp_valid_reg = 0;
+reg  [TLP_SEG_COUNT-1:0]                rx_req_tlp_sop_reg = 0;
+reg  [TLP_SEG_COUNT-1:0]                rx_req_tlp_eop_reg = 0;
 
 reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_req_fifo_wr_ptr_reg = 0;
 reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_req_fifo_rd_ptr_reg = 0;
@@ -334,19 +334,19 @@ wire out_req_fifo_full = out_req_fifo_wr_ptr_reg == (out_req_fifo_rd_ptr_reg ^ {
 wire out_req_fifo_empty = out_req_fifo_wr_ptr_reg == out_req_fifo_rd_ptr_reg;
 
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  out_req_fifo_rx_req_tlp_data[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_DATA_WIDTH-1:0]               out_req_fifo_rx_req_tlp_data[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   out_req_fifo_rx_req_tlp_hdr[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out_req_fifo_rx_req_tlp_hdr[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT*3-1:0]                   out_req_fifo_rx_req_tlp_bar_id[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_SEG_COUNT*3-1:0]              out_req_fifo_rx_req_tlp_bar_id[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT*8-1:0]                   out_req_fifo_rx_req_tlp_func_num[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_SEG_COUNT*8-1:0]              out_req_fifo_rx_req_tlp_func_num[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT-1:0]                     out_req_fifo_rx_req_tlp_valid[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_SEG_COUNT-1:0]                out_req_fifo_rx_req_tlp_valid[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT-1:0]                     out_req_fifo_rx_req_tlp_sop[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_SEG_COUNT-1:0]                out_req_fifo_rx_req_tlp_sop[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT-1:0]                     out_req_fifo_rx_req_tlp_eop[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_SEG_COUNT-1:0]                out_req_fifo_rx_req_tlp_eop[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 
 assign rx_req_tlp_ready_int = !out_req_fifo_watermark_reg;
 
@@ -392,11 +392,11 @@ always @(posedge clk) begin
 end
 
 // output datapath logic (completion TLP)
-reg  [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  rx_cpl_tlp_data_reg = 0;
-reg  [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   rx_cpl_tlp_hdr_reg = 0;
-reg  [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_valid_reg = 0;
-reg  [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_sop_reg = 0;
-reg  [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_eop_reg = 0;
+reg  [TLP_DATA_WIDTH-1:0]               rx_cpl_tlp_data_reg = 0;
+reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_cpl_tlp_hdr_reg = 0;
+reg  [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_valid_reg = 0;
+reg  [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_sop_reg = 0;
+reg  [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_eop_reg = 0;
 
 reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_cpl_fifo_wr_ptr_reg = 0;
 reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_cpl_fifo_rd_ptr_reg = 0;
@@ -406,15 +406,15 @@ wire out_cpl_fifo_full = out_cpl_fifo_wr_ptr_reg == (out_cpl_fifo_rd_ptr_reg ^ {
 wire out_cpl_fifo_empty = out_cpl_fifo_wr_ptr_reg == out_cpl_fifo_rd_ptr_reg;
 
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  out_cpl_fifo_rx_cpl_tlp_data[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_DATA_WIDTH-1:0]               out_cpl_fifo_rx_cpl_tlp_data[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   out_cpl_fifo_rx_cpl_tlp_hdr[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out_cpl_fifo_rx_cpl_tlp_hdr[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT-1:0]                     out_cpl_fifo_rx_cpl_tlp_valid[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_SEG_COUNT-1:0]                out_cpl_fifo_rx_cpl_tlp_valid[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT-1:0]                     out_cpl_fifo_rx_cpl_tlp_sop[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_SEG_COUNT-1:0]                out_cpl_fifo_rx_cpl_tlp_sop[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
-reg  [TLP_SEG_COUNT-1:0]                     out_cpl_fifo_rx_cpl_tlp_eop[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+reg  [TLP_SEG_COUNT-1:0]                out_cpl_fifo_rx_cpl_tlp_eop[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 
 assign rx_cpl_tlp_ready_int = !out_cpl_fifo_watermark_reg;
 

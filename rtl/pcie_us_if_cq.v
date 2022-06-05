@@ -39,14 +39,14 @@ module pcie_us_if_cq #
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     // PCIe AXI stream CQ tuser signal width
     parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
+    // TLP data width
+    parameter TLP_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
+    // TLP strobe width
+    parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
+    // TLP header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
-    parameter TLP_SEG_COUNT = 1,
-    // TLP segment data width
-    parameter TLP_SEG_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH/TLP_SEG_COUNT,
-    // TLP segment strobe width
-    parameter TLP_SEG_STRB_WIDTH = TLP_SEG_DATA_WIDTH/32,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128
+    parameter TLP_SEG_COUNT = 1
 )
 (
     input  wire                                         clk,
@@ -65,8 +65,8 @@ module pcie_us_if_cq #
     /*
      * TLP output (request to BAR)
      */
-    output wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  rx_req_tlp_data,
-    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   rx_req_tlp_hdr,
+    output wire [TLP_DATA_WIDTH-1:0]                    rx_req_tlp_data,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]       rx_req_tlp_hdr,
     output wire [TLP_SEG_COUNT*3-1:0]                   rx_req_tlp_bar_id,
     output wire [TLP_SEG_COUNT*8-1:0]                   rx_req_tlp_func_num,
     output wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_valid,
@@ -75,8 +75,6 @@ module pcie_us_if_cq #
     input  wire                                         rx_req_tlp_ready
 );
 
-parameter TLP_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH;
-parameter TLP_STRB_WIDTH = TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH;
 parameter TLP_DATA_WIDTH_BYTES = TLP_DATA_WIDTH/8;
 parameter TLP_DATA_WIDTH_DWORDS = TLP_DATA_WIDTH/32;
 
@@ -111,12 +109,12 @@ initial begin
         $finish;
     end
 
-    if (TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH != AXIS_PCIE_DATA_WIDTH) begin
+    if (TLP_DATA_WIDTH != AXIS_PCIE_DATA_WIDTH) begin
         $error("Error: Interface widths must match (instance %m)");
         $finish;
     end
 
-    if (TLP_SEG_HDR_WIDTH != 128) begin
+    if (TLP_HDR_WIDTH != 128) begin
         $error("Error: TLP segment header width must be 128 (instance %m)");
         $finish;
     end
@@ -146,8 +144,8 @@ localparam [3:0]
     REQ_MSG_VENDOR = 4'b1101,
     REQ_MSG_ATS = 4'b1110;
 
-reg [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0] rx_req_tlp_data_reg = 0, rx_req_tlp_data_next;
-reg [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0] rx_req_tlp_hdr_reg = 0, rx_req_tlp_hdr_next;
+reg [TLP_DATA_WIDTH-1:0] rx_req_tlp_data_reg = 0, rx_req_tlp_data_next;
+reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0] rx_req_tlp_hdr_reg = 0, rx_req_tlp_hdr_next;
 reg [TLP_SEG_COUNT*3-1:0] rx_req_tlp_bar_id_reg = 0, rx_req_tlp_bar_id_next;
 reg [TLP_SEG_COUNT*7-1:0] rx_req_tlp_func_num_reg = 0, rx_req_tlp_func_num_next;
 reg [TLP_SEG_COUNT-1:0] rx_req_tlp_valid_reg = 0, rx_req_tlp_valid_next;

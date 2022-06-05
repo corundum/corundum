@@ -35,50 +35,50 @@ module pcie_tlp_mux #
 (
     // Input count
     parameter PORTS = 2,
+    // TLP data width
+    parameter TLP_DATA_WIDTH = 256,
+    // TLP strobe width
+    parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
+    // TLP header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
-    // TLP segment data width
-    parameter TLP_SEG_DATA_WIDTH = 256,
-    // TLP segment strobe width
-    parameter TLP_SEG_STRB_WIDTH = TLP_SEG_DATA_WIDTH/32,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128,
     // select round robin arbitration
     parameter ARB_TYPE_ROUND_ROBIN = 0,
     // LSB priority selection
     parameter ARB_LSB_HIGH_PRIORITY = 1
 )
 (
-    input  wire                                               clk,
-    input  wire                                               rst,
+    input  wire                                          clk,
+    input  wire                                          rst,
 
     /*
      * TLP input
      */
-    input  wire [PORTS*TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  in_tlp_data,
-    input  wire [PORTS*TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  in_tlp_strb,
-    input  wire [PORTS*TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   in_tlp_hdr,
-    input  wire [PORTS*TLP_SEG_COUNT*3-1:0]                   in_tlp_bar_id,
-    input  wire [PORTS*TLP_SEG_COUNT*8-1:0]                   in_tlp_func_num,
-    input  wire [PORTS*TLP_SEG_COUNT*4-1:0]                   in_tlp_error,
-    input  wire [PORTS*TLP_SEG_COUNT-1:0]                     in_tlp_valid,
-    input  wire [PORTS*TLP_SEG_COUNT-1:0]                     in_tlp_sop,
-    input  wire [PORTS*TLP_SEG_COUNT-1:0]                     in_tlp_eop,
-    output wire [PORTS-1:0]                                   in_tlp_ready,
+    input  wire [PORTS*TLP_DATA_WIDTH-1:0]               in_tlp_data,
+    input  wire [PORTS*TLP_STRB_WIDTH-1:0]               in_tlp_strb,
+    input  wire [PORTS*TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  in_tlp_hdr,
+    input  wire [PORTS*TLP_SEG_COUNT*3-1:0]              in_tlp_bar_id,
+    input  wire [PORTS*TLP_SEG_COUNT*8-1:0]              in_tlp_func_num,
+    input  wire [PORTS*TLP_SEG_COUNT*4-1:0]              in_tlp_error,
+    input  wire [PORTS*TLP_SEG_COUNT-1:0]                in_tlp_valid,
+    input  wire [PORTS*TLP_SEG_COUNT-1:0]                in_tlp_sop,
+    input  wire [PORTS*TLP_SEG_COUNT-1:0]                in_tlp_eop,
+    output wire [PORTS-1:0]                              in_tlp_ready,
 
     /*
      * TLP output
      */
-    output wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]        out_tlp_data,
-    output wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]        out_tlp_strb,
-    output wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]         out_tlp_hdr,
-    output wire [TLP_SEG_COUNT*3-1:0]                         out_tlp_bar_id,
-    output wire [TLP_SEG_COUNT*8-1:0]                         out_tlp_func_num,
-    output wire [TLP_SEG_COUNT*4-1:0]                         out_tlp_error,
-    output wire [TLP_SEG_COUNT-1:0]                           out_tlp_valid,
-    output wire [TLP_SEG_COUNT-1:0]                           out_tlp_sop,
-    output wire [TLP_SEG_COUNT-1:0]                           out_tlp_eop,
-    input  wire                                               out_tlp_ready
+    output wire [TLP_DATA_WIDTH-1:0]                     out_tlp_data,
+    output wire [TLP_STRB_WIDTH-1:0]                     out_tlp_strb,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        out_tlp_hdr,
+    output wire [TLP_SEG_COUNT*3-1:0]                    out_tlp_bar_id,
+    output wire [TLP_SEG_COUNT*8-1:0]                    out_tlp_func_num,
+    output wire [TLP_SEG_COUNT*4-1:0]                    out_tlp_error,
+    output wire [TLP_SEG_COUNT-1:0]                      out_tlp_valid,
+    output wire [TLP_SEG_COUNT-1:0]                      out_tlp_sop,
+    output wire [TLP_SEG_COUNT-1:0]                      out_tlp_eop,
+    input  wire                                          out_tlp_ready
 );
 
 parameter CL_PORTS = $clog2(PORTS);
@@ -90,12 +90,12 @@ initial begin
         $finish;
     end
 
-    if (TLP_SEG_HDR_WIDTH != 128) begin
+    if (TLP_HDR_WIDTH != 128) begin
         $error("Error: TLP segment header width must be 128 (instance %m)");
         $finish;
     end
 
-    if (TLP_SEG_STRB_WIDTH*32 != TLP_SEG_DATA_WIDTH) begin
+    if (TLP_STRB_WIDTH*32 != TLP_DATA_WIDTH) begin
         $error("Error: PCIe interface requires dword (32-bit) granularity (instance %m)");
         $finish;
     end
@@ -108,42 +108,42 @@ wire grant_valid;
 wire [CL_PORTS-1:0] grant_encoded;
 
 // input registers to pipeline arbitration delay
-reg [PORTS*TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  in_tlp_data_reg = 0;
-reg [PORTS*TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  in_tlp_strb_reg = 0;
-reg [PORTS*TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   in_tlp_hdr_reg = 0;
-reg [PORTS*TLP_SEG_COUNT*3-1:0]                   in_tlp_bar_id_reg = 0;
-reg [PORTS*TLP_SEG_COUNT*8-1:0]                   in_tlp_func_num_reg = 0;
-reg [PORTS*TLP_SEG_COUNT*4-1:0]                   in_tlp_error_reg = 0;
-reg [PORTS*TLP_SEG_COUNT-1:0]                     in_tlp_valid_reg = 0;
-reg [PORTS*TLP_SEG_COUNT-1:0]                     in_tlp_sop_reg = 0;
-reg [PORTS*TLP_SEG_COUNT-1:0]                     in_tlp_eop_reg = 0;
+reg [PORTS*TLP_DATA_WIDTH-1:0]               in_tlp_data_reg = 0;
+reg [PORTS*TLP_STRB_WIDTH-1:0]               in_tlp_strb_reg = 0;
+reg [PORTS*TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  in_tlp_hdr_reg = 0;
+reg [PORTS*TLP_SEG_COUNT*3-1:0]              in_tlp_bar_id_reg = 0;
+reg [PORTS*TLP_SEG_COUNT*8-1:0]              in_tlp_func_num_reg = 0;
+reg [PORTS*TLP_SEG_COUNT*4-1:0]              in_tlp_error_reg = 0;
+reg [PORTS*TLP_SEG_COUNT-1:0]                in_tlp_valid_reg = 0;
+reg [PORTS*TLP_SEG_COUNT-1:0]                in_tlp_sop_reg = 0;
+reg [PORTS*TLP_SEG_COUNT-1:0]                in_tlp_eop_reg = 0;
 
 // internal datapath
-reg  [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  out_tlp_data_int;
-reg  [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  out_tlp_strb_int;
-reg  [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   out_tlp_hdr_int;
-reg  [TLP_SEG_COUNT*3-1:0]                   out_tlp_bar_id_int;
-reg  [TLP_SEG_COUNT*8-1:0]                   out_tlp_func_num_int;
-reg  [TLP_SEG_COUNT*4-1:0]                   out_tlp_error_int;
-reg  [TLP_SEG_COUNT-1:0]                     out_tlp_valid_int;
-reg  [TLP_SEG_COUNT-1:0]                     out_tlp_sop_int;
-reg  [TLP_SEG_COUNT-1:0]                     out_tlp_eop_int;
-reg                                          out_tlp_ready_int_reg = 1'b0;
-wire                                         out_tlp_ready_int_early;
+reg  [TLP_DATA_WIDTH-1:0]               out_tlp_data_int;
+reg  [TLP_STRB_WIDTH-1:0]               out_tlp_strb_int;
+reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out_tlp_hdr_int;
+reg  [TLP_SEG_COUNT*3-1:0]              out_tlp_bar_id_int;
+reg  [TLP_SEG_COUNT*8-1:0]              out_tlp_func_num_int;
+reg  [TLP_SEG_COUNT*4-1:0]              out_tlp_error_int;
+reg  [TLP_SEG_COUNT-1:0]                out_tlp_valid_int;
+reg  [TLP_SEG_COUNT-1:0]                out_tlp_sop_int;
+reg  [TLP_SEG_COUNT-1:0]                out_tlp_eop_int;
+reg                                     out_tlp_ready_int_reg = 1'b0;
+wire                                    out_tlp_ready_int_early;
 
 assign in_tlp_ready = ~in_tlp_valid_reg | ({PORTS{out_tlp_ready_int_reg}} & grant);
 
 // mux for incoming packet
-wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  current_in_tlp_data     = in_tlp_data_reg[grant_encoded*TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH +: TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH];
-wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  current_in_tlp_strb     = in_tlp_strb_reg[grant_encoded*TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH +: TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH];
-wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   current_in_tlp_hdr      = in_tlp_hdr_reg[grant_encoded*TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH +: TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH];
-wire [TLP_SEG_COUNT*3-1:0]                   current_in_tlp_bar_id   = in_tlp_bar_id_reg[grant_encoded*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3];
-wire [TLP_SEG_COUNT*8-1:0]                   current_in_tlp_func_num = in_tlp_func_num_reg[grant_encoded*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8];
-wire [TLP_SEG_COUNT*4-1:0]                   current_in_tlp_error    = in_tlp_error_reg[grant_encoded*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4];
-wire [TLP_SEG_COUNT-1:0]                     current_in_tlp_valid    = in_tlp_valid_reg[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
-wire [TLP_SEG_COUNT-1:0]                     current_in_tlp_sop      = in_tlp_sop_reg[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
-wire [TLP_SEG_COUNT-1:0]                     current_in_tlp_eop      = in_tlp_eop_reg[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
-wire                                         current_in_tlp_ready    = in_tlp_ready[grant_encoded];
+wire [TLP_DATA_WIDTH-1:0]               current_in_tlp_data     = in_tlp_data_reg[grant_encoded*TLP_DATA_WIDTH +: TLP_DATA_WIDTH];
+wire [TLP_STRB_WIDTH-1:0]               current_in_tlp_strb     = in_tlp_strb_reg[grant_encoded*TLP_STRB_WIDTH +: TLP_STRB_WIDTH];
+wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  current_in_tlp_hdr      = in_tlp_hdr_reg[grant_encoded*TLP_SEG_COUNT*TLP_HDR_WIDTH +: TLP_SEG_COUNT*TLP_HDR_WIDTH];
+wire [TLP_SEG_COUNT*3-1:0]              current_in_tlp_bar_id   = in_tlp_bar_id_reg[grant_encoded*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3];
+wire [TLP_SEG_COUNT*8-1:0]              current_in_tlp_func_num = in_tlp_func_num_reg[grant_encoded*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8];
+wire [TLP_SEG_COUNT*4-1:0]              current_in_tlp_error    = in_tlp_error_reg[grant_encoded*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4];
+wire [TLP_SEG_COUNT-1:0]                current_in_tlp_valid    = in_tlp_valid_reg[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
+wire [TLP_SEG_COUNT-1:0]                current_in_tlp_sop      = in_tlp_sop_reg[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
+wire [TLP_SEG_COUNT-1:0]                current_in_tlp_eop      = in_tlp_eop_reg[grant_encoded*TLP_SEG_COUNT +: TLP_SEG_COUNT];
+wire                                    current_in_tlp_ready    = in_tlp_ready[grant_encoded];
 
 // arbiter instance
 arbiter #(
@@ -185,9 +185,9 @@ always @(posedge clk) begin
     // register inputs
     for (i = 0; i < PORTS; i = i + 1) begin
         if (in_tlp_ready[i]) begin
-            in_tlp_data_reg[i*TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH +: TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH] <= in_tlp_data[i*TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH +: TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH];
-            in_tlp_strb_reg[i*TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH +: TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH] <= in_tlp_strb[i*TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH +: TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH];
-            in_tlp_hdr_reg[i*TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH +: TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH] <= in_tlp_hdr[i*TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH +: TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH];
+            in_tlp_data_reg[i*TLP_DATA_WIDTH +: TLP_DATA_WIDTH] <= in_tlp_data[i*TLP_DATA_WIDTH +: TLP_DATA_WIDTH];
+            in_tlp_strb_reg[i*TLP_STRB_WIDTH +: TLP_STRB_WIDTH] <= in_tlp_strb[i*TLP_STRB_WIDTH +: TLP_STRB_WIDTH];
+            in_tlp_hdr_reg[i*TLP_SEG_COUNT*TLP_HDR_WIDTH +: TLP_SEG_COUNT*TLP_HDR_WIDTH] <= in_tlp_hdr[i*TLP_SEG_COUNT*TLP_HDR_WIDTH +: TLP_SEG_COUNT*TLP_HDR_WIDTH];
             in_tlp_bar_id_reg[i*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3] <= in_tlp_bar_id[i*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3];
             in_tlp_func_num_reg[i*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8] <= in_tlp_func_num[i*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8];
             in_tlp_error_reg[i*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4] <= in_tlp_error[i*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4];
@@ -203,25 +203,25 @@ always @(posedge clk) begin
 end
 
 // output datapath logic
-reg [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  out_tlp_data_reg = 0;
-reg [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  out_tlp_strb_reg = 0;
-reg [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   out_tlp_hdr_reg = 0;
-reg [TLP_SEG_COUNT*3-1:0]                   out_tlp_bar_id_reg = 0;
-reg [TLP_SEG_COUNT*8-1:0]                   out_tlp_func_num_reg = 0;
-reg [TLP_SEG_COUNT*4-1:0]                   out_tlp_error_reg = 0;
-reg [TLP_SEG_COUNT-1:0]                     out_tlp_valid_reg = 0, out_tlp_valid_next;
-reg [TLP_SEG_COUNT-1:0]                     out_tlp_sop_reg = 0;
-reg [TLP_SEG_COUNT-1:0]                     out_tlp_eop_reg = 0;
+reg [TLP_DATA_WIDTH-1:0]               out_tlp_data_reg = 0;
+reg [TLP_STRB_WIDTH-1:0]               out_tlp_strb_reg = 0;
+reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out_tlp_hdr_reg = 0;
+reg [TLP_SEG_COUNT*3-1:0]              out_tlp_bar_id_reg = 0;
+reg [TLP_SEG_COUNT*8-1:0]              out_tlp_func_num_reg = 0;
+reg [TLP_SEG_COUNT*4-1:0]              out_tlp_error_reg = 0;
+reg [TLP_SEG_COUNT-1:0]                out_tlp_valid_reg = 0, out_tlp_valid_next;
+reg [TLP_SEG_COUNT-1:0]                out_tlp_sop_reg = 0;
+reg [TLP_SEG_COUNT-1:0]                out_tlp_eop_reg = 0;
 
-reg [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  temp_out_tlp_data_reg = 0;
-reg [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  temp_out_tlp_strb_reg = 0;
-reg [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   temp_out_tlp_hdr_reg = 0;
-reg [TLP_SEG_COUNT*3-1:0]                   temp_out_tlp_bar_id_reg = 0;
-reg [TLP_SEG_COUNT*8-1:0]                   temp_out_tlp_func_num_reg = 0;
-reg [TLP_SEG_COUNT*4-1:0]                   temp_out_tlp_error_reg = 0;
-reg [TLP_SEG_COUNT-1:0]                     temp_out_tlp_valid_reg = 0, temp_out_tlp_valid_next;
-reg [TLP_SEG_COUNT-1:0]                     temp_out_tlp_sop_reg = 0;
-reg [TLP_SEG_COUNT-1:0]                     temp_out_tlp_eop_reg = 0;
+reg [TLP_DATA_WIDTH-1:0]               temp_out_tlp_data_reg = 0;
+reg [TLP_STRB_WIDTH-1:0]               temp_out_tlp_strb_reg = 0;
+reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  temp_out_tlp_hdr_reg = 0;
+reg [TLP_SEG_COUNT*3-1:0]              temp_out_tlp_bar_id_reg = 0;
+reg [TLP_SEG_COUNT*8-1:0]              temp_out_tlp_func_num_reg = 0;
+reg [TLP_SEG_COUNT*4-1:0]              temp_out_tlp_error_reg = 0;
+reg [TLP_SEG_COUNT-1:0]                temp_out_tlp_valid_reg = 0, temp_out_tlp_valid_next;
+reg [TLP_SEG_COUNT-1:0]                temp_out_tlp_sop_reg = 0;
+reg [TLP_SEG_COUNT-1:0]                temp_out_tlp_eop_reg = 0;
 
 // datapath control
 reg store_axis_int_to_output;

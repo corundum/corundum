@@ -37,88 +37,86 @@ module pcie_s10_if_tx #
     parameter SEG_COUNT = 1,
     // H-Tile/L-Tile AVST segment data width
     parameter SEG_DATA_WIDTH = 256,
+    // TLP data width
+    parameter TLP_DATA_WIDTH = SEG_COUNT*SEG_DATA_WIDTH,
+    // TLP strobe width
+    parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
+    // TLP header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
-    // TLP segment data width
-    parameter TLP_SEG_DATA_WIDTH = (SEG_COUNT*SEG_DATA_WIDTH)/TLP_SEG_COUNT,
-    // TLP segment strobe width
-    parameter TLP_SEG_STRB_WIDTH = TLP_SEG_DATA_WIDTH/32,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128,
     // TX sequence number width
     parameter TX_SEQ_NUM_WIDTH = 6
 )
 (
-    input  wire                                         clk,
-    input  wire                                         rst,
+    input  wire                                       clk,
+    input  wire                                       rst,
 
     // H-Tile/L-Tile TX AVST interface
-    output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]          tx_st_data,
-    output wire [SEG_COUNT-1:0]                         tx_st_sop,
-    output wire [SEG_COUNT-1:0]                         tx_st_eop,
-    output wire [SEG_COUNT-1:0]                         tx_st_valid,
-    input  wire                                         tx_st_ready,
-    output wire [SEG_COUNT-1:0]                         tx_st_err,
+    output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]        tx_st_data,
+    output wire [SEG_COUNT-1:0]                       tx_st_sop,
+    output wire [SEG_COUNT-1:0]                       tx_st_eop,
+    output wire [SEG_COUNT-1:0]                       tx_st_valid,
+    input  wire                                       tx_st_ready,
+    output wire [SEG_COUNT-1:0]                       tx_st_err,
 
     /*
      * TLP input (read request from DMA)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   tx_rd_req_tlp_hdr,
-    input  wire [TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]    tx_rd_req_tlp_seq,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_rd_req_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_rd_req_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_rd_req_tlp_eop,
-    output wire                                         tx_rd_req_tlp_ready,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]     tx_rd_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]  tx_rd_req_tlp_seq,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_rd_req_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_rd_req_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_rd_req_tlp_eop,
+    output wire                                       tx_rd_req_tlp_ready,
 
     /*
      * Transmit sequence number output (DMA read request)
      */
-    output wire [SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]        m_axis_rd_req_tx_seq_num,
-    output wire [SEG_COUNT-1:0]                         m_axis_rd_req_tx_seq_num_valid,
+    output wire [SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]      m_axis_rd_req_tx_seq_num,
+    output wire [SEG_COUNT-1:0]                       m_axis_rd_req_tx_seq_num_valid,
 
     /*
      * TLP input (write request from DMA)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  tx_wr_req_tlp_data,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  tx_wr_req_tlp_strb,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   tx_wr_req_tlp_hdr,
-    input  wire [TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]    tx_wr_req_tlp_seq,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_wr_req_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_wr_req_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_wr_req_tlp_eop,
-    output wire                                         tx_wr_req_tlp_ready,
+    input  wire [TLP_DATA_WIDTH-1:0]                  tx_wr_req_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                  tx_wr_req_tlp_strb,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]     tx_wr_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]  tx_wr_req_tlp_seq,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_wr_req_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_wr_req_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_wr_req_tlp_eop,
+    output wire                                       tx_wr_req_tlp_ready,
 
     /*
      * Transmit sequence number output (DMA write request)
      */
-    output wire [SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]        m_axis_wr_req_tx_seq_num,
-    output wire [SEG_COUNT-1:0]                         m_axis_wr_req_tx_seq_num_valid,
+    output wire [SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0]      m_axis_wr_req_tx_seq_num,
+    output wire [SEG_COUNT-1:0]                       m_axis_wr_req_tx_seq_num_valid,
 
     /*
      * TLP input (completion from BAR)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  tx_cpl_tlp_data,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  tx_cpl_tlp_strb,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   tx_cpl_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_cpl_tlp_eop,
-    output wire                                         tx_cpl_tlp_ready,
+    input  wire [TLP_DATA_WIDTH-1:0]                  tx_cpl_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                  tx_cpl_tlp_strb,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]     tx_cpl_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_cpl_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_cpl_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_cpl_tlp_eop,
+    output wire                                       tx_cpl_tlp_ready,
 
     /*
      * TLP input (write request from MSI)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0]  tx_msi_wr_req_tlp_data,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH-1:0]  tx_msi_wr_req_tlp_strb,
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]   tx_msi_wr_req_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_msi_wr_req_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_msi_wr_req_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                     tx_msi_wr_req_tlp_eop,
-    output wire                                         tx_msi_wr_req_tlp_ready
+    input  wire [TLP_DATA_WIDTH-1:0]                  tx_msi_wr_req_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                  tx_msi_wr_req_tlp_strb,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]     tx_msi_wr_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_msi_wr_req_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_msi_wr_req_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                   tx_msi_wr_req_tlp_eop,
+    output wire                                       tx_msi_wr_req_tlp_ready
 );
 
-parameter TLP_DATA_WIDTH = TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH;
-parameter TLP_STRB_WIDTH = TLP_SEG_COUNT*TLP_SEG_STRB_WIDTH;
 parameter TLP_DATA_WIDTH_BYTES = TLP_DATA_WIDTH/8;
 parameter TLP_DATA_WIDTH_DWORDS = TLP_DATA_WIDTH/32;
 
@@ -141,12 +139,12 @@ initial begin
         $finish;
     end
 
-    if (TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH != SEG_COUNT*SEG_DATA_WIDTH) begin
+    if (TLP_DATA_WIDTH != SEG_COUNT*SEG_DATA_WIDTH) begin
         $error("Error: Interface widths must match (instance %m)");
         $finish;
     end
 
-    if (TLP_SEG_HDR_WIDTH != 128) begin
+    if (TLP_HDR_WIDTH != 128) begin
         $error("Error: TLP segment header width must be 128 (instance %m)");
         $finish;
     end
@@ -173,10 +171,10 @@ reg [1:0] tlp_output_state_reg = TLP_OUTPUT_STATE_IDLE, tlp_output_state_next;
 
 reg wr_req_payload_offset_reg = 1'b0, wr_req_payload_offset_next;
 
-reg [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0] wr_req_tlp_data_reg = 0, wr_req_tlp_data_next;
+reg [TLP_DATA_WIDTH-1:0] wr_req_tlp_data_reg = 0, wr_req_tlp_data_next;
 reg [TLP_SEG_COUNT-1:0] wr_req_tlp_eop_reg = 0, wr_req_tlp_eop_next;
 
-reg [TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH-1:0] cpl_tlp_data_reg = 0, cpl_tlp_data_next;
+reg [TLP_DATA_WIDTH-1:0] cpl_tlp_data_reg = 0, cpl_tlp_data_next;
 reg [TLP_SEG_COUNT-1:0] cpl_tlp_eop_reg = 0, cpl_tlp_eop_next;
 
 reg tx_rd_req_tlp_ready_reg = 1'b0, tx_rd_req_tlp_ready_next;

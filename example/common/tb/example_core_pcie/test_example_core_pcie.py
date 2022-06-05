@@ -368,15 +368,10 @@ def test_example_core_pcie(request, pcie_data_width):
 
     parameters = {}
 
-    # segmented interface parameters
-    tlp_seg_count = 1
-    tlp_seg_data_width = pcie_data_width // tlp_seg_count
-    tlp_seg_strb_width = tlp_seg_data_width // 32
-
-    parameters['TLP_SEG_COUNT'] = tlp_seg_count
-    parameters['TLP_SEG_DATA_WIDTH'] = tlp_seg_data_width
-    parameters['TLP_SEG_STRB_WIDTH'] = tlp_seg_strb_width
-    parameters['TLP_SEG_HDR_WIDTH'] = 128
+    parameters['TLP_DATA_WIDTH'] = pcie_data_width
+    parameters['TLP_STRB_WIDTH'] = parameters['TLP_DATA_WIDTH'] // 32
+    parameters['TLP_HDR_WIDTH'] = 128
+    parameters['TLP_SEG_COUNT'] = 1
     parameters['TX_SEQ_NUM_COUNT'] = 1
     parameters['TX_SEQ_NUM_WIDTH'] = 6
     parameters['TX_SEQ_NUM_ENABLE'] = 1

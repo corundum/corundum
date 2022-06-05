@@ -50,7 +50,8 @@ except ImportError:
         del sys.path[0]
 
 DescBus, DescTransaction, DescSource, DescSink, DescMonitor = define_stream("Desc",
-    signals=["axi_addr", "ram_addr", "ram_sel", "len", "tag", "valid", "ready"]
+    signals=["axi_addr", "ram_addr", "ram_sel", "len", "tag", "valid", "ready"],
+    optional_signals=["imm", "imm_en"]
 )
 
 DescStatusBus, DescStatusTransaction, DescStatusSource, DescStatusSink, DescStatusMonitor = define_stream("DescStatus",

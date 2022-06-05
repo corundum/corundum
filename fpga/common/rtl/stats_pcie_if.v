@@ -33,10 +33,10 @@ THE SOFTWARE.
  */
 module stats_pcie_if #
 (
+    // TLP segment header width
+    parameter TLP_HDR_WIDTH = 128,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
-    // TLP segment header width
-    parameter TLP_SEG_HDR_WIDTH = 128,
     // Statistics counter increment width (bits)
     parameter STAT_INC_WIDTH = 24,
     // Statistics counter ID width (bits)
@@ -45,61 +45,61 @@ module stats_pcie_if #
     parameter UPDATE_PERIOD = 1024
 )
 (
-    input  wire                                        clk,
-    input  wire                                        rst,
+    input  wire                                    clk,
+    input  wire                                    rst,
 
     /*
      * monitor input (request to BAR)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]  rx_req_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                    rx_req_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                    rx_req_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                    rx_req_tlp_eop,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_eop,
 
     /*
      * monitor input (completion to DMA)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]  rx_cpl_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                    rx_cpl_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                    rx_cpl_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                    rx_cpl_tlp_eop,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_cpl_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_eop,
 
     /*
      * monitor input (read request from DMA)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]  tx_rd_req_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                    tx_rd_req_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                    tx_rd_req_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                    tx_rd_req_tlp_eop,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  tx_rd_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                tx_rd_req_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                tx_rd_req_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                tx_rd_req_tlp_eop,
 
     /*
      * monitor input (write request from DMA)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]  tx_wr_req_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                    tx_wr_req_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                    tx_wr_req_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                    tx_wr_req_tlp_eop,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  tx_wr_req_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                tx_wr_req_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                tx_wr_req_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                tx_wr_req_tlp_eop,
 
     /*
      * monitor input (completion from BAR)
      */
-    input  wire [TLP_SEG_COUNT*TLP_SEG_HDR_WIDTH-1:0]  tx_cpl_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                    tx_cpl_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                    tx_cpl_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                    tx_cpl_tlp_eop,
+    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  tx_cpl_tlp_hdr,
+    input  wire [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_valid,
+    input  wire [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_sop,
+    input  wire [TLP_SEG_COUNT-1:0]                tx_cpl_tlp_eop,
 
     /*
      * Statistics output
      */
-    output wire [STAT_INC_WIDTH-1:0]                   m_axis_stat_tdata,
-    output wire [STAT_ID_WIDTH-1:0]                    m_axis_stat_tid,
-    output wire                                        m_axis_stat_tvalid,
-    input  wire                                        m_axis_stat_tready,
+    output wire [STAT_INC_WIDTH-1:0]               m_axis_stat_tdata,
+    output wire [STAT_ID_WIDTH-1:0]                m_axis_stat_tid,
+    output wire                                    m_axis_stat_tvalid,
+    input  wire                                    m_axis_stat_tready,
 
     /*
      * Control inputs
      */
-    input  wire                                        update
+    input  wire                                    update
 );
 
 wire stat_rx_req_tlp_mem_rd;
@@ -118,8 +118,8 @@ wire [10:0] stat_rx_req_tlp_payload_dw;
 wire [10:0] stat_rx_req_tlp_cpl_dw;
 
 stats_pcie_tlp #(
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
-    .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH)
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(TLP_SEG_COUNT)
 )
 stats_pcie_rx_req_tlp_inst (
     .clk(clk),
@@ -168,8 +168,8 @@ wire [10:0] stat_rx_cpl_tlp_payload_dw;
 wire [10:0] stat_rx_cpl_tlp_cpl_dw;
 
 stats_pcie_tlp #(
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
-    .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH)
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(TLP_SEG_COUNT)
 )
 stats_pcie_rx_cpl_tlp_inst (
     .clk(clk),
@@ -233,8 +233,8 @@ wire [10:0] stat_tx_rd_req_tlp_payload_dw;
 wire [10:0] stat_tx_rd_req_tlp_cpl_dw;
 
 stats_pcie_tlp #(
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
-    .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH)
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(TLP_SEG_COUNT)
 )
 stats_pcie_tx_rd_req_tlp_inst (
     .clk(clk),
@@ -283,8 +283,8 @@ wire [10:0] stat_tx_wr_req_tlp_payload_dw;
 wire [10:0] stat_tx_wr_req_tlp_cpl_dw;
 
 stats_pcie_tlp #(
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
-    .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH)
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(TLP_SEG_COUNT)
 )
 stats_pcie_tx_wr_req_tlp_inst (
     .clk(clk),
@@ -333,8 +333,8 @@ wire [10:0] stat_tx_cpl_tlp_payload_dw;
 wire [10:0] stat_tx_cpl_tlp_cpl_dw;
 
 stats_pcie_tlp #(
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
-    .TLP_SEG_HDR_WIDTH(TLP_SEG_HDR_WIDTH)
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(TLP_SEG_COUNT)
 )
 stats_pcie_tx_cpl_tlp_inst (
     .clk(clk),

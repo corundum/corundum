@@ -41,6 +41,8 @@ module pcie_tlp_mux #
     parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
     // TLP header width
     parameter TLP_HDR_WIDTH = 128,
+    // Sequence number width
+    parameter SEQ_NUM_WIDTH = 6,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
     // select round robin arbitration
@@ -58,6 +60,7 @@ module pcie_tlp_mux #
     input  wire [PORTS*TLP_DATA_WIDTH-1:0]               in_tlp_data,
     input  wire [PORTS*TLP_STRB_WIDTH-1:0]               in_tlp_strb,
     input  wire [PORTS*TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  in_tlp_hdr,
+    input  wire [PORTS*TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  in_tlp_seq,
     input  wire [PORTS*TLP_SEG_COUNT*3-1:0]              in_tlp_bar_id,
     input  wire [PORTS*TLP_SEG_COUNT*8-1:0]              in_tlp_func_num,
     input  wire [PORTS*TLP_SEG_COUNT*4-1:0]              in_tlp_error,
@@ -72,6 +75,7 @@ module pcie_tlp_mux #
     output wire [TLP_DATA_WIDTH-1:0]                     out_tlp_data,
     output wire [TLP_STRB_WIDTH-1:0]                     out_tlp_strb,
     output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        out_tlp_hdr,
+    output wire [TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]        out_tlp_seq,
     output wire [TLP_SEG_COUNT*3-1:0]                    out_tlp_bar_id,
     output wire [TLP_SEG_COUNT*8-1:0]                    out_tlp_func_num,
     output wire [TLP_SEG_COUNT*4-1:0]                    out_tlp_error,
@@ -111,6 +115,7 @@ wire [CL_PORTS-1:0] grant_encoded;
 reg [PORTS*TLP_DATA_WIDTH-1:0]               in_tlp_data_reg = 0;
 reg [PORTS*TLP_STRB_WIDTH-1:0]               in_tlp_strb_reg = 0;
 reg [PORTS*TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  in_tlp_hdr_reg = 0;
+reg [PORTS*TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  in_tlp_seq_reg = 0;
 reg [PORTS*TLP_SEG_COUNT*3-1:0]              in_tlp_bar_id_reg = 0;
 reg [PORTS*TLP_SEG_COUNT*8-1:0]              in_tlp_func_num_reg = 0;
 reg [PORTS*TLP_SEG_COUNT*4-1:0]              in_tlp_error_reg = 0;
@@ -122,6 +127,7 @@ reg [PORTS*TLP_SEG_COUNT-1:0]                in_tlp_eop_reg = 0;
 reg  [TLP_DATA_WIDTH-1:0]               out_tlp_data_int;
 reg  [TLP_STRB_WIDTH-1:0]               out_tlp_strb_int;
 reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out_tlp_hdr_int;
+reg  [TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  out_tlp_seq_int;
 reg  [TLP_SEG_COUNT*3-1:0]              out_tlp_bar_id_int;
 reg  [TLP_SEG_COUNT*8-1:0]              out_tlp_func_num_int;
 reg  [TLP_SEG_COUNT*4-1:0]              out_tlp_error_int;
@@ -137,6 +143,7 @@ assign in_tlp_ready = ~in_tlp_valid_reg | ({PORTS{out_tlp_ready_int_reg}} & gran
 wire [TLP_DATA_WIDTH-1:0]               current_in_tlp_data     = in_tlp_data_reg[grant_encoded*TLP_DATA_WIDTH +: TLP_DATA_WIDTH];
 wire [TLP_STRB_WIDTH-1:0]               current_in_tlp_strb     = in_tlp_strb_reg[grant_encoded*TLP_STRB_WIDTH +: TLP_STRB_WIDTH];
 wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  current_in_tlp_hdr      = in_tlp_hdr_reg[grant_encoded*TLP_SEG_COUNT*TLP_HDR_WIDTH +: TLP_SEG_COUNT*TLP_HDR_WIDTH];
+wire [TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  current_in_tlp_seq      = in_tlp_seq_reg[grant_encoded*TLP_SEG_COUNT*SEQ_NUM_WIDTH +: TLP_SEG_COUNT*SEQ_NUM_WIDTH];
 wire [TLP_SEG_COUNT*3-1:0]              current_in_tlp_bar_id   = in_tlp_bar_id_reg[grant_encoded*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3];
 wire [TLP_SEG_COUNT*8-1:0]              current_in_tlp_func_num = in_tlp_func_num_reg[grant_encoded*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8];
 wire [TLP_SEG_COUNT*4-1:0]              current_in_tlp_error    = in_tlp_error_reg[grant_encoded*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4];
@@ -171,6 +178,7 @@ always @* begin
     out_tlp_data_int  = current_in_tlp_data;
     out_tlp_strb_int  = current_in_tlp_strb;
     out_tlp_hdr_int  = current_in_tlp_hdr;
+    out_tlp_seq_int  = current_in_tlp_seq;
     out_tlp_bar_id_int  = current_in_tlp_bar_id;
     out_tlp_func_num_int  = current_in_tlp_func_num;
     out_tlp_error_int  = current_in_tlp_error;
@@ -188,6 +196,7 @@ always @(posedge clk) begin
             in_tlp_data_reg[i*TLP_DATA_WIDTH +: TLP_DATA_WIDTH] <= in_tlp_data[i*TLP_DATA_WIDTH +: TLP_DATA_WIDTH];
             in_tlp_strb_reg[i*TLP_STRB_WIDTH +: TLP_STRB_WIDTH] <= in_tlp_strb[i*TLP_STRB_WIDTH +: TLP_STRB_WIDTH];
             in_tlp_hdr_reg[i*TLP_SEG_COUNT*TLP_HDR_WIDTH +: TLP_SEG_COUNT*TLP_HDR_WIDTH] <= in_tlp_hdr[i*TLP_SEG_COUNT*TLP_HDR_WIDTH +: TLP_SEG_COUNT*TLP_HDR_WIDTH];
+            in_tlp_seq_reg[i*TLP_SEG_COUNT*SEQ_NUM_WIDTH +: TLP_SEG_COUNT*SEQ_NUM_WIDTH] <= in_tlp_seq[i*TLP_SEG_COUNT*SEQ_NUM_WIDTH +: TLP_SEG_COUNT*SEQ_NUM_WIDTH];
             in_tlp_bar_id_reg[i*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3] <= in_tlp_bar_id[i*TLP_SEG_COUNT*3 +: TLP_SEG_COUNT*3];
             in_tlp_func_num_reg[i*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8] <= in_tlp_func_num[i*TLP_SEG_COUNT*8 +: TLP_SEG_COUNT*8];
             in_tlp_error_reg[i*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4] <= in_tlp_error[i*TLP_SEG_COUNT*4 +: TLP_SEG_COUNT*4];
@@ -206,6 +215,7 @@ end
 reg [TLP_DATA_WIDTH-1:0]               out_tlp_data_reg = 0;
 reg [TLP_STRB_WIDTH-1:0]               out_tlp_strb_reg = 0;
 reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out_tlp_hdr_reg = 0;
+reg [TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  out_tlp_seq_reg = 0;
 reg [TLP_SEG_COUNT*3-1:0]              out_tlp_bar_id_reg = 0;
 reg [TLP_SEG_COUNT*8-1:0]              out_tlp_func_num_reg = 0;
 reg [TLP_SEG_COUNT*4-1:0]              out_tlp_error_reg = 0;
@@ -216,6 +226,7 @@ reg [TLP_SEG_COUNT-1:0]                out_tlp_eop_reg = 0;
 reg [TLP_DATA_WIDTH-1:0]               temp_out_tlp_data_reg = 0;
 reg [TLP_STRB_WIDTH-1:0]               temp_out_tlp_strb_reg = 0;
 reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  temp_out_tlp_hdr_reg = 0;
+reg [TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  temp_out_tlp_seq_reg = 0;
 reg [TLP_SEG_COUNT*3-1:0]              temp_out_tlp_bar_id_reg = 0;
 reg [TLP_SEG_COUNT*8-1:0]              temp_out_tlp_func_num_reg = 0;
 reg [TLP_SEG_COUNT*4-1:0]              temp_out_tlp_error_reg = 0;
@@ -231,6 +242,7 @@ reg store_axis_temp_to_output;
 assign out_tlp_data      = out_tlp_data_reg;
 assign out_tlp_strb      = out_tlp_strb_reg;
 assign out_tlp_hdr       = out_tlp_hdr_reg;
+assign out_tlp_seq       = out_tlp_seq_reg;
 assign out_tlp_bar_id    = out_tlp_bar_id_reg;
 assign out_tlp_func_num  = out_tlp_func_num_reg;
 assign out_tlp_error     = out_tlp_error_reg;
@@ -279,6 +291,7 @@ always @(posedge clk) begin
         out_tlp_data_reg <= out_tlp_data_int;
         out_tlp_strb_reg <= out_tlp_strb_int;
         out_tlp_hdr_reg <= out_tlp_hdr_int;
+        out_tlp_seq_reg <= out_tlp_seq_int;
         out_tlp_bar_id_reg <= out_tlp_bar_id_int;
         out_tlp_func_num_reg <= out_tlp_func_num_int;
         out_tlp_error_reg <= out_tlp_error_int;
@@ -288,6 +301,7 @@ always @(posedge clk) begin
         out_tlp_data_reg <= temp_out_tlp_data_reg;
         out_tlp_strb_reg <= temp_out_tlp_strb_reg;
         out_tlp_hdr_reg <= temp_out_tlp_hdr_reg;
+        out_tlp_seq_reg <= temp_out_tlp_seq_reg;
         out_tlp_bar_id_reg <= temp_out_tlp_bar_id_reg;
         out_tlp_func_num_reg <= temp_out_tlp_func_num_reg;
         out_tlp_error_reg <= temp_out_tlp_error_reg;
@@ -299,6 +313,7 @@ always @(posedge clk) begin
         temp_out_tlp_data_reg <= out_tlp_data_int;
         temp_out_tlp_strb_reg <= out_tlp_strb_int;
         temp_out_tlp_hdr_reg <= out_tlp_hdr_int;
+        temp_out_tlp_seq_reg <= out_tlp_seq_int;
         temp_out_tlp_bar_id_reg <= out_tlp_bar_id_int;
         temp_out_tlp_func_num_reg <= out_tlp_func_num_int;
         temp_out_tlp_error_reg <= out_tlp_error_int;

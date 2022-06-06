@@ -54,14 +54,23 @@ class BaseBus(Bus):
         return cls(entity, prefix, **kwargs)
 
 
+class PcieIfBus(BaseBus):
+    _signals = ["hdr", "valid", "sop", "eop", "ready"]
+    _optional_signals = ["data", "strb", "error", "tlp_prfx", "vf_active",
+        "func_num", "vf_num", "data_par", "hdr_par", "tlp_prfx_par",
+        "seq", "bar_id", "tlp_abort"]
+
+
 class PcieIfTxBus(BaseBus):
     _signals = ["hdr", "valid", "sop", "eop", "ready"]
-    _optional_signals = ["data", "strb", "tlp_prfx", "data_par", "hdr_par", "tlp_prfx_par", "seq", "err"]
+    _optional_signals = ["data", "strb", "tlp_prfx",
+        "data_par", "hdr_par", "tlp_prfx_par", "seq"]
 
 
 class PcieIfRxBus(BaseBus):
     _signals = ["hdr", "valid", "sop", "eop", "ready"]
-    _optional_signals = ["data", "strb", "error", "tlp_prfx", "vf_active", "func_num", "vf_num", "data_par", "hdr_par", "tlp_prfx_par", "bar_id", "tlp_abort"]
+    _optional_signals = ["data", "strb", "error", "tlp_prfx", "vf_active", "func_num", "vf_num",
+        "data_par", "hdr_par", "tlp_prfx_par", "bar_id", "tlp_abort"]
 
 
 def dword_parity(d):

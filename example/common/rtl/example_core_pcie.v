@@ -82,6 +82,7 @@ module example_core_pcie #
      * TLP input (request)
      */
     input  wire [TLP_DATA_WIDTH-1:0]                     rx_req_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                     rx_req_tlp_strb,
     input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        rx_req_tlp_hdr,
     input  wire [TLP_SEG_COUNT*3-1:0]                    rx_req_tlp_bar_id,
     input  wire [TLP_SEG_COUNT*8-1:0]                    rx_req_tlp_func_num,
@@ -105,6 +106,7 @@ module example_core_pcie #
      * TLP input (completion)
      */
     input  wire [TLP_DATA_WIDTH-1:0]                     rx_cpl_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                     rx_cpl_tlp_strb,
     input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        rx_cpl_tlp_hdr,
     input  wire [TLP_SEG_COUNT*4-1:0]                    rx_cpl_tlp_error,
     input  wire [TLP_SEG_COUNT-1:0]                      rx_cpl_tlp_valid,
@@ -255,6 +257,7 @@ wire [2:0] status_error_uncor_int;
 
 // PCIe connections
 wire [TLP_DATA_WIDTH-1:0]               ctrl_rx_req_tlp_data;
+wire [TLP_STRB_WIDTH-1:0]               ctrl_rx_req_tlp_strb;
 wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  ctrl_rx_req_tlp_hdr;
 wire [TLP_SEG_COUNT*3-1:0]              ctrl_rx_req_tlp_bar_id;
 wire [TLP_SEG_COUNT*8-1:0]              ctrl_rx_req_tlp_func_num;
@@ -272,6 +275,7 @@ wire [TLP_SEG_COUNT-1:0]                ctrl_tx_cpl_tlp_eop;
 wire                                    ctrl_tx_cpl_tlp_ready;
 
 wire [TLP_DATA_WIDTH-1:0]               ram_rx_req_tlp_data;
+wire [TLP_STRB_WIDTH-1:0]               ram_rx_req_tlp_strb;
 wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  ram_rx_req_tlp_hdr;
 wire [TLP_SEG_COUNT*3-1:0]              ram_rx_req_tlp_bar_id;
 wire [TLP_SEG_COUNT*8-1:0]              ram_rx_req_tlp_func_num;
@@ -306,7 +310,7 @@ pcie_tlp_demux_inst (
      * TLP input
      */
     .in_tlp_data(rx_req_tlp_data),
-    .in_tlp_strb(0),
+    .in_tlp_strb(rx_req_tlp_strb),
     .in_tlp_hdr(rx_req_tlp_hdr),
     .in_tlp_bar_id(rx_req_tlp_bar_id),
     .in_tlp_func_num(rx_req_tlp_func_num),
@@ -320,7 +324,7 @@ pcie_tlp_demux_inst (
      * TLP output
      */
     .out_tlp_data(    {ram_rx_req_tlp_data,     ctrl_rx_req_tlp_data    }),
-    .out_tlp_strb(),
+    .out_tlp_strb(    {ram_rx_req_tlp_strb,     ctrl_rx_req_tlp_strb    }),
     .out_tlp_hdr(     {ram_rx_req_tlp_hdr,      ctrl_rx_req_tlp_hdr     }),
     .out_tlp_bar_id(  {ram_rx_req_tlp_bar_id,   ctrl_rx_req_tlp_bar_id  }),
     .out_tlp_func_num({ram_rx_req_tlp_func_num, ctrl_rx_req_tlp_func_num}),

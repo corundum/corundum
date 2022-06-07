@@ -71,6 +71,7 @@ module pcie_s10_if_rx #
      * TLP output (request to BAR)
      */
     output wire [TLP_DATA_WIDTH-1:0]                    rx_req_tlp_data,
+    output wire [TLP_STRB_WIDTH-1:0]                    rx_req_tlp_strb,
     output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]       rx_req_tlp_hdr,
     output wire [TLP_SEG_COUNT*3-1:0]                   rx_req_tlp_bar_id,
     output wire [TLP_SEG_COUNT*8-1:0]                   rx_req_tlp_func_num,
@@ -83,6 +84,7 @@ module pcie_s10_if_rx #
      * TLP output (completion to DMA)
      */
     output wire [TLP_DATA_WIDTH-1:0]                    rx_cpl_tlp_data,
+    output wire [TLP_STRB_WIDTH-1:0]                    rx_cpl_tlp_strb,
     output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]       rx_cpl_tlp_hdr,
     output wire [TLP_SEG_COUNT*4-1:0]                   rx_cpl_tlp_error,
     output wire [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_valid,
@@ -90,6 +92,8 @@ module pcie_s10_if_rx #
     output wire [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_eop,
     input  wire                                         rx_cpl_tlp_ready
 );
+
+parameter SEG_STRB_WIDTH = SEG_DATA_WIDTH/32;
 
 parameter OUTPUT_FIFO_ADDR_WIDTH = 5;
 parameter OUTPUT_FIFO_LIMIT = 8;
@@ -135,6 +139,7 @@ reg cpl_reg = 1'b0, cpl_next;
 
 // internal datapath
 reg  [TLP_DATA_WIDTH-1:0]               rx_req_tlp_data_int;
+reg  [TLP_STRB_WIDTH-1:0]               rx_req_tlp_strb_int;
 reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_req_tlp_hdr_int;
 reg  [TLP_SEG_COUNT*3-1:0]              rx_req_tlp_bar_id_int;
 reg  [TLP_SEG_COUNT*8-1:0]              rx_req_tlp_func_num_int;
@@ -147,6 +152,7 @@ reg  [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_valid_int;
 
 reg [SEG_COUNT*SEG_DATA_WIDTH-1:0]  rx_st_data_int_reg = 0, rx_st_data_int_next;
 reg [SEG_COUNT*SEG_EMPTY_WIDTH-1:0] rx_st_empty_int_reg = 0, rx_st_empty_int_next;
+reg [SEG_COUNT*SEG_STRB_WIDTH-1:0]  rx_st_strb_int_reg = 0, rx_st_strb_int_next;
 reg [SEG_COUNT-1:0]                 rx_st_sop_int_reg = 0, rx_st_sop_int_next;
 reg [SEG_COUNT-1:0]                 rx_st_eop_int_reg = 0, rx_st_eop_int_next;
 reg [SEG_COUNT-1:0]                 rx_st_valid_int_reg = 0, rx_st_valid_int_next;
@@ -155,7 +161,10 @@ reg [SEG_COUNT*2-1:0]               rx_st_func_num_int_reg = 0, rx_st_func_num_i
 reg [SEG_COUNT*11-1:0]              rx_st_vf_num_int_reg = 0, rx_st_vf_num_int_next;
 reg [SEG_COUNT*3-1:0]               rx_st_bar_range_int_reg = 0, rx_st_bar_range_int_next;
 
+wire [SEG_COUNT*SEG_STRB_WIDTH] rx_st_strb = rx_st_eop ? {SEG_STRB_WIDTH{1'b1}} >> rx_st_empty : {SEG_STRB_WIDTH{1'b1}};
+
 wire [SEG_COUNT*SEG_DATA_WIDTH*2-1:0] rx_st_data_full = {rx_st_data, rx_st_data_int_reg};
+wire [SEG_COUNT*SEG_STRB_WIDTH*2-1:0] rx_st_strb_full = {rx_st_strb, rx_st_strb_int_reg};
 
 assign rx_st_ready = rx_req_tlp_ready_int && rx_cpl_tlp_ready_int;
 
@@ -167,9 +176,11 @@ always @* begin
     cpl_next = cpl_reg;
 
     if (payload_offset_reg) begin
-        rx_req_tlp_data_int = rx_st_data_full[SEG_COUNT*SEG_DATA_WIDTH+128-1:128];
+        rx_req_tlp_data_int = rx_st_data_full >> 128;
+        rx_req_tlp_strb_int = rx_st_strb_full >> 4;
     end else begin
-        rx_req_tlp_data_int = rx_st_data_full[SEG_COUNT*SEG_DATA_WIDTH+96-1:96];
+        rx_req_tlp_data_int = rx_st_data_full >> 96;
+        rx_req_tlp_strb_int = rx_st_strb_full >> 3;
     end
     rx_req_tlp_hdr_int[127:96] = rx_st_data_full[31:0];
     rx_req_tlp_hdr_int[95:64] = rx_st_data_full[63:32];
@@ -192,6 +203,7 @@ always @* begin
     rx_cpl_tlp_valid_int = 1'b0;
 
     rx_st_data_int_next = rx_st_data_int_reg;
+    rx_st_strb_int_next = rx_st_strb_int_reg;
     rx_st_empty_int_next = rx_st_empty_int_reg;
     rx_st_sop_int_next = rx_st_sop_int_reg;
     rx_st_eop_int_next = rx_st_eop_int_reg;
@@ -224,9 +236,11 @@ always @* begin
                 rx_req_tlp_func_num_int = rx_st_func_num;
 
                 if (payload_offset_next) begin
-                    rx_req_tlp_data_int = rx_st_data_full[(SEG_COUNT*SEG_DATA_WIDTH)+128-1:128];
+                    rx_req_tlp_data_int = rx_st_data_full >> 128;
+                    rx_req_tlp_strb_int = rx_st_strb_full >> 4;
                 end else begin
-                    rx_req_tlp_data_int = rx_st_data_full[(SEG_COUNT*SEG_DATA_WIDTH)+96-1:96];
+                    rx_req_tlp_data_int = rx_st_data_full >> 96;
+                    rx_req_tlp_strb_int = rx_st_strb_full >> 3;
                 end
                 rx_req_tlp_sop_int = 1'b1;
                 rx_req_tlp_eop_int = 1'b0;
@@ -236,6 +250,11 @@ always @* begin
                 if (rx_st_eop_int_reg) begin
                     rx_req_tlp_valid_int = !cpl_next;
                     rx_cpl_tlp_valid_int = cpl_next;
+                    if (payload_offset_next) begin
+                        rx_req_tlp_strb_int = rx_st_strb_int_reg >> 4;
+                    end else begin
+                        rx_req_tlp_strb_int = rx_st_strb_int_reg >> 3;
+                    end
                     rx_req_tlp_eop_int = 1'b1;
                     rx_st_valid_int_next = 1'b0;
                     tlp_input_state_next = TLP_INPUT_STATE_IDLE;
@@ -254,9 +273,11 @@ always @* begin
             if (rx_st_valid_int_reg) begin
 
                 if (payload_offset_reg) begin
-                    rx_req_tlp_data_int = rx_st_data_full[SEG_COUNT*SEG_DATA_WIDTH+128-1:128];
+                    rx_req_tlp_data_int = rx_st_data_full >> 128;
+                    rx_req_tlp_strb_int = rx_st_strb_full >> 4;
                 end else begin
-                    rx_req_tlp_data_int = rx_st_data_full[SEG_COUNT*SEG_DATA_WIDTH+96-1:96];
+                    rx_req_tlp_data_int = rx_st_data_full >> 96;
+                    rx_req_tlp_strb_int = rx_st_strb_full >> 3;
                 end
                 rx_req_tlp_sop_int = 1'b0;
                 rx_req_tlp_eop_int = 1'b0;
@@ -264,6 +285,11 @@ always @* begin
                 if (rx_st_eop_int_reg) begin
                     rx_req_tlp_valid_int = !cpl_reg;
                     rx_cpl_tlp_valid_int = cpl_reg;
+                    if (payload_offset_next) begin
+                        rx_req_tlp_strb_int = rx_st_strb_int_reg >> 4;
+                    end else begin
+                        rx_req_tlp_strb_int = rx_st_strb_int_reg >> 3;
+                    end
                     rx_req_tlp_eop_int = 1'b1;
                     rx_st_valid_int_next = 1'b0;
                     tlp_input_state_next = TLP_INPUT_STATE_IDLE;
@@ -283,6 +309,7 @@ always @* begin
     if (rx_st_valid) begin
         rx_st_data_int_next = rx_st_data;
         rx_st_empty_int_next = rx_st_empty;
+        rx_st_strb_int_next = rx_st_strb;
         rx_st_sop_int_next = rx_st_sop;
         rx_st_eop_int_next = rx_st_eop;
         rx_st_valid_int_next = rx_st_valid;
@@ -302,6 +329,7 @@ always @(posedge clk) begin
 
     rx_st_data_int_reg <= rx_st_data_int_next;
     rx_st_empty_int_reg <= rx_st_empty_int_next;
+    rx_st_strb_int_reg <= rx_st_strb_int_next;
     rx_st_sop_int_reg <= rx_st_sop_int_next;
     rx_st_eop_int_reg <= rx_st_eop_int_next;
     rx_st_valid_int_reg <= rx_st_valid_int_next;
@@ -319,6 +347,7 @@ end
 
 // output datapath logic (request TLP)
 reg  [TLP_DATA_WIDTH-1:0]               rx_req_tlp_data_reg = 0;
+reg  [TLP_STRB_WIDTH-1:0]               rx_req_tlp_strb_reg = 0;
 reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_req_tlp_hdr_reg = 0;
 reg  [TLP_SEG_COUNT*3-1:0]              rx_req_tlp_bar_id_reg = 0;
 reg  [TLP_SEG_COUNT*8-1:0]              rx_req_tlp_func_num_reg = 0;
@@ -336,6 +365,8 @@ wire out_req_fifo_empty = out_req_fifo_wr_ptr_reg == out_req_fifo_rd_ptr_reg;
 (* ramstyle = "no_rw_check, mlab" *)
 reg  [TLP_DATA_WIDTH-1:0]               out_req_fifo_rx_req_tlp_data[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
+reg  [TLP_STRB_WIDTH-1:0]               out_req_fifo_rx_req_tlp_strb[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+(* ramstyle = "no_rw_check, mlab" *)
 reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out_req_fifo_rx_req_tlp_hdr[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
 reg  [TLP_SEG_COUNT*3-1:0]              out_req_fifo_rx_req_tlp_bar_id[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
@@ -351,6 +382,7 @@ reg  [TLP_SEG_COUNT-1:0]                out_req_fifo_rx_req_tlp_eop[2**OUTPUT_FI
 assign rx_req_tlp_ready_int = !out_req_fifo_watermark_reg;
 
 assign rx_req_tlp_data = rx_req_tlp_data_reg;
+assign rx_req_tlp_strb = rx_req_tlp_strb_reg;
 assign rx_req_tlp_hdr = rx_req_tlp_hdr_reg;
 assign rx_req_tlp_bar_id = rx_req_tlp_bar_id_reg;
 assign rx_req_tlp_func_num = rx_req_tlp_func_num_reg;
@@ -365,6 +397,7 @@ always @(posedge clk) begin
 
     if (!out_req_fifo_full && rx_req_tlp_valid_int) begin
         out_req_fifo_rx_req_tlp_data[out_req_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= rx_req_tlp_data_int;
+        out_req_fifo_rx_req_tlp_strb[out_req_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= rx_req_tlp_strb_int;
         out_req_fifo_rx_req_tlp_hdr[out_req_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= rx_req_tlp_hdr_int;
         out_req_fifo_rx_req_tlp_bar_id[out_req_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= rx_req_tlp_bar_id_int;
         out_req_fifo_rx_req_tlp_func_num[out_req_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= rx_req_tlp_func_num_int;
@@ -375,6 +408,7 @@ always @(posedge clk) begin
 
     if (!out_req_fifo_empty && (!rx_req_tlp_valid_reg || rx_req_tlp_ready)) begin
         rx_req_tlp_data_reg <= out_req_fifo_rx_req_tlp_data[out_req_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+        rx_req_tlp_strb_reg <= out_req_fifo_rx_req_tlp_strb[out_req_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
         rx_req_tlp_hdr_reg <= out_req_fifo_rx_req_tlp_hdr[out_req_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
         rx_req_tlp_bar_id_reg <= out_req_fifo_rx_req_tlp_bar_id[out_req_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
         rx_req_tlp_func_num_reg <= out_req_fifo_rx_req_tlp_func_num[out_req_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
@@ -393,6 +427,7 @@ end
 
 // output datapath logic (completion TLP)
 reg  [TLP_DATA_WIDTH-1:0]               rx_cpl_tlp_data_reg = 0;
+reg  [TLP_STRB_WIDTH-1:0]               rx_cpl_tlp_strb_reg = 0;
 reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_cpl_tlp_hdr_reg = 0;
 reg  [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_valid_reg = 0;
 reg  [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_sop_reg = 0;
@@ -408,6 +443,8 @@ wire out_cpl_fifo_empty = out_cpl_fifo_wr_ptr_reg == out_cpl_fifo_rd_ptr_reg;
 (* ramstyle = "no_rw_check, mlab" *)
 reg  [TLP_DATA_WIDTH-1:0]               out_cpl_fifo_rx_cpl_tlp_data[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
+reg  [TLP_STRB_WIDTH-1:0]               out_cpl_fifo_rx_cpl_tlp_strb[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
+(* ramstyle = "no_rw_check, mlab" *)
 reg  [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out_cpl_fifo_rx_cpl_tlp_hdr[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
 (* ramstyle = "no_rw_check, mlab" *)
 reg  [TLP_SEG_COUNT-1:0]                out_cpl_fifo_rx_cpl_tlp_valid[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
@@ -419,6 +456,7 @@ reg  [TLP_SEG_COUNT-1:0]                out_cpl_fifo_rx_cpl_tlp_eop[2**OUTPUT_FI
 assign rx_cpl_tlp_ready_int = !out_cpl_fifo_watermark_reg;
 
 assign rx_cpl_tlp_data = rx_cpl_tlp_data_reg;
+assign rx_cpl_tlp_strb = rx_cpl_tlp_strb_reg;
 assign rx_cpl_tlp_hdr = rx_cpl_tlp_hdr_reg;
 assign rx_cpl_tlp_error = 0;
 assign rx_cpl_tlp_valid = rx_cpl_tlp_valid_reg;
@@ -432,6 +470,7 @@ always @(posedge clk) begin
 
     if (!out_cpl_fifo_full && rx_cpl_tlp_valid_int) begin
         out_cpl_fifo_rx_cpl_tlp_data[out_cpl_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= rx_req_tlp_data_int;
+        out_cpl_fifo_rx_cpl_tlp_strb[out_cpl_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= rx_req_tlp_strb_int;
         out_cpl_fifo_rx_cpl_tlp_hdr[out_cpl_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= rx_req_tlp_hdr_int;
         out_cpl_fifo_rx_cpl_tlp_sop[out_cpl_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= rx_req_tlp_sop_int;
         out_cpl_fifo_rx_cpl_tlp_eop[out_cpl_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= rx_req_tlp_eop_int;
@@ -440,6 +479,7 @@ always @(posedge clk) begin
 
     if (!out_cpl_fifo_empty && (!rx_cpl_tlp_valid_reg || rx_cpl_tlp_ready)) begin
         rx_cpl_tlp_data_reg <= out_cpl_fifo_rx_cpl_tlp_data[out_cpl_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
+        rx_cpl_tlp_strb_reg <= out_cpl_fifo_rx_cpl_tlp_strb[out_cpl_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
         rx_cpl_tlp_hdr_reg <= out_cpl_fifo_rx_cpl_tlp_hdr[out_cpl_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
         rx_cpl_tlp_sop_reg <= out_cpl_fifo_rx_cpl_tlp_sop[out_cpl_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
         rx_cpl_tlp_eop_reg <= out_cpl_fifo_rx_cpl_tlp_eop[out_cpl_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];

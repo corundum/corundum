@@ -281,6 +281,7 @@ class PcieIfBase:
         self.seg_par_mask = 2**self.seg_par_width-1
         self.seg_byte_lanes = self.byte_lanes // self.seg_count
         self.seg_strb_width = self.seg_byte_lanes
+        self.seg_strb_mask = 2**self.seg_strb_width-1
 
         if hasattr(self.bus, "seq"):
             self.seq_width = len(self.bus.seq) // self.seg_count
@@ -570,6 +571,8 @@ class PcieIfSink(PcieIfBase):
         self.queue_occupancy_limit_bytes = -1
         self.queue_occupancy_limit_frames = -1
 
+        self.strb_present = hasattr(self.bus, "strb")
+
         self.bus.ready.setimmediatevalue(0)
 
         cocotb.start_soon(self._run_sink())
@@ -673,10 +676,21 @@ class PcieIfSink(PcieIfBase):
                 if dword_count > 0:
                     data = (sample.data >> (seg*self.seg_width)) & self.seg_mask
                     data_par = (sample.data_par >> (seg*self.seg_par_width)) & self.seg_par_mask
-                    for k in range(min(self.seg_byte_lanes, dword_count)):
-                        frame.data.append((data >> 32*k) & 0xffffffff)
-                        frame.parity.append((data_par >> 4*k) & 0xf)
-                        dword_count -= 1
+                    strb = (sample.strb >> (seg*self.seg_strb_width)) & self.seg_strb_mask
+                    for k in range(self.seg_byte_lanes):
+                        if dword_count > 0:
+                            frame.data.append((data >> 32*k) & 0xffffffff)
+                            frame.parity.append((data_par >> 4*k) & 0xf)
+                            if self.strb_present:
+                                assert (strb >> k) & 1, "incorrect strobe signal level"
+                            dword_count -= 1
+                        else:
+                            if self.strb_present:
+                                assert (strb >> k) & 1 == 0, "incorrect strobe signal level"
+                else:
+                    if self.strb_present:
+                        strb = (sample.strb >> (seg*self.seg_strb_width)) & self.seg_strb_mask
+                        assert strb == 0, "incorrect strobe signal level"
 
                 if sample.eop & (1 << seg):
                     assert dword_count == 0, "framing error: incorrect length or early eop"

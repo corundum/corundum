@@ -39,8 +39,6 @@ module pcie_us_if_rc #
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     // PCIe AXI stream RC tuser signal width
     parameter AXIS_PCIE_RC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 75 : 161,
-    // PCIe AXI stream RQ tuser signal width
-    parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 60 : 137,
     // TLP data width
     parameter TLP_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     // TLP strobe width

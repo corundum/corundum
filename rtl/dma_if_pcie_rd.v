@@ -52,7 +52,7 @@ module dma_if_pcie_rd #
     // RAM segment count
     parameter RAM_SEG_COUNT = TLP_SEG_COUNT*2,
     // RAM segment data width
-    parameter RAM_SEG_DATA_WIDTH = (TLP_SEG_COUNT*TLP_SEG_DATA_WIDTH)*2/RAM_SEG_COUNT,
+    parameter RAM_SEG_DATA_WIDTH = TLP_DATA_WIDTH*2/RAM_SEG_COUNT,
     // RAM segment byte enable width
     parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
     // RAM segment address width

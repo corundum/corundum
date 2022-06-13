@@ -227,7 +227,7 @@ reg [TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  out_tlp_seq_reg = 0;
 reg [TLP_SEG_COUNT*3-1:0]              out_tlp_bar_id_reg = 0;
 reg [TLP_SEG_COUNT*8-1:0]              out_tlp_func_num_reg = 0;
 reg [TLP_SEG_COUNT*4-1:0]              out_tlp_error_reg = 0;
-reg [PORTS*TLP_SEG_COUNT-1:0]          out_tlp_valid_reg = 1, out_tlp_valid_next;
+reg [PORTS*TLP_SEG_COUNT-1:0]          out_tlp_valid_reg = 0, out_tlp_valid_next;
 reg [TLP_SEG_COUNT-1:0]                out_tlp_sop_reg = 0;
 reg [TLP_SEG_COUNT-1:0]                out_tlp_eop_reg = 0;
 

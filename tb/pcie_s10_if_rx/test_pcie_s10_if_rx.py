@@ -26,6 +26,7 @@ THE SOFTWARE.
 import itertools
 import logging
 import os
+import random
 import sys
 
 import cocotb_test.simulator
@@ -186,6 +187,69 @@ async def run_test_cpl(dut, payload_lengths=None, payload_data=None, idle_insert
     await RisingEdge(dut.clk)
 
 
+async def run_stress_test(dut, idle_inserter=None, backpressure_inserter=None):
+
+    tb = TB(dut)
+
+    seq_count = 32
+
+    cur_seq = 1
+
+    await tb.cycle_reset()
+
+    tb.set_idle_generator(idle_inserter)
+    tb.set_backpressure_generator(backpressure_inserter)
+
+    test_req_tlps = []
+    test_cpl_tlps = []
+
+    for k in range(128):
+        length = random.randint(1, 512)
+        test_tlp = Tlp()
+        test_tlp.fmt_type = random.choice([TlpType.MEM_WRITE, TlpType.MEM_READ, TlpType.CPL_DATA])
+        if test_tlp.fmt_type == TlpType.MEM_WRITE:
+            test_data = bytearray(itertools.islice(itertools.cycle(range(256)), length))
+            test_tlp.set_addr_be_data(cur_seq*4, test_data)
+            test_req_tlps.append(test_tlp)
+        elif test_tlp.fmt_type == TlpType.MEM_READ:
+            test_tlp.set_addr_be(cur_seq*4, length)
+            test_tlp.tag = cur_seq
+            test_req_tlps.append(test_tlp)
+        elif test_tlp.fmt_type == TlpType.CPL_DATA:
+            test_data = bytearray(itertools.islice(itertools.cycle(range(256)), length))
+            test_tlp.byte_count = len(test_data)
+            test_tlp.length = (test_tlp.byte_count+3) // 4
+            test_tlp.set_data(test_data+b'\x00'*(3-(len(test_data)-1) % 4))
+            test_tlp.tag = cur_seq
+            test_cpl_tlps.append(test_tlp)
+
+        test_frame = S10PcieFrame.from_tlp(test_tlp)
+
+        await tb.source.send(test_frame)
+
+        cur_seq = (cur_seq + 1) % seq_count
+
+    for test_tlp in test_req_tlps:
+        rx_frame = await tb.req_sink.recv()
+
+        rx_tlp = rx_frame.to_tlp()
+
+        assert test_tlp == rx_tlp
+
+    for test_tlp in test_cpl_tlps:
+        rx_frame = await tb.cpl_sink.recv()
+
+        rx_tlp = rx_frame.to_tlp()
+
+        assert test_tlp == rx_tlp
+
+    assert tb.req_sink.empty()
+    assert tb.cpl_sink.empty()
+
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
+
 def cycle_pause():
     return itertools.cycle([1, 1, 1, 0])
 
@@ -208,6 +272,11 @@ if cocotb.SIM_NAME:
         factory.add_option("idle_inserter", [None, cycle_pause])
         factory.add_option("backpressure_inserter", [None, cycle_pause])
         factory.generate_tests()
+
+    factory = TestFactory(run_stress_test)
+    factory.add_option("idle_inserter", [None, cycle_pause])
+    factory.add_option("backpressure_inserter", [None, cycle_pause])
+    factory.generate_tests()
 
 
 # cocotb-test

@@ -115,7 +115,7 @@ initial begin
     end
 end
 
-reg [CL_PORTS-1:0] select_reg = {CL_PORTS{1'b0}}, select_ctl, select_next;
+reg [CL_PORTS-1:0] select_reg = 0, select_ctl, select_next;
 reg drop_reg = 1'b0, drop_ctl, drop_next;
 reg frame_reg = 1'b0, frame_ctl, frame_next;
 

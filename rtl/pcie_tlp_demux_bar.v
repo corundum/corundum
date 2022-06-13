@@ -41,6 +41,8 @@ module pcie_tlp_demux_bar #
     parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
     // TLP header width
     parameter TLP_HDR_WIDTH = 128,
+    // Sequence number width
+    parameter SEQ_NUM_WIDTH = 6,
     // TLP segment count
     parameter TLP_SEG_COUNT = 1,
     // Base BAR
@@ -60,6 +62,7 @@ module pcie_tlp_demux_bar #
     input  wire [TLP_DATA_WIDTH-1:0]                     in_tlp_data,
     input  wire [TLP_STRB_WIDTH-1:0]                     in_tlp_strb,
     input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        in_tlp_hdr,
+    input  wire [TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]        in_tlp_seq,
     input  wire [TLP_SEG_COUNT*3-1:0]                    in_tlp_bar_id,
     input  wire [TLP_SEG_COUNT*8-1:0]                    in_tlp_func_num,
     input  wire [TLP_SEG_COUNT*4-1:0]                    in_tlp_error,
@@ -74,6 +77,7 @@ module pcie_tlp_demux_bar #
     output wire [PORTS*TLP_DATA_WIDTH-1:0]               out_tlp_data,
     output wire [PORTS*TLP_STRB_WIDTH-1:0]               out_tlp_strb,
     output wire [PORTS*TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out_tlp_hdr,
+    output wire [PORTS*TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  out_tlp_seq,
     output wire [PORTS*TLP_SEG_COUNT*3-1:0]              out_tlp_bar_id,
     output wire [PORTS*TLP_SEG_COUNT*8-1:0]              out_tlp_func_num,
     output wire [PORTS*TLP_SEG_COUNT*4-1:0]              out_tlp_error,
@@ -151,6 +155,7 @@ pcie_tlp_demux #(
     .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
     .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .SEQ_NUM_WIDTH(SEQ_NUM_WIDTH),
     .TLP_SEG_COUNT(TLP_SEG_COUNT)
 )
 pcie_tlp_demux_inst (
@@ -163,7 +168,7 @@ pcie_tlp_demux_inst (
     .in_tlp_data(in_tlp_data),
     .in_tlp_strb(in_tlp_strb),
     .in_tlp_hdr(in_tlp_hdr),
-    .in_tlp_seq(0),
+    .in_tlp_seq(in_tlp_seq),
     .in_tlp_bar_id(in_tlp_bar_id),
     .in_tlp_func_num(in_tlp_func_num),
     .in_tlp_error(in_tlp_error),
@@ -178,7 +183,7 @@ pcie_tlp_demux_inst (
     .out_tlp_data(out_tlp_data),
     .out_tlp_strb(out_tlp_strb),
     .out_tlp_hdr(out_tlp_hdr),
-    .out_tlp_seq(),
+    .out_tlp_seq(out_tlp_seq),
     .out_tlp_bar_id(out_tlp_bar_id),
     .out_tlp_func_num(out_tlp_func_num),
     .out_tlp_error(out_tlp_error),

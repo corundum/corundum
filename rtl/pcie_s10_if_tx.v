@@ -292,7 +292,7 @@ always @* begin
     rd_req_fifo_wr_seq = tx_rd_req_tlp_seq;
     rd_req_fifo_we = 0;
 
-    tx_rd_req_tlp_ready_next = !cpl_fifo_watermark_reg;
+    tx_rd_req_tlp_ready_next = !rd_req_fifo_watermark_reg;
 
     if (tx_rd_req_tlp_valid && tx_rd_req_tlp_ready) begin
         // send complete header (read request)

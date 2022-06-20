@@ -31,6 +31,7 @@
 
 struct example_dev {
 	struct pci_dev *pdev;
+	struct device *dev;
 
 	// BAR pointers
 	void __iomem *bar[6];

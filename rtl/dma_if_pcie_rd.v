@@ -933,7 +933,7 @@ always @* begin
                 addr_next = pcie_tag_table_ram_addr[pcie_tag_next] - rx_cpl_tlp_hdr_byte_count;
                 zero_len_next = pcie_tag_table_zero_len[pcie_tag_next];
 
-                offset_next = addr_next[OFFSET_WIDTH-1:0] - rx_cpl_tlp_hdr_lower_addr[1:0];
+                offset_next = pcie_tag_table_ram_addr[pcie_tag_next] - (rx_cpl_tlp_hdr_byte_count + rx_cpl_tlp_hdr_lower_addr[1:0]);
 
                 if (rx_cpl_tlp_hdr_byte_count > (op_dword_count_next << 2) - rx_cpl_tlp_hdr_lower_addr[1:0]) begin
                     // more completions to follow

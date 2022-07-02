@@ -376,7 +376,7 @@ reg [10:0] max_read_request_size_dw_reg = 11'd0;
 reg have_credit_reg = 1'b0;
 
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_wr_ptr_reg = 0;
-reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0, status_fifo_rd_ptr_next;
+reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0;
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [OP_TAG_WIDTH-1:0] status_fifo_op_tag[(2**STATUS_FIFO_ADDR_WIDTH)-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
@@ -389,16 +389,17 @@ reg [OP_TAG_WIDTH-1:0] status_fifo_wr_op_tag;
 reg [RAM_SEG_COUNT-1:0] status_fifo_wr_mask;
 reg status_fifo_wr_finish;
 reg [3:0] status_fifo_wr_error;
-reg status_fifo_we;
+reg status_fifo_wr_en;
 reg status_fifo_mask_reg = 1'b0, status_fifo_mask_next;
 reg status_fifo_finish_reg = 1'b0, status_fifo_finish_next;
 reg [3:0] status_fifo_error_reg = 4'd0, status_fifo_error_next;
-reg status_fifo_we_reg = 1'b0, status_fifo_we_next;
+reg status_fifo_wr_en_reg = 1'b0, status_fifo_wr_en_next;
 reg status_fifo_half_full_reg = 1'b0;
-reg [OP_TAG_WIDTH-1:0] status_fifo_rd_op_tag_reg = 0, status_fifo_rd_op_tag_next;
-reg [RAM_SEG_COUNT-1:0] status_fifo_rd_mask_reg = 0, status_fifo_rd_mask_next;
-reg status_fifo_rd_finish_reg = 1'b0, status_fifo_rd_finish_next;
-reg [3:0] status_fifo_rd_error_reg = 4'd0, status_fifo_rd_error_next;
+reg status_fifo_rd_en;
+reg [OP_TAG_WIDTH-1:0] status_fifo_rd_op_tag_reg = 0;
+reg [RAM_SEG_COUNT-1:0] status_fifo_rd_mask_reg = 0;
+reg status_fifo_rd_finish_reg = 1'b0;
+reg [3:0] status_fifo_rd_error_reg = 4'd0;
 reg status_fifo_rd_valid_reg = 1'b0, status_fifo_rd_valid_next;
 
 reg [TX_COUNT_WIDTH-1:0] active_tx_count_reg = {TX_COUNT_WIDTH{1'b0}}, active_tx_count_next;
@@ -854,7 +855,7 @@ always @* begin
     status_fifo_mask_next = 1'b1;
     status_fifo_finish_next = 1'b0;
     status_fifo_error_next = DMA_ERROR_NONE;
-    status_fifo_we_next = 1'b0;
+    status_fifo_wr_en_next = 1'b0;
 
     out_done_ack = {RAM_SEG_COUNT{1'b0}};
 
@@ -1045,7 +1046,7 @@ always @* begin
 
                     status_fifo_mask_next = 1'b0;
                     status_fifo_finish_next = 1'b1;
-                    status_fifo_we_next = 1'b1;
+                    status_fifo_wr_en_next = 1'b1;
 
                     stat_rd_req_finish_tag_next = pcie_tag_next;
                     stat_rd_req_finish_status_next = status_fifo_error_next;
@@ -1066,7 +1067,7 @@ always @* begin
                     status_fifo_mask_next = 1'b1;
                     status_fifo_finish_next = 1'b0;
                     status_fifo_error_next = DMA_ERROR_NONE;
-                    status_fifo_we_next = 1'b1;
+                    status_fifo_wr_en_next = 1'b1;
 
                     if (zero_len_next) begin
                         tlp_data_valid_int_next = 1'b0;
@@ -1133,7 +1134,7 @@ always @* begin
                 status_fifo_mask_next = 1'b1;
                 status_fifo_finish_next = 1'b0;
                 status_fifo_error_next = DMA_ERROR_NONE;
-                status_fifo_we_next = 1'b1;
+                status_fifo_wr_en_next = 1'b1;
 
                 stat_rd_req_finish_tag_next = pcie_tag_next;
                 stat_rd_req_finish_status_next = DMA_ERROR_NONE;
@@ -1205,27 +1206,14 @@ always @* begin
         end
     end
 
-    status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg;
-
     status_fifo_wr_op_tag = op_tag_reg;
     status_fifo_wr_mask = status_fifo_mask_reg ? ram_mask_reg : 0;
     status_fifo_wr_finish = status_fifo_finish_reg;
     status_fifo_wr_error = status_fifo_error_reg;
-    status_fifo_we = 1'b0;
+    status_fifo_wr_en = status_fifo_wr_en_reg;
 
-    if (status_fifo_we_reg) begin
-        status_fifo_wr_op_tag = op_tag_reg;
-        status_fifo_wr_mask = status_fifo_mask_reg ? ram_mask_reg : 0;
-        status_fifo_wr_finish = status_fifo_finish_reg;
-        status_fifo_wr_error = status_fifo_error_reg;
-        status_fifo_we = 1'b1;
-    end
-
-    status_fifo_rd_op_tag_next = status_fifo_rd_op_tag_reg;
-    status_fifo_rd_mask_next = status_fifo_rd_mask_reg;
-    status_fifo_rd_finish_next = status_fifo_rd_finish_reg;
-    status_fifo_rd_error_next = status_fifo_rd_error_reg;
     status_fifo_rd_valid_next = status_fifo_rd_valid_reg;
+    status_fifo_rd_en = 1'b0;
 
     m_axis_read_desc_status_tag_next = op_table_tag[status_fifo_rd_op_tag_reg];
     if (status_fifo_rd_error_reg != DMA_ERROR_NONE) begin
@@ -1280,12 +1268,8 @@ always @* begin
 
     if (!status_fifo_rd_valid_next && status_fifo_rd_ptr_reg != status_fifo_wr_ptr_reg) begin
         // status FIFO not empty
-        status_fifo_rd_op_tag_next = status_fifo_op_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
-        status_fifo_rd_mask_next = status_fifo_mask[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
-        status_fifo_rd_finish_next = status_fifo_finish[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
-        status_fifo_rd_error_next = status_fifo_error[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+        status_fifo_rd_en = 1'b1;
         status_fifo_rd_valid_next = 1'b1;
-        status_fifo_rd_ptr_next = status_fifo_rd_ptr_reg + 1;
     end
 end
 
@@ -1394,24 +1378,27 @@ always @(posedge clk) begin
 
     have_credit_reg <= pcie_tx_fc_nph_av > 4;
 
-    if (status_fifo_we) begin
+    if (status_fifo_wr_en) begin
         status_fifo_op_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_op_tag;
         status_fifo_mask[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_mask;
         status_fifo_finish[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_finish;
         status_fifo_error[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_error;
         status_fifo_wr_ptr_reg <= status_fifo_wr_ptr_reg + 1;
     end
-    status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_next;
+
+    if (status_fifo_rd_en) begin
+        status_fifo_rd_op_tag_reg <= status_fifo_op_tag[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+        status_fifo_rd_mask_reg <= status_fifo_mask[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+        status_fifo_rd_finish_reg <= status_fifo_finish[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+        status_fifo_rd_error_reg <= status_fifo_error[status_fifo_rd_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]];
+        status_fifo_rd_ptr_reg <= status_fifo_rd_ptr_reg + 1;
+    end
 
     status_fifo_mask_reg <= status_fifo_mask_next;
     status_fifo_finish_reg <= status_fifo_finish_next;
     status_fifo_error_reg <= status_fifo_error_next;
-    status_fifo_we_reg <= status_fifo_we_next;
+    status_fifo_wr_en_reg <= status_fifo_wr_en_next;
 
-    status_fifo_rd_op_tag_reg <= status_fifo_rd_op_tag_next;
-    status_fifo_rd_mask_reg <= status_fifo_rd_mask_next;
-    status_fifo_rd_finish_reg <= status_fifo_rd_finish_next;
-    status_fifo_rd_error_reg <= status_fifo_rd_error_next;
     status_fifo_rd_valid_reg <= status_fifo_rd_valid_next;
 
     status_fifo_half_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**(STATUS_FIFO_ADDR_WIDTH-1);
@@ -1536,7 +1523,7 @@ always @(posedge clk) begin
 
         status_fifo_wr_ptr_reg <= 0;
         status_fifo_rd_ptr_reg <= 0;
-        status_fifo_we_reg <= 1'b0;
+        status_fifo_wr_en_reg <= 1'b0;
         status_fifo_rd_valid_reg <= 1'b0;
 
         active_tx_count_reg <= {TX_COUNT_WIDTH{1'b0}};

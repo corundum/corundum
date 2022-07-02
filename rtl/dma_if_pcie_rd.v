@@ -351,6 +351,12 @@ reg [OFFSET_WIDTH-1:0] offset_reg = {OFFSET_WIDTH{1'b0}}, offset_next;
 reg [TLP_DATA_WIDTH-1:0] tlp_data_int_reg = 0, tlp_data_int_next;
 reg tlp_data_valid_int_reg = 0, tlp_data_valid_int_next;
 
+reg  [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0]      ram_wr_cmd_sel_pipe_reg = 0, ram_wr_cmd_sel_pipe_next;
+reg  [RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1:0]   ram_wr_cmd_be_pipe_reg = 0, ram_wr_cmd_be_pipe_next;
+reg  [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0] ram_wr_cmd_addr_pipe_reg = 0, ram_wr_cmd_addr_pipe_next;
+reg  [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0] ram_wr_cmd_data_pipe_reg = 0, ram_wr_cmd_data_pipe_next;
+reg  [RAM_SEG_COUNT-1:0]                    ram_wr_cmd_valid_pipe_reg = 0, ram_wr_cmd_valid_pipe_next;
+
 reg [2:0] rx_cpl_tlp_hdr_fmt;
 reg [4:0] rx_cpl_tlp_hdr_type;
 reg [2:0] rx_cpl_tlp_hdr_tc;
@@ -860,24 +866,30 @@ always @* begin
     out_done_ack = {RAM_SEG_COUNT{1'b0}};
 
     // Write generation
-    ram_wr_cmd_sel_int = {RAM_SEG_COUNT{ram_sel_reg}};
+    ram_wr_cmd_sel_pipe_next = {RAM_SEG_COUNT{ram_sel_reg}};
     if (!ram_wrap_reg) begin
-        ram_wr_cmd_be_int = ({RAM_SEG_COUNT*RAM_SEG_BE_WIDTH{1'b1}} << start_offset_reg) & ({RAM_SEG_COUNT*RAM_SEG_BE_WIDTH{1'b1}} >> (RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1-end_offset_reg));
+        ram_wr_cmd_be_pipe_next = ({RAM_SEG_COUNT*RAM_SEG_BE_WIDTH{1'b1}} << start_offset_reg) & ({RAM_SEG_COUNT*RAM_SEG_BE_WIDTH{1'b1}} >> (RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1-end_offset_reg));
     end else begin
-        ram_wr_cmd_be_int = ({RAM_SEG_COUNT*RAM_SEG_BE_WIDTH{1'b1}} << start_offset_reg) | ({RAM_SEG_COUNT*RAM_SEG_BE_WIDTH{1'b1}} >> (RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1-end_offset_reg));
+        ram_wr_cmd_be_pipe_next = ({RAM_SEG_COUNT*RAM_SEG_BE_WIDTH{1'b1}} << start_offset_reg) | ({RAM_SEG_COUNT*RAM_SEG_BE_WIDTH{1'b1}} >> (RAM_SEG_COUNT*RAM_SEG_BE_WIDTH-1-end_offset_reg));
     end
     for (i = 0; i < RAM_SEG_COUNT; i = i + 1) begin
-        ram_wr_cmd_addr_int[i*RAM_SEG_ADDR_WIDTH +: RAM_SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-RAM_SEG_ADDR_WIDTH];
+        ram_wr_cmd_addr_pipe_next[i*RAM_SEG_ADDR_WIDTH +: RAM_SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-RAM_SEG_ADDR_WIDTH];
         if (ram_mask_1_reg[i]) begin
-            ram_wr_cmd_addr_int[i*RAM_SEG_ADDR_WIDTH +: RAM_SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-RAM_SEG_ADDR_WIDTH]+1;
+            ram_wr_cmd_addr_pipe_next[i*RAM_SEG_ADDR_WIDTH +: RAM_SEG_ADDR_WIDTH] = addr_delay_reg[RAM_ADDR_WIDTH-1:RAM_ADDR_WIDTH-RAM_SEG_ADDR_WIDTH]+1;
         end
     end
-    ram_wr_cmd_data_int = {3{tlp_data_int_reg}} >> (TLP_DATA_WIDTH - offset_reg*8);
-    ram_wr_cmd_valid_int = {RAM_SEG_COUNT{1'b0}};
+    ram_wr_cmd_data_pipe_next = {3{tlp_data_int_reg}} >> (TLP_DATA_WIDTH - offset_reg*8);
+    ram_wr_cmd_valid_pipe_next = {RAM_SEG_COUNT{1'b0}};
 
     if (tlp_data_valid_int_reg) begin
-        ram_wr_cmd_valid_int = ram_mask_reg;
+        ram_wr_cmd_valid_pipe_next = ram_mask_reg;
     end
+
+    ram_wr_cmd_sel_int = ram_wr_cmd_sel_pipe_reg;
+    ram_wr_cmd_be_int = ram_wr_cmd_be_pipe_reg;
+    ram_wr_cmd_addr_int = ram_wr_cmd_addr_pipe_reg;
+    ram_wr_cmd_data_int = ram_wr_cmd_data_pipe_reg;
+    ram_wr_cmd_valid_int = ram_wr_cmd_valid_pipe_reg;
 
     status_error_cor_next = 1'b0;
     status_error_uncor_next = 1'b0;
@@ -1340,6 +1352,12 @@ always @(posedge clk) begin
 
     tlp_data_int_reg <= tlp_data_int_next;
     tlp_data_valid_int_reg <= tlp_data_valid_int_next;
+
+    ram_wr_cmd_sel_pipe_reg <= ram_wr_cmd_sel_pipe_next;
+    ram_wr_cmd_be_pipe_reg <= ram_wr_cmd_be_pipe_next;
+    ram_wr_cmd_addr_pipe_reg <= ram_wr_cmd_addr_pipe_next;
+    ram_wr_cmd_data_pipe_reg <= ram_wr_cmd_data_pipe_next;
+    ram_wr_cmd_valid_pipe_reg <= ram_wr_cmd_valid_pipe_next;
 
     tx_rd_req_tlp_hdr_reg <= tx_rd_req_tlp_hdr_next;
     tx_rd_req_tlp_valid_reg <= tx_rd_req_tlp_valid_next;

@@ -258,12 +258,12 @@ module pcie_us_if #
     /*
      * TLP input (write request from MSI-X)
      */
-    input  wire [TLP_DATA_WIDTH-1:0]                     tx_msix_wr_req_tlp_data,
-    input  wire [TLP_STRB_WIDTH-1:0]                     tx_msix_wr_req_tlp_strb,
-    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        tx_msix_wr_req_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                      tx_msix_wr_req_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                      tx_msix_wr_req_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                      tx_msix_wr_req_tlp_eop,
+    input  wire [31:0]                                   tx_msix_wr_req_tlp_data,
+    input  wire                                          tx_msix_wr_req_tlp_strb,
+    input  wire [TLP_HDR_WIDTH-1:0]                      tx_msix_wr_req_tlp_hdr,
+    input  wire                                          tx_msix_wr_req_tlp_valid,
+    input  wire                                          tx_msix_wr_req_tlp_sop,
+    input  wire                                          tx_msix_wr_req_tlp_eop,
     output wire                                          tx_msix_wr_req_tlp_ready,
 
     /*

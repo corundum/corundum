@@ -168,7 +168,9 @@ pcie_tlp_demux #(
     .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
     .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
-    .TLP_SEG_COUNT(TLP_SEG_COUNT)
+    .IN_TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .OUT_TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .FIFO_ENABLE(0)
 )
 pcie_tlp_demux_inst (
     .clk(clk),
@@ -214,7 +216,13 @@ pcie_tlp_demux_inst (
      */
     .enable(1'b1),
     .drop({TLP_SEG_COUNT{1'b0}}),
-    .select(select)
+    .select(select),
+
+    /*
+     * Status
+     */
+    .fifo_half_full(),
+    .fifo_watermark()
 );
 
 pcie_axi_master_rd #(

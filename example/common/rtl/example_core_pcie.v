@@ -297,7 +297,9 @@ pcie_tlp_demux_bar #(
     .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
     .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .IN_TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .OUT_TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .FIFO_ENABLE(0),
     .BAR_BASE(0),
     .BAR_STRIDE(2),
     .BAR_IDS(0)
@@ -337,7 +339,13 @@ pcie_tlp_demux_inst (
     /*
      * Control
      */
-    .enable(1'b1)
+    .enable(1'b1),
+
+    /*
+     * Status
+     */
+    .fifo_half_full(),
+    .fifo_watermark()
 );
 
 pcie_tlp_mux #(

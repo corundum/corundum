@@ -78,8 +78,16 @@ module {{name}} #
     parameter TLP_HDR_WIDTH = 128,
     // Sequence number width
     parameter SEQ_NUM_WIDTH = 6,
-    // TLP segment count
-    parameter TLP_SEG_COUNT = 1,
+    // TLP segment count (input)
+    parameter IN_TLP_SEG_COUNT = 1,
+    // TLP segment count (output)
+    parameter OUT_TLP_SEG_COUNT = IN_TLP_SEG_COUNT,
+    // Include output FIFOs
+    parameter FIFO_ENABLE = 1,
+    // FIFO depth
+    parameter FIFO_DEPTH = 2048,
+    // FIFO watermark level
+    parameter FIFO_WATERMARK = FIFO_DEPTH/2,
     // Base BAR
     parameter BAR_BASE = 0,
     // BAR stride
@@ -88,44 +96,52 @@ module {{name}} #
     parameter BAR_IDS = 0
 )
 (
-    input  wire                                    clk,
-    input  wire                                    rst,
+    input  wire                                        clk,
+    input  wire                                        rst,
 
     /*
      * TLP input
      */
-    input  wire [TLP_DATA_WIDTH-1:0]               in_tlp_data,
-    input  wire [TLP_STRB_WIDTH-1:0]               in_tlp_strb,
-    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  in_tlp_hdr,
-    input  wire [TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  in_tlp_seq,
-    input  wire [TLP_SEG_COUNT*3-1:0]              in_tlp_bar_id,
-    input  wire [TLP_SEG_COUNT*8-1:0]              in_tlp_func_num,
-    input  wire [TLP_SEG_COUNT*4-1:0]              in_tlp_error,
-    input  wire [TLP_SEG_COUNT-1:0]                in_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                in_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                in_tlp_eop,
-    output wire                                    in_tlp_ready,
+    input  wire [TLP_DATA_WIDTH-1:0]                   in_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                   in_tlp_strb,
+    input  wire [IN_TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]   in_tlp_hdr,
+    input  wire [IN_TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]   in_tlp_seq,
+    input  wire [IN_TLP_SEG_COUNT*3-1:0]               in_tlp_bar_id,
+    input  wire [IN_TLP_SEG_COUNT*8-1:0]               in_tlp_func_num,
+    input  wire [IN_TLP_SEG_COUNT*4-1:0]               in_tlp_error,
+    input  wire [IN_TLP_SEG_COUNT-1:0]                 in_tlp_valid,
+    input  wire [IN_TLP_SEG_COUNT-1:0]                 in_tlp_sop,
+    input  wire [IN_TLP_SEG_COUNT-1:0]                 in_tlp_eop,
+    output wire                                        in_tlp_ready,
 
     /*
      * TLP outputs
      */
 {%- for p in range(n) %}
-    output wire [TLP_DATA_WIDTH-1:0]               out{{'%02d'%p}}_tlp_data,
-    output wire [TLP_STRB_WIDTH-1:0]               out{{'%02d'%p}}_tlp_strb,
-    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out{{'%02d'%p}}_tlp_hdr,
-    output wire [TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  out{{'%02d'%p}}_tlp_seq,
-    output wire [TLP_SEG_COUNT*3-1:0]              out{{'%02d'%p}}_tlp_bar_id,
-    output wire [TLP_SEG_COUNT*8-1:0]              out{{'%02d'%p}}_tlp_func_num,
-    output wire [TLP_SEG_COUNT*4-1:0]              out{{'%02d'%p}}_tlp_error,
-    output wire [TLP_SEG_COUNT-1:0]                out{{'%02d'%p}}_tlp_valid,
-    output wire [TLP_SEG_COUNT-1:0]                out{{'%02d'%p}}_tlp_sop,
-    output wire [TLP_SEG_COUNT-1:0]                out{{'%02d'%p}}_tlp_eop,
-    input  wire                                    out{{'%02d'%p}}_tlp_ready,
+    output wire [TLP_DATA_WIDTH-1:0]                   out{{'%02d'%p}}_tlp_data,
+    output wire [TLP_STRB_WIDTH-1:0]                   out{{'%02d'%p}}_tlp_strb,
+    output wire [OUT_TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  out{{'%02d'%p}}_tlp_hdr,
+    output wire [OUT_TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  out{{'%02d'%p}}_tlp_seq,
+    output wire [OUT_TLP_SEG_COUNT*3-1:0]              out{{'%02d'%p}}_tlp_bar_id,
+    output wire [OUT_TLP_SEG_COUNT*8-1:0]              out{{'%02d'%p}}_tlp_func_num,
+    output wire [OUT_TLP_SEG_COUNT*4-1:0]              out{{'%02d'%p}}_tlp_error,
+    output wire [OUT_TLP_SEG_COUNT-1:0]                out{{'%02d'%p}}_tlp_valid,
+    output wire [OUT_TLP_SEG_COUNT-1:0]                out{{'%02d'%p}}_tlp_sop,
+    output wire [OUT_TLP_SEG_COUNT-1:0]                out{{'%02d'%p}}_tlp_eop,
+    input  wire                                        out{{'%02d'%p}}_tlp_ready,
 {% endfor %}
     /*
      * Control
      */
-    input  wire                                    enable
+    input  wire                                        enable,
+
+    /*
+     * Status
+     */
+{%- for p in range(n) %}
+    output wire                                        out{{'%02d'%p}}_fifo_half_full,
+    output wire                                        out{{'%02d'%p}}_fifo_watermark{% if not loop.last %},{% endif %}
+{%- endfor %}
 );
 
 pcie_tlp_demux_bar #(
@@ -133,7 +149,12 @@ pcie_tlp_demux_bar #(
     .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
     .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .SEQ_NUM_WIDTH(SEQ_NUM_WIDTH),
+    .IN_TLP_SEG_COUNT(IN_TLP_SEG_COUNT),
+    .OUT_TLP_SEG_COUNT(OUT_TLP_SEG_COUNT),
+    .FIFO_ENABLE(FIFO_ENABLE),
+    .FIFO_DEPTH(FIFO_DEPTH),
+    .FIFO_WATERMARK(FIFO_WATERMARK),
     .BAR_BASE(BAR_BASE),
     .BAR_STRIDE(BAR_STRIDE),
     .BAR_IDS(BAR_IDS)
@@ -175,7 +196,13 @@ pcie_tlp_demux_bar_inst (
     /*
      * Control
      */
-    .enable(enable)
+    .enable(enable),
+
+    /*
+     * Status
+     */
+    .fifo_half_full({ {% for p in range(n-1,-1,-1) %}out{{'%02d'%p}}_fifo_half_full{% if not loop.last %}, {% endif %}{% endfor %} }),
+    .fifo_watermark({ {% for p in range(n-1,-1,-1) %}out{{'%02d'%p}}_fifo_watermark{% if not loop.last %}, {% endif %}{% endfor %} })
 );
 
 endmodule

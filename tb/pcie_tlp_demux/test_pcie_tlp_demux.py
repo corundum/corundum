@@ -248,9 +248,10 @@ tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
-@pytest.mark.parametrize("pcie_data_width", [64, 128, 256, 512])
+@pytest.mark.parametrize(("pcie_data_width", "tlp_seg_count"),
+    [(64, 1), (128, 1), (256, 1), (256, 2), (512, 1), (512, 2), (512, 4)])
 @pytest.mark.parametrize("ports", [1, 4])
-def test_pcie_tlp_demux(request, pcie_data_width, ports):
+def test_pcie_tlp_demux(request, pcie_data_width, tlp_seg_count, ports):
     dut = "pcie_tlp_demux"
     wrapper = f"{dut}_wrap_{ports}"
     module = os.path.splitext(os.path.basename(__file__))[0]
@@ -267,6 +268,8 @@ def test_pcie_tlp_demux(request, pcie_data_width, ports):
     verilog_sources = [
         wrapper_file,
         os.path.join(rtl_dir, f"{dut}.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
     ]
 
     parameters = {}
@@ -275,7 +278,11 @@ def test_pcie_tlp_demux(request, pcie_data_width, ports):
     parameters['TLP_STRB_WIDTH'] = parameters['TLP_DATA_WIDTH'] // 32
     parameters['TLP_HDR_WIDTH'] = 128
     parameters['SEQ_NUM_WIDTH'] = 6
-    parameters['TLP_SEG_COUNT'] = 1
+    parameters['IN_TLP_SEG_COUNT'] = tlp_seg_count
+    parameters['OUT_TLP_SEG_COUNT'] = parameters['IN_TLP_SEG_COUNT']
+    parameters['FIFO_ENABLE'] = 1
+    parameters['FIFO_DEPTH'] = 4096
+    parameters['FIFO_WATERMARK'] = parameters['FIFO_DEPTH'] // 2
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

@@ -34,8 +34,6 @@ TOPLEVEL = $(WRAPPER)
 MODULE   = test_$(DUT)
 VERILOG_SOURCES += $(WRAPPER).v
 VERILOG_SOURCES += ../../rtl/$(DUT).v
-VERILOG_SOURCES += ../../rtl/arbiter.v
-VERILOG_SOURCES += ../../rtl/priority_encoder.v
 
 # module parameters
 export PARAM_TLP_DATA_WIDTH ?= 64

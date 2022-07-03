@@ -118,7 +118,15 @@ module {{name}} #
     output wire [TLP_SEG_COUNT-1:0]                out_tlp_valid,
     output wire [TLP_SEG_COUNT-1:0]                out_tlp_sop,
     output wire [TLP_SEG_COUNT-1:0]                out_tlp_eop,
-    input  wire                                    out_tlp_ready
+    input  wire                                    out_tlp_ready,
+
+    /*
+     * Status
+     */
+{%- for p in range(n) %}
+    output wire [TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  in{{'%02d'%p}}_sel_tlp_seq,
+    output wire [TLP_SEG_COUNT-1:0]                in{{'%02d'%p}}_sel_tlp_seq_valid{% if not loop.last %},{% endif %}
+{%- endfor %}
 );
 
 pcie_tlp_mux #(
@@ -163,7 +171,13 @@ pcie_tlp_mux_inst (
     .out_tlp_valid(out_tlp_valid),
     .out_tlp_sop(out_tlp_sop),
     .out_tlp_eop(out_tlp_eop),
-    .out_tlp_ready(out_tlp_ready)
+    .out_tlp_ready(out_tlp_ready),
+
+    /*
+     * Status
+     */
+    .sel_tlp_seq({ {% for p in range(n-1,-1,-1) %}in{{'%02d'%p}}_sel_tlp_seq{% if not loop.last %}, {% endif %}{% endfor %} }),
+    .sel_tlp_seq_valid({ {% for p in range(n-1,-1,-1) %}in{{'%02d'%p}}_sel_tlp_seq_valid{% if not loop.last %}, {% endif %}{% endfor %} })
 );
 
 endmodule

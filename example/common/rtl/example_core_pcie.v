@@ -389,7 +389,13 @@ pcie_tlp_mux_inst (
     .out_tlp_valid(tx_cpl_tlp_valid),
     .out_tlp_sop(tx_cpl_tlp_sop),
     .out_tlp_eop(tx_cpl_tlp_eop),
-    .out_tlp_ready(tx_cpl_tlp_ready)
+    .out_tlp_ready(tx_cpl_tlp_ready),
+
+    /*
+     * Status
+     */
+    .sel_tlp_seq(),
+    .sel_tlp_seq_valid()
 );
 
 pcie_axil_master #(

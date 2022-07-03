@@ -232,9 +232,10 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
 @pytest.mark.parametrize("round_robin", [0, 1])
-@pytest.mark.parametrize("pcie_data_width", [64, 128, 256, 512])
+@pytest.mark.parametrize(("pcie_data_width", "tlp_seg_count"),
+    [(64, 1), (128, 1), (256, 1), (256, 2), (512, 1), (512, 2), (512, 4)])
 @pytest.mark.parametrize("ports", [1, 4])
-def test_pcie_tlp_mux(request, pcie_data_width, ports, round_robin):
+def test_pcie_tlp_mux(request, pcie_data_width, tlp_seg_count, ports, round_robin):
     dut = "pcie_tlp_mux"
     wrapper = f"{dut}_wrap_{ports}"
     module = os.path.splitext(os.path.basename(__file__))[0]
@@ -251,8 +252,6 @@ def test_pcie_tlp_mux(request, pcie_data_width, ports, round_robin):
     verilog_sources = [
         wrapper_file,
         os.path.join(rtl_dir, f"{dut}.v"),
-        os.path.join(rtl_dir, "arbiter.v"),
-        os.path.join(rtl_dir, "priority_encoder.v"),
     ]
 
     parameters = {}
@@ -261,7 +260,7 @@ def test_pcie_tlp_mux(request, pcie_data_width, ports, round_robin):
     parameters['TLP_STRB_WIDTH'] = parameters['TLP_DATA_WIDTH'] // 32
     parameters['TLP_HDR_WIDTH'] = 128
     parameters['SEQ_NUM_WIDTH'] = 6
-    parameters['TLP_SEG_COUNT'] = 1
+    parameters['TLP_SEG_COUNT'] = tlp_seg_count
     parameters['ARB_TYPE_ROUND_ROBIN'] = round_robin
     parameters['ARB_LSB_HIGH_PRIORITY'] = 1
 

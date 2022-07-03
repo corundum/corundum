@@ -30,11 +30,12 @@ DUT      = pcie_s10_if_rx
 TOPLEVEL = $(DUT)
 MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
-VERILOG_SOURCES += ../../rtl/arbiter.v
-VERILOG_SOURCES += ../../rtl/priority_encoder.v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_demux.v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo.v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_raw.v
 
 # module parameters
-export PARAM_SEG_COUNT ?= 1
+export PARAM_SEG_COUNT ?= 2
 export PARAM_SEG_DATA_WIDTH ?= 256
 export PARAM_SEG_EMPTY_WIDTH ?= $(shell python -c "print((($(PARAM_SEG_DATA_WIDTH)//32)-1).bit_length())" )
 export PARAM_TLP_DATA_WIDTH ?= $(shell expr $(PARAM_SEG_COUNT) \* $(PARAM_SEG_DATA_WIDTH) )

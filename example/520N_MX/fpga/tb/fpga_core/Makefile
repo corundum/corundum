@@ -46,6 +46,9 @@ VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_axi_master_wr.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_demux_bar.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_demux.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_mux.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo_raw.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo_mux.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie_rd.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie_wr.v
@@ -55,7 +58,7 @@ VERILOG_SOURCES += ../../lib/pcie/rtl/priority_encoder.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pulse_merge.v
 
 # module parameters
-export PARAM_SEG_COUNT ?= 1
+export PARAM_SEG_COUNT ?= 2
 export PARAM_SEG_DATA_WIDTH ?= 256
 export PARAM_SEG_EMPTY_WIDTH ?= $(shell python -c "print((($(PARAM_SEG_DATA_WIDTH)//32)-1).bit_length())" )
 export PARAM_TX_SEQ_NUM_WIDTH ?= 6

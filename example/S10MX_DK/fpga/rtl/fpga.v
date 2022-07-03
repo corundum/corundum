@@ -36,24 +36,24 @@ module fpga (
      * Clock: 100 MHz
      * Reset: Push button, active low
      */
-    input  wire        clk_sys_100m_p,
-    input  wire        cpu_resetn,
+    input  wire         clk_sys_100m_p,
+    input  wire         cpu_resetn,
 
     /*
      * GPIO
      */
-    output wire [3:0]  user_led,
+    output wire [3:0]   user_led,
 
     /*
      * PCIe: gen 3 x16
      */
-    output wire [7:0]  pcie_ep_rx_p,
-    input  wire [7:0]  pcie_ep_tx_p,
-    input  wire        refclk_pcie_ep_edge_p,
-    input  wire        s10_pcie_perstn0
+    output wire [15:0]  pcie_ep_rx_p,
+    input  wire [15:0]  pcie_ep_tx_p,
+    input  wire         refclk_pcie_ep_edge_p,
+    input  wire         s10_pcie_perstn0
 );
 
-parameter SEG_COUNT = 1;
+parameter SEG_COUNT = 2;
 parameter SEG_DATA_WIDTH = 256;
 parameter SEG_EMPTY_WIDTH = $clog2(SEG_DATA_WIDTH/32);
 
@@ -434,6 +434,14 @@ pcie pcie_hip_inst (
     .rx_in5                    (pcie_ep_tx_p[5]),
     .rx_in6                    (pcie_ep_tx_p[6]),
     .rx_in7                    (pcie_ep_tx_p[7]),
+    .rx_in8                    (pcie_ep_tx_p[8]),
+    .rx_in9                    (pcie_ep_tx_p[9]),
+    .rx_in10                   (pcie_ep_tx_p[10]),
+    .rx_in11                   (pcie_ep_tx_p[11]),
+    .rx_in12                   (pcie_ep_tx_p[12]),
+    .rx_in13                   (pcie_ep_tx_p[13]),
+    .rx_in14                   (pcie_ep_tx_p[14]),
+    .rx_in15                   (pcie_ep_tx_p[15]),
     .tx_out0                   (pcie_ep_rx_p[0]),
     .tx_out1                   (pcie_ep_rx_p[1]),
     .tx_out2                   (pcie_ep_rx_p[2]),
@@ -442,6 +450,14 @@ pcie pcie_hip_inst (
     .tx_out5                   (pcie_ep_rx_p[5]),
     .tx_out6                   (pcie_ep_rx_p[6]),
     .tx_out7                   (pcie_ep_rx_p[7]),
+    .tx_out8                   (pcie_ep_rx_p[8]),
+    .tx_out9                   (pcie_ep_rx_p[9]),
+    .tx_out10                  (pcie_ep_rx_p[10]),
+    .tx_out11                  (pcie_ep_rx_p[11]),
+    .tx_out12                  (pcie_ep_rx_p[12]),
+    .tx_out13                  (pcie_ep_rx_p[13]),
+    .tx_out14                  (pcie_ep_rx_p[14]),
+    .tx_out15                  (pcie_ep_rx_p[15]),
     .pm_linkst_in_l1           (),
     .pm_linkst_in_l0s          (),
     .pm_state                  (),

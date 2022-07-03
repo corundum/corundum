@@ -192,6 +192,49 @@ async def run_test_cpl(dut, payload_lengths=None, payload_data=None, idle_insert
     await RisingEdge(dut.clk)
 
 
+async def run_test_msi(dut, idle_inserter=None, backpressure_inserter=None):
+
+    tb = TB(dut)
+
+    seq_count = 32
+
+    cur_seq = 1
+
+    await tb.cycle_reset()
+
+    tb.set_idle_generator(idle_inserter)
+    tb.set_backpressure_generator(backpressure_inserter)
+
+    test_tlps = []
+    test_frames = []
+
+    for k in range(10):
+        test_tlp = Tlp()
+
+        test_tlp.fmt_type = TlpType.MEM_WRITE
+        test_tlp.set_addr_be_data(cur_seq*4, k.to_bytes(4, 'little'))
+
+        test_frame = PcieIfFrame.from_tlp(test_tlp)
+
+        test_tlps.append(test_tlp)
+        test_frames.append(test_frame)
+        await tb.msi_source.send(test_frame)
+
+        cur_seq = (cur_seq + 1) % seq_count
+
+    for test_tlp in test_tlps:
+        rx_frame = await tb.sink.recv()
+
+        rx_tlp = rx_frame.to_tlp()
+
+        assert test_tlp == rx_tlp
+
+    assert tb.sink.empty()
+
+    await RisingEdge(dut.clk)
+    await RisingEdge(dut.clk)
+
+
 async def run_stress_test(dut, idle_inserter=None, backpressure_inserter=None):
 
     tb = TB(dut)
@@ -213,14 +256,19 @@ async def run_stress_test(dut, idle_inserter=None, backpressure_inserter=None):
         length = random.randint(1, 512)
         test_tlp = Tlp()
         test_tlp.fmt_type = random.choice([TlpType.MEM_WRITE, TlpType.MEM_READ, TlpType.CPL_DATA])
+        addr = cur_seq*4 + random.choice([0x12340000, 0x123400000000])
         if test_tlp.fmt_type == TlpType.MEM_WRITE:
+            if addr >> 32:
+                test_tlp.fmt_type = TlpType.MEM_WRITE_64
             test_data = bytearray(itertools.islice(itertools.cycle(range(256)), length))
-            test_tlp.set_addr_be_data(cur_seq*4, test_data)
+            test_tlp.set_addr_be_data(addr, test_data)
             test_wr_tlps.append(test_tlp)
             test_frame = PcieIfFrame.from_tlp(test_tlp)
             await tb.wr_req_source.send(test_frame)
         elif test_tlp.fmt_type == TlpType.MEM_READ:
-            test_tlp.set_addr_be(cur_seq*4, length)
+            if addr >> 32:
+                test_tlp.fmt_type = TlpType.MEM_READ_64
+            test_tlp.set_addr_be(addr, length)
             test_tlp.tag = cur_seq
             test_rd_tlps.append(test_tlp)
             test_frame = PcieIfFrame.from_tlp(test_tlp)
@@ -244,11 +292,11 @@ async def run_stress_test(dut, idle_inserter=None, backpressure_inserter=None):
         rx_frame = await tb.sink.recv()
         rx_tlp = rx_frame.to_tlp()
 
-        if rx_tlp.fmt_type == TlpType.MEM_WRITE:
+        if rx_tlp.fmt_type in (TlpType.MEM_WRITE, TlpType.MEM_WRITE_64):
             rx_wr_tlps.append(rx_tlp)
-        elif rx_tlp.fmt_type == TlpType.MEM_READ:
+        elif rx_tlp.fmt_type in (TlpType.MEM_READ, TlpType.MEM_READ_64):
             rx_rd_tlps.append(rx_tlp)
-        elif rx_tlp.fmt_type == TlpType.CPL_DATA:
+        elif rx_tlp.fmt_type in (TlpType.CPL, TlpType.CPL_DATA):
             rx_cpl_tlps.append(rx_tlp)
 
     for test_tlp in test_wr_tlps:
@@ -289,6 +337,13 @@ if cocotb.SIM_NAME:
         factory.add_option("backpressure_inserter", [None, cycle_pause])
         factory.generate_tests()
 
+    for test in [run_test_msi]:
+
+        factory = TestFactory(test)
+        factory.add_option("idle_inserter", [None, cycle_pause])
+        factory.add_option("backpressure_inserter", [None, cycle_pause])
+        factory.generate_tests()
+
     factory = TestFactory(run_stress_test)
     factory.add_option("idle_inserter", [None, cycle_pause])
     factory.add_option("backpressure_inserter", [None, cycle_pause])
@@ -301,7 +356,7 @@ tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
-@pytest.mark.parametrize("data_width", [256])
+@pytest.mark.parametrize("data_width", [256, 512])
 def test_pcie_s10_if_tx(request, data_width):
     dut = "pcie_s10_if_tx"
     module = os.path.splitext(os.path.basename(__file__))[0]
@@ -309,8 +364,8 @@ def test_pcie_s10_if_tx(request, data_width):
 
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
-        os.path.join(rtl_dir, "arbiter.v"),
-        os.path.join(rtl_dir, "priority_encoder.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo_mux.v"),
     ]
 
     parameters = {}

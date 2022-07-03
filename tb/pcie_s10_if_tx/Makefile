@@ -30,11 +30,11 @@ DUT      = pcie_s10_if_tx
 TOPLEVEL = $(DUT)
 MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
-VERILOG_SOURCES += ../../rtl/arbiter.v
-VERILOG_SOURCES += ../../rtl/priority_encoder.v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_raw.v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_mux.v
 
 # module parameters
-export PARAM_SEG_COUNT ?= 1
+export PARAM_SEG_COUNT ?= 2
 export PARAM_SEG_DATA_WIDTH ?= 256
 export PARAM_TLP_DATA_WIDTH ?= $(shell expr $(PARAM_SEG_COUNT) \* $(PARAM_SEG_DATA_WIDTH) )
 export PARAM_TLP_STRB_WIDTH ?= $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )

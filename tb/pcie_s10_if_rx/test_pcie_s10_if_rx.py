@@ -207,12 +207,17 @@ async def run_stress_test(dut, idle_inserter=None, backpressure_inserter=None):
         length = random.randint(1, 512)
         test_tlp = Tlp()
         test_tlp.fmt_type = random.choice([TlpType.MEM_WRITE, TlpType.MEM_READ, TlpType.CPL_DATA])
+        addr = cur_seq*4 + random.choice([0x12340000, 0x123400000000])
         if test_tlp.fmt_type == TlpType.MEM_WRITE:
+            if addr >> 32:
+                test_tlp.fmt_type = TlpType.MEM_WRITE_64
             test_data = bytearray(itertools.islice(itertools.cycle(range(256)), length))
-            test_tlp.set_addr_be_data(cur_seq*4, test_data)
+            test_tlp.set_addr_be_data(addr, test_data)
             test_req_tlps.append(test_tlp)
         elif test_tlp.fmt_type == TlpType.MEM_READ:
-            test_tlp.set_addr_be(cur_seq*4, length)
+            if addr >> 32:
+                test_tlp.fmt_type = TlpType.MEM_READ_64
+            test_tlp.set_addr_be(addr, length)
             test_tlp.tag = cur_seq
             test_req_tlps.append(test_tlp)
         elif test_tlp.fmt_type == TlpType.CPL_DATA:
@@ -285,7 +290,7 @@ tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
-@pytest.mark.parametrize("data_width", [256])
+@pytest.mark.parametrize("data_width", [256, 512])
 def test_pcie_s10_if_rx(request, data_width):
     dut = "pcie_s10_if_rx"
     module = os.path.splitext(os.path.basename(__file__))[0]
@@ -293,8 +298,9 @@ def test_pcie_s10_if_rx(request, data_width):
 
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
-        os.path.join(rtl_dir, "arbiter.v"),
-        os.path.join(rtl_dir, "priority_encoder.v"),
+        os.path.join(rtl_dir, "pcie_tlp_demux.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
     ]
 
     parameters = {}

@@ -150,6 +150,7 @@ end
 
 reg frame_reg = 1'b0, frame_next, frame_cyc;
 reg tlp_hdr_4dw_reg = 1'b0, tlp_hdr_4dw_next, tlp_hdr_4dw_cyc;
+reg tlp_hdr_cyc;
 reg tlp_split1_reg = 1'b0, tlp_split1_next, tlp_split1_cyc;
 reg tlp_split2_reg = 1'b0, tlp_split2_next, tlp_split2_cyc;
 reg [SEG_SEL_WIDTH-1:0] seg_offset_cyc;
@@ -164,7 +165,10 @@ reg [INT_TLP_SEG_COUNT-1:0] port_seg_extra_4dw;
 reg [INT_TLP_SEG_COUNT-1:0] port_seg_eop;
 
 reg [INT_TLP_SEG_COUNT-1:0] out_sel_reg = 0, out_sel_next, out_sel_cyc;
+reg [INT_TLP_SEG_COUNT-1:0] out_sop_reg = 0, out_sop_next;
+reg [INT_TLP_SEG_COUNT-1:0] out_eop_reg = 0, out_eop_next;
 reg [INT_TLP_SEG_COUNT-1:0] out_tlp_hdr_4dw_reg = 0, out_tlp_hdr_4dw_next;
+reg [INT_TLP_SEG_COUNT-1:0] out_tlp_hdr_reg = 0, out_tlp_hdr_next;
 reg [INT_TLP_SEG_COUNT-1:0] out_tlp_split1_reg = 0, out_tlp_split1_next;
 reg [INT_TLP_SEG_COUNT-1:0] out_tlp_split2_reg = 0, out_tlp_split2_next;
 reg [SEG_SEL_WIDTH+1-1:0] out_sel_seg_reg[0:INT_TLP_SEG_COUNT-1], out_sel_seg_next[0:INT_TLP_SEG_COUNT-1];
@@ -409,6 +413,7 @@ always @* begin
 
     frame_cyc = frame_reg;
     tlp_hdr_4dw_cyc = tlp_hdr_4dw_reg;
+    tlp_hdr_cyc = 1'b0;
     tlp_split1_cyc = tlp_split1_reg;
     tlp_split2_cyc = tlp_split2_reg;
     seg_offset_cyc = fifo_ctrl_seg_offset;
@@ -420,7 +425,10 @@ always @* begin
 
     out_sel_next = 0;
     out_sel_cyc = 0;
+    out_sop_next = 0;
+    out_eop_next = 0;
     out_tlp_hdr_4dw_next = 0;
+    out_tlp_hdr_next = 0;
     out_tlp_split1_next = 0;
     out_tlp_split2_next = 0;
     for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
@@ -445,6 +453,7 @@ always @* begin
 
     for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
         if (!frame_cyc && !abort) begin
+            tlp_hdr_cyc = 1'b1;
             tlp_split1_cyc = 1'b0;
             tlp_split2_cyc = 1'b0;
             if (port_seg_valid[0]) begin
@@ -459,12 +468,17 @@ always @* begin
         frame = frame_cyc;
 
         out_sel_cyc[seg] = 1'b1;
+        out_sop_next[seg] = tlp_hdr_cyc;
         out_tlp_hdr_4dw_next[seg] = tlp_hdr_4dw_cyc;
+        out_tlp_hdr_next[seg] = tlp_hdr_cyc;
         out_sel_seg_next[seg] = seg_offset_cyc;
+
         if (tlp_hdr_4dw_cyc ? port_seg_extra_4dw[0] : port_seg_extra_3dw[0]) begin
             // extra cycle
+            tlp_hdr_cyc = 1'b0;
             if (tlp_split1_cyc) begin
                 frame_cyc = 0;
+                out_eop_next[seg] = 1'b1;
                 tlp_split1_cyc = 1'b0;
                 tlp_split2_cyc = 1'b1;
                 seg_offset_cyc = seg_offset_cyc + 1;
@@ -477,17 +491,13 @@ always @* begin
             end else begin
                 tlp_split1_cyc = 1'b1;
             end
-        end else if (eop) begin
-            // end of packet
-            frame_cyc = 0;
-            seg_offset_cyc = seg_offset_cyc + 1;
-            seg_count_cyc = seg_count_cyc + 1;
-            port_seg_valid = port_seg_valid >> 1;
-            port_seg_hdr_4dw = port_seg_hdr_4dw >> 1;
-            port_seg_eop = port_seg_eop >> 1;
-            port_seg_extra_3dw = port_seg_extra_3dw >> 1;
-            port_seg_extra_4dw = port_seg_extra_4dw >> 1;
         end else begin
+            tlp_hdr_cyc = 1'b0;
+            if (eop) begin
+                // end of packet
+                frame_cyc = 0;
+                out_eop_next[seg] = 1'b1;
+            end
             seg_offset_cyc = seg_offset_cyc + 1;
             seg_count_cyc = seg_count_cyc + 1;
             port_seg_valid = port_seg_valid >> 1;
@@ -496,6 +506,7 @@ always @* begin
             port_seg_extra_3dw = port_seg_extra_3dw >> 1;
             port_seg_extra_4dw = port_seg_extra_4dw >> 1;
         end
+
         out_tlp_split1_next[seg] = tlp_split1_cyc;
         out_tlp_split2_next[seg] = tlp_split2_cyc;
 
@@ -531,21 +542,17 @@ always @* begin
             tx_st_data_next[seg*SEG_DATA_WIDTH +: SEG_DATA_WIDTH] = out_shift_tlp_data_next >> 32;
             tx_st_data_next[seg*SEG_DATA_WIDTH+96 +: SEG_DATA_WIDTH-96] = fifo_tlp_data[out_sel_seg_reg[seg]*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH-96];
         end
-        if (fifo_tlp_sop[out_sel_seg_reg[seg] +: 1] && !out_tlp_split2_reg[seg]) begin
+        if (out_tlp_hdr_reg[seg]) begin
             tx_st_data_next[seg*SEG_DATA_WIDTH+0 +: 32] = fifo_tlp_hdr[out_sel_seg_reg[seg]*TLP_HDR_WIDTH+96 +: 32];
             tx_st_data_next[seg*SEG_DATA_WIDTH+32 +: 32] = fifo_tlp_hdr[out_sel_seg_reg[seg]*TLP_HDR_WIDTH+64 +: 32];
             tx_st_data_next[seg*SEG_DATA_WIDTH+64 +: 32] = fifo_tlp_hdr[out_sel_seg_reg[seg]*TLP_HDR_WIDTH+32 +: 32];
             if (out_tlp_hdr_4dw_reg[seg]) begin
                 tx_st_data_next[seg*SEG_DATA_WIDTH+96 +: 32] = fifo_tlp_hdr[out_sel_seg_reg[seg]*TLP_HDR_WIDTH+0 +: 32];
             end
-            tx_st_sop_next[seg +: 1] = 1'b1;
-        end else begin
-            tx_st_sop_next[seg +: 1] = 1'b0;
         end
-        if (out_sel_reg[seg]) begin
-            tx_st_valid_next[seg +: 1] = fifo_tlp_valid[out_sel_seg_reg[seg] +: 1];
-        end
-        tx_st_eop_next[seg +: 1] = fifo_tlp_eop[out_sel_seg_reg[seg] +: 1] && !out_tlp_split1_reg[seg];
+        tx_st_valid_next[seg +: 1] = out_sel_reg[seg];
+        tx_st_sop_next[seg +: 1] = out_sop_reg[seg];
+        tx_st_eop_next[seg +: 1] = out_eop_reg[seg];
 
         if (out_sel_reg[seg]) begin
             out_shift_tlp_data_next = fifo_tlp_data[(out_sel_seg_reg[seg]+1)*INT_TLP_SEG_DATA_WIDTH-128 +: 128];
@@ -562,7 +569,10 @@ always @(posedge clk) begin
     tlp_split2_reg <= tlp_split2_next;
 
     out_sel_reg <= out_sel_next;
+    out_sop_reg <= out_sop_next;
+    out_eop_reg <= out_eop_next;
     out_tlp_hdr_4dw_reg <= out_tlp_hdr_4dw_next;
+    out_tlp_hdr_reg <= out_tlp_hdr_next;
     out_tlp_split1_reg <= out_tlp_split1_next;
     out_tlp_split2_reg <= out_tlp_split2_next;
     for (i = 0; i < INT_TLP_SEG_COUNT; i = i + 1) begin

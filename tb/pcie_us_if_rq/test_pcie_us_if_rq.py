@@ -64,7 +64,12 @@ class TB(object):
 
         self.rd_req_source = PcieIfSource(PcieIfTxBus.from_prefix(dut, "tx_rd_req_tlp"), dut.clk, dut.rst)
         self.wr_req_source = PcieIfSource(PcieIfTxBus.from_prefix(dut, "tx_wr_req_tlp"), dut.clk, dut.rst)
-        self.sink = RqSink(AxiStreamBus.from_prefix(dut, "m_axis_rq"), dut.clk, dut.rst)
+        self.sink = RqSink(AxiStreamBus.from_prefix(dut, "m_axis_rq"), dut.clk, dut.rst, segments=len(dut.out_tlp_valid))
+
+        dut.s_axis_rq_seq_num_0.setimmediatevalue(0)
+        dut.s_axis_rq_seq_num_valid_0.setimmediatevalue(0)
+        dut.s_axis_rq_seq_num_1.setimmediatevalue(0)
+        dut.s_axis_rq_seq_num_valid_1.setimmediatevalue(0)
 
     def set_idle_generator(self, generator=None):
         if generator:
@@ -231,16 +236,17 @@ tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
-@pytest.mark.parametrize("axis_pcie_data_width", [64, 128, 256, 512])
-def test_pcie_us_if_rq(request, axis_pcie_data_width):
+@pytest.mark.parametrize(("axis_pcie_data_width", "straddle"),
+    [(64, False), (128, False), (256, False), (512, False), (512, True)])
+def test_pcie_us_if_rq(request, axis_pcie_data_width, straddle):
     dut = "pcie_us_if_rq"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
 
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
-        os.path.join(rtl_dir, "arbiter.v"),
-        os.path.join(rtl_dir, "priority_encoder.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
     ]
 
     parameters = {}
@@ -248,8 +254,9 @@ def test_pcie_us_if_rq(request, axis_pcie_data_width):
     parameters['AXIS_PCIE_DATA_WIDTH'] = axis_pcie_data_width
     parameters['AXIS_PCIE_KEEP_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH'] // 32
     parameters['AXIS_PCIE_RQ_USER_WIDTH'] = 62 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 137
+    parameters['RQ_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512 and straddle)
     parameters['RQ_SEQ_NUM_WIDTH'] = 4 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 6
-    parameters['TLP_DATA_WIDTH'] = axis_pcie_data_width
+    parameters['TLP_DATA_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH']
     parameters['TLP_STRB_WIDTH'] = parameters['TLP_DATA_WIDTH'] // 32
     parameters['TLP_HDR_WIDTH'] = 128
     parameters['TLP_SEG_COUNT'] = 1

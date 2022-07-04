@@ -63,7 +63,7 @@ class TB(object):
         cocotb.start_soon(Clock(dut.clk, 4, units="ns").start())
 
         self.source = PcieIfSource(PcieIfTxBus.from_prefix(dut, "tx_cpl_tlp"), dut.clk, dut.rst)
-        self.sink = CcSink(AxiStreamBus.from_prefix(dut, "m_axis_cc"), dut.clk, dut.rst)
+        self.sink = CcSink(AxiStreamBus.from_prefix(dut, "m_axis_cc"), dut.clk, dut.rst, segments=len(dut.out_tlp_valid))
 
     def set_idle_generator(self, generator=None):
         if generator:
@@ -222,14 +222,17 @@ tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
-@pytest.mark.parametrize("axis_pcie_data_width", [64, 128, 256, 512])
-def test_pcie_us_if_cc(request, axis_pcie_data_width):
+@pytest.mark.parametrize(("axis_pcie_data_width", "straddle"),
+    [(64, False), (128, False), (256, False), (512, False), (512, True)])
+def test_pcie_us_if_cc(request, axis_pcie_data_width, straddle):
     dut = "pcie_us_if_cc"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
 
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
     ]
 
     parameters = {}
@@ -237,7 +240,8 @@ def test_pcie_us_if_cc(request, axis_pcie_data_width):
     parameters['AXIS_PCIE_DATA_WIDTH'] = axis_pcie_data_width
     parameters['AXIS_PCIE_KEEP_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH'] // 32
     parameters['AXIS_PCIE_CC_USER_WIDTH'] = 33 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 81
-    parameters['TLP_DATA_WIDTH'] = axis_pcie_data_width
+    parameters['CC_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512 and straddle)
+    parameters['TLP_DATA_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH']
     parameters['TLP_STRB_WIDTH'] = parameters['TLP_DATA_WIDTH'] // 32
     parameters['TLP_HDR_WIDTH'] = 128
     parameters['TLP_SEG_COUNT'] = 1

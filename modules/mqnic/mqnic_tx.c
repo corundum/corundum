@@ -484,7 +484,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	stop_queue = mqnic_is_tx_ring_full(ring);
 	if (unlikely(stop_queue)) {
-		netdev_info(ndev, "%s: TX ring %d full on port %d",
+		netdev_dbg(ndev, "%s: TX ring %d full on port %d",
 				__func__, ring_index, priv->index);
 		netif_tx_stop_queue(ring->tx_queue);
 	}

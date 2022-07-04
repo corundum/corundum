@@ -52,11 +52,11 @@ class TB(object):
             pcie_link_width=16,
             user_clk_frequency=250e6,
             alignment="dword",
-            cq_straddle=False,
-            cc_straddle=False,
-            rq_straddle=False,
-            rc_straddle=False,
-            rc_4tlp_straddle=False,
+            cq_straddle=True,
+            cc_straddle=True,
+            rq_straddle=True,
+            rc_straddle=True,
+            rc_4tlp_straddle=True,
             pf_count=1,
             max_payload_size=1024,
             enable_client_tag=True,
@@ -534,6 +534,10 @@ def test_fpga_core(request):
     parameters['AXIS_PCIE_RC_USER_WIDTH'] = 75 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 161
     parameters['AXIS_PCIE_CQ_USER_WIDTH'] = 88 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 183
     parameters['AXIS_PCIE_CC_USER_WIDTH'] = 33 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 81
+    parameters['RC_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 256)
+    parameters['RQ_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512)
+    parameters['CQ_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512)
+    parameters['CC_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512)
     parameters['RQ_SEQ_NUM_WIDTH'] = 6
     parameters['RQ_SEQ_NUM_ENABLE'] = 1
     parameters['PCIE_TAG_COUNT'] = 64

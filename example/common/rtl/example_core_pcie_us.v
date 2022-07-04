@@ -45,6 +45,14 @@ module example_core_pcie_us #
     parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
     // PCIe AXI stream CC tuser signal width
     parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
+    // RC interface TLP straddling
+    parameter RC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 256,
+    // RQ interface TLP straddling
+    parameter RQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512,
+    // CQ interface TLP straddling
+    parameter CQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512,
+    // CC interface TLP straddling
+    parameter CC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512,
     // RQ sequence number width
     parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
     // RQ sequence number tracking enable
@@ -256,6 +264,10 @@ pcie_us_if #(
     .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
     .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
     .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
+    .RC_STRADDLE(RC_STRADDLE),
+    .RQ_STRADDLE(RQ_STRADDLE),
+    .CQ_STRADDLE(CQ_STRADDLE),
+    .CC_STRADDLE(CC_STRADDLE),
     .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
     .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),

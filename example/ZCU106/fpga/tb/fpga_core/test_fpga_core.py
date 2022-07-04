@@ -541,6 +541,10 @@ def test_fpga_core(request):
     parameters['AXIS_PCIE_RC_USER_WIDTH'] = 75 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 161
     parameters['AXIS_PCIE_CQ_USER_WIDTH'] = 88 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 183
     parameters['AXIS_PCIE_CC_USER_WIDTH'] = 33 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 81
+    parameters['RC_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 256)
+    parameters['RQ_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512)
+    parameters['CQ_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512)
+    parameters['CC_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512)
     parameters['RQ_SEQ_NUM_WIDTH'] = 6
     parameters['RQ_SEQ_NUM_ENABLE'] = 1
     parameters['PCIE_TAG_COUNT'] = 64

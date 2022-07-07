@@ -274,10 +274,23 @@ always @* begin
         rc_sop = 0;
         rc_eop = 0;
         if (AXIS_PCIE_DATA_WIDTH == 256) begin
-            for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
-                if (s_axis_rc_tuser[32+seg]) begin
-                    rc_strb_sop[seg*4] = 1'b1;
+            if (INT_TLP_SEG_COUNT == 1) begin
+                if (s_axis_rc_tuser[32]) begin
+                    rc_strb_sop[0] = 1'b1;
                 end
+            end else begin
+                if (s_axis_rc_tuser[32]) begin
+                    if (rc_frame_reg) begin
+                        rc_strb_sop[4] = 1'b1;
+                    end else begin
+                        rc_strb_sop[0] = 1'b1;
+                    end
+                end
+                if (s_axis_rc_tuser[33]) begin
+                    rc_strb_sop[4] = 1'b1;
+                end
+            end
+            for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
                 if (s_axis_rc_tuser[34+seg*4]) begin
                     rc_strb_eop[s_axis_rc_tuser[35+seg*4 +: 3]] = 1'b1;
                 end
@@ -306,6 +319,9 @@ always @* begin
                 valid = 0;
                 rc_eop[lane/INT_TLP_SEG_STRB_WIDTH] = 1'b1;
             end
+        end
+        if (s_axis_rc_tready && s_axis_rc_tvalid) begin
+            rc_frame_next = valid;
         end
     end else begin
         rc_data = s_axis_rc_tdata;

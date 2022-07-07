@@ -42,63 +42,60 @@ module pcie_msix #
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
 
     // TLP interface configuration
-    parameter TLP_DATA_WIDTH = 256,
-    parameter TLP_STRB_WIDTH = TLP_DATA_WIDTH/32,
     parameter TLP_HDR_WIDTH = 128,
-    parameter TLP_SEG_COUNT = 1,
     parameter TLP_FORCE_64_BIT_ADDR = 0
 )
 (
-    input  wire                                    clk,
-    input  wire                                    rst,
+    input  wire                        clk,
+    input  wire                        rst,
 
     /*
      * AXI lite interface for MSI-X tables
      */
-    input  wire [AXIL_ADDR_WIDTH-1:0]              s_axil_awaddr,
-    input  wire [2:0]                              s_axil_awprot,
-    input  wire                                    s_axil_awvalid,
-    output wire                                    s_axil_awready,
-    input  wire [AXIL_DATA_WIDTH-1:0]              s_axil_wdata,
-    input  wire [AXIL_STRB_WIDTH-1:0]              s_axil_wstrb,
-    input  wire                                    s_axil_wvalid,
-    output wire                                    s_axil_wready,
-    output wire [1:0]                              s_axil_bresp,
-    output wire                                    s_axil_bvalid,
-    input  wire                                    s_axil_bready,
-    input  wire [AXIL_ADDR_WIDTH-1:0]              s_axil_araddr,
-    input  wire [2:0]                              s_axil_arprot,
-    input  wire                                    s_axil_arvalid,
-    output wire                                    s_axil_arready,
-    output wire [AXIL_DATA_WIDTH-1:0]              s_axil_rdata,
-    output wire [1:0]                              s_axil_rresp,
-    output wire                                    s_axil_rvalid,
-    input  wire                                    s_axil_rready,
+    input  wire [AXIL_ADDR_WIDTH-1:0]  s_axil_awaddr,
+    input  wire [2:0]                  s_axil_awprot,
+    input  wire                        s_axil_awvalid,
+    output wire                        s_axil_awready,
+    input  wire [AXIL_DATA_WIDTH-1:0]  s_axil_wdata,
+    input  wire [AXIL_STRB_WIDTH-1:0]  s_axil_wstrb,
+    input  wire                        s_axil_wvalid,
+    output wire                        s_axil_wready,
+    output wire [1:0]                  s_axil_bresp,
+    output wire                        s_axil_bvalid,
+    input  wire                        s_axil_bready,
+    input  wire [AXIL_ADDR_WIDTH-1:0]  s_axil_araddr,
+    input  wire [2:0]                  s_axil_arprot,
+    input  wire                        s_axil_arvalid,
+    output wire                        s_axil_arready,
+    output wire [AXIL_DATA_WIDTH-1:0]  s_axil_rdata,
+    output wire [1:0]                  s_axil_rresp,
+    output wire                        s_axil_rvalid,
+    input  wire                        s_axil_rready,
 
     /*
      * Interrupt request input
      */
-    input  wire [IRQ_INDEX_WIDTH-1:0]              irq_index,
-    input  wire                                    irq_valid,
-    output wire                                    irq_ready,
+    input  wire [IRQ_INDEX_WIDTH-1:0]  irq_index,
+    input  wire                        irq_valid,
+    output wire                        irq_ready,
 
     /*
      * Memory write TLP output
      */
-    output wire [TLP_DATA_WIDTH-1:0]               tx_wr_req_tlp_data,
-    output wire [TLP_STRB_WIDTH-1:0]               tx_wr_req_tlp_strb,
-    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  tx_wr_req_tlp_hdr,
-    output wire [TLP_SEG_COUNT-1:0]                tx_wr_req_tlp_valid,
-    output wire [TLP_SEG_COUNT-1:0]                tx_wr_req_tlp_sop,
-    output wire [TLP_SEG_COUNT-1:0]                tx_wr_req_tlp_eop,
-    input  wire                                    tx_wr_req_tlp_ready,
+    output wire [31:0]                 tx_wr_req_tlp_data,
+    output wire                        tx_wr_req_tlp_strb,
+    output wire [TLP_HDR_WIDTH-1:0]    tx_wr_req_tlp_hdr,
+    output wire                        tx_wr_req_tlp_valid,
+    output wire                        tx_wr_req_tlp_sop,
+    output wire                        tx_wr_req_tlp_eop,
+    input  wire                        tx_wr_req_tlp_ready,
 
     /*
      * Configuration
      */
-    input  wire [15:0]                             requester_id,
-    input  wire                                    msix_enable,
-    input  wire                                    msix_mask
+    input  wire [15:0]                 requester_id,
+    input  wire                        msix_enable,
+    input  wire                        msix_mask
 );
 
 parameter TBL_ADDR_WIDTH = IRQ_INDEX_WIDTH+1;
@@ -184,9 +181,9 @@ reg s_axil_rvalid_reg = 1'b0, s_axil_rvalid_next;
 
 reg irq_ready_reg = 1'b0, irq_ready_next;
 
-reg [TLP_DATA_WIDTH-1:0] tx_wr_req_tlp_data_reg = 0, tx_wr_req_tlp_data_next;
-reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0] tx_wr_req_tlp_hdr_reg = 0, tx_wr_req_tlp_hdr_next;
-reg [TLP_SEG_COUNT-1:0] tx_wr_req_tlp_valid_reg = 0, tx_wr_req_tlp_valid_next;
+reg [31:0] tx_wr_req_tlp_data_reg = 0, tx_wr_req_tlp_data_next;
+reg [TLP_HDR_WIDTH-1:0] tx_wr_req_tlp_hdr_reg = 0, tx_wr_req_tlp_hdr_next;
+reg tx_wr_req_tlp_valid_reg = 0, tx_wr_req_tlp_valid_next;
 
 // MSI-X table
 (* ramstyle = "no_rw_check, mlab" *)

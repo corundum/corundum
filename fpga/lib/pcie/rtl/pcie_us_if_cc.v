@@ -1,6 +1,6 @@
 /*
 
-Copyright (c) 2021 Alex Forencich
+Copyright (c) 2021-2022 Alex Forencich
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -39,6 +39,8 @@ module pcie_us_if_cc #
     parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
     // PCIe AXI stream CC tuser signal width
     parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
+    // CC interface TLP straddling
+    parameter CC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512,
     // TLP data width
     parameter TLP_DATA_WIDTH = AXIS_PCIE_DATA_WIDTH,
     // TLP strobe width
@@ -77,7 +79,11 @@ module pcie_us_if_cc #
 parameter TLP_DATA_WIDTH_BYTES = TLP_DATA_WIDTH/8;
 parameter TLP_DATA_WIDTH_DWORDS = TLP_DATA_WIDTH/32;
 
-parameter OUTPUT_FIFO_ADDR_WIDTH = 5;
+parameter INT_TLP_SEG_COUNT = (CC_STRADDLE && AXIS_PCIE_DATA_WIDTH >= 512) ? 2 : 1;
+parameter INT_TLP_SEG_DATA_WIDTH = TLP_DATA_WIDTH / INT_TLP_SEG_COUNT;
+parameter INT_TLP_SEG_STRB_WIDTH = TLP_STRB_WIDTH / INT_TLP_SEG_COUNT;
+
+parameter SEG_SEL_WIDTH = $clog2(INT_TLP_SEG_COUNT);
 
 // bus width assertions
 initial begin
@@ -101,11 +107,6 @@ initial begin
             $error("Error: PCIe CC tuser width must be 33 (instance %m)");
             $finish;
         end
-    end
-
-    if (TLP_SEG_COUNT != 1) begin
-        $error("Error: TLP segment count must be 1 (instance %m)");
-        $finish;
     end
 
     if (TLP_DATA_WIDTH != AXIS_PCIE_DATA_WIDTH) begin
@@ -132,284 +133,42 @@ localparam [2:0]
     CPL_STATUS_CRS = 3'b010, // configuration request retry status
     CPL_STATUS_CA  = 3'b100; // completer abort
 
-reg tx_cpl_tlp_ready_cmb;
+reg frame_reg = 1'b0, frame_next, frame_cyc;
+reg tlp_hdr1_reg = 1'b0, tlp_hdr1_next, tlp_hdr1_cyc;
+reg tlp_hdr2_reg = 1'b0, tlp_hdr2_next, tlp_hdr2_cyc;
+reg tlp_split1_reg = 1'b0, tlp_split1_next, tlp_split1_cyc;
+reg tlp_split2_reg = 1'b0, tlp_split2_next, tlp_split2_cyc;
+reg [SEG_SEL_WIDTH-1:0] seg_offset_cyc;
+reg [SEG_SEL_WIDTH+1-1:0] seg_count_cyc;
+reg valid, sop, eop;
+reg frame, abort;
 
-assign tx_cpl_tlp_ready = tx_cpl_tlp_ready_cmb;
+reg [INT_TLP_SEG_COUNT-1:0] out_sel, out_sel_cyc;
+reg [INT_TLP_SEG_COUNT-1:0] out_sop;
+reg [INT_TLP_SEG_COUNT-1:0] out_eop;
+reg [INT_TLP_SEG_COUNT-1:0] out_tlp_hdr1;
+reg [INT_TLP_SEG_COUNT-1:0] out_tlp_hdr2;
+reg [INT_TLP_SEG_COUNT-1:0] out_tlp_split1;
+reg [INT_TLP_SEG_COUNT-1:0] out_tlp_split2;
+reg [SEG_SEL_WIDTH+1-1:0] out_sel_seg[0:INT_TLP_SEG_COUNT-1];
 
-// process outgoing TLPs
-localparam [1:0]
-    TLP_OUTPUT_STATE_IDLE = 2'd0,
-    TLP_OUTPUT_STATE_HEADER = 2'd1,
-    TLP_OUTPUT_STATE_PAYLOAD = 2'd2;
+reg [TLP_DATA_WIDTH-1:0] out_tlp_data;
+reg [TLP_STRB_WIDTH-1:0] out_tlp_strb;
+reg [INT_TLP_SEG_COUNT-1:0] out_tlp_valid;
+reg [INT_TLP_SEG_COUNT-1:0] out_tlp_sop;
+reg [INT_TLP_SEG_COUNT-1:0] out_tlp_eop;
+reg [95:0] out_shift_tlp_data_reg = 0, out_shift_tlp_data_next;
+reg [2:0] out_shift_tlp_strb_reg = 0, out_shift_tlp_strb_next;
 
-reg [1:0] tlp_output_state_reg = TLP_OUTPUT_STATE_IDLE, tlp_output_state_next;
+reg [127:0] seg_tlp_hdr;
+reg [95:0] seg_cc_hdr;
+reg [INT_TLP_SEG_COUNT*3-1:0] eop_index;
 
-reg [TLP_DATA_WIDTH-1:0] out_tlp_data_reg = 0, out_tlp_data_next;
-reg [TLP_STRB_WIDTH-1:0] out_tlp_strb_reg = 0, out_tlp_strb_next;
-reg [TLP_SEG_COUNT-1:0] out_tlp_eop_reg = 0, out_tlp_eop_next;
-
-reg [2:0] tx_cpl_tlp_hdr_fmt;
-reg [4:0] tx_cpl_tlp_hdr_type;
-reg [2:0] tx_cpl_tlp_hdr_tc;
-reg tx_cpl_tlp_hdr_ln;
-reg tx_cpl_tlp_hdr_th;
-reg tx_cpl_tlp_hdr_td;
-reg tx_cpl_tlp_hdr_ep;
-reg [2:0] tx_cpl_tlp_hdr_attr;
-reg [1:0] tx_cpl_tlp_hdr_at;
-reg [9:0] tx_cpl_tlp_hdr_length;
-reg [15:0] tx_cpl_tlp_hdr_completer_id;
-reg [2:0] tx_cpl_tlp_hdr_cpl_status;
-reg tx_cpl_tlp_hdr_bcm;
-reg [11:0] tx_cpl_tlp_hdr_byte_count;
-reg [15:0] tx_cpl_tlp_hdr_requester_id;
-reg [9:0] tx_cpl_tlp_hdr_tag;
-reg [6:0] tx_cpl_tlp_hdr_lower_addr;
-
-reg [95:0] tlp_header_data;
-reg [AXIS_PCIE_CC_USER_WIDTH-1:0] tlp_tuser;
-
-reg  [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_cc_tdata_int = 0;
-reg  [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_cc_tkeep_int = 0;
-reg                                m_axis_cc_tvalid_int = 0;
-wire                               m_axis_cc_tready_int;
-reg                                m_axis_cc_tlast_int = 0;
-reg  [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser_int = 0;
-
-always @* begin
-    tlp_output_state_next = TLP_OUTPUT_STATE_IDLE;
-
-    out_tlp_data_next = out_tlp_data_reg;
-    out_tlp_strb_next = out_tlp_strb_reg;
-    out_tlp_eop_next = out_tlp_eop_reg;
-
-    tx_cpl_tlp_ready_cmb = 1'b0;
-
-    // TLP header parsing
-    // DW 0
-    tx_cpl_tlp_hdr_fmt = tx_cpl_tlp_hdr[127:125]; // fmt
-    tx_cpl_tlp_hdr_type = tx_cpl_tlp_hdr[124:120]; // type
-    tx_cpl_tlp_hdr_tag[9] = tx_cpl_tlp_hdr[119]; // T9
-    tx_cpl_tlp_hdr_tc = tx_cpl_tlp_hdr[118:116]; // TC
-    tx_cpl_tlp_hdr_tag[8] = tx_cpl_tlp_hdr[115]; // T8
-    tx_cpl_tlp_hdr_attr[2] = tx_cpl_tlp_hdr[114]; // attr
-    tx_cpl_tlp_hdr_ln = tx_cpl_tlp_hdr[113]; // LN
-    tx_cpl_tlp_hdr_th = tx_cpl_tlp_hdr[112]; // TH
-    tx_cpl_tlp_hdr_td = tx_cpl_tlp_hdr[111]; // TD
-    tx_cpl_tlp_hdr_ep = tx_cpl_tlp_hdr[110]; // EP
-    tx_cpl_tlp_hdr_attr[1:0] = tx_cpl_tlp_hdr[109:108]; // attr
-    tx_cpl_tlp_hdr_at = tx_cpl_tlp_hdr[107:106]; // AT
-    tx_cpl_tlp_hdr_length = tx_cpl_tlp_hdr[105:96]; // length
-    // DW 1
-    tx_cpl_tlp_hdr_completer_id = tx_cpl_tlp_hdr[95:80]; // completer ID
-    tx_cpl_tlp_hdr_cpl_status = tx_cpl_tlp_hdr[79:77]; // completion status
-    tx_cpl_tlp_hdr_bcm = tx_cpl_tlp_hdr[76]; // BCM
-    tx_cpl_tlp_hdr_byte_count = tx_cpl_tlp_hdr[75:64]; // byte count
-    // DW 2
-    tx_cpl_tlp_hdr_requester_id = tx_cpl_tlp_hdr[63:48]; // requester ID
-    tx_cpl_tlp_hdr_tag[7:0] = tx_cpl_tlp_hdr[47:40]; // tag
-    tx_cpl_tlp_hdr_lower_addr = tx_cpl_tlp_hdr[38:32]; // lower address
-
-    tlp_header_data[6:0] = tx_cpl_tlp_hdr_lower_addr; // lower address
-    tlp_header_data[7] = 1'b0;
-    tlp_header_data[9:8] = tx_cpl_tlp_hdr_at; // AT
-    tlp_header_data[15:10] = 6'd0;
-    tlp_header_data[28:16] = tx_cpl_tlp_hdr_byte_count; // Byte count
-    tlp_header_data[29] = 1'b0; // locked read completion
-    tlp_header_data[31:30] = 2'd0;
-    tlp_header_data[42:32] = tx_cpl_tlp_hdr_length; // DWORD count
-    tlp_header_data[45:43] = tx_cpl_tlp_hdr_cpl_status; // completion status
-    tlp_header_data[46] = tx_cpl_tlp_hdr_ep; // poisoned
-    tlp_header_data[47] = 1'b0;
-    tlp_header_data[63:48] = tx_cpl_tlp_hdr_requester_id; // requester ID
-    tlp_header_data[71:64] = tx_cpl_tlp_hdr_tag; // tag
-    tlp_header_data[87:72] = tx_cpl_tlp_hdr_completer_id; // completer ID
-    tlp_header_data[88] = 1'b0; // completer ID enable
-    tlp_header_data[91:89] = tx_cpl_tlp_hdr_tc; // TC
-    tlp_header_data[94:92] = tx_cpl_tlp_hdr_attr; // attr
-    tlp_header_data[95] = 1'b0; // force ECRC
-
-    if (AXIS_PCIE_DATA_WIDTH == 512) begin
-        tlp_tuser[1:0] = 2'b01; // is_sop
-        tlp_tuser[3:2] = 2'd0; // is_sop0_ptr
-        tlp_tuser[5:4] = 2'd0; // is_sop1_ptr
-        tlp_tuser[7:6] = 2'b01; // is_eop
-        tlp_tuser[11:8]  = 4'd3; // is_eop0_ptr
-        tlp_tuser[15:12] = 4'd0; // is_eop1_ptr
-        tlp_tuser[16] = 1'b0; // discontinue
-        tlp_tuser[80:17] = 64'd0; // parity
-    end else begin
-        tlp_tuser[0] = 1'b0; // discontinue
-        tlp_tuser[32:1] = 32'd0; // parity
-    end
-
-    // TLP output
-    m_axis_cc_tdata_int = 0;
-    m_axis_cc_tkeep_int = 0;
-    m_axis_cc_tvalid_int = 1'b0;
-    m_axis_cc_tlast_int = 1'b0;
-    m_axis_cc_tuser_int = 0;
-
-    // combine header and payload, merge in read request TLPs
-    case (tlp_output_state_reg)
-        TLP_OUTPUT_STATE_IDLE: begin
-            // idle state
-
-            if (tx_cpl_tlp_valid && m_axis_cc_tready_int) begin
-                if (AXIS_PCIE_DATA_WIDTH == 64) begin
-                    // 64 bit interface, send first half of header
-                    m_axis_cc_tdata_int = tlp_header_data[63:0];
-                    m_axis_cc_tkeep_int = 2'b11;
-                    m_axis_cc_tvalid_int = 1'b1;
-                    m_axis_cc_tlast_int = 1'b0;
-                    m_axis_cc_tuser_int = tlp_tuser;
-
-                    tlp_output_state_next = TLP_OUTPUT_STATE_HEADER;
-                end else begin
-                    // wider interface, send header and start of payload
-                    m_axis_cc_tdata_int = {tx_cpl_tlp_data, tlp_header_data};
-                    m_axis_cc_tkeep_int = {tx_cpl_tlp_strb, 3'b111};
-                    m_axis_cc_tvalid_int = 1'b1;
-                    m_axis_cc_tlast_int = 1'b0;
-                    m_axis_cc_tuser_int = tlp_tuser;
-
-                    tx_cpl_tlp_ready_cmb = 1'b1;
-
-                    out_tlp_data_next = tx_cpl_tlp_data;
-                    out_tlp_strb_next = tx_cpl_tlp_strb;
-                    out_tlp_eop_next = tx_cpl_tlp_eop;
-
-                    if (tx_cpl_tlp_eop && ((tx_cpl_tlp_strb >> (TLP_DATA_WIDTH_DWORDS-3)) == 0)) begin
-                        m_axis_cc_tlast_int = 1'b1;
-                        tlp_output_state_next = TLP_OUTPUT_STATE_IDLE;
-                    end else begin
-                        tlp_output_state_next = TLP_OUTPUT_STATE_PAYLOAD;
-                    end
-                end
-            end else begin
-                tlp_output_state_next = TLP_OUTPUT_STATE_IDLE;
-            end
-        end
-        TLP_OUTPUT_STATE_HEADER: begin
-            // second cycle of header (64 bit interface width only)
-            if (AXIS_PCIE_DATA_WIDTH == 64) begin
-                m_axis_cc_tdata_int = {tx_cpl_tlp_data, tlp_header_data[95:64]};
-                m_axis_cc_tkeep_int = {tx_cpl_tlp_strb, 1'b1};
-                m_axis_cc_tvalid_int = 1'b1;
-                m_axis_cc_tlast_int = 1'b0;
-                m_axis_cc_tuser_int = tlp_tuser;
-
-                tx_cpl_tlp_ready_cmb = 1'b1;
-
-                out_tlp_data_next = tx_cpl_tlp_data;
-                out_tlp_strb_next = tx_cpl_tlp_strb;
-                out_tlp_eop_next = tx_cpl_tlp_eop;
-
-                if (tx_cpl_tlp_eop && ((tx_cpl_tlp_strb >> (TLP_DATA_WIDTH_DWORDS-1)) == 0)) begin
-                    m_axis_cc_tlast_int = 1'b1;
-                    tlp_output_state_next = TLP_OUTPUT_STATE_IDLE;
-                end else begin
-                    tlp_output_state_next = TLP_OUTPUT_STATE_PAYLOAD;
-                end
-            end
-        end
-        TLP_OUTPUT_STATE_PAYLOAD: begin
-            // transfer payload
-            if (AXIS_PCIE_DATA_WIDTH >= 128) begin
-                m_axis_cc_tdata_int = {tx_cpl_tlp_data, out_tlp_data_reg[TLP_DATA_WIDTH-1:TLP_DATA_WIDTH-96]};
-                if (tx_cpl_tlp_valid && !out_tlp_eop_reg) begin
-                    m_axis_cc_tkeep_int = {tx_cpl_tlp_strb, out_tlp_strb_reg[TLP_STRB_WIDTH-1:TLP_DATA_WIDTH_DWORDS-3]};
-                end else begin
-                    m_axis_cc_tkeep_int = out_tlp_strb_reg[TLP_STRB_WIDTH-1:TLP_DATA_WIDTH_DWORDS-3];
-                end
-                m_axis_cc_tlast_int = 1'b0;
-                m_axis_cc_tuser_int = tlp_tuser;
-
-                if ((tx_cpl_tlp_valid || out_tlp_eop_reg) && m_axis_cc_tready_int) begin
-                    m_axis_cc_tvalid_int = 1'b1;
-                    tx_cpl_tlp_ready_cmb = !out_tlp_eop_reg;
-
-                    out_tlp_data_next = tx_cpl_tlp_data;
-                    out_tlp_strb_next = tx_cpl_tlp_strb;
-                    out_tlp_eop_next = tx_cpl_tlp_eop;
-
-                    if (out_tlp_eop_reg || (tx_cpl_tlp_eop && ((tx_cpl_tlp_strb >> (TLP_DATA_WIDTH_DWORDS-3)) == 0))) begin
-                        m_axis_cc_tlast_int = 1'b1;
-                        tlp_output_state_next = TLP_OUTPUT_STATE_IDLE;
-                    end else begin
-                        tlp_output_state_next = TLP_OUTPUT_STATE_PAYLOAD;
-                    end
-                end else begin
-                    tlp_output_state_next = TLP_OUTPUT_STATE_PAYLOAD;
-                end
-            end else begin
-                m_axis_cc_tdata_int = {tx_cpl_tlp_data, out_tlp_data_reg[TLP_DATA_WIDTH-1:TLP_DATA_WIDTH-32]};
-                if (tx_cpl_tlp_valid && !out_tlp_eop_reg) begin
-                    m_axis_cc_tkeep_int = {tx_cpl_tlp_strb, out_tlp_strb_reg[TLP_STRB_WIDTH-1:TLP_DATA_WIDTH_DWORDS-1]};
-                end else begin
-                    m_axis_cc_tkeep_int = out_tlp_strb_reg[TLP_STRB_WIDTH-1:TLP_DATA_WIDTH_DWORDS-1];
-                end
-                m_axis_cc_tlast_int = 1'b0;
-                m_axis_cc_tuser_int = tlp_tuser;
-
-                if ((tx_cpl_tlp_valid || out_tlp_eop_reg) && m_axis_cc_tready_int) begin
-                    m_axis_cc_tvalid_int = 1'b1;
-                    tx_cpl_tlp_ready_cmb = !out_tlp_eop_reg;
-
-                    out_tlp_data_next = tx_cpl_tlp_data;
-                    out_tlp_strb_next = tx_cpl_tlp_strb;
-                    out_tlp_eop_next = tx_cpl_tlp_eop;
-
-                    if (out_tlp_eop_reg || (tx_cpl_tlp_eop && ((tx_cpl_tlp_strb >> (TLP_DATA_WIDTH_DWORDS-1)) == 0))) begin
-                        m_axis_cc_tlast_int = 1'b1;
-                        tlp_output_state_next = TLP_OUTPUT_STATE_IDLE;
-                    end else begin
-                        tlp_output_state_next = TLP_OUTPUT_STATE_PAYLOAD;
-                    end
-                end else begin
-                    tlp_output_state_next = TLP_OUTPUT_STATE_PAYLOAD;
-                end
-            end
-        end
-    endcase
-end
-
-always @(posedge clk) begin
-    tlp_output_state_reg <= tlp_output_state_next;
-
-    out_tlp_data_reg <= out_tlp_data_next;
-    out_tlp_strb_reg <= out_tlp_strb_next;
-    out_tlp_eop_reg <= out_tlp_eop_next;
-
-    if (rst) begin
-        tlp_output_state_reg <= TLP_OUTPUT_STATE_IDLE;
-    end
-end
-
-// output datapath logic (PCIe TLP)
-reg [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_cc_tdata_reg = {AXIS_PCIE_DATA_WIDTH{1'b0}};
-reg [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_cc_tkeep_reg = {AXIS_PCIE_KEEP_WIDTH{1'b0}};
-reg                               m_axis_cc_tvalid_reg = 1'b0, m_axis_cc_tvalid_next;
-reg                               m_axis_cc_tlast_reg = 1'b0;
-reg [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser_reg = {AXIS_PCIE_CC_USER_WIDTH{1'b0}};
-
-reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_fifo_wr_ptr_reg = 0;
-reg [OUTPUT_FIFO_ADDR_WIDTH+1-1:0] out_fifo_rd_ptr_reg = 0;
-reg out_fifo_half_full_reg = 1'b0;
-
-wire out_fifo_full = out_fifo_wr_ptr_reg == (out_fifo_rd_ptr_reg ^ {1'b1, {OUTPUT_FIFO_ADDR_WIDTH{1'b0}}});
-wire out_fifo_empty = out_fifo_wr_ptr_reg == out_fifo_rd_ptr_reg;
-
-(* ram_style = "distributed" *)
-reg [AXIS_PCIE_DATA_WIDTH-1:0]    out_fifo_tdata[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
-reg [AXIS_PCIE_KEEP_WIDTH-1:0]    out_fifo_tkeep[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
-reg                               out_fifo_tlast[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-(* ram_style = "distributed" *)
-reg [AXIS_PCIE_CC_USER_WIDTH-1:0] out_fifo_tuser[2**OUTPUT_FIFO_ADDR_WIDTH-1:0];
-
-assign m_axis_cc_tready_int = !out_fifo_half_full_reg;
+reg [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_cc_tdata_reg = 0, m_axis_cc_tdata_next;
+reg [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_cc_tkeep_reg = 0, m_axis_cc_tkeep_next;
+reg m_axis_cc_tvalid_reg = 1'b0, m_axis_cc_tvalid_next;
+reg m_axis_cc_tlast_reg = 1'b0, m_axis_cc_tlast_next;
+reg [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser_reg = 0, m_axis_cc_tuser_next;
 
 assign m_axis_cc_tdata = m_axis_cc_tdata_reg;
 assign m_axis_cc_tkeep = m_axis_cc_tkeep_reg;
@@ -417,32 +176,382 @@ assign m_axis_cc_tvalid = m_axis_cc_tvalid_reg;
 assign m_axis_cc_tlast = m_axis_cc_tlast_reg;
 assign m_axis_cc_tuser = m_axis_cc_tuser_reg;
 
+wire [TLP_DATA_WIDTH-1:0] fifo_tlp_data;
+wire [TLP_STRB_WIDTH-1:0] fifo_tlp_strb;
+wire [INT_TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0] fifo_tlp_hdr;
+wire [INT_TLP_SEG_COUNT-1:0] fifo_tlp_valid;
+wire [INT_TLP_SEG_COUNT-1:0] fifo_tlp_sop;
+wire [INT_TLP_SEG_COUNT-1:0] fifo_tlp_eop;
+wire [SEG_SEL_WIDTH-1:0] fifo_seg_offset;
+wire [SEG_SEL_WIDTH+1-1:0] fifo_seg_count;
+reg fifo_read_en;
+reg [SEG_SEL_WIDTH+1-1:0] fifo_read_seg_count;
+
+// completions
+pcie_tlp_fifo_raw #(
+    .DEPTH((1024/4)*2),
+    .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
+    .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .SEQ_NUM_WIDTH(1),
+    .IN_TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .OUT_TLP_SEG_COUNT(INT_TLP_SEG_COUNT),
+    .CTRL_OUT_EN(0)
+)
+cpl_fifo_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * TLP input
+     */
+    .in_tlp_data(tx_cpl_tlp_data),
+    .in_tlp_strb(tx_cpl_tlp_strb),
+    .in_tlp_hdr(tx_cpl_tlp_hdr),
+    .in_tlp_seq(0),
+    .in_tlp_bar_id(0),
+    .in_tlp_func_num(0),
+    .in_tlp_error(0),
+    .in_tlp_valid(tx_cpl_tlp_valid),
+    .in_tlp_sop(tx_cpl_tlp_sop),
+    .in_tlp_eop(tx_cpl_tlp_eop),
+    .in_tlp_ready(tx_cpl_tlp_ready),
+
+    /*
+     * TLP output
+     */
+    .out_tlp_data(fifo_tlp_data),
+    .out_tlp_strb(fifo_tlp_strb),
+    .out_tlp_hdr(fifo_tlp_hdr),
+    .out_tlp_seq(),
+    .out_tlp_bar_id(),
+    .out_tlp_func_num(),
+    .out_tlp_error(),
+    .out_tlp_valid(fifo_tlp_valid),
+    .out_tlp_sop(fifo_tlp_sop),
+    .out_tlp_eop(fifo_tlp_eop),
+    .out_seg_offset(fifo_seg_offset),
+    .out_seg_count(fifo_seg_count),
+    .out_read_en(fifo_read_en),
+    .out_read_seg_count(fifo_read_seg_count),
+
+    .out_ctrl_tlp_strb(),
+    .out_ctrl_tlp_hdr(),
+    .out_ctrl_tlp_valid(),
+    .out_ctrl_tlp_sop(),
+    .out_ctrl_tlp_eop(),
+    .out_ctrl_seg_offset(),
+    .out_ctrl_seg_count(),
+    .out_ctrl_read_en(0),
+    .out_ctrl_read_seg_count(0),
+
+    /*
+     * Status
+     */
+    .half_full(),
+    .watermark()
+);
+
+integer seg, cur_seg, lane;
+
+always @* begin
+    frame_next = frame_reg;
+    tlp_hdr1_next = tlp_hdr1_reg;
+    tlp_hdr2_next = tlp_hdr2_reg;
+    tlp_split1_next = tlp_split1_reg;
+    tlp_split2_next = tlp_split2_reg;
+
+    m_axis_cc_tdata_next = m_axis_cc_tdata_reg;
+    m_axis_cc_tkeep_next = m_axis_cc_tkeep_reg;
+    m_axis_cc_tvalid_next = m_axis_cc_tvalid_reg && !m_axis_cc_tready;
+    m_axis_cc_tlast_next = m_axis_cc_tlast_reg;
+    m_axis_cc_tuser_next = m_axis_cc_tuser_reg;
+
+    fifo_read_en = 0;
+
+    frame_cyc = frame_reg;
+    tlp_hdr1_cyc = tlp_hdr1_reg;
+    tlp_hdr2_cyc = tlp_hdr2_reg;
+    tlp_split1_cyc = tlp_split1_reg;
+    tlp_split2_cyc = tlp_split2_reg;
+    seg_offset_cyc = fifo_seg_offset;
+    seg_count_cyc = 0;
+    valid = 0;
+    eop = 0;
+    frame = frame_cyc;
+    abort = 0;
+
+    fifo_read_seg_count = 0;
+
+    out_sel = 0;
+    out_sel_cyc = 0;
+    out_sop = 0;
+    out_eop = 0;
+    out_tlp_hdr1 = 0;
+    out_tlp_hdr2 = 0;
+    out_tlp_split1 = 0;
+    out_tlp_split2 = 0;
+    for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
+        out_sel_seg[seg] = 0;
+    end
+
+    out_shift_tlp_data_next = out_shift_tlp_data_reg;
+    out_shift_tlp_strb_next = out_shift_tlp_strb_reg;
+
+    // compute mux settings
+    for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
+        if (!frame_cyc && !abort) begin
+            tlp_hdr1_cyc = 1'b1;
+            tlp_hdr2_cyc = 1'b0;
+            tlp_split1_cyc = 1'b0;
+            tlp_split2_cyc = 1'b0;
+            if (fifo_tlp_valid[seg_offset_cyc]) begin
+                frame_cyc = 1'b1;
+            end
+        end
+
+        // route segment
+        valid = fifo_tlp_valid[seg_offset_cyc];
+        sop = fifo_tlp_sop[seg_offset_cyc];
+        eop = fifo_tlp_eop[seg_offset_cyc];
+        frame = frame_cyc;
+
+        out_sel_cyc[seg] = 1'b1;
+        out_sop[seg] = tlp_hdr1_cyc;
+        out_sel_seg[seg] = seg_offset_cyc;
+
+        out_tlp_hdr1[seg] = tlp_hdr1_cyc;
+        out_tlp_hdr2[seg] = tlp_hdr2_cyc;
+
+        if (AXIS_PCIE_DATA_WIDTH == 64 && tlp_hdr1_cyc) begin
+            // output header
+            tlp_hdr1_cyc = 1'b0;
+            tlp_hdr2_cyc = 1'b1;
+        end else if (eop && fifo_tlp_strb[seg_offset_cyc*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH] >> (INT_TLP_SEG_STRB_WIDTH-(AXIS_PCIE_DATA_WIDTH == 64 ? 1 : 3))) begin
+            // extra cycle
+            tlp_hdr1_cyc = 1'b0;
+            tlp_hdr2_cyc = 1'b0;
+            if (tlp_split1_cyc) begin
+                frame_cyc = 0;
+                out_eop[seg] = 1'b1;
+                tlp_split1_cyc = 1'b0;
+                tlp_split2_cyc = 1'b1;
+                seg_offset_cyc = seg_offset_cyc + 1;
+                seg_count_cyc = seg_count_cyc + 1;
+            end else begin
+                tlp_split1_cyc = 1'b1;
+            end
+        end else begin
+            tlp_hdr1_cyc = 1'b0;
+            tlp_hdr2_cyc = 1'b0;
+            if (eop) begin
+                // end of packet
+                frame_cyc = 0;
+                out_eop[seg] = 1'b1;
+            end
+            seg_offset_cyc = seg_offset_cyc + 1;
+            seg_count_cyc = seg_count_cyc + 1;
+        end
+
+        out_tlp_split1[seg] = tlp_split1_cyc;
+        out_tlp_split2[seg] = tlp_split2_cyc;
+
+        if (frame && !abort) begin
+            if (valid) begin
+                if (eop || seg == INT_TLP_SEG_COUNT-1) begin
+                    // end of packet or end of cycle, commit
+                    fifo_read_seg_count = seg_count_cyc;
+                    if (!m_axis_cc_tvalid || m_axis_cc_tready) begin
+                        frame_next = frame_cyc;
+                        tlp_hdr1_next = tlp_hdr1_cyc;
+                        tlp_hdr2_next = tlp_hdr2_cyc;
+                        tlp_split1_next = tlp_split1_cyc;
+                        tlp_split2_next = tlp_split2_cyc;
+                        out_sel = out_sel_cyc;
+                        fifo_read_en = seg_count_cyc != 0;
+                    end
+                end
+            end else begin
+                // input has stalled, wait
+                abort = 1;
+            end
+        end
+    end
+
+    out_tlp_data = 0;
+    out_tlp_strb = 0;
+    out_tlp_valid = 0;
+    out_tlp_sop = 0;
+    out_tlp_eop = 0;
+
+    for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
+        // remap header
+        seg_tlp_hdr = fifo_tlp_hdr[out_sel_seg[seg]*TLP_HDR_WIDTH +: TLP_HDR_WIDTH];
+        seg_cc_hdr[6:0] = seg_tlp_hdr[38:32]; // lower address
+        seg_cc_hdr[7] = 1'b0;
+        seg_cc_hdr[9:8] = seg_tlp_hdr[107:106]; // AT
+        seg_cc_hdr[15:10] = 6'd0;
+        seg_cc_hdr[28:16] = seg_tlp_hdr[75:64]; // Byte count
+        seg_cc_hdr[29] = 1'b0; // locked read completion
+        seg_cc_hdr[31:30] = 2'd0;
+        seg_cc_hdr[42:32] = seg_tlp_hdr[105:96]; // DWORD count
+        seg_cc_hdr[45:43] = seg_tlp_hdr[79:77]; // completion status
+        seg_cc_hdr[46] = seg_tlp_hdr[110]; // poisoned
+        seg_cc_hdr[47] = 1'b0;
+        seg_cc_hdr[63:48] = seg_tlp_hdr[63:48]; // requester ID
+        seg_cc_hdr[71:64] = seg_tlp_hdr[47:40]; // tag
+        seg_cc_hdr[87:72] = seg_tlp_hdr[95:80]; // completer ID
+        seg_cc_hdr[88] = 1'b0; // completer ID enable
+        seg_cc_hdr[91:89] = seg_tlp_hdr[118:116]; // TC
+        seg_cc_hdr[94:92] = {seg_tlp_hdr[114], seg_tlp_hdr[109:108]}; // attr
+        seg_cc_hdr[95] = 1'b0; // force ECRC
+
+        // mux for output segments
+        if (AXIS_PCIE_DATA_WIDTH == 64) begin
+            out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH] = out_shift_tlp_data_next;
+            out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH] = out_shift_tlp_strb_next;
+            out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH+32 +: INT_TLP_SEG_DATA_WIDTH-32] = fifo_tlp_data[out_sel_seg[seg]*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH-32];
+            if (!out_tlp_split2[seg]) begin
+                out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH+1 +: INT_TLP_SEG_STRB_WIDTH-1] = fifo_tlp_strb[out_sel_seg[seg]*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH-1];
+            end
+
+            if (out_tlp_hdr1[seg]) begin
+                out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH] = seg_cc_hdr[63:0];
+                out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH] = 2'b11;
+            end else if (out_tlp_hdr2[seg]) begin
+                out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: 32] = seg_cc_hdr[95:64];
+                out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: 1] = 1'b1;
+            end
+
+            out_tlp_valid[seg] = out_sel[seg];
+            out_tlp_sop[seg] = out_sop[seg];
+            out_tlp_eop[seg] = out_eop[seg];
+
+            if (out_sel[seg]) begin
+                out_shift_tlp_data_next = fifo_tlp_data[(out_sel_seg[seg]+1)*INT_TLP_SEG_DATA_WIDTH-32 +: 32];
+                out_shift_tlp_strb_next = fifo_tlp_strb[(out_sel_seg[seg]+1)*INT_TLP_SEG_STRB_WIDTH-1 +: 1];
+            end
+        end else begin
+            out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH] = out_shift_tlp_data_next;
+            out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH] = out_shift_tlp_strb_next;
+            out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH+96 +: INT_TLP_SEG_DATA_WIDTH-96] = fifo_tlp_data[out_sel_seg[seg]*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH-96];
+            if (!out_tlp_split2[seg]) begin
+                out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH+3 +: INT_TLP_SEG_STRB_WIDTH-3] = fifo_tlp_strb[out_sel_seg[seg]*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH-3];
+            end
+
+            if (out_tlp_hdr1[seg]) begin
+                out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: 96] = seg_cc_hdr;
+                out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: 3] = 3'b111;
+            end
+
+            out_tlp_valid[seg] = out_sel[seg];
+            out_tlp_sop[seg] = out_sop[seg];
+            out_tlp_eop[seg] = out_eop[seg];
+
+            if (out_sel[seg]) begin
+                out_shift_tlp_data_next = fifo_tlp_data[(out_sel_seg[seg]+1)*INT_TLP_SEG_DATA_WIDTH-96 +: 96];
+                out_shift_tlp_strb_next = fifo_tlp_strb[(out_sel_seg[seg]+1)*INT_TLP_SEG_STRB_WIDTH-3 +: 3];
+            end
+        end
+    end
+
+    if (!m_axis_cc_tvalid || m_axis_cc_tready) begin
+        // remap header and sideband
+        m_axis_cc_tdata_next = out_tlp_data;
+        m_axis_cc_tkeep_next = 0;
+        m_axis_cc_tvalid_next = out_tlp_valid != 0;
+        m_axis_cc_tlast_next = !(CC_STRADDLE && AXIS_PCIE_DATA_WIDTH == 512) && (out_tlp_valid & out_tlp_eop);
+        m_axis_cc_tuser_next = 0;
+
+        for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
+            if (out_tlp_valid[seg]) begin
+                m_axis_cc_tkeep_next[seg*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH] = out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH];
+            end
+
+            eop_index[seg*3 +: 3] = 0;
+            for (lane = 0; lane < INT_TLP_SEG_STRB_WIDTH; lane = lane + 1) begin
+                if (out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH+lane]) begin
+                    eop_index[seg*3 +: 3] = lane;
+                end
+            end
+        end
+
+        if (AXIS_PCIE_DATA_WIDTH == 512) begin
+            case (out_tlp_valid & out_tlp_sop)
+                2'b00: begin
+                    m_axis_cc_tuser_next[1:0] = 2'b00; // is_sop
+                    m_axis_cc_tuser_next[3:2] = 2'd0; // is_sop0_ptr
+                    m_axis_cc_tuser_next[5:4] = 2'd0; // is_sop1_ptr
+                end
+                2'b01: begin
+                    m_axis_cc_tuser_next[1:0] = 2'b01; // is_sop
+                    m_axis_cc_tuser_next[3:2] = 2'd0; // is_sop0_ptr
+                    m_axis_cc_tuser_next[5:4] = 2'd0; // is_sop1_ptr
+                end
+                2'b10: begin
+                    m_axis_cc_tuser_next[1:0] = 2'b01; // is_sop
+                    m_axis_cc_tuser_next[3:2] = 2'd2; // is_sop0_ptr
+                    m_axis_cc_tuser_next[5:4] = 2'd0; // is_sop1_ptr
+                end
+                2'b11: begin
+                    m_axis_cc_tuser_next[1:0] = 2'b11; // is_sop
+                    m_axis_cc_tuser_next[3:2] = 2'd0; // is_sop0_ptr
+                    m_axis_cc_tuser_next[5:4] = 2'd2; // is_sop1_ptr
+                end
+            endcase
+            case (out_tlp_valid & out_tlp_eop)
+                2'b00: begin
+                    m_axis_cc_tuser_next[7:6] = 2'b00; // is_eop
+                    m_axis_cc_tuser_next[11:8]  = 4'd0; // is_eop0_ptr
+                    m_axis_cc_tuser_next[15:12] = 4'd0; // is_eop1_ptr
+                end
+                2'b01: begin
+                    m_axis_cc_tuser_next[7:6] = 2'b01; // is_eop
+                    m_axis_cc_tuser_next[11:8]  = eop_index[0*3 +: 3]; // is_eop0_ptr
+                    m_axis_cc_tuser_next[15:12] = 4'd0; // is_eop1_ptr
+                end
+                2'b10: begin
+                    m_axis_cc_tuser_next[7:6] = 2'b01; // is_eop
+                    m_axis_cc_tuser_next[11:8]  = 4'd8+eop_index[1*3 +: 3]; // is_eop0_ptr
+                    m_axis_cc_tuser_next[15:12] = 4'd0; // is_eop1_ptr
+                end
+                2'b11: begin
+                    m_axis_cc_tuser_next[7:6] = 2'b11; // is_eop
+                    m_axis_cc_tuser_next[11:8]  = eop_index[0*3 +: 3]; // is_eop0_ptr
+                    m_axis_cc_tuser_next[15:12] = 4'd8+eop_index[1*3 +: 3]; // is_eop1_ptr
+                end
+            endcase
+            m_axis_cc_tuser_next[16] = 1'b0; // discontinue
+            m_axis_cc_tuser_next[80:17] = 64'd0; // parity
+        end else begin
+            m_axis_cc_tuser_next[1] = 1'b0; // discontinue
+            m_axis_cc_tuser_next[32:1] = 32'd0; // parity
+        end
+    end
+end
+
+integer i;
+
 always @(posedge clk) begin
-    m_axis_cc_tvalid_reg <= m_axis_cc_tvalid_reg && !m_axis_cc_tready;
+    frame_reg <= frame_next;
+    tlp_hdr1_reg <= tlp_hdr1_next;
+    tlp_hdr2_reg <= tlp_hdr2_next;
+    tlp_split1_reg <= tlp_split1_next;
+    tlp_split2_reg <= tlp_split2_next;
 
-    out_fifo_half_full_reg <= $unsigned(out_fifo_wr_ptr_reg - out_fifo_rd_ptr_reg) >= 2**(OUTPUT_FIFO_ADDR_WIDTH-1);
+    out_shift_tlp_data_reg <= out_shift_tlp_data_next;
+    out_shift_tlp_strb_reg <= out_shift_tlp_strb_next;
 
-    if (!out_fifo_full && m_axis_cc_tvalid_int) begin
-        out_fifo_tdata[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axis_cc_tdata_int;
-        out_fifo_tkeep[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axis_cc_tkeep_int;
-        out_fifo_tlast[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axis_cc_tlast_int;
-        out_fifo_tuser[out_fifo_wr_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]] <= m_axis_cc_tuser_int;
-        out_fifo_wr_ptr_reg <= out_fifo_wr_ptr_reg + 1;
-    end
-
-    if (!out_fifo_empty && (!m_axis_cc_tvalid_reg || m_axis_cc_tready)) begin
-        m_axis_cc_tdata_reg <= out_fifo_tdata[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
-        m_axis_cc_tkeep_reg <= out_fifo_tkeep[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
-        m_axis_cc_tvalid_reg <= 1'b1;
-        m_axis_cc_tlast_reg <= out_fifo_tlast[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
-        m_axis_cc_tuser_reg <= out_fifo_tuser[out_fifo_rd_ptr_reg[OUTPUT_FIFO_ADDR_WIDTH-1:0]];
-        out_fifo_rd_ptr_reg <= out_fifo_rd_ptr_reg + 1;
-    end
+    m_axis_cc_tdata_reg <= m_axis_cc_tdata_next;
+    m_axis_cc_tkeep_reg <= m_axis_cc_tkeep_next;
+    m_axis_cc_tvalid_reg <= m_axis_cc_tvalid_next;
+    m_axis_cc_tlast_reg <= m_axis_cc_tlast_next;
+    m_axis_cc_tuser_reg <= m_axis_cc_tuser_next;
 
     if (rst) begin
-        out_fifo_wr_ptr_reg <= 0;
-        out_fifo_rd_ptr_reg <= 0;
-        m_axis_cc_tvalid_reg <= 1'b0;
+        frame_reg <= 1'b0;
+
+        m_axis_cc_tvalid_reg <= 0;
     end
 end
 

@@ -414,7 +414,7 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 pcie_rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', '..', '..', 'rtl'))
 
 
-@pytest.mark.parametrize("data_width", [256])
+@pytest.mark.parametrize("data_width", [256, 512])
 @pytest.mark.parametrize("l_tile", [0, 1])
 def test_example_core_pcie_s10(request, data_width, l_tile):
     dut = "example_core_pcie_s10"
@@ -438,6 +438,9 @@ def test_example_core_pcie_s10(request, data_width, l_tile):
         os.path.join(pcie_rtl_dir, "pcie_tlp_demux_bar.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_demux.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_mux.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_fifo.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_fifo_raw.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_fifo_mux.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_rd.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_wr.v"),

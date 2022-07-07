@@ -292,7 +292,7 @@ proc do_create_pcie {} {
 	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_pf3_msix_enable_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_pf3_tph_cap_enable_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {virtual_rp_ep_mode_hwtcl} {Native Endpoint}
-	set_instance_parameter_value pcie_s10_hip_ast_0 {wrala_hwtcl} {Gen3x8, Interface - 256 bit, 250 MHz}
+	set_instance_parameter_value pcie_s10_hip_ast_0 {wrala_hwtcl} {Gen3x16, Interface - 512 bit, 250 MHz}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {xcvr_adme_hwtcl} {0}
 	set_instance_parameter_value pcie_s10_hip_ast_0 {xcvr_reconfig_hwtcl} {0}
 	set_instance_property pcie_s10_hip_ast_0 AUTO_EXPORT true

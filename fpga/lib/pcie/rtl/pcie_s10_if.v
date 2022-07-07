@@ -127,6 +127,7 @@ module pcie_s10_if #
      * TLP output (request to BAR)
      */
     output wire [TLP_DATA_WIDTH-1:0]                  rx_req_tlp_data,
+    output wire [TLP_STRB_WIDTH-1:0]                  rx_req_tlp_strb,
     output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]     rx_req_tlp_hdr,
     output wire [TLP_SEG_COUNT*3-1:0]                 rx_req_tlp_bar_id,
     output wire [TLP_SEG_COUNT*8-1:0]                 rx_req_tlp_func_num,
@@ -139,6 +140,7 @@ module pcie_s10_if #
      * TLP output (completion to DMA)
      */
     output wire [TLP_DATA_WIDTH-1:0]                  rx_cpl_tlp_data,
+    output wire [TLP_STRB_WIDTH-1:0]                  rx_cpl_tlp_strb,
     output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]     rx_cpl_tlp_hdr,
     output wire [TLP_SEG_COUNT*4-1:0]                 rx_cpl_tlp_error,
     output wire [TLP_SEG_COUNT-1:0]                   rx_cpl_tlp_valid,
@@ -194,12 +196,12 @@ module pcie_s10_if #
     /*
      * TLP input (write request from MSI)
      */
-    input  wire [TLP_DATA_WIDTH-1:0]                  tx_msi_wr_req_tlp_data,
-    input  wire [TLP_STRB_WIDTH-1:0]                  tx_msi_wr_req_tlp_strb,
-    input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]     tx_msi_wr_req_tlp_hdr,
-    input  wire [TLP_SEG_COUNT-1:0]                   tx_msi_wr_req_tlp_valid,
-    input  wire [TLP_SEG_COUNT-1:0]                   tx_msi_wr_req_tlp_sop,
-    input  wire [TLP_SEG_COUNT-1:0]                   tx_msi_wr_req_tlp_eop,
+    input  wire [31:0]                                tx_msi_wr_req_tlp_data,
+    input  wire                                       tx_msi_wr_req_tlp_strb,
+    input  wire [TLP_HDR_WIDTH-1:0]                   tx_msi_wr_req_tlp_hdr,
+    input  wire                                       tx_msi_wr_req_tlp_valid,
+    input  wire                                       tx_msi_wr_req_tlp_sop,
+    input  wire                                       tx_msi_wr_req_tlp_eop,
     output wire                                       tx_msi_wr_req_tlp_ready,
 
     /*
@@ -263,6 +265,7 @@ pcie_s10_if_rx_inst (
      * TLP output (request to BAR)
      */
     .rx_req_tlp_data(rx_req_tlp_data),
+    .rx_req_tlp_strb(rx_req_tlp_strb),
     .rx_req_tlp_hdr(rx_req_tlp_hdr),
     .rx_req_tlp_bar_id(rx_req_tlp_bar_id),
     .rx_req_tlp_func_num(rx_req_tlp_func_num),
@@ -275,6 +278,7 @@ pcie_s10_if_rx_inst (
      * TLP output (completion to DMA)
      */
     .rx_cpl_tlp_data(rx_cpl_tlp_data),
+    .rx_cpl_tlp_strb(rx_cpl_tlp_strb),
     .rx_cpl_tlp_hdr(rx_cpl_tlp_hdr),
     .rx_cpl_tlp_error(rx_cpl_tlp_error),
     .rx_cpl_tlp_valid(rx_cpl_tlp_valid),

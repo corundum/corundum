@@ -82,6 +82,7 @@ module example_core_pcie #
      * TLP input (request)
      */
     input  wire [TLP_DATA_WIDTH-1:0]                     rx_req_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                     rx_req_tlp_strb,
     input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        rx_req_tlp_hdr,
     input  wire [TLP_SEG_COUNT*3-1:0]                    rx_req_tlp_bar_id,
     input  wire [TLP_SEG_COUNT*8-1:0]                    rx_req_tlp_func_num,
@@ -105,6 +106,7 @@ module example_core_pcie #
      * TLP input (completion)
      */
     input  wire [TLP_DATA_WIDTH-1:0]                     rx_cpl_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                     rx_cpl_tlp_strb,
     input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        rx_cpl_tlp_hdr,
     input  wire [TLP_SEG_COUNT*4-1:0]                    rx_cpl_tlp_error,
     input  wire [TLP_SEG_COUNT-1:0]                      rx_cpl_tlp_valid,
@@ -255,6 +257,7 @@ wire [2:0] status_error_uncor_int;
 
 // PCIe connections
 wire [TLP_DATA_WIDTH-1:0]               ctrl_rx_req_tlp_data;
+wire [TLP_STRB_WIDTH-1:0]               ctrl_rx_req_tlp_strb;
 wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  ctrl_rx_req_tlp_hdr;
 wire [TLP_SEG_COUNT*3-1:0]              ctrl_rx_req_tlp_bar_id;
 wire [TLP_SEG_COUNT*8-1:0]              ctrl_rx_req_tlp_func_num;
@@ -272,6 +275,7 @@ wire [TLP_SEG_COUNT-1:0]                ctrl_tx_cpl_tlp_eop;
 wire                                    ctrl_tx_cpl_tlp_ready;
 
 wire [TLP_DATA_WIDTH-1:0]               ram_rx_req_tlp_data;
+wire [TLP_STRB_WIDTH-1:0]               ram_rx_req_tlp_strb;
 wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  ram_rx_req_tlp_hdr;
 wire [TLP_SEG_COUNT*3-1:0]              ram_rx_req_tlp_bar_id;
 wire [TLP_SEG_COUNT*8-1:0]              ram_rx_req_tlp_func_num;
@@ -293,7 +297,9 @@ pcie_tlp_demux_bar #(
     .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
     .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .IN_TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .OUT_TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .FIFO_ENABLE(0),
     .BAR_BASE(0),
     .BAR_STRIDE(2),
     .BAR_IDS(0)
@@ -306,7 +312,7 @@ pcie_tlp_demux_inst (
      * TLP input
      */
     .in_tlp_data(rx_req_tlp_data),
-    .in_tlp_strb(0),
+    .in_tlp_strb(rx_req_tlp_strb),
     .in_tlp_hdr(rx_req_tlp_hdr),
     .in_tlp_bar_id(rx_req_tlp_bar_id),
     .in_tlp_func_num(rx_req_tlp_func_num),
@@ -320,7 +326,7 @@ pcie_tlp_demux_inst (
      * TLP output
      */
     .out_tlp_data(    {ram_rx_req_tlp_data,     ctrl_rx_req_tlp_data    }),
-    .out_tlp_strb(),
+    .out_tlp_strb(    {ram_rx_req_tlp_strb,     ctrl_rx_req_tlp_strb    }),
     .out_tlp_hdr(     {ram_rx_req_tlp_hdr,      ctrl_rx_req_tlp_hdr     }),
     .out_tlp_bar_id(  {ram_rx_req_tlp_bar_id,   ctrl_rx_req_tlp_bar_id  }),
     .out_tlp_func_num({ram_rx_req_tlp_func_num, ctrl_rx_req_tlp_func_num}),
@@ -333,7 +339,13 @@ pcie_tlp_demux_inst (
     /*
      * Control
      */
-    .enable(1'b1)
+    .enable(1'b1),
+
+    /*
+     * Status
+     */
+    .fifo_half_full(),
+    .fifo_watermark()
 );
 
 pcie_tlp_mux #(
@@ -355,6 +367,7 @@ pcie_tlp_mux_inst (
     .in_tlp_data( {ram_tx_cpl_tlp_data,  ctrl_tx_cpl_tlp_data }),
     .in_tlp_strb( {ram_tx_cpl_tlp_strb,  ctrl_tx_cpl_tlp_strb }),
     .in_tlp_hdr(  {ram_tx_cpl_tlp_hdr,   ctrl_tx_cpl_tlp_hdr  }),
+    .in_tlp_seq(0),
     .in_tlp_bar_id(0),
     .in_tlp_func_num(0),
     .in_tlp_error(0),
@@ -369,13 +382,20 @@ pcie_tlp_mux_inst (
     .out_tlp_data(tx_cpl_tlp_data),
     .out_tlp_strb(tx_cpl_tlp_strb),
     .out_tlp_hdr(tx_cpl_tlp_hdr),
+    .out_tlp_seq(),
     .out_tlp_bar_id(),
     .out_tlp_func_num(),
     .out_tlp_error(),
     .out_tlp_valid(tx_cpl_tlp_valid),
     .out_tlp_sop(tx_cpl_tlp_sop),
     .out_tlp_eop(tx_cpl_tlp_eop),
-    .out_tlp_ready(tx_cpl_tlp_ready)
+    .out_tlp_ready(tx_cpl_tlp_ready),
+
+    /*
+     * Status
+     */
+    .sel_tlp_seq(),
+    .sel_tlp_seq_valid()
 );
 
 pcie_axil_master #(

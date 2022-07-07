@@ -33,7 +33,7 @@ THE SOFTWARE.
  */
 module fpga_core #
 (
-    parameter SEG_COUNT = 1,
+    parameter SEG_COUNT = 2,
     parameter SEG_DATA_WIDTH = 256,
     parameter SEG_EMPTY_WIDTH = $clog2(SEG_DATA_WIDTH/32),
     parameter TX_SEQ_NUM_WIDTH = 6,

@@ -552,7 +552,7 @@ tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
-@pytest.mark.parametrize("data_width", [256])
+@pytest.mark.parametrize("data_width", [256, 512])
 @pytest.mark.parametrize("l_tile", [0])
 def test_pcie_s10_if(request, data_width, l_tile):
     dut = "pcie_s10_if"
@@ -565,6 +565,10 @@ def test_pcie_s10_if(request, data_width, l_tile):
         os.path.join(rtl_dir, f"{dut}_tx.v"),
         os.path.join(rtl_dir, "pcie_s10_cfg.v"),
         os.path.join(rtl_dir, "pcie_s10_msi.v"),
+        os.path.join(rtl_dir, "pcie_tlp_demux.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo_mux.v"),
         os.path.join(rtl_dir, "arbiter.v"),
         os.path.join(rtl_dir, "priority_encoder.v"),
     ]

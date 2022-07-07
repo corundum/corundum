@@ -51,6 +51,150 @@ static const struct pci_device_id pci_ids[] = {
 
 MODULE_DEVICE_TABLE(pci, pci_ids);
 
+static void dma_block_read(struct example_dev *edev,
+		dma_addr_t dma_addr, size_t dma_offset,
+		size_t dma_offset_mask, size_t dma_stride,
+		size_t ram_addr, size_t ram_offset,
+		size_t ram_offset_mask, size_t ram_stride,
+		size_t block_len, size_t block_count)
+{
+	unsigned long t;
+
+	// DMA base address
+	iowrite32(dma_addr & 0xffffffff, edev->bar[0] + 0x001080);
+	iowrite32((dma_addr >> 32) & 0xffffffff, edev->bar[0] + 0x001084);
+	// DMA offset address
+	iowrite32(dma_offset & 0xffffffff, edev->bar[0] + 0x001088);
+	iowrite32((dma_offset >> 32) & 0xffffffff, edev->bar[0] + 0x00108c);
+	// DMA offset mask
+	iowrite32(dma_offset_mask & 0xffffffff, edev->bar[0] + 0x001090);
+	iowrite32((dma_offset_mask >> 32) & 0xffffffff, edev->bar[0] + 0x001094);
+	// DMA stride
+	iowrite32(dma_stride & 0xffffffff, edev->bar[0] + 0x001098);
+	iowrite32((dma_stride >> 32) & 0xffffffff, edev->bar[0] + 0x00109c);
+	// RAM base address
+	iowrite32(ram_addr & 0xffffffff, edev->bar[0] + 0x0010c0);
+	iowrite32((ram_addr >> 32) & 0xffffffff, edev->bar[0] + 0x0010c4);
+	// RAM offset address
+	iowrite32(ram_offset & 0xffffffff, edev->bar[0] + 0x0010c8);
+	iowrite32((ram_offset >> 32) & 0xffffffff, edev->bar[0] + 0x0010cc);
+	// RAM offset mask
+	iowrite32(ram_offset_mask & 0xffffffff, edev->bar[0] + 0x0010d0);
+	iowrite32((ram_offset_mask >> 32) & 0xffffffff, edev->bar[0] + 0x0010d4);
+	// RAM stride
+	iowrite32(ram_stride & 0xffffffff, edev->bar[0] + 0x0010d8);
+	iowrite32((ram_stride >> 32) & 0xffffffff, edev->bar[0] + 0x0010dc);
+	// clear cycle count
+	iowrite32(0, edev->bar[0] + 0x001008);
+	iowrite32(0, edev->bar[0] + 0x00100c);
+	// block length
+	iowrite32(block_len, edev->bar[0] + 0x001010);
+	// block count
+	iowrite32(block_count, edev->bar[0] + 0x001018);
+	// start
+	iowrite32(1, edev->bar[0] + 0x001000);
+
+	// wait for transfer to complete
+	t = jiffies + msecs_to_jiffies(20000);
+	while (time_before(jiffies, t)) {
+		if ((ioread32(edev->bar[0] + 0x001000) & 1) == 0)
+			break;
+	}
+
+	if ((ioread32(edev->bar[0] + 0x001000) & 1) != 0)
+		dev_warn(edev->dev, "%s: operation timed out", __func__);
+}
+
+static void dma_block_write(struct example_dev *edev,
+		dma_addr_t dma_addr, size_t dma_offset,
+		size_t dma_offset_mask, size_t dma_stride,
+		size_t ram_addr, size_t ram_offset,
+		size_t ram_offset_mask, size_t ram_stride,
+		size_t block_len, size_t block_count)
+{
+	unsigned long t;
+
+	// DMA base address
+	iowrite32(dma_addr & 0xffffffff, edev->bar[0] + 0x001180);
+	iowrite32((dma_addr >> 32) & 0xffffffff, edev->bar[0] + 0x001184);
+	// DMA offset address
+	iowrite32(dma_offset & 0xffffffff, edev->bar[0] + 0x001188);
+	iowrite32((dma_offset >> 32) & 0xffffffff, edev->bar[0] + 0x00118c);
+	// DMA offset mask
+	iowrite32(dma_offset_mask & 0xffffffff, edev->bar[0] + 0x001190);
+	iowrite32((dma_offset_mask >> 32) & 0xffffffff, edev->bar[0] + 0x001194);
+	// DMA stride
+	iowrite32(dma_stride & 0xffffffff, edev->bar[0] + 0x001198);
+	iowrite32((dma_stride >> 32) & 0xffffffff, edev->bar[0] + 0x00119c);
+	// RAM base address
+	iowrite32(ram_addr & 0xffffffff, edev->bar[0] + 0x0011c0);
+	iowrite32((ram_addr >> 32) & 0xffffffff, edev->bar[0] + 0x0011c4);
+	// RAM offset address
+	iowrite32(ram_offset & 0xffffffff, edev->bar[0] + 0x0011c8);
+	iowrite32((ram_offset >> 32) & 0xffffffff, edev->bar[0] + 0x0011cc);
+	// RAM offset mask
+	iowrite32(ram_offset_mask & 0xffffffff, edev->bar[0] + 0x0011d0);
+	iowrite32((ram_offset_mask >> 32) & 0xffffffff, edev->bar[0] + 0x0011d4);
+	// RAM stride
+	iowrite32(ram_stride & 0xffffffff, edev->bar[0] + 0x0011d8);
+	iowrite32((ram_stride >> 32) & 0xffffffff, edev->bar[0] + 0x0011dc);
+	// clear cycle count
+	iowrite32(0, edev->bar[0] + 0x001108);
+	iowrite32(0, edev->bar[0] + 0x00110c);
+	// block length
+	iowrite32(block_len, edev->bar[0] + 0x001110);
+	// block count
+	iowrite32(block_count, edev->bar[0] + 0x001118);
+	// start
+	iowrite32(1, edev->bar[0] + 0x001100);
+
+	// wait for transfer to complete
+	t = jiffies + msecs_to_jiffies(20000);
+	while (time_before(jiffies, t)) {
+		if ((ioread32(edev->bar[0] + 0x001100) & 1) == 0)
+			break;
+	}
+
+	if ((ioread32(edev->bar[0] + 0x001100) & 1) != 0)
+		dev_warn(edev->dev, "%s: operation timed out", __func__);
+}
+
+static void dma_block_read_bench(struct example_dev *edev,
+		dma_addr_t dma_addr, u64 size, u64 stride, u64 count)
+{
+	u64 cycles;
+
+	udelay(5);
+
+	dma_block_read(edev, dma_addr, 0, 0x3fff, stride,
+			0, 0, 0x3fff, stride, size, count);
+
+	cycles = ioread32(edev->bar[0] + 0x001008);
+
+	udelay(5);
+
+	dev_info(edev->dev, "read %lld blocks of %lld bytes (stride %lld) in %lld ns: %lld Mbps",
+			count, size, stride, cycles * 4, size * count * 8 * 1000 / (cycles * 4));
+}
+
+static void dma_block_write_bench(struct example_dev *edev,
+		dma_addr_t dma_addr, u64 size, u64 stride, u64 count)
+{
+	u64 cycles;
+
+	udelay(5);
+
+	dma_block_write(edev, dma_addr, 0, 0x3fff, stride,
+			0, 0, 0x3fff, stride, size, count);
+
+	cycles = ioread32(edev->bar[0] + 0x001108);
+
+	udelay(5);
+
+	dev_info(edev->dev, "wrote %lld blocks of %lld bytes (stride %lld) in %lld ns: %lld Mbps",
+			count, size, stride, cycles * 4, size * count * 8 * 1000 / (cycles * 4));
+}
+
 static irqreturn_t edev_intr(int irq, void *data)
 {
 	struct example_dev *edev = data;
@@ -70,6 +214,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	struct device *dev = &pdev->dev;
 
 	int k;
+	int mismatch = 0;
 
 	dev_info(dev, DRIVER_NAME " probe");
 	dev_info(dev, " Vendor: 0x%04x", pdev->vendor);
@@ -117,6 +262,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 		return -ENOMEM;
 
 	edev->pdev = pdev;
+	edev->dev = dev;
 	pci_set_drvdata(pdev, edev);
 
 	// Allocate DMA buffer
@@ -234,6 +380,13 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 16, 1,
 			edev->dma_region + 0x0200, 256, true);
 
+	if (memcmp(edev->dma_region + 0x0000, edev->dma_region + 0x0200, 256) == 0) {
+		dev_info(dev, "test data matches");
+	} else {
+		dev_warn(dev, "test data mismatch");
+		mismatch = 1;
+	}
+
 	dev_info(dev, "start immediate write to host");
 	iowrite32((edev->dma_region_addr + 0x0200) & 0xffffffff, edev->bar[0] + 0x000200);
 	iowrite32(((edev->dma_region_addr + 0x0200) >> 32) & 0xffffffff, edev->bar[0] + 0x000204);
@@ -250,6 +403,34 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	dev_info(dev, "read data");
 	print_hex_dump(KERN_INFO, "", DUMP_PREFIX_NONE, 16, 1,
 			edev->dma_region + 0x0200, 4, true);
+
+	if (!mismatch) {
+		u64 size;
+		u64 stride;
+
+		dev_info(dev, "disable interrupts");
+		iowrite32(0x0, edev->bar[0] + 0x000008);
+
+		dev_info(dev, "perform block reads (dma_alloc_coherent)");
+
+		for (size = 1; size <= 8192; size *= 2) {
+			for (stride = size; stride <= max(size, 256llu); stride *= 2) {
+				dma_block_read_bench(edev,
+						edev->dma_region_addr + 0x0000,
+						size, stride, 10000);
+			}
+		}
+
+		dev_info(dev, "perform block writes (dma_alloc_coherent)");
+
+		for (size = 1; size <= 8192; size *= 2) {
+			for (stride = size; stride <= max(size, 256llu); stride *= 2) {
+				dma_block_write_bench(edev,
+						edev->dma_region_addr + 0x0000,
+						size, stride, 10000);
+			}
+		}
+	}
 
 	// probe complete
 	return 0;

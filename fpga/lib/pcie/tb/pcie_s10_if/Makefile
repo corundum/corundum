@@ -34,11 +34,15 @@ VERILOG_SOURCES += ../../rtl/$(DUT)_rx.v
 VERILOG_SOURCES += ../../rtl/$(DUT)_tx.v
 VERILOG_SOURCES += ../../rtl/pcie_s10_cfg.v
 VERILOG_SOURCES += ../../rtl/pcie_s10_msi.v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_demux.v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo.v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_raw.v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_mux.v
 VERILOG_SOURCES += ../../rtl/arbiter.v
 VERILOG_SOURCES += ../../rtl/priority_encoder.v
 
 # module parameters
-export PARAM_SEG_COUNT ?= 1
+export PARAM_SEG_COUNT ?= 2
 export PARAM_SEG_DATA_WIDTH ?= 256
 export PARAM_SEG_EMPTY_WIDTH ?= $(shell python -c "print((($(PARAM_SEG_DATA_WIDTH)//32)-1).bit_length())" )
 export PARAM_TLP_DATA_WIDTH ?= $(shell expr $(PARAM_SEG_COUNT) \* $(PARAM_SEG_DATA_WIDTH) )

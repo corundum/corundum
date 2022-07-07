@@ -45,6 +45,14 @@ module example_core_pcie_us #
     parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
     // PCIe AXI stream CC tuser signal width
     parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
+    // RC interface TLP straddling
+    parameter RC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 256,
+    // RQ interface TLP straddling
+    parameter RQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512,
+    // CQ interface TLP straddling
+    parameter CQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512,
+    // CC interface TLP straddling
+    parameter CC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512,
     // RQ sequence number width
     parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
     // RQ sequence number tracking enable
@@ -194,6 +202,7 @@ parameter F_COUNT = PF_COUNT+VF_COUNT;
 parameter MSI_COUNT = 32;
 
 wire [TLP_DATA_WIDTH-1:0]                     pcie_rx_req_tlp_data;
+wire [TLP_STRB_WIDTH-1:0]                     pcie_rx_req_tlp_strb;
 wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        pcie_rx_req_tlp_hdr;
 wire [TLP_SEG_COUNT*3-1:0]                    pcie_rx_req_tlp_bar_id;
 wire [TLP_SEG_COUNT*8-1:0]                    pcie_rx_req_tlp_func_num;
@@ -203,6 +212,7 @@ wire [TLP_SEG_COUNT-1:0]                      pcie_rx_req_tlp_eop;
 wire                                          pcie_rx_req_tlp_ready;
 
 wire [TLP_DATA_WIDTH-1:0]                     pcie_rx_cpl_tlp_data;
+wire [TLP_STRB_WIDTH-1:0]                     pcie_rx_cpl_tlp_strb;
 wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        pcie_rx_cpl_tlp_hdr;
 wire [TLP_SEG_COUNT*4-1:0]                    pcie_rx_cpl_tlp_error;
 wire [TLP_SEG_COUNT-1:0]                      pcie_rx_cpl_tlp_valid;
@@ -254,6 +264,10 @@ pcie_us_if #(
     .AXIS_PCIE_RQ_USER_WIDTH(AXIS_PCIE_RQ_USER_WIDTH),
     .AXIS_PCIE_CQ_USER_WIDTH(AXIS_PCIE_CQ_USER_WIDTH),
     .AXIS_PCIE_CC_USER_WIDTH(AXIS_PCIE_CC_USER_WIDTH),
+    .RC_STRADDLE(RC_STRADDLE),
+    .RQ_STRADDLE(RQ_STRADDLE),
+    .CQ_STRADDLE(CQ_STRADDLE),
+    .CC_STRADDLE(CC_STRADDLE),
     .RQ_SEQ_NUM_WIDTH(RQ_SEQ_NUM_WIDTH),
     .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
@@ -371,6 +385,7 @@ pcie_us_if_inst (
      * TLP output (request to BAR)
      */
     .rx_req_tlp_data(pcie_rx_req_tlp_data),
+    .rx_req_tlp_strb(pcie_rx_req_tlp_strb),
     .rx_req_tlp_hdr(pcie_rx_req_tlp_hdr),
     .rx_req_tlp_bar_id(pcie_rx_req_tlp_bar_id),
     .rx_req_tlp_func_num(pcie_rx_req_tlp_func_num),
@@ -383,6 +398,7 @@ pcie_us_if_inst (
      * TLP output (completion to DMA)
      */
     .rx_cpl_tlp_data(pcie_rx_cpl_tlp_data),
+    .rx_cpl_tlp_strb(pcie_rx_cpl_tlp_strb),
     .rx_cpl_tlp_hdr(pcie_rx_cpl_tlp_hdr),
     .rx_cpl_tlp_error(pcie_rx_cpl_tlp_error),
     .rx_cpl_tlp_valid(pcie_rx_cpl_tlp_valid),
@@ -434,6 +450,17 @@ pcie_us_if_inst (
     .tx_cpl_tlp_sop(pcie_tx_cpl_tlp_sop),
     .tx_cpl_tlp_eop(pcie_tx_cpl_tlp_eop),
     .tx_cpl_tlp_ready(pcie_tx_cpl_tlp_ready),
+
+    /*
+     * TLP input (write request from MSI-X)
+     */
+    .tx_msix_wr_req_tlp_data(0),
+    .tx_msix_wr_req_tlp_strb(0),
+    .tx_msix_wr_req_tlp_hdr(0),
+    .tx_msix_wr_req_tlp_valid(0),
+    .tx_msix_wr_req_tlp_sop(0),
+    .tx_msix_wr_req_tlp_eop(0),
+    .tx_msix_wr_req_tlp_ready(),
 
     /*
      * Flow control
@@ -488,6 +515,7 @@ core_pcie_inst (
      * TLP input (request)
      */
     .rx_req_tlp_data(pcie_rx_req_tlp_data),
+    .rx_req_tlp_strb(pcie_rx_req_tlp_strb),
     .rx_req_tlp_hdr(pcie_rx_req_tlp_hdr),
     .rx_req_tlp_valid(pcie_rx_req_tlp_valid),
     .rx_req_tlp_bar_id(pcie_rx_req_tlp_bar_id),
@@ -511,6 +539,7 @@ core_pcie_inst (
      * TLP input (completion)
      */
     .rx_cpl_tlp_data(pcie_rx_cpl_tlp_data),
+    .rx_cpl_tlp_strb(pcie_rx_cpl_tlp_strb),
     .rx_cpl_tlp_hdr(pcie_rx_cpl_tlp_hdr),
     .rx_cpl_tlp_error(pcie_rx_cpl_tlp_error),
     .rx_cpl_tlp_valid(pcie_rx_cpl_tlp_valid),

@@ -66,11 +66,11 @@ class TB(object):
             # pcie_link_width=2,
             # user_clk_frequency=250e6,
             alignment="dword",
-            cq_straddle=False,
-            cc_straddle=False,
-            rq_straddle=False,
-            rc_straddle=False,
-            rc_4tlp_straddle=False,
+            cq_straddle=len(dut.pcie_us_if_cq_inst.rx_req_tlp_valid_reg) > 1,
+            cc_straddle=len(dut.pcie_us_if_cc_inst.out_tlp_valid) > 1,
+            rq_straddle=len(dut.pcie_us_if_rq_inst.out_tlp_valid) > 1,
+            rc_straddle=len(dut.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 1,
+            rc_4tlp_straddle=len(dut.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 2,
             pf_count=1,
             max_payload_size=1024,
             enable_client_tag=True,
@@ -427,6 +427,8 @@ async def run_test_dma(dut, idle_inserter=None, backpressure_inserter=None):
             # wait for write to complete
             while not tb.test_dev.tx_wr_req_tlp_source.empty() or tb.test_dev.tx_wr_req_tlp_source.active:
                 await RisingEdge(dut.clk)
+            await Timer(100, 'ns')
+            await tb.test_dev.dma_mem_read(addr, 1, timeout=5000, timeout_unit='ns')
             await tb.test_dev.dma_mem_read(addr, 1, timeout=5000, timeout_unit='ns')
             assert mem[offset:offset+length] == test_data
 
@@ -592,8 +594,9 @@ tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
-@pytest.mark.parametrize("axis_pcie_data_width", [64, 128, 256, 512])
-def test_pcie_us_if(request, axis_pcie_data_width):
+@pytest.mark.parametrize(("axis_pcie_data_width", "straddle"),
+    [(64, False), (128, False), (256, False), (256, True), (512, False), (512, True)])
+def test_pcie_us_if(request, axis_pcie_data_width, straddle):
     dut = "pcie_us_if"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -606,6 +609,8 @@ def test_pcie_us_if(request, axis_pcie_data_width):
         os.path.join(rtl_dir, f"{dut}_cq.v"),
         os.path.join(rtl_dir, "pcie_us_cfg.v"),
         os.path.join(rtl_dir, "pcie_us_msi.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
         os.path.join(rtl_dir, "arbiter.v"),
         os.path.join(rtl_dir, "priority_encoder.v"),
     ]
@@ -618,8 +623,12 @@ def test_pcie_us_if(request, axis_pcie_data_width):
     parameters['AXIS_PCIE_RC_USER_WIDTH'] = 75 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 161
     parameters['AXIS_PCIE_CQ_USER_WIDTH'] = 88 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 183
     parameters['AXIS_PCIE_CC_USER_WIDTH'] = 33 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 81
+    parameters['RC_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 256 and straddle)
+    parameters['RQ_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512 and straddle)
+    parameters['CQ_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512 and straddle)
+    parameters['CC_STRADDLE'] = int(parameters['AXIS_PCIE_DATA_WIDTH'] >= 512 and straddle)
     parameters['RQ_SEQ_NUM_WIDTH'] = 4 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 6
-    parameters['TLP_DATA_WIDTH'] = axis_pcie_data_width
+    parameters['TLP_DATA_WIDTH'] = parameters['AXIS_PCIE_DATA_WIDTH']
     parameters['TLP_STRB_WIDTH'] = parameters['TLP_DATA_WIDTH'] // 32
     parameters['TLP_HDR_WIDTH'] = 128
     parameters['TLP_SEG_COUNT'] = 1

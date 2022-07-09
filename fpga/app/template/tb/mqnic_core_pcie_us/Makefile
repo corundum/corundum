@@ -191,7 +191,7 @@ export PARAM_TX_RAM_SIZE ?= 131072
 export PARAM_RX_RAM_SIZE ?= 131072
 
 # Application block configuration
-export PARAM_APP_ID ?= $(shell echo $$((16#12340001)) )
+export PARAM_APP_ID ?= $(shell echo $$((0x12340001)) )
 export PARAM_APP_ENABLE ?= 1
 export PARAM_APP_CTRL_ENABLE ?= 1
 export PARAM_APP_DMA_ENABLE ?= 1

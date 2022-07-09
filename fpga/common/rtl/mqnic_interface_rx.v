@@ -308,15 +308,18 @@ always @(posedge clk) begin
         rx_req_cnt_reg <= rx_req_cnt_reg - 1;
     end
 
-    if (s_axis_rx_tready && s_axis_rx_tvalid) begin
+    if (s_axis_rx_tvalid) begin
         if (!rx_frame_reg) begin
             if (rx_req_valid && rx_req_ready) begin
                 rx_req_cnt_reg <= rx_req_cnt_reg;
             end else begin
                 rx_req_cnt_reg <= rx_req_cnt_reg + 1;
             end
+            rx_frame_reg <= 1'b1;
         end
-        rx_frame_reg <= !s_axis_rx_tlast;
+        if (s_axis_rx_tready && s_axis_rx_tvalid && s_axis_rx_tlast) begin
+            rx_frame_reg <= 1'b0;
+        end
     end
 
     if (rst) begin

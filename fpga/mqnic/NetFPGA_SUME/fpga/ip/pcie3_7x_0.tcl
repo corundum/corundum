@@ -6,7 +6,7 @@ set_property -dict [list \
     CONFIG.pcie_blk_locn {X0Y1} \
     CONFIG.PL_LINK_CAP_MAX_LINK_SPEED {8.0_GT/s} \
     CONFIG.PL_LINK_CAP_MAX_LINK_WIDTH {X8} \
-    CONFIG.AXISTEN_IF_RC_STRADDLE {false} \
+    CONFIG.AXISTEN_IF_RC_STRADDLE {true} \
     CONFIG.axisten_if_enable_client_tag {false} \
     CONFIG.axisten_if_width {256_bit} \
     CONFIG.extended_tag_field {true} \

@@ -199,6 +199,7 @@ module mqnic_core_pcie #
      * TLP input (request to BAR)
      */
     input  wire [TLP_DATA_WIDTH-1:0]                     pcie_rx_req_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                     pcie_rx_req_tlp_strb,
     input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        pcie_rx_req_tlp_hdr,
     input  wire [TLP_SEG_COUNT*3-1:0]                    pcie_rx_req_tlp_bar_id,
     input  wire [TLP_SEG_COUNT*8-1:0]                    pcie_rx_req_tlp_func_num,
@@ -211,6 +212,7 @@ module mqnic_core_pcie #
      * TLP input (completion to DMA)
      */
     input  wire [TLP_DATA_WIDTH-1:0]                     pcie_rx_cpl_tlp_data,
+    input  wire [TLP_STRB_WIDTH-1:0]                     pcie_rx_cpl_tlp_strb,
     input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        pcie_rx_cpl_tlp_hdr,
     input  wire [TLP_SEG_COUNT*4-1:0]                    pcie_rx_cpl_tlp_error,
     input  wire [TLP_SEG_COUNT-1:0]                      pcie_rx_cpl_tlp_valid,
@@ -266,12 +268,12 @@ module mqnic_core_pcie #
     /*
      * TLP output (MSI-X write request)
      */
-    output wire [TLP_DATA_WIDTH-1:0]                     pcie_tx_msix_wr_req_tlp_data,
-    output wire [TLP_STRB_WIDTH-1:0]                     pcie_tx_msix_wr_req_tlp_strb,
-    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]        pcie_tx_msix_wr_req_tlp_hdr,
-    output wire [TLP_SEG_COUNT-1:0]                      pcie_tx_msix_wr_req_tlp_valid,
-    output wire [TLP_SEG_COUNT-1:0]                      pcie_tx_msix_wr_req_tlp_sop,
-    output wire [TLP_SEG_COUNT-1:0]                      pcie_tx_msix_wr_req_tlp_eop,
+    output wire [31:0]                                   pcie_tx_msix_wr_req_tlp_data,
+    output wire                                          pcie_tx_msix_wr_req_tlp_strb,
+    output wire [TLP_HDR_WIDTH-1:0]                      pcie_tx_msix_wr_req_tlp_hdr,
+    output wire                                          pcie_tx_msix_wr_req_tlp_valid,
+    output wire                                          pcie_tx_msix_wr_req_tlp_sop,
+    output wire                                          pcie_tx_msix_wr_req_tlp_eop,
     input  wire                                          pcie_tx_msix_wr_req_tlp_ready,
 
     /*
@@ -428,6 +430,7 @@ parameter AXIL_APP_CTRL_STRB_WIDTH = (AXIL_APP_CTRL_DATA_WIDTH/8);
 
 // PCIe connections
 wire [TLP_DATA_WIDTH-1:0]                    pcie_ctrl_rx_req_tlp_data;
+wire [TLP_STRB_WIDTH-1:0]                    pcie_ctrl_rx_req_tlp_strb;
 wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]       pcie_ctrl_rx_req_tlp_hdr;
 wire [TLP_SEG_COUNT*3-1:0]                   pcie_ctrl_rx_req_tlp_bar_id;
 wire [TLP_SEG_COUNT*8-1:0]                   pcie_ctrl_rx_req_tlp_func_num;
@@ -445,6 +448,7 @@ wire [TLP_SEG_COUNT-1:0]                     pcie_ctrl_tx_cpl_tlp_eop;
 wire                                         pcie_ctrl_tx_cpl_tlp_ready;
 
 wire [TLP_DATA_WIDTH-1:0]                    pcie_app_ctrl_rx_req_tlp_data;
+wire [TLP_STRB_WIDTH-1:0]                    pcie_app_ctrl_rx_req_tlp_strb;
 wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]       pcie_app_ctrl_rx_req_tlp_hdr;
 wire [TLP_SEG_COUNT*3-1:0]                   pcie_app_ctrl_rx_req_tlp_bar_id;
 wire [TLP_SEG_COUNT*8-1:0]                   pcie_app_ctrl_rx_req_tlp_func_num;
@@ -585,7 +589,9 @@ if (APP_ENABLE) begin : pcie_tlp_mux
         .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
         .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
         .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
-        .TLP_SEG_COUNT(TLP_SEG_COUNT),
+        .IN_TLP_SEG_COUNT(TLP_SEG_COUNT),
+        .OUT_TLP_SEG_COUNT(TLP_SEG_COUNT),
+        .FIFO_ENABLE(0),
         .BAR_BASE(0),
         .BAR_STRIDE(2),
         .BAR_IDS(0)
@@ -598,7 +604,7 @@ if (APP_ENABLE) begin : pcie_tlp_mux
          * TLP input
          */
         .in_tlp_data(pcie_rx_req_tlp_data),
-        .in_tlp_strb(0),
+        .in_tlp_strb(pcie_rx_req_tlp_strb),
         .in_tlp_hdr(pcie_rx_req_tlp_hdr),
         .in_tlp_bar_id(pcie_rx_req_tlp_bar_id),
         .in_tlp_func_num(pcie_rx_req_tlp_func_num),
@@ -612,7 +618,7 @@ if (APP_ENABLE) begin : pcie_tlp_mux
          * TLP output
          */
         .out_tlp_data(    {pcie_app_ctrl_rx_req_tlp_data,     pcie_ctrl_rx_req_tlp_data    }),
-        .out_tlp_strb(),
+        .out_tlp_strb(    {pcie_app_ctrl_rx_req_tlp_strb,     pcie_ctrl_rx_req_tlp_strb    }),
         .out_tlp_hdr(     {pcie_app_ctrl_rx_req_tlp_hdr,      pcie_ctrl_rx_req_tlp_hdr     }),
         .out_tlp_bar_id(  {pcie_app_ctrl_rx_req_tlp_bar_id,   pcie_ctrl_rx_req_tlp_bar_id  }),
         .out_tlp_func_num({pcie_app_ctrl_rx_req_tlp_func_num, pcie_ctrl_rx_req_tlp_func_num}),
@@ -625,7 +631,13 @@ if (APP_ENABLE) begin : pcie_tlp_mux
         /*
          * Control
          */
-        .enable(1'b1)
+        .enable(1'b1),
+
+        /*
+         * Status
+         */
+        .fifo_half_full(),
+        .fifo_watermark()
     );
 
     pcie_tlp_mux #(
@@ -673,6 +685,7 @@ if (APP_ENABLE) begin : pcie_tlp_mux
 end else begin
 
     assign pcie_ctrl_rx_req_tlp_data = pcie_rx_req_tlp_data;
+    assign pcie_ctrl_rx_req_tlp_strb = pcie_rx_req_tlp_strb;
     assign pcie_ctrl_rx_req_tlp_hdr = pcie_rx_req_tlp_hdr;
     assign pcie_ctrl_rx_req_tlp_bar_id = pcie_rx_req_tlp_bar_id;
     assign pcie_ctrl_rx_req_tlp_func_num = pcie_rx_req_tlp_func_num;
@@ -690,6 +703,7 @@ end else begin
     assign pcie_ctrl_tx_cpl_tlp_ready = pcie_tx_cpl_tlp_ready;
 
     assign pcie_app_ctrl_rx_req_tlp_data = 0;
+    assign pcie_app_ctrl_rx_req_tlp_strb = 0;
     assign pcie_app_ctrl_rx_req_tlp_hdr = 0;
     assign pcie_app_ctrl_rx_req_tlp_valid = 0;
     assign pcie_app_ctrl_rx_req_tlp_sop = 0;
@@ -1118,10 +1132,7 @@ pcie_msix #(
     .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .AXIL_ADDR_WIDTH(AXIL_MSIX_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
-    .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
-    .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
     .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
-    .TLP_SEG_COUNT(TLP_SEG_COUNT),
     .TLP_FORCE_64_BIT_ADDR(TLP_FORCE_64_BIT_ADDR)
 )
 pcie_msix_inst (

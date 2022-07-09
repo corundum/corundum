@@ -152,7 +152,7 @@ dict set params RAM_ADDR_WIDTH [expr int(ceil(log(max([dict get $params TX_RAM_S
 dict set params RAM_PIPELINE "2"
 
 # PCIe interface configuration
-dict set params PCIE_TAG_COUNT "64"
+dict set params PCIE_TAG_COUNT "256"
 dict set params PCIE_DMA_READ_OP_TABLE_SIZE [dict get $params PCIE_TAG_COUNT]
 dict set params PCIE_DMA_READ_TX_LIMIT "16"
 dict set params PCIE_DMA_READ_TX_FC_ENABLE "1"

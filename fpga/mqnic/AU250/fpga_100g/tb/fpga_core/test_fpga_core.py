@@ -81,11 +81,11 @@ class TB(object):
             pcie_link_width=16,
             user_clk_frequency=250e6,
             alignment="dword",
-            cq_straddle=False,
-            cc_straddle=False,
-            rq_straddle=False,
-            rc_straddle=False,
-            rc_4tlp_straddle=False,
+            cq_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_cq_inst.rx_req_tlp_valid_reg) > 1,
+            cc_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_cc_inst.out_tlp_valid) > 1,
+            rq_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_rq_inst.out_tlp_valid) > 1,
+            rc_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 1,
+            rc_4tlp_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 2,
             pf_count=1,
             max_payload_size=1024,
             enable_client_tag=True,
@@ -686,6 +686,8 @@ def test_fpga_core(request):
         os.path.join(pcie_rtl_dir, "pcie_tlp_demux.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_demux_bar.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_mux.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_fifo.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_fifo_raw.v"),
         os.path.join(pcie_rtl_dir, "pcie_msix.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_rd.v"),
@@ -789,7 +791,7 @@ def test_fpga_core(request):
     parameters['AXIS_PCIE_DATA_WIDTH'] = 512
     parameters['PF_COUNT'] = 1
     parameters['VF_COUNT'] = 0
-    parameters['PCIE_TAG_COUNT'] = 64
+    parameters['PCIE_TAG_COUNT'] = 256
     parameters['PCIE_DMA_READ_OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
     parameters['PCIE_DMA_READ_TX_LIMIT'] = 16
     parameters['PCIE_DMA_READ_TX_FC_ENABLE'] = 1

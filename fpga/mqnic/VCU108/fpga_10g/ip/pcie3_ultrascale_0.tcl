@@ -4,7 +4,7 @@ create_ip -name pcie3_ultrascale -vendor xilinx.com -library ip -module_name pci
 set_property -dict [list \
     CONFIG.PL_LINK_CAP_MAX_LINK_SPEED {8.0_GT/s} \
     CONFIG.PL_LINK_CAP_MAX_LINK_WIDTH {X8} \
-    CONFIG.AXISTEN_IF_RC_STRADDLE {false} \
+    CONFIG.AXISTEN_IF_RC_STRADDLE {true} \
     CONFIG.axisten_if_width {256_bit} \
     CONFIG.extended_tag_field {true} \
     CONFIG.pf0_dev_cap_max_payload {1024_bytes} \

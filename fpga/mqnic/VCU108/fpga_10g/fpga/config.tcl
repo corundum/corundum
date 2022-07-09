@@ -169,7 +169,7 @@ dict set params IRQ_INDEX_WIDTH [dict get $params EVENT_QUEUE_INDEX_WIDTH]
 # AXI lite interface configuration (control)
 dict set params AXIL_CTRL_DATA_WIDTH "32"
 dict set params AXIL_CTRL_ADDR_WIDTH "24"
- 
+
 # AXI lite interface configuration (application control)
 dict set params AXIL_APP_CTRL_DATA_WIDTH [dict get $params AXIL_CTRL_DATA_WIDTH]
 dict set params AXIL_APP_CTRL_ADDR_WIDTH "24"

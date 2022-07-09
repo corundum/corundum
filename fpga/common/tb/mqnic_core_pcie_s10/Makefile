@@ -105,6 +105,9 @@ VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_axil_master.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_demux.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_demux_bar.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_mux.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo_raw.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo_mux.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_msix.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie_rd.v
@@ -203,7 +206,7 @@ export PARAM_RAM_ADDR_WIDTH ?= $(shell python -c "print((max($(PARAM_TX_RAM_SIZE
 export PARAM_RAM_PIPELINE ?= 2
 
 # PCIe interface configuration
-export PARAM_SEG_COUNT ?= 1
+export PARAM_SEG_COUNT ?= 2
 export PARAM_SEG_DATA_WIDTH ?= 256
 export PARAM_SEG_EMPTY_WIDTH ?= $(shell python -c "print((($(PARAM_SEG_DATA_WIDTH)//32)-1).bit_length())" )
 export PARAM_TX_SEQ_NUM_WIDTH ?= 6

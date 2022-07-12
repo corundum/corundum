@@ -52,47 +52,47 @@ module pcie_s10_if_rx #
     parameter IO_BAR_INDEX = 5
 )
 (
-    input  wire                                         clk,
-    input  wire                                         rst,
+    input  wire                                    clk,
+    input  wire                                    rst,
 
     /*
      * H-Tile/L-Tile RX AVST interface
      */
-    input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]          rx_st_data,
-    input  wire [SEG_COUNT*SEG_EMPTY_WIDTH-1:0]         rx_st_empty,
-    input  wire [SEG_COUNT-1:0]                         rx_st_sop,
-    input  wire [SEG_COUNT-1:0]                         rx_st_eop,
-    input  wire [SEG_COUNT-1:0]                         rx_st_valid,
-    output wire                                         rx_st_ready,
-    input  wire [SEG_COUNT-1:0]                         rx_st_vf_active,
-    input  wire [SEG_COUNT*2-1:0]                       rx_st_func_num,
-    input  wire [SEG_COUNT*11-1:0]                      rx_st_vf_num,
-    input  wire [SEG_COUNT*3-1:0]                       rx_st_bar_range,
+    input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]     rx_st_data,
+    input  wire [SEG_COUNT*SEG_EMPTY_WIDTH-1:0]    rx_st_empty,
+    input  wire [SEG_COUNT-1:0]                    rx_st_sop,
+    input  wire [SEG_COUNT-1:0]                    rx_st_eop,
+    input  wire [SEG_COUNT-1:0]                    rx_st_valid,
+    output wire                                    rx_st_ready,
+    input  wire [SEG_COUNT-1:0]                    rx_st_vf_active,
+    input  wire [SEG_COUNT*2-1:0]                  rx_st_func_num,
+    input  wire [SEG_COUNT*11-1:0]                 rx_st_vf_num,
+    input  wire [SEG_COUNT*3-1:0]                  rx_st_bar_range,
 
     /*
      * TLP output (request to BAR)
      */
-    output wire [TLP_DATA_WIDTH-1:0]                    rx_req_tlp_data,
-    output wire [TLP_STRB_WIDTH-1:0]                    rx_req_tlp_strb,
-    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]       rx_req_tlp_hdr,
-    output wire [TLP_SEG_COUNT*3-1:0]                   rx_req_tlp_bar_id,
-    output wire [TLP_SEG_COUNT*8-1:0]                   rx_req_tlp_func_num,
-    output wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_valid,
-    output wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_sop,
-    output wire [TLP_SEG_COUNT-1:0]                     rx_req_tlp_eop,
-    input  wire                                         rx_req_tlp_ready,
+    output wire [TLP_DATA_WIDTH-1:0]               rx_req_tlp_data,
+    output wire [TLP_STRB_WIDTH-1:0]               rx_req_tlp_strb,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_req_tlp_hdr,
+    output wire [TLP_SEG_COUNT*3-1:0]              rx_req_tlp_bar_id,
+    output wire [TLP_SEG_COUNT*8-1:0]              rx_req_tlp_func_num,
+    output wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_valid,
+    output wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_sop,
+    output wire [TLP_SEG_COUNT-1:0]                rx_req_tlp_eop,
+    input  wire                                    rx_req_tlp_ready,
 
     /*
      * TLP output (completion to DMA)
      */
-    output wire [TLP_DATA_WIDTH-1:0]                    rx_cpl_tlp_data,
-    output wire [TLP_STRB_WIDTH-1:0]                    rx_cpl_tlp_strb,
-    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]       rx_cpl_tlp_hdr,
-    output wire [TLP_SEG_COUNT*4-1:0]                   rx_cpl_tlp_error,
-    output wire [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_valid,
-    output wire [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_sop,
-    output wire [TLP_SEG_COUNT-1:0]                     rx_cpl_tlp_eop,
-    input  wire                                         rx_cpl_tlp_ready
+    output wire [TLP_DATA_WIDTH-1:0]               rx_cpl_tlp_data,
+    output wire [TLP_STRB_WIDTH-1:0]               rx_cpl_tlp_strb,
+    output wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  rx_cpl_tlp_hdr,
+    output wire [TLP_SEG_COUNT*4-1:0]              rx_cpl_tlp_error,
+    output wire [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_valid,
+    output wire [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_sop,
+    output wire [TLP_SEG_COUNT-1:0]                rx_cpl_tlp_eop,
+    input  wire                                    rx_cpl_tlp_ready
 );
 
 parameter SEG_STRB_WIDTH = SEG_DATA_WIDTH/32;

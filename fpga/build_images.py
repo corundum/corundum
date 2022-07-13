@@ -289,6 +289,8 @@ async def monitor_status(jobs):
 
 async def main():
     config.read("build_images.ini")
+    config.read("build_images_project.ini")
+    config.read("build_images_local.ini")
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--output_dir', type=str, default=None, help="Output directory")

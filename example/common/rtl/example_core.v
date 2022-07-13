@@ -60,7 +60,9 @@ module example_core #
     // RAM segment byte enable width
     parameter RAM_SEG_BE_WIDTH = RAM_SEG_DATA_WIDTH/8,
     // RAM segment address width
-    parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH)
+    parameter RAM_SEG_ADDR_WIDTH = RAM_ADDR_WIDTH-$clog2(RAM_SEG_COUNT*RAM_SEG_BE_WIDTH),
+    // Interrupt configuration
+    parameter IRQ_INDEX_WIDTH = 5
 )
 (
     input  wire                                         clk,
@@ -146,9 +148,11 @@ module example_core #
     output wire [RAM_SEG_COUNT-1:0]                     ram_wr_done,
 
     /*
-     * MSI request outputs
+     * Interrupt request output
      */
-    output wire [31:0]                                  msi_irq
+    output wire [IRQ_INDEX_WIDTH-1:0]                   irq_index,
+    output wire                                         irq_valid,
+    input  wire                                         irq_ready
 );
 
 localparam RAM_ADDR_IMM_WIDTH = (DMA_IMM_ENABLE && (DMA_IMM_WIDTH > RAM_ADDR_WIDTH)) ? DMA_IMM_WIDTH : RAM_ADDR_WIDTH;
@@ -224,6 +228,7 @@ reg dma_write_desc_status_valid_reg = 0, dma_write_desc_status_valid_next;
 reg dma_enable_reg = 0, dma_enable_next;
 reg dma_rd_int_en_reg = 0, dma_rd_int_en_next;
 reg dma_wr_int_en_reg = 0, dma_wr_int_en_next;
+reg irq_valid_reg = 1'b0, irq_valid_next;
 
 reg dma_read_block_run_reg = 1'b0, dma_read_block_run_next;
 reg [DMA_LEN_WIDTH-1:0] dma_read_block_len_reg = 0, dma_read_block_len_next;
@@ -276,8 +281,8 @@ assign m_axis_dma_write_desc_len = dma_write_desc_len_reg;
 assign m_axis_dma_write_desc_tag = dma_write_desc_tag_reg;
 assign m_axis_dma_write_desc_valid = dma_write_desc_valid_reg;
 
-assign msi_irq[0] = (s_axis_dma_read_desc_status_valid && dma_rd_int_en_reg) || (s_axis_dma_write_desc_status_valid && dma_wr_int_en_reg);
-assign msi_irq[31:1] = 31'd0;
+assign irq_index = 0;
+assign irq_valid = irq_valid_reg;
 
 always @* begin
     axil_ctrl_awready_next = 1'b0;
@@ -314,6 +319,8 @@ always @* begin
 
     dma_rd_int_en_next = dma_rd_int_en_reg;
     dma_wr_int_en_next = dma_wr_int_en_reg;
+
+    irq_valid_next = irq_valid_reg && !irq_ready;
 
     dma_read_block_run_next = dma_read_block_run_reg;
     dma_read_block_len_next = dma_read_block_len_reg;
@@ -526,6 +533,10 @@ always @* begin
         dma_read_desc_status_tag_next = s_axis_dma_read_desc_status_tag;
         dma_read_desc_status_error_next = s_axis_dma_read_desc_status_error;
         dma_read_desc_status_valid_next = s_axis_dma_read_desc_status_valid;
+
+        if (dma_rd_int_en_reg) begin
+            irq_valid_next = 1'b1;
+        end
     end
 
     // store write response
@@ -533,6 +544,10 @@ always @* begin
         dma_write_desc_status_tag_next = s_axis_dma_write_desc_status_tag;
         dma_write_desc_status_error_next = s_axis_dma_write_desc_status_error;
         dma_write_desc_status_valid_next = s_axis_dma_write_desc_status_valid;
+
+        if (dma_wr_int_en_reg) begin
+            irq_valid_next = 1'b1;
+        end
     end
 
     // block read
@@ -626,6 +641,8 @@ always @(posedge clk) begin
     dma_rd_int_en_reg <= dma_rd_int_en_next;
     dma_wr_int_en_reg <= dma_wr_int_en_next;
 
+    irq_valid_reg <= irq_valid_next;
+
     dma_read_block_run_reg <= dma_read_block_run_next;
     dma_read_block_len_reg <= dma_read_block_len_next;
     dma_read_block_count_reg <= dma_read_block_count_next;
@@ -670,6 +687,7 @@ always @(posedge clk) begin
         dma_enable_reg <= 1'b0;
         dma_rd_int_en_reg <= 1'b0;
         dma_wr_int_en_reg <= 1'b0;
+        irq_valid_reg <= 1'b0;
         dma_read_block_run_reg <= 1'b0;
         dma_write_block_run_reg <= 1'b0;
     end

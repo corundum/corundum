@@ -309,7 +309,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	}
 
 	// Allocate MSI IRQs
-	ret = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI);
+	ret = pci_alloc_irq_vectors(pdev, 1, 32, PCI_IRQ_MSI | PCI_IRQ_MSIX);
 	if (ret < 0) {
 		dev_err(dev, "Failed to allocate IRQs");
 		goto fail_map_bars;

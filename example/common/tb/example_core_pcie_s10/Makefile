@@ -37,7 +37,6 @@ VERILOG_SOURCES += ../../../../rtl/pcie_s10_if.v
 VERILOG_SOURCES += ../../../../rtl/pcie_s10_if_rx.v
 VERILOG_SOURCES += ../../../../rtl/pcie_s10_if_tx.v
 VERILOG_SOURCES += ../../../../rtl/pcie_s10_cfg.v
-VERILOG_SOURCES += ../../../../rtl/pcie_s10_msi.v
 VERILOG_SOURCES += ../../../../rtl/pcie_axil_master.v
 VERILOG_SOURCES += ../../../../rtl/pcie_axi_master.v
 VERILOG_SOURCES += ../../../../rtl/pcie_axi_master_rd.v
@@ -48,11 +47,11 @@ VERILOG_SOURCES += ../../../../rtl/pcie_tlp_mux.v
 VERILOG_SOURCES += ../../../../rtl/pcie_tlp_fifo.v
 VERILOG_SOURCES += ../../../../rtl/pcie_tlp_fifo_raw.v
 VERILOG_SOURCES += ../../../../rtl/pcie_tlp_fifo_mux.v
+VERILOG_SOURCES += ../../../../rtl/pcie_msix.v
 VERILOG_SOURCES += ../../../../rtl/dma_if_pcie.v
 VERILOG_SOURCES += ../../../../rtl/dma_if_pcie_rd.v
 VERILOG_SOURCES += ../../../../rtl/dma_if_pcie_wr.v
 VERILOG_SOURCES += ../../../../rtl/dma_psdpram.v
-VERILOG_SOURCES += ../../../../rtl/arbiter.v
 VERILOG_SOURCES += ../../../../rtl/priority_encoder.v
 VERILOG_SOURCES += ../../../../rtl/pulse_merge.v
 
@@ -74,6 +73,7 @@ export PARAM_WRITE_TX_LIMIT ?= $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH)
 export PARAM_WRITE_TX_FC_ENABLE ?= 1
 export PARAM_BAR0_APERTURE ?= 24
 export PARAM_BAR2_APERTURE ?= 24
+export PARAM_BAR4_APERTURE ?= 16
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst
@@ -95,6 +95,7 @@ ifeq ($(SIM), icarus)
 	COMPILE_ARGS += -P $(TOPLEVEL).WRITE_TX_FC_ENABLE=$(PARAM_WRITE_TX_FC_ENABLE)
 	COMPILE_ARGS += -P $(TOPLEVEL).BAR0_APERTURE=$(PARAM_BAR0_APERTURE)
 	COMPILE_ARGS += -P $(TOPLEVEL).BAR2_APERTURE=$(PARAM_BAR2_APERTURE)
+	COMPILE_ARGS += -P $(TOPLEVEL).BAR4_APERTURE=$(PARAM_BAR4_APERTURE)
 
 	ifeq ($(WAVES), 1)
 		VERILOG_SOURCES += iverilog_dump.v
@@ -120,6 +121,7 @@ else ifeq ($(SIM), verilator)
 	COMPILE_ARGS += -GWRITE_TX_FC_ENABLE=$(PARAM_WRITE_TX_FC_ENABLE)
 	COMPILE_ARGS += -GBAR0_APERTURE=$(PARAM_BAR0_APERTURE)
 	COMPILE_ARGS += -GBAR2_APERTURE=$(PARAM_BAR2_APERTURE)
+	COMPILE_ARGS += -GBAR4_APERTURE=$(PARAM_BAR4_APERTURE)
 
 	ifeq ($(WAVES), 1)
 		COMPILE_ARGS += --trace-fst

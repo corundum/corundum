@@ -67,20 +67,20 @@ class TB(object):
             enable_sriov=False,
             enable_extended_configuration=False,
 
-            pf0_msi_enable=True,
-            pf0_msi_count=32,
+            pf0_msi_enable=False,
+            pf0_msi_count=1,
             pf1_msi_enable=False,
             pf1_msi_count=1,
             pf2_msi_enable=False,
             pf2_msi_count=1,
             pf3_msi_enable=False,
             pf3_msi_count=1,
-            pf0_msix_enable=False,
-            pf0_msix_table_size=0,
-            pf0_msix_table_bir=0,
+            pf0_msix_enable=True,
+            pf0_msix_table_size=31,
+            pf0_msix_table_bir=4,
             pf0_msix_table_offset=0x00000000,
-            pf0_msix_pba_bir=0,
-            pf0_msix_pba_offset=0x00000000,
+            pf0_msix_pba_bir=4,
+            pf0_msix_pba_offset=0x00008000,
             pf1_msix_enable=False,
             pf1_msix_table_size=0,
             pf1_msix_table_bir=0,
@@ -224,32 +224,32 @@ class TB(object):
             # cfg_interrupt_int
             # cfg_interrupt_sent
             # cfg_interrupt_pending
-            cfg_interrupt_msi_enable=dut.cfg_interrupt_msi_enable,
-            cfg_interrupt_msi_mmenable=dut.cfg_interrupt_msi_mmenable,
-            cfg_interrupt_msi_mask_update=dut.cfg_interrupt_msi_mask_update,
-            cfg_interrupt_msi_data=dut.cfg_interrupt_msi_data,
-            # cfg_interrupt_msi_select=dut.cfg_interrupt_msi_select,
-            cfg_interrupt_msi_int=dut.cfg_interrupt_msi_int,
-            cfg_interrupt_msi_pending_status=dut.cfg_interrupt_msi_pending_status,
-            cfg_interrupt_msi_pending_status_data_enable=dut.cfg_interrupt_msi_pending_status_data_enable,
-            # cfg_interrupt_msi_pending_status_function_num=dut.cfg_interrupt_msi_pending_status_function_num,
-            cfg_interrupt_msi_sent=dut.cfg_interrupt_msi_sent,
-            cfg_interrupt_msi_fail=dut.cfg_interrupt_msi_fail,
-            # cfg_interrupt_msix_enable
-            # cfg_interrupt_msix_mask
-            # cfg_interrupt_msix_vf_enable
-            # cfg_interrupt_msix_vf_mask
-            # cfg_interrupt_msix_address
-            # cfg_interrupt_msix_data
-            # cfg_interrupt_msix_int
-            # cfg_interrupt_msix_vec_pending
-            # cfg_interrupt_msix_vec_pending_status
-            # cfg_interrupt_msix_sent
-            # cfg_interrupt_msix_fail
-            cfg_interrupt_msi_attr=dut.cfg_interrupt_msi_attr,
-            cfg_interrupt_msi_tph_present=dut.cfg_interrupt_msi_tph_present,
-            cfg_interrupt_msi_tph_type=dut.cfg_interrupt_msi_tph_type,
-            # cfg_interrupt_msi_tph_st_tag=dut.cfg_interrupt_msi_tph_st_tag,
+            # cfg_interrupt_msi_enable
+            # cfg_interrupt_msi_mmenable
+            # cfg_interrupt_msi_mask_update
+            # cfg_interrupt_msi_data
+            # cfg_interrupt_msi_select
+            # cfg_interrupt_msi_int
+            # cfg_interrupt_msi_pending_status
+            # cfg_interrupt_msi_pending_status_data_enable
+            # cfg_interrupt_msi_pending_status_function_num
+            # cfg_interrupt_msi_sent
+            # cfg_interrupt_msi_fail
+            cfg_interrupt_msix_enable=dut.cfg_interrupt_msix_enable,
+            cfg_interrupt_msix_mask=dut.cfg_interrupt_msix_mask,
+            cfg_interrupt_msix_vf_enable=dut.cfg_interrupt_msix_vf_enable,
+            cfg_interrupt_msix_vf_mask=dut.cfg_interrupt_msix_vf_mask,
+            cfg_interrupt_msix_address=dut.cfg_interrupt_msix_address,
+            cfg_interrupt_msix_data=dut.cfg_interrupt_msix_data,
+            cfg_interrupt_msix_int=dut.cfg_interrupt_msix_int,
+            cfg_interrupt_msix_vec_pending=dut.cfg_interrupt_msix_vec_pending,
+            cfg_interrupt_msix_vec_pending_status=dut.cfg_interrupt_msix_vec_pending_status,
+            cfg_interrupt_msix_sent=dut.cfg_interrupt_msix_sent,
+            cfg_interrupt_msix_fail=dut.cfg_interrupt_msix_fail,
+            # cfg_interrupt_msi_attr
+            # cfg_interrupt_msi_tph_present
+            # cfg_interrupt_msi_tph_type
+            # cfg_interrupt_msi_tph_st_tag
             cfg_interrupt_msi_function_number=dut.cfg_interrupt_msi_function_number,
 
             # Configuration Extend Interface
@@ -271,6 +271,7 @@ class TB(object):
 
         self.dev.functions[0].configure_bar(0, 2**len(dut.core_pcie_inst.axil_ctrl_awaddr))
         self.dev.functions[0].configure_bar(2, 2**len(dut.core_pcie_inst.axi_ram_awaddr))
+        self.dev.functions[0].configure_bar(4, 2**len(dut.core_pcie_inst.axil_msix_awaddr))
 
         # monitor error outputs
         self.status_error_cor_asserted = False
@@ -311,6 +312,7 @@ async def run_test(dut):
     dev = tb.rc.find_device(tb.dev.functions[0].pcie_id)
     await dev.enable_device()
     await dev.set_master()
+    await dev.alloc_irq_vectors(32, 32)
 
     dev_pf0_bar0 = dev.bar_window[0]
     dev_pf0_bar2 = dev.bar_window[2]
@@ -527,7 +529,6 @@ def test_example_core_pcie_us(request, axis_pcie_data_width, straddle):
         os.path.join(pcie_rtl_dir, "pcie_us_if_cq.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_if_cc.v"),
         os.path.join(pcie_rtl_dir, "pcie_us_cfg.v"),
-        os.path.join(pcie_rtl_dir, "pcie_us_msi.v"),
         os.path.join(pcie_rtl_dir, "pcie_axil_master.v"),
         os.path.join(pcie_rtl_dir, "pcie_axi_master.v"),
         os.path.join(pcie_rtl_dir, "pcie_axi_master_rd.v"),
@@ -537,11 +538,11 @@ def test_example_core_pcie_us(request, axis_pcie_data_width, straddle):
         os.path.join(pcie_rtl_dir, "pcie_tlp_mux.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_fifo.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_fifo_raw.v"),
+        os.path.join(pcie_rtl_dir, "pcie_msix.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_rd.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_wr.v"),
         os.path.join(pcie_rtl_dir, "dma_psdpram.v"),
-        os.path.join(pcie_rtl_dir, "arbiter.v"),
         os.path.join(pcie_rtl_dir, "priority_encoder.v"),
         os.path.join(pcie_rtl_dir, "pulse_merge.v"),
     ]
@@ -571,6 +572,7 @@ def test_example_core_pcie_us(request, axis_pcie_data_width, straddle):
     parameters['WRITE_TX_FC_ENABLE'] = 1
     parameters['BAR0_APERTURE'] = 24
     parameters['BAR2_APERTURE'] = 24
+    parameters['BAR4_APERTURE'] = 16
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

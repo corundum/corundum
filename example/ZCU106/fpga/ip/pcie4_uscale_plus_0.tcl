@@ -24,8 +24,19 @@ set_property -dict [list \
     CONFIG.pf0_bar2_type {Memory} \
     CONFIG.pf0_bar2_scale {Megabytes} \
     CONFIG.pf0_bar2_size {16} \
-    CONFIG.pf0_msi_enabled {true} \
-    CONFIG.PF0_MSI_CAP_MULTIMSGCAP {32_vectors} \
+    CONFIG.pf0_bar4_64bit {true} \
+    CONFIG.pf0_bar4_prefetchable {true} \
+    CONFIG.pf0_bar4_enabled {true} \
+    CONFIG.pf0_bar4_type {Memory} \
+    CONFIG.pf0_bar4_scale {Kilobytes} \
+    CONFIG.pf0_bar4_size {64} \
+    CONFIG.pf0_msi_enabled {false} \
+    CONFIG.pf0_msix_enabled {true} \
+    CONFIG.PF0_MSIX_CAP_TABLE_SIZE {01F} \
+    CONFIG.PF0_MSIX_CAP_TABLE_BIR {BAR_5:4} \
+    CONFIG.PF0_MSIX_CAP_TABLE_OFFSET {00000000} \
+    CONFIG.PF0_MSIX_CAP_PBA_BIR {BAR_5:4} \
+    CONFIG.PF0_MSIX_CAP_PBA_OFFSET {00008000} \
+    CONFIG.MSI_X_OPTIONS {MSI-X_External} \
     CONFIG.vendor_id {1234} \
-    CONFIG.en_msi_per_vec_masking {true} \
 ] [get_ips pcie4_uscale_plus_0]

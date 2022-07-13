@@ -39,7 +39,8 @@ module fpga_core #
     parameter TX_SEQ_NUM_WIDTH = 6,
     parameter PCIE_TAG_COUNT = 256,
     parameter BAR0_APERTURE = 24,
-    parameter BAR2_APERTURE = 24
+    parameter BAR2_APERTURE = 24,
+    parameter BAR4_APERTURE = 16
 )
 (
     input  wire                                  clk,
@@ -84,12 +85,6 @@ module fpga_core #
     input  wire [SEG_COUNT*2-1:0]                tx_cdts_type,
     input  wire [SEG_COUNT*1-1:0]                tx_cdts_data_value,
 
-    output wire                                  app_msi_req,
-    input  wire                                  app_msi_ack,
-    output wire [2:0]                            app_msi_tc,
-    output wire [4:0]                            app_msi_num,
-    output wire [1:0]                            app_msi_func_num,
-
     input  wire [31:0]                           tl_cfg_ctl,
     input  wire [4:0]                            tl_cfg_add,
     input  wire [1:0]                            tl_cfg_func
@@ -114,7 +109,8 @@ example_core_pcie_s10 #(
     .WRITE_TX_LIMIT(2**TX_SEQ_NUM_WIDTH),
     .WRITE_TX_FC_ENABLE(1),
     .BAR0_APERTURE(BAR0_APERTURE),
-    .BAR2_APERTURE(BAR2_APERTURE)
+    .BAR2_APERTURE(BAR2_APERTURE),
+    .BAR4_APERTURE(BAR4_APERTURE)
 )
 example_core_pcie_s10_inst (
     .clk(clk),
@@ -157,15 +153,6 @@ example_core_pcie_s10_inst (
     .tx_data_cdts_consumed(tx_data_cdts_consumed),
     .tx_cdts_type(tx_cdts_type),
     .tx_cdts_data_value(tx_cdts_data_value),
-
-    /*
-     * H-tile MSI interrupt interface
-     */
-    .app_msi_req(app_msi_req),
-    .app_msi_ack(app_msi_ack),
-    .app_msi_tc(app_msi_tc),
-    .app_msi_num(app_msi_num),
-    .app_msi_func_num(app_msi_func_num),
 
     /*
      * H-tile configuration interface

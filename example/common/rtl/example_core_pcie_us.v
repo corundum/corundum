@@ -78,7 +78,9 @@ module example_core_pcie_us #
     // BAR0 aperture (log2 size)
     parameter BAR0_APERTURE = 24,
     // BAR2 aperture (log2 size)
-    parameter BAR2_APERTURE = 24
+    parameter BAR2_APERTURE = 24,
+    // BAR4 aperture (log2 size)
+    parameter BAR4_APERTURE = 16
 )
 (
     input  wire                                clk,
@@ -158,22 +160,17 @@ module example_core_pcie_us #
     /*
      * Interrupt interface
      */
-    input  wire [3:0]                          cfg_interrupt_msi_enable,
-    input  wire [7:0]                          cfg_interrupt_msi_vf_enable,
-    input  wire [11:0]                         cfg_interrupt_msi_mmenable,
-    input  wire                                cfg_interrupt_msi_mask_update,
-    input  wire [31:0]                         cfg_interrupt_msi_data,
-    output wire [3:0]                          cfg_interrupt_msi_select,
-    output wire [31:0]                         cfg_interrupt_msi_int,
-    output wire [31:0]                         cfg_interrupt_msi_pending_status,
-    output wire                                cfg_interrupt_msi_pending_status_data_enable,
-    output wire [3:0]                          cfg_interrupt_msi_pending_status_function_num,
-    input  wire                                cfg_interrupt_msi_sent,
-    input  wire                                cfg_interrupt_msi_fail,
-    output wire [2:0]                          cfg_interrupt_msi_attr,
-    output wire                                cfg_interrupt_msi_tph_present,
-    output wire [1:0]                          cfg_interrupt_msi_tph_type,
-    output wire [8:0]                          cfg_interrupt_msi_tph_st_tag,
+    input  wire [3:0]                          cfg_interrupt_msix_enable,
+    input  wire [3:0]                          cfg_interrupt_msix_mask,
+    input  wire [251:0]                        cfg_interrupt_msix_vf_enable,
+    input  wire [251:0]                        cfg_interrupt_msix_vf_mask,
+    output wire [63:0]                         cfg_interrupt_msix_address,
+    output wire [31:0]                         cfg_interrupt_msix_data,
+    output wire                                cfg_interrupt_msix_int,
+    output wire [1:0]                          cfg_interrupt_msix_vec_pending,
+    input  wire                                cfg_interrupt_msix_vec_pending_status,
+    input  wire                                cfg_interrupt_msix_sent,
+    input  wire                                cfg_interrupt_msix_fail,
     output wire [7:0]                          cfg_interrupt_msi_function_number,
 
     /*
@@ -199,7 +196,6 @@ parameter TX_SEQ_NUM_ENABLE = RQ_SEQ_NUM_ENABLE;
 parameter PF_COUNT = 1;
 parameter VF_COUNT = 0;
 parameter F_COUNT = PF_COUNT+VF_COUNT;
-parameter MSI_COUNT = 32;
 
 wire [TLP_DATA_WIDTH-1:0]                     pcie_rx_req_tlp_data;
 wire [TLP_STRB_WIDTH-1:0]                     pcie_rx_req_tlp_strb;
@@ -250,12 +246,21 @@ wire [TLP_SEG_COUNT-1:0]                      pcie_tx_cpl_tlp_sop;
 wire [TLP_SEG_COUNT-1:0]                      pcie_tx_cpl_tlp_eop;
 wire                                          pcie_tx_cpl_tlp_ready;
 
+wire [31:0]                                   pcie_tx_msix_wr_req_tlp_data;
+wire                                          pcie_tx_msix_wr_req_tlp_strb;
+wire [TLP_HDR_WIDTH-1:0]                      pcie_tx_msix_wr_req_tlp_hdr;
+wire                                          pcie_tx_msix_wr_req_tlp_valid;
+wire                                          pcie_tx_msix_wr_req_tlp_sop;
+wire                                          pcie_tx_msix_wr_req_tlp_eop;
+wire                                          pcie_tx_msix_wr_req_tlp_ready;
+
 wire [7:0]   pcie_tx_fc_ph_av;
 wire [11:0]  pcie_tx_fc_pd_av;
 wire [7:0]   pcie_tx_fc_nph_av;
 
 wire ext_tag_enable;
-wire [MSI_COUNT-1:0] msi_irq;
+wire msix_enable;
+wire msix_mask;
 
 pcie_us_if #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
@@ -281,9 +286,8 @@ pcie_us_if #(
     .READ_EXT_TAG_ENABLE(1),
     .READ_MAX_READ_REQ_SIZE(1),
     .READ_MAX_PAYLOAD_SIZE(1),
-    .MSIX_ENABLE(0),
-    .MSI_ENABLE(1),
-    .MSI_COUNT(MSI_COUNT)
+    .MSIX_ENABLE(1),
+    .MSI_ENABLE(0)
 )
 pcie_us_if_inst (
     .clk(clk),
@@ -363,22 +367,33 @@ pcie_us_if_inst (
     /*
      * Interrupt interface
      */
-    .cfg_interrupt_msi_enable(cfg_interrupt_msi_enable),
-    .cfg_interrupt_msi_vf_enable(cfg_interrupt_msi_vf_enable),
-    .cfg_interrupt_msi_mmenable(cfg_interrupt_msi_mmenable),
-    .cfg_interrupt_msi_mask_update(cfg_interrupt_msi_mask_update),
-    .cfg_interrupt_msi_data(cfg_interrupt_msi_data),
-    .cfg_interrupt_msi_select(cfg_interrupt_msi_select),
-    .cfg_interrupt_msi_int(cfg_interrupt_msi_int),
-    .cfg_interrupt_msi_pending_status(cfg_interrupt_msi_pending_status),
-    .cfg_interrupt_msi_pending_status_data_enable(cfg_interrupt_msi_pending_status_data_enable),
-    .cfg_interrupt_msi_pending_status_function_num(cfg_interrupt_msi_pending_status_function_num),
-    .cfg_interrupt_msi_sent(cfg_interrupt_msi_sent),
-    .cfg_interrupt_msi_fail(cfg_interrupt_msi_fail),
-    .cfg_interrupt_msi_attr(cfg_interrupt_msi_attr),
-    .cfg_interrupt_msi_tph_present(cfg_interrupt_msi_tph_present),
-    .cfg_interrupt_msi_tph_type(cfg_interrupt_msi_tph_type),
-    .cfg_interrupt_msi_tph_st_tag(cfg_interrupt_msi_tph_st_tag),
+    .cfg_interrupt_msi_enable(),
+    .cfg_interrupt_msi_vf_enable(),
+    .cfg_interrupt_msi_mmenable(),
+    .cfg_interrupt_msi_mask_update(),
+    .cfg_interrupt_msi_data(),
+    .cfg_interrupt_msi_select(),
+    .cfg_interrupt_msi_int(),
+    .cfg_interrupt_msi_pending_status(),
+    .cfg_interrupt_msi_pending_status_data_enable(),
+    .cfg_interrupt_msi_pending_status_function_num(),
+    .cfg_interrupt_msi_sent(),
+    .cfg_interrupt_msi_fail(),
+    .cfg_interrupt_msix_enable(cfg_interrupt_msix_enable),
+    .cfg_interrupt_msix_mask(cfg_interrupt_msix_mask),
+    .cfg_interrupt_msix_vf_enable(cfg_interrupt_msix_vf_enable),
+    .cfg_interrupt_msix_vf_mask(cfg_interrupt_msix_vf_mask),
+    .cfg_interrupt_msix_address(cfg_interrupt_msix_address),
+    .cfg_interrupt_msix_data(cfg_interrupt_msix_data),
+    .cfg_interrupt_msix_int(cfg_interrupt_msix_int),
+    .cfg_interrupt_msix_vec_pending(cfg_interrupt_msix_vec_pending),
+    .cfg_interrupt_msix_vec_pending_status(cfg_interrupt_msix_vec_pending_status),
+    .cfg_interrupt_msix_sent(cfg_interrupt_msix_sent),
+    .cfg_interrupt_msix_fail(cfg_interrupt_msix_fail),
+    .cfg_interrupt_msi_attr(),
+    .cfg_interrupt_msi_tph_present(),
+    .cfg_interrupt_msi_tph_type(),
+    .cfg_interrupt_msi_tph_st_tag(),
     .cfg_interrupt_msi_function_number(cfg_interrupt_msi_function_number),
 
     /*
@@ -454,13 +469,13 @@ pcie_us_if_inst (
     /*
      * TLP input (write request from MSI-X)
      */
-    .tx_msix_wr_req_tlp_data(0),
-    .tx_msix_wr_req_tlp_strb(0),
-    .tx_msix_wr_req_tlp_hdr(0),
-    .tx_msix_wr_req_tlp_valid(0),
-    .tx_msix_wr_req_tlp_sop(0),
-    .tx_msix_wr_req_tlp_eop(0),
-    .tx_msix_wr_req_tlp_ready(),
+    .tx_msix_wr_req_tlp_data(pcie_tx_msix_wr_req_tlp_data),
+    .tx_msix_wr_req_tlp_strb(pcie_tx_msix_wr_req_tlp_strb),
+    .tx_msix_wr_req_tlp_hdr(pcie_tx_msix_wr_req_tlp_hdr),
+    .tx_msix_wr_req_tlp_valid(pcie_tx_msix_wr_req_tlp_valid),
+    .tx_msix_wr_req_tlp_sop(pcie_tx_msix_wr_req_tlp_sop),
+    .tx_msix_wr_req_tlp_eop(pcie_tx_msix_wr_req_tlp_eop),
+    .tx_msix_wr_req_tlp_ready(pcie_tx_msix_wr_req_tlp_ready),
 
     /*
      * Flow control
@@ -478,11 +493,13 @@ pcie_us_if_inst (
     .ext_tag_enable(ext_tag_enable),
     .max_read_request_size(),
     .max_payload_size(),
+    .msix_enable(msix_enable),
+    .msix_mask(msix_mask),
 
     /*
      * MSI request inputs
      */
-    .msi_irq(msi_irq)
+    .msi_irq(0)
 );
 
 example_core_pcie #(
@@ -505,7 +522,8 @@ example_core_pcie #(
     .TLP_FORCE_64_BIT_ADDR(1),
     .CHECK_BUS_NUMBER(0),
     .BAR0_APERTURE(BAR0_APERTURE),
-    .BAR2_APERTURE(BAR2_APERTURE)
+    .BAR2_APERTURE(BAR2_APERTURE),
+    .BAR4_APERTURE(BAR4_APERTURE)
 )
 core_pcie_inst (
     .clk(clk),
@@ -585,23 +603,31 @@ core_pcie_inst (
     .pcie_tx_fc_nph_av(pcie_tx_fc_nph_av),
 
     /*
+     * TLP output (MSI-X write request)
+     */
+    .tx_msix_wr_req_tlp_data(pcie_tx_msix_wr_req_tlp_data),
+    .tx_msix_wr_req_tlp_strb(pcie_tx_msix_wr_req_tlp_strb),
+    .tx_msix_wr_req_tlp_hdr(pcie_tx_msix_wr_req_tlp_hdr),
+    .tx_msix_wr_req_tlp_valid(pcie_tx_msix_wr_req_tlp_valid),
+    .tx_msix_wr_req_tlp_sop(pcie_tx_msix_wr_req_tlp_sop),
+    .tx_msix_wr_req_tlp_eop(pcie_tx_msix_wr_req_tlp_eop),
+    .tx_msix_wr_req_tlp_ready(pcie_tx_msix_wr_req_tlp_ready),
+
+    /*
      * Configuration
      */
     .bus_num(8'd0),
     .ext_tag_enable(ext_tag_enable),
     .max_read_request_size(cfg_max_read_req),
     .max_payload_size(cfg_max_payload),
+    .msix_enable(msix_enable),
+    .msix_mask(msix_mask),
 
     /*
      * Status
      */
     .status_error_cor(status_error_cor),
-    .status_error_uncor(status_error_uncor),
-
-    /*
-     * MSI request outputs
-     */
-    .msi_irq(msi_irq)
+    .status_error_uncor(status_error_uncor)
 );
 
 endmodule

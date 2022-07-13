@@ -17,7 +17,9 @@ Example designs are included for the following FPGA boards:
 *  Exablaze ExaNIC X10 (Xilinx Kintex UltraScale XCKU035)
 *  Exablaze ExaNIC X25 (Xilinx Kintex UltraScale+ XCKU3P)
 *  Silicom fb2CG@KU15P (Xilinx Kintex UltraScale+ XCKU15P)
+*  Intel Stratix 10 DX dev kit (Intel Stratix 10 MX 1SD280PT2F55E1VG)
 *  Intel Stratix 10 MX dev kit (Intel Stratix 10 MX 1SM21CHU1F53E1VG)
+*  Terasic DE10-Agilex (Intel Agilex F AGFB014R24B2E2V)
 *  Xilinx Alveo U50 (Xilinx Virtex UltraScale+ XCU50)
 *  Xilinx Alveo U200 (Xilinx Virtex UltraScale+ XCU200)
 *  Xilinx Alveo U250 (Xilinx Virtex UltraScale+ XCU250)
@@ -36,6 +38,8 @@ The PCIe modules use a generic, FPGA-independent interface for handling PCIe TLP
 The `pcie_us_if` module is an adaptation shim for Xilinx 7-series, UltraScale, and UltraScale+.  It handles the main datapath, configuration space parameters, MSI interrupts, and flow control.
 
 The `pcie_s10_if` module is an adaptation shim for Intel Stratix 10 GX/SX/TX/MX series FPGAs that use the H-Tile or L-Tile for PCIe.  It handles the main datapath, configuration space parameters, MSI interrupts, and flow control.
+
+The `pcie_ptile_if` module is an adaptation shim for Intel Stratix 10 DX/Agilex series FPGAs that use the P-Tile for PCIe.  It handles the main datapath, configuration space parameters, and flow control.
 
 ### PCIe AXI and AXI lite master
 
@@ -177,6 +181,26 @@ PCIe AXI lite master module.  Parametrizable interface width.
 
 Minimal PCIe AXI lite master module.  Parametrizable interface width.  Only supports aligned 32-bit operations, all other operations will result in a completer abort.  Only supports 32-bit AXI lite.
 
+### `pcie_msix` module
+
+MSI-X support module.  Implements MSI-X table and pending bit array with AXI lite register interface, accepts interrupt requests on a streaming interface, and generates corresponding write request TLPs.
+
+### `pcie_ptile_cfg` module
+
+Configuration shim for Intel Stratix 10 DX/Agilex series FPGAs (P-Tile).
+
+### `pcie_ptile_if` module
+
+PCIe interface shim for Intel Stratix 10 DX/Agilex series FPGAs (P-Tile).  Wrapper for all Intel Stratix 10 DX/Agilex PCIe interface shims.
+
+### `pcie_ptile_if_rx` module
+
+PCIe interface shim (RX) for Intel Stratix 10 DX/Agilex series FPGAs (P-Tile).
+
+### `pcie_ptile_if_tx` module
+
+PCIe interface shim (TX) for Intel Stratix 10 DX/Agilex series FPGAs (P-Tile).
+
 ### `pcie_s10_cfg` module
 
 Configuration shim for Intel Stratix 10 GX/SX/TX/MX series FPGAs (H-Tile/L-Tile).
@@ -204,6 +228,18 @@ PCIe TLP demultiplexer module.
 ### `pcie_tlp_demux_bar` module
 
 PCIe TLP demultiplexer module.  Wrapper for `pcie_tlp_demux` with parametrizable BAR ID matching logic.
+
+### `pcie_tlp_fifo` module
+
+PCIe TLP FIFO module.
+
+### `pcie_tlp_fifo_raw` module
+
+PCIe TLP FIFO module with raw non-destriped output.
+
+### `pcie_tlp_fifo_mux` module
+
+PCIe TLP FIFO + multiplexer module.
 
 ### `pcie_tlp_mux` module
 
@@ -315,6 +351,11 @@ Parametrizable pulse merge module.  Combines several single-cycle pulse status s
     pcie_axi_master_wr.v       : PCIe AXI master write module
     pcie_axil_master.v         : PCIe AXI Lite master module
     pcie_axil_master_minimal.v : PCIe AXI Lite master module (minimal)
+    pcie_msix.v                : PCIe MSI-X support module
+    pcie_ptile_cfg.v           : Configuration shim for Intel P-Tile
+    pcie_ptile_if.v            : PCIe interface shim (Intel P-Tile)
+    pcie_ptile_if_rx.v         : PCIe interface shim (RX) (Intel P-Tile)
+    pcie_ptile_if_tx.v         : PCIe interface shim (TX) (Intel P-Tile)
     pcie_s10_cfg.v             : Configuration shim for Intel Stratix 10
     pcie_s10_if.v              : PCIe interface shim (Intel Stratix 10)
     pcie_s10_if_rx.v           : PCIe interface shim (RX) (Intel Stratix 10)
@@ -322,6 +363,9 @@ Parametrizable pulse merge module.  Combines several single-cycle pulse status s
     pcie_s10_msi.v             : MSI shim for Intel Stratix 10 devices
     pcie_tlp_demux.v           : PCIe TLP demultiplexer
     pcie_tlp_demux_bar.v       : PCIe TLP demultiplexer (BAR ID)
+    pcie_tlp_fifo.v            : PCIe TLP FIFO
+    pcie_tlp_fifo_raw.v        : PCIe TLP FIFO (raw output)
+    pcie_tlp_fifo_mux.v        : PCIe TLP FIFO + multiplexer
     pcie_tlp_mux.v             : PCIe TLP multiplexer
     pcie_us_axi_dma.v          : PCIe AXI DMA module (Xilinx UltraScale)
     pcie_us_axi_dma_rd.v       : PCIe AXI DMA read module (Xilinx UltraScale)

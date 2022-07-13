@@ -899,6 +899,8 @@ mqnic_core_pcie_s10 #(
     .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
     .SEG_EMPTY_WIDTH(SEG_EMPTY_WIDTH),
     .TX_SEQ_NUM_WIDTH(TX_SEQ_NUM_WIDTH),
+    .TX_SEQ_NUM_ENABLE(1),
+    .L_TILE(0),
     .PF_COUNT(PF_COUNT),
     .VF_COUNT(VF_COUNT),
     .F_COUNT(F_COUNT),
@@ -1063,11 +1065,11 @@ core_inst (
 
     .eth_tx_status(eth_tx_status),
 
-    .eth_rx_ptp_clk(0),
-    .eth_rx_ptp_rst(0),
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),
 
+    .eth_rx_ptp_clk(0),
+    .eth_rx_ptp_rst(0),
     .eth_rx_ptp_ts_96(eth_rx_ptp_ts_96),
     .eth_rx_ptp_ts_step(eth_rx_ptp_ts_step),
 

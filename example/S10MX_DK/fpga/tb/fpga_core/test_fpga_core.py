@@ -48,8 +48,8 @@ class TB(object):
         self.dev = S10PcieDevice(
             # configuration options
             pcie_generation=3,
-            # pcie_link_width=8,
-            # pld_clk_frequency=250e6,
+            pcie_link_width=16,
+            pld_clk_frequency=250e6,
             l_tile=False,
             pf_count=1,
             max_payload_size=1024,

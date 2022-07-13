@@ -48,8 +48,8 @@ class TB(object):
         self.dev = PTilePcieDevice(
             # configuration options
             pcie_generation=3,
-            # pcie_link_width=2,
-            # pld_clk_frequency=250e6,
+            pcie_link_width=16,
+            pld_clk_frequency=250e6,
             pf_count=1,
             max_payload_size=512,
             enable_extended_tag=True,
@@ -62,7 +62,7 @@ class TB(object):
             pf2_msi_count=1,
             pf3_msi_enable=False,
             pf3_msi_count=1,
-            pf0_msix_enable=False,
+            pf0_msix_enable=True,
             pf0_msix_table_size=63,
             pf0_msix_table_bir=4,
             pf0_msix_table_offset=0x00000000,
@@ -245,6 +245,7 @@ class TB(object):
 
         self.dev.functions[0].configure_bar(0, 2**len(dut.core_inst.core_pcie_inst.axil_ctrl_awaddr))
         self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axi_ram_awaddr))
+        self.dev.functions[0].configure_bar(4, 2**len(dut.core_inst.core_pcie_inst.axil_msix_awaddr))
 
     async def init(self):
 

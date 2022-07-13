@@ -185,6 +185,9 @@ reg [31:0] tx_wr_req_tlp_data_reg = 0, tx_wr_req_tlp_data_next;
 reg [TLP_HDR_WIDTH-1:0] tx_wr_req_tlp_hdr_reg = 0, tx_wr_req_tlp_hdr_next;
 reg tx_wr_req_tlp_valid_reg = 0, tx_wr_req_tlp_valid_next;
 
+reg msix_enable_reg = 1'b0;
+reg msix_mask_reg = 1'b0;
+
 // MSI-X table
 (* ramstyle = "no_rw_check, mlab" *)
 reg [63:0] tbl_mem[(2**TBL_ADDR_WIDTH)-1:0];
@@ -314,7 +317,7 @@ always @* begin
                 pba_mem_addr = irq_index_next >> 6;
 
                 state_next = STATE_READ_TBL_1;
-            end else if (!irq_valid && msix_enable && !msix_mask) begin
+            end else if (!irq_valid && msix_enable_reg && !msix_mask_reg) begin
                 // no new request waiting, scan PBA for masked requests
 
                 if (pba_mem_rd_data_reg[irq_index_reg & 6'h3f]) begin
@@ -361,7 +364,7 @@ always @* begin
             vec_data_next = tbl_mem_rd_data_reg[31:0];
             vec_mask_next = tbl_mem_rd_data_reg[32];
 
-            if (msix_enable && !msix_mask && !vec_mask_next) begin
+            if (msix_enable_reg && !msix_mask_reg && !vec_mask_next) begin
                 // send TLP
                 state_next = STATE_SEND_TLP;
             end else begin
@@ -409,6 +412,9 @@ always @(posedge clk) begin
     tx_wr_req_tlp_data_reg <= tx_wr_req_tlp_data_next;
     tx_wr_req_tlp_hdr_reg <= tx_wr_req_tlp_hdr_next;
     tx_wr_req_tlp_valid_reg <= tx_wr_req_tlp_valid_next;
+
+    msix_enable_reg <= msix_enable;
+    msix_mask_reg <= msix_mask;
 
     if (tbl_mem_rd_en) begin
         tbl_mem_rd_data_reg <= tbl_mem[tbl_mem_addr];

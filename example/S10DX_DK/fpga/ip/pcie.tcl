@@ -12,7 +12,7 @@ proc do_create_pcie {} {
 	# add HDL parameters
 
 	# add the components
-	add_instance intel_pcie_ptile_ast_0 intel_pcie_ptile_ast 8.0.0
+	add_instance intel_pcie_ptile_ast_0 intel_pcie_ptile_ast
 	set_instance_parameter_value intel_pcie_ptile_ast_0 {aib_csr_top_dfd_ctrl_src_sel_hwtcl} {cfg_avmm_src}
 	set_instance_parameter_value intel_pcie_ptile_ast_0 {aib_csr_top_ecc_enable_mode_hwtcl} {Disable}
 	set_instance_parameter_value intel_pcie_ptile_ast_0 {aibnd_rx_sup_mode_hwtcl} {engineering_mode}

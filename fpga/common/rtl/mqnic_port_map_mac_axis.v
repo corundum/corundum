@@ -63,6 +63,8 @@ module mqnic_port_map_mac_axis #
     input  wire [MAC_COUNT-1:0]                      mac_tx_clk,
     input  wire [MAC_COUNT-1:0]                      mac_tx_rst,
 
+    input  wire [MAC_COUNT-1:0]                      mac_tx_ptp_clk,
+    input  wire [MAC_COUNT-1:0]                      mac_tx_ptp_rst,
     output wire [MAC_COUNT*PTP_TS_WIDTH-1:0]         mac_tx_ptp_ts_96,
     output wire [MAC_COUNT-1:0]                      mac_tx_ptp_ts_step,
 
@@ -101,6 +103,8 @@ module mqnic_port_map_mac_axis #
     output wire [PORT_COUNT-1:0]                     tx_clk,
     output wire [PORT_COUNT-1:0]                     tx_rst,
 
+    output wire [PORT_COUNT-1:0]                     tx_ptp_clk,
+    output wire [PORT_COUNT-1:0]                     tx_ptp_rst,
     input  wire [PORT_COUNT*PTP_TS_WIDTH-1:0]        tx_ptp_ts_96,
     input  wire [PORT_COUNT-1:0]                     tx_ptp_ts_step,
 
@@ -222,6 +226,9 @@ generate
             assign m_axis_tx_ptp_ts[IND[n*8 +: 8]*PTP_TS_WIDTH +: PTP_TS_WIDTH] = s_axis_mac_tx_ptp_ts[n*PTP_TS_WIDTH +: PTP_TS_WIDTH];
             assign m_axis_tx_ptp_ts_tag[IND[n*8 +: 8]*PTP_TAG_WIDTH +: PTP_TAG_WIDTH] = s_axis_mac_tx_ptp_ts_tag[n*PTP_TAG_WIDTH +: PTP_TAG_WIDTH];
             assign m_axis_tx_ptp_ts_valid[IND[n*8 +: 8]] = s_axis_mac_tx_ptp_ts_valid[n];
+
+            assign tx_ptp_clk[IND[n*8 +: 8]] = mac_tx_ptp_clk[n];
+            assign tx_ptp_rst[IND[n*8 +: 8]] = mac_tx_ptp_rst[n];
 
             assign mac_tx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH] = tx_ptp_ts_96[IND[n*8 +: 8]*PTP_TS_WIDTH +: PTP_TS_WIDTH];
             assign mac_tx_ptp_ts_step[n] = tx_ptp_ts_step[IND[n*8 +: 8]];

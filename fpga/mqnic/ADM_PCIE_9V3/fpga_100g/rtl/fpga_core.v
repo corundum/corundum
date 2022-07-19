@@ -683,6 +683,8 @@ assign front_led[1] = 1'b0;
 wire [PORT_COUNT-1:0]                         eth_tx_clk;
 wire [PORT_COUNT-1:0]                         eth_tx_rst;
 
+wire [PORT_COUNT-1:0]                         eth_tx_ptp_clk;
+wire [PORT_COUNT-1:0]                         eth_tx_ptp_rst;
 wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            eth_tx_ptp_ts_96;
 wire [PORT_COUNT-1:0]                         eth_tx_ptp_ts_step;
 
@@ -749,6 +751,8 @@ mqnic_port_map_mac_axis_inst (
     .mac_tx_clk({qsfp_1_tx_clk, qsfp_0_tx_clk}),
     .mac_tx_rst({qsfp_1_tx_rst, qsfp_0_tx_rst}),
 
+    .mac_tx_ptp_clk(2'b00),
+    .mac_tx_ptp_rst(2'b00),
     .mac_tx_ptp_ts_96({qsfp_1_tx_ptp_time_int, qsfp_0_tx_ptp_time_int}),
     .mac_tx_ptp_ts_step(),
 
@@ -787,6 +791,8 @@ mqnic_port_map_mac_axis_inst (
     .tx_clk(eth_tx_clk),
     .tx_rst(eth_tx_rst),
 
+    .tx_ptp_clk(eth_tx_ptp_clk),
+    .tx_ptp_rst(eth_tx_ptp_rst),
     .tx_ptp_ts_96(eth_tx_ptp_ts_96),
     .tx_ptp_ts_step(eth_tx_ptp_ts_step),
 
@@ -1137,8 +1143,8 @@ core_inst (
     .eth_tx_clk(eth_tx_clk),
     .eth_tx_rst(eth_tx_rst),
 
-    .eth_tx_ptp_clk(0),
-    .eth_tx_ptp_rst(0),
+    .eth_tx_ptp_clk(eth_tx_ptp_clk),
+    .eth_tx_ptp_rst(eth_tx_ptp_rst),
     .eth_tx_ptp_ts_96(eth_tx_ptp_ts_96),
     .eth_tx_ptp_ts_step(eth_tx_ptp_ts_step),
 

@@ -862,6 +862,8 @@ assign led[3] = !pps_led_reg;
 wire [PORT_COUNT-1:0]                         eth_tx_clk;
 wire [PORT_COUNT-1:0]                         eth_tx_rst;
 
+wire [PORT_COUNT-1:0]                         eth_tx_ptp_clk;
+wire [PORT_COUNT-1:0]                         eth_tx_ptp_rst;
 wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            eth_tx_ptp_ts_96;
 wire [PORT_COUNT-1:0]                         eth_tx_ptp_ts_step;
 
@@ -936,6 +938,8 @@ mqnic_port_map_mac_axis_inst (
     .mac_tx_clk({qsfp3_tx_clk, qsfp2_tx_clk, qsfp1_tx_clk, qsfp0_tx_clk}),
     .mac_tx_rst({qsfp3_tx_rst, qsfp2_tx_rst, qsfp1_tx_rst, qsfp0_tx_rst}),
 
+    .mac_tx_ptp_clk(4'b0000),
+    .mac_tx_ptp_rst(4'b0000),
     .mac_tx_ptp_ts_96({qsfp3_tx_ptp_time_int, qsfp2_tx_ptp_time_int, qsfp1_tx_ptp_time_int, qsfp0_tx_ptp_time_int}),
     .mac_tx_ptp_ts_step(),
 
@@ -951,7 +955,7 @@ mqnic_port_map_mac_axis_inst (
     .s_axis_mac_tx_ptp_ts_valid({qsfp3_tx_ptp_ts_valid, qsfp2_tx_ptp_ts_valid, qsfp1_tx_ptp_ts_valid, qsfp0_tx_ptp_ts_valid}),
     .s_axis_mac_tx_ptp_ts_ready(),
 
-    .mac_tx_status(2'b11),
+    .mac_tx_status(4'b1111),
 
     .mac_rx_clk({qsfp3_rx_clk, qsfp2_rx_clk, qsfp1_rx_clk, qsfp0_rx_clk}),
     .mac_rx_rst({qsfp3_rx_rst, qsfp2_rx_rst, qsfp1_rx_rst, qsfp0_rx_rst}),
@@ -974,6 +978,8 @@ mqnic_port_map_mac_axis_inst (
     .tx_clk(eth_tx_clk),
     .tx_rst(eth_tx_rst),
 
+    .tx_ptp_clk(eth_tx_ptp_clk),
+    .tx_ptp_rst(eth_tx_ptp_rst),
     .tx_ptp_ts_96(eth_tx_ptp_ts_96),
     .tx_ptp_ts_step(eth_tx_ptp_ts_step),
 
@@ -1324,8 +1330,8 @@ core_inst (
     .eth_tx_clk(eth_tx_clk),
     .eth_tx_rst(eth_tx_rst),
 
-    .eth_tx_ptp_clk(0),
-    .eth_tx_ptp_rst(0),
+    .eth_tx_ptp_clk(eth_tx_ptp_clk),
+    .eth_tx_ptp_rst(eth_tx_ptp_rst),
     .eth_tx_ptp_ts_96(eth_tx_ptp_ts_96),
     .eth_tx_ptp_ts_step(eth_tx_ptp_ts_step),
 

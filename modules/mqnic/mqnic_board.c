@@ -431,6 +431,47 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0x20, MQNIC_MAX_IF);
 
 		break;
+	case MQNIC_BOARD_ID_250SOC:
+		// FPGA I2C
+		//   TCA9548 U28 0x72
+		//     CH0: J6 (OCuLink ch 0) A
+		//     CH1: J6 (OCuLink ch 0) B
+		//     CH2: J7 (OCuLink ch 1) A
+		//     CH3: J8 (OCuLink ch 2) A
+		//     CH4: J9 (OCuLink ch 3) A
+		//     CH5: J9 (OCuLink ch 3) B
+		//     CH6: QSFP0
+		//     CH7: QSFP1
+		// FPGA SMBUS
+		//   AT24C16C U51 0x54
+		//   TMP431C U52 0x4C
+
+		request_module("at24");
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
+
+		// U34 TCA9548 I2C MUX
+		mux = create_i2c_client(adapter, "pca9548", 0x70, i2c_mux_props);
+
+		// QSFP0
+		mqnic->mod_i2c_client[0] = create_i2c_client(get_i2c_mux_channel(mux, 6), "24c02", 0x50, NULL);
+
+		// QSFP1
+		mqnic->mod_i2c_client[1] = create_i2c_client(get_i2c_mux_channel(mux, 7), "24c02", 0x50, NULL);
+
+		mqnic->mod_i2c_client_count = 2;
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 1);
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 2);
+
+		// I2C EEPROM
+		mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c16", 0x50, NULL);
+
+		break;
 	case MQNIC_BOARD_ID_XUPP3R:
 
 		request_module("at24");

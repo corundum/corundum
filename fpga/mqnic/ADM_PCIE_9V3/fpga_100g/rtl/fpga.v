@@ -1002,14 +1002,14 @@ qsfp_0_cmac_pad_inst (
     .m_axis_tuser(qsfp_0_mac_tx_axis_tuser)
 );
 
-cmac_ts_insert #(
+mac_ts_insert #(
     .PTP_TS_WIDTH(80),
     .DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
     .KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
     .S_USER_WIDTH(1),
-    .M_USER_WIDTH(801)
+    .M_USER_WIDTH(80+1)
 )
-qsfp_0_cmac_ts_insert_inst (
+qsfp_0_mac_ts_insert_inst (
     .clk(qsfp_0_rx_clk_int),
     .rst(qsfp_0_rx_rst_int),
 
@@ -1411,14 +1411,14 @@ qsfp_1_cmac_pad_inst (
     .m_axis_tuser(qsfp_1_mac_tx_axis_tuser)
 );
 
-cmac_ts_insert #(
+mac_ts_insert #(
     .PTP_TS_WIDTH(80),
     .DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
     .KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
     .S_USER_WIDTH(1),
-    .M_USER_WIDTH(801)
+    .M_USER_WIDTH(80+1)
 )
-qsfp_1_cmac_ts_insert_inst (
+qsfp_1_mac_ts_insert_inst (
     .clk(qsfp_1_rx_clk_int),
     .rst(qsfp_1_rx_rst_int),
 

@@ -1007,14 +1007,14 @@ qsfp_cmac_pad_inst (
     .m_axis_tuser(qsfp_mac_tx_axis_tuser)
 );
 
-cmac_ts_insert #(
+mac_ts_insert #(
     .PTP_TS_WIDTH(80),
     .DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
     .KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
     .S_USER_WIDTH(1),
-    .M_USER_WIDTH(801)
+    .M_USER_WIDTH(80+1)
 )
-qsfp_cmac_ts_insert_inst (
+qsfp_mac_ts_insert_inst (
     .clk(qsfp_rx_clk_int),
     .rst(qsfp_rx_rst_int),
 

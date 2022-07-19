@@ -38,9 +38,9 @@ either expressed or implied, of The Regents of the University of California.
 `default_nettype none
 
 /*
- * CMAC PTP TS insert module
+ * MAC PTP TS insert module
  */
-module cmac_ts_insert #
+module mac_ts_insert #
 (
     // PTP TS width
     parameter PTP_TS_WIDTH = 80,
@@ -85,11 +85,6 @@ module cmac_ts_insert #
 
 // check configuration
 initial begin
-    if (DATA_WIDTH != 512) begin
-        $error("Error: AXI stream data width must be 512 (instance %m)");
-        $finish;
-    end
-
     if (KEEP_WIDTH * 8 != DATA_WIDTH) begin
         $error("Error: AXI stream interface requires byte (8-bit) granularity (instance %m)");
         $finish;

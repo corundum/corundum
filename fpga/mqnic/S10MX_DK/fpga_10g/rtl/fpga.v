@@ -1017,7 +1017,7 @@ core_inst (
     .user_led(user_led),
 
     /*
-     * H-tile RX AVST interface
+     * H-Tile interface
      */
     .rx_st_data(rx_st_data),
     .rx_st_empty(rx_st_empty),

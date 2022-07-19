@@ -954,7 +954,7 @@ core_inst (
     .rst(rst_250mhz),
 
     /*
-     * H-tile RX AVST interface
+     * H-Tile/L-Tile RX AVST interface
      */
     .rx_st_data(rx_st_data),
     .rx_st_empty(rx_st_empty),
@@ -967,6 +967,9 @@ core_inst (
     .rx_st_vf_num(rx_st_vf_num),
     .rx_st_bar_range(rx_st_bar_range),
 
+    /*
+     * H-Tile/L-Tile TX AVST interface
+     */
     .tx_st_data(tx_st_data),
     .tx_st_sop(tx_st_sop),
     .tx_st_eop(tx_st_eop),
@@ -974,6 +977,9 @@ core_inst (
     .tx_st_ready(tx_st_ready),
     .tx_st_err(tx_st_err),
 
+    /*
+     * H-Tile/L-Tile TX flow control
+     */
     .tx_ph_cdts(tx_ph_cdts),
     .tx_pd_cdts(tx_pd_cdts),
     .tx_nph_cdts(tx_nph_cdts),
@@ -985,6 +991,9 @@ core_inst (
     .tx_cdts_type(tx_cdts_type),
     .tx_cdts_data_value(tx_cdts_data_value),
 
+    /*
+     * H-Tile/L-Tile configuration interface
+     */
     .tl_cfg_ctl(tl_cfg_ctl),
     .tl_cfg_add(tl_cfg_add),
     .tl_cfg_func(tl_cfg_func),

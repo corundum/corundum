@@ -66,6 +66,7 @@ module mqnic_core #
     parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_CLOCK_CDC_PIPELINE = 0,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
+    parameter PTP_SEPARATE_TX_CLOCK = 0,
     parameter PTP_SEPARATE_RX_CLOCK = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 0,
@@ -374,6 +375,8 @@ module mqnic_core #
     input  wire [PORT_COUNT-1:0]                        tx_clk,
     input  wire [PORT_COUNT-1:0]                        tx_rst,
 
+    input  wire [PORT_COUNT-1:0]                        tx_ptp_clk,
+    input  wire [PORT_COUNT-1:0]                        tx_ptp_rst,
     output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           tx_ptp_ts_96,
     output wire [PORT_COUNT-1:0]                        tx_ptp_ts_step,
 
@@ -2780,6 +2783,9 @@ generate
             wire port_rx_clk = rx_clk[n*PORTS_PER_IF+m];
             wire port_rx_rst = rx_rst[n*PORTS_PER_IF+m];
 
+            wire port_tx_ptp_clk = tx_ptp_clk[n*PORTS_PER_IF+m];
+            wire port_tx_ptp_rst = tx_ptp_rst[n*PORTS_PER_IF+m];
+
             wire port_rx_ptp_clk = rx_ptp_clk[n*PORTS_PER_IF+m];
             wire port_rx_ptp_rst = rx_ptp_rst[n*PORTS_PER_IF+m];
 
@@ -2814,8 +2820,8 @@ generate
                 tx_ptp_cdc_inst (
                     .input_clk(ptp_clk),
                     .input_rst(ptp_rst),
-                    .output_clk(port_tx_clk),
-                    .output_rst(port_tx_rst),
+                    .output_clk(PTP_SEPARATE_TX_CLOCK ? port_tx_ptp_clk : port_tx_clk),
+                    .output_rst(PTP_SEPARATE_TX_CLOCK ? port_tx_ptp_rst : port_tx_rst),
                     .sample_clk(ptp_sample_clk),
                     .input_ts(ptp_ts_96),
                     .input_ts_step(ptp_ts_step),

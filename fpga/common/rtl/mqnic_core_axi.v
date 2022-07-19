@@ -336,6 +336,8 @@ module mqnic_core_axi #
     input  wire [PORT_COUNT-1:0]                      tx_clk,
     input  wire [PORT_COUNT-1:0]                      tx_rst,
 
+    input  wire [PORT_COUNT-1:0]                      tx_ptp_clk,
+    input  wire [PORT_COUNT-1:0]                      tx_ptp_rst,
     output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]         tx_ptp_ts_96,
     output wire [PORT_COUNT-1:0]                      tx_ptp_ts_step,
 
@@ -1104,6 +1106,8 @@ core_inst (
     .tx_clk(tx_clk),
     .tx_rst(tx_rst),
 
+    .tx_ptp_clk(tx_ptp_clk),
+    .tx_ptp_rst(tx_ptp_rst),
     .tx_ptp_ts_96(tx_ptp_ts_96),
     .tx_ptp_ts_step(tx_ptp_ts_step),
 

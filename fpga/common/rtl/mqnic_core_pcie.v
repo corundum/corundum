@@ -66,6 +66,7 @@ module mqnic_core_pcie #
     parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_CLOCK_CDC_PIPELINE = 0,
     parameter PTP_USE_SAMPLE_CLOCK = 0,
+    parameter PTP_SEPARATE_TX_CLOCK = 0,
     parameter PTP_SEPARATE_RX_CLOCK = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 0,
@@ -359,6 +360,8 @@ module mqnic_core_pcie #
     input  wire [PORT_COUNT-1:0]                         tx_clk,
     input  wire [PORT_COUNT-1:0]                         tx_rst,
 
+    input  wire [PORT_COUNT-1:0]                         tx_ptp_clk,
+    input  wire [PORT_COUNT-1:0]                         tx_ptp_rst,
     output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            tx_ptp_ts_96,
     output wire [PORT_COUNT-1:0]                         tx_ptp_ts_step,
 
@@ -1465,6 +1468,7 @@ mqnic_core #(
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PTP_SEPARATE_TX_CLOCK(PTP_SEPARATE_TX_CLOCK),
     .PTP_SEPARATE_RX_CLOCK(PTP_SEPARATE_RX_CLOCK),
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
@@ -1771,6 +1775,8 @@ core_inst (
     .tx_clk(tx_clk),
     .tx_rst(tx_rst),
 
+    .tx_ptp_clk(tx_ptp_clk),
+    .tx_ptp_rst(tx_ptp_rst),
     .tx_ptp_ts_96(tx_ptp_ts_96),
     .tx_ptp_ts_step(tx_ptp_ts_step),
 

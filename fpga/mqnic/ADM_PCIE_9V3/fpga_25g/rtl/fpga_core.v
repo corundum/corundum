@@ -1119,6 +1119,7 @@ mqnic_core_pcie_us #(
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
     .PTP_USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
+    .PTP_SEPARATE_TX_CLOCK(0),
     .PTP_SEPARATE_RX_CLOCK(0),
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
@@ -1408,6 +1409,8 @@ core_inst (
     .eth_tx_clk(eth_tx_clk),
     .eth_tx_rst(eth_tx_rst),
 
+    .eth_tx_ptp_clk(0),
+    .eth_tx_ptp_rst(0),
     .eth_tx_ptp_ts_96(eth_tx_ptp_ts_96),
     .eth_tx_ptp_ts_step(eth_tx_ptp_ts_step),
 

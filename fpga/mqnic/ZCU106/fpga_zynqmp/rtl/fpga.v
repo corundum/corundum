@@ -321,10 +321,6 @@ wire btnd_int;
 wire btnr_int;
 wire btnc_int;
 wire [7:0] sw_int;
-wire qsfp1_modprsl_int;
-wire qsfp2_modprsl_int;
-wire qsfp1_intl_int;
-wire qsfp2_intl_int;
 
 debounce_switch #(
     .WIDTH(13),

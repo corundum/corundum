@@ -72,7 +72,9 @@ module example_core_pcie #
     // BAR0 aperture (log2 size)
     parameter BAR0_APERTURE = 24,
     // BAR2 aperture (log2 size)
-    parameter BAR2_APERTURE = 24
+    parameter BAR2_APERTURE = 24,
+    // BAR4 aperture (log2 size)
+    parameter BAR4_APERTURE = 16
 )
 (
     input  wire                                          clk,
@@ -145,6 +147,17 @@ module example_core_pcie #
     input  wire [TX_SEQ_NUM_COUNT-1:0]                   s_axis_wr_req_tx_seq_num_valid,
 
     /*
+     * TLP output (MSI-X write request)
+     */
+    output wire [31:0]                                   tx_msix_wr_req_tlp_data,
+    output wire                                          tx_msix_wr_req_tlp_strb,
+    output wire [TLP_HDR_WIDTH-1:0]                      tx_msix_wr_req_tlp_hdr,
+    output wire                                          tx_msix_wr_req_tlp_valid,
+    output wire                                          tx_msix_wr_req_tlp_sop,
+    output wire                                          tx_msix_wr_req_tlp_eop,
+    input  wire                                          tx_msix_wr_req_tlp_ready,
+
+    /*
      * Transmit flow control
      */
     input  wire [7:0]                                    pcie_tx_fc_ph_av,
@@ -158,27 +171,28 @@ module example_core_pcie #
     input  wire                                          ext_tag_enable,
     input  wire [2:0]                                    max_read_request_size,
     input  wire [2:0]                                    max_payload_size,
+    input  wire                                          msix_enable,
+    input  wire                                          msix_mask,
 
     /*
      * Status
      */
     output wire                                          status_error_cor,
-    output wire                                          status_error_uncor,
-
-    /*
-     * MSI request outputs
-     */
-    output wire [31:0]                                   msi_irq
+    output wire                                          status_error_uncor
 );
 
-parameter AXIL_DATA_WIDTH = 32;
-parameter AXIL_ADDR_WIDTH = BAR0_APERTURE;
-parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8);
+parameter AXIL_CTRL_DATA_WIDTH = 32;
+parameter AXIL_CTRL_ADDR_WIDTH = BAR0_APERTURE;
+parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8);
 
 parameter AXI_DATA_WIDTH = TLP_DATA_WIDTH;
 parameter AXI_STRB_WIDTH = (AXI_DATA_WIDTH/8);
 parameter AXI_ADDR_WIDTH = BAR2_APERTURE;
 parameter AXI_ID_WIDTH = 8;
+
+parameter AXIL_MSIX_DATA_WIDTH = 32;
+parameter AXIL_MSIX_ADDR_WIDTH = BAR4_APERTURE;
+parameter AXIL_MSIX_STRB_WIDTH = (AXIL_MSIX_DATA_WIDTH/8);
 
 parameter RAM_SEL_WIDTH = 2;
 parameter RAM_ADDR_WIDTH = 16;
@@ -191,25 +205,47 @@ parameter PCIE_ADDR_WIDTH = 64;
 parameter DMA_LEN_WIDTH = 16;
 parameter DMA_TAG_WIDTH = 8;
 
-wire [AXIL_ADDR_WIDTH-1:0]  axil_ctrl_awaddr;
-wire [2:0]                  axil_ctrl_awprot;
-wire                        axil_ctrl_awvalid;
-wire                        axil_ctrl_awready;
-wire [AXIL_DATA_WIDTH-1:0]  axil_ctrl_wdata;
-wire [AXIL_STRB_WIDTH-1:0]  axil_ctrl_wstrb;
-wire                        axil_ctrl_wvalid;
-wire                        axil_ctrl_wready;
-wire [1:0]                  axil_ctrl_bresp;
-wire                        axil_ctrl_bvalid;
-wire                        axil_ctrl_bready;
-wire [AXIL_ADDR_WIDTH-1:0]  axil_ctrl_araddr;
-wire [2:0]                  axil_ctrl_arprot;
-wire                        axil_ctrl_arvalid;
-wire                        axil_ctrl_arready;
-wire [AXIL_DATA_WIDTH-1:0]  axil_ctrl_rdata;
-wire [1:0]                  axil_ctrl_rresp;
-wire                        axil_ctrl_rvalid;
-wire                        axil_ctrl_rready;
+parameter IRQ_INDEX_WIDTH = 5;
+
+wire [AXIL_CTRL_ADDR_WIDTH-1:0]  axil_ctrl_awaddr;
+wire [2:0]                       axil_ctrl_awprot;
+wire                             axil_ctrl_awvalid;
+wire                             axil_ctrl_awready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_ctrl_wdata;
+wire [AXIL_CTRL_STRB_WIDTH-1:0]  axil_ctrl_wstrb;
+wire                             axil_ctrl_wvalid;
+wire                             axil_ctrl_wready;
+wire [1:0]                       axil_ctrl_bresp;
+wire                             axil_ctrl_bvalid;
+wire                             axil_ctrl_bready;
+wire [AXIL_CTRL_ADDR_WIDTH-1:0]  axil_ctrl_araddr;
+wire [2:0]                       axil_ctrl_arprot;
+wire                             axil_ctrl_arvalid;
+wire                             axil_ctrl_arready;
+wire [AXIL_CTRL_DATA_WIDTH-1:0]  axil_ctrl_rdata;
+wire [1:0]                       axil_ctrl_rresp;
+wire                             axil_ctrl_rvalid;
+wire                             axil_ctrl_rready;
+
+wire [AXIL_MSIX_ADDR_WIDTH-1:0]  axil_msix_awaddr;
+wire [2:0]                       axil_msix_awprot;
+wire                             axil_msix_awvalid;
+wire                             axil_msix_awready;
+wire [AXIL_MSIX_DATA_WIDTH-1:0]  axil_msix_wdata;
+wire [AXIL_MSIX_STRB_WIDTH-1:0]  axil_msix_wstrb;
+wire                             axil_msix_wvalid;
+wire                             axil_msix_wready;
+wire [1:0]                       axil_msix_bresp;
+wire                             axil_msix_bvalid;
+wire                             axil_msix_bready;
+wire [AXIL_MSIX_ADDR_WIDTH-1:0]  axil_msix_araddr;
+wire [2:0]                       axil_msix_arprot;
+wire                             axil_msix_arvalid;
+wire                             axil_msix_arready;
+wire [AXIL_MSIX_DATA_WIDTH-1:0]  axil_msix_rdata;
+wire [1:0]                       axil_msix_rresp;
+wire                             axil_msix_rvalid;
+wire                             axil_msix_rready;
 
 wire [PCIE_ADDR_WIDTH-1:0]  axis_dma_read_desc_dma_addr;
 wire [RAM_SEL_WIDTH-1:0]    axis_dma_read_desc_ram_sel;
@@ -252,8 +288,8 @@ wire [RAM_SEG_COUNT-1:0]                     ram_wr_cmd_valid;
 wire [RAM_SEG_COUNT-1:0]                     ram_wr_cmd_ready;
 wire [RAM_SEG_COUNT-1:0]                     ram_wr_done;
 
-wire [2:0] status_error_cor_int;
-wire [2:0] status_error_uncor_int;
+wire [3:0] status_error_cor_int;
+wire [3:0] status_error_uncor_int;
 
 // PCIe connections
 wire [TLP_DATA_WIDTH-1:0]               ctrl_rx_req_tlp_data;
@@ -292,8 +328,31 @@ wire [TLP_SEG_COUNT-1:0]                ram_tx_cpl_tlp_sop;
 wire [TLP_SEG_COUNT-1:0]                ram_tx_cpl_tlp_eop;
 wire                                    ram_tx_cpl_tlp_ready;
 
+wire [TLP_DATA_WIDTH-1:0]               msix_rx_req_tlp_data;
+wire [TLP_STRB_WIDTH-1:0]               msix_rx_req_tlp_strb;
+wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  msix_rx_req_tlp_hdr;
+wire [TLP_SEG_COUNT*3-1:0]              msix_rx_req_tlp_bar_id;
+wire [TLP_SEG_COUNT*8-1:0]              msix_rx_req_tlp_func_num;
+wire [TLP_SEG_COUNT-1:0]                msix_rx_req_tlp_valid;
+wire [TLP_SEG_COUNT-1:0]                msix_rx_req_tlp_sop;
+wire [TLP_SEG_COUNT-1:0]                msix_rx_req_tlp_eop;
+wire                                    msix_rx_req_tlp_ready;
+
+wire [TLP_DATA_WIDTH-1:0]               msix_tx_cpl_tlp_data;
+wire [TLP_STRB_WIDTH-1:0]               msix_tx_cpl_tlp_strb;
+wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]  msix_tx_cpl_tlp_hdr;
+wire [TLP_SEG_COUNT-1:0]                msix_tx_cpl_tlp_valid;
+wire [TLP_SEG_COUNT-1:0]                msix_tx_cpl_tlp_sop;
+wire [TLP_SEG_COUNT-1:0]                msix_tx_cpl_tlp_eop;
+wire                                    msix_tx_cpl_tlp_ready;
+
+// Interrupts
+wire [IRQ_INDEX_WIDTH-1:0]  irq_index;
+wire                        irq_valid;
+wire                        irq_ready;
+
 pcie_tlp_demux_bar #(
-    .PORTS(2),
+    .PORTS(3),
     .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
     .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
@@ -325,16 +384,16 @@ pcie_tlp_demux_inst (
     /*
      * TLP output
      */
-    .out_tlp_data(    {ram_rx_req_tlp_data,     ctrl_rx_req_tlp_data    }),
-    .out_tlp_strb(    {ram_rx_req_tlp_strb,     ctrl_rx_req_tlp_strb    }),
-    .out_tlp_hdr(     {ram_rx_req_tlp_hdr,      ctrl_rx_req_tlp_hdr     }),
-    .out_tlp_bar_id(  {ram_rx_req_tlp_bar_id,   ctrl_rx_req_tlp_bar_id  }),
-    .out_tlp_func_num({ram_rx_req_tlp_func_num, ctrl_rx_req_tlp_func_num}),
+    .out_tlp_data(    {msix_rx_req_tlp_data,     ram_rx_req_tlp_data,     ctrl_rx_req_tlp_data    }),
+    .out_tlp_strb(    {msix_rx_req_tlp_strb,     ram_rx_req_tlp_strb,     ctrl_rx_req_tlp_strb    }),
+    .out_tlp_hdr(     {msix_rx_req_tlp_hdr,      ram_rx_req_tlp_hdr,      ctrl_rx_req_tlp_hdr     }),
+    .out_tlp_bar_id(  {msix_rx_req_tlp_bar_id,   ram_rx_req_tlp_bar_id,   ctrl_rx_req_tlp_bar_id  }),
+    .out_tlp_func_num({msix_rx_req_tlp_func_num, ram_rx_req_tlp_func_num, ctrl_rx_req_tlp_func_num}),
     .out_tlp_error(),
-    .out_tlp_valid(   {ram_rx_req_tlp_valid,    ctrl_rx_req_tlp_valid   }),
-    .out_tlp_sop(     {ram_rx_req_tlp_sop,      ctrl_rx_req_tlp_sop     }),
-    .out_tlp_eop(     {ram_rx_req_tlp_eop,      ctrl_rx_req_tlp_eop     }),
-    .out_tlp_ready(   {ram_rx_req_tlp_ready,    ctrl_rx_req_tlp_ready   }),
+    .out_tlp_valid(   {msix_rx_req_tlp_valid,    ram_rx_req_tlp_valid,    ctrl_rx_req_tlp_valid   }),
+    .out_tlp_sop(     {msix_rx_req_tlp_sop,      ram_rx_req_tlp_sop,      ctrl_rx_req_tlp_sop     }),
+    .out_tlp_eop(     {msix_rx_req_tlp_eop,      ram_rx_req_tlp_eop,      ctrl_rx_req_tlp_eop     }),
+    .out_tlp_ready(   {msix_rx_req_tlp_ready,    ram_rx_req_tlp_ready,    ctrl_rx_req_tlp_ready   }),
 
     /*
      * Control
@@ -349,7 +408,7 @@ pcie_tlp_demux_inst (
 );
 
 pcie_tlp_mux #(
-    .PORTS(2),
+    .PORTS(3),
     .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
     .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
@@ -364,17 +423,17 @@ pcie_tlp_mux_inst (
     /*
      * TLP input
      */
-    .in_tlp_data( {ram_tx_cpl_tlp_data,  ctrl_tx_cpl_tlp_data }),
-    .in_tlp_strb( {ram_tx_cpl_tlp_strb,  ctrl_tx_cpl_tlp_strb }),
-    .in_tlp_hdr(  {ram_tx_cpl_tlp_hdr,   ctrl_tx_cpl_tlp_hdr  }),
+    .in_tlp_data( {msix_tx_cpl_tlp_data,  ram_tx_cpl_tlp_data,  ctrl_tx_cpl_tlp_data }),
+    .in_tlp_strb( {msix_tx_cpl_tlp_strb,  ram_tx_cpl_tlp_strb,  ctrl_tx_cpl_tlp_strb }),
+    .in_tlp_hdr(  {msix_tx_cpl_tlp_hdr,   ram_tx_cpl_tlp_hdr,   ctrl_tx_cpl_tlp_hdr  }),
     .in_tlp_seq(0),
     .in_tlp_bar_id(0),
     .in_tlp_func_num(0),
     .in_tlp_error(0),
-    .in_tlp_valid({ram_tx_cpl_tlp_valid, ctrl_tx_cpl_tlp_valid}),
-    .in_tlp_sop(  {ram_tx_cpl_tlp_sop,   ctrl_tx_cpl_tlp_sop  }),
-    .in_tlp_eop(  {ram_tx_cpl_tlp_eop,   ctrl_tx_cpl_tlp_eop  }),
-    .in_tlp_ready({ram_tx_cpl_tlp_ready, ctrl_tx_cpl_tlp_ready}),
+    .in_tlp_valid({msix_tx_cpl_tlp_valid, ram_tx_cpl_tlp_valid, ctrl_tx_cpl_tlp_valid}),
+    .in_tlp_sop(  {msix_tx_cpl_tlp_sop,   ram_tx_cpl_tlp_sop,   ctrl_tx_cpl_tlp_sop  }),
+    .in_tlp_eop(  {msix_tx_cpl_tlp_eop,   ram_tx_cpl_tlp_eop,   ctrl_tx_cpl_tlp_eop  }),
+    .in_tlp_ready({msix_tx_cpl_tlp_ready, ram_tx_cpl_tlp_ready, ctrl_tx_cpl_tlp_ready}),
 
     /*
      * TLP output
@@ -403,9 +462,9 @@ pcie_axil_master #(
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
     .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
     .TLP_SEG_COUNT(TLP_SEG_COUNT),
-    .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
-    .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
+    .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+    .AXIL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
     .TLP_FORCE_64_BIT_ADDR(TLP_FORCE_64_BIT_ADDR)
 )
 pcie_axil_master_inst (
@@ -639,6 +698,76 @@ axi_ram_inst (
     .s_axi_rready(axi_ram_rready)
 );
 
+pcie_axil_master #(
+    .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
+    .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(TLP_SEG_COUNT),
+    .AXIL_DATA_WIDTH(AXIL_MSIX_DATA_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_MSIX_ADDR_WIDTH),
+    .AXIL_STRB_WIDTH(AXIL_MSIX_STRB_WIDTH),
+    .TLP_FORCE_64_BIT_ADDR(TLP_FORCE_64_BIT_ADDR)
+)
+msix_pcie_axil_master_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * TLP input (request)
+     */
+    .rx_req_tlp_data(msix_rx_req_tlp_data),
+    .rx_req_tlp_hdr(msix_rx_req_tlp_hdr),
+    .rx_req_tlp_valid(msix_rx_req_tlp_valid),
+    .rx_req_tlp_sop(msix_rx_req_tlp_sop),
+    .rx_req_tlp_eop(msix_rx_req_tlp_eop),
+    .rx_req_tlp_ready(msix_rx_req_tlp_ready),
+
+    /*
+     * TLP output (completion)
+     */
+    .tx_cpl_tlp_data(msix_tx_cpl_tlp_data),
+    .tx_cpl_tlp_strb(msix_tx_cpl_tlp_strb),
+    .tx_cpl_tlp_hdr(msix_tx_cpl_tlp_hdr),
+    .tx_cpl_tlp_valid(msix_tx_cpl_tlp_valid),
+    .tx_cpl_tlp_sop(msix_tx_cpl_tlp_sop),
+    .tx_cpl_tlp_eop(msix_tx_cpl_tlp_eop),
+    .tx_cpl_tlp_ready(msix_tx_cpl_tlp_ready),
+
+    /*
+     * AXI Lite Master output
+     */
+    .m_axil_awaddr(axil_msix_awaddr),
+    .m_axil_awprot(axil_msix_awprot),
+    .m_axil_awvalid(axil_msix_awvalid),
+    .m_axil_awready(axil_msix_awready),
+    .m_axil_wdata(axil_msix_wdata),
+    .m_axil_wstrb(axil_msix_wstrb),
+    .m_axil_wvalid(axil_msix_wvalid),
+    .m_axil_wready(axil_msix_wready),
+    .m_axil_bresp(axil_msix_bresp),
+    .m_axil_bvalid(axil_msix_bvalid),
+    .m_axil_bready(axil_msix_bready),
+    .m_axil_araddr(axil_msix_araddr),
+    .m_axil_arprot(axil_msix_arprot),
+    .m_axil_arvalid(axil_msix_arvalid),
+    .m_axil_arready(axil_msix_arready),
+    .m_axil_rdata(axil_msix_rdata),
+    .m_axil_rresp(axil_msix_rresp),
+    .m_axil_rvalid(axil_msix_rvalid),
+    .m_axil_rready(axil_msix_rready),
+
+    /*
+     * Configuration
+     */
+    .completer_id({bus_num, 5'd0, 3'd0}),
+
+    /*
+     * Status
+     */
+    .status_error_cor(status_error_cor_int[2]),
+    .status_error_uncor(status_error_uncor_int[2])
+);
+
 dma_if_pcie #(
     .TLP_DATA_WIDTH(TLP_DATA_WIDTH),
     .TLP_STRB_WIDTH(TLP_STRB_WIDTH),
@@ -789,12 +918,73 @@ dma_if_pcie_inst (
     /*
      * Status
      */
-    .status_error_cor(status_error_cor_int[2]),
-    .status_error_uncor(status_error_uncor_int[2])
+    .status_error_cor(status_error_cor_int[3]),
+    .status_error_uncor(status_error_uncor_int[3])
+);
+
+pcie_msix #(
+    .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),
+    .AXIL_DATA_WIDTH(AXIL_MSIX_DATA_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_MSIX_ADDR_WIDTH),
+    .AXIL_STRB_WIDTH(AXIL_MSIX_STRB_WIDTH),
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_FORCE_64_BIT_ADDR(TLP_FORCE_64_BIT_ADDR)
+)
+pcie_msix_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * AXI lite interface for MSI-X tables
+     */
+    .s_axil_awaddr(axil_msix_awaddr),
+    .s_axil_awprot(axil_msix_awprot),
+    .s_axil_awvalid(axil_msix_awvalid),
+    .s_axil_awready(axil_msix_awready),
+    .s_axil_wdata(axil_msix_wdata),
+    .s_axil_wstrb(axil_msix_wstrb),
+    .s_axil_wvalid(axil_msix_wvalid),
+    .s_axil_wready(axil_msix_wready),
+    .s_axil_bresp(axil_msix_bresp),
+    .s_axil_bvalid(axil_msix_bvalid),
+    .s_axil_bready(axil_msix_bready),
+    .s_axil_araddr(axil_msix_araddr),
+    .s_axil_arprot(axil_msix_arprot),
+    .s_axil_arvalid(axil_msix_arvalid),
+    .s_axil_arready(axil_msix_arready),
+    .s_axil_rdata(axil_msix_rdata),
+    .s_axil_rresp(axil_msix_rresp),
+    .s_axil_rvalid(axil_msix_rvalid),
+    .s_axil_rready(axil_msix_rready),
+
+    /*
+     * Interrupt request input
+     */
+    .irq_index(irq_index),
+    .irq_valid(irq_valid),
+    .irq_ready(irq_ready),
+
+    /*
+     * Memory write TLP output
+     */
+    .tx_wr_req_tlp_data(tx_msix_wr_req_tlp_data),
+    .tx_wr_req_tlp_strb(tx_msix_wr_req_tlp_strb),
+    .tx_wr_req_tlp_hdr(tx_msix_wr_req_tlp_hdr),
+    .tx_wr_req_tlp_valid(tx_msix_wr_req_tlp_valid),
+    .tx_wr_req_tlp_sop(tx_msix_wr_req_tlp_sop),
+    .tx_wr_req_tlp_eop(tx_msix_wr_req_tlp_eop),
+    .tx_wr_req_tlp_ready(tx_msix_wr_req_tlp_ready),
+
+    /*
+     * Configuration
+     */
+    .requester_id({bus_num, 5'd0, 3'd0}),
+    .msix_enable(msix_enable),
+    .msix_mask(msix_mask)
 );
 
 pulse_merge #(
-    .INPUT_WIDTH(3),
+    .INPUT_WIDTH(4),
     .COUNT_WIDTH(4)
 )
 status_error_cor_pm_inst (
@@ -807,7 +997,7 @@ status_error_cor_pm_inst (
 );
 
 pulse_merge #(
-    .INPUT_WIDTH(3),
+    .INPUT_WIDTH(4),
     .COUNT_WIDTH(4)
 )
 status_error_uncor_pm_inst (
@@ -820,9 +1010,9 @@ status_error_uncor_pm_inst (
 );
 
 example_core #(
-    .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
-    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
-    .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
+    .AXIL_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+    .AXIL_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
     .DMA_ADDR_WIDTH(PCIE_ADDR_WIDTH),
     .DMA_IMM_ENABLE(IMM_ENABLE),
     .DMA_IMM_WIDTH(IMM_WIDTH),
@@ -833,7 +1023,8 @@ example_core #(
     .RAM_SEG_COUNT(RAM_SEG_COUNT),
     .RAM_SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
     .RAM_SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
-    .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH)
+    .RAM_SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
+    .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH)
 )
 core_inst (
     .clk(clk),
@@ -919,9 +1110,11 @@ core_inst (
     .ram_wr_done(ram_wr_done),
 
     /*
-     * MSI request outputs
+     * Interrupt request output
      */
-    .msi_irq(msi_irq)
+    .irq_index(irq_index),
+    .irq_valid(irq_valid),
+    .irq_ready(irq_ready)
 );
 
 endmodule

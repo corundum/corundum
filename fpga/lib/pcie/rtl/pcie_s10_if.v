@@ -221,8 +221,8 @@ module pcie_s10_if #
     output wire [7:0]                                 bus_num,
     output wire [F_COUNT*3-1:0]                       max_read_request_size,
     output wire [F_COUNT*3-1:0]                       max_payload_size,
-    output wire [F_COUNT*3-1:0]                       msix_enable,
-    output wire [F_COUNT*3-1:0]                       msix_mask,
+    output wire [F_COUNT-1:0]                         msix_enable,
+    output wire [F_COUNT-1:0]                         msix_mask,
 
     /*
      * MSI request inputs

@@ -70,6 +70,7 @@ parameter RQ_SEQ_NUM_ENABLE = 1;
 parameter PCIE_TAG_COUNT = 256;
 parameter BAR0_APERTURE = 24;
 parameter BAR2_APERTURE = 24;
+parameter BAR4_APERTURE = 16;
 
 // PCIe
 wire pcie_user_clk;
@@ -162,22 +163,18 @@ wire [7:0]  cfg_fc_cplh;
 wire [11:0] cfg_fc_cpld;
 wire [2:0]  cfg_fc_sel;
 
-wire [3:0]  cfg_interrupt_msi_enable;
-wire [11:0] cfg_interrupt_msi_mmenable;
-wire        cfg_interrupt_msi_mask_update;
-wire [31:0] cfg_interrupt_msi_data;
-wire [3:0]  cfg_interrupt_msi_select;
-wire [31:0] cfg_interrupt_msi_int;
-wire [31:0] cfg_interrupt_msi_pending_status;
-wire        cfg_interrupt_msi_pending_status_data_enable;
-wire [3:0]  cfg_interrupt_msi_pending_status_function_num;
-wire        cfg_interrupt_msi_sent;
-wire        cfg_interrupt_msi_fail;
-wire [2:0]  cfg_interrupt_msi_attr;
-wire        cfg_interrupt_msi_tph_present;
-wire [1:0]  cfg_interrupt_msi_tph_type;
-wire [8:0]  cfg_interrupt_msi_tph_st_tag;
-wire [3:0]  cfg_interrupt_msi_function_number;
+wire [3:0]   cfg_interrupt_msix_enable;
+wire [3:0]   cfg_interrupt_msix_mask;
+wire [251:0] cfg_interrupt_msix_vf_enable;
+wire [251:0] cfg_interrupt_msix_vf_mask;
+wire [63:0]  cfg_interrupt_msix_address;
+wire [31:0]  cfg_interrupt_msix_data;
+wire         cfg_interrupt_msix_int;
+wire [1:0]   cfg_interrupt_msix_vec_pending;
+wire         cfg_interrupt_msix_vec_pending_status;
+wire         cfg_interrupt_msix_sent;
+wire         cfg_interrupt_msix_fail;
+wire [7:0]   cfg_interrupt_msi_function_number;
 
 wire status_error_cor;
 wire status_error_uncor;
@@ -310,21 +307,17 @@ pcie4_uscale_plus_inst (
     .cfg_interrupt_int(4'd0),
     .cfg_interrupt_pending(4'd0),
     .cfg_interrupt_sent(),
-    .cfg_interrupt_msi_enable(cfg_interrupt_msi_enable),
-    .cfg_interrupt_msi_mmenable(cfg_interrupt_msi_mmenable),
-    .cfg_interrupt_msi_mask_update(cfg_interrupt_msi_mask_update),
-    .cfg_interrupt_msi_data(cfg_interrupt_msi_data),
-    .cfg_interrupt_msi_select(cfg_interrupt_msi_select),
-    .cfg_interrupt_msi_int(cfg_interrupt_msi_int),
-    .cfg_interrupt_msi_pending_status(cfg_interrupt_msi_pending_status),
-    .cfg_interrupt_msi_pending_status_data_enable(cfg_interrupt_msi_pending_status_data_enable),
-    .cfg_interrupt_msi_pending_status_function_num(cfg_interrupt_msi_pending_status_function_num),
-    .cfg_interrupt_msi_sent(cfg_interrupt_msi_sent),
-    .cfg_interrupt_msi_fail(cfg_interrupt_msi_fail),
-    .cfg_interrupt_msi_attr(cfg_interrupt_msi_attr),
-    .cfg_interrupt_msi_tph_present(cfg_interrupt_msi_tph_present),
-    .cfg_interrupt_msi_tph_type(cfg_interrupt_msi_tph_type),
-    .cfg_interrupt_msi_tph_st_tag(cfg_interrupt_msi_tph_st_tag),
+    .cfg_interrupt_msix_enable(cfg_interrupt_msix_enable),
+    .cfg_interrupt_msix_mask(cfg_interrupt_msix_mask),
+    .cfg_interrupt_msix_vf_enable(cfg_interrupt_msix_vf_enable),
+    .cfg_interrupt_msix_vf_mask(cfg_interrupt_msix_vf_mask),
+    .cfg_interrupt_msix_address(cfg_interrupt_msix_address),
+    .cfg_interrupt_msix_data(cfg_interrupt_msix_data),
+    .cfg_interrupt_msix_int(cfg_interrupt_msix_int),
+    .cfg_interrupt_msix_vec_pending(cfg_interrupt_msix_vec_pending),
+    .cfg_interrupt_msix_vec_pending_status(cfg_interrupt_msix_vec_pending_status),
+    .cfg_interrupt_msi_sent(cfg_interrupt_msix_sent),
+    .cfg_interrupt_msi_fail(cfg_interrupt_msix_fail),
     .cfg_interrupt_msi_function_number(cfg_interrupt_msi_function_number),
 
     .cfg_pm_aspm_l1_entry_reject(1'b0),
@@ -400,7 +393,8 @@ fpga_core #(
     .RQ_SEQ_NUM_ENABLE(RQ_SEQ_NUM_ENABLE),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .BAR0_APERTURE(BAR0_APERTURE),
-    .BAR2_APERTURE(BAR2_APERTURE)
+    .BAR2_APERTURE(BAR2_APERTURE),
+    .BAR4_APERTURE(BAR4_APERTURE)
 )
 core_inst (
     /*
@@ -472,21 +466,17 @@ core_inst (
     .cfg_fc_cpld(cfg_fc_cpld),
     .cfg_fc_sel(cfg_fc_sel),
 
-    .cfg_interrupt_msi_enable(cfg_interrupt_msi_enable),
-    .cfg_interrupt_msi_mmenable(cfg_interrupt_msi_mmenable),
-    .cfg_interrupt_msi_mask_update(cfg_interrupt_msi_mask_update),
-    .cfg_interrupt_msi_data(cfg_interrupt_msi_data),
-    .cfg_interrupt_msi_select(cfg_interrupt_msi_select),
-    .cfg_interrupt_msi_int(cfg_interrupt_msi_int),
-    .cfg_interrupt_msi_pending_status(cfg_interrupt_msi_pending_status),
-    .cfg_interrupt_msi_pending_status_data_enable(cfg_interrupt_msi_pending_status_data_enable),
-    .cfg_interrupt_msi_pending_status_function_num(cfg_interrupt_msi_pending_status_function_num),
-    .cfg_interrupt_msi_sent(cfg_interrupt_msi_sent),
-    .cfg_interrupt_msi_fail(cfg_interrupt_msi_fail),
-    .cfg_interrupt_msi_attr(cfg_interrupt_msi_attr),
-    .cfg_interrupt_msi_tph_present(cfg_interrupt_msi_tph_present),
-    .cfg_interrupt_msi_tph_type(cfg_interrupt_msi_tph_type),
-    .cfg_interrupt_msi_tph_st_tag(cfg_interrupt_msi_tph_st_tag),
+    .cfg_interrupt_msix_enable(cfg_interrupt_msix_enable),
+    .cfg_interrupt_msix_mask(cfg_interrupt_msix_mask),
+    .cfg_interrupt_msix_vf_enable(cfg_interrupt_msix_vf_enable),
+    .cfg_interrupt_msix_vf_mask(cfg_interrupt_msix_vf_mask),
+    .cfg_interrupt_msix_address(cfg_interrupt_msix_address),
+    .cfg_interrupt_msix_data(cfg_interrupt_msix_data),
+    .cfg_interrupt_msix_int(cfg_interrupt_msix_int),
+    .cfg_interrupt_msix_vec_pending(cfg_interrupt_msix_vec_pending),
+    .cfg_interrupt_msix_vec_pending_status(cfg_interrupt_msix_vec_pending_status),
+    .cfg_interrupt_msix_sent(cfg_interrupt_msix_sent),
+    .cfg_interrupt_msix_fail(cfg_interrupt_msix_fail),
     .cfg_interrupt_msi_function_number(cfg_interrupt_msi_function_number),
 
     .status_error_cor(status_error_cor),

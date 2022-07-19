@@ -296,6 +296,7 @@ module mqnic_app_block #
     input  wire                                           ptp_rst,
     input  wire                                           ptp_sample_clk,
     input  wire                                           ptp_pps,
+    input  wire                                           ptp_pps_str,
     input  wire [PTP_TS_WIDTH-1:0]                        ptp_ts_96,
     input  wire                                           ptp_ts_step,
     input  wire                                           ptp_sync_pps,

@@ -392,6 +392,7 @@ end
 wire [PTP_TS_WIDTH-1:0]     ptp_ts_96;
 wire                        ptp_ts_step;
 wire                        ptp_pps;
+wire                        ptp_pps_str;
 wire [PTP_TS_WIDTH-1:0]     ptp_sync_ts_96;
 wire                        ptp_sync_ts_step;
 wire                        ptp_sync_pps;
@@ -1012,6 +1013,7 @@ core_inst (
     .ptp_rst(ptp_rst),
     .ptp_sample_clk(ptp_sample_clk),
     .ptp_pps(ptp_pps),
+    .ptp_pps_str(ptp_pps_str),
     .ptp_ts_96(ptp_ts_96),
     .ptp_ts_step(ptp_ts_step),
     .ptp_sync_pps(ptp_sync_pps),

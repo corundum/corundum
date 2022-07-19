@@ -410,6 +410,7 @@ end
 wire [PTP_TS_WIDTH-1:0]     ptp_ts_96;
 wire                        ptp_ts_step;
 wire                        ptp_pps;
+wire                        ptp_pps_str;
 wire [PTP_TS_WIDTH-1:0]     ptp_sync_ts_96;
 wire                        ptp_sync_ts_step;
 wire                        ptp_sync_pps;
@@ -693,24 +694,11 @@ bmc_spi_inst (
 assign pps_out = ptp_perout_pulse[0];
 assign pps_out_en = 1'b1;
 
-reg [26:0] pps_led_counter_reg = 0;
-reg pps_led_reg = 0;
-
-always @(posedge ptp_clk) begin
-    if (ptp_pps) begin
-        pps_led_counter_reg <= 80566406;
-    end else if (pps_led_counter_reg > 0) begin
-        pps_led_counter_reg <= pps_led_counter_reg - 1;
-    end
-
-    pps_led_reg <= pps_led_counter_reg > 0;
-end
-
 assign led_red = 8'd0;
 assign led_green = 8'd0;
-assign led_bmc[0] = pps_led_reg;
+assign led_bmc[0] = ptp_pps_str;
 assign led_bmc[1] = 0;
-assign led_exp[0] = !pps_led_reg;
+assign led_exp[0] = !ptp_pps_str;
 assign led_exp[1] = 1'b1;
 
 wire [PORT_COUNT-1:0]                         eth_tx_clk;
@@ -1161,6 +1149,7 @@ core_inst (
     .ptp_rst(ptp_rst),
     .ptp_sample_clk(ptp_sample_clk),
     .ptp_pps(ptp_pps),
+    .ptp_pps_str(ptp_pps_str),
     .ptp_ts_96(ptp_ts_96),
     .ptp_ts_step(ptp_ts_step),
     .ptp_sync_pps(ptp_sync_pps),

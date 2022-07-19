@@ -81,6 +81,7 @@ module mqnic_ptp_clock #
     input  wire                       ptp_rst,
     input  wire                       ptp_sample_clk,
     output wire                       ptp_pps,
+    output wire                       ptp_pps_str,
     output wire [95:0]                ptp_ts_96,
     output wire                       ptp_ts_step,
     output wire                       ptp_sync_pps,
@@ -329,6 +330,26 @@ ptp_clock_inst (
      */
     .output_pps(ptp_pps)
 );
+
+// stretched PPS output
+localparam PPS_CNT_PERIOD = (64'd500_000_000*PTP_CLK_PERIOD_NS_DENOM)/PTP_CLK_PERIOD_NS_NUM;
+
+reg [$clog2(PPS_CNT_PERIOD)-1:0] pps_counter_reg = 0;
+reg pps_str_reg = 0;
+
+always @(posedge ptp_clk) begin
+    pps_str_reg <= 1'b0;
+
+    if (ptp_pps) begin
+        pps_counter_reg <= PPS_CNT_PERIOD;
+        pps_str_reg <= 1'b1;
+    end else if (pps_counter_reg > 0) begin
+        pps_counter_reg <= pps_counter_reg - 1;
+        pps_str_reg <= 1'b1;
+    end
+end
+
+assign ptp_pps_str = pps_str_reg;
 
 // sync to core clock domain
 ptp_clock_cdc #(

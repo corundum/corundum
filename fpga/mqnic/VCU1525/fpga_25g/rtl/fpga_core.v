@@ -484,6 +484,7 @@ wire                             axil_csr_rready;
 wire [PTP_TS_WIDTH-1:0]     ptp_ts_96;
 wire                        ptp_ts_step;
 wire                        ptp_pps;
+wire                        ptp_pps_str;
 wire [PTP_TS_WIDTH-1:0]     ptp_sync_ts_96;
 wire                        ptp_sync_ts_step;
 wire                        ptp_sync_pps;
@@ -780,19 +781,6 @@ qsfp1_rb_drp_inst (
     .drp_rdy(qsfp1_drp_rdy)
 );
 
-reg [26:0] pps_led_counter_reg = 0;
-reg pps_led_reg = 0;
-
-always @(posedge ptp_clk) begin
-    if (ptp_pps) begin
-        pps_led_counter_reg <= 80566406;
-    end else if (pps_led_counter_reg > 0) begin
-        pps_led_counter_reg <= pps_led_counter_reg - 1;
-    end
-
-    pps_led_reg <= pps_led_counter_reg > 0;
-end
-
 generate
 
 if (TDMA_BER_ENABLE) begin
@@ -869,7 +857,7 @@ end
 
 endgenerate
 
-assign led[0] = pps_led_reg;
+assign led[0] = ptp_pps_str;
 assign led[2:1] = 0;
 
 wire [PORT_COUNT-1:0]                         eth_tx_clk;
@@ -1325,7 +1313,7 @@ core_inst (
     .ptp_clk(ptp_clk),
     .ptp_rst(ptp_rst),
     .ptp_sample_clk(ptp_sample_clk),
-    .ptp_pps(ptp_pps),
+    .ptp_pps_str(ptp_pps_str),
     .ptp_ts_96(ptp_ts_96),
     .ptp_ts_step(ptp_ts_step),
     .ptp_sync_pps(ptp_sync_pps),

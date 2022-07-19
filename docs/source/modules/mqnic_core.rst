@@ -696,6 +696,7 @@ Ports
         ptp_rst            in   1                 PTP reset
         ptp_sample_clk     in   1                 PTP sample clock
         ptp_pps            out  1                 PTP pulse-per-second (synchronous to ptp_clk)
+        ptp_pps_str        out  1                 PTP pulse-per-second (stretched) (synchronous to ptp_clk)
         ptp_ts_96          out  PTP_TS_WIDTH      current PTP time (synchronous to ptp_clk)
         ptp_ts_step        out  1                 PTP clock step (synchronous to ptp_clk)
         ptp_sync_pps       out  1                 PTP pulse-per-second (synchronous to clk)

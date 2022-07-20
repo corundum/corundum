@@ -27,6 +27,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     BittWare      250-SoC                  XCZU19EG-2FFVD1760E   0x198a250e
     Intel         DK-DEV-1SMX-H-A          1SM21BHU2F53E1VG      0x11720001
     Intel         DK-DEV-1SMC-H-A          1SM21CHU1F53E1VG      0x11720001
+    Terasic       DE10-Agilex              AGFB014R24B2E2V       0x1172b00a
     Xilinx        Alveo U50                XCU50-2FSVH2104E      0x10ee9032
     Xilinx        Alveo U200               XCU200-2FSGD2104E     0x10ee90c8
     Xilinx        Alveo U250               XCU250-2FIGD2104E     0x10ee90fa
@@ -53,6 +54,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     XUP-P3R                  Gen 3 x16  4x QSFP28   4x DDR4 2400 DIMM (4x x72)       \-
     DK-DEV-1SMX-H-A          Gen 3 x8   2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     8 GB
     DK-DEV-1SMC-H-A          Gen 3 x8   2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     16 GB
+    DE10-Agilex              Gen 4 x16  2x QSFP-DD  4x 8GB DDR4 3200 DIMM (4x 72)    \-
     Alveo U50                Gen 3 x16  1x QSFP28   \-                               8 GB
     Alveo U200               Gen 3 x16  2x QSFP28   64 GB DDR4 2400 (4x 2G x72)      \-
     Alveo U250               Gen 3 x16  2x QSFP28   64 GB DDR4 2400 (4x 2G x72)      \-
@@ -79,6 +81,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     XUP-P3R                  Y             Y             Y
     DK-DEV-1SMX-H-A          N             N             N
     DK-DEV-1SMC-H-A          N             N             N
+    DE10-Agilex              Y             N             N
     Alveo U50                N :sup:`4`    Y             Y
     Alveo U200               Y             Y             Y
     Alveo U250               Y             Y             Y
@@ -130,6 +133,8 @@ This section details PCIe form-factor targets, which interface with a separate h
     XUP-P3R                  mqnic/fpga_100g/fpga         4x1   256/8K   100G  RR
     DK-DEV-1SMX-H-A          mqnic/fpga_10g/fpga_1sm21b   2x1   256/1K   10G   RR
     DK-DEV-1SMC-H-A          mqnic/fpga_10g/fpga_1sm21c   2x1   256/1K   10G   RR
+    DE10-Agilex              mqnic/fpga_25g/fpga          2x1   256/1K   25G   RR
+    DE10-Agilex              mqnic/fpga_25g/fpga_10g      2x1   256/1K   10G   RR
     Alveo U50                mqnic/fpga_25g/fpga          1x1   256/8K   25G   RR
     Alveo U50                mqnic/fpga_25g/fpga_10g      1x1   256/8K   10G   RR
     Alveo U50                mqnic/fpga_100g/fpga         1x1   256/8K   100G  RR

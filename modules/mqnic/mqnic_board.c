@@ -431,6 +431,25 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0x20, MQNIC_MAX_IF);
 
 		break;
+	case MQNIC_BOARD_ID_DE10_AGILEX:
+
+		request_module("at24");
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
+
+		// QSFP-DD A
+		mqnic->mod_i2c_client[0] = create_i2c_client(adapter, "24c02", 0x50, NULL);
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 1);
+
+		// QSFP-DD B
+		mqnic->mod_i2c_client[1] = create_i2c_client(adapter, "24c02", 0x50, NULL);
+
+		mqnic->mod_i2c_client_count = 2;
+
+		break;
 	case MQNIC_BOARD_ID_250SOC:
 		// FPGA I2C
 		//   TCA9548 U28 0x72

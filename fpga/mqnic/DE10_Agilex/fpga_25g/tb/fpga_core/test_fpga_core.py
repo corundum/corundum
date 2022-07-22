@@ -78,8 +78,8 @@ class TB(object):
         self.dev = PTilePcieDevice(
             # configuration options
             pcie_generation=3,
-            # pcie_link_width=2,
-            # pld_clk_frequency=250e6,
+            pcie_link_width=16,
+            pld_clk_frequency=250e6,
             pf_count=1,
             max_payload_size=512,
             enable_extended_tag=True,

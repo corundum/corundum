@@ -135,6 +135,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     DK-DEV-1SMC-H-A          mqnic/fpga_10g/fpga_1sm21c   2x1   256/1K   10G   RR
     DE10-Agilex              mqnic/fpga_25g/fpga          2x1   256/1K   25G   RR
     DE10-Agilex              mqnic/fpga_25g/fpga_10g      2x1   256/1K   10G   RR
+    DE10-Agilex              mqnic/fpga_100g/fpga         2x1   256/1K   100G  RR
     Alveo U50                mqnic/fpga_25g/fpga          1x1   256/8K   25G   RR
     Alveo U50                mqnic/fpga_25g/fpga_10g      1x1   256/8K   10G   RR
     Alveo U50                mqnic/fpga_100g/fpga         1x1   256/8K   100G  RR

@@ -76,7 +76,7 @@ end
 
 endgenerate
 
-assign axis_tkeep = KEEP_ENABLE ? {KEEP_WIDTH{1'b1}} >> avst_empty : 0;
+assign axis_tkeep = (KEEP_ENABLE && avst_endofpacket) ? ({KEEP_WIDTH{1'b1}} >> avst_empty) : {KEEP_WIDTH{1'b1}};
 
 assign axis_tvalid = avst_valid;
 assign axis_tlast = avst_endofpacket;

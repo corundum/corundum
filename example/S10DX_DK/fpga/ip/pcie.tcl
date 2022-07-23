@@ -165,7 +165,7 @@ proc do_create_pcie {} {
 	set_instance_parameter_value intel_pcie_ptile_ast_0 {core16_pf0_pci_msi_multiple_msg_cap_hwtcl} {1}
 	set_instance_parameter_value intel_pcie_ptile_ast_0 {core16_pf0_pci_msix_bir_hwtcl} {4}
 	set_instance_parameter_value intel_pcie_ptile_ast_0 {core16_pf0_pci_msix_pba_hwtcl} {4}
-	set_instance_parameter_value intel_pcie_ptile_ast_0 {core16_pf0_pci_msix_pba_offset_hwtcl} {8192.0}
+	set_instance_parameter_value intel_pcie_ptile_ast_0 {core16_pf0_pci_msix_pba_offset_hwtcl} {4096.0}
 	set_instance_parameter_value intel_pcie_ptile_ast_0 {core16_pf0_pci_msix_table_offset_hwtcl} {0.0}
 	set_instance_parameter_value intel_pcie_ptile_ast_0 {core16_pf0_pci_msix_table_size_hwtcl} {31}
 	set_instance_parameter_value intel_pcie_ptile_ast_0 {core16_pf0_pci_msix_table_size_vfcomm_cs2_hwtcl} {0}

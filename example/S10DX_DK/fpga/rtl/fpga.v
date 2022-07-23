@@ -147,7 +147,7 @@ wire [15:0]                           tl_cfg_ctl;
 wire [4:0]                            tl_cfg_add;
 wire [2:0]                            tl_cfg_func;
 
-pcie (
+pcie pcie_hip_inst (
     .p0_rx_st_ready_i(rx_st_ready),
     .p0_rx_st_sop_o(rx_st_sop),
     .p0_rx_st_eop_o(rx_st_eop),

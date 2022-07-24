@@ -102,79 +102,79 @@ set_instance_assignment -name IO_STANDARD "1.8 V" -to "pcie_ep_i2c_sda"
 set_instance_assignment -name IO_STANDARD "1.8 V" -to "pcie_ep_i2c_scl"
 
 # PCIe EP
-set_location_assignment PIN_BH45 -to "pcie_ep_tx_p[0]"
-set_location_assignment PIN_BH44 -to "pcie_ep_tx_n[0]"
-set_location_assignment PIN_BL47 -to "pcie_ep_rx_p[0]"
-set_location_assignment PIN_BL46 -to "pcie_ep_rx_n[0]"
-set_location_assignment PIN_BJ47 -to "pcie_ep_tx_p[1]"
-set_location_assignment PIN_BJ46 -to "pcie_ep_tx_n[1]"
-set_location_assignment PIN_BK49 -to "pcie_ep_rx_p[1]"
-set_location_assignment PIN_BK48 -to "pcie_ep_rx_n[1]"
-set_location_assignment PIN_BG47 -to "pcie_ep_tx_p[2]"
-set_location_assignment PIN_BG46 -to "pcie_ep_tx_n[2]"
-set_location_assignment PIN_BH49 -to "pcie_ep_rx_p[2]"
-set_location_assignment PIN_BH48 -to "pcie_ep_rx_n[2]"
-set_location_assignment PIN_BF45 -to "pcie_ep_tx_p[3]"
-set_location_assignment PIN_BF44 -to "pcie_ep_tx_n[3]"
-set_location_assignment PIN_BG51 -to "pcie_ep_rx_p[3]"
-set_location_assignment PIN_BG50 -to "pcie_ep_rx_n[3]"
-set_location_assignment PIN_BE47 -to "pcie_ep_tx_p[4]"
-set_location_assignment PIN_BE46 -to "pcie_ep_tx_n[4]"
-set_location_assignment PIN_BF49 -to "pcie_ep_rx_p[4]"
-set_location_assignment PIN_BF48 -to "pcie_ep_rx_n[4]"
-set_location_assignment PIN_BD45 -to "pcie_ep_tx_p[5]"
-set_location_assignment PIN_BD44 -to "pcie_ep_tx_n[5]"
-set_location_assignment PIN_BE51 -to "pcie_ep_rx_p[5]"
-set_location_assignment PIN_BE50 -to "pcie_ep_rx_n[5]"
-set_location_assignment PIN_BB45 -to "pcie_ep_tx_p[6]"
-set_location_assignment PIN_BB44 -to "pcie_ep_tx_n[6]"
-set_location_assignment PIN_BD49 -to "pcie_ep_rx_p[6]"
-set_location_assignment PIN_BD48 -to "pcie_ep_rx_n[6]"
-set_location_assignment PIN_BC47 -to "pcie_ep_tx_p[7]"
-set_location_assignment PIN_BC46 -to "pcie_ep_tx_n[7]"
-set_location_assignment PIN_BC51 -to "pcie_ep_rx_p[7]"
-set_location_assignment PIN_BC50 -to "pcie_ep_rx_n[7]"
-set_location_assignment PIN_BA47 -to "pcie_ep_tx_p[8]"
-set_location_assignment PIN_BA46 -to "pcie_ep_tx_n[8]"
-set_location_assignment PIN_BB49 -to "pcie_ep_rx_p[8]"
-set_location_assignment PIN_BB48 -to "pcie_ep_rx_n[8]"
-set_location_assignment PIN_AY45 -to "pcie_ep_tx_p[9]"
-set_location_assignment PIN_AY44 -to "pcie_ep_tx_n[9]"
-set_location_assignment PIN_BA51 -to "pcie_ep_rx_p[9]"
-set_location_assignment PIN_BA50 -to "pcie_ep_rx_n[9]"
-set_location_assignment PIN_AW47 -to "pcie_ep_tx_p[10]"
-set_location_assignment PIN_AW46 -to "pcie_ep_tx_n[10]"
-set_location_assignment PIN_AY49 -to "pcie_ep_rx_p[10]"
-set_location_assignment PIN_AY48 -to "pcie_ep_rx_n[10]"
-set_location_assignment PIN_AV45 -to "pcie_ep_tx_p[11]"
-set_location_assignment PIN_AV44 -to "pcie_ep_tx_n[11]"
-set_location_assignment PIN_AW51 -to "pcie_ep_rx_p[11]"
-set_location_assignment PIN_AW50 -to "pcie_ep_rx_n[11]"
-set_location_assignment PIN_AU47 -to "pcie_ep_tx_p[12]"
-set_location_assignment PIN_AU46 -to "pcie_ep_tx_n[12]"
-set_location_assignment PIN_AV49 -to "pcie_ep_rx_p[12]"
-set_location_assignment PIN_AV48 -to "pcie_ep_rx_n[12]"
-set_location_assignment PIN_AT45 -to "pcie_ep_tx_p[13]"
-set_location_assignment PIN_AT44 -to "pcie_ep_tx_n[13]"
-set_location_assignment PIN_AU51 -to "pcie_ep_rx_p[13]"
-set_location_assignment PIN_AU50 -to "pcie_ep_rx_n[13]"
-set_location_assignment PIN_AR47 -to "pcie_ep_tx_p[14]"
-set_location_assignment PIN_AR46 -to "pcie_ep_tx_n[14]"
-set_location_assignment PIN_AT49 -to "pcie_ep_rx_p[14]"
-set_location_assignment PIN_AT48 -to "pcie_ep_rx_n[14]"
-set_location_assignment PIN_AP45 -to "pcie_ep_tx_p[15]"
-set_location_assignment PIN_AP44 -to "pcie_ep_tx_n[15]"
-set_location_assignment PIN_AR51 -to "pcie_ep_rx_p[15]"
-set_location_assignment PIN_AR50 -to "pcie_ep_rx_n[15]"
+set_location_assignment PIN_BH45 -to "pcie_ep_tx_p[0]"   ;# GXBL1C_TX_CH0P
+set_location_assignment PIN_BH44 -to "pcie_ep_tx_n[0]"   ;# GXBL1C_TX_CH0N
+set_location_assignment PIN_BL47 -to "pcie_ep_rx_p[0]"   ;# GXBL1C_RX_CH0P
+set_location_assignment PIN_BL46 -to "pcie_ep_rx_n[0]"   ;# GXBL1C_RX_CH0N
+set_location_assignment PIN_BJ47 -to "pcie_ep_tx_p[1]"   ;# GXBL1C_TX_CH1P
+set_location_assignment PIN_BJ46 -to "pcie_ep_tx_n[1]"   ;# GXBL1C_TX_CH1N
+set_location_assignment PIN_BK49 -to "pcie_ep_rx_p[1]"   ;# GXBL1C_RX_CH1P
+set_location_assignment PIN_BK48 -to "pcie_ep_rx_n[1]"   ;# GXBL1C_RX_CH1N
+set_location_assignment PIN_BG47 -to "pcie_ep_tx_p[2]"   ;# GXBL1C_TX_CH2P
+set_location_assignment PIN_BG46 -to "pcie_ep_tx_n[2]"   ;# GXBL1C_TX_CH2N
+set_location_assignment PIN_BH49 -to "pcie_ep_rx_p[2]"   ;# GXBL1C_RX_CH2P
+set_location_assignment PIN_BH48 -to "pcie_ep_rx_n[2]"   ;# GXBL1C_RX_CH2N
+set_location_assignment PIN_BF45 -to "pcie_ep_tx_p[3]"   ;# GXBL1C_TX_CH3P
+set_location_assignment PIN_BF44 -to "pcie_ep_tx_n[3]"   ;# GXBL1C_TX_CH3N
+set_location_assignment PIN_BG51 -to "pcie_ep_rx_p[3]"   ;# GXBL1C_RX_CH3P
+set_location_assignment PIN_BG50 -to "pcie_ep_rx_n[3]"   ;# GXBL1C_RX_CH3N
+set_location_assignment PIN_BE47 -to "pcie_ep_tx_p[4]"   ;# GXBL1C_TX_CH4P
+set_location_assignment PIN_BE46 -to "pcie_ep_tx_n[4]"   ;# GXBL1C_TX_CH4N
+set_location_assignment PIN_BF49 -to "pcie_ep_rx_p[4]"   ;# GXBL1C_RX_CH4P
+set_location_assignment PIN_BF48 -to "pcie_ep_rx_n[4]"   ;# GXBL1C_RX_CH4N
+set_location_assignment PIN_BD45 -to "pcie_ep_tx_p[5]"   ;# GXBL1C_TX_CH5P
+set_location_assignment PIN_BD44 -to "pcie_ep_tx_n[5]"   ;# GXBL1C_TX_CH5N
+set_location_assignment PIN_BE51 -to "pcie_ep_rx_p[5]"   ;# GXBL1C_RX_CH5P
+set_location_assignment PIN_BE50 -to "pcie_ep_rx_n[5]"   ;# GXBL1C_RX_CH5N
+set_location_assignment PIN_BB45 -to "pcie_ep_tx_p[6]"   ;# GXBL1D_TX_CH0P
+set_location_assignment PIN_BB44 -to "pcie_ep_tx_n[6]"   ;# GXBL1D_TX_CH0N
+set_location_assignment PIN_BD49 -to "pcie_ep_rx_p[6]"   ;# GXBL1D_RX_CH0P
+set_location_assignment PIN_BD48 -to "pcie_ep_rx_n[6]"   ;# GXBL1D_RX_CH0N
+set_location_assignment PIN_BC47 -to "pcie_ep_tx_p[7]"   ;# GXBL1D_TX_CH1P
+set_location_assignment PIN_BC46 -to "pcie_ep_tx_n[7]"   ;# GXBL1D_TX_CH1N
+set_location_assignment PIN_BC51 -to "pcie_ep_rx_p[7]"   ;# GXBL1D_RX_CH1P
+set_location_assignment PIN_BC50 -to "pcie_ep_rx_n[7]"   ;# GXBL1D_RX_CH1N
+set_location_assignment PIN_BA47 -to "pcie_ep_tx_p[8]"   ;# GXBL1D_TX_CH2P
+set_location_assignment PIN_BA46 -to "pcie_ep_tx_n[8]"   ;# GXBL1D_TX_CH2N
+set_location_assignment PIN_BB49 -to "pcie_ep_rx_p[8]"   ;# GXBL1D_RX_CH2P
+set_location_assignment PIN_BB48 -to "pcie_ep_rx_n[8]"   ;# GXBL1D_RX_CH2N
+set_location_assignment PIN_AY45 -to "pcie_ep_tx_p[9]"   ;# GXBL1D_TX_CH3P
+set_location_assignment PIN_AY44 -to "pcie_ep_tx_n[9]"   ;# GXBL1D_TX_CH3N
+set_location_assignment PIN_BA51 -to "pcie_ep_rx_p[9]"   ;# GXBL1D_RX_CH3P
+set_location_assignment PIN_BA50 -to "pcie_ep_rx_n[9]"   ;# GXBL1D_RX_CH3N
+set_location_assignment PIN_AW47 -to "pcie_ep_tx_p[10]"  ;# GXBL1D_TX_CH4P
+set_location_assignment PIN_AW46 -to "pcie_ep_tx_n[10]"  ;# GXBL1D_TX_CH4N
+set_location_assignment PIN_AY49 -to "pcie_ep_rx_p[10]"  ;# GXBL1D_RX_CH4P
+set_location_assignment PIN_AY48 -to "pcie_ep_rx_n[10]"  ;# GXBL1D_RX_CH4N
+set_location_assignment PIN_AV45 -to "pcie_ep_tx_p[11]"  ;# GXBL1D_TX_CH5P
+set_location_assignment PIN_AV44 -to "pcie_ep_tx_n[11]"  ;# GXBL1D_TX_CH5N
+set_location_assignment PIN_AW51 -to "pcie_ep_rx_p[11]"  ;# GXBL1D_RX_CH5P
+set_location_assignment PIN_AW50 -to "pcie_ep_rx_n[11]"  ;# GXBL1D_RX_CH5N
+set_location_assignment PIN_AU47 -to "pcie_ep_tx_p[12]"  ;# GXBL1E_TX_CH0P
+set_location_assignment PIN_AU46 -to "pcie_ep_tx_n[12]"  ;# GXBL1E_TX_CH0N
+set_location_assignment PIN_AV49 -to "pcie_ep_rx_p[12]"  ;# GXBL1E_RX_CH0P
+set_location_assignment PIN_AV48 -to "pcie_ep_rx_n[12]"  ;# GXBL1E_RX_CH0N
+set_location_assignment PIN_AT45 -to "pcie_ep_tx_p[13]"  ;# GXBL1E_TX_CH1P
+set_location_assignment PIN_AT44 -to "pcie_ep_tx_n[13]"  ;# GXBL1E_TX_CH1N
+set_location_assignment PIN_AU51 -to "pcie_ep_rx_p[13]"  ;# GXBL1E_RX_CH1P
+set_location_assignment PIN_AU50 -to "pcie_ep_rx_n[13]"  ;# GXBL1E_RX_CH1N
+set_location_assignment PIN_AR47 -to "pcie_ep_tx_p[14]"  ;# GXBL1E_TX_CH2P
+set_location_assignment PIN_AR46 -to "pcie_ep_tx_n[14]"  ;# GXBL1E_TX_CH2N
+set_location_assignment PIN_AT49 -to "pcie_ep_rx_p[14]"  ;# GXBL1E_RX_CH2P
+set_location_assignment PIN_AT48 -to "pcie_ep_rx_n[14]"  ;# GXBL1E_RX_CH2N
+set_location_assignment PIN_AP45 -to "pcie_ep_tx_p[15]"  ;# GXBL1E_TX_CH3P
+set_location_assignment PIN_AP44 -to "pcie_ep_tx_n[15]"  ;# GXBL1E_TX_CH3N
+set_location_assignment PIN_AR51 -to "pcie_ep_rx_p[15]"  ;# GXBL1E_RX_CH3P
+set_location_assignment PIN_AR50 -to "pcie_ep_rx_n[15]"  ;# GXBL1E_RX_CH3N
 
-set_location_assignment PIN_AW43 -to "refclk_pcie_ep_p"
-set_location_assignment PIN_AW42 -to "refclk_pcie_ep_n"
+set_location_assignment PIN_AW43 -to "refclk_pcie_ep_p"  ;# REFCLK_GXBL1C_CHTP
+set_location_assignment PIN_AW42 -to "refclk_pcie_ep_n"  ;# REFCLK_GXBL1C_CHTN
 
-set_location_assignment PIN_AR43 -to "refclk_pcie_ep_edge_p"
-set_location_assignment PIN_AR42 -to "refclk_pcie_ep_edge_n"
+set_location_assignment PIN_AR43 -to "refclk_pcie_ep_edge_p"  ;# REFCLK_GXBL1D_CHTP
+set_location_assignment PIN_AR42 -to "refclk_pcie_ep_edge_n"  ;# REFCLK_GXBL1D_CHTN
 
-set_location_assignment PIN_BA43 -to "refclk_pcie_ep1_p"
-set_location_assignment PIN_BA42 -to "refclk_pcie_ep1_n"
+set_location_assignment PIN_BA43 -to "refclk_pcie_ep1_p"  ;# REFCLK_GXBL1C_CHBP
+set_location_assignment PIN_BA42 -to "refclk_pcie_ep1_n"  ;# REFCLK_GXBL1C_CHBN
 
 set_location_assignment PIN_BH16 -to "pcie_ep_waken"
 
@@ -198,73 +198,73 @@ set_instance_assignment -name USE_AS_3V_GPIO ON -to "s10_pcie_perstn1"
 set_instance_assignment -name IO_STANDARD "2.5 V" -to "s10_pcie_perstn1"
 
 # PCIe RP
-set_location_assignment PIN_BL5  -to "pcie_rp_tx_p[0]"
-set_location_assignment PIN_BL6  -to "pcie_rp_tx_n[0]"
-set_location_assignment PIN_BH7  -to "pcie_rp_rx_p[0]"
-set_location_assignment PIN_BH8  -to "pcie_rp_rx_n[0]"
-set_location_assignment PIN_BK3  -to "pcie_rp_tx_p[1]"
-set_location_assignment PIN_BK4  -to "pcie_rp_tx_n[1]"
-set_location_assignment PIN_BJ5  -to "pcie_rp_rx_p[1]"
-set_location_assignment PIN_BJ6  -to "pcie_rp_rx_n[1]"
-set_location_assignment PIN_BH3  -to "pcie_rp_tx_p[2]"
-set_location_assignment PIN_BH4  -to "pcie_rp_tx_n[2]"
-set_location_assignment PIN_BG6  -to "pcie_rp_rx_n[2]"
-set_location_assignment PIN_BG5  -to "pcie_rp_rx_p[2]"
-set_location_assignment PIN_BG1  -to "pcie_rp_tx_p[3]"
-set_location_assignment PIN_BG2  -to "pcie_rp_tx_n[3]"
-set_location_assignment PIN_BF8  -to "pcie_rp_rx_n[3]"
-set_location_assignment PIN_BF7  -to "pcie_rp_rx_p[3]"
-set_location_assignment PIN_BF3  -to "pcie_rp_tx_p[4]"
-set_location_assignment PIN_BF4  -to "pcie_rp_tx_n[4]"
-set_location_assignment PIN_BE6  -to "pcie_rp_rx_n[4]"
-set_location_assignment PIN_BE5  -to "pcie_rp_rx_p[4]"
-set_location_assignment PIN_BE1  -to "pcie_rp_tx_p[5]"
-set_location_assignment PIN_BE2  -to "pcie_rp_tx_n[5]"
-set_location_assignment PIN_BD8  -to "pcie_rp_rx_n[5]"
-set_location_assignment PIN_BD7  -to "pcie_rp_rx_p[5]"
-set_location_assignment PIN_BD3  -to "pcie_rp_tx_p[6]"
-set_location_assignment PIN_BD4  -to "pcie_rp_tx_n[6]"
-set_location_assignment PIN_BB8  -to "pcie_rp_rx_n[6]"
-set_location_assignment PIN_BB7  -to "pcie_rp_rx_p[6]"
-set_location_assignment PIN_BC1  -to "pcie_rp_tx_p[7]"
-set_location_assignment PIN_BC2  -to "pcie_rp_tx_n[7]"
-set_location_assignment PIN_BC5  -to "pcie_rp_rx_p[7]"
-set_location_assignment PIN_BC6  -to "pcie_rp_rx_n[7]"
-set_location_assignment PIN_BB3  -to "pcie_rp_tx_p[8]"
-set_location_assignment PIN_BB4  -to "pcie_rp_tx_n[8]"
-set_location_assignment PIN_BA5  -to "pcie_rp_rx_p[8]"
-set_location_assignment PIN_BA6  -to "pcie_rp_rx_n[8]"
-set_location_assignment PIN_BA1  -to "pcie_rp_tx_p[9]"
-set_location_assignment PIN_BA2  -to "pcie_rp_tx_n[9]"
-set_location_assignment PIN_AY7  -to "pcie_rp_rx_p[9]"
-set_location_assignment PIN_AY8  -to "pcie_rp_rx_n[9]"
-set_location_assignment PIN_AY3  -to "pcie_rp_tx_p[10]"
-set_location_assignment PIN_AY4  -to "pcie_rp_tx_n[10]"
-set_location_assignment PIN_AW5  -to "pcie_rp_rx_p[10]"
-set_location_assignment PIN_AW6  -to "pcie_rp_rx_n[10]"
-set_location_assignment PIN_AW1  -to "pcie_rp_tx_p[11]"
-set_location_assignment PIN_AW2  -to "pcie_rp_tx_n[11]"
-set_location_assignment PIN_AV7  -to "pcie_rp_rx_p[11]"
-set_location_assignment PIN_AV8  -to "pcie_rp_rx_n[11]"
-set_location_assignment PIN_AV3  -to "pcie_rp_tx_p[12]"
-set_location_assignment PIN_AV4  -to "pcie_rp_tx_n[12]"
-set_location_assignment PIN_AU5  -to "pcie_rp_rx_p[12]"
-set_location_assignment PIN_AU6  -to "pcie_rp_rx_n[12]"
-set_location_assignment PIN_AU1  -to "pcie_rp_tx_p[13]"
-set_location_assignment PIN_AU2  -to "pcie_rp_tx_n[13]"
-set_location_assignment PIN_AT7  -to "pcie_rp_rx_p[13]"
-set_location_assignment PIN_AT8  -to "pcie_rp_rx_n[13]"
-set_location_assignment PIN_AT3  -to "pcie_rp_tx_p[14]"
-set_location_assignment PIN_AT4  -to "pcie_rp_tx_n[14]"
-set_location_assignment PIN_AR5  -to "pcie_rp_rx_p[14]"
-set_location_assignment PIN_AR6  -to "pcie_rp_rx_n[14]"
-set_location_assignment PIN_AR1  -to "pcie_rp_tx_p[15]"
-set_location_assignment PIN_AR2  -to "pcie_rp_tx_n[15]"
-set_location_assignment PIN_AP7  -to "pcie_rp_rx_p[15]"
-set_location_assignment PIN_AP8  -to "pcie_rp_rx_n[15]"
+set_location_assignment PIN_BL5  -to "pcie_rp_tx_p[0]"   ;# GXBR4C_TX_CH0P
+set_location_assignment PIN_BL6  -to "pcie_rp_tx_n[0]"   ;# GXBR4C_TX_CH0N
+set_location_assignment PIN_BH7  -to "pcie_rp_rx_p[0]"   ;# GXBR4C_RX_CH0P
+set_location_assignment PIN_BH8  -to "pcie_rp_rx_n[0]"   ;# GXBR4C_RX_CH0N
+set_location_assignment PIN_BK3  -to "pcie_rp_tx_p[1]"   ;# GXBR4C_TX_CH1P
+set_location_assignment PIN_BK4  -to "pcie_rp_tx_n[1]"   ;# GXBR4C_TX_CH1N
+set_location_assignment PIN_BJ5  -to "pcie_rp_rx_p[1]"   ;# GXBR4C_RX_CH1P
+set_location_assignment PIN_BJ6  -to "pcie_rp_rx_n[1]"   ;# GXBR4C_RX_CH1N
+set_location_assignment PIN_BH3  -to "pcie_rp_tx_p[2]"   ;# GXBR4C_TX_CH2P
+set_location_assignment PIN_BH4  -to "pcie_rp_tx_n[2]"   ;# GXBR4C_TX_CH2N
+set_location_assignment PIN_BG6  -to "pcie_rp_rx_n[2]"   ;# GXBR4C_RX_CH2P
+set_location_assignment PIN_BG5  -to "pcie_rp_rx_p[2]"   ;# GXBR4C_RX_CH2N
+set_location_assignment PIN_BG1  -to "pcie_rp_tx_p[3]"   ;# GXBR4C_TX_CH3P
+set_location_assignment PIN_BG2  -to "pcie_rp_tx_n[3]"   ;# GXBR4C_TX_CH3N
+set_location_assignment PIN_BF8  -to "pcie_rp_rx_n[3]"   ;# GXBR4C_RX_CH3P
+set_location_assignment PIN_BF7  -to "pcie_rp_rx_p[3]"   ;# GXBR4C_RX_CH3N
+set_location_assignment PIN_BF3  -to "pcie_rp_tx_p[4]"   ;# GXBR4C_TX_CH4P
+set_location_assignment PIN_BF4  -to "pcie_rp_tx_n[4]"   ;# GXBR4C_TX_CH4N
+set_location_assignment PIN_BE6  -to "pcie_rp_rx_n[4]"   ;# GXBR4C_RX_CH4P
+set_location_assignment PIN_BE5  -to "pcie_rp_rx_p[4]"   ;# GXBR4C_RX_CH4N
+set_location_assignment PIN_BE1  -to "pcie_rp_tx_p[5]"   ;# GXBR4C_TX_CH5P
+set_location_assignment PIN_BE2  -to "pcie_rp_tx_n[5]"   ;# GXBR4C_TX_CH5N
+set_location_assignment PIN_BD8  -to "pcie_rp_rx_n[5]"   ;# GXBR4C_RX_CH5P
+set_location_assignment PIN_BD7  -to "pcie_rp_rx_p[5]"   ;# GXBR4C_RX_CH5N
+set_location_assignment PIN_BD3  -to "pcie_rp_tx_p[6]"   ;# GXBR4D_TX_CH0P
+set_location_assignment PIN_BD4  -to "pcie_rp_tx_n[6]"   ;# GXBR4D_TX_CH0N
+set_location_assignment PIN_BB8  -to "pcie_rp_rx_n[6]"   ;# GXBR4D_RX_CH0P
+set_location_assignment PIN_BB7  -to "pcie_rp_rx_p[6]"   ;# GXBR4D_RX_CH0N
+set_location_assignment PIN_BC1  -to "pcie_rp_tx_p[7]"   ;# GXBR4D_TX_CH1P
+set_location_assignment PIN_BC2  -to "pcie_rp_tx_n[7]"   ;# GXBR4D_TX_CH1N
+set_location_assignment PIN_BC5  -to "pcie_rp_rx_p[7]"   ;# GXBR4D_RX_CH1P
+set_location_assignment PIN_BC6  -to "pcie_rp_rx_n[7]"   ;# GXBR4D_RX_CH1N
+set_location_assignment PIN_BB3  -to "pcie_rp_tx_p[8]"   ;# GXBR4D_TX_CH2P
+set_location_assignment PIN_BB4  -to "pcie_rp_tx_n[8]"   ;# GXBR4D_TX_CH2N
+set_location_assignment PIN_BA5  -to "pcie_rp_rx_p[8]"   ;# GXBR4D_RX_CH2P
+set_location_assignment PIN_BA6  -to "pcie_rp_rx_n[8]"   ;# GXBR4D_RX_CH2N
+set_location_assignment PIN_BA1  -to "pcie_rp_tx_p[9]"   ;# GXBR4D_TX_CH3P
+set_location_assignment PIN_BA2  -to "pcie_rp_tx_n[9]"   ;# GXBR4D_TX_CH3N
+set_location_assignment PIN_AY7  -to "pcie_rp_rx_p[9]"   ;# GXBR4D_RX_CH3P
+set_location_assignment PIN_AY8  -to "pcie_rp_rx_n[9]"   ;# GXBR4D_RX_CH3N
+set_location_assignment PIN_AY3  -to "pcie_rp_tx_p[10]"  ;# GXBR4D_TX_CH4P
+set_location_assignment PIN_AY4  -to "pcie_rp_tx_n[10]"  ;# GXBR4D_TX_CH4N
+set_location_assignment PIN_AW5  -to "pcie_rp_rx_p[10]"  ;# GXBR4D_RX_CH4P
+set_location_assignment PIN_AW6  -to "pcie_rp_rx_n[10]"  ;# GXBR4D_RX_CH4N
+set_location_assignment PIN_AW1  -to "pcie_rp_tx_p[11]"  ;# GXBR4D_TX_CH5P
+set_location_assignment PIN_AW2  -to "pcie_rp_tx_n[11]"  ;# GXBR4D_TX_CH5N
+set_location_assignment PIN_AV7  -to "pcie_rp_rx_p[11]"  ;# GXBR4D_RX_CH5P
+set_location_assignment PIN_AV8  -to "pcie_rp_rx_n[11]"  ;# GXBR4D_RX_CH5N
+set_location_assignment PIN_AV3  -to "pcie_rp_tx_p[12]"  ;# GXBR4E_TX_CH0P
+set_location_assignment PIN_AV4  -to "pcie_rp_tx_n[12]"  ;# GXBR4E_TX_CH0N
+set_location_assignment PIN_AU5  -to "pcie_rp_rx_p[12]"  ;# GXBR4E_RX_CH0P
+set_location_assignment PIN_AU6  -to "pcie_rp_rx_n[12]"  ;# GXBR4E_RX_CH0N
+set_location_assignment PIN_AU1  -to "pcie_rp_tx_p[13]"  ;# GXBR4E_TX_CH1P
+set_location_assignment PIN_AU2  -to "pcie_rp_tx_n[13]"  ;# GXBR4E_TX_CH1N
+set_location_assignment PIN_AT7  -to "pcie_rp_rx_p[13]"  ;# GXBR4E_RX_CH1P
+set_location_assignment PIN_AT8  -to "pcie_rp_rx_n[13]"  ;# GXBR4E_RX_CH1N
+set_location_assignment PIN_AT3  -to "pcie_rp_tx_p[14]"  ;# GXBR4E_TX_CH2P
+set_location_assignment PIN_AT4  -to "pcie_rp_tx_n[14]"  ;# GXBR4E_TX_CH2N
+set_location_assignment PIN_AR5  -to "pcie_rp_rx_p[14]"  ;# GXBR4E_RX_CH2P
+set_location_assignment PIN_AR6  -to "pcie_rp_rx_n[14]"  ;# GXBR4E_RX_CH2N
+set_location_assignment PIN_AR1  -to "pcie_rp_tx_p[15]"  ;# GXBR4E_TX_CH3P
+set_location_assignment PIN_AR2  -to "pcie_rp_tx_n[15]"  ;# GXBR4E_TX_CH3N
+set_location_assignment PIN_AP7  -to "pcie_rp_rx_p[15]"  ;# GXBR4E_RX_CH3P
+set_location_assignment PIN_AP8  -to "pcie_rp_rx_n[15]"  ;# GXBR4E_RX_CH3N
 
-set_location_assignment PIN_AW9  -to "refclk_pcie_rp_p"
-set_location_assignment PIN_AW10 -to "refclk_pcie_rp_n"
+set_location_assignment PIN_AW9  -to "refclk_pcie_rp_p"  ;# REFCLK_GXBR4C_CHTP
+set_location_assignment PIN_AW10 -to "refclk_pcie_rp_n"  ;# REFCLK_GXBR4C_CHTN
 
 set_location_assignment PIN_BB17 -to "pcie_rp_s10_perstn"
 set_location_assignment PIN_BG15 -to "pcie_rp_s10_waken"
@@ -283,43 +283,43 @@ set_instance_assignment -name IO_STANDARD "1.8 V" -to "pcie_rp_s10_waken"
 set_instance_assignment -name IO_STANDARD "1.8 V" -to "pcie_rp_s10_prsnt2n"
 
 # QSFP
-set_location_assignment PIN_AN51 -to "qsfp0_tx_p[0]"
-set_location_assignment PIN_AN50 -to "qsfp0_tx_n[0]"
-set_location_assignment PIN_AM45 -to "qsfp0_rx_p[0]"
-set_location_assignment PIN_AM44 -to "qsfp0_rx_n[0]"
-set_location_assignment PIN_AL51 -to "qsfp0_tx_p[1]"
-set_location_assignment PIN_AL50 -to "qsfp0_tx_n[1]"
-set_location_assignment PIN_AK45 -to "qsfp0_rx_p[1]"
-set_location_assignment PIN_AK44 -to "qsfp0_rx_n[1]"
-set_location_assignment PIN_AG51 -to "qsfp0_tx_p[2]"
-set_location_assignment PIN_AG50 -to "qsfp0_tx_n[2]"
-set_location_assignment PIN_AF45 -to "qsfp0_rx_p[2]"
-set_location_assignment PIN_AF44 -to "qsfp0_rx_n[2]"
-set_location_assignment PIN_AJ51 -to "qsfp0_tx_p[3]"
-set_location_assignment PIN_AJ50 -to "qsfp0_tx_n[3]"
-set_location_assignment PIN_AH45 -to "qsfp0_rx_p[3]"
-set_location_assignment PIN_AH44 -to "qsfp0_rx_n[3]"
-set_location_assignment PIN_AJ43 -to "refclk_qsfp0_p"
-set_location_assignment PIN_AJ42 -to "refclk_qsfp0_n"
+set_location_assignment PIN_AN51 -to "qsfp0_tx_p[0]"   ;# GXBL1F_TX_CH0P
+set_location_assignment PIN_AN50 -to "qsfp0_tx_n[0]"   ;# GXBL1F_TX_CH0N
+set_location_assignment PIN_AM45 -to "qsfp0_rx_p[0]"   ;# GXBL1F_RX_CH0P
+set_location_assignment PIN_AM44 -to "qsfp0_rx_n[0]"   ;# GXBL1F_RX_CH0N
+set_location_assignment PIN_AL51 -to "qsfp0_tx_p[1]"   ;# GXBL1F_TX_CH1P
+set_location_assignment PIN_AL50 -to "qsfp0_tx_n[1]"   ;# GXBL1F_TX_CH1N
+set_location_assignment PIN_AK45 -to "qsfp0_rx_p[1]"   ;# GXBL1F_RX_CH1P
+set_location_assignment PIN_AK44 -to "qsfp0_rx_n[1]"   ;# GXBL1F_RX_CH1N
+set_location_assignment PIN_AG51 -to "qsfp0_tx_p[2]"   ;# GXBL1F_TX_CH4P
+set_location_assignment PIN_AG50 -to "qsfp0_tx_n[2]"   ;# GXBL1F_TX_CH4N
+set_location_assignment PIN_AF45 -to "qsfp0_rx_p[2]"   ;# GXBL1F_RX_CH4P
+set_location_assignment PIN_AF44 -to "qsfp0_rx_n[2]"   ;# GXBL1F_RX_CH4N
+set_location_assignment PIN_AJ51 -to "qsfp0_tx_p[3]"   ;# GXBL1F_TX_CH3P
+set_location_assignment PIN_AJ50 -to "qsfp0_tx_n[3]"   ;# GXBL1F_TX_CH3N
+set_location_assignment PIN_AH45 -to "qsfp0_rx_p[3]"   ;# GXBL1F_RX_CH3P
+set_location_assignment PIN_AH44 -to "qsfp0_rx_n[3]"   ;# GXBL1F_RX_CH3N
+set_location_assignment PIN_AJ43 -to "refclk_qsfp0_p"  ;# REFCLK_GXBL1F_CHBP
+set_location_assignment PIN_AJ42 -to "refclk_qsfp0_n"  ;# REFCLK_GXBL1F_CHBN
 
-set_location_assignment PIN_AM3  -to "qsfp1_tx_p[0]"
-set_location_assignment PIN_AM4  -to "qsfp1_tx_n[0]"
-set_location_assignment PIN_AL5  -to "qsfp1_rx_p[0]"
-set_location_assignment PIN_AL6  -to "qsfp1_rx_n[0]"
-set_location_assignment PIN_AL1  -to "qsfp1_tx_p[1]"
-set_location_assignment PIN_AL2  -to "qsfp1_tx_n[1]"
-set_location_assignment PIN_AK7  -to "qsfp1_rx_p[1]"
-set_location_assignment PIN_AK8  -to "qsfp1_rx_n[1]"
-set_location_assignment PIN_AJ1  -to "qsfp1_tx_p[2]"
-set_location_assignment PIN_AJ2  -to "qsfp1_tx_n[2]"
-set_location_assignment PIN_AH7  -to "qsfp1_rx_p[2]"
-set_location_assignment PIN_AH8  -to "qsfp1_rx_n[2]"
-set_location_assignment PIN_AH3  -to "qsfp1_tx_p[3]"
-set_location_assignment PIN_AH4  -to "qsfp1_tx_n[3]"
-set_location_assignment PIN_AG5  -to "qsfp1_rx_p[3]"
-set_location_assignment PIN_AG6  -to "qsfp1_rx_n[3]"
-set_location_assignment PIN_AJ9  -to "refclk_qsfp1_p"
-set_location_assignment PIN_AJ10 -to "refclk_qsfp1_n"
+set_location_assignment PIN_AM3  -to "qsfp1_tx_p[0]"   ;# GXBR4F_TX_CH0P
+set_location_assignment PIN_AM4  -to "qsfp1_tx_n[0]"   ;# GXBR4F_TX_CH0N
+set_location_assignment PIN_AL5  -to "qsfp1_rx_p[0]"   ;# GXBR4F_RX_CH0P
+set_location_assignment PIN_AL6  -to "qsfp1_rx_n[0]"   ;# GXBR4F_RX_CH0N
+set_location_assignment PIN_AL1  -to "qsfp1_tx_p[1]"   ;# GXBR4F_TX_CH1P
+set_location_assignment PIN_AL2  -to "qsfp1_tx_n[1]"   ;# GXBR4F_TX_CH1N
+set_location_assignment PIN_AK7  -to "qsfp1_rx_p[1]"   ;# GXBR4F_RX_CH1P
+set_location_assignment PIN_AK8  -to "qsfp1_rx_n[1]"   ;# GXBR4F_RX_CH1N
+set_location_assignment PIN_AJ1  -to "qsfp1_tx_p[2]"   ;# GXBR4F_TX_CH3P
+set_location_assignment PIN_AJ2  -to "qsfp1_tx_n[2]"   ;# GXBR4F_TX_CH3N
+set_location_assignment PIN_AH7  -to "qsfp1_rx_p[2]"   ;# GXBR4F_RX_CH3P
+set_location_assignment PIN_AH8  -to "qsfp1_rx_n[2]"   ;# GXBR4F_RX_CH3N
+set_location_assignment PIN_AH3  -to "qsfp1_tx_p[3]"   ;# GXBR4F_TX_CH4P
+set_location_assignment PIN_AH4  -to "qsfp1_tx_n[3]"   ;# GXBR4F_TX_CH4N
+set_location_assignment PIN_AG5  -to "qsfp1_rx_p[3]"   ;# GXBR4F_RX_CH4P
+set_location_assignment PIN_AG6  -to "qsfp1_rx_n[3]"   ;# GXBR4F_RX_CH4N
+set_location_assignment PIN_AJ9  -to "refclk_qsfp1_p"  ;# REFCLK_GXBR4F_CHBP
+set_location_assignment PIN_AJ10 -to "refclk_qsfp1_n"  ;# REFCLK_GXBR4F_CHBN
 
 set_location_assignment PIN_AW17 -to "qsfp0_modsel_l"
 set_location_assignment PIN_AV16 -to "qsfp0_reset_l"

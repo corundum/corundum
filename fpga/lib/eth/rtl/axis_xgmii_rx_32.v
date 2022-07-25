@@ -128,15 +128,12 @@ reg error_bad_fcs_reg = 1'b0, error_bad_fcs_next;
 
 reg [31:0] crc_state = 32'hFFFFFFFF;
 
-wire [31:0] crc_next0;
-wire [31:0] crc_next1;
-wire [31:0] crc_next2;
-wire [31:0] crc_next3;
+wire [31:0] crc_next[3:0];
 
-wire crc_valid0 = crc_next0 == ~32'h2144df1c;
-wire crc_valid1 = crc_next1 == ~32'h2144df1c;
-wire crc_valid2 = crc_next2 == ~32'h2144df1c;
-wire crc_valid3 = crc_next3 == ~32'h2144df1c;
+wire crc_valid0 = crc_next[0] == ~32'h2144df1c;
+wire crc_valid1 = crc_next[1] == ~32'h2144df1c;
+wire crc_valid2 = crc_next[2] == ~32'h2144df1c;
+wire crc_valid3 = crc_next[3] == ~32'h2144df1c;
 
 reg crc_valid0_save = 1'b0;
 reg crc_valid1_save = 1'b0;
@@ -155,69 +152,28 @@ assign error_bad_fcs = error_bad_fcs_reg;
 
 wire last_cycle = state_reg == STATE_LAST;
 
-lfsr #(
-    .LFSR_WIDTH(32),
-    .LFSR_POLY(32'h4c11db7),
-    .LFSR_CONFIG("GALOIS"),
-    .LFSR_FEED_FORWARD(0),
-    .REVERSE(1),
-    .DATA_WIDTH(8),
-    .STYLE("AUTO")
-)
-eth_crc_8 (
-    .data_in(xgmii_rxd_d0[7:0]),
-    .state_in(crc_state),
-    .data_out(),
-    .state_out(crc_next0)
-);
+generate
+    genvar n;
 
-lfsr #(
-    .LFSR_WIDTH(32),
-    .LFSR_POLY(32'h4c11db7),
-    .LFSR_CONFIG("GALOIS"),
-    .LFSR_FEED_FORWARD(0),
-    .REVERSE(1),
-    .DATA_WIDTH(16),
-    .STYLE("AUTO")
-)
-eth_crc_16 (
-    .data_in(xgmii_rxd_d0[15:0]),
-    .state_in(crc_state),
-    .data_out(),
-    .state_out(crc_next1)
-);
+    for (n = 0; n < 4; n = n + 1) begin : crc
+        lfsr #(
+            .LFSR_WIDTH(32),
+            .LFSR_POLY(32'h4c11db7),
+            .LFSR_CONFIG("GALOIS"),
+            .LFSR_FEED_FORWARD(0),
+            .REVERSE(1),
+            .DATA_WIDTH(8*(n+1)),
+            .STYLE("AUTO")
+        )
+        eth_crc (
+            .data_in(xgmii_rxd_d0[0 +: 8*(n+1)]),
+            .state_in(crc_state),
+            .data_out(),
+            .state_out(crc_next[n])
+        );
+    end
 
-lfsr #(
-    .LFSR_WIDTH(32),
-    .LFSR_POLY(32'h4c11db7),
-    .LFSR_CONFIG("GALOIS"),
-    .LFSR_FEED_FORWARD(0),
-    .REVERSE(1),
-    .DATA_WIDTH(24),
-    .STYLE("AUTO")
-)
-eth_crc_24 (
-    .data_in(xgmii_rxd_d0[23:0]),
-    .state_in(crc_state),
-    .data_out(),
-    .state_out(crc_next2)
-);
-
-lfsr #(
-    .LFSR_WIDTH(32),
-    .LFSR_POLY(32'h4c11db7),
-    .LFSR_CONFIG("GALOIS"),
-    .LFSR_FEED_FORWARD(0),
-    .REVERSE(1),
-    .DATA_WIDTH(32),
-    .STYLE("AUTO")
-)
-eth_crc_32 (
-    .data_in(xgmii_rxd_d0[31:0]),
-    .state_in(crc_state),
-    .data_out(),
-    .state_out(crc_next3)
-);
+endgenerate
 
 // detect control characters
 reg [3:0] detect_term = 4'd0;
@@ -319,6 +275,10 @@ always @* begin
 
             last_cycle_tkeep_next = tkeep_mask;
 
+            if (detect_term) begin
+                reset_crc = 1'b1;
+            end
+
             if (control_masked) begin
                 // control or error characters in packet
                 m_axis_tlast_next = 1'b1;
@@ -329,7 +289,6 @@ always @* begin
             end else if (detect_term) begin
                 if (detect_term[0]) begin
                     // end this cycle
-                    reset_crc = 1'b1;
                     m_axis_tkeep_next = 4'b1111;
                     m_axis_tlast_next = 1'b1;
                     if (detect_term[0] && crc_valid3_save) begin
@@ -397,7 +356,7 @@ always @(posedge clk) begin
     if (reset_crc) begin
         crc_state <= 32'hFFFFFFFF;
     end else begin
-        crc_state <= crc_next3;
+        crc_state <= crc_next[3];
     end
 
     crc_valid0_save <= crc_valid0;
@@ -420,8 +379,6 @@ always @(posedge clk) begin
         start_packet_reg <= 1'b0;
         error_bad_frame_reg <= 1'b0;
         error_bad_fcs_reg <= 1'b0;
-
-        crc_state <= 32'hFFFFFFFF;
 
         xgmii_rxc_d0 <= {CTRL_WIDTH{1'b0}};
         xgmii_rxc_d1 <= {CTRL_WIDTH{1'b0}};

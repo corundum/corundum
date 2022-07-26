@@ -135,18 +135,7 @@ module example_core_pcie_us #
     input  wire                                s_axis_rq_seq_num_valid_1,
 
     /*
-     * Flow control
-     */
-    input  wire [7:0]                          cfg_fc_ph,
-    input  wire [11:0]                         cfg_fc_pd,
-    input  wire [7:0]                          cfg_fc_nph,
-    input  wire [11:0]                         cfg_fc_npd,
-    input  wire [7:0]                          cfg_fc_cplh,
-    input  wire [11:0]                         cfg_fc_cpld,
-    output wire [2:0]                          cfg_fc_sel,
-
-    /*
-     * Configuration interface
+     * Configuration management interface
      */
     output wire [9:0]                          cfg_mgmt_addr,
     output wire [7:0]                          cfg_mgmt_function_number,
@@ -158,7 +147,24 @@ module example_core_pcie_us #
     input  wire                                cfg_mgmt_read_write_done,
 
     /*
-     * Interrupt interface
+     * Configuration status interface
+     */
+    input  wire [2:0]                          cfg_max_read_req,
+    input  wire [2:0]                          cfg_max_payload,
+
+    /*
+     * Configuration flow control interface
+     */
+    input  wire [7:0]                          cfg_fc_ph,
+    input  wire [11:0]                         cfg_fc_pd,
+    input  wire [7:0]                          cfg_fc_nph,
+    input  wire [11:0]                         cfg_fc_npd,
+    input  wire [7:0]                          cfg_fc_cplh,
+    input  wire [11:0]                         cfg_fc_cpld,
+    output wire [2:0]                          cfg_fc_sel,
+
+    /*
+     * Configuration interrupt interface
      */
     input  wire [3:0]                          cfg_interrupt_msix_enable,
     input  wire [3:0]                          cfg_interrupt_msix_mask,
@@ -172,12 +178,6 @@ module example_core_pcie_us #
     input  wire                                cfg_interrupt_msix_sent,
     input  wire                                cfg_interrupt_msix_fail,
     output wire [7:0]                          cfg_interrupt_msi_function_number,
-
-    /*
-     * Configuration
-     */
-    input  wire [2:0]                          cfg_max_read_req,
-    input  wire [2:0]                          cfg_max_payload,
 
     /*
      * Status
@@ -342,18 +342,7 @@ pcie_us_if_inst (
     .s_axis_rq_seq_num_valid_1(s_axis_rq_seq_num_valid_1),
 
     /*
-     * Flow control
-     */
-    .cfg_fc_ph(cfg_fc_ph),
-    .cfg_fc_pd(cfg_fc_pd),
-    .cfg_fc_nph(cfg_fc_nph),
-    .cfg_fc_npd(cfg_fc_npd),
-    .cfg_fc_cplh(cfg_fc_cplh),
-    .cfg_fc_cpld(cfg_fc_cpld),
-    .cfg_fc_sel(cfg_fc_sel),
-
-    /*
-     * Configuration interface
+     * Configuration management interface
      */
     .cfg_mgmt_addr(cfg_mgmt_addr),
     .cfg_mgmt_function_number(cfg_mgmt_function_number),
@@ -365,7 +354,24 @@ pcie_us_if_inst (
     .cfg_mgmt_read_write_done(cfg_mgmt_read_write_done),
 
     /*
-     * Interrupt interface
+     * Configuration status interface
+     */
+    .cfg_max_payload(cfg_max_payload),
+    .cfg_max_read_req(cfg_max_read_req),
+
+    /*
+     * Configuration flow control interface
+     */
+    .cfg_fc_ph(cfg_fc_ph),
+    .cfg_fc_pd(cfg_fc_pd),
+    .cfg_fc_nph(cfg_fc_nph),
+    .cfg_fc_npd(cfg_fc_npd),
+    .cfg_fc_cplh(cfg_fc_cplh),
+    .cfg_fc_cpld(cfg_fc_cpld),
+    .cfg_fc_sel(cfg_fc_sel),
+
+    /*
+     * Configuration interrupt interface
      */
     .cfg_interrupt_msi_enable(),
     .cfg_interrupt_msi_vf_enable(),

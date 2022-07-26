@@ -139,18 +139,7 @@ module pcie_us_if #
     input  wire                                          s_axis_rq_seq_num_valid_1,
 
     /*
-     * Flow control
-     */
-    input  wire [7:0]                                    cfg_fc_ph,
-    input  wire [11:0]                                   cfg_fc_pd,
-    input  wire [7:0]                                    cfg_fc_nph,
-    input  wire [11:0]                                   cfg_fc_npd,
-    input  wire [7:0]                                    cfg_fc_cplh,
-    input  wire [11:0]                                   cfg_fc_cpld,
-    output wire [2:0]                                    cfg_fc_sel,
-
-    /*
-     * Configuration interface
+     * Configuration management interface
      */
     output wire [9:0]                                    cfg_mgmt_addr,
     output wire [7:0]                                    cfg_mgmt_function_number,
@@ -162,7 +151,24 @@ module pcie_us_if #
     input  wire                                          cfg_mgmt_read_write_done,
 
     /*
-     * Interrupt interface
+     * Configuration status interface
+     */
+    output wire [2:0]                                    cfg_max_payload,
+    output wire [2:0]                                    cfg_max_read_req,
+
+    /*
+     * Configuration flow control interface
+     */
+    input  wire [7:0]                                    cfg_fc_ph,
+    input  wire [11:0]                                   cfg_fc_pd,
+    input  wire [7:0]                                    cfg_fc_nph,
+    input  wire [11:0]                                   cfg_fc_npd,
+    input  wire [7:0]                                    cfg_fc_cplh,
+    input  wire [11:0]                                   cfg_fc_cpld,
+    output wire [2:0]                                    cfg_fc_sel,
+
+    /*
+     * Configuration interrupt interface
      */
     input  wire [3:0]                                    cfg_interrupt_msi_enable,
     input  wire [7:0]                                    cfg_interrupt_msi_vf_enable,
@@ -405,7 +411,20 @@ pcie_us_if_rq_inst
      * Transmit sequence number output (DMA write request)
      */
     .m_axis_wr_req_tx_seq_num(m_axis_wr_req_tx_seq_num),
-    .m_axis_wr_req_tx_seq_num_valid(m_axis_wr_req_tx_seq_num_valid)
+    .m_axis_wr_req_tx_seq_num_valid(m_axis_wr_req_tx_seq_num_valid),
+
+    /*
+     * Flow control
+     */
+    .tx_fc_ph_av(tx_fc_ph_av),
+    .tx_fc_pd_av(tx_fc_pd_av),
+    .tx_fc_nph_av(tx_fc_nph_av),
+    .tx_fc_npd_av(tx_fc_npd_av),
+
+    /*
+     * Configuration
+     */
+    .max_payload_size(cfg_max_payload)
 );
 
 pcie_us_if_cq #(

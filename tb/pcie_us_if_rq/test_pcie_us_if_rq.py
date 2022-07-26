@@ -71,6 +71,12 @@ class TB(object):
         dut.s_axis_rq_seq_num_1.setimmediatevalue(0)
         dut.s_axis_rq_seq_num_valid_1.setimmediatevalue(0)
 
+        dut.tx_fc_ph_av.setimmediatevalue(0x80)
+        dut.tx_fc_pd_av.setimmediatevalue(0x800)
+        dut.tx_fc_nph_av.setimmediatevalue(0x80)
+        dut.tx_fc_npd_av.setimmediatevalue(0x800)
+        dut.max_payload_size.setimmediatevalue(0)
+
     def set_idle_generator(self, generator=None):
         if generator:
             self.rd_req_source.set_pause_generator(generator())

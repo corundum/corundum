@@ -48,4 +48,4 @@ SDC_FILES = fpga.sdc
 include ../common/quartus_pro.mk
 
 program: fpga
-	quartus_pgm --no_banner --mode=jtag -o "P;$(FPGA_TOP).sof@1"
+	quartus_pgm --no_banner --mode=jtag -o "P;$(FPGA_TOP).sof@2"

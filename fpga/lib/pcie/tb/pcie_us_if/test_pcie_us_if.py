@@ -166,8 +166,8 @@ class TB(object):
             # cfg_phy_link_status
             # cfg_negotiated_width
             # cfg_current_speed
-            # cfg_max_payload
-            # cfg_max_read_req
+            cfg_max_payload=dut.cfg_max_payload,
+            cfg_max_read_req=dut.cfg_max_read_req,
             # cfg_function_status
             # cfg_vf_status
             # cfg_function_power_state

@@ -110,7 +110,20 @@ module pcie_us_if_rq #
      * Transmit sequence number output (DMA write request)
      */
     output wire [TX_SEQ_NUM_COUNT*TX_SEQ_NUM_WIDTH-1:0]  m_axis_wr_req_tx_seq_num,
-    output wire [TX_SEQ_NUM_COUNT-1:0]                   m_axis_wr_req_tx_seq_num_valid
+    output wire [TX_SEQ_NUM_COUNT-1:0]                   m_axis_wr_req_tx_seq_num_valid,
+
+    /*
+     * Flow control
+     */
+    input  wire [7:0]                                    tx_fc_ph_av,
+    input  wire [11:0]                                   tx_fc_pd_av,
+    input  wire [7:0]                                    tx_fc_nph_av,
+    input  wire [11:0]                                   tx_fc_npd_av,
+
+    /*
+     * Configuration
+     */
+    input  wire [2:0]                                    max_payload_size
 );
 
 parameter TLP_DATA_WIDTH_BYTES = TLP_DATA_WIDTH/8;
@@ -207,6 +220,10 @@ localparam [3:0]
     REQ_MSG_VENDOR = 4'b1101,
     REQ_MSG_ATS = 4'b1110;
 
+reg [8:0] max_payload_size_fc_reg = 9'd0;
+reg have_p_credit_reg = 1'b0;
+reg have_np_credit_reg = 1'b0;
+
 reg frame_reg = 1'b0, frame_next, frame_cyc;
 reg tlp_hdr1_reg = 1'b0, tlp_hdr1_next, tlp_hdr1_cyc;
 reg tlp_hdr2_reg = 1'b0, tlp_hdr2_next, tlp_hdr2_cyc;
@@ -291,6 +308,8 @@ reg [SEG_SEL_WIDTH+1-1:0] fifo_read_seg_count[0:PORTS-1];
 
 reg [INT_TLP_SEG_COUNT-1:0] fifo_tlp_extra[0:PORTS-1];
 
+wire [PORTS-1:0] port_have_credit;
+
 // read requests
 pcie_tlp_fifo_raw #(
     .DEPTH((1024/4)*2),
@@ -359,6 +378,8 @@ rd_req_fifo_inst (
 assign fifo_tlp_data[0] = 0;
 assign fifo_tlp_strb[0] = 0;
 
+assign port_have_credit[0] = have_np_credit_reg;
+
 // write requests
 pcie_tlp_fifo_raw #(
     .DEPTH((1024/4)*2),
@@ -423,6 +444,8 @@ wr_req_fifo_inst (
     .half_full(),
     .watermark()
 );
+
+assign port_have_credit[1] = have_p_credit_reg;
 
 integer port, cur_port, seg, cur_seg, lane;
 
@@ -504,7 +527,7 @@ always @* begin
             tlp_split1_cyc = 1'b0;
             tlp_split2_cyc = 1'b0;
             for (port = 0; port < PORTS; port = port + 1) begin
-                if (port_seg_valid[cur_port][0] && !frame_cyc) begin
+                if (port_seg_valid[cur_port][0] && port_have_credit[cur_port] && !frame_cyc) begin
                     // select port, set frame
                     frame_cyc = 1'b1;
                     port_cyc = cur_port;
@@ -844,9 +867,11 @@ always @* begin
     end
 end
 
-integer i;
-
 always @(posedge clk) begin
+    max_payload_size_fc_reg <= 9'd8 << (max_payload_size > 5 ? 5 : max_payload_size);
+    have_p_credit_reg <= (tx_fc_ph_av > 4) && (tx_fc_pd_av > (max_payload_size_fc_reg << 1));
+    have_np_credit_reg <= tx_fc_nph_av > 4;
+
     frame_reg <= frame_next;
     tlp_hdr1_reg <= tlp_hdr1_next;
     tlp_hdr2_reg <= tlp_hdr2_next;

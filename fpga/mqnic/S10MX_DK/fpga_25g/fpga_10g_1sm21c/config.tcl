@@ -70,6 +70,7 @@ set pcie_revision_id [expr 0x00]
 set pcie_subsystem_vendor_id $board_vendor_id
 set pcie_subsystem_device_id $board_device_id
 
+# FW ID block
 dict set params FPGA_ID [format "32'h%08x" $fpga_id]
 dict set params FW_ID [format "32'h%08x" $fw_id]
 dict set params FW_VER [format "32'h%02x%02x%02x%02x" {*}[split $fw_ver .-] 0 0 0 0]
@@ -78,6 +79,9 @@ dict set params BOARD_VER [format "32'h%02x%02x%02x%02x" {*}[split $board_ver .-
 dict set params BUILD_DATE  "32'd${build_date}"
 dict set params GIT_HASH  "32'h${git_hash}"
 dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
+
+# Board configuration
+dict set params TDMA_BER_ENABLE "0"
 
 # Structural configuration
 dict set params IF_COUNT "2"
@@ -173,11 +177,13 @@ dict set params AXIL_APP_CTRL_DATA_WIDTH [dict get $params AXIL_CTRL_DATA_WIDTH]
 dict set params AXIL_APP_CTRL_ADDR_WIDTH "24"
 
 # Ethernet interface configuration
+dict set params AXIS_ETH_SYNC_DATA_WIDTH_DOUBLE "0"
 dict set params AXIS_ETH_TX_PIPELINE "0"
 dict set params AXIS_ETH_TX_FIFO_PIPELINE "2"
 dict set params AXIS_ETH_TX_TS_PIPELINE "0"
 dict set params AXIS_ETH_RX_PIPELINE "0"
 dict set params AXIS_ETH_RX_FIFO_PIPELINE "2"
+dict set params ETH_XCVR_GXT "0"
 
 # Statistics counter subsystem
 dict set params STAT_ENABLE "0"

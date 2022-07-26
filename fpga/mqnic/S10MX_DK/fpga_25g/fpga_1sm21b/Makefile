@@ -2,7 +2,7 @@
 # FPGA settings
 FPGA_TOP = fpga
 FPGA_FAMILY = "Stratix 10 MX"
-FPGA_DEVICE = 1SM21CHU1F53E1VG
+FPGA_DEVICE = 1SM21BHU2F53E1VG
 
 # Files for synthesis
 SYN_FILES = rtl/fpga.v
@@ -122,8 +122,10 @@ SYN_FILES += lib/pcie/rtl/pulse_merge.v
 # IP files
 IP_TCL_FILES += ip/reset_release.tcl
 IP_TCL_FILES += ip/pcie.tcl
-IP_TCL_FILES += ip/eth_xcvr.tcl
-IP_TCL_FILES += ip/eth_xcvr_pll.tcl
+IP_TCL_FILES += ip/eth_xcvr_gxt.tcl
+IP_TCL_FILES += ip/eth_xcvr_gx_pll.tcl
+IP_TCL_FILES += ip/eth_xcvr_gxt_pll.tcl
+IP_TCL_FILES += ip/eth_xcvr_gxt_buf.tcl
 IP_TCL_FILES += ip/eth_xcvr_reset.tcl
 IP_TCL_FILES += ip/ref_div.tcl
 

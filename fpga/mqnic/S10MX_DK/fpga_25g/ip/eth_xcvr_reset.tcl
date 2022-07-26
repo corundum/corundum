@@ -13,7 +13,7 @@ proc do_create_eth_xcvr_reset {} {
 
 	# add the components
 	add_instance xcvr_reset_control_s10_0 altera_xcvr_reset_control_s10
-	set_instance_parameter_value xcvr_reset_control_s10_0 {CHANNELS} {4}
+	set_instance_parameter_value xcvr_reset_control_s10_0 {CHANNELS} {1}
 	set_instance_parameter_value xcvr_reset_control_s10_0 {ENABLE_DIGITAL_SEQ} {0}
 	set_instance_parameter_value xcvr_reset_control_s10_0 {PLLS} {1}
 	set_instance_parameter_value xcvr_reset_control_s10_0 {REDUCED_SIM_TIME} {1}

@@ -1,9 +1,9 @@
-package require -exact qsys 20.4
+package require -exact qsys 21.3
 
-# create the system "eth_xcvr_pll"
-proc do_create_eth_xcvr_pll {} {
+# create the system "eth_xcvr_gxt_buf"
+proc do_create_eth_xcvr_gxt_buf {} {
 	# create the system
-	create_system eth_xcvr_pll
+	create_system eth_xcvr_gxt_buf
 	set_project_property DEVICE {1SM21CHU1F53E1VG}
 	set_project_property DEVICE_FAMILY {Stratix 10}
 	set_project_property HIDE_FROM_IP_CATALOG {true}
@@ -16,12 +16,12 @@ proc do_create_eth_xcvr_pll {} {
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {base_device} {Unknown}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {bw_sel} {high}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_28G_input_frm_abv_atx} {0}
-	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_28G_input_frm_blw_atx} {0}
-	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_28G_local_atx_path} {0}
+	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_28G_input_frm_blw_atx} {1}
+	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_28G_local_atx_path} {1}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_28G_output_frm_abv_atx} {0}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_28G_output_frm_blw_atx} {0}
-	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_8G_path} {1}
-	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_GXT_clock_source} {disabled}
+	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_8G_path} {0}
+	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_GXT_clock_source} {atx_blw}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_GXT_out_buffer_abv} {0}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_GXT_out_buffer_blw} {0}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {enable_analog_resets} {0}
@@ -47,7 +47,7 @@ proc do_create_eth_xcvr_pll {} {
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {mcgb_div} {1}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {message_level} {error}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {pma_width} {64}
-	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {primary_pll_buffer} {GX clock output buffer}
+	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {primary_pll_buffer} {GXT clock output buffer}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {prot_mode} {Basic}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {rcfg_debug} {0}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {rcfg_enable} {0}
@@ -94,7 +94,7 @@ proc do_create_eth_xcvr_pll {} {
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {set_l_counter} {4}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {set_m_counter} {24}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {set_manual_reference_clock_frequency} {200.0}
-	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {set_output_clock_frequency} {5156.25}
+	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {set_output_clock_frequency} {12890.625}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {set_rcfg_emb_strm_enable} {0}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {set_ref_clk_div} {1}
 	set_instance_parameter_value xcvr_atx_pll_s10_htile_0 {set_user_identifier} {0}
@@ -106,9 +106,12 @@ proc do_create_eth_xcvr_pll {} {
 
 	# add wirelevel expressions
 
+	# preserve ports for debug
+
 	# add the exports
 	set_interface_property pll_refclk0 EXPORT_OF xcvr_atx_pll_s10_htile_0.pll_refclk0
-	set_interface_property tx_serial_clk EXPORT_OF xcvr_atx_pll_s10_htile_0.tx_serial_clk
+	set_interface_property tx_serial_clk_gxt EXPORT_OF xcvr_atx_pll_s10_htile_0.tx_serial_clk_gxt
+	set_interface_property gxt_input_from_blw_atx EXPORT_OF xcvr_atx_pll_s10_htile_0.gxt_input_from_blw_atx
 	set_interface_property pll_locked EXPORT_OF xcvr_atx_pll_s10_htile_0.pll_locked
 	set_interface_property pll_cal_busy EXPORT_OF xcvr_atx_pll_s10_htile_0.pll_cal_busy
 
@@ -122,20 +125,20 @@ proc do_create_eth_xcvr_pll {} {
  </element>
 </bonusData>
 }
-	set_module_property FILE {eth_xcvr_pll.ip}
+	set_module_property FILE {eth_xcvr_gxt_buf.ip}
 	set_module_property GENERATION_ID {0x00000000}
-	set_module_property NAME {eth_xcvr_pll}
+	set_module_property NAME {eth_xcvr_gxt_buf}
 
 	# save the system
 	sync_sysinfo_parameters
-	save_system eth_xcvr_pll
+	save_system eth_xcvr_gxt_buf
 }
 
 proc do_set_exported_interface_sysinfo_parameters {} {
 }
 
 # create all the systems, from bottom up
-do_create_eth_xcvr_pll
+do_create_eth_xcvr_gxt_buf
 
 # set system info parameters on exported interface, from bottom up
 do_set_exported_interface_sysinfo_parameters

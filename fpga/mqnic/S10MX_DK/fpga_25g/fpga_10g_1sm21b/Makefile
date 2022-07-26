@@ -122,8 +122,8 @@ SYN_FILES += lib/pcie/rtl/pulse_merge.v
 # IP files
 IP_TCL_FILES += ip/reset_release.tcl
 IP_TCL_FILES += ip/pcie.tcl
-IP_TCL_FILES += ip/eth_xcvr.tcl
-IP_TCL_FILES += ip/eth_xcvr_pll.tcl
+IP_TCL_FILES += ip/eth_xcvr_gx.tcl
+IP_TCL_FILES += ip/eth_xcvr_gx_pll.tcl
 IP_TCL_FILES += ip/eth_xcvr_reset.tcl
 IP_TCL_FILES += ip/ref_div.tcl
 

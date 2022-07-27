@@ -156,7 +156,8 @@ This section details PCIe form-factor targets, which interface with a separate h
     Alveo U280               mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
     Alveo U280               mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
     Alveo U280               mqnic/fpga_100g/fpga             2x1   256/8K   100G  RR
-    VCU108                   mqnic/fpga_10g/fpga              1x1   256/2K   10G   RR
+    VCU108                   mqnic/fpga_25g/fpga              1x1   256/2K   25G   RR
+    VCU108                   mqnic/fpga_25g/fpga_10g          1x1   256/2K   10G   RR
     VCU118                   mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
     VCU118                   mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
     VCU118                   mqnic/fpga_100g/fpga             2x1   256/8K   100G  RR

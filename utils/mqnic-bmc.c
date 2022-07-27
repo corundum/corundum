@@ -228,7 +228,7 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    if (dev->pci_device_path)
+    if (dev->pci_device_path[0])
     {
         char *ptr = strrchr(dev->pci_device_path, '/');
         if (ptr)

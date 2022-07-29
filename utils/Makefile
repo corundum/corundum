@@ -16,6 +16,7 @@ BIN = mqnic-config
 BIN += mqnic-dump
 BIN += mqnic-fw
 BIN += mqnic-bmc
+BIN += mqnic-xcvr
 BIN += perout
 
 GENDEPFLAGS = -MD -MP -MF .$(@F).d
@@ -42,6 +43,9 @@ mqnic-fw: mqnic-fw.o flash.o flash_spi.o flash_bpi.o bitfile.o $(LIBMQNIC)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 mqnic-bmc: mqnic-bmc.o $(LIBMQNIC)
+	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
+
+mqnic-xcvr: mqnic-xcvr.o $(LIBMQNIC) drp.o xcvr_gt.o xcvr_gthe3.o xcvr_gtye3.o xcvr_gthe4.o xcvr_gtye4.o
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 perout: perout.o timespec.o

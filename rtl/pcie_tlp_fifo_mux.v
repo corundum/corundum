@@ -91,6 +91,11 @@ module pcie_tlp_fifo_mux #
     input  wire                                              out_tlp_ready,
 
     /*
+     * Control
+     */
+    input  wire [PORTS-1:0]                                  pause,
+
+    /*
      * Status
      */
     output wire [PORTS*OUT_TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  sel_tlp_seq,
@@ -336,7 +341,7 @@ always @* begin
                 end
             end
             for (port = 0; port < PORTS; port = port + 1) begin
-                if (port_seg_valid[cur_port][0] && !frame_cyc) begin
+                if (port_seg_valid[cur_port][0] && !pause[cur_port] && !frame_cyc) begin
                     // select port, set frame
                     frame_cyc = 1;
                     port_cyc = cur_port;

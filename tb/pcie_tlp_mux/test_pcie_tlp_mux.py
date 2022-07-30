@@ -66,6 +66,9 @@ class TB(object):
         self.source = [PcieIfSource(PcieIfBus.from_prefix(dut, f"in{k:02d}_tlp"), dut.clk, dut.rst) for k in range(ports)]
         self.sink = PcieIfSink(PcieIfBus.from_prefix(dut, "out_tlp"), dut.clk, dut.rst)
 
+        for k in range(ports):
+            getattr(dut, f"in{k:02d}_pause").setimmediatevalue(0)
+
     def set_idle_generator(self, generator=None):
         if generator:
             for source in self.source:

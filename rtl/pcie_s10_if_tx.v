@@ -321,6 +321,11 @@ pcie_tlp_fifo_mux_inst (
     .out_tlp_ready(mux_out_tlp_ready),
 
     /*
+     * Control
+     */
+    .pause(0),
+
+    /*
      * Status
      */
     .sel_tlp_seq(mux_out_sel_tlp_seq),

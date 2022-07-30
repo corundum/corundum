@@ -127,6 +127,13 @@ module {{name}} #
     input  wire                                        out_tlp_ready,
 
     /*
+     * Control
+     */
+{%- for p in range(n) %}
+    input  wire                                        in{{'%02d'%p}}_pause,
+{%- endfor %}
+
+    /*
      * Status
      */
 {%- for p in range(n) %}
@@ -183,6 +190,11 @@ pcie_tlp_fifo_mux_inst (
     .out_tlp_sop(out_tlp_sop),
     .out_tlp_eop(out_tlp_eop),
     .out_tlp_ready(out_tlp_ready),
+
+    /*
+     * Control
+     */
+    .pause({ {% for p in range(n-1,-1,-1) %}in{{'%02d'%p}}_pause{% if not loop.last %}, {% endif %}{% endfor %} }),
 
     /*
      * Status

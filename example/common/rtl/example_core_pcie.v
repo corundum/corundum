@@ -451,6 +451,11 @@ pcie_tlp_mux_inst (
     .out_tlp_ready(tx_cpl_tlp_ready),
 
     /*
+     * Control
+     */
+    .pause(0),
+
+    /*
      * Status
      */
     .sel_tlp_seq(),

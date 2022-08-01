@@ -67,6 +67,19 @@ class TB(object):
         self.sink = S10PcieSink(S10TxBus.from_prefix(dut, "tx_st"), dut.clk, dut.rst)
         self.sink.ready_latency = 3
 
+        dut.tx_ph_cdts.setimmediatevalue(0x80)
+        dut.tx_pd_cdts.setimmediatevalue(0x800)
+        dut.tx_nph_cdts.setimmediatevalue(0x80)
+        dut.tx_npd_cdts.setimmediatevalue(0x800)
+        dut.tx_cplh_cdts.setimmediatevalue(0x80)
+        dut.tx_cpld_cdts.setimmediatevalue(0x800)
+        dut.tx_hdr_cdts_consumed.setimmediatevalue(0)
+        dut.tx_data_cdts_consumed.setimmediatevalue(0)
+        dut.tx_cdts_type.setimmediatevalue(0)
+        dut.tx_cdts_data_value.setimmediatevalue(0)
+
+        dut.max_payload_size.setimmediatevalue(0)
+
     def set_idle_generator(self, generator=None):
         if generator:
             self.rd_req_source.set_pause_generator(generator())

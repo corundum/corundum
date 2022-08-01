@@ -51,7 +51,7 @@ class TB(object):
             pcie_generation=3,
             # pcie_link_width=2,
             # pld_clk_frequency=250e6,
-            l_tile=False,
+            l_tile=dut.L_TILE.value,
             pf_count=1,
             max_payload_size=1024,
             enable_extended_tag=True,

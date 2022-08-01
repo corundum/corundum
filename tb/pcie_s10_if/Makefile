@@ -35,6 +35,7 @@ VERILOG_SOURCES += ../../rtl/$(DUT)_tx.v
 VERILOG_SOURCES += ../../rtl/pcie_s10_cfg.v
 VERILOG_SOURCES += ../../rtl/pcie_s10_msi.v
 VERILOG_SOURCES += ../../rtl/pcie_tlp_demux.v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_fc_count.v
 VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo.v
 VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_raw.v
 VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_mux.v

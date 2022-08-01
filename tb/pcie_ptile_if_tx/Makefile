@@ -30,6 +30,7 @@ DUT      = pcie_ptile_if_tx
 TOPLEVEL = $(DUT)
 MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_fc_count.v
 VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_raw.v
 VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_mux.v
 

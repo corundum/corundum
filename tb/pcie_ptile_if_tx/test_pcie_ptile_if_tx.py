@@ -368,6 +368,7 @@ def test_pcie_ptile_if_tx(request, data_width):
 
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fc_count.v"),
         os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
         os.path.join(rtl_dir, "pcie_tlp_fifo_mux.v"),
     ]

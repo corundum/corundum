@@ -91,6 +91,16 @@ module pcie_tlp_fifo_mux #
     input  wire                                              out_tlp_ready,
 
     /*
+     * Flow control count output
+     */
+    output wire [3:0]                                        out_fc_ph,
+    output wire [8:0]                                        out_fc_pd,
+    output wire [3:0]                                        out_fc_nph,
+    output wire [8:0]                                        out_fc_npd,
+    output wire [3:0]                                        out_fc_cplh,
+    output wire [8:0]                                        out_fc_cpld,
+
+    /*
      * Control
      */
     input  wire [PORTS-1:0]                                  pause,
@@ -259,6 +269,33 @@ endgenerate
 
 assign sel_tlp_seq = {PORTS{out_sel_tlp_seq_reg}};
 assign sel_tlp_seq_valid = out_sel_tlp_seq_valid_reg;
+
+pcie_tlp_fc_count #(
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(OUT_TLP_SEG_COUNT)
+)
+fc_count_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * TLP monitor
+     */
+    .tlp_hdr(out_tlp_hdr_int),
+    .tlp_valid(out_tlp_valid_int),
+    .tlp_sop(out_tlp_sop_int),
+    .tlp_ready(1'b1),
+
+    /*
+     * Flow control count output
+     */
+    .out_fc_ph(out_fc_ph),
+    .out_fc_pd(out_fc_pd),
+    .out_fc_nph(out_fc_nph),
+    .out_fc_npd(out_fc_npd),
+    .out_fc_cplh(out_fc_cplh),
+    .out_fc_cpld(out_fc_cpld)
+);
 
 integer port, cur_port, seg, cur_seg;
 

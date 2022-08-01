@@ -44,6 +44,7 @@ VERILOG_SOURCES += ../../../../rtl/pcie_axi_master_wr.v
 VERILOG_SOURCES += ../../../../rtl/pcie_tlp_demux_bar.v
 VERILOG_SOURCES += ../../../../rtl/pcie_tlp_demux.v
 VERILOG_SOURCES += ../../../../rtl/pcie_tlp_mux.v
+VERILOG_SOURCES += ../../../../rtl/pcie_tlp_fc_count.v
 VERILOG_SOURCES += ../../../../rtl/pcie_tlp_fifo.v
 VERILOG_SOURCES += ../../../../rtl/pcie_tlp_fifo_raw.v
 VERILOG_SOURCES += ../../../../rtl/pcie_tlp_fifo_mux.v

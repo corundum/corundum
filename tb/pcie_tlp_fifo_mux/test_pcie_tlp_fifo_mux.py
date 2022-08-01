@@ -255,6 +255,7 @@ def test_pcie_tlp_fifo_mux(request, pcie_data_width, tlp_seg_count, ports, round
     verilog_sources = [
         wrapper_file,
         os.path.join(rtl_dir, f"{dut}.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fc_count.v"),
         os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
     ]
 

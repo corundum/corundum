@@ -341,13 +341,16 @@ always @* begin
                 end
             end
             for (port = 0; port < PORTS; port = port + 1) begin
-                if (port_seg_valid[cur_port][0] && !pause[cur_port] && !frame_cyc) begin
-                    // select port, set frame
-                    frame_cyc = 1;
+                if (!frame_cyc) begin
+                    // select port
                     port_cyc = cur_port;
                     seg_offset_cyc = port_seg_offset_cyc[cur_port];
                     seg_count_cyc = port_seg_count_cyc[cur_port];
-                    sel_tlp_seq_valid_cyc[OUT_TLP_SEG_COUNT*cur_port+seg] = 1'b1;
+                    if (port_seg_valid[cur_port][0] && !pause[cur_port]) begin
+                        // set frame
+                        frame_cyc = 1;
+                        sel_tlp_seq_valid_cyc[OUT_TLP_SEG_COUNT*cur_port+seg] = 1'b1;
+                    end
                 end
                 // next port
                 if (ARB_LSB_HIGH_PRIORITY) begin

@@ -91,6 +91,21 @@ module pcie_tlp_fifo_mux #
     input  wire                                              out_tlp_ready,
 
     /*
+     * Flow control count output
+     */
+    output wire [3:0]                                        out_fc_ph,
+    output wire [8:0]                                        out_fc_pd,
+    output wire [3:0]                                        out_fc_nph,
+    output wire [8:0]                                        out_fc_npd,
+    output wire [3:0]                                        out_fc_cplh,
+    output wire [8:0]                                        out_fc_cpld,
+
+    /*
+     * Control
+     */
+    input  wire [PORTS-1:0]                                  pause,
+
+    /*
      * Status
      */
     output wire [PORTS*OUT_TLP_SEG_COUNT*SEQ_NUM_WIDTH-1:0]  sel_tlp_seq,
@@ -255,6 +270,33 @@ endgenerate
 assign sel_tlp_seq = {PORTS{out_sel_tlp_seq_reg}};
 assign sel_tlp_seq_valid = out_sel_tlp_seq_valid_reg;
 
+pcie_tlp_fc_count #(
+    .TLP_HDR_WIDTH(TLP_HDR_WIDTH),
+    .TLP_SEG_COUNT(OUT_TLP_SEG_COUNT)
+)
+fc_count_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * TLP monitor
+     */
+    .tlp_hdr(out_tlp_hdr_int),
+    .tlp_valid(out_tlp_valid_int),
+    .tlp_sop(out_tlp_sop_int),
+    .tlp_ready(1'b1),
+
+    /*
+     * Flow control count output
+     */
+    .out_fc_ph(out_fc_ph),
+    .out_fc_pd(out_fc_pd),
+    .out_fc_nph(out_fc_nph),
+    .out_fc_npd(out_fc_npd),
+    .out_fc_cplh(out_fc_cplh),
+    .out_fc_cpld(out_fc_cpld)
+);
+
 integer port, cur_port, seg, cur_seg;
 
 always @* begin
@@ -336,13 +378,16 @@ always @* begin
                 end
             end
             for (port = 0; port < PORTS; port = port + 1) begin
-                if (port_seg_valid[cur_port][0] && !frame_cyc) begin
-                    // select port, set frame
-                    frame_cyc = 1;
+                if (!frame_cyc) begin
+                    // select port
                     port_cyc = cur_port;
                     seg_offset_cyc = port_seg_offset_cyc[cur_port];
                     seg_count_cyc = port_seg_count_cyc[cur_port];
-                    sel_tlp_seq_valid_cyc[OUT_TLP_SEG_COUNT*cur_port+seg] = 1'b1;
+                    if (port_seg_valid[cur_port][0] && !pause[cur_port]) begin
+                        // set frame
+                        frame_cyc = 1;
+                        sel_tlp_seq_valid_cyc[OUT_TLP_SEG_COUNT*cur_port+seg] = 1'b1;
+                    end
                 end
                 // next port
                 if (ARB_LSB_HIGH_PRIORITY) begin

@@ -1255,43 +1255,43 @@ class PcieIfDevice(Device):
             await RisingEdge(self.clk)
 
             if self.tx_fc_ph_av is not None:
-                self.tx_fc_ph_av.value = self.upstream_port.fc_state[0].ph.tx_credits_available
+                self.tx_fc_ph_av.value = self.upstream_port.fc_state[0].ph.tx_credits_available & 0xff
             if self.tx_fc_pd_av is not None:
-                self.tx_fc_pd_av.value = self.upstream_port.fc_state[0].pd.tx_credits_available
+                self.tx_fc_pd_av.value = self.upstream_port.fc_state[0].pd.tx_credits_available & 0xfff
             if self.tx_fc_nph_av is not None:
-                self.tx_fc_nph_av.value = self.upstream_port.fc_state[0].nph.tx_credits_available
+                self.tx_fc_nph_av.value = self.upstream_port.fc_state[0].nph.tx_credits_available & 0xff
             if self.tx_fc_npd_av is not None:
-                self.tx_fc_npd_av.value = self.upstream_port.fc_state[0].npd.tx_credits_available
+                self.tx_fc_npd_av.value = self.upstream_port.fc_state[0].npd.tx_credits_available & 0xfff
             if self.tx_fc_cplh_av is not None:
-                self.tx_fc_cplh_av.value = self.upstream_port.fc_state[0].cplh.tx_credits_available
+                self.tx_fc_cplh_av.value = self.upstream_port.fc_state[0].cplh.tx_credits_available & 0xff
             if self.tx_fc_cpld_av is not None:
-                self.tx_fc_cpld_av.value = self.upstream_port.fc_state[0].cpld.tx_credits_available
+                self.tx_fc_cpld_av.value = self.upstream_port.fc_state[0].cpld.tx_credits_available & 0xfff
 
             if self.tx_fc_ph_lim is not None:
-                self.tx_fc_ph_lim.value = self.upstream_port.fc_state[0].ph.tx_credit_limit
+                self.tx_fc_ph_lim.value = self.upstream_port.fc_state[0].ph.tx_credit_limit & 0xff
             if self.tx_fc_pd_lim is not None:
-                self.tx_fc_pd_lim.value = self.upstream_port.fc_state[0].pd.tx_credit_limit
+                self.tx_fc_pd_lim.value = self.upstream_port.fc_state[0].pd.tx_credit_limit & 0xfff
             if self.tx_fc_nph_lim is not None:
-                self.tx_fc_nph_lim.value = self.upstream_port.fc_state[0].nph.tx_credit_limit
+                self.tx_fc_nph_lim.value = self.upstream_port.fc_state[0].nph.tx_credit_limit & 0xff
             if self.tx_fc_npd_lim is not None:
-                self.tx_fc_npd_lim.value = self.upstream_port.fc_state[0].npd.tx_credit_limit
+                self.tx_fc_npd_lim.value = self.upstream_port.fc_state[0].npd.tx_credit_limit & 0xfff
             if self.tx_fc_cplh_lim is not None:
-                self.tx_fc_cplh_lim.value = self.upstream_port.fc_state[0].cplh.tx_credit_limit
+                self.tx_fc_cplh_lim.value = self.upstream_port.fc_state[0].cplh.tx_credit_limit & 0xff
             if self.tx_fc_cpld_lim is not None:
-                self.tx_fc_cpld_lim.value = self.upstream_port.fc_state[0].cpld.tx_credit_limit
+                self.tx_fc_cpld_lim.value = self.upstream_port.fc_state[0].cpld.tx_credit_limit & 0xfff
 
             if self.tx_fc_ph_cons is not None:
-                self.tx_fc_ph_cons.value = self.upstream_port.fc_state[0].ph.tx_credits_consumed
+                self.tx_fc_ph_cons.value = self.upstream_port.fc_state[0].ph.tx_credits_consumed & 0xff
             if self.tx_fc_pd_cons is not None:
-                self.tx_fc_pd_cons.value = self.upstream_port.fc_state[0].pd.tx_credits_consumed
+                self.tx_fc_pd_cons.value = self.upstream_port.fc_state[0].pd.tx_credits_consumed & 0xfff
             if self.tx_fc_nph_cons is not None:
-                self.tx_fc_nph_cons.value = self.upstream_port.fc_state[0].nph.tx_credits_consumed
+                self.tx_fc_nph_cons.value = self.upstream_port.fc_state[0].nph.tx_credits_consumed & 0xff
             if self.tx_fc_npd_cons is not None:
-                self.tx_fc_npd_cons.value = self.upstream_port.fc_state[0].npd.tx_credits_consumed
+                self.tx_fc_npd_cons.value = self.upstream_port.fc_state[0].npd.tx_credits_consumed & 0xfff
             if self.tx_fc_cplh_cons is not None:
-                self.tx_fc_cplh_cons.value = self.upstream_port.fc_state[0].cplh.tx_credits_consumed
+                self.tx_fc_cplh_cons.value = self.upstream_port.fc_state[0].cplh.tx_credits_consumed & 0xff
             if self.tx_fc_cpld_cons is not None:
-                self.tx_fc_cpld_cons.value = self.upstream_port.fc_state[0].cpld.tx_credits_consumed
+                self.tx_fc_cpld_cons.value = self.upstream_port.fc_state[0].cpld.tx_credits_consumed & 0xfff
 
 
 class PcieIfTestDevice:

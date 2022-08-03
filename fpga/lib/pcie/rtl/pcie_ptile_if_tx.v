@@ -69,6 +69,12 @@ module pcie_ptile_if_tx #
     output wire [SEG_COUNT*SEG_PRFX_WIDTH-1:0]        tx_st_tlp_prfx,
 
     /*
+     * P-Tile TX flow control
+     */
+    input  wire [15:0]                                tx_cdts_limit,
+    input  wire [2:0]                                 tx_cdts_limit_tdm_idx,
+
+    /*
      * TLP input (read request from DMA)
      */
     input  wire [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0]     tx_rd_req_tlp_hdr,
@@ -122,7 +128,22 @@ module pcie_ptile_if_tx #
     input  wire                                       tx_msi_wr_req_tlp_valid,
     input  wire                                       tx_msi_wr_req_tlp_sop,
     input  wire                                       tx_msi_wr_req_tlp_eop,
-    output wire                                       tx_msi_wr_req_tlp_ready
+    output wire                                       tx_msi_wr_req_tlp_ready,
+
+    /*
+     * Flow control
+     */
+    output wire [11:0]                                tx_fc_ph_av,
+    output wire [15:0]                                tx_fc_pd_av,
+    output wire [11:0]                                tx_fc_nph_av,
+    output wire [15:0]                                tx_fc_npd_av,
+    output wire [11:0]                                tx_fc_cplh_av,
+    output wire [15:0]                                tx_fc_cpld_av,
+
+    /*
+     * Configuration
+     */
+    input  wire [2:0]                                 max_payload_size
 );
 
 parameter SEG_STRB_WIDTH = SEG_DATA_WIDTH/32;
@@ -199,8 +220,22 @@ wire [INT_TLP_SEG_COUNT-1:0] mux_out_tlp_sop;
 wire [INT_TLP_SEG_COUNT-1:0] mux_out_tlp_eop;
 reg mux_out_tlp_ready_cmb;
 
+wire [PORTS-1:0] mux_pause;
+
 wire [PORTS*INT_TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH-1:0] mux_out_sel_tlp_seq;
 wire [PORTS*INT_TLP_SEG_COUNT-1:0] mux_out_sel_tlp_seq_valid;
+
+wire [3:0] mux_tx_fc_ph;
+wire [8:0] mux_tx_fc_pd;
+wire [3:0] mux_tx_fc_nph;
+wire [8:0] mux_tx_fc_npd;
+wire [3:0] mux_tx_fc_cplh;
+wire [8:0] mux_tx_fc_cpld;
+
+reg [8:0] max_payload_size_fc_reg = 9'd0;
+reg have_p_credit_reg = 1'b0;
+reg have_np_credit_reg = 1'b0;
+reg have_cpl_credit_reg = 1'b0;
 
 assign mux_in_tlp_data[TLP_DATA_WIDTH*0 +: TLP_DATA_WIDTH] = tx_msi_wr_req_tlp_data;
 assign mux_in_tlp_strb[TLP_STRB_WIDTH*0 +: TLP_STRB_WIDTH] = tx_msi_wr_req_tlp_strb;
@@ -211,6 +246,8 @@ assign mux_in_tlp_sop[TLP_SEG_COUNT*0 +: TLP_SEG_COUNT] = tx_msi_wr_req_tlp_sop;
 assign mux_in_tlp_eop[TLP_SEG_COUNT*0 +: TLP_SEG_COUNT] = tx_msi_wr_req_tlp_eop;
 assign tx_msi_wr_req_tlp_ready = mux_in_tlp_ready[0 +: 1];
 
+assign mux_pause[0] = !have_p_credit_reg;
+
 assign mux_in_tlp_data[TLP_DATA_WIDTH*1 +: TLP_DATA_WIDTH] = tx_cpl_tlp_data;
 assign mux_in_tlp_strb[TLP_STRB_WIDTH*1 +: TLP_STRB_WIDTH] = tx_cpl_tlp_strb;
 assign mux_in_tlp_hdr[TLP_SEG_COUNT*TLP_HDR_WIDTH*1 +: TLP_SEG_COUNT*TLP_HDR_WIDTH] = tx_cpl_tlp_hdr;
@@ -219,6 +256,8 @@ assign mux_in_tlp_valid[TLP_SEG_COUNT*1 +: TLP_SEG_COUNT] = tx_cpl_tlp_valid;
 assign mux_in_tlp_sop[TLP_SEG_COUNT*1 +: TLP_SEG_COUNT] = tx_cpl_tlp_sop;
 assign mux_in_tlp_eop[TLP_SEG_COUNT*1 +: TLP_SEG_COUNT] = tx_cpl_tlp_eop;
 assign tx_cpl_tlp_ready = mux_in_tlp_ready[1 +: 1];
+
+assign mux_pause[1] = !have_cpl_credit_reg;
 
 assign mux_in_tlp_data[TLP_DATA_WIDTH*2 +: TLP_DATA_WIDTH] = 0;
 assign mux_in_tlp_strb[TLP_STRB_WIDTH*2 +: TLP_STRB_WIDTH] = 0;
@@ -229,6 +268,8 @@ assign mux_in_tlp_sop[TLP_SEG_COUNT*2 +: TLP_SEG_COUNT] = {TLP_SEG_COUNT{1'b1}};
 assign mux_in_tlp_eop[TLP_SEG_COUNT*2 +: TLP_SEG_COUNT] = {TLP_SEG_COUNT{1'b1}};
 assign tx_rd_req_tlp_ready = mux_in_tlp_ready[2 +: 1];
 
+assign mux_pause[2] = !have_np_credit_reg;
+
 assign mux_in_tlp_data[TLP_DATA_WIDTH*3 +: TLP_DATA_WIDTH] = tx_wr_req_tlp_data;
 assign mux_in_tlp_strb[TLP_STRB_WIDTH*3 +: TLP_STRB_WIDTH] = tx_wr_req_tlp_strb;
 assign mux_in_tlp_hdr[TLP_SEG_COUNT*TLP_HDR_WIDTH*3 +: TLP_SEG_COUNT*TLP_HDR_WIDTH] = tx_wr_req_tlp_hdr;
@@ -237,6 +278,8 @@ assign mux_in_tlp_valid[TLP_SEG_COUNT*3 +: TLP_SEG_COUNT] = tx_wr_req_tlp_valid;
 assign mux_in_tlp_sop[TLP_SEG_COUNT*3 +: TLP_SEG_COUNT] = tx_wr_req_tlp_sop;
 assign mux_in_tlp_eop[TLP_SEG_COUNT*3 +: TLP_SEG_COUNT] = tx_wr_req_tlp_eop;
 assign tx_wr_req_tlp_ready = mux_in_tlp_ready[3 +: 1];
+
+assign mux_pause[3] = !have_p_credit_reg;
 
 assign m_axis_rd_req_tx_seq_num = mux_out_sel_tlp_seq[INT_TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH*2 +: INT_TLP_SEG_COUNT*TX_SEQ_NUM_WIDTH];
 assign m_axis_rd_req_tx_seq_num_valid = mux_out_sel_tlp_seq_valid[INT_TLP_SEG_COUNT*2 +: INT_TLP_SEG_COUNT];
@@ -298,12 +341,105 @@ pcie_tlp_fifo_mux_inst (
     .out_tlp_ready(mux_out_tlp_ready_cmb),
 
     /*
+     * Flow control count output
+     */
+    .out_fc_ph(mux_tx_fc_ph),
+    .out_fc_pd(mux_tx_fc_pd),
+    .out_fc_nph(mux_tx_fc_nph),
+    .out_fc_npd(mux_tx_fc_npd),
+    .out_fc_cplh(mux_tx_fc_cplh),
+    .out_fc_cpld(mux_tx_fc_cpld),
+
+    /*
+     * Control
+     */
+    .pause(mux_pause),
+
+    /*
      * Status
      */
     .sel_tlp_seq(mux_out_sel_tlp_seq),
     .sel_tlp_seq_valid(mux_out_sel_tlp_seq_valid),
     .fifo_half_full(),
     .fifo_watermark()
+);
+
+ptile_tx_fc_counter #(
+    .WIDTH(12),
+    .INDEX(0)
+)
+fc_counter_ph (
+    .clk(clk),
+    .rst(rst),
+    .tx_cdts_limit(tx_cdts_limit),
+    .tx_cdts_limit_tdm_idx(tx_cdts_limit_tdm_idx),
+    .fc_dec(mux_tx_fc_ph),
+    .fc_av(tx_fc_ph_av)
+);
+
+ptile_tx_fc_counter #(
+    .WIDTH(12),
+    .INDEX(1)
+)
+fc_counter_nph (
+    .clk(clk),
+    .rst(rst),
+    .tx_cdts_limit(tx_cdts_limit),
+    .tx_cdts_limit_tdm_idx(tx_cdts_limit_tdm_idx),
+    .fc_dec(mux_tx_fc_nph),
+    .fc_av(tx_fc_nph_av)
+);
+
+ptile_tx_fc_counter #(
+    .WIDTH(12),
+    .INDEX(2)
+)
+fc_counter_cplh (
+    .clk(clk),
+    .rst(rst),
+    .tx_cdts_limit(tx_cdts_limit),
+    .tx_cdts_limit_tdm_idx(tx_cdts_limit_tdm_idx),
+    .fc_dec(mux_tx_fc_cplh),
+    .fc_av(tx_fc_cplh_av)
+);
+
+ptile_tx_fc_counter #(
+    .WIDTH(16),
+    .INDEX(4)
+)
+fc_counter_pd (
+    .clk(clk),
+    .rst(rst),
+    .tx_cdts_limit(tx_cdts_limit),
+    .tx_cdts_limit_tdm_idx(tx_cdts_limit_tdm_idx),
+    .fc_dec(mux_tx_fc_pd),
+    .fc_av(tx_fc_pd_av)
+);
+
+ptile_tx_fc_counter #(
+    .WIDTH(16),
+    .INDEX(5)
+)
+fc_counter_npd (
+    .clk(clk),
+    .rst(rst),
+    .tx_cdts_limit(tx_cdts_limit),
+    .tx_cdts_limit_tdm_idx(tx_cdts_limit_tdm_idx),
+    .fc_dec(mux_tx_fc_npd),
+    .fc_av(tx_fc_npd_av)
+);
+
+ptile_tx_fc_counter #(
+    .WIDTH(16),
+    .INDEX(6)
+)
+fc_counter_cpld (
+    .clk(clk),
+    .rst(rst),
+    .tx_cdts_limit(tx_cdts_limit),
+    .tx_cdts_limit_tdm_idx(tx_cdts_limit_tdm_idx),
+    .fc_dec(mux_tx_fc_cpld),
+    .fc_av(tx_fc_cpld_av)
 );
 
 always @* begin
@@ -334,6 +470,11 @@ always @(posedge clk) begin
     tx_st_hdr_reg <= tx_st_hdr_next;
 
     tx_st_ready_delay_reg <= {tx_st_ready_delay_reg, tx_st_ready};
+
+    max_payload_size_fc_reg <= 9'd8 << (max_payload_size > 5 ? 5 : max_payload_size);
+    have_p_credit_reg <= (tx_fc_ph_av > 4) && (tx_fc_pd_av > (max_payload_size_fc_reg << 1));
+    have_np_credit_reg <= tx_fc_nph_av > 4;
+    have_cpl_credit_reg <= (tx_fc_cplh_av > 4) && (tx_fc_cpld_av > (max_payload_size_fc_reg << 1));
 
     if (rst) begin
         tx_st_valid_reg <= 0;

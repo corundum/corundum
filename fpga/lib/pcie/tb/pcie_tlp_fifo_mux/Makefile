@@ -34,6 +34,7 @@ TOPLEVEL = $(WRAPPER)
 MODULE   = test_$(DUT)
 VERILOG_SOURCES += $(WRAPPER).v
 VERILOG_SOURCES += ../../rtl/$(DUT).v
+VERILOG_SOURCES += ../../rtl/pcie_tlp_fc_count.v
 VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_raw.v
 
 # module parameters

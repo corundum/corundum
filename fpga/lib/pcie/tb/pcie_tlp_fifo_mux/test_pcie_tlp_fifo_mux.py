@@ -66,6 +66,9 @@ class TB(object):
         self.source = [PcieIfSource(PcieIfBus.from_prefix(dut, f"in{k:02d}_tlp"), dut.clk, dut.rst) for k in range(ports)]
         self.sink = PcieIfSink(PcieIfBus.from_prefix(dut, "out_tlp"), dut.clk, dut.rst)
 
+        for k in range(ports):
+            getattr(dut, f"in{k:02d}_pause").setimmediatevalue(0)
+
     def set_idle_generator(self, generator=None):
         if generator:
             for source in self.source:
@@ -252,6 +255,7 @@ def test_pcie_tlp_fifo_mux(request, pcie_data_width, tlp_seg_count, ports, round
     verilog_sources = [
         wrapper_file,
         os.path.join(rtl_dir, f"{dut}.v"),
+        os.path.join(rtl_dir, "pcie_tlp_fc_count.v"),
         os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
     ]
 

@@ -311,6 +311,20 @@ pcie_s10_if_tx_inst (
     .tx_st_err(tx_st_err),
 
     /*
+     * H-Tile/L-Tile TX flow control
+     */
+    .tx_ph_cdts(tx_ph_cdts),
+    .tx_pd_cdts(tx_pd_cdts),
+    .tx_nph_cdts(tx_nph_cdts),
+    .tx_npd_cdts(L_TILE ? tx_npd_cdts : 12'h800),
+    .tx_cplh_cdts(tx_cplh_cdts),
+    .tx_cpld_cdts(L_TILE ? tx_cpld_cdts : 12'h800),
+    .tx_hdr_cdts_consumed(tx_hdr_cdts_consumed),
+    .tx_data_cdts_consumed(tx_data_cdts_consumed),
+    .tx_cdts_type(tx_cdts_type),
+    .tx_cdts_data_value(tx_cdts_data_value),
+
+    /*
      * TLP input (read request from DMA)
      */
     .tx_rd_req_tlp_hdr(tx_rd_req_tlp_hdr),
@@ -364,7 +378,22 @@ pcie_s10_if_tx_inst (
     .tx_msi_wr_req_tlp_valid(tx_msi_wr_req_tlp_valid),
     .tx_msi_wr_req_tlp_sop(tx_msi_wr_req_tlp_sop),
     .tx_msi_wr_req_tlp_eop(tx_msi_wr_req_tlp_eop),
-    .tx_msi_wr_req_tlp_ready(tx_msi_wr_req_tlp_ready)
+    .tx_msi_wr_req_tlp_ready(tx_msi_wr_req_tlp_ready),
+
+    /*
+     * Flow control
+     */
+    .tx_fc_ph_av(tx_fc_ph_av),
+    .tx_fc_pd_av(tx_fc_pd_av),
+    .tx_fc_nph_av(tx_fc_nph_av),
+    .tx_fc_npd_av(tx_fc_npd_av),
+    .tx_fc_cplh_av(tx_fc_cplh_av),
+    .tx_fc_cpld_av(tx_fc_cpld_av),
+
+    /*
+     * Configuration
+     */
+    .max_payload_size(max_payload_size)
 );
 
 pcie_s10_cfg #(
@@ -435,13 +464,6 @@ pcie_s10_cfg_inst (
     .cfg_aer_corr_err_mask(),
     .cfg_aer_uncor_err_severity()
 );
-
-assign tx_fc_ph_av = tx_ph_cdts;
-assign tx_fc_pd_av = tx_pd_cdts;
-assign tx_fc_nph_av = tx_nph_cdts;
-assign tx_fc_npd_av = L_TILE ? tx_npd_cdts : 0;
-assign tx_fc_cplh_av = tx_cplh_cdts;
-assign tx_fc_cpld_av = L_TILE ? tx_cpld_cdts : 0;
 
 generate
 

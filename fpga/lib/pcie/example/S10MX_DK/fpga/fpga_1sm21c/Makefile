@@ -24,6 +24,7 @@ SYN_FILES += lib/pcie/rtl/pcie_axi_master_wr.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_demux_bar.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_demux.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_mux.v
+SYN_FILES += lib/pcie/rtl/pcie_tlp_fc_count.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_fifo.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_fifo_raw.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_fifo_mux.v

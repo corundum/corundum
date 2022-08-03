@@ -67,6 +67,20 @@ class TB(object):
         self.sink = PTilePcieSink(PTileTxBus.from_prefix(dut, "tx_st"), dut.clk, dut.rst)
         self.sink.ready_latency = 3
 
+        dut.tx_cdts_limit.setimmediatevalue(0)
+        dut.tx_cdts_limit_tdm_idx.setimmediatevalue(0)
+
+        dut.max_payload_size.setimmediatevalue(0)
+
+        self.tx_fc_ph_limit = 0x080
+        self.tx_fc_pd_limit = 0x0800
+        self.tx_fc_nph_limit = 0x080
+        self.tx_fc_npd_limit = 0x0800
+        self.tx_fc_cplh_limit = 0x080
+        self.tx_fc_cpld_limit = 0x0800
+
+        cocotb.start_soon(self.run_fc_logic())
+
     def set_idle_generator(self, generator=None):
         if generator:
             self.rd_req_source.set_pause_generator(generator())
@@ -88,6 +102,34 @@ class TB(object):
         self.dut.rst.value = 0
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
+
+    async def run_fc_logic(self):
+        clock_edge_event = RisingEdge(self.dut.clk)
+
+        while True:
+            self.dut.tx_cdts_limit.value = self.tx_fc_ph_limit & 0xfff
+            self.dut.tx_cdts_limit_tdm_idx.value = 0
+            await clock_edge_event
+
+            self.dut.tx_cdts_limit.value = self.tx_fc_nph_limit & 0xfff
+            self.dut.tx_cdts_limit_tdm_idx.value = 1
+            await clock_edge_event
+
+            self.dut.tx_cdts_limit.value = self.tx_fc_cplh_limit & 0xfff
+            self.dut.tx_cdts_limit_tdm_idx.value = 2
+            await clock_edge_event
+
+            self.dut.tx_cdts_limit.value = self.tx_fc_pd_limit & 0xffff
+            self.dut.tx_cdts_limit_tdm_idx.value = 4
+            await clock_edge_event
+
+            self.dut.tx_cdts_limit.value = self.tx_fc_npd_limit & 0xffff
+            self.dut.tx_cdts_limit_tdm_idx.value = 5
+            await clock_edge_event
+
+            self.dut.tx_cdts_limit.value = self.tx_fc_cpld_limit & 0xffff
+            self.dut.tx_cdts_limit_tdm_idx.value = 6
+            await clock_edge_event
 
 
 async def run_test_req(dut, payload_lengths=None, payload_data=None, idle_inserter=None, backpressure_inserter=None):
@@ -134,6 +176,16 @@ async def run_test_req(dut, payload_lengths=None, payload_data=None, idle_insert
         rx_tlp = rx_frame.to_tlp()
 
         assert test_tlp == rx_tlp
+
+        if rx_tlp.is_posted():
+            tb.tx_fc_ph_limit += 1
+            tb.tx_fc_pd_limit += rx_tlp.get_data_credits()
+        if rx_tlp.is_nonposted():
+            tb.tx_fc_nph_limit += 1
+            tb.tx_fc_npd_limit += rx_tlp.get_data_credits()
+        if rx_tlp.is_completion():
+            tb.tx_fc_cplh_limit += 1
+            tb.tx_fc_cpld_limit += rx_tlp.get_data_credits()
 
     assert tb.sink.empty()
 
@@ -187,6 +239,16 @@ async def run_test_cpl(dut, payload_lengths=None, payload_data=None, idle_insert
 
         assert test_tlp == rx_tlp
 
+        if rx_tlp.is_posted():
+            tb.tx_fc_ph_limit += 1
+            tb.tx_fc_pd_limit += rx_tlp.get_data_credits()
+        if rx_tlp.is_nonposted():
+            tb.tx_fc_nph_limit += 1
+            tb.tx_fc_npd_limit += rx_tlp.get_data_credits()
+        if rx_tlp.is_completion():
+            tb.tx_fc_cplh_limit += 1
+            tb.tx_fc_cpld_limit += rx_tlp.get_data_credits()
+
     assert tb.sink.empty()
 
     await RisingEdge(dut.clk)
@@ -229,6 +291,16 @@ async def run_test_msi(dut, idle_inserter=None, backpressure_inserter=None):
         rx_tlp = rx_frame.to_tlp()
 
         assert test_tlp == rx_tlp
+
+        if rx_tlp.is_posted():
+            tb.tx_fc_ph_limit += 1
+            tb.tx_fc_pd_limit += rx_tlp.get_data_credits()
+        if rx_tlp.is_nonposted():
+            tb.tx_fc_nph_limit += 1
+            tb.tx_fc_npd_limit += rx_tlp.get_data_credits()
+        if rx_tlp.is_completion():
+            tb.tx_fc_cplh_limit += 1
+            tb.tx_fc_cpld_limit += rx_tlp.get_data_credits()
 
     assert tb.sink.empty()
 
@@ -303,6 +375,16 @@ async def run_stress_test(dut, idle_inserter=None, backpressure_inserter=None):
         elif rx_tlp.fmt_type in (TlpType.CPL, TlpType.CPL_DATA):
             rx_cpl_tlps.append(rx_tlp)
 
+        if rx_tlp.is_posted():
+            tb.tx_fc_ph_limit += 1
+            tb.tx_fc_pd_limit += rx_tlp.get_data_credits()
+        if rx_tlp.is_nonposted():
+            tb.tx_fc_nph_limit += 1
+            tb.tx_fc_npd_limit += rx_tlp.get_data_credits()
+        if rx_tlp.is_completion():
+            tb.tx_fc_cplh_limit += 1
+            tb.tx_fc_cpld_limit += rx_tlp.get_data_credits()
+
     for test_tlp in test_wr_tlps:
         assert test_tlp == rx_wr_tlps.pop(0)
 
@@ -368,6 +450,7 @@ def test_pcie_ptile_if_tx(request, data_width):
 
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
+        os.path.join(rtl_dir, "pcie_ptile_fc_counter.v"),
         os.path.join(rtl_dir, "pcie_tlp_fc_count.v"),
         os.path.join(rtl_dir, "pcie_tlp_fifo_raw.v"),
         os.path.join(rtl_dir, "pcie_tlp_fifo_mux.v"),

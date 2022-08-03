@@ -37,6 +37,7 @@ VERILOG_SOURCES += ../../../../rtl/pcie_ptile_if.v
 VERILOG_SOURCES += ../../../../rtl/pcie_ptile_if_rx.v
 VERILOG_SOURCES += ../../../../rtl/pcie_ptile_if_tx.v
 VERILOG_SOURCES += ../../../../rtl/pcie_ptile_cfg.v
+VERILOG_SOURCES += ../../../../rtl/pcie_ptile_fc_counter.v
 VERILOG_SOURCES += ../../../../rtl/pcie_axil_master.v
 VERILOG_SOURCES += ../../../../rtl/pcie_axi_master.v
 VERILOG_SOURCES += ../../../../rtl/pcie_axi_master_rd.v

@@ -483,6 +483,7 @@ def test_fpga_core(request):
         os.path.join(pcie_rtl_dir, "pcie_ptile_if_rx.v"),
         os.path.join(pcie_rtl_dir, "pcie_ptile_if_tx.v"),
         os.path.join(pcie_rtl_dir, "pcie_ptile_cfg.v"),
+        os.path.join(pcie_rtl_dir, "pcie_ptile_fc_counter.v"),
         os.path.join(pcie_rtl_dir, "pcie_axil_master.v"),
         os.path.join(pcie_rtl_dir, "pcie_axi_master.v"),
         os.path.join(pcie_rtl_dir, "pcie_axi_master_rd.v"),

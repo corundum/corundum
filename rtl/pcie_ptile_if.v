@@ -217,14 +217,6 @@ module pcie_ptile_if #
     output wire [F_COUNT-1:0]                         msix_mask
 );
 
-// TODO
-assign tx_fc_ph_av = 0;
-assign tx_fc_pd_av = 0;
-assign tx_fc_nph_av = 0;
-assign tx_fc_npd_av = 0;
-assign tx_fc_cplh_av = 0;
-assign tx_fc_cpld_av = 0;
-
 pcie_ptile_if_rx #(
     .SEG_COUNT(SEG_COUNT),
     .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
@@ -312,6 +304,12 @@ pcie_ptile_if_tx_inst (
     .tx_st_tlp_prfx(tx_st_tlp_prfx),
 
     /*
+     * P-Tile TX flow control
+     */
+    .tx_cdts_limit(tx_cdts_limit),
+    .tx_cdts_limit_tdm_idx(tx_cdts_limit_tdm_idx),
+
+    /*
      * TLP input (read request from DMA)
      */
     .tx_rd_req_tlp_hdr(tx_rd_req_tlp_hdr),
@@ -365,7 +363,22 @@ pcie_ptile_if_tx_inst (
     .tx_msi_wr_req_tlp_valid(tx_msi_wr_req_tlp_valid),
     .tx_msi_wr_req_tlp_sop(tx_msi_wr_req_tlp_sop),
     .tx_msi_wr_req_tlp_eop(tx_msi_wr_req_tlp_eop),
-    .tx_msi_wr_req_tlp_ready(tx_msi_wr_req_tlp_ready)
+    .tx_msi_wr_req_tlp_ready(tx_msi_wr_req_tlp_ready),
+
+    /*
+     * Flow control
+     */
+    .tx_fc_ph_av(tx_fc_ph_av),
+    .tx_fc_pd_av(tx_fc_pd_av),
+    .tx_fc_nph_av(tx_fc_nph_av),
+    .tx_fc_npd_av(tx_fc_npd_av),
+    .tx_fc_cplh_av(tx_fc_cplh_av),
+    .tx_fc_cpld_av(tx_fc_cpld_av),
+
+    /*
+     * Configuration
+     */
+    .max_payload_size(max_payload_size)
 );
 
 pcie_ptile_cfg #(

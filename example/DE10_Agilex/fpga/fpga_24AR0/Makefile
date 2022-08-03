@@ -17,6 +17,7 @@ SYN_FILES += lib/pcie/rtl/pcie_ptile_if.v
 SYN_FILES += lib/pcie/rtl/pcie_ptile_if_rx.v
 SYN_FILES += lib/pcie/rtl/pcie_ptile_if_tx.v
 SYN_FILES += lib/pcie/rtl/pcie_ptile_cfg.v
+SYN_FILES += lib/pcie/rtl/pcie_ptile_fc_counter.v
 SYN_FILES += lib/pcie/rtl/pcie_axil_master.v
 SYN_FILES += lib/pcie/rtl/pcie_axi_master.v
 SYN_FILES += lib/pcie/rtl/pcie_axi_master_rd.v

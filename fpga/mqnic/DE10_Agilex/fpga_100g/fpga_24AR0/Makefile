@@ -86,6 +86,7 @@ SYN_FILES += lib/pcie/rtl/pcie_axil_master.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_demux.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_demux_bar.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_mux.v
+SYN_FILES += lib/pcie/rtl/pcie_tlp_fc_count.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_fifo.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_fifo_raw.v
 SYN_FILES += lib/pcie/rtl/pcie_tlp_fifo_mux.v
@@ -106,6 +107,7 @@ SYN_FILES += lib/pcie/rtl/pcie_ptile_if.v
 SYN_FILES += lib/pcie/rtl/pcie_ptile_if_rx.v
 SYN_FILES += lib/pcie/rtl/pcie_ptile_if_tx.v
 SYN_FILES += lib/pcie/rtl/pcie_ptile_cfg.v
+SYN_FILES += lib/pcie/rtl/pcie_ptile_fc_counter.v
 SYN_FILES += lib/pcie/rtl/pulse_merge.v
 
 # IP files

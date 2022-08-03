@@ -115,6 +115,7 @@ VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_axil_master.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_demux.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_demux_bar.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_mux.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fc_count.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo_raw.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo_mux.v
@@ -135,6 +136,7 @@ VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_ptile_if.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_ptile_if_rx.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_ptile_if_tx.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_ptile_cfg.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_ptile_fc_counter.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pulse_merge.v
 
 # module parameters

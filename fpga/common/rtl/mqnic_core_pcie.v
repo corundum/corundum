@@ -663,6 +663,7 @@ if (APP_ENABLE) begin : pcie_tlp_mux
         .in_tlp_data( {pcie_app_ctrl_tx_cpl_tlp_data,  pcie_ctrl_tx_cpl_tlp_data }),
         .in_tlp_strb( {pcie_app_ctrl_tx_cpl_tlp_strb,  pcie_ctrl_tx_cpl_tlp_strb }),
         .in_tlp_hdr(  {pcie_app_ctrl_tx_cpl_tlp_hdr,   pcie_ctrl_tx_cpl_tlp_hdr  }),
+        .in_tlp_seq(0),
         .in_tlp_bar_id(0),
         .in_tlp_func_num(0),
         .in_tlp_error(0),
@@ -677,13 +678,25 @@ if (APP_ENABLE) begin : pcie_tlp_mux
         .out_tlp_data(pcie_tx_cpl_tlp_data),
         .out_tlp_strb(pcie_tx_cpl_tlp_strb),
         .out_tlp_hdr(pcie_tx_cpl_tlp_hdr),
+        .out_tlp_seq(),
         .out_tlp_bar_id(),
         .out_tlp_func_num(),
         .out_tlp_error(),
         .out_tlp_valid(pcie_tx_cpl_tlp_valid),
         .out_tlp_sop(pcie_tx_cpl_tlp_sop),
         .out_tlp_eop(pcie_tx_cpl_tlp_eop),
-        .out_tlp_ready(pcie_tx_cpl_tlp_ready)
+        .out_tlp_ready(pcie_tx_cpl_tlp_ready),
+
+        /*
+         * Control
+         */
+        .pause(0),
+
+        /*
+         * Status
+         */
+        .sel_tlp_seq(),
+        .sel_tlp_seq_valid()
     );
 
 end else begin

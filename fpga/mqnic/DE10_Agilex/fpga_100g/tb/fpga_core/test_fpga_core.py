@@ -710,6 +710,7 @@ def test_fpga_core(request):
         os.path.join(pcie_rtl_dir, "pcie_tlp_demux.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_demux_bar.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_mux.v"),
+        os.path.join(pcie_rtl_dir, "pcie_tlp_fc_count.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_fifo.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_fifo_raw.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_fifo_mux.v"),
@@ -730,6 +731,7 @@ def test_fpga_core(request):
         os.path.join(pcie_rtl_dir, "pcie_ptile_if_rx.v"),
         os.path.join(pcie_rtl_dir, "pcie_ptile_if_tx.v"),
         os.path.join(pcie_rtl_dir, "pcie_ptile_cfg.v"),
+        os.path.join(pcie_rtl_dir, "pcie_ptile_fc_counter.v"),
         os.path.join(pcie_rtl_dir, "pulse_merge.v"),
     ]
 

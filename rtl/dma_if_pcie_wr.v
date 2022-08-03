@@ -73,8 +73,6 @@ module dma_if_pcie_wr #
     parameter OP_TABLE_SIZE = 2**TX_SEQ_NUM_WIDTH,
     // In-flight transmit limit
     parameter TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
-    // Transmit flow control
-    parameter TX_FC_ENABLE = 0,
     // Force 64 bit address
     parameter TLP_FORCE_64_BIT_ADDR = 0
 )
@@ -99,12 +97,6 @@ module dma_if_pcie_wr #
      */
     input  wire [TX_SEQ_NUM_COUNT*TX_SEQ_NUM_WIDTH-1:0]  s_axis_tx_seq_num,
     input  wire [TX_SEQ_NUM_COUNT-1:0]                   s_axis_tx_seq_num_valid,
-
-    /*
-     * Transmit flow control
-     */
-    input  wire [7:0]                                    pcie_tx_fc_ph_av,
-    input  wire [11:0]                                   pcie_tx_fc_pd_av,
 
     /*
      * AXI write descriptor input
@@ -160,7 +152,6 @@ module dma_if_pcie_wr #
     output wire [3:0]                                    stat_wr_req_finish_status,
     output wire                                          stat_wr_req_finish_valid,
     output wire                                          stat_wr_op_table_full,
-    output wire                                          stat_wr_tx_no_credit,
     output wire                                          stat_wr_tx_limit,
     output wire                                          stat_wr_tx_stall
 );
@@ -332,8 +323,6 @@ wire mask_fifo_full = mask_fifo_wr_ptr_reg == (mask_fifo_rd_ptr_reg ^ (1 << MASK
 
 reg [10:0] max_payload_size_dw_reg = 11'd0;
 
-reg have_credit_reg = 1'b0;
-
 reg [TX_COUNT_WIDTH-1:0] active_tx_count_reg = {TX_COUNT_WIDTH{1'b0}}, active_tx_count_next;
 reg active_tx_count_av_reg = 1'b1, active_tx_count_av_next;
 reg inc_active_tx;
@@ -367,7 +356,6 @@ reg stat_wr_req_start_valid_reg = 1'b0, stat_wr_req_start_valid_next;
 reg [OP_TAG_WIDTH-1:0] stat_wr_req_finish_tag_reg = 0, stat_wr_req_finish_tag_next;
 reg stat_wr_req_finish_valid_reg = 1'b0, stat_wr_req_finish_valid_next;
 reg stat_wr_op_table_full_reg = 1'b0, stat_wr_op_table_full_next;
-reg stat_wr_tx_no_credit_reg = 1'b0, stat_wr_tx_no_credit_next;
 reg stat_wr_tx_limit_reg = 1'b0, stat_wr_tx_limit_next;
 reg stat_wr_tx_stall_reg = 1'b0, stat_wr_tx_stall_next;
 
@@ -403,7 +391,6 @@ assign stat_wr_req_finish_tag = stat_wr_req_finish_tag_reg;
 assign stat_wr_req_finish_status = 4'd00;
 assign stat_wr_req_finish_valid = stat_wr_req_finish_valid_reg;
 assign stat_wr_op_table_full = stat_wr_op_table_full_reg;
-assign stat_wr_tx_no_credit = stat_wr_tx_no_credit_reg;
 assign stat_wr_tx_limit = stat_wr_tx_limit_reg;
 assign stat_wr_tx_stall = stat_wr_tx_stall_reg;
 
@@ -479,7 +466,6 @@ always @* begin
     stat_wr_req_start_len_next = stat_wr_req_start_len_reg;
     stat_wr_req_start_valid_next = 1'b0;
     stat_wr_op_table_full_next = !(!op_table_active[op_table_start_ptr_reg[OP_TAG_WIDTH-1:0]] && ($unsigned(op_table_start_ptr_reg - op_table_finish_ptr_reg) < 2**OP_TAG_WIDTH));
-    stat_wr_tx_no_credit_next = !(!TX_FC_ENABLE || have_credit_reg);
     stat_wr_tx_limit_next = !(!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg);
     stat_wr_tx_stall_next = !(!tx_wr_req_tlp_valid_reg || tx_wr_req_tlp_ready);
 
@@ -891,7 +877,7 @@ always @* begin
             cycle_count_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
             last_cycle_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
 
-            if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && (!TX_FC_ENABLE || have_credit_reg) && (!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+            if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && (!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                 op_table_tx_start_en = 1'b1;
                 tlp_state_next = TLP_STATE_TRANSFER;
             end else begin
@@ -949,7 +935,7 @@ always @* begin
                     cycle_count_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]];
                     last_cycle_next = op_table_cycle_count[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] == 0;
 
-                    if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && (!TX_FC_ENABLE || have_credit_reg) && (!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+                    if (op_table_active[op_table_tx_start_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_tx_start_ptr_reg != op_table_start_ptr_reg && (!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                         op_table_tx_start_en = 1'b1;
                         tlp_state_next = TLP_STATE_TRANSFER;
                     end else begin
@@ -1097,13 +1083,10 @@ always @(posedge clk) begin
     stat_wr_req_finish_tag_reg <= stat_wr_req_finish_tag_next;
     stat_wr_req_finish_valid_reg <= stat_wr_req_finish_valid_next;
     stat_wr_op_table_full_reg <= stat_wr_op_table_full_next;
-    stat_wr_tx_no_credit_reg <= stat_wr_tx_no_credit_next;
     stat_wr_tx_limit_reg <= stat_wr_tx_limit_next;
     stat_wr_tx_stall_reg <= stat_wr_tx_stall_next;
 
     max_payload_size_dw_reg <= 11'd32 << (max_payload_size > 5 ? 5 : max_payload_size);
-
-    have_credit_reg <= (pcie_tx_fc_ph_av > 4) && (pcie_tx_fc_pd_av > (max_payload_size_dw_reg >> 1));
 
     active_tx_count_reg <= active_tx_count_next;
     active_tx_count_av_reg <= active_tx_count_av_next;
@@ -1173,7 +1156,6 @@ always @(posedge clk) begin
         stat_wr_req_start_valid_reg <= 1'b0;
         stat_wr_req_finish_valid_reg <= 1'b0;
         stat_wr_op_table_full_reg <= 1'b0;
-        stat_wr_tx_no_credit_reg <= 1'b0;
         stat_wr_tx_limit_reg <= 1'b0;
         stat_wr_tx_stall_reg <= 1'b0;
 

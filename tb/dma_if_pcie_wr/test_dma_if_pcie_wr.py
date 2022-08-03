@@ -82,9 +82,6 @@ class TB(object):
             wr_req_tx_seq_num_valid=dut.s_axis_tx_seq_num_valid,
 
             cfg_max_payload=dut.max_payload_size,
-
-            tx_fc_ph_av=dut.pcie_tx_fc_ph_av,
-            tx_fc_pd_av=dut.pcie_tx_fc_pd_av,
         )
 
         self.dev.log.setLevel(logging.DEBUG)
@@ -305,7 +302,6 @@ def test_dma_if_pcie_wr(request, pcie_data_width, pcie_offset):
     parameters['TAG_WIDTH'] = 8
     parameters['OP_TABLE_SIZE'] = 2**(parameters['TX_SEQ_NUM_WIDTH']-1)
     parameters['TX_LIMIT'] = 2**(parameters['TX_SEQ_NUM_WIDTH']-1)
-    parameters['TX_FC_ENABLE'] = 1
     parameters['TLP_FORCE_64_BIT_ADDR'] = 0
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}

@@ -69,8 +69,6 @@ module dma_if_pcie_rd #
     parameter OP_TABLE_SIZE = PCIE_TAG_COUNT,
     // In-flight transmit limit
     parameter TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
-    // Transmit flow control
-    parameter TX_FC_ENABLE = 0,
     // Force 64 bit address
     parameter TLP_FORCE_64_BIT_ADDR = 0,
     // Requester ID mash
@@ -106,11 +104,6 @@ module dma_if_pcie_rd #
      */
     input  wire [TX_SEQ_NUM_COUNT*TX_SEQ_NUM_WIDTH-1:0]  s_axis_tx_seq_num,
     input  wire [TX_SEQ_NUM_COUNT-1:0]                   s_axis_tx_seq_num_valid,
-
-    /*
-     * Transmit flow control
-     */
-    input  wire [7:0]                                    pcie_tx_fc_nph_av,
 
     /*
      * AXI read descriptor input
@@ -173,7 +166,6 @@ module dma_if_pcie_rd #
     output wire                                          stat_rd_req_timeout,
     output wire                                          stat_rd_op_table_full,
     output wire                                          stat_rd_no_tags,
-    output wire                                          stat_rd_tx_no_credit,
     output wire                                          stat_rd_tx_limit,
     output wire                                          stat_rd_tx_stall
 );
@@ -379,8 +371,6 @@ reg [127:0] tlp_hdr;
 
 reg [10:0] max_read_request_size_dw_reg = 11'd0;
 
-reg have_credit_reg = 1'b0;
-
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_wr_ptr_reg = 0;
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0;
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
@@ -441,7 +431,6 @@ reg stat_rd_req_finish_valid_reg = 1'b0, stat_rd_req_finish_valid_next;
 reg stat_rd_req_timeout_reg = 1'b0, stat_rd_req_timeout_next;
 reg stat_rd_op_table_full_reg = 1'b0, stat_rd_op_table_full_next;
 reg stat_rd_no_tags_reg = 1'b0, stat_rd_no_tags_next;
-reg stat_rd_tx_no_credit_reg = 1'b0, stat_rd_tx_no_credit_next;
 reg stat_rd_tx_limit_reg = 1'b0, stat_rd_tx_limit_next;
 reg stat_rd_tx_stall_reg = 1'b0, stat_rd_tx_stall_next;
 
@@ -488,7 +477,6 @@ assign stat_rd_req_finish_valid = stat_rd_req_finish_valid_reg;
 assign stat_rd_req_timeout = stat_rd_req_timeout_reg;
 assign stat_rd_op_table_full = stat_rd_op_table_full_reg;
 assign stat_rd_no_tags = stat_rd_no_tags_reg;
-assign stat_rd_tx_no_credit = stat_rd_tx_no_credit_reg;
 assign stat_rd_tx_limit = stat_rd_tx_limit_reg;
 assign stat_rd_tx_stall = stat_rd_tx_stall_reg;
 
@@ -606,7 +594,6 @@ always @* begin
     stat_rd_req_start_valid_next = 1'b0;
     stat_rd_op_table_full_next = op_tag_fifo_rd_ptr_reg == op_tag_fifo_wr_ptr_reg;
     stat_rd_no_tags_next = !req_pcie_tag_valid_reg;
-    stat_rd_tx_no_credit_next = !(!TX_FC_ENABLE || have_credit_reg);
     stat_rd_tx_limit_next = !(!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg);
     stat_rd_tx_stall_next = !(!tx_rd_req_tlp_valid_reg || tx_rd_req_tlp_ready);
 
@@ -755,7 +742,7 @@ always @* begin
                 tx_rd_req_tlp_hdr_next = tlp_hdr;
             end
 
-            if ((!tx_rd_req_tlp_valid_reg || tx_rd_req_tlp_ready) && req_pcie_tag_valid_reg && (!TX_FC_ENABLE || have_credit_reg) && (!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+            if ((!tx_rd_req_tlp_valid_reg || tx_rd_req_tlp_ready) && req_pcie_tag_valid_reg && (!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
                 tx_rd_req_tlp_valid_next = 1'b1;
 
                 inc_active_tx = 1'b1;
@@ -1388,13 +1375,10 @@ always @(posedge clk) begin
     stat_rd_req_timeout_reg <= stat_rd_req_timeout_next;
     stat_rd_op_table_full_reg <= stat_rd_op_table_full_next;
     stat_rd_no_tags_reg <= stat_rd_no_tags_next;
-    stat_rd_tx_no_credit_reg <= stat_rd_tx_no_credit_next;
     stat_rd_tx_limit_reg <= stat_rd_tx_limit_next;
     stat_rd_tx_stall_reg <= stat_rd_tx_stall_next;
 
     max_read_request_size_dw_reg <= 11'd32 << (max_read_request_size > 5 ? 5 : max_read_request_size);
-
-    have_credit_reg <= pcie_tx_fc_nph_av > 4;
 
     if (status_fifo_wr_en) begin
         status_fifo_op_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_op_tag;
@@ -1535,7 +1519,6 @@ always @(posedge clk) begin
         stat_rd_req_timeout_reg <= 1'b0;
         stat_rd_op_table_full_reg <= 1'b0;
         stat_rd_no_tags_reg <= 1'b0;
-        stat_rd_tx_no_credit_reg <= 1'b0;
         stat_rd_tx_limit_reg <= 1'b0;
         stat_rd_tx_stall_reg <= 1'b0;
 

@@ -57,14 +57,10 @@ module example_core_pcie_ptile #
     parameter READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
     // In-flight transmit limit (read)
     parameter READ_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
-    // Transmit flow control (read)
-    parameter READ_TX_FC_ENABLE = 1,
     // Operation table size (write)
     parameter WRITE_OP_TABLE_SIZE = 2**TX_SEQ_NUM_WIDTH,
     // In-flight transmit limit (write)
     parameter WRITE_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
-    // Transmit flow control (write)
-    parameter WRITE_TX_FC_ENABLE = 1,
     // BAR0 aperture (log2 size)
     parameter BAR0_APERTURE = 24,
     // BAR2 aperture (log2 size)
@@ -191,10 +187,6 @@ wire                                          pcie_tx_msix_wr_req_tlp_valid;
 wire                                          pcie_tx_msix_wr_req_tlp_sop;
 wire                                          pcie_tx_msix_wr_req_tlp_eop;
 wire                                          pcie_tx_msix_wr_req_tlp_ready;
-
-wire [7:0]   pcie_tx_fc_ph_av;
-wire [11:0]  pcie_tx_fc_pd_av;
-wire [7:0]   pcie_tx_fc_nph_av;
 
 wire ext_tag_enable;
 wire [7:0] bus_num;
@@ -353,9 +345,9 @@ pcie_ptile_if_inst (
     /*
      * Flow control
      */
-    .tx_fc_ph_av(pcie_tx_fc_ph_av),
-    .tx_fc_pd_av(pcie_tx_fc_pd_av),
-    .tx_fc_nph_av(pcie_tx_fc_nph_av),
+    .tx_fc_ph_av(),
+    .tx_fc_pd_av(),
+    .tx_fc_nph_av(),
     .tx_fc_npd_av(),
     .tx_fc_cplh_av(),
     .tx_fc_cpld_av(),
@@ -384,10 +376,8 @@ example_core_pcie #(
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .READ_OP_TABLE_SIZE(READ_OP_TABLE_SIZE),
     .READ_TX_LIMIT(READ_TX_LIMIT),
-    .READ_TX_FC_ENABLE(0),
     .WRITE_OP_TABLE_SIZE(WRITE_OP_TABLE_SIZE),
     .WRITE_TX_LIMIT(WRITE_TX_LIMIT),
-    .WRITE_TX_FC_ENABLE(0),
     .TLP_FORCE_64_BIT_ADDR(0),
     .CHECK_BUS_NUMBER(1),
     .BAR0_APERTURE(BAR0_APERTURE),
@@ -463,13 +453,6 @@ core_pcie_inst (
     .s_axis_rd_req_tx_seq_num_valid(axis_pcie_rd_req_tx_seq_num_valid),
     .s_axis_wr_req_tx_seq_num(axis_pcie_wr_req_tx_seq_num),
     .s_axis_wr_req_tx_seq_num_valid(axis_pcie_wr_req_tx_seq_num_valid),
-
-    /*
-     * Transmit flow control
-     */
-    .pcie_tx_fc_ph_av(pcie_tx_fc_ph_av),
-    .pcie_tx_fc_pd_av(pcie_tx_fc_pd_av),
-    .pcie_tx_fc_nph_av(pcie_tx_fc_nph_av),
 
     /*
      * TLP output (MSI-X write request)

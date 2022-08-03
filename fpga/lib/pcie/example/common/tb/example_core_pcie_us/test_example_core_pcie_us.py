@@ -566,10 +566,8 @@ def test_example_core_pcie_us(request, axis_pcie_data_width, straddle):
     parameters['IMM_WIDTH'] = 32
     parameters['READ_OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
     parameters['READ_TX_LIMIT'] = 2**(parameters['RQ_SEQ_NUM_WIDTH']-1)
-    parameters['READ_TX_FC_ENABLE'] = 1
     parameters['WRITE_OP_TABLE_SIZE'] = 2**(parameters['RQ_SEQ_NUM_WIDTH']-1)
     parameters['WRITE_TX_LIMIT'] = 2**(parameters['RQ_SEQ_NUM_WIDTH']-1)
-    parameters['WRITE_TX_FC_ENABLE'] = 1
     parameters['BAR0_APERTURE'] = 24
     parameters['BAR2_APERTURE'] = 24
     parameters['BAR4_APERTURE'] = 16

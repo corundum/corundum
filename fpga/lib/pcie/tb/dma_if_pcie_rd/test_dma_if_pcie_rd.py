@@ -85,8 +85,6 @@ class TB(object):
 
             cfg_max_read_req=dut.max_read_request_size,
             cfg_ext_tag_enable=dut.ext_tag_enable,
-
-            tx_fc_nph_av=dut.pcie_tx_fc_nph_av,
         )
 
         self.dev.log.setLevel(logging.DEBUG)
@@ -332,7 +330,6 @@ def test_dma_if_pcie_rd(request, pcie_data_width, pcie_offset):
     parameters['TAG_WIDTH'] = 8
     parameters['OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
     parameters['TX_LIMIT'] = 2**(parameters['TX_SEQ_NUM_WIDTH']-1)
-    parameters['TX_FC_ENABLE'] = 1
     parameters['TLP_FORCE_64_BIT_ADDR'] = 0
     parameters['CHECK_BUS_NUMBER'] = 0
 

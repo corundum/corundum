@@ -108,64 +108,64 @@ This section details PCIe form-factor targets, which interface with a separate h
 
 .. table:: Summary of the board-specific design variants and some important configuration parameters.
 
-    =======================  ===============================  ====  =======  ====  =====
-    Board                    Design                           IFxP  RXQ/TXQ  MAC   Sched
-    =======================  ===============================  ====  =======  ====  =====
-    ADM-PCIE-9V3             mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
-    ADM-PCIE-9V3             mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
-    ADM-PCIE-9V3             mqnic/fpga_25g/fpga_tdma         2x1   256/256  25G   TDMA
-    ADM-PCIE-9V3             mqnic/fpga_100g/fpga             2x1   256/8K   100G  RR
-    ADM-PCIE-9V3             mqnic/fpga_100g/fpga_tdma        2x1   256/256  100G  TDMA
-    DNPCIe_40G_KU_LL_2QSFP   mqnic/fpga/fpga_ku040            2x1   256/2K   10G   RR
-    DNPCIe_40G_KU_LL_2QSFP   mqnic/fpga/fpga_ku060            2x1   256/2K   10G   RR
-    Nexus K35-S              mqnic/fpga/fpga                  2x1   256/2K   10G   RR
-    Nexus K3P-S              mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
-    Nexus K3P-S              mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
-    Nexus K3P-Q              mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
-    Nexus K3P-Q              mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
-    fb2CG\@KU15P             mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
-    fb2CG\@KU15P             mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
-    fb2CG\@KU15P             mqnic/fpga_25g/fpga_tdma         2x1   256/256  25G   TDMA
-    fb2CG\@KU15P             mqnic/fpga_100g/fpga             2x1   256/8K   100G  RR
-    fb2CG\@KU15P             mqnic/fpga_100g/fpga_tdma        2x1   256/256  100G  TDMA
-    NetFPGA SUME             mqnic/fpga/fpga                  1x1   256/512  10G   RR
-    250-SoC                  mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
-    250-SoC                  mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
-    250-SoC                  mqnic/fpga_100g/fpga             2x1   256/8K   100G  RR
-    XUP-P3R                  mqnic/fpga_25g/fpga              4x1   256/8K   25G   RR
-    XUP-P3R                  mqnic/fpga_25g/fpga_10g          4x1   256/8K   10G   RR
-    XUP-P3R                  mqnic/fpga_100g/fpga             4x1   256/8K   100G  RR
-    DK-DEV-1SMX-H-A          mqnic/fpga_25g/fpga_1sm21b       2x1   256/1K   25G   RR
-    DK-DEV-1SMC-H-A          mqnic/fpga_25g/fpga_1sm21c       2x1   256/1K   25G   RR
-    DK-DEV-1SMX-H-A          mqnic/fpga_25g/fpga_10g_1sm21b   2x1   256/1K   10G   RR
-    DK-DEV-1SMC-H-A          mqnic/fpga_25g/fpga_10g_1sm21c   2x1   256/1K   10G   RR
-    DK-DEV-1SDX-P-A          mqnic/fpga_25g/fpga              2x1   256/1K   25G   RR
-    DK-DEV-1SDX-P-A          mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   RR
-    DE10-Agilex              mqnic/fpga_25g/fpga              2x1   256/1K   25G   RR
-    DE10-Agilex              mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   RR
-    DE10-Agilex              mqnic/fpga_100g/fpga             2x1   256/1K   100G  RR
-    Alveo U50                mqnic/fpga_25g/fpga              1x1   256/8K   25G   RR
-    Alveo U50                mqnic/fpga_25g/fpga_10g          1x1   256/8K   10G   RR
-    Alveo U50                mqnic/fpga_100g/fpga             1x1   256/8K   100G  RR
-    Alveo U200               mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
-    Alveo U200               mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
-    Alveo U200               mqnic/fpga_100g/fpga             2x1   256/8K   100G  RR
-    Alveo U250               mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
-    Alveo U250               mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
-    Alveo U250               mqnic/fpga_100g/fpga             2x1   256/8K   100G  RR
-    Alveo U280               mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
-    Alveo U280               mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
-    Alveo U280               mqnic/fpga_100g/fpga             2x1   256/8K   100G  RR
-    VCU108                   mqnic/fpga_25g/fpga              1x1   256/2K   25G   RR
-    VCU108                   mqnic/fpga_25g/fpga_10g          1x1   256/2K   10G   RR
-    VCU118                   mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
-    VCU118                   mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
-    VCU118                   mqnic/fpga_100g/fpga             2x1   256/8K   100G  RR
-    VCU1525                  mqnic/fpga_25g/fpga              2x1   256/8K   25G   RR
-    VCU1525                  mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   RR
-    VCU1525                  mqnic/fpga_100g/fpga             2x1   256/8K   100G  RR
-    ZCU106                   mqnic/fpga_pcie/fpga             2x1   256/8K   10G   RR
-    =======================  ===============================  ====  =======  ====  =====
+    =======================  ===============================  ====  =======  ====  ===  =====
+    Board                    Design                           IFxP  RXQ/TXQ  MAC   PTP  Sched
+    =======================  ===============================  ====  =======  ====  ===  =====
+    ADM-PCIE-9V3             mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    ADM-PCIE-9V3             mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    ADM-PCIE-9V3             mqnic/fpga_25g/fpga_tdma         2x1   256/256  25G   Y    TDMA
+    ADM-PCIE-9V3             mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR
+    ADM-PCIE-9V3             mqnic/fpga_100g/fpga_tdma        2x1   256/256  100G  Y    TDMA
+    DNPCIe_40G_KU_LL_2QSFP   mqnic/fpga/fpga_ku040            2x1   256/2K   10G   Y    RR
+    DNPCIe_40G_KU_LL_2QSFP   mqnic/fpga/fpga_ku060            2x1   256/2K   10G   Y    RR
+    Nexus K35-S              mqnic/fpga/fpga                  2x1   256/2K   10G   Y    RR
+    Nexus K3P-S              mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    Nexus K3P-S              mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    Nexus K3P-Q              mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    Nexus K3P-Q              mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    fb2CG\@KU15P             mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    fb2CG\@KU15P             mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    fb2CG\@KU15P             mqnic/fpga_25g/fpga_tdma         2x1   256/256  25G   Y    TDMA
+    fb2CG\@KU15P             mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR
+    fb2CG\@KU15P             mqnic/fpga_100g/fpga_tdma        2x1   256/256  100G  Y    TDMA
+    NetFPGA SUME             mqnic/fpga/fpga                  1x1   256/512  10G   Y    RR
+    250-SoC                  mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    250-SoC                  mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    250-SoC                  mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR
+    XUP-P3R                  mqnic/fpga_25g/fpga              4x1   256/8K   25G   Y    RR
+    XUP-P3R                  mqnic/fpga_25g/fpga_10g          4x1   256/8K   10G   Y    RR
+    XUP-P3R                  mqnic/fpga_100g/fpga             4x1   256/8K   100G  Y    RR
+    DK-DEV-1SMX-H-A          mqnic/fpga_25g/fpga_1sm21b       2x1   256/1K   25G   Y    RR
+    DK-DEV-1SMC-H-A          mqnic/fpga_25g/fpga_1sm21c       2x1   256/1K   25G   Y    RR
+    DK-DEV-1SMX-H-A          mqnic/fpga_25g/fpga_10g_1sm21b   2x1   256/1K   10G   Y    RR
+    DK-DEV-1SMC-H-A          mqnic/fpga_25g/fpga_10g_1sm21c   2x1   256/1K   10G   Y    RR
+    DK-DEV-1SDX-P-A          mqnic/fpga_25g/fpga              2x1   256/1K   25G   Y    RR
+    DK-DEV-1SDX-P-A          mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   Y    RR
+    DE10-Agilex              mqnic/fpga_25g/fpga              2x1   256/1K   25G   Y    RR
+    DE10-Agilex              mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   Y    RR
+    DE10-Agilex              mqnic/fpga_100g/fpga             2x1   256/1K   100G  N    RR
+    Alveo U50                mqnic/fpga_25g/fpga              1x1   256/8K   25G   Y    RR
+    Alveo U50                mqnic/fpga_25g/fpga_10g          1x1   256/8K   10G   Y    RR
+    Alveo U50                mqnic/fpga_100g/fpga             1x1   256/8K   100G  Y    RR
+    Alveo U200               mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    Alveo U200               mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    Alveo U200               mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR
+    Alveo U250               mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    Alveo U250               mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    Alveo U250               mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR
+    Alveo U280               mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    Alveo U280               mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    Alveo U280               mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR
+    VCU108                   mqnic/fpga_25g/fpga              1x1   256/2K   25G   Y    RR
+    VCU108                   mqnic/fpga_25g/fpga_10g          1x1   256/2K   10G   Y    RR
+    VCU118                   mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    VCU118                   mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    VCU118                   mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR
+    VCU1525                  mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    VCU1525                  mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    VCU1525                  mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR
+    ZCU106                   mqnic/fpga_pcie/fpga             2x1   256/8K   10G   Y    RR
+    =======================  ===============================  ====  =======  ====  ===  =====
 
 SoC
 ===

@@ -498,7 +498,7 @@ for (n = 0; n < N_CH; n = n + 1) begin : mac_ch
         .DATA_WIDTH(DATA_WIDTH),
         .KEEP_WIDTH(KEEP_WIDTH),
         .S_USER_WIDTH(1),
-        .M_USER_WIDTH(RX_USER_WIDTH)
+        .M_USER_WIDTH(PTP_TS_WIDTH+1)
     )
     mac_ts_insert_inst (
         .clk(mac_clk[n]),

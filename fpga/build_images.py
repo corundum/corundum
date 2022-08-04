@@ -253,7 +253,9 @@ class QuartusBuild(Build):
         self.output_file = os.path.join(self.build_dir, "fpga"+self.output_ext)
 
     def scan_log_line(self, line):
-        if line.startswith('quartus_map'):
+        if line.startswith('quartus_ipgenerate'):
+            self.phase = "Generating IP"
+        elif line.startswith('quartus_map') or line.startswith('quartus_syn'):
             self.phase = "Running synthesis and mapping"
         elif line.startswith('quartus_fit'):
             self.synth_done()
@@ -262,6 +264,10 @@ class QuartusBuild(Build):
             self.phase = "Running timing analysis"
         elif line.startswith('quartus_asm'):
             self.phase = "Running assembler"
+
+        m = re.search(r"Worst-case setup slack is (\S+)", line)
+        if m:
+            self.wns = m.group(1)
 
 
 class QuartusProBuild(QuartusBuild):

@@ -155,10 +155,8 @@ dict set params RAM_PIPELINE "2"
 dict set params PCIE_TAG_COUNT "256"
 dict set params PCIE_DMA_READ_OP_TABLE_SIZE [dict get $params PCIE_TAG_COUNT]
 dict set params PCIE_DMA_READ_TX_LIMIT "16"
-dict set params PCIE_DMA_READ_TX_FC_ENABLE "1"
 dict set params PCIE_DMA_WRITE_OP_TABLE_SIZE "16"
 dict set params PCIE_DMA_WRITE_TX_LIMIT "3"
-dict set params PCIE_DMA_WRITE_TX_FC_ENABLE "1"
 
 # AXI lite interface configuration (control)
 dict set params AXIL_CTRL_DATA_WIDTH "32"

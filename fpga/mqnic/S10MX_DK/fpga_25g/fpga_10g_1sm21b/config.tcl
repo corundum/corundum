@@ -162,10 +162,8 @@ dict set params TX_SEQ_NUM_WIDTH "6"
 dict set params PCIE_TAG_COUNT "256"
 dict set params PCIE_DMA_READ_OP_TABLE_SIZE [dict get $params PCIE_TAG_COUNT]
 dict set params PCIE_DMA_READ_TX_LIMIT [expr 2**[dict get $params TX_SEQ_NUM_WIDTH]]
-dict set params PCIE_DMA_READ_TX_FC_ENABLE "1"
 dict set params PCIE_DMA_WRITE_OP_TABLE_SIZE [expr 2**[dict get $params TX_SEQ_NUM_WIDTH]]
 dict set params PCIE_DMA_WRITE_TX_LIMIT [expr 2**[dict get $params TX_SEQ_NUM_WIDTH]]
-dict set params PCIE_DMA_WRITE_TX_FC_ENABLE "1"
 
 # Interrupt configuration
 dict set params IRQ_INDEX_WIDTH [dict get $params EVENT_QUEUE_INDEX_WIDTH]

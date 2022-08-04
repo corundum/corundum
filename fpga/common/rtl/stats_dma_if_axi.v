@@ -274,8 +274,8 @@ stats_collect_tx_inst (
         16'd0,                     // index 30
         16'd0,                     // index 29
         16'd0,                     // index 28
-        stat_wr_tx_stall_inc,      // index 27
-        16'd0,                     // index 26
+        16'd0,                     // index 27
+        stat_wr_tx_stall_inc,      // index 26
         16'd0,                     // index 25
         16'd0,                     // index 24
         stat_wr_op_table_full_inc, // index 23
@@ -290,8 +290,8 @@ stats_collect_tx_inst (
         16'd0,                     // index 14
         16'd0,                     // index 13
         16'd0,                     // index 12
-        stat_rd_tx_stall_inc,      // index 11
-        16'd0,                     // index 10
+        16'd0,                     // index 11
+        stat_rd_tx_stall_inc,      // index 10
         16'd0,                     // index 9
         16'd0,                     // index 8
         stat_rd_op_table_full_inc, // index 7

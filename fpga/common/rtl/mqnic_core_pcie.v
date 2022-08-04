@@ -148,10 +148,8 @@ module mqnic_core_pcie #
     parameter PCIE_TAG_COUNT = 256,
     parameter PCIE_DMA_READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
     parameter PCIE_DMA_READ_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
-    parameter PCIE_DMA_READ_TX_FC_ENABLE = 0,
     parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 2**TX_SEQ_NUM_WIDTH,
     parameter PCIE_DMA_WRITE_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
-    parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 0,
     parameter TLP_FORCE_64_BIT_ADDR = 0,
     parameter CHECK_BUS_NUMBER = 1,
 
@@ -276,13 +274,6 @@ module mqnic_core_pcie #
     output wire                                          pcie_tx_msix_wr_req_tlp_sop,
     output wire                                          pcie_tx_msix_wr_req_tlp_eop,
     input  wire                                          pcie_tx_msix_wr_req_tlp_ready,
-
-    /*
-     * Flow control credits
-     */
-    input  wire [7:0]                                    pcie_tx_fc_ph_av,
-    input  wire [11:0]                                   pcie_tx_fc_pd_av,
-    input  wire [7:0]                                    pcie_tx_fc_nph_av,
 
     /*
      * Configuration inputs
@@ -932,7 +923,6 @@ wire stat_rd_req_finish_valid;
 wire stat_rd_req_timeout;
 wire stat_rd_op_table_full;
 wire stat_rd_no_tags;
-wire stat_rd_tx_no_credit;
 wire stat_rd_tx_limit;
 wire stat_rd_tx_stall;
 wire [$clog2(PCIE_DMA_WRITE_OP_TABLE_SIZE)-1:0] stat_wr_op_start_tag;
@@ -948,7 +938,6 @@ wire [$clog2(PCIE_DMA_WRITE_OP_TABLE_SIZE)-1:0] stat_wr_req_finish_tag;
 wire [3:0] stat_wr_req_finish_status;
 wire stat_wr_req_finish_valid;
 wire stat_wr_op_table_full;
-wire stat_wr_tx_no_credit;
 wire stat_wr_tx_limit;
 wire stat_wr_tx_stall;
 
@@ -974,10 +963,8 @@ dma_if_pcie #(
     .TAG_WIDTH(DMA_TAG_WIDTH),
     .READ_OP_TABLE_SIZE(PCIE_DMA_READ_OP_TABLE_SIZE),
     .READ_TX_LIMIT(PCIE_DMA_READ_TX_LIMIT),
-    .READ_TX_FC_ENABLE(PCIE_DMA_READ_TX_FC_ENABLE),
     .WRITE_OP_TABLE_SIZE(PCIE_DMA_WRITE_OP_TABLE_SIZE),
     .WRITE_TX_LIMIT(PCIE_DMA_WRITE_TX_LIMIT),
-    .WRITE_TX_FC_ENABLE(PCIE_DMA_WRITE_TX_FC_ENABLE),
     .TLP_FORCE_64_BIT_ADDR(TLP_FORCE_64_BIT_ADDR),
     .CHECK_BUS_NUMBER(CHECK_BUS_NUMBER)
 )
@@ -1025,13 +1012,6 @@ dma_if_pcie_inst (
     .s_axis_rd_req_tx_seq_num_valid(s_axis_pcie_rd_req_tx_seq_num_valid),
     .s_axis_wr_req_tx_seq_num(s_axis_pcie_wr_req_tx_seq_num),
     .s_axis_wr_req_tx_seq_num_valid(s_axis_pcie_wr_req_tx_seq_num_valid),
-
-    /*
-     * Transmit flow control
-     */
-    .pcie_tx_fc_ph_av(pcie_tx_fc_ph_av),
-    .pcie_tx_fc_pd_av(pcie_tx_fc_pd_av),
-    .pcie_tx_fc_nph_av(pcie_tx_fc_nph_av),
 
     /*
      * AXI read descriptor input
@@ -1123,7 +1103,6 @@ dma_if_pcie_inst (
     .stat_rd_req_timeout(stat_rd_req_timeout),
     .stat_rd_op_table_full(stat_rd_op_table_full),
     .stat_rd_no_tags(stat_rd_no_tags),
-    .stat_rd_tx_no_credit(stat_rd_tx_no_credit),
     .stat_rd_tx_limit(stat_rd_tx_limit),
     .stat_rd_tx_stall(stat_rd_tx_stall),
     .stat_wr_op_start_tag(stat_wr_op_start_tag),
@@ -1139,7 +1118,6 @@ dma_if_pcie_inst (
     .stat_wr_req_finish_status(stat_wr_req_finish_status),
     .stat_wr_req_finish_valid(stat_wr_req_finish_valid),
     .stat_wr_op_table_full(stat_wr_op_table_full),
-    .stat_wr_tx_no_credit(stat_wr_tx_no_credit),
     .stat_wr_tx_limit(stat_wr_tx_limit),
     .stat_wr_tx_stall(stat_wr_tx_stall)
 );
@@ -1358,7 +1336,6 @@ if (STAT_ENABLE && STAT_DMA_ENABLE) begin : stats_dma_if_pcie
         .stat_rd_req_timeout(stat_rd_req_timeout),
         .stat_rd_op_table_full(stat_rd_op_table_full),
         .stat_rd_no_tags(stat_rd_no_tags),
-        .stat_rd_tx_no_credit(stat_rd_tx_no_credit),
         .stat_rd_tx_limit(stat_rd_tx_limit),
         .stat_rd_tx_stall(stat_rd_tx_stall),
         .stat_wr_op_start_tag(stat_wr_op_start_tag),
@@ -1374,7 +1351,6 @@ if (STAT_ENABLE && STAT_DMA_ENABLE) begin : stats_dma_if_pcie
         .stat_wr_req_finish_status(stat_wr_req_finish_status),
         .stat_wr_req_finish_valid(stat_wr_req_finish_valid),
         .stat_wr_op_table_full(stat_wr_op_table_full),
-        .stat_wr_tx_no_credit(stat_wr_tx_no_credit),
         .stat_wr_tx_limit(stat_wr_tx_limit),
         .stat_wr_tx_stall(stat_wr_tx_stall),
 

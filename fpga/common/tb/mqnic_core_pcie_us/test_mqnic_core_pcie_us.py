@@ -869,10 +869,8 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
     parameters['PCIE_TAG_COUNT'] = 256
     parameters['PCIE_DMA_READ_OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
     parameters['PCIE_DMA_READ_TX_LIMIT'] = 16
-    parameters['PCIE_DMA_READ_TX_FC_ENABLE'] = 1
     parameters['PCIE_DMA_WRITE_OP_TABLE_SIZE'] = 16
     parameters['PCIE_DMA_WRITE_TX_LIMIT'] = 3
-    parameters['PCIE_DMA_WRITE_TX_FC_ENABLE'] = 1
 
     # Interrupt configuration
     parameters['IRQ_INDEX_WIDTH'] = parameters['EVENT_QUEUE_INDEX_WIDTH']

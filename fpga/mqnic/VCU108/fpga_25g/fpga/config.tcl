@@ -167,10 +167,8 @@ dict set params RAM_PIPELINE "2"
 dict set params PCIE_TAG_COUNT "64"
 dict set params PCIE_DMA_READ_OP_TABLE_SIZE [dict get $params PCIE_TAG_COUNT]
 dict set params PCIE_DMA_READ_TX_LIMIT "8"
-dict set params PCIE_DMA_READ_TX_FC_ENABLE "1"
 dict set params PCIE_DMA_WRITE_OP_TABLE_SIZE "8"
 dict set params PCIE_DMA_WRITE_TX_LIMIT "3"
-dict set params PCIE_DMA_WRITE_TX_FC_ENABLE "1"
 
 # Interrupt configuration
 dict set params IRQ_INDEX_WIDTH [dict get $params EVENT_QUEUE_INDEX_WIDTH]

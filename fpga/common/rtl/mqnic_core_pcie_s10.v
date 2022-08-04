@@ -147,10 +147,8 @@ module mqnic_core_pcie_s10 #
     parameter PCIE_TAG_COUNT = 256,
     parameter PCIE_DMA_READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
     parameter PCIE_DMA_READ_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
-    parameter PCIE_DMA_READ_TX_FC_ENABLE = 1,
     parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 2**TX_SEQ_NUM_WIDTH,
     parameter PCIE_DMA_WRITE_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
-    parameter PCIE_DMA_WRITE_TX_FC_ENABLE = 1,
 
     // Interrupt configuration
     parameter IRQ_INDEX_WIDTH = EVENT_QUEUE_INDEX_WIDTH,
@@ -421,10 +419,6 @@ wire                                          pcie_tx_msix_wr_req_tlp_sop;
 wire                                          pcie_tx_msix_wr_req_tlp_eop;
 wire                                          pcie_tx_msix_wr_req_tlp_ready;
 
-wire [7:0]   pcie_tx_fc_ph_av;
-wire [11:0]  pcie_tx_fc_pd_av;
-wire [7:0]   pcie_tx_fc_nph_av;
-
 wire [F_COUNT-1:0] ext_tag_enable;
 wire [7:0] bus_num;
 wire [F_COUNT*3-1:0] max_read_request_size;
@@ -590,9 +584,9 @@ pcie_s10_if_inst (
     /*
      * Flow control
      */
-    .tx_fc_ph_av(pcie_tx_fc_ph_av),
-    .tx_fc_pd_av(pcie_tx_fc_pd_av),
-    .tx_fc_nph_av(pcie_tx_fc_nph_av),
+    .tx_fc_ph_av(),
+    .tx_fc_pd_av(),
+    .tx_fc_nph_av(),
     .tx_fc_npd_av(),
     .tx_fc_cplh_av(),
     .tx_fc_cpld_av(),
@@ -718,10 +712,8 @@ mqnic_core_pcie #(
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .PCIE_DMA_READ_OP_TABLE_SIZE(PCIE_DMA_READ_OP_TABLE_SIZE),
     .PCIE_DMA_READ_TX_LIMIT(PCIE_DMA_READ_TX_LIMIT),
-    .PCIE_DMA_READ_TX_FC_ENABLE(PCIE_DMA_READ_TX_FC_ENABLE),
     .PCIE_DMA_WRITE_OP_TABLE_SIZE(PCIE_DMA_WRITE_OP_TABLE_SIZE),
     .PCIE_DMA_WRITE_TX_LIMIT(PCIE_DMA_WRITE_TX_LIMIT),
-    .PCIE_DMA_WRITE_TX_FC_ENABLE(PCIE_DMA_WRITE_TX_FC_ENABLE),
     .TLP_FORCE_64_BIT_ADDR(0),
     .CHECK_BUS_NUMBER(1),
 
@@ -846,13 +838,6 @@ core_pcie_inst (
     .pcie_tx_msix_wr_req_tlp_sop(pcie_tx_msix_wr_req_tlp_sop),
     .pcie_tx_msix_wr_req_tlp_eop(pcie_tx_msix_wr_req_tlp_eop),
     .pcie_tx_msix_wr_req_tlp_ready(pcie_tx_msix_wr_req_tlp_ready),
-
-    /*
-     * Flow control credits
-     */
-    .pcie_tx_fc_ph_av(pcie_tx_fc_ph_av),
-    .pcie_tx_fc_pd_av(pcie_tx_fc_pd_av),
-    .pcie_tx_fc_nph_av(pcie_tx_fc_nph_av),
 
     /*
      * Configuration inputs

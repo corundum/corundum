@@ -70,7 +70,6 @@ module stats_dma_if_pcie #
     input  wire                                    stat_rd_req_timeout,
     input  wire                                    stat_rd_op_table_full,
     input  wire                                    stat_rd_no_tags,
-    input  wire                                    stat_rd_tx_no_credit,
     input  wire                                    stat_rd_tx_limit,
     input  wire                                    stat_rd_tx_stall,
     input  wire [$clog2(WRITE_OP_TABLE_SIZE)-1:0]  stat_wr_op_start_tag,
@@ -86,7 +85,6 @@ module stats_dma_if_pcie #
     input  wire [3:0]                              stat_wr_req_finish_status,
     input  wire                                    stat_wr_req_finish_valid,
     input  wire                                    stat_wr_op_table_full,
-    input  wire                                    stat_wr_tx_no_credit,
     input  wire                                    stat_wr_tx_limit,
     input  wire                                    stat_wr_tx_stall,
 
@@ -254,7 +252,6 @@ wire [15:0] stat_rd_req_latency_inc = stat_rd_req_latency;
 wire [15:0] stat_rd_req_timeout_inc = stat_rd_req_timeout;
 wire [15:0] stat_rd_op_table_full_inc = stat_rd_op_table_full;
 wire [15:0] stat_rd_no_tags_inc = stat_rd_no_tags;
-wire [15:0] stat_rd_tx_no_credit_inc = stat_rd_tx_no_credit;
 wire [15:0] stat_rd_tx_limit_inc = stat_rd_tx_limit;
 wire [15:0] stat_rd_tx_stall_inc = stat_rd_tx_stall;
 
@@ -265,7 +262,6 @@ wire [15:0] stat_wr_op_error_inc = stat_wr_op_valid && (stat_wr_op_status != 0);
 wire [15:0] stat_wr_req_count_inc = stat_wr_req_valid;
 wire [15:0] stat_wr_req_latency_inc = stat_wr_req_latency;
 wire [15:0] stat_wr_op_table_full_inc = stat_wr_op_table_full;
-wire [15:0] stat_wr_tx_no_credit_inc = stat_wr_tx_no_credit;
 wire [15:0] stat_wr_tx_limit_inc = stat_wr_tx_limit;
 wire [15:0] stat_wr_tx_stall_inc = stat_wr_tx_stall;
 
@@ -288,9 +284,9 @@ stats_collect_tx_inst (
         16'd0,                     // index 30
         16'd0,                     // index 29
         16'd0,                     // index 28
-        stat_wr_tx_stall_inc,      // index 27
-        stat_wr_tx_limit_inc,      // index 26
-        stat_wr_tx_no_credit_inc,  // index 25
+        16'd0,                     // index 27
+        stat_wr_tx_stall_inc,      // index 26
+        stat_wr_tx_limit_inc,      // index 25
         16'd0,                     // index 24
         stat_wr_op_table_full_inc, // index 23
         16'd0,                     // index 22
@@ -304,9 +300,9 @@ stats_collect_tx_inst (
         16'd0,                     // index 14
         16'd0,                     // index 13
         16'd0,                     // index 12
-        stat_rd_tx_stall_inc,      // index 11
-        stat_rd_tx_limit_inc,      // index 10
-        stat_rd_tx_no_credit_inc,  // index 9
+        16'd0,                     // index 11
+        stat_rd_tx_stall_inc,      // index 10
+        stat_rd_tx_limit_inc,      // index 9
         stat_rd_no_tags_inc,       // index 8
         stat_rd_op_table_full_inc, // index 7
         stat_rd_req_timeout_inc,   // index 6

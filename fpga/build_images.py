@@ -144,13 +144,10 @@ class Build:
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE)
 
-        while True:
-            line = await proc.stdout.readline()
-            if not line:
-                break
-            line = line.decode('utf-8').strip()
-
-            self.scan_log_line(line)
+        await asyncio.gather(
+            self.process_stream(proc.stdout),
+            self.process_stream(proc.stderr),
+        )
 
         self.synth_done()
         self.build_done()
@@ -165,6 +162,15 @@ class Build:
             self.phase = "Failed"
 
         self.elapsed_time = datetime.datetime.now() - self.start_time
+
+    async def process_stream(self, stream):
+        while True:
+            line = await stream.readline()
+            if not line:
+                break
+            line = line.decode('utf-8').strip()
+
+            self.scan_log_line(line)
 
     def scan_log_line(self, line):
         pass

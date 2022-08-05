@@ -88,7 +88,7 @@ generate
 
     for (n = 0; n < SEG_COUNT; n = n + 1) begin
 
-        (* ramstyle = "no_rw_check, mlab" *)
+        (* ramstyle = "no_rw_check" *)
         reg [SEG_DATA_WIDTH-1:0] mem_reg[2**INT_ADDR_WIDTH-1:0];
 
         reg wr_done_reg = 1'b0;

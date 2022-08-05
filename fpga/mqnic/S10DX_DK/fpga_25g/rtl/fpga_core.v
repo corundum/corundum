@@ -1147,8 +1147,8 @@ core_inst (
     .eth_tx_clk(eth_tx_clk),
     .eth_tx_rst(eth_tx_rst),
 
-    .eth_tx_ptp_clk(eth_rx_ptp_clk),
-    .eth_tx_ptp_rst(eth_rx_ptp_rst),
+    .eth_tx_ptp_clk(eth_tx_ptp_clk),
+    .eth_tx_ptp_rst(eth_tx_ptp_rst),
     .eth_tx_ptp_ts_96(eth_tx_ptp_ts_96),
     .eth_tx_ptp_ts_step(eth_tx_ptp_ts_step),
 

@@ -41,6 +41,8 @@ set_global_assignment -name RESERVE_ALL_UNUSED_PINS_WEAK_PULLUP "AS INPUT TRI-ST
 
 set_global_assignment -name PRESERVE_UNUSED_XCVR_CHANNEL ON
 
+set_global_assignment -name verilog_allow_ram_inferred_in_generate_loop on
+
 # Clock and reset
 set_location_assignment PIN_BE17 -to "clk_sys_50m_p"
 set_location_assignment PIN_BD17 -to "clk_sys_50m_n"

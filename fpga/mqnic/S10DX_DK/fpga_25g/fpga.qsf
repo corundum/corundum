@@ -34,6 +34,8 @@ set_global_assignment -name ERROR_CHECK_FREQUENCY_DIVISOR 1
 
 set_global_assignment -name PRESERVE_UNUSED_XCVR_CHANNEL ON
 
+set_global_assignment -name verilog_allow_ram_inferred_in_generate_loop on
+
 # Clock and reset
 set_location_assignment PIN_E21  -to clk_133m_ddr4_0_p
 set_location_assignment PIN_F21  -to clk_133m_ddr4_0_n

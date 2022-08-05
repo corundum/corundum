@@ -17,6 +17,8 @@ set_global_assignment -name DEVICE_INITIALIZATION_CLOCK OSC_CLK_1_125MHZ
 
 set_global_assignment -name PRESERVE_UNUSED_XCVR_CHANNEL ON
 
+set_global_assignment -name verilog_allow_ram_inferred_in_generate_loop on
+
 # Clock and reset
 set_location_assignment PIN_CU50 -to clk_100_b2a
 set_location_assignment PIN_CU24 -to clk_30m72

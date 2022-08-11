@@ -327,6 +327,8 @@ static int mqnic_query_module_eeprom_by_page(struct net_device *ndev,
 {
 	int module_id;
 	u8 d;
+	int ret;
+	unsigned short orig_i2c_addr;
 
 	module_id = mqnic_query_module_id(ndev);
 
@@ -374,8 +376,23 @@ static int mqnic_query_module_eeprom_by_page(struct net_device *ndev,
 		return -EINVAL;
 	}
 
+	// set i2c address of the mod_i2c_client
+	// This code section should not be called concurrently since the IOCTL
+	// handler for ethtool operations is called under the RTNL lock.
+	// In addition the i2c_client is used only within code inside this lock.
+	if (!priv->mod_i2c_client)
+		return -EINVAL;
+
+	orig_i2c_addr = priv->mod_i2c_client->addr;
+	priv->mod_i2c_client->addr = i2c_addr;
+
 	// read data
-	return mqnic_read_module_eeprom(ndev, offset, len, data);
+	ret = mqnic_read_module_eeprom(ndev, offset, len, data);
+
+	// reset i2c addr
+	priv->mod_i2c_client->addr = orig_i2c_addr;
+
+	return ret;
 }
 
 static int mqnic_query_module_eeprom(struct net_device *ndev,

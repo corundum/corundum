@@ -141,20 +141,21 @@ static int mqnic_query_module_eeprom_by_page(struct net_device *ndev,
 	case SFF_MODULE_ID_SFP:
 		if (page > 0 || bank > 0)
 			return -EINVAL;
+		if (i2c_addr != 0x50 && i2c_addr != 0x51)
+			return -EINVAL;
 		break;
 	case SFF_MODULE_ID_QSFP:
 	case SFF_MODULE_ID_QSFP_PLUS:
 	case SFF_MODULE_ID_QSFP28:
 		if (page > 3 || bank > 0)
 			return -EINVAL;
+		if (i2c_addr != 0x50)
+			return -EINVAL;
 		break;
 	default:
 		dev_err(priv->dev, "%s: Unknown module ID (0x%x)", __func__, module_id);
 		return -EINVAL;
 	}
-
-	if (i2c_addr != 0x50)
-		return -EINVAL;
 
 	// set page
 	switch (module_id) {
@@ -199,7 +200,7 @@ static int mqnic_query_module_eeprom(struct net_device *ndev,
 	case SFF_MODULE_ID_SFP:
 		i2c_addr = 0x50;
 		page = 0;
-		if (offset > 256) {
+		if (offset >= 256) {
 			offset -= 256;
 			i2c_addr = 0x51;
 		}

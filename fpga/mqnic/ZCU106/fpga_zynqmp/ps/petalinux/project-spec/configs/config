@@ -290,7 +290,7 @@ CONFIG_YOCTO_NETWORK_SSTATE_FEEDS=y
 #
 # Network sstate feeds URL
 #
-CONFIG_YOCTO_NETWORK_SSTATE_FEEDS_URL="http://petalinux.xilinx.com/sswreleases/rel-v${PETALINUX_VER%%.*}/aarch64/sstate-cache"
+CONFIG_YOCTO_NETWORK_SSTATE_FEEDS_URL="http://petalinux.xilinx.com/sswreleases/rel-v2021.1/aarch64/sstate-cache"
 # CONFIG_YOCTO_BB_NO_NETWORK is not set
 # CONFIG_YOCTO_BUILDTOOLS_EXTENDED is not set
 

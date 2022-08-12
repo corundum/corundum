@@ -74,7 +74,7 @@ Running tests
 
 Once the packages are installed, you should be able to run the tests.  There are several ways to do this.
 
-First, all tests can be run by runing ``tox`` in the repo root.  In this case, tox will set up a python virtual environment and install all python dependencies inside the virtual environment.  Additionally, tox will run pytest as ``pytest -n auto`` so it will run tests in parallel on multiple CPUs. ::
+First, all tests can be run by running ``tox`` in the repo root.  In this case, tox will set up a python virtual environment and install all python dependencies inside the virtual environment.  Additionally, tox will run pytest as ``pytest -n auto`` so it will run tests in parallel on multiple CPUs. ::
 
     $ cd /path/to/corundum/
     $ tox
@@ -218,7 +218,7 @@ For example: if you want to build a 100G design for an Alveo U50, you will not n
 
 Before building a design with Vivado, you'll have to source the appropriate settings file.  For example::
 
-    $ source /opt/Xilinx/Vivado/2020.2/settings64.sh
+    $ source /opt/Xilinx/Vivado/2021.1/settings64.sh
     $ make
 
 Building the FPGA configuration
@@ -229,7 +229,7 @@ Each design contains a set of makefiles for automating the build process.  To us
 For example::
 
     $ cd /path/to/corundum/fpga/mqnic/[board]/fpga_[variant]/fpga
-    $ source /opt/Xilinx/Vivado/2020.2/settings64.sh
+    $ source /opt/Xilinx/Vivado/2021.1/settings64.sh
     $ make
 
 Building the driver
@@ -551,7 +551,7 @@ Finally, test the PTP synchronization performance with ``ptp4l`` from ``linuxptp
 
 On the server::
 
-    $ sudo ptp4l -i enp193s0np0 --masterOnly=1 -m --logSyncInterval=-3
+    $ sudo ptp4l -i enp193s0np0 --masterOnly=1 -m --logSyncInterval=-3 --tx_timestamp_timeout=10
     ptp4l[4463.798]: selected /dev/ptp2 as PTP clock
     ptp4l[4463.799]: port 1: INITIALIZING to LISTENING on INIT_COMPLETE
     ptp4l[4463.799]: port 0: INITIALIZING to LISTENING on INIT_COMPLETE
@@ -561,7 +561,7 @@ On the server::
 
 On the client::
 
-    $ sudo ptp4l -i enp129s0 --slaveOnly=1 -m
+    $ sudo ptp4l -i enp129s0 --slaveOnly=1 -m --tx_timestamp_timeout=10
     ptp4l[642.961]: selected /dev/ptp5 as PTP clock
     ptp4l[642.962]: port 1: INITIALIZING to LISTENING on INIT_COMPLETE
     ptp4l[642.962]: port 0: INITIALIZING to LISTENING on INIT_COMPLETE

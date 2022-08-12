@@ -7,6 +7,7 @@ LIC_FILES_CHKSUM = " \
 
 SRC_URI = " \
 	file://utils \
+	file://include \
 	file://lib \
 	file://modules \
 "

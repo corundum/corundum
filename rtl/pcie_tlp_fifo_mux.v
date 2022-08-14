@@ -353,7 +353,7 @@ always @* begin
 
     for (seg = 0; seg < OUT_TLP_SEG_COUNT; seg = seg + 1) begin
         // select port
-        if (!frame_cyc && !abort) begin
+        if (!frame_cyc) begin
             if (ARB_TYPE_ROUND_ROBIN) begin
                 // round robin arb - start checking after previously-selected port
                 if (ARB_LSB_HIGH_PRIORITY) begin

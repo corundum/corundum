@@ -364,7 +364,7 @@ pcie_tlp_fifo_mux_inst (
     .fifo_watermark()
 );
 
-ptile_tx_fc_counter #(
+pcie_ptile_fc_counter #(
     .WIDTH(12),
     .INDEX(0)
 )
@@ -377,7 +377,7 @@ fc_counter_ph (
     .fc_av(tx_fc_ph_av)
 );
 
-ptile_tx_fc_counter #(
+pcie_ptile_fc_counter #(
     .WIDTH(12),
     .INDEX(1)
 )
@@ -390,7 +390,7 @@ fc_counter_nph (
     .fc_av(tx_fc_nph_av)
 );
 
-ptile_tx_fc_counter #(
+pcie_ptile_fc_counter #(
     .WIDTH(12),
     .INDEX(2)
 )
@@ -403,7 +403,7 @@ fc_counter_cplh (
     .fc_av(tx_fc_cplh_av)
 );
 
-ptile_tx_fc_counter #(
+pcie_ptile_fc_counter #(
     .WIDTH(16),
     .INDEX(4)
 )
@@ -416,7 +416,7 @@ fc_counter_pd (
     .fc_av(tx_fc_pd_av)
 );
 
-ptile_tx_fc_counter #(
+pcie_ptile_fc_counter #(
     .WIDTH(16),
     .INDEX(5)
 )
@@ -429,7 +429,7 @@ fc_counter_npd (
     .fc_av(tx_fc_npd_av)
 );
 
-ptile_tx_fc_counter #(
+pcie_ptile_fc_counter #(
     .WIDTH(16),
     .INDEX(6)
 )

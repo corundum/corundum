@@ -59,28 +59,7 @@
 	};
 };
 
-/* WORKAROUND:
- * Letting the Linux driver for USER MGT SI570 (U56) chip program the output
- * frequency causes the peer of mqnic's PHY to loose its link.
- * Reason: The USER MGT SI570 (U56) chip is used as the source for the 156.25 MHz
- * MGT ref clock. And the factory default is 156.25 HHz. However the frequency
- * hard-coded into the PetaLinux device tree snippet for the ZCU106 board
- * (file: zcu106-reva.dtsi) is 148.5 MHz.
- *
- * However even when overwriting the "clock-frequency" property to 156.25 MHz and
- * letting the Linux driver reprogram/reconfigure the USER MGT SI570 (U56) chip
- * with this desired frequency the mqnic's PHY RX direction still breaks (block
- * lock lost); the peer however still keeps saying "link up".
- *
- * Thus, for now, we make Linux NOT load the driver for the USER MGT SI570 (U56)
- * chip.
- * In the future the mqnic PHY may get a control interface, in order for the
- * software to reprogram the USER MGT SI570 (U56) chip and then be able to
- * trigger a PHY reset.
- */
-
 /* USER MGT SI570 (U56) */
 &si570_2 {
-	status = "disabled";
-	/* clock-frequency = <156250000>; */
+	clock-frequency = <156250000>;
 };

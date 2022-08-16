@@ -80,7 +80,7 @@ void mqnic_destroy_tx_ring(struct mqnic_ring **ring_ptr)
 
 int mqnic_alloc_tx_ring(struct mqnic_ring *ring, int size, int stride)
 {
-	int ret;
+	int ret = 0;
 
 	if (ring->active || ring->buf)
 		return -EINVAL;
@@ -102,7 +102,7 @@ int mqnic_alloc_tx_ring(struct mqnic_ring *ring, int size, int stride)
 	ring->buf = dma_alloc_coherent(ring->dev, ring->buf_size, &ring->buf_dma_addr, GFP_KERNEL);
 	if (!ring->buf) {
 		ret = -ENOMEM;
-		goto fail_info;
+		goto fail;
 	}
 
 	ring->head_ptr = 0;
@@ -125,9 +125,8 @@ int mqnic_alloc_tx_ring(struct mqnic_ring *ring, int size, int stride)
 
 	return 0;
 
-fail_info:
-	kvfree(ring->tx_info);
-	ring->tx_info = NULL;
+fail:
+	mqnic_free_tx_ring(ring);
 	return ret;
 }
 
@@ -135,17 +134,18 @@ void mqnic_free_tx_ring(struct mqnic_ring *ring)
 {
 	mqnic_deactivate_tx_ring(ring);
 
-	if (!ring->buf)
-		return;
+	if (ring->buf) {
+		mqnic_free_tx_buf(ring);
 
-	mqnic_free_tx_buf(ring);
+		dma_free_coherent(ring->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
+		ring->buf = NULL;
+		ring->buf_dma_addr = 0;
+	}
 
-	dma_free_coherent(ring->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
-	ring->buf = NULL;
-	ring->buf_dma_addr = 0;
-
-	kvfree(ring->tx_info);
-	ring->tx_info = NULL;
+	if (ring->tx_info) {
+		kvfree(ring->tx_info);
+		ring->tx_info = NULL;
+	}
 }
 
 int mqnic_activate_tx_ring(struct mqnic_ring *ring, struct mqnic_priv *priv,

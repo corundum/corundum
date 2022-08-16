@@ -90,6 +90,9 @@ void mqnic_destroy_eq_ring(struct mqnic_eq_ring **ring_ptr)
 
 int mqnic_alloc_eq_ring(struct mqnic_eq_ring *ring, int size, int stride)
 {
+	if (ring->active || ring->buf)
+		return -EINVAL;
+
 	ring->size = roundup_pow_of_two(size);
 	ring->size_mask = ring->size - 1;
 	ring->stride = roundup_pow_of_two(stride);
@@ -122,12 +125,11 @@ void mqnic_free_eq_ring(struct mqnic_eq_ring *ring)
 {
 	mqnic_deactivate_eq_ring(ring);
 
-	if (!ring->buf)
-		return;
-
-	dma_free_coherent(ring->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
-	ring->buf = NULL;
-	ring->buf_dma_addr = 0;
+	if (ring->buf) {
+		dma_free_coherent(ring->dev, ring->buf_size, ring->buf, ring->buf_dma_addr);
+		ring->buf = NULL;
+		ring->buf_dma_addr = 0;
+	}
 }
 
 int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, struct mqnic_irq *irq)

@@ -1,0 +1,28 @@
+From 357b3eebaa54be1ec8d14b306625eb73732ee5dc Mon Sep 17 00:00:00 2001
+From: Ashok Reddy Soma <ashok.reddy.soma@xilinx.com>
+Date: Wed, 19 Aug 2020 05:29:40 -0600
+Subject: [UBOOT PATCH] ubifs: distroboot support
+
+Signed-off-by: Ashok Reddy Soma <ashok.reddy.soma@xilinx.com>
+---
+ include/configs/xilinx_zynqmp.h | 5 ++++-
+ 1 file changed, 4 insertions(+), 1 deletion(-)
+
+diff --git a/include/configs/xilinx_zynqmp.h b/include/configs/xilinx_zynqmp.h
+index d3f465a..dc231b8 100644
+--- a/include/configs/xilinx_zynqmp.h
++++ b/include/configs/xilinx_zynqmp.h
+@@ -154,7 +154,10 @@
+
+ #define BOOTENV_DEV_QSPI(devtypeu, devtypel, instance) \
+	"bootcmd_" #devtypel #instance "=sf probe " #instance " 0 0 && " \
+-		       "sf read $scriptaddr $script_offset_f $script_size_f && " \
++		       "setenv mtdids 'nor0=nor0' && " \
++		       "setenv mtdparts 'mtdparts=nor0:16m(raw),-(boot)' && " \
++		       "mtdparts && " \
++		       "ubi part boot; ubifsmount ubi0:boot; ubifsload $scriptaddr boot.scr; && " \
+		       "echo QSPI: Trying to boot script at ${scriptaddr} && " \
+		       "source ${scriptaddr}; echo QSPI: SCRIPT FAILED: continuing...;\0"
+
+--
+2.7.4

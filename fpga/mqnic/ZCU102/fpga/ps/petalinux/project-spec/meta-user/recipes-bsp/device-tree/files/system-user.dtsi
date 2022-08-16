@@ -1,0 +1,78 @@
+/include/ "system-conf.dtsi"
+
+/ {
+	/delete-node/ m_axil_ctrl@a0000000;
+	/delete-node/ m_axil_app_ctrl@a8000000;
+
+	mqnic0: ethernet@a0000000 {
+		compatible = "corundum,mqnic";
+		reg = <0x0 0xa0000000 0x0 0x1000000>,
+		      <0x0 0xa8000000 0x0 0x1000000>;
+		reg-names = "csr", "app";
+		interrupt-parent = <&gic>;
+		interrupts = <0x0 0x59 0x1>, <0x0 0x5a 0x1>, <0x0 0x5b 0x1>,
+			     <0x0 0x5c 0x1>;
+
+		nvmem-cells = <&macaddress>;
+		nvmem-cell-names = "mac-address";
+
+		/* NOTE: The nvmem-cells property provides us with a base MAC
+		 * address. We increment its last byte (default) by 0x1. And we
+		 * mark the derived address as "locally administrated". The
+		 * result is used to derive MAC addresses for mqnic interfaces.
+		 */
+		mac-address-increment = <0x1>;
+		mac-address-local;
+
+		module-eeproms = <&module_eeprom_sfp0>, <&module_eeprom_sfp1>,
+				<&module_eeprom_sfp2>, <&module_eeprom_sfp3>;
+	};
+};
+
+&eeprom {
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		macaddress: macaddress@20 {
+			/* NOTE: On Xilinx Zynq boards there usually is an
+			 * EEPROM with a MAC address for one of the PS GEMs at
+			 * offset 0x20. So we take that address as our base
+			 * address.
+			 */
+			reg = <0x20 0x06>;
+		};
+};
+
+&i2c1 {
+	i2c-mux@75 {
+		i2c@4 {
+			module_eeprom_sfp3: eeprom@50 {
+				compatible = "atmel,24c02";
+				reg = <0x50>;
+			};
+		};
+		i2c@5 {
+			module_eeprom_sfp2: eeprom@50 {
+				compatible = "atmel,24c02";
+				reg = <0x50>;
+			};
+		};
+		i2c@6 {
+			module_eeprom_sfp1: eeprom@50 {
+				compatible = "atmel,24c02";
+				reg = <0x50>;
+			};
+		};
+		i2c@7 {
+			module_eeprom_sfp0: eeprom@50 {
+				compatible = "atmel,24c02";
+				reg = <0x50>;
+			};
+		};
+	};
+};
+
+/* USER MGT SI570 (U56) */
+&si570_2 {
+	clock-frequency = <156250000>;
+};

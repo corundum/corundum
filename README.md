@@ -41,6 +41,7 @@ Corundum currently supports devices from both Xilinx and Intel, on boards from s
 *  Xilinx VCU108 (Xilinx Virtex UltraScale XCVU095)
 *  Xilinx VCU118 (Xilinx Virtex UltraScale+ XCVU9P)
 *  Xilinx VCU1525 (Xilinx Virtex UltraScale+ XCVU9P)
+*  Xilinx ZCU102 (Xilinx Zynq UltraScale+ XCZU9EG)
 *  Xilinx ZCU106 (Xilinx Zynq UltraScale+ XCZU7EV)
 
 For operation at 10G and 25G, Corundum uses the open source 10G/25G MAC and PHY modules from the verilog-ethernet repository, no extra licenses are required.  However, it is possible to use other MAC and/or PHY modules.

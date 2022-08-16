@@ -31,7 +31,8 @@ THE SOFTWARE.
 /*
  * P-Tile PCIe flow control counter
  */
-module ptile_tx_fc_counter #(
+module pcie_ptile_fc_counter #
+(
     parameter WIDTH = 16,
     parameter INDEX = 0
 )

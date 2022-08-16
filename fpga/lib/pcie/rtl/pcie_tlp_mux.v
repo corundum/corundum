@@ -241,13 +241,13 @@ always @* begin
 
     // compute mux settings
     for (port = 0; port < PORTS; port = port + 1) begin
-        port_seg_valid[port] = {2{in_tlp_valid_full[port]}} >> port_seg_offset_reg[port];
+        port_seg_valid[port] = pause[port] ? 0 : {2{in_tlp_valid_full[port]}} >> port_seg_offset_reg[port];
         port_seg_eop[port] = {2{in_tlp_eop_full[port]}} >> port_seg_offset_reg[port];
     end
 
     for (seg = 0; seg < TLP_SEG_COUNT; seg = seg + 1) begin
         // select port
-        if (!frame_cyc && !abort) begin
+        if (!frame_cyc) begin
             if (ARB_TYPE_ROUND_ROBIN) begin
                 // round robin arb - start checking after previously-selected port
                 if (ARB_LSB_HIGH_PRIORITY) begin
@@ -276,7 +276,7 @@ always @* begin
                     // select port
                     port_cyc = cur_port;
                     seg_offset_cyc = port_seg_offset_next[cur_port];
-                    if (port_seg_valid[cur_port][0] && !pause[cur_port]) begin
+                    if (port_seg_valid[cur_port][0]) begin
                         // set frame
                         frame_cyc = 1;
                         sel_tlp_seq_valid_cyc[TLP_SEG_COUNT*cur_port+seg] = 1'b1;

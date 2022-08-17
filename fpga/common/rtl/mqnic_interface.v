@@ -940,15 +940,18 @@ wire [EVENT_QUEUE_INDEX_WIDTH-1:0]  tx_event;
 wire [EVENT_TYPE_WIDTH-1:0]         tx_event_type = 16'd0;
 wire [EVENT_SOURCE_WIDTH-1:0]       tx_event_source;
 wire                                tx_event_valid;
+wire                                tx_event_ready;
 
 wire [EVENT_QUEUE_INDEX_WIDTH-1:0]  rx_event;
 wire [EVENT_TYPE_WIDTH-1:0]         rx_event_type = 16'd1;
 wire [EVENT_SOURCE_WIDTH-1:0]       rx_event_source;
 wire                                rx_event_valid;
+wire                                rx_event_ready;
 
 // interrupts
 wire [IRQ_INDEX_WIDTH-1:0]  event_irq_index;
 wire                        event_irq_valid;
+wire                        event_irq_ready;
 
 axis_fifo #(
     .DEPTH(128),
@@ -968,7 +971,7 @@ irq_fifo (
     .s_axis_tdata(event_irq_index),
     .s_axis_tkeep(0),
     .s_axis_tvalid(event_irq_valid),
-    .s_axis_tready(),
+    .s_axis_tready(event_irq_ready),
     .s_axis_tlast(0),
     .s_axis_tid(0),
     .s_axis_tdest(0),
@@ -1314,6 +1317,7 @@ event_queue_manager_inst (
     .m_axis_event(event_irq_index),
     .m_axis_event_source(),
     .m_axis_event_valid(event_irq_valid),
+    .m_axis_event_ready(event_irq_ready),
 
     /*
      * AXI-Lite slave interface
@@ -1483,6 +1487,7 @@ tx_cpl_queue_manager_inst (
     .m_axis_event(tx_event),
     .m_axis_event_source(tx_event_source),
     .m_axis_event_valid(tx_event_valid),
+    .m_axis_event_ready(tx_event_ready),
 
     /*
      * AXI-Lite slave interface
@@ -1652,6 +1657,7 @@ rx_cpl_queue_manager_inst (
     .m_axis_event(rx_event),
     .m_axis_event_source(rx_event_source),
     .m_axis_event_valid(rx_event_valid),
+    .m_axis_event_ready(rx_event_ready),
 
     /*
      * AXI-Lite slave interface
@@ -2081,7 +2087,7 @@ assign event_cpl_req_valid = axis_event_valid;
 assign axis_event_ready = event_cpl_req_ready;
 
 axis_fifo #(
-    .DEPTH(128),
+    .DEPTH(32),
     .DATA_WIDTH(EVENT_SOURCE_WIDTH+EVENT_TYPE_WIDTH+EVENT_QUEUE_INDEX_WIDTH),
     .KEEP_ENABLE(0),
     .LAST_ENABLE(0),
@@ -2098,7 +2104,7 @@ tx_event_fifo (
     .s_axis_tdata({tx_event_source, tx_event_type, tx_event}),
     .s_axis_tkeep(0),
     .s_axis_tvalid(tx_event_valid),
-    .s_axis_tready(),
+    .s_axis_tready(tx_event_ready),
     .s_axis_tlast(0),
     .s_axis_tid(0),
     .s_axis_tdest(0),
@@ -2121,7 +2127,7 @@ tx_event_fifo (
 );
 
 axis_fifo #(
-    .DEPTH(128),
+    .DEPTH(32),
     .DATA_WIDTH(EVENT_SOURCE_WIDTH+EVENT_TYPE_WIDTH+EVENT_QUEUE_INDEX_WIDTH),
     .KEEP_ENABLE(0),
     .LAST_ENABLE(0),
@@ -2138,7 +2144,7 @@ rx_event_fifo (
     .s_axis_tdata({rx_event_source, rx_event_type, rx_event}),
     .s_axis_tkeep(0),
     .s_axis_tvalid(rx_event_valid),
-    .s_axis_tready(),
+    .s_axis_tready(rx_event_ready),
     .s_axis_tlast(0),
     .s_axis_tid(0),
     .s_axis_tdest(0),

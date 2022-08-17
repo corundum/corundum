@@ -108,6 +108,7 @@ module cpl_queue_manager #
     output wire [EVENT_WIDTH-1:0]       m_axis_event,
     output wire [QUEUE_INDEX_WIDTH-1:0] m_axis_event_source,
     output wire                         m_axis_event_valid,
+    input  wire                         m_axis_event_ready,
 
     /*
      * AXI-Lite slave interface
@@ -354,7 +355,7 @@ always @* begin
 
     m_axis_event_next = m_axis_event_reg;
     m_axis_event_source_next = m_axis_event_source_reg;
-    m_axis_event_valid_next = 1'b0;
+    m_axis_event_valid_next = m_axis_event_valid_reg && !m_axis_event_ready;
 
     s_axil_awready_next = 1'b0;
     s_axil_wready_next = 1'b0;
@@ -414,7 +415,7 @@ always @* begin
         queue_ram_read_ptr = s_axil_araddr_queue;
         queue_ram_addr_pipeline_next[0] = s_axil_araddr_queue;
         axil_reg_pipeline_next[0] = s_axil_araddr_reg;
-    end else if (op_table_active[op_table_finish_ptr_reg] && op_table_commit[op_table_finish_ptr_reg] && !op_commit_pipe_reg[0] && !op_commit_pipe_hazard) begin
+    end else if (op_table_active[op_table_finish_ptr_reg] && op_table_commit[op_table_finish_ptr_reg] && (!m_axis_event_valid_reg || m_axis_event_ready) && !op_commit_pipe_reg && !op_commit_pipe_hazard) begin
         // enqueue commit finalize (update pointer)
         op_commit_pipe_next[0] = 1'b1;
 

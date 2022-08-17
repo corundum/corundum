@@ -1271,7 +1271,6 @@ CONFIG_run-postinsts=y
 # CONFIG_cairo-dbg is not set
 # CONFIG_cairo-dev is not set
 # CONFIG_cairo-script-interpreter is not set
-# CONFIG_cairo-perf-utils is not set
 # CONFIG_cairo-gobject is not set
 
 #
@@ -3100,7 +3099,6 @@ CONFIG_packagegroup-core-ssh-dropbear=y
 # CONFIG_qtxmlpatterns is not set
 # CONFIG_qtxmlpatterns-dev is not set
 # CONFIG_qtxmlpatterns-mkspecs is not set
-# CONFIG_qtxmlpatterns-examples is not set
 # CONFIG_qtxmlpatterns-dbg is not set
 # CONFIG_qtxmlpatterns-tools is not set
 
@@ -3504,7 +3502,6 @@ CONFIG_watchdog-init=y
 #
 # CONFIG_gstreamer1.0 is not set
 # CONFIG_gstreamer1.0-dev is not set
-# CONFIG_gstreamer1.0-bash-completion is not set
 # CONFIG_gstreamer1.0-dbg is not set
 
 #
@@ -3766,10 +3763,10 @@ CONFIG_u-boot-tools=y
 # CONFIG_libgnome-desktop3 is not set
 
 #
-# gnome-themes-standard 
+# gnome-themes-extra 
 #
-# CONFIG_gnome-themes-standard-dev is not set
-# CONFIG_gnome-themes-standard-dbg is not set
+# CONFIG_gnome-themes-extra-dev is not set
+# CONFIG_gnome-themes-extra-dbg is not set
 # CONFIG_gnome-theme-adwaita is not set
 
 #

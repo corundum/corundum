@@ -206,6 +206,11 @@ $(PRJ_HDF): $(HDF) $(subst gethdf,FORCE,$(findstring gethdf,$(MAKECMDGOALS)))
 	mkdir -p $(dir $(TMPHDF))
 	ln -sf $(realpath $(HDF)) $(TMPHDF)
 	petalinux-config $(GEN_ARGS) --get-hw-description $(dir $(TMPHDF)) $(SILENTCONFIG)
+	# Linuxptp patch fix for issue here: 
+	# https://support.xilinx.com/s/question/0D52E00006ihQMPSA2/issues-adding-linuxptp-package-in-petalinux-20211?language=en_US
+	rm -f components/yocto/layers/meta-openembedded/meta-oe/recipes-connectivity/linuxptp/linuxptp_3.1.bb
+	cp ../../patches/linuxptp_3.1.1.bb components/yocto/layers/meta-openembedded/meta-oe/recipes-connectivity/linuxptp/
+
 
 gethdf: $(PRJ_HDF)
 

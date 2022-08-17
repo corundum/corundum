@@ -323,7 +323,7 @@ static int mqnic_query_module_id(struct net_device *ndev)
 }
 
 static int mqnic_query_module_eeprom_by_page(struct net_device *ndev,
-		u8 i2c_addr, u16 page, u16 bank, u16 offset, u16 len, u8 *data)
+		unsigned short i2c_addr, u16 page, u16 bank, u16 offset, u16 len, u8 *data)
 {
 	int module_id;
 	u8 d;
@@ -399,7 +399,7 @@ static int mqnic_query_module_eeprom(struct net_device *ndev,
 		u16 offset, u16 len, u8 *data)
 {
 	int module_id;
-	u8 i2c_addr = 0x50;
+	unsigned short i2c_addr = 0x50;
 	u16 page = 0;
 	u16 bank = 0;
 

@@ -10,7 +10,7 @@ GitHub wiki: https://github.com/corundum/corundum/wiki
 
 Google group: https://groups.google.com/d/forum/corundum-nic
 
-Slack workspace: https://join.slack.com/t/corundumworkspace/shared_invite/zt-tj5azsbm-V9LV8L7ugSRDBpe2JiPKMA
+Zulip: https://corundum.zulipchat.com/
 
 ## Introduction
 

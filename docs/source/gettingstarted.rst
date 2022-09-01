@@ -7,7 +7,7 @@ Getting Started
 Join the Corundum community
 ===========================
 
-To stay up to date with the latest developments and get support, consider joining the `mailing list <https://groups.google.com/d/forum/corundum-nic>`_ and `Slack workspace <https://join.slack.com/t/corundumworkspace/shared_invite/zt-tj5azsbm-V9LV8L7ugSRDBpe2JiPKMA>`_.
+To stay up to date with the latest developments and get support, consider joining the `mailing list <https://groups.google.com/d/forum/corundum-nic>`_ and `Zulip <https://corundum.zulipchat.com/>`_.
 
 Obtaining the source code
 =========================

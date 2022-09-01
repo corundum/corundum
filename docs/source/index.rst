@@ -10,7 +10,7 @@ Corundum has several unique architectural features.  First, transmit, receive, c
 
 Corundum also provides an application section for implementing custom logic.  The application section has a dedicated PCIe BAR for control and a number of interfaces that provide access to the core datapath and DMA infrastructure.
 
-The latest source code is available from the `Corundum GitHub repository <https://github.com/corundum/corundum>`_.  To stay up to date with the latest developments and get support, consider joining the `mailing list <https://groups.google.com/d/forum/corundum-nic>`_ and `Slack workspace <https://join.slack.com/t/corundumworkspace/shared_invite/zt-tj5azsbm-V9LV8L7ugSRDBpe2JiPKMA>`_.
+The latest source code is available from the `Corundum GitHub repository <https://github.com/corundum/corundum>`_.  To stay up to date with the latest developments and get support, consider joining the `mailing list <https://groups.google.com/d/forum/corundum-nic>`_ and `Zulip <https://corundum.zulipchat.com/>`_.
 
 Corundum currently supports devices from both Xilinx and Intel, on boards from several different manufacturers.  Designs are included for the following FPGA boards; see :ref:`device_list` for more details:
 

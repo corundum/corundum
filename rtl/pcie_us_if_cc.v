@@ -455,6 +455,15 @@ always @* begin
         end
     end
 
+    eop_index = 0;
+    for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
+        for (lane = 0; lane < INT_TLP_SEG_STRB_WIDTH; lane = lane + 1) begin
+            if (out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH+lane]) begin
+                eop_index[seg*3 +: 3] = lane;
+            end
+        end
+    end
+
     if (!m_axis_cc_tvalid || m_axis_cc_tready) begin
         // remap header and sideband
         m_axis_cc_tdata_next = out_tlp_data;
@@ -466,13 +475,6 @@ always @* begin
         for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
             if (out_tlp_valid[seg]) begin
                 m_axis_cc_tkeep_next[seg*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH] = out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH];
-            end
-
-            eop_index[seg*3 +: 3] = 0;
-            for (lane = 0; lane < INT_TLP_SEG_STRB_WIDTH; lane = lane + 1) begin
-                if (out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH+lane]) begin
-                    eop_index[seg*3 +: 3] = lane;
-                end
             end
         end
 

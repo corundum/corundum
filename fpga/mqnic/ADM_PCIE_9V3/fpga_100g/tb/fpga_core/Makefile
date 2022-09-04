@@ -111,6 +111,7 @@ VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_mux.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_tlp_fifo_raw.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pcie_msix.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/irq_rate_limit.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie_rd.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_pcie_wr.v

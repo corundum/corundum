@@ -770,6 +770,7 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
         os.path.join(pcie_rtl_dir, "pcie_tlp_fifo.v"),
         os.path.join(pcie_rtl_dir, "pcie_tlp_fifo_raw.v"),
         os.path.join(pcie_rtl_dir, "pcie_msix.v"),
+        os.path.join(pcie_rtl_dir, "irq_rate_limit.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_rd.v"),
         os.path.join(pcie_rtl_dir, "dma_if_pcie_wr.v"),

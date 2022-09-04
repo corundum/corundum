@@ -421,6 +421,7 @@ def test_fpga_core(request):
         os.path.join(axis_rtl_dir, "axis_fifo_adapter.v"),
         os.path.join(axis_rtl_dir, "axis_pipeline_fifo.v"),
         os.path.join(axis_rtl_dir, "axis_register.v"),
+        os.path.join(pcie_rtl_dir, "irq_rate_limit.v"),
         os.path.join(pcie_rtl_dir, "dma_if_axi.v"),
         os.path.join(pcie_rtl_dir, "dma_if_axi_rd.v"),
         os.path.join(pcie_rtl_dir, "dma_if_axi_wr.v"),

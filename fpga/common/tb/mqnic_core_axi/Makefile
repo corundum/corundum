@@ -100,6 +100,7 @@ VERILOG_SOURCES += ../../lib/axis/rtl/axis_fifo.v
 VERILOG_SOURCES += ../../lib/axis/rtl/axis_fifo_adapter.v
 VERILOG_SOURCES += ../../lib/axis/rtl/axis_pipeline_fifo.v
 VERILOG_SOURCES += ../../lib/axis/rtl/axis_register.v
+VERILOG_SOURCES += ../../lib/pcie/rtl/irq_rate_limit.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_axi.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_axi_rd.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/dma_if_axi_wr.v

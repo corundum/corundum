@@ -458,6 +458,8 @@ parameter AXIS_IF_RX_DEST_WIDTH = RX_QUEUE_INDEX_WIDTH;
 parameter AXIS_IF_TX_USER_WIDTH = AXIS_TX_USER_WIDTH;
 parameter AXIS_IF_RX_USER_WIDTH = AXIS_RX_USER_WIDTH;
 
+localparam CLK_CYCLES_PER_US = (1000*CLK_PERIOD_NS_DENOM)/CLK_PERIOD_NS_NUM;
+
 localparam PHC_RB_BASE_ADDR = 32'h100;
 
 // check configuration
@@ -600,6 +602,8 @@ reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
+reg [15:0] irq_rate_limit_min_interval_reg = 10;
+
 assign ctrl_reg_wr_wait_int = ctrl_reg_wr_wait | ptp_ctrl_reg_wr_wait;
 assign ctrl_reg_wr_ack_int = ctrl_reg_wr_ack | ctrl_reg_wr_ack_reg | ptp_ctrl_reg_wr_ack;
 assign ctrl_reg_rd_data_int = ctrl_reg_rd_data | ctrl_reg_rd_data_reg | ptp_ctrl_reg_rd_data;
@@ -614,9 +618,11 @@ always @(posedge clk) begin
     if (ctrl_reg_wr_en && !ctrl_reg_wr_ack_reg) begin
         // write operation
         ctrl_reg_wr_ack_reg <= 1'b0;
-        // case ({ctrl_reg_wr_addr >> 2, 2'b00})
-        //     default: ctrl_reg_wr_ack_reg <= 1'b0;
-        // endcase
+        case ({ctrl_reg_wr_addr >> 2, 2'b00})
+            // IRQ configuration
+            8'h4C: irq_rate_limit_min_interval_reg <= ctrl_reg_wr_data;  // IRQ config: Min interval
+            default: ctrl_reg_wr_ack_reg <= 1'b0;
+        endcase
     end
 
     if (ctrl_reg_rd_en && !ctrl_reg_rd_ack_reg) begin
@@ -635,19 +641,24 @@ always @(posedge clk) begin
             8'h20: ctrl_reg_rd_data_reg <= BUILD_DATE;    // FW ID: Build date
             8'h24: ctrl_reg_rd_data_reg <= GIT_HASH;      // FW ID: Git commit hash
             8'h28: ctrl_reg_rd_data_reg <= RELEASE_INFO;  // FW ID: Release info
+            // IRQ configuration
+            8'h40: ctrl_reg_rd_data_reg <= 32'h0000C007;  // IRQ config: Type
+            8'h44: ctrl_reg_rd_data_reg <= 32'h00000100;  // IRQ config: Version
+            8'h48: ctrl_reg_rd_data_reg <= 32'h50;        // IRQ config: Next header
+            8'h4C: ctrl_reg_rd_data_reg <= irq_rate_limit_min_interval_reg;  // IRQ config: Min interval
             // Interface
-            8'h40: ctrl_reg_rd_data_reg <= 32'h0000C000;  // Interface: Type
-            8'h44: ctrl_reg_rd_data_reg <= 32'h00000100;  // Interface: Version
-            8'h48: ctrl_reg_rd_data_reg <= 32'h60;        // Interface: Next header
-            8'h4C: ctrl_reg_rd_data_reg <= 32'h0;         // Interface: Offset
-            8'h50: ctrl_reg_rd_data_reg <= IF_COUNT;      // Interface: Count
-            8'h54: ctrl_reg_rd_data_reg <= 2**AXIL_IF_CTRL_ADDR_WIDTH;  // Interface: Stride
-            8'h58: ctrl_reg_rd_data_reg <= 2**AXIL_CSR_ADDR_WIDTH;      // Interface: CSR offset
+            8'h50: ctrl_reg_rd_data_reg <= 32'h0000C000;  // Interface: Type
+            8'h54: ctrl_reg_rd_data_reg <= 32'h00000100;  // Interface: Version
+            8'h58: ctrl_reg_rd_data_reg <= 32'h70;        // Interface: Next header
+            8'h5C: ctrl_reg_rd_data_reg <= 32'h0;         // Interface: Offset
+            8'h60: ctrl_reg_rd_data_reg <= IF_COUNT;      // Interface: Count
+            8'h64: ctrl_reg_rd_data_reg <= 2**AXIL_IF_CTRL_ADDR_WIDTH;  // Interface: Stride
+            8'h68: ctrl_reg_rd_data_reg <= 2**AXIL_CSR_ADDR_WIDTH;      // Interface: CSR offset
             // App info
-            8'h60: ctrl_reg_rd_data_reg <= APP_ENABLE ? 32'h0000C005 : 0;  // App info: Type
-            8'h64: ctrl_reg_rd_data_reg <= APP_ENABLE ? 32'h00000200 : 0;  // App info: Version
-            8'h68: ctrl_reg_rd_data_reg <= 32'h80;                         // App info: Next header
-            8'h6C: ctrl_reg_rd_data_reg <= APP_ENABLE ? APP_ID : 0;        // App info: ID
+            8'h70: ctrl_reg_rd_data_reg <= APP_ENABLE ? 32'h0000C005 : 0;  // App info: Type
+            8'h74: ctrl_reg_rd_data_reg <= APP_ENABLE ? 32'h00000200 : 0;  // App info: Version
+            8'h78: ctrl_reg_rd_data_reg <= 32'h80;                         // App info: Next header
+            8'h7C: ctrl_reg_rd_data_reg <= APP_ENABLE ? APP_ID : 0;        // App info: ID
             // Stats
             8'h80: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h0000C006 : 0;      // Stats: Type
             8'h84: ctrl_reg_rd_data_reg <= STAT_ENABLE ? 32'h00000100 : 0;      // Stats: Version
@@ -663,6 +674,8 @@ always @(posedge clk) begin
     if (rst) begin
         ctrl_reg_wr_ack_reg <= 1'b0;
         ctrl_reg_rd_ack_reg <= 1'b0;
+
+        irq_rate_limit_min_interval_reg <= 10;
     end
 end
 
@@ -2127,6 +2140,38 @@ end
 
 endgenerate
 
+wire [IRQ_INDEX_WIDTH-1:0]  int_irq_index;
+wire                        int_irq_valid;
+wire                        int_irq_ready;
+
+irq_rate_limit #(
+    .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH)
+)
+irq_rate_limit_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * Interrupt request input
+     */
+    .in_irq_index(int_irq_index),
+    .in_irq_valid(int_irq_valid),
+    .in_irq_ready(int_irq_ready),
+
+    /*
+     * Interrupt request output
+     */
+    .out_irq_index(irq_index),
+    .out_irq_valid(irq_valid),
+    .out_irq_ready(irq_ready),
+
+    /*
+     * Configuration
+     */
+    .prescale(CLK_CYCLES_PER_US-1),
+    .min_interval(irq_rate_limit_min_interval_reg)
+);
+
 wire [IF_COUNT*IRQ_INDEX_WIDTH-1:0]  if_irq_index;
 wire [IF_COUNT-1:0]                  if_irq_valid;
 wire [IF_COUNT-1:0]                  if_irq_ready;
@@ -2165,10 +2210,10 @@ if (IF_COUNT > 1) begin : irq_mux
         /*
          * AXI Stream output
          */
-        .m_axis_tdata(irq_index),
+        .m_axis_tdata(int_irq_index),
         .m_axis_tkeep(),
-        .m_axis_tvalid(irq_valid),
-        .m_axis_tready(irq_ready),
+        .m_axis_tvalid(int_irq_valid),
+        .m_axis_tready(int_irq_ready),
         .m_axis_tlast(),
         .m_axis_tid(),
         .m_axis_tdest(),
@@ -2177,9 +2222,9 @@ if (IF_COUNT > 1) begin : irq_mux
 
 end else begin
 
-    assign irq_index = if_irq_index;
-    assign irq_valid = if_irq_valid;
-    assign if_irq_ready = irq_ready;
+    assign int_irq_index = if_irq_index;
+    assign int_irq_valid = if_irq_valid;
+    assign if_irq_ready = int_irq_ready;
 
 end
 

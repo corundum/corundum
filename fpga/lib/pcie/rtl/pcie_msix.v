@@ -164,9 +164,7 @@ reg [63:0] tbl_axil_mem_wr_data;
 reg pba_axil_mem_rd_en;
 
 reg tbl_mem_rd_en;
-reg tbl_mem_wr_en;
 reg [TBL_ADDR_WIDTH-1:0] tbl_mem_addr;
-reg [63:0] tbl_mem_wr_data;
 reg pba_mem_rd_en;
 reg pba_mem_wr_en;
 reg [PBA_ADDR_WIDTH-1:0] pba_mem_addr;
@@ -244,9 +242,7 @@ always @* begin
     state_next = STATE_IDLE;
 
     tbl_mem_rd_en = 1'b0;
-    tbl_mem_wr_en = 1'b0;
     tbl_mem_addr = {irq_index_reg, 1'b0};
-    tbl_mem_wr_data = 0;
 
     pba_mem_rd_en = 1'b0;
     pba_mem_wr_en = 1'b0;
@@ -418,14 +414,12 @@ always @(posedge clk) begin
 
     if (tbl_mem_rd_en) begin
         tbl_mem_rd_data_reg <= tbl_mem[tbl_mem_addr];
-    end else if (tbl_mem_wr_en) begin
-        tbl_mem[tbl_mem_addr] <= tbl_mem_wr_data;
     end
 
-    if (pba_mem_rd_en) begin
-        pba_mem_rd_data_reg <= pba_mem[pba_mem_addr];
-    end else if (pba_mem_wr_en) begin
+    if (pba_mem_wr_en) begin
         pba_mem[pba_mem_addr] <= pba_mem_wr_data;
+    end else if (pba_mem_rd_en) begin
+        pba_mem_rd_data_reg <= pba_mem[pba_mem_addr];
     end
 
     if (rst) begin

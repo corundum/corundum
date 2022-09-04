@@ -1236,7 +1236,7 @@ if (STAT_ENABLE) begin
 
 end else begin
 
-    assign s_axis_stat_tready = 1'b1;
+    assign axis_stat_tready = 1'b1;
 
 end
 

@@ -74,6 +74,14 @@ Parameters
 
     Total port count, must be set to ``IF_COUNT*PORTS_PER_IF``.
 
+.. object:: CLK_PERIOD_NS_NUM
+
+    Numerator of core clock period in ns, default ``4``.
+
+.. object:: CLK_PERIOD_NS_DENOM
+
+    Denominator of core clock period in ns, default ``1``.
+
 .. object:: PTP_CLK_PERIOD_NS_NUM
 
     Numerator of PTP clock period in ns, default ``4``.

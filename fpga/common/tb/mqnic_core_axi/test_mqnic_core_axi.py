@@ -554,6 +554,10 @@ def test_mqnic_core_pcie_axi(request, if_count, ports_per_if, axi_data_width,
     parameters['PORTS_PER_IF'] = ports_per_if
     parameters['SCHED_PER_IF'] = ports_per_if
 
+    # Clock configuration
+    parameters['CLK_PERIOD_NS_NUM'] = 4
+    parameters['CLK_PERIOD_NS_DENOM'] = 1
+
     # PTP configuration
     parameters['PTP_CLK_PERIOD_NS_NUM'] = 32
     parameters['PTP_CLK_PERIOD_NS_DENOM'] = 5

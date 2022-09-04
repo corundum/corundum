@@ -49,6 +49,10 @@ module mqnic_app_block #
 
     parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF,
 
+    // Clock configuration
+    parameter CLK_PERIOD_NS_NUM = 4,
+    parameter CLK_PERIOD_NS_DENOM = 1,
+
     // PTP configuration
     parameter PTP_CLK_PERIOD_NS_NUM = 4,
     parameter PTP_CLK_PERIOD_NS_DENOM = 1,

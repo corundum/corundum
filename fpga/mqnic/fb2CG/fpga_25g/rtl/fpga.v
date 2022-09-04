@@ -61,6 +61,10 @@ module fpga #
     parameter SCHED_PER_IF = PORTS_PER_IF,
     parameter PORT_MASK = 0,
 
+    // Clock configuration
+    parameter CLK_PERIOD_NS_NUM = 4,
+    parameter CLK_PERIOD_NS_DENOM = 1,
+
     // PTP configuration
     parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_CLOCK_CDC_PIPELINE = 0,
@@ -1389,6 +1393,10 @@ fpga_core #(
 
     // Board configuration
     .TDMA_BER_ENABLE(TDMA_BER_ENABLE),
+
+    // Clock configuration
+    .CLK_PERIOD_NS_NUM(CLK_PERIOD_NS_NUM),
+    .CLK_PERIOD_NS_DENOM(CLK_PERIOD_NS_DENOM),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),

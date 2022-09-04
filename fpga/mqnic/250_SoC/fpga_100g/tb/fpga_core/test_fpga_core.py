@@ -718,6 +718,10 @@ def test_fpga_core(request):
     parameters['SCHED_PER_IF'] = parameters['PORTS_PER_IF']
     parameters['PORT_MASK'] = 0
 
+    # Clock configuration
+    parameters['CLK_PERIOD_NS_NUM'] = 4
+    parameters['CLK_PERIOD_NS_DENOM'] = 1
+
     # PTP configuration
     parameters['PTP_CLK_PERIOD_NS_NUM'] = 512
     parameters['PTP_CLK_PERIOD_NS_DENOM'] = 165

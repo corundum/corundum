@@ -58,6 +58,10 @@ module fpga_core #
     parameter SCHED_PER_IF = PORTS_PER_IF,
     parameter PORT_MASK = 0,
 
+    // Clock configuration
+    parameter CLK_PERIOD_NS_NUM = 4,
+    parameter CLK_PERIOD_NS_DENOM = 1,
+
     // PTP configuration
     parameter PTP_CLK_PERIOD_NS_NUM = 4096,
     parameter PTP_CLK_PERIOD_NS_DENOM = 825,
@@ -908,6 +912,10 @@ mqnic_core_pcie_ptile #(
     .SCHED_PER_IF(SCHED_PER_IF),
 
     .PORT_COUNT(PORT_COUNT),
+
+    // Clock configuration
+    .CLK_PERIOD_NS_NUM(CLK_PERIOD_NS_NUM),
+    .CLK_PERIOD_NS_DENOM(CLK_PERIOD_NS_DENOM),
 
     // PTP configuration
     .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),

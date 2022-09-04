@@ -98,6 +98,10 @@ dict set params PORTS_PER_IF "1"
 dict set params SCHED_PER_IF [dict get $params PORTS_PER_IF]
 dict set params PORT_MASK "0"
 
+# Clock configuration
+dict set params CLK_PERIOD_NS_NUM "4"
+dict set params CLK_PERIOD_NS_DENOM "1"
+
 # PTP configuration
 dict set params PTP_CLOCK_PIPELINE "0"
 dict set params PTP_CLOCK_CDC_PIPELINE "0"

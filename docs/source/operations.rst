@@ -59,8 +59,8 @@ Packet transmission
 #. :ref:`mod_mqnic_app_block` ``s_axis_sync_tx``: data is presented to the application section
 #. :ref:`mod_mqnic_app_block` ``m_axis_sync_tx``: data is returned from the application section
 #. :ref:`mod_mqnic_core`: Data passes through per-port transmit async FIFO module and is transferred to MAC TX clock domain
-#. :ref:`mod_mqnic_app_block` ``s_axis_sync_tx``: data is presented to the application section
-#. :ref:`mod_mqnic_app_block` ``m_axis_sync_tx``: data is returned from the application section
+#. :ref:`mod_mqnic_app_block` ``s_axis_direct_tx``: data is presented to the application section
+#. :ref:`mod_mqnic_app_block` ``m_axis_direct_tx``: data is returned from the application section
 #. :ref:`mod_mqnic_l2_egress`: layer 2 egress processing
 #. :ref:`mod_mqnic_core`: data leaves through transmit streaming interfaces
 #. The packet arrives at the MAC
@@ -141,8 +141,8 @@ receive:
 #. The MAC produces a PTP timestamp
 #. :ref:`mod_mqnic_core`: data enters through receive streaming interfaces
 #. :ref:`mod_mqnic_l2_ingress`: layer 2 ingress processing
-#. :ref:`mod_mqnic_app_block` ``s_axis_sync_rx``: data is presented to the application section
-#. :ref:`mod_mqnic_app_block` ``m_axis_sync_rx``: data is returned from the application section
+#. :ref:`mod_mqnic_app_block` ``s_axis_direct_rx``: data is presented to the application section
+#. :ref:`mod_mqnic_app_block` ``m_axis_direct_rx``: data is returned from the application section
 #. :ref:`mod_mqnic_core`: Data passes through per-port receive async FIFO module and is transferred to core clock domain
 #. :ref:`mod_mqnic_app_block` ``s_axis_sync_rx``: data is presented to the application section
 #. :ref:`mod_mqnic_app_block` ``m_axis_sync_rx``: data is returned from the application section

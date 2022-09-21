@@ -56,14 +56,12 @@ module tx_engine #
     parameter REQ_TAG_WIDTH = 8,
     // Descriptor request tag field width
     parameter DESC_REQ_TAG_WIDTH = 8,
+    // Completion request tag field width
+    parameter CPL_REQ_TAG_WIDTH = 8,
     // DMA tag field width
     parameter DMA_TAG_WIDTH = 8,
     // DMA client tag field width
     parameter DMA_CLIENT_TAG_WIDTH = 8,
-    // Queue request tag field width
-    parameter QUEUE_REQ_TAG_WIDTH = 8,
-    // Queue operation tag field width
-    parameter QUEUE_OP_TAG_WIDTH = 8,
     // Queue index width
     parameter QUEUE_INDEX_WIDTH = 4,
     // Queue element pointer width
@@ -161,7 +159,7 @@ module tx_engine #
      * Completion request output
      */
     output wire [QUEUE_INDEX_WIDTH-1:0]     m_axis_cpl_req_queue,
-    output wire [DESC_REQ_TAG_WIDTH-1:0]    m_axis_cpl_req_tag,
+    output wire [CPL_REQ_TAG_WIDTH-1:0]     m_axis_cpl_req_tag,
     output wire [CPL_SIZE*8-1:0]            m_axis_cpl_req_data,
     output wire                             m_axis_cpl_req_valid,
     input  wire                             m_axis_cpl_req_ready,
@@ -169,7 +167,7 @@ module tx_engine #
     /*
      * Completion request status input
      */
-    input  wire [DESC_REQ_TAG_WIDTH-1:0]    s_axis_cpl_req_status_tag,
+    input  wire [CPL_REQ_TAG_WIDTH-1:0]     s_axis_cpl_req_status_tag,
     input  wire                             s_axis_cpl_req_status_full,
     input  wire                             s_axis_cpl_req_status_error,
     input  wire                             s_axis_cpl_req_status_valid,
@@ -256,18 +254,13 @@ initial begin
         $finish;
     end
 
-    if (QUEUE_REQ_TAG_WIDTH < CL_DESC_TABLE_SIZE) begin
-        $error("Error: QUEUE_REQ_TAG_WIDTH must be at least $clog2(DESC_TABLE_SIZE) (instance %m)");
+    if (DESC_REQ_TAG_WIDTH < REQ_TAG_WIDTH) begin
+        $error("Error: DESC_REQ_TAG_WIDTH must be at least REQ_TAG_WIDTH (instance %m)");
         $finish;
     end
 
-    if (DESC_REQ_TAG_WIDTH < CL_DESC_TABLE_SIZE) begin
-        $error("Error: DESC_REQ_TAG_WIDTH must be at least $clog2(DESC_TABLE_SIZE) (instance %m)");
-        $finish;
-    end
-
-    if (QUEUE_REQ_TAG_WIDTH < REQ_TAG_WIDTH) begin
-        $error("Error: QUEUE_REQ_TAG_WIDTH must be at least REQ_TAG_WIDTH (instance %m)");
+    if (CPL_REQ_TAG_WIDTH < CL_DESC_TABLE_SIZE) begin
+        $error("Error: CPL_REQ_TAG_WIDTH must be at least $clog2(DESC_TABLE_SIZE) (instance %m)");
         $finish;
     end
 
@@ -295,7 +288,7 @@ reg m_axis_desc_req_valid_reg = 1'b0, m_axis_desc_req_valid_next;
 reg s_axis_desc_tready_reg = 1'b0, s_axis_desc_tready_next;
 
 reg [CPL_QUEUE_INDEX_WIDTH-1:0] m_axis_cpl_req_queue_reg = {CPL_QUEUE_INDEX_WIDTH{1'b0}}, m_axis_cpl_req_queue_next;
-reg [DESC_REQ_TAG_WIDTH-1:0] m_axis_cpl_req_tag_reg = {DESC_REQ_TAG_WIDTH{1'b0}}, m_axis_cpl_req_tag_next;
+reg [CPL_REQ_TAG_WIDTH-1:0] m_axis_cpl_req_tag_reg = {CPL_REQ_TAG_WIDTH{1'b0}}, m_axis_cpl_req_tag_next;
 reg [CPL_SIZE*8-1:0] m_axis_cpl_req_data_reg = {CPL_SIZE*8{1'b0}}, m_axis_cpl_req_data_next;
 reg m_axis_cpl_req_valid_reg = 1'b0, m_axis_cpl_req_valid_next;
 

@@ -328,6 +328,25 @@ async def run_test_nic(dut):
 
     tb.loopback_enable = False
 
+    tb.log.info("Multiple TX queues")
+
+    count = 1024
+
+    pkts = [bytearray([(x+k) % 256 for x in range(60)]) for k in range(count)]
+
+    tb.loopback_enable = True
+
+    for k in range(len(pkts)):
+        await tb.driver.interfaces[0].start_xmit(pkts[k], k % tb.driver.interfaces[0].tx_queue_count)
+
+    for k in range(count):
+        pkt = await tb.driver.interfaces[0].recv()
+
+        tb.log.info("Packet: %s", pkt)
+        assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
+
+    tb.loopback_enable = False
+
     tb.log.info("Multiple large packets")
 
     count = 64

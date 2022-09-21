@@ -313,7 +313,6 @@ reg [CL_TX_BUFFER_SIZE+1-1:0] buf_rd_ptr_reg = 0, buf_rd_ptr_next;
 reg desc_start_reg = 1'b1, desc_start_next;
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_len_reg = {DMA_CLIENT_LEN_WIDTH{1'b0}}, desc_len_next;
 
-reg [DMA_CLIENT_LEN_WIDTH-1:0] early_tx_req_status_len_reg = {DMA_CLIENT_LEN_WIDTH{1'b0}}, early_tx_req_status_len_next;
 reg [REQ_TAG_WIDTH-1:0] early_tx_req_status_tag_reg = {REQ_TAG_WIDTH{1'b0}}, early_tx_req_status_tag_next;
 reg early_tx_req_status_valid_reg = 1'b0, early_tx_req_status_valid_next;
 
@@ -543,7 +542,6 @@ always @* begin
     desc_start_next = desc_start_reg;
     desc_len_next = desc_len_reg;
 
-    early_tx_req_status_len_next = early_tx_req_status_len_reg;
     early_tx_req_status_tag_next = early_tx_req_status_tag_reg;
     early_tx_req_status_valid_next = early_tx_req_status_valid_reg;
 
@@ -642,7 +640,6 @@ always @* begin
             desc_table_dequeue_invalid = 1'b1;
 
             // return transmit request completion
-            early_tx_req_status_len_next = 0;
             early_tx_req_status_tag_next = desc_table_tag[s_axis_desc_req_status_tag & DESC_PTR_MASK];
             early_tx_req_status_valid_next = 1'b1;
 
@@ -836,16 +833,16 @@ always @* begin
     end
 
     // transmit request completion arbitration
-    if (finish_tx_req_status_valid_next && !m_axis_tx_req_status_valid_reg) begin
+    if (early_tx_req_status_valid_next) begin
+        m_axis_tx_req_status_len_next = 0;
+        m_axis_tx_req_status_tag_next = early_tx_req_status_tag_next;
+        m_axis_tx_req_status_valid_next = 1'b1;
+        early_tx_req_status_valid_next = 1'b0;
+    end else if (finish_tx_req_status_valid_next) begin
         m_axis_tx_req_status_len_next = finish_tx_req_status_len_next;
         m_axis_tx_req_status_tag_next = finish_tx_req_status_tag_next;
         m_axis_tx_req_status_valid_next = 1'b1;
         finish_tx_req_status_valid_next = 1'b0;
-    end else if (early_tx_req_status_valid_next && !m_axis_tx_req_status_valid_reg) begin
-        m_axis_tx_req_status_len_next = early_tx_req_status_len_next;
-        m_axis_tx_req_status_tag_next = early_tx_req_status_tag_next;
-        m_axis_tx_req_status_valid_next = 1'b1;
-        early_tx_req_status_valid_next = 1'b0;
     end
 end
 
@@ -888,7 +885,6 @@ always @(posedge clk) begin
     desc_start_reg <= desc_start_next;
     desc_len_reg <= desc_len_next;
 
-    early_tx_req_status_len_reg <= early_tx_req_status_len_next;
     early_tx_req_status_tag_reg <= early_tx_req_status_tag_next;
     early_tx_req_status_valid_reg <= early_tx_req_status_valid_next;
 

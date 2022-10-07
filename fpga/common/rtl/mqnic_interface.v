@@ -874,12 +874,12 @@ wire                                tx_desc_tuser;
 // completions
 wire [1:0]                          cpl_req_sel;
 wire [QUEUE_INDEX_WIDTH-1:0]        cpl_req_queue;
-wire [DESC_REQ_TAG_WIDTH-1:0]       cpl_req_tag;
+wire [CPL_REQ_TAG_WIDTH-1:0]        cpl_req_tag;
 wire [CPL_SIZE*8-1:0]               cpl_req_data;
 wire                                cpl_req_valid;
 wire                                cpl_req_ready;
 
-wire [DESC_REQ_TAG_WIDTH-1:0]       cpl_req_status_tag;
+wire [CPL_REQ_TAG_WIDTH-1:0]        cpl_req_status_tag;
 wire                                cpl_req_status_full;
 wire                                cpl_req_status_error;
 wire                                cpl_req_status_valid;

@@ -110,6 +110,9 @@ $(FPGA_TOP).xpr: create_project.tcl update_config.tcl
 	echo "reset_run impl_1" >> run_impl.tcl
 	echo "launch_runs -jobs 4 impl_1" >> run_impl.tcl
 	echo "wait_on_run impl_1" >> run_impl.tcl
+	echo "open_run impl_1" >> run_impl.tcl
+	echo "report_utilization -file $*_utilization.rpt" >> run_impl.tcl
+	echo "report_utilization -hierarchical -file $*_utilization_hierarchical.rpt" >> run_impl.tcl
 	vivado -nojournal -nolog -mode batch -source run_impl.tcl
 
 # bit file

@@ -120,11 +120,11 @@ $(FPGA_TOP).xpr: create_project.tcl update_config.tcl
 %.bit: %.runs/impl_1/%_routed.dcp
 	echo "open_project $*.xpr" > generate_bit.tcl
 	echo "open_run impl_1" >> generate_bit.tcl
-	echo "write_bitstream -force $*.bit" >> generate_bit.tcl
+	echo "write_bitstream -force $*.runs/impl_1/$*.bit" >> generate_bit.tcl
 	vivado -nojournal -nolog -mode batch -source generate_bit.tcl
+	ln -f -s $*.runs/impl_1/$*.bit .
 	mkdir -p rev
-	EXT=bit; COUNT=100; \
-	while [ -e rev/$*_rev$$COUNT.$$EXT ]; \
+	COUNT=100; \
+	while [ -e rev/$*_rev$$COUNT.bit ]; \
 	do COUNT=$$((COUNT+1)); done; \
-	cp $@ rev/$*_rev$$COUNT.$$EXT; \
-	echo "Output: rev/$*_rev$$COUNT.$$EXT";
+	cp -v $*.runs/impl_1/$*.bit rev/$*_rev$$COUNT.bit;

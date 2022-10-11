@@ -110,6 +110,9 @@ $(FPGA_TOP).xpr: create_project.tcl update_config.tcl
 	echo "reset_run impl_1" >> run_impl.tcl
 	echo "launch_runs -jobs 4 impl_1" >> run_impl.tcl
 	echo "wait_on_run impl_1" >> run_impl.tcl
+	echo "open_run impl_1" >> run_impl.tcl
+	echo "report_utilization -file $*_utilization.rpt" >> run_impl.tcl
+	echo "report_utilization -hierarchical -file $*_utilization_hierarchical.rpt" >> run_impl.tcl
 	vivado -nojournal -nolog -mode batch -source run_impl.tcl
 
 # bit file
@@ -121,9 +124,8 @@ $(FPGA_TOP).xpr: create_project.tcl update_config.tcl
 	vivado -nojournal -nolog -mode batch -source generate_bit.tcl
 	ln -f -s $*.runs/impl_1/$*.bit .
 	mkdir -p rev
-	EXT=bit; COUNT=100; \
-	while [ -e rev/$*_rev$$COUNT.$$EXT ]; \
+	COUNT=100; \
+	while [ -e rev/$*_rev$$COUNT.bit ]; \
 	do COUNT=$$((COUNT+1)); done; \
-	cp $*.bit rev/$*_rev$$COUNT.bit; \
-	cp $*.xsa rev/$*_rev$$COUNT.xsa; \
-	echo "Output: rev/$*_rev$$COUNT.$$EXT";
+	cp -v $*.runs/impl_1/$*.bit rev/$*_rev$$COUNT.bit; \
+	cp -v $*.xsa rev/$*_rev$$COUNT.xsa;

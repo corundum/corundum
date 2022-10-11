@@ -37,6 +37,9 @@
 CONFIG ?= config.mk
 -include ../$(CONFIG)
 
+FPGA_TOP ?= fpga
+PROJECT ?= $(FPGA_TOP)
+
 SYN_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(SYN_FILES))) $(filter /% ./%,$(SYN_FILES))
 INC_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(INC_FILES))) $(filter /% ./%,$(INC_FILES))
 XCI_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(XCI_FILES))) $(filter /% ./%,$(XCI_FILES))
@@ -46,7 +49,7 @@ CONFIG_TCL_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(CONFIG_TCL_FILE
 ifdef XDC_FILES
   XDC_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(XDC_FILES))) $(filter /% ./%,$(XDC_FILES))
 else
-  XDC_FILES_REL = $(FPGA_TOP).xdc
+  XDC_FILES_REL = $(PROJECT).xdc
 endif
 
 ###################################################################
@@ -58,10 +61,10 @@ endif
 
 all: fpga
 
-fpga: $(FPGA_TOP).bit
+fpga: $(PROJECT).bit
 
-vivado: $(FPGA_TOP).xpr
-	vivado $(FPGA_TOP).xpr
+vivado: $(PROJECT).xpr
+	vivado $(PROJECT).xpr
 
 tmpclean::
 	-rm -rf *.log *.jou *.cache *.gen *.hbs *.hw *.ip_user_files *.runs *.xpr *.html *.xml *.sim *.srcs *.str .Xil defines.v
@@ -83,7 +86,7 @@ create_project.tcl: Makefile $(XCI_FILES_REL) $(IP_TCL_FILES_REL)
 	rm -rf defines.v
 	touch defines.v
 	for x in $(DEFS); do echo '`define' $$x >> defines.v; done
-	echo "create_project -force -part $(FPGA_PART) $(FPGA_TOP)" > $@
+	echo "create_project -force -part $(FPGA_PART) $(PROJECT)" > $@
 	echo "add_files -fileset sources_1 defines.v $(SYN_FILES_REL)" >> $@
 	echo "set_property top $(FPGA_TOP) [current_fileset]" >> $@
 	echo "add_files -fileset constrs_1 $(XDC_FILES_REL)" >> $@
@@ -92,45 +95,45 @@ create_project.tcl: Makefile $(XCI_FILES_REL) $(IP_TCL_FILES_REL)
 	for x in $(CONFIG_TCL_FILES_REL); do echo "source $$x" >> $@; done
 
 update_config.tcl: $(CONFIG_TCL_FILES_REL)
-	echo "open_project -quiet $(FPGA_TOP).xpr" > $@
+	echo "open_project -quiet $(PROJECT).xpr" > $@
 	for x in $(CONFIG_TCL_FILES_REL); do echo "source $$x" >> $@; done
 
-$(FPGA_TOP).xpr: create_project.tcl update_config.tcl
+$(PROJECT).xpr: create_project.tcl update_config.tcl
 	vivado -nojournal -nolog -mode batch $(foreach x,$?,-source $x)
 
 # synthesis run
-%.runs/synth_1/%.dcp: %.xpr $(SYN_FILES_REL) $(INC_FILES_REL) $(XDC_FILES_REL) $(CONFIG_TCL_FILES_REL)
-	echo "open_project $*.xpr" > run_synth.tcl
+$(PROJECT).runs/synth_1/$(PROJECT).dcp: $(PROJECT).xpr $(SYN_FILES_REL) $(INC_FILES_REL) $(XDC_FILES_REL) $(CONFIG_TCL_FILES_REL)
+	echo "open_project $(PROJECT).xpr" > run_synth.tcl
 	echo "reset_run synth_1" >> run_synth.tcl
 	echo "launch_runs -jobs 4 synth_1" >> run_synth.tcl
 	echo "wait_on_run synth_1" >> run_synth.tcl
 	vivado -nojournal -nolog -mode batch -source run_synth.tcl
 
 # implementation run
-%.runs/impl_1/%_routed.dcp: %.runs/synth_1/%.dcp
-	echo "open_project $*.xpr" > run_impl.tcl
+$(PROJECT).runs/impl_1/$(PROJECT)_routed.dcp: $(PROJECT).runs/synth_1/$(PROJECT).dcp
+	echo "open_project $(PROJECT).xpr" > run_impl.tcl
 	echo "reset_run impl_1" >> run_impl.tcl
 	echo "launch_runs -jobs 4 impl_1" >> run_impl.tcl
 	echo "wait_on_run impl_1" >> run_impl.tcl
 	echo "open_run impl_1" >> run_impl.tcl
-	echo "report_utilization -file $*_utilization.rpt" >> run_impl.tcl
-	echo "report_utilization -hierarchical -file $*_utilization_hierarchical.rpt" >> run_impl.tcl
+	echo "report_utilization -file $(PROJECT)_utilization.rpt" >> run_impl.tcl
+	echo "report_utilization -hierarchical -file $(PROJECT)_utilization_hierarchical.rpt" >> run_impl.tcl
 	vivado -nojournal -nolog -mode batch -source run_impl.tcl
 
 # bit file
-%.bit %.ltx %.xsa: %.runs/impl_1/%_routed.dcp
-	echo "open_project $*.xpr" > generate_bit.tcl
+$(PROJECT).bit $(PROJECT).ltx $(PROJECT).xsa: $(PROJECT).runs/impl_1/$(PROJECT)_routed.dcp
+	echo "open_project $(PROJECT).xpr" > generate_bit.tcl
 	echo "open_run impl_1" >> generate_bit.tcl
-	echo "write_bitstream -force $*.runs/impl_1/$*.bit" >> generate_bit.tcl
-	echo "write_debug_probes -force $*.runs/impl_1/$*.ltx" >> generate_bit.tcl
-	echo "write_hw_platform -fixed -force -include_bit $*.xsa" >> generate_bit.tcl
+	echo "write_bitstream -force $(PROJECT).runs/impl_1/$(PROJECT).bit" >> generate_bit.tcl
+	echo "write_debug_probes -force $(PROJECT).runs/impl_1/$(PROJECT).ltx" >> generate_bit.tcl
+	echo "write_hw_platform -fixed -force -include_bit $(PROJECT).xsa" >> generate_bit.tcl
 	vivado -nojournal -nolog -mode batch -source generate_bit.tcl
-	ln -f -s $*.runs/impl_1/$*.bit .
-	if [ -e $*.runs/impl_1/$*.ltx ]; then ln -f -s $*.runs/impl_1/$*.ltx .; fi
+	ln -f -s $(PROJECT).runs/impl_1/$(PROJECT).bit .
+	if [ -e $(PROJECT).runs/impl_1/$(PROJECT).ltx ]; then ln -f -s $(PROJECT).runs/impl_1/$(PROJECT).ltx .; fi
 	mkdir -p rev
 	COUNT=100; \
-	while [ -e rev/$*_rev$$COUNT.bit ]; \
+	while [ -e rev/$(PROJECT)_rev$$COUNT.bit ]; \
 	do COUNT=$$((COUNT+1)); done; \
-	cp -pv $*.runs/impl_1/$*.bit rev/$*_rev$$COUNT.bit; \
-	if [ -e $*.runs/impl_1/$*.ltx ]; then cp -pv $*.runs/impl_1/$*.ltx rev/$*_rev$$COUNT.ltx; fi; \
-	cp -pv $*.xsa rev/$*_rev$$COUNT.xsa;
+	cp -pv $(PROJECT).runs/impl_1/$(PROJECT).bit rev/$(PROJECT)_rev$$COUNT.bit; \
+	if [ -e $(PROJECT).runs/impl_1/$(PROJECT).ltx ]; then cp -pv $(PROJECT).runs/impl_1/$(PROJECT).ltx rev/$(PROJECT)_rev$$COUNT.ltx; fi; \
+	cp -pv $(PROJECT).xsa rev/$(PROJECT)_rev$$COUNT.xsa;

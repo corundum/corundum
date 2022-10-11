@@ -68,7 +68,8 @@ tmpclean::
 	-rm -rf create_project.tcl update_config.tcl run_synth.tcl run_impl.tcl generate_bit.tcl
 
 clean:: tmpclean
-	-rm -rf *.bit program.tcl generate_mcs.tcl *.mcs *.prm flash.tcl
+	-rm -rf *.bit *.ltx program.tcl generate_mcs.tcl *.mcs *.prm flash.tcl
+	-rm -rf *_utilization.rpt *_utilization_hierarchical.rpt
 
 distclean:: clean
 	-rm -rf rev

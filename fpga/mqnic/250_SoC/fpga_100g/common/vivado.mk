@@ -85,6 +85,7 @@ create_project.tcl: Makefile $(XCI_FILES_REL) $(IP_TCL_FILES_REL)
 	for x in $(DEFS); do echo '`define' $$x >> defines.v; done
 	echo "create_project -force -part $(FPGA_PART) $(FPGA_TOP)" > $@
 	echo "add_files -fileset sources_1 defines.v $(SYN_FILES_REL)" >> $@
+	echo "set_property top $(FPGA_TOP) [current_fileset]" >> $@
 	echo "add_files -fileset constrs_1 $(XDC_FILES_REL)" >> $@
 	for x in $(XCI_FILES_REL); do echo "import_ip $$x" >> $@; done
 	for x in $(IP_TCL_FILES_REL); do echo "source $$x" >> $@; done

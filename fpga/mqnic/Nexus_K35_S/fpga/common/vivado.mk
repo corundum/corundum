@@ -117,14 +117,17 @@ $(FPGA_TOP).xpr: create_project.tcl update_config.tcl
 	vivado -nojournal -nolog -mode batch -source run_impl.tcl
 
 # bit file
-%.bit: %.runs/impl_1/%_routed.dcp
+%.bit %.ltx: %.runs/impl_1/%_routed.dcp
 	echo "open_project $*.xpr" > generate_bit.tcl
 	echo "open_run impl_1" >> generate_bit.tcl
 	echo "write_bitstream -force $*.runs/impl_1/$*.bit" >> generate_bit.tcl
+	echo "write_debug_probes -force $*.runs/impl_1/$*.ltx" >> generate_bit.tcl
 	vivado -nojournal -nolog -mode batch -source generate_bit.tcl
 	ln -f -s $*.runs/impl_1/$*.bit .
+	if [ -e $*.runs/impl_1/$*.ltx ]; then ln -f -s $*.runs/impl_1/$*.ltx .; fi
 	mkdir -p rev
 	COUNT=100; \
 	while [ -e rev/$*_rev$$COUNT.bit ]; \
 	do COUNT=$$((COUNT+1)); done; \
-	cp -v $*.runs/impl_1/$*.bit rev/$*_rev$$COUNT.bit;
+	cp -pv $*.runs/impl_1/$*.bit rev/$*_rev$$COUNT.bit; \
+	if [ -e $*.runs/impl_1/$*.ltx ]; then cp -pv $*.runs/impl_1/$*.ltx rev/$*_rev$$COUNT.ltx; fi

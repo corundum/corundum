@@ -4,8 +4,9 @@
 
 This design targets the Xilinx ZCU106 FPGA board.
 
-FPGA: xczu7ev-ffvc1156-2-e
-PHY: 10G BASE-R PHY IP core and internal GTH transceiver
+* FPGA: xczu7ev-ffvc1156-2-e
+* PHY: 10G BASE-R PHY IP core and internal GTH transceiver
+* RAM: 2 GB DDR4 2400 (256M x64)
 
 ## How to build
 

@@ -7,6 +7,7 @@ This design targets the BittWare 250-SoC FPGA board.
 * FPGA: xczu19eg-ffvd1760-2-e
 * MAC: Xilinx 100G CMAC
 * PHY: 100G CAUI-4 CMAC and internal GTY transceivers
+* RAM: 4 GB DDR4 2666 (512M x72)
 
 ## How to build
 

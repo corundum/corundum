@@ -6,6 +6,7 @@ This design targets the Xilinx Alveo U50 FPGA board.
 
 * FPGA: xcu50-fsvh2104-2-e
 * PHY: 10G BASE-R PHY IP core and internal GTY transceivers
+* RAM: 8GB HBM2
 
 ## How to build
 

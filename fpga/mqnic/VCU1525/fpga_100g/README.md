@@ -7,6 +7,7 @@ This design targets the Xilinx VCU1525 FPGA board.
 * FPGA: xcvu9p-fsgd2104-2L-e
 * MAC: Xilinx 100G CMAC
 * PHY: 100G CAUI-4 CMAC and internal GTY transceivers
+* RAM: 64 GB DDR4 2400 (4x 2G x72 DIMM)
 
 ## How to build
 

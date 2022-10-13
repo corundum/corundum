@@ -4,8 +4,9 @@
 
 This design targets the Xilinx Alveo U250 FPGA board.
 
-FPGA: xcu250-figd2104-2-e
-PHY: 10G BASE-R PHY IP core and internal GTY transceiver
+* FPGA: xcu250-figd2104-2-e
+* PHY: 10G BASE-R PHY IP core and internal GTY transceiver
+* RAM: 64 GB DDR4 2400 (4x 2G x72 DIMM)
 
 ## How to build
 

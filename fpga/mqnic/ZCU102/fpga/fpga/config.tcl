@@ -132,6 +132,12 @@ dict set params MAX_RX_SIZE "9214"
 dict set params TX_RAM_SIZE "32768"
 dict set params RX_RAM_SIZE "32768"
 
+# RAM configuration
+dict set params DDR_CH "1"
+dict set params DDR_ENABLE "1"
+dict set params AXI_DDR_ID_WIDTH "8"
+dict set params AXI_DDR_MAX_BURST_LEN "256"
+
 # Application block configuration
 dict set params APP_ID "32'h00000000"
 dict set params APP_ENABLE "0"
@@ -192,6 +198,19 @@ dict set params STAT_DMA_ENABLE "1"
 dict set params STAT_AXI_ENABLE "1"
 dict set params STAT_INC_WIDTH "24"
 dict set params STAT_ID_WIDTH "12"
+
+# DDR4 MIG settings
+if {[dict get $params DDR_ENABLE]} {
+    set ddr4 [get_ips ddr4_0]
+
+    # set AXI ID width
+    set_property CONFIG.C0.DDR4_AxiIDWidth [dict get $params AXI_DDR_ID_WIDTH] $ddr4
+
+    # extract AXI configuration
+    dict set params AXI_DDR_DATA_WIDTH [get_property CONFIG.C0.DDR4_AxiDataWidth $ddr4]
+    dict set params AXI_DDR_ADDR_WIDTH [get_property CONFIG.C0.DDR4_AxiAddressWidth $ddr4]
+    dict set params AXI_DDR_NARROW_BURST [expr [get_property CONFIG.C0.DDR4_AxiNarrowBurst $ddr4] && 1]
+}
 
 # apply parameters to top-level
 set param_list {}

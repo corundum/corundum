@@ -72,6 +72,11 @@
 	};
 };
 
+/* USER SI570 (U42) */
+&si570_1 {
+	clock-frequency = <300000000>;
+};
+
 /* USER MGT SI570 (U56) */
 &si570_2 {
 	clock-frequency = <156250000>;

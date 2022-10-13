@@ -4,8 +4,9 @@
 
 This design targets the Xilinx VCU1525 FPGA board.
 
-FPGA: xcvu9p-fsgd2104-2L-e
-PHY: 10G BASE-R PHY IP core and internal GTY transceiver
+* FPGA: xcvu9p-fsgd2104-2L-e
+* PHY: 10G BASE-R PHY IP core and internal GTY transceiver
+* RAM: 64 GB DDR4 2400 (4x 2G x72 DIMM)
 
 ## How to build
 

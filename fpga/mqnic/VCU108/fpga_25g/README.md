@@ -4,8 +4,9 @@
 
 This design targets the Xilinx VCU108 FPGA board.
 
-FPGA: xcvu095-ffva2104-2-e
-PHY: 10G BASE-R PHY IP core and internal GTY transceiver
+* FPGA: xcvu095-ffva2104-2-e
+* PHY: 10G BASE-R PHY IP core and internal GTY transceiver
+* RAM: 4 GB DDR4 2400 (2x 256M x80)
 
 ## How to build
 

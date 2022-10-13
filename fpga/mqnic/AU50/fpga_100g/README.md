@@ -7,6 +7,7 @@ This design targets the Xilinx Alveo U50 FPGA board.
 * FPGA: xcu50-fsvh2104-2-e
 * MAC: Xilinx 100G CMAC
 * PHY: 100G CAUI-4 CMAC and internal GTY transceivers
+* RAM: 8GB HBM2
 
 ## How to build
 

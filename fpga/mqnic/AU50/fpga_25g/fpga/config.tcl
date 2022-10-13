@@ -148,6 +148,13 @@ dict set params MAX_TX_SIZE "9214"
 dict set params MAX_RX_SIZE "9214"
 dict set params TX_RAM_SIZE "32768"
 dict set params RX_RAM_SIZE "131072"
+
+# RAM configuration
+dict set params HBM_CH "32"
+dict set params HBM_ENABLE "1"
+dict set params HBM_GROUP_SIZE "32"
+dict set params AXI_HBM_ADDR_WIDTH "33"
+dict set params AXI_HBM_MAX_BURST_LEN "256"
  
 # Application block configuration
 dict set params APP_ID "32'h00000000"

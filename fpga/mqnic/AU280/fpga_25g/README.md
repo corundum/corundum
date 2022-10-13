@@ -6,6 +6,8 @@ This design targets the Xilinx Alveo U280 FPGA board.
 
 * FPGA: xcu280-fsvh2892-2L-e
 * PHY: 10G BASE-R PHY IP core and internal GTY transceivers
+* RAM: 32 GB DDR4 2400 (2x 2G x72 DIMM)
+* HBM: 8GB HBM2
 
 ## How to build
 

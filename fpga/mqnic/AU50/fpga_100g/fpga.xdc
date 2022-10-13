@@ -23,9 +23,9 @@ set_operating_conditions -design_power_budget 63
 #create_clock -period 10 -name clk_100mhz_0 [get_ports clk_100mhz_0_p]
 
 # 100 MHz
-#set_property -dict {LOC BB18 IOSTANDARD LVDS} [get_ports clk_100mhz_1_p]
-#set_property -dict {LOC BC18 IOSTANDARD LVDS} [get_ports clk_100mhz_1_n]
-#create_clock -period 10 -name clk_100mhz_1 [get_ports clk_100mhz_1_p]
+set_property -dict {LOC BB18 IOSTANDARD LVDS} [get_ports clk_100mhz_1_p]
+set_property -dict {LOC BC18 IOSTANDARD LVDS} [get_ports clk_100mhz_1_n]
+create_clock -period 10 -name clk_100mhz_1 [get_ports clk_100mhz_1_p]
 
 # LEDs
 set_property -dict {LOC E18 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qsfp_led_act]

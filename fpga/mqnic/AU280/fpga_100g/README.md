@@ -7,6 +7,8 @@ This design targets the Xilinx Alveo U280 FPGA board.
 * FPGA: xcu280-fsvh2892-2L-e
 * MAC: Xilinx 100G CMAC
 * PHY: 100G CAUI-4 CMAC and internal GTY transceivers
+* RAM: 32 GB DDR4 2400 (2x 2G x72 DIMM)
+* HBM: 8GB HBM2
 
 ## How to build
 

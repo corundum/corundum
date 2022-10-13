@@ -49,9 +49,9 @@ This section details PCIe form-factor targets, which interface with a separate h
     Nexus K35-S              Gen 3 x8   2x SFP+     \-                               \-
     Nexus K3P-S              Gen 3 x8   2x SFP28    4 GB DDR4 (1G x32)               \-
     Nexus K3P-Q              Gen 3 x8   2x QSFP28   8 GB DDR4 (1G x72)               \-
-    fb2CG\@KU15P             Gen 3 x16  2x QSFP28   16 GB DDR4 2400 (4x 512M x72)    \-
+    fb2CG\@KU15P             Gen 3 x16  2x QSFP28   16 GB DDR4 2666 (4x 512M x72)    \-
     NetFPGA SUME             Gen 3 x8   4x SFP+     8 GB DDR3 1866 (2x 512M x64)     \-
-    250-SoC                  Gen 3 x16  2x QSFP28   4 GB DDR4 2400 (512M x72)        \-
+    250-SoC                  Gen 3 x16  2x QSFP28   4 GB DDR4 2666 (512M x72)        \-
     XUP-P3R                  Gen 3 x16  4x QSFP28   4x DDR4 2400 DIMM (4x x72)       \-
     DK-DEV-1SMX-H-A          Gen 3 x16  2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     8 GB
     DK-DEV-1SMC-H-A          Gen 3 x16  2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     16 GB
@@ -62,7 +62,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     Alveo U250               Gen 3 x16  2x QSFP28   64 GB DDR4 2400 (4x 2G x72)      \-
     Alveo U280               Gen 3 x16  2x QSFP28   32 GB DDR4 2400 (2x 2G x72)      8 GB
     VCU108                   Gen 3 x8   1x QSFP28   4 GB DDR4 2400 (2x 256M x80)     \-
-    VCU118                   Gen 3 x16  2x QSFP28   4 GB DDR4 2400 (2x 256M x80)     \-
+    VCU118                   Gen 3 x16  2x QSFP28   4 GB DDR4 2666 (2x 256M x80)     \-
     VCU1525                  Gen 3 x16  2x QSFP28   64 GB DDR4 2400 (4x 2G x72)      \-
     ZCU106                   Gen 3 x4   2x SFP+     2 GB DDR4 2400 (256M x64)        \-
     =======================  =========  ==========  ===============================  =====
@@ -186,7 +186,7 @@ This section details SoC targets, which interface with CPU cores on the same dev
     =================  =========  ==========  ===============================  =====
     Board              PCIe IF    Network IF  DDR                              HBM
     =================  =========  ==========  ===============================  =====
-    ZCU102             \-         4x SFP+     2 GB DDR4 2400 (256M x64)        \-
+    ZCU102             \-         4x SFP+     512 MB DDR4 2400 (256M x16)      \-
     ZCU106             Gen 3 x4   2x SFP+     2 GB DDR4 2400 (256M x64)        \-
     =================  =========  ==========  ===============================  =====
 

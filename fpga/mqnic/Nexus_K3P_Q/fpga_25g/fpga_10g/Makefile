@@ -137,6 +137,7 @@ XDC_FILES += ../../../common/syn/vivado/tdma_ber_ch.tcl
 # IP
 IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl
 IP_TCL_FILES += ip/eth_xcvr_gty.tcl
+IP_TCL_FILES += ip/ddr4_0.tcl
 
 # Configuration
 CONFIG_TCL_FILES = ./config.tcl

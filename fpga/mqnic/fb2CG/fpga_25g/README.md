@@ -4,8 +4,9 @@
 
 This design targets the Silicom fb2CG@KU15P FPGA board.
 
-FPGA: xcku15p-ffve1760-2-e
-PHY: 25G BASE-R PHY IP core and internal GTY transceiver
+* FPGA: xcku15p-ffve1760-2-e
+* PHY: 25G BASE-R PHY IP core and internal GTY transceiver
+* RAM: 16GB DDR4 2666 (4x 512M x72)
 
 ## How to build
 

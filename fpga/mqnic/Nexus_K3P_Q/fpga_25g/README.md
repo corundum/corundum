@@ -6,6 +6,7 @@ This design targets the Cisco Nexus K3P-Q FPGA board.
 
 * FPGA: xcku3p-ffvb676-2-e
 * PHY: 25G BASE-R PHY IP core and internal GTY transceiver
+* RAM: 8 GB DDR4 (1G x72)
 
 ## How to build
 

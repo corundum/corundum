@@ -4,8 +4,9 @@
 
 This design targets the Xilinx VCU118 FPGA board.
 
-FPGA: xcvu9p-flga2104-2L-e
-PHY: 10G BASE-R PHY IP core and internal GTY transceiver
+* FPGA: xcvu9p-flga2104-2L-e
+* PHY: 10G BASE-R PHY IP core and internal GTY transceiver
+* RAM: 4 GB DDR4 2666 (2x 256M x80)
 
 ## How to build
 

@@ -6,6 +6,7 @@ This design targets the BittWare XUP-P3R FPGA board.
 
 * FPGA: xcvu9p-flgb2104-2-e
 * PHY: 10G BASE-R PHY IP core and internal GTY transceiver
+* RAM: 4x DDR4 DIMM
 
 ## How to build
 

@@ -6,6 +6,7 @@ This design targets the Dini Group DNPCIe_40G_KU_LL_2QSFP FPGA board.
 
 * FPGA: xcku040-ffva1156-2-e
 * PHY: 10G BASE-R PHY IP core and internal GTH transceiver
+* RAM: 4 GB DDR4 2400 (512M x72)
 
 ## How to build
 

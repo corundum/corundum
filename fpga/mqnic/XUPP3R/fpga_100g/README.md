@@ -2,11 +2,12 @@
 
 ## Introduction
 
-This design targets the BittWare XUP-PR3 FPGA board.
+This design targets the BittWare XUP-P3R FPGA board.
 
 * FPGA: xcvu9p-flgb2104-2-e
 * MAC: Xilinx 100G CMAC
 * PHY: 100G CAUI-4 CMAC and internal GTY transceivers
+* RAM: 4x DDR4 DIMM
 
 ## How to build
 
@@ -18,6 +19,6 @@ installed, otherwise the driver cannot be compiled.
 
 ## How to test
 
-Run make program to program the XUP-PR3 board with Vivado.  Then load the
+Run make program to program the XUP-P3R board with Vivado.  Then load the
 driver with insmod mqnic.ko.  Check dmesg for output from driver
 initialization.

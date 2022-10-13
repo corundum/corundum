@@ -7,6 +7,7 @@ This design targets the Alpha Data ADM-PCIE-9V3 FPGA board.
 * FPGA: xcvu3p-ffvc1517-2-i
 * MAC: Xilinx 100G CMAC
 * PHY: 100G CAUI-4 CMAC and internal GTY transceivers
+* RAM: 16 GB DDR4 2400 (2x 1G x72)
 
 ## How to build
 

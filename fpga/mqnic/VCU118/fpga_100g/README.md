@@ -7,6 +7,7 @@ This design targets the Xilinx VCU118 FPGA board.
 * FPGA: xcvu9p-flga2104-2L-e
 * MAC: Xilinx 100G CMAC
 * PHY: 100G CAUI-4 CMAC and internal GTY transceivers
+* RAM: 4 GB DDR4 2666 (2x 256M x80)
 
 ## How to build
 

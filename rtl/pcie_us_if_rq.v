@@ -263,7 +263,7 @@ reg [127:0] out_shift_tlp_data_reg = 0, out_shift_tlp_data_next;
 reg [3:0] out_shift_tlp_strb_reg = 0, out_shift_tlp_strb_next;
 
 reg [127:0] seg_tlp_hdr;
-reg [127:0] seg_rc_hdr;
+reg [127:0] seg_rq_hdr;
 reg [INT_TLP_SEG_COUNT*3-1:0] eop_index;
 
 reg [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata_reg = 0, m_axis_rq_tdata_next;
@@ -651,32 +651,32 @@ always @* begin
     for (seg = 0; seg < INT_TLP_SEG_COUNT; seg = seg + 1) begin
         // remap header
         seg_tlp_hdr = fifo_tlp_hdr[out_sel_port[seg]][out_sel_seg[seg]*TLP_HDR_WIDTH +: TLP_HDR_WIDTH];
-        seg_rc_hdr[1:0] = seg_tlp_hdr[107:106]; // address type
-        seg_rc_hdr[63:2] = seg_tlp_hdr[63:2]; // address
-        seg_rc_hdr[74:64] = seg_tlp_hdr[105:96]; // DWORD count
+        seg_rq_hdr[1:0] = seg_tlp_hdr[107:106]; // address type
+        seg_rq_hdr[63:2] = seg_tlp_hdr[63:2]; // address
+        seg_rq_hdr[74:64] = seg_tlp_hdr[105:96]; // DWORD count
         casez (seg_tlp_hdr[127:120])
-            8'b00z_00000: seg_rc_hdr[78:75] = REQ_MEM_READ;
-            8'b00z_00001: seg_rc_hdr[78:75] = REQ_MEM_READ_LOCKED;
-            8'b01z_00000: seg_rc_hdr[78:75] = REQ_MEM_WRITE;
-            8'b00z_00010: seg_rc_hdr[78:75] = REQ_IO_READ;
-            8'b01z_00010: seg_rc_hdr[78:75] = REQ_IO_WRITE;
-            8'b000_00100: seg_rc_hdr[78:75] = REQ_CFG_READ_0;
-            8'b010_00100: seg_rc_hdr[78:75] = REQ_CFG_WRITE_0;
-            8'b000_00101: seg_rc_hdr[78:75] = REQ_CFG_READ_1;
-            8'b010_00101: seg_rc_hdr[78:75] = REQ_CFG_WRITE_1;
-            8'b01z_01100: seg_rc_hdr[78:75] = REQ_MEM_FETCH_ADD;
-            8'b01z_01101: seg_rc_hdr[78:75] = REQ_MEM_SWAP;
-            8'b01z_01110: seg_rc_hdr[78:75] = REQ_MEM_CAS;
-            default:      seg_rc_hdr[78:75] = REQ_MEM_WRITE;
+            8'b00z_00000: seg_rq_hdr[78:75] = REQ_MEM_READ;
+            8'b00z_00001: seg_rq_hdr[78:75] = REQ_MEM_READ_LOCKED;
+            8'b01z_00000: seg_rq_hdr[78:75] = REQ_MEM_WRITE;
+            8'b00z_00010: seg_rq_hdr[78:75] = REQ_IO_READ;
+            8'b01z_00010: seg_rq_hdr[78:75] = REQ_IO_WRITE;
+            8'b000_00100: seg_rq_hdr[78:75] = REQ_CFG_READ_0;
+            8'b010_00100: seg_rq_hdr[78:75] = REQ_CFG_WRITE_0;
+            8'b000_00101: seg_rq_hdr[78:75] = REQ_CFG_READ_1;
+            8'b010_00101: seg_rq_hdr[78:75] = REQ_CFG_WRITE_1;
+            8'b01z_01100: seg_rq_hdr[78:75] = REQ_MEM_FETCH_ADD;
+            8'b01z_01101: seg_rq_hdr[78:75] = REQ_MEM_SWAP;
+            8'b01z_01110: seg_rq_hdr[78:75] = REQ_MEM_CAS;
+            default:      seg_rq_hdr[78:75] = REQ_MEM_WRITE;
         endcase
-        seg_rc_hdr[79] = seg_tlp_hdr[110]; // poisoned request
-        seg_rc_hdr[95:80] = seg_tlp_hdr[95:80]; // requester ID
-        seg_rc_hdr[103:96] = seg_tlp_hdr[79:72]; // tag
-        seg_rc_hdr[119:104] = 16'd0; // completer ID
-        seg_rc_hdr[120] = 1'b0; // requester ID enable
-        seg_rc_hdr[123:121] = seg_tlp_hdr[118:116]; // traffic class
-        seg_rc_hdr[126:124] = {seg_tlp_hdr[114], seg_tlp_hdr[109:108]}; // attr
-        seg_rc_hdr[127] = 1'b0; // force ECRC
+        seg_rq_hdr[79] = seg_tlp_hdr[110]; // poisoned request
+        seg_rq_hdr[95:80] = seg_tlp_hdr[95:80]; // requester ID
+        seg_rq_hdr[103:96] = seg_tlp_hdr[79:72]; // tag
+        seg_rq_hdr[119:104] = 16'd0; // completer ID
+        seg_rq_hdr[120] = 1'b0; // requester ID enable
+        seg_rq_hdr[123:121] = seg_tlp_hdr[118:116]; // traffic class
+        seg_rq_hdr[126:124] = {seg_tlp_hdr[114], seg_tlp_hdr[109:108]}; // attr
+        seg_rq_hdr[127] = 1'b0; // force ECRC
 
         // mux for output segments
         out_tlp_be[seg*8+0 +: 4] = seg_tlp_hdr[67:64]; // first BE
@@ -688,15 +688,15 @@ always @* begin
 
             if (AXIS_PCIE_DATA_WIDTH == 64) begin
                 if (out_tlp_hdr1[seg]) begin
-                    out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH] = seg_rc_hdr[63:0];
+                    out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH] = seg_rq_hdr[63:0];
                     out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH] = 2'b11;
                 end else if (out_tlp_hdr2[seg]) begin
-                    out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH] = seg_rc_hdr[127:64];
+                    out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH] = seg_rq_hdr[127:64];
                     out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH] = 2'b11;
                 end
             end else begin
                 if (out_tlp_hdr1[seg]) begin
-                    out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH] = seg_rc_hdr;
+                    out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: INT_TLP_SEG_DATA_WIDTH] = seg_rq_hdr;
                     out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: INT_TLP_SEG_STRB_WIDTH] = 4'b1111;
                 end
             end
@@ -715,7 +715,7 @@ always @* begin
             end
 
             if (out_tlp_hdr1[seg]) begin
-                out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: 128] = seg_rc_hdr;
+                out_tlp_data[seg*INT_TLP_SEG_DATA_WIDTH +: 128] = seg_rq_hdr;
                 out_tlp_strb[seg*INT_TLP_SEG_STRB_WIDTH +: 4] = 4'b1111;
             end
 

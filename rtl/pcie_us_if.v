@@ -153,8 +153,8 @@ module pcie_us_if #
     /*
      * Configuration status interface
      */
-    output wire [2:0]                                    cfg_max_payload,
-    output wire [2:0]                                    cfg_max_read_req,
+    input  wire [2:0]                                    cfg_max_payload,
+    input  wire [2:0]                                    cfg_max_read_req,
 
     /*
      * Configuration flow control interface

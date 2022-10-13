@@ -151,11 +151,11 @@ dict set params RX_RAM_SIZE "32768"
 
 # RAM configuration
 dict set params DDR_CH "2"
-dict set params DDR_ENABLE "1"
+dict set params DDR_ENABLE "0"
 dict set params AXI_DDR_ID_WIDTH "8"
 dict set params AXI_DDR_MAX_BURST_LEN "256"
 dict set params HBM_CH "32"
-dict set params HBM_ENABLE "1"
+dict set params HBM_ENABLE "0"
 dict set params HBM_GROUP_SIZE "32"
 dict set params AXI_HBM_ADDR_WIDTH "33"
 dict set params AXI_HBM_MAX_BURST_LEN "256"

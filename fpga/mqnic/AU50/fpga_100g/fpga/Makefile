@@ -117,13 +117,13 @@ XDC_FILES += lib/axis/syn/vivado/sync_reset.tcl
 XDC_FILES += lib/eth/syn/vivado/ptp_clock_cdc.tcl
 XDC_FILES += ../../../common/syn/vivado/mqnic_port.tcl
 XDC_FILES += ../../../common/syn/vivado/mqnic_ptp_clock.tcl
-XDC_FILES += hbm.xdc
+#XDC_FILES += hbm.xdc
 
 # IP
 IP_TCL_FILES = ip/pcie4c_uscale_plus_0.tcl
 IP_TCL_FILES += ip/cmac_usplus_0.tcl
 IP_TCL_FILES += ip/cms.tcl
-IP_TCL_FILES += ip/hbm_0.tcl
+#IP_TCL_FILES += ip/hbm_0.tcl
 
 # Configuration
 CONFIG_TCL_FILES = ./config.tcl

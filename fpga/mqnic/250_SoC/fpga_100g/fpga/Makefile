@@ -117,7 +117,7 @@ XDC_FILES += ../../../common/syn/vivado/mqnic_ptp_clock.tcl
 IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl
 IP_TCL_FILES += ip/cmac_usplus_0.tcl
 IP_TCL_FILES += ip/cmac_usplus_1.tcl
-IP_TCL_FILES += ip/ddr4_0.tcl
+#IP_TCL_FILES += ip/ddr4_0.tcl
 
 # Configuration
 CONFIG_TCL_FILES = ./config.tcl

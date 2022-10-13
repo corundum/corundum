@@ -111,7 +111,7 @@ module fpga #
 
     // RAM configuration
     parameter HBM_CH = 32,
-    parameter HBM_ENABLE = 1,
+    parameter HBM_ENABLE = 0,
     parameter HBM_GROUP_SIZE = 32,
     parameter AXI_HBM_ADDR_WIDTH = 33,
     parameter AXI_HBM_MAX_BURST_LEN = 256,

@@ -111,7 +111,7 @@ module fpga #
 
     // RAM configuration
     parameter DDR_CH = 4,
-    parameter DDR_ENABLE = 1,
+    parameter DDR_ENABLE = 0,
     parameter AXI_DDR_DATA_WIDTH = 512,
     parameter AXI_DDR_ADDR_WIDTH = 34,
     parameter AXI_DDR_ID_WIDTH = 8,

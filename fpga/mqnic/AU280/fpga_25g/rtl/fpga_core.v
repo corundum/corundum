@@ -124,7 +124,7 @@ module fpga_core #
 
     // RAM configuration
     parameter DDR_CH = 2,
-    parameter DDR_ENABLE = 1,
+    parameter DDR_ENABLE = 0,
     parameter AXI_DDR_DATA_WIDTH = 512,
     parameter AXI_DDR_ADDR_WIDTH = 34,
     parameter AXI_DDR_STRB_WIDTH = (AXI_DDR_DATA_WIDTH/8),
@@ -132,7 +132,7 @@ module fpga_core #
     parameter AXI_DDR_MAX_BURST_LEN = 256,
     parameter AXI_DDR_NARROW_BURST = 0,
     parameter HBM_CH = 32,
-    parameter HBM_ENABLE = 1,
+    parameter HBM_ENABLE = 0,
     parameter HBM_GROUP_SIZE = 32,
     parameter AXI_HBM_DATA_WIDTH = 256,
     parameter AXI_HBM_ADDR_WIDTH = 33,

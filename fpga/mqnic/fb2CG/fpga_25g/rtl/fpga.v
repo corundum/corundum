@@ -1394,15 +1394,15 @@ fpga_core #(
     // Board configuration
     .TDMA_BER_ENABLE(TDMA_BER_ENABLE),
 
-    // Clock configuration
-    .CLK_PERIOD_NS_NUM(CLK_PERIOD_NS_NUM),
-    .CLK_PERIOD_NS_DENOM(CLK_PERIOD_NS_DENOM),
-
     // Structural configuration
     .IF_COUNT(IF_COUNT),
     .PORTS_PER_IF(PORTS_PER_IF),
     .SCHED_PER_IF(SCHED_PER_IF),
     .PORT_MASK(PORT_MASK),
+
+    // Clock configuration
+    .CLK_PERIOD_NS_NUM(CLK_PERIOD_NS_NUM),
+    .CLK_PERIOD_NS_DENOM(CLK_PERIOD_NS_DENOM),
 
     // PTP configuration
     .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),

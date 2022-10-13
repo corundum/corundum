@@ -95,7 +95,7 @@ module fpga #
     parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE,
     parameter TDMA_INDEX_WIDTH = 6,
 
-    // Timestamping configuration
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
     parameter TX_CPL_FIFO_DEPTH = 32,
     parameter TX_CHECKSUM_ENABLE = 1,
@@ -2008,6 +2008,7 @@ core_inst (
     .qsfp0_rx_ptp_rst(qsfp0_rx_ptp_rst_int),
     .qsfp0_rx_ptp_time(qsfp0_rx_ptp_time_int),
     .qsfp0_rx_status(qsfp0_rx_status),
+
     .qsfp0_modprsl(qsfp0_modprsl_int),
     .qsfp0_modsell(qsfp0_modsell),
     .qsfp0_resetl(qsfp0_resetl),
@@ -2037,6 +2038,7 @@ core_inst (
     .qsfp1_rx_ptp_rst(qsfp1_rx_ptp_rst_int),
     .qsfp1_rx_ptp_time(qsfp1_rx_ptp_time_int),
     .qsfp1_rx_status(qsfp1_rx_status),
+
     .qsfp1_modprsl(qsfp1_modprsl_int),
     .qsfp1_modsell(qsfp1_modsell),
     .qsfp1_resetl(qsfp1_resetl),

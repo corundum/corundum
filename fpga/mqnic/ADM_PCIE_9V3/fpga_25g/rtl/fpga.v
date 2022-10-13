@@ -98,7 +98,7 @@ module fpga #
     parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE,
     parameter TDMA_INDEX_WIDTH = 6,
 
-    // Timestamping configuration
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
     parameter TX_CPL_FIFO_DEPTH = 32,
     parameter TX_CHECKSUM_ENABLE = 1,
@@ -257,6 +257,9 @@ module fpga #
     inout  wire         eeprom_i2c_sda,
     output wire         eeprom_wp,
 
+    /*
+     * QSPI
+     */
     inout  wire [3:0]   qspi_1_dq,
     output wire         qspi_1_cs
 );

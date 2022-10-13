@@ -166,7 +166,7 @@ set_property -dict {LOC AF7 } [get_ports {pcie_tx_p[7]}] ;# MGTYTXP0_224 GTYE4_C
 set_property -dict {LOC AF6 } [get_ports {pcie_tx_n[7]}] ;# MGTYTXN0_224 GTYE4_CHANNEL_X0Y0 / GTYE4_COMMON_X0Y0
 set_property -dict {LOC V7  } [get_ports pcie_refclk_p] ;# MGTREFCLK0P_225
 set_property -dict {LOC V6  } [get_ports pcie_refclk_n] ;# MGTREFCLK0N_225
-set_property -dict {LOC T19 IOSTANDARD LVCMOS18 PULLUP true} [get_ports pcie_reset_n]
+set_property -dict {LOC T19 IOSTANDARD LVCMOS12 PULLUP true} [get_ports pcie_reset_n]
 
 set_false_path -from [get_ports {pcie_reset_n}]
 set_input_delay 0 [get_ports {pcie_reset_n}]

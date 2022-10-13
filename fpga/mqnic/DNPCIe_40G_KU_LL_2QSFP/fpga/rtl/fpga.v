@@ -98,7 +98,7 @@ module fpga #
     parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE,
     parameter TDMA_INDEX_WIDTH = 6,
 
-    // Timestamping configuration
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
     parameter TX_CPL_FIFO_DEPTH = 32,
     parameter TX_CHECKSUM_ENABLE = 1,
@@ -268,7 +268,7 @@ module fpga #
     output wire         flash_oe_n,
     output wire         flash_we_n,
     output wire         flash_adv_n,
-    input wire          flash_wait
+    input  wire         flash_wait
 );
 
 // PTP configuration

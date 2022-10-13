@@ -95,7 +95,7 @@ module fpga #
     parameter TX_SCHEDULER_PIPELINE = TX_QUEUE_PIPELINE,
     parameter TDMA_INDEX_WIDTH = 6,
 
-    // Timestamping configuration
+    // Interface configuration
     parameter PTP_TS_ENABLE = 1,
     parameter TX_CPL_FIFO_DEPTH = 32,
     parameter TX_CHECKSUM_ENABLE = 1,
@@ -1586,7 +1586,6 @@ core_inst (
     .cfg_interrupt_msix_sent(cfg_interrupt_msix_sent),
     .cfg_interrupt_msix_fail(cfg_interrupt_msix_fail),
     .cfg_interrupt_msi_function_number(cfg_interrupt_msi_function_number),
-
 
     .status_error_cor(status_error_cor),
     .status_error_uncor(status_error_uncor),

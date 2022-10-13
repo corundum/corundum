@@ -1428,10 +1428,10 @@ core_inst (
     .s_axis_eth_tx_cpl_valid(axis_eth_tx_ptp_ts_valid),
     .s_axis_eth_tx_cpl_ready(axis_eth_tx_ptp_ts_ready),
 
+    .eth_tx_status(eth_tx_status),
+
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),
-
-    .eth_tx_status(eth_tx_status),
 
     .eth_rx_ptp_clk(0),
     .eth_rx_ptp_rst(0),

@@ -210,7 +210,6 @@ module fpga_core #
     /*
      * GPIO
      */
-    input  wire [3:0]                         sw,
     output wire [3:0]                         led,
 
     /*

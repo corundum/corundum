@@ -693,12 +693,12 @@ wire [PORT_COUNT-1:0]                         axis_eth_tx_tready;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_tlast;
 wire [PORT_COUNT*AXIS_ETH_TX_USER_WIDTH-1:0]  axis_eth_tx_tuser;
 
-wire [PORT_COUNT-1:0]                         eth_tx_status;
-
 wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            axis_eth_tx_ptp_ts;
 wire [PORT_COUNT*TX_TAG_WIDTH-1:0]            axis_eth_tx_ptp_ts_tag;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_valid;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_ready;
+
+wire [PORT_COUNT-1:0]                         eth_tx_status;
 
 wire [PORT_COUNT-1:0]                         eth_rx_clk;
 wire [PORT_COUNT-1:0]                         eth_rx_rst;

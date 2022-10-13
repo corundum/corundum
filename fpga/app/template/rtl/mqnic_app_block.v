@@ -68,6 +68,50 @@ module mqnic_app_block #
     parameter MAX_TX_SIZE = 9214,
     parameter MAX_RX_SIZE = 9214,
 
+    // RAM configuration
+    parameter DDR_CH = 1,
+    parameter DDR_ENABLE = 0,
+    parameter DDR_GROUP_SIZE = 1,
+    parameter AXI_DDR_DATA_WIDTH = 256,
+    parameter AXI_DDR_ADDR_WIDTH = 32,
+    parameter AXI_DDR_STRB_WIDTH = (AXI_DDR_DATA_WIDTH/8),
+    parameter AXI_DDR_ID_WIDTH = 8,
+    parameter AXI_DDR_AWUSER_ENABLE = 0,
+    parameter AXI_DDR_AWUSER_WIDTH = 1,
+    parameter AXI_DDR_WUSER_ENABLE = 0,
+    parameter AXI_DDR_WUSER_WIDTH = 1,
+    parameter AXI_DDR_BUSER_ENABLE = 0,
+    parameter AXI_DDR_BUSER_WIDTH = 1,
+    parameter AXI_DDR_ARUSER_ENABLE = 0,
+    parameter AXI_DDR_ARUSER_WIDTH = 1,
+    parameter AXI_DDR_RUSER_ENABLE = 0,
+    parameter AXI_DDR_RUSER_WIDTH = 1,
+    parameter AXI_DDR_MAX_BURST_LEN = 256,
+    parameter AXI_DDR_NARROW_BURST = 0,
+    parameter AXI_DDR_FIXED_BURST = 0,
+    parameter AXI_DDR_WRAP_BURST = 0,
+    parameter HBM_CH = 1,
+    parameter HBM_ENABLE = 0,
+    parameter HBM_GROUP_SIZE = 1,
+    parameter AXI_HBM_DATA_WIDTH = 256,
+    parameter AXI_HBM_ADDR_WIDTH = 32,
+    parameter AXI_HBM_STRB_WIDTH = (AXI_HBM_DATA_WIDTH/8),
+    parameter AXI_HBM_ID_WIDTH = 8,
+    parameter AXI_HBM_AWUSER_ENABLE = 0,
+    parameter AXI_HBM_AWUSER_WIDTH = 1,
+    parameter AXI_HBM_WUSER_ENABLE = 0,
+    parameter AXI_HBM_WUSER_WIDTH = 1,
+    parameter AXI_HBM_BUSER_ENABLE = 0,
+    parameter AXI_HBM_BUSER_WIDTH = 1,
+    parameter AXI_HBM_ARUSER_ENABLE = 0,
+    parameter AXI_HBM_ARUSER_WIDTH = 1,
+    parameter AXI_HBM_RUSER_ENABLE = 0,
+    parameter AXI_HBM_RUSER_WIDTH = 1,
+    parameter AXI_HBM_MAX_BURST_LEN = 256,
+    parameter AXI_HBM_NARROW_BURST = 0,
+    parameter AXI_HBM_FIXED_BURST = 0,
+    parameter AXI_HBM_WRAP_BURST = 0,
+
     // Application configuration
     parameter APP_ID = 32'h12340001,
     parameter APP_CTRL_ENABLE = 1,
@@ -448,6 +492,108 @@ module mqnic_app_block #
     output wire [IF_COUNT*AXIS_IF_RX_USER_WIDTH-1:0]      m_axis_if_rx_tuser,
 
     /*
+     * DDR
+     */
+    input  wire [DDR_CH-1:0]                              ddr_clk,
+    input  wire [DDR_CH-1:0]                              ddr_rst,
+
+    output wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]             m_axi_ddr_awid,
+    output wire [DDR_CH*AXI_DDR_ADDR_WIDTH-1:0]           m_axi_ddr_awaddr,
+    output wire [DDR_CH*8-1:0]                            m_axi_ddr_awlen,
+    output wire [DDR_CH*3-1:0]                            m_axi_ddr_awsize,
+    output wire [DDR_CH*2-1:0]                            m_axi_ddr_awburst,
+    output wire [DDR_CH-1:0]                              m_axi_ddr_awlock,
+    output wire [DDR_CH*4-1:0]                            m_axi_ddr_awcache,
+    output wire [DDR_CH*3-1:0]                            m_axi_ddr_awprot,
+    output wire [DDR_CH*4-1:0]                            m_axi_ddr_awqos,
+    output wire [DDR_CH*AXI_DDR_AWUSER_WIDTH-1:0]         m_axi_ddr_awuser,
+    output wire [DDR_CH-1:0]                              m_axi_ddr_awvalid,
+    input  wire [DDR_CH-1:0]                              m_axi_ddr_awready,
+    output wire [DDR_CH*AXI_DDR_DATA_WIDTH-1:0]           m_axi_ddr_wdata,
+    output wire [DDR_CH*AXI_DDR_STRB_WIDTH-1:0]           m_axi_ddr_wstrb,
+    output wire [DDR_CH-1:0]                              m_axi_ddr_wlast,
+    output wire [DDR_CH*AXI_DDR_WUSER_WIDTH-1:0]          m_axi_ddr_wuser,
+    output wire [DDR_CH-1:0]                              m_axi_ddr_wvalid,
+    input  wire [DDR_CH-1:0]                              m_axi_ddr_wready,
+    input  wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]             m_axi_ddr_bid,
+    input  wire [DDR_CH*2-1:0]                            m_axi_ddr_bresp,
+    input  wire [DDR_CH*AXI_DDR_BUSER_WIDTH-1:0]          m_axi_ddr_buser,
+    input  wire [DDR_CH-1:0]                              m_axi_ddr_bvalid,
+    output wire [DDR_CH-1:0]                              m_axi_ddr_bready,
+    output wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]             m_axi_ddr_arid,
+    output wire [DDR_CH*AXI_DDR_ADDR_WIDTH-1:0]           m_axi_ddr_araddr,
+    output wire [DDR_CH*8-1:0]                            m_axi_ddr_arlen,
+    output wire [DDR_CH*3-1:0]                            m_axi_ddr_arsize,
+    output wire [DDR_CH*2-1:0]                            m_axi_ddr_arburst,
+    output wire [DDR_CH-1:0]                              m_axi_ddr_arlock,
+    output wire [DDR_CH*4-1:0]                            m_axi_ddr_arcache,
+    output wire [DDR_CH*3-1:0]                            m_axi_ddr_arprot,
+    output wire [DDR_CH*4-1:0]                            m_axi_ddr_arqos,
+    output wire [DDR_CH*AXI_DDR_ARUSER_WIDTH-1:0]         m_axi_ddr_aruser,
+    output wire [DDR_CH-1:0]                              m_axi_ddr_arvalid,
+    input  wire [DDR_CH-1:0]                              m_axi_ddr_arready,
+    input  wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]             m_axi_ddr_rid,
+    input  wire [DDR_CH*AXI_DDR_DATA_WIDTH-1:0]           m_axi_ddr_rdata,
+    input  wire [DDR_CH*2-1:0]                            m_axi_ddr_rresp,
+    input  wire [DDR_CH-1:0]                              m_axi_ddr_rlast,
+    input  wire [DDR_CH*AXI_DDR_RUSER_WIDTH-1:0]          m_axi_ddr_ruser,
+    input  wire [DDR_CH-1:0]                              m_axi_ddr_rvalid,
+    output wire [DDR_CH-1:0]                              m_axi_ddr_rready,
+
+    input  wire [DDR_CH-1:0]                              ddr_status,
+
+    /*
+     * HBM
+     */
+    input  wire [HBM_CH-1:0]                              hbm_clk,
+    input  wire [HBM_CH-1:0]                              hbm_rst,
+
+    output wire [HBM_CH*AXI_HBM_ID_WIDTH-1:0]             m_axi_hbm_awid,
+    output wire [HBM_CH*AXI_HBM_ADDR_WIDTH-1:0]           m_axi_hbm_awaddr,
+    output wire [HBM_CH*8-1:0]                            m_axi_hbm_awlen,
+    output wire [HBM_CH*3-1:0]                            m_axi_hbm_awsize,
+    output wire [HBM_CH*2-1:0]                            m_axi_hbm_awburst,
+    output wire [HBM_CH-1:0]                              m_axi_hbm_awlock,
+    output wire [HBM_CH*4-1:0]                            m_axi_hbm_awcache,
+    output wire [HBM_CH*3-1:0]                            m_axi_hbm_awprot,
+    output wire [HBM_CH*4-1:0]                            m_axi_hbm_awqos,
+    output wire [HBM_CH*AXI_HBM_AWUSER_WIDTH-1:0]         m_axi_hbm_awuser,
+    output wire [HBM_CH-1:0]                              m_axi_hbm_awvalid,
+    input  wire [HBM_CH-1:0]                              m_axi_hbm_awready,
+    output wire [HBM_CH*AXI_HBM_DATA_WIDTH-1:0]           m_axi_hbm_wdata,
+    output wire [HBM_CH*AXI_HBM_STRB_WIDTH-1:0]           m_axi_hbm_wstrb,
+    output wire [HBM_CH-1:0]                              m_axi_hbm_wlast,
+    output wire [HBM_CH*AXI_HBM_WUSER_WIDTH-1:0]          m_axi_hbm_wuser,
+    output wire [HBM_CH-1:0]                              m_axi_hbm_wvalid,
+    input  wire [HBM_CH-1:0]                              m_axi_hbm_wready,
+    input  wire [HBM_CH*AXI_HBM_ID_WIDTH-1:0]             m_axi_hbm_bid,
+    input  wire [HBM_CH*2-1:0]                            m_axi_hbm_bresp,
+    input  wire [HBM_CH*AXI_HBM_BUSER_WIDTH-1:0]          m_axi_hbm_buser,
+    input  wire [HBM_CH-1:0]                              m_axi_hbm_bvalid,
+    output wire [HBM_CH-1:0]                              m_axi_hbm_bready,
+    output wire [HBM_CH*AXI_HBM_ID_WIDTH-1:0]             m_axi_hbm_arid,
+    output wire [HBM_CH*AXI_HBM_ADDR_WIDTH-1:0]           m_axi_hbm_araddr,
+    output wire [HBM_CH*8-1:0]                            m_axi_hbm_arlen,
+    output wire [HBM_CH*3-1:0]                            m_axi_hbm_arsize,
+    output wire [HBM_CH*2-1:0]                            m_axi_hbm_arburst,
+    output wire [HBM_CH-1:0]                              m_axi_hbm_arlock,
+    output wire [HBM_CH*4-1:0]                            m_axi_hbm_arcache,
+    output wire [HBM_CH*3-1:0]                            m_axi_hbm_arprot,
+    output wire [HBM_CH*4-1:0]                            m_axi_hbm_arqos,
+    output wire [HBM_CH*AXI_HBM_ARUSER_WIDTH-1:0]         m_axi_hbm_aruser,
+    output wire [HBM_CH-1:0]                              m_axi_hbm_arvalid,
+    input  wire [HBM_CH-1:0]                              m_axi_hbm_arready,
+    input  wire [HBM_CH*AXI_HBM_ID_WIDTH-1:0]             m_axi_hbm_rid,
+    input  wire [HBM_CH*AXI_HBM_DATA_WIDTH-1:0]           m_axi_hbm_rdata,
+    input  wire [HBM_CH*2-1:0]                            m_axi_hbm_rresp,
+    input  wire [HBM_CH-1:0]                              m_axi_hbm_rlast,
+    input  wire [HBM_CH*AXI_HBM_RUSER_WIDTH-1:0]          m_axi_hbm_ruser,
+    input  wire [HBM_CH-1:0]                              m_axi_hbm_rvalid,
+    output wire [HBM_CH-1:0]                              m_axi_hbm_rready,
+
+    input  wire [HBM_CH-1:0]                              hbm_status,
+
+    /*
      * Statistics increment output
      */
     output wire [STAT_INC_WIDTH-1:0]                      m_axis_stat_tdata,
@@ -528,6 +674,54 @@ assign m_axil_ctrl_arvalid = 1'b0;
 assign m_axil_ctrl_rready = 1'b1;
 
 /*
+ * DMA interface (control)
+ */
+assign m_axis_ctrl_dma_read_desc_dma_addr = 0;
+assign m_axis_ctrl_dma_read_desc_ram_sel = 0;
+assign m_axis_ctrl_dma_read_desc_ram_addr = 0;
+assign m_axis_ctrl_dma_read_desc_len = 0;
+assign m_axis_ctrl_dma_read_desc_tag = 0;
+assign m_axis_ctrl_dma_read_desc_valid = 1'b0;
+assign m_axis_ctrl_dma_write_desc_dma_addr = 0;
+assign m_axis_ctrl_dma_write_desc_ram_sel = 0;
+assign m_axis_ctrl_dma_write_desc_ram_addr = 0;
+assign m_axis_ctrl_dma_write_desc_imm = 0;
+assign m_axis_ctrl_dma_write_desc_imm_en = 0;
+assign m_axis_ctrl_dma_write_desc_len = 0;
+assign m_axis_ctrl_dma_write_desc_tag = 0;
+assign m_axis_ctrl_dma_write_desc_valid = 1'b0;
+
+assign ctrl_dma_ram_wr_cmd_ready = 1'b1;
+assign ctrl_dma_ram_wr_done = ctrl_dma_ram_wr_cmd_valid;
+assign ctrl_dma_ram_rd_cmd_ready = ctrl_dma_ram_rd_resp_ready;
+assign ctrl_dma_ram_rd_resp_data = 0;
+assign ctrl_dma_ram_rd_resp_valid = ctrl_dma_ram_rd_cmd_valid;
+
+/*
+ * DMA interface (data)
+ */
+assign m_axis_data_dma_read_desc_dma_addr = 0;
+assign m_axis_data_dma_read_desc_ram_sel = 0;
+assign m_axis_data_dma_read_desc_ram_addr = 0;
+assign m_axis_data_dma_read_desc_len = 0;
+assign m_axis_data_dma_read_desc_tag = 0;
+assign m_axis_data_dma_read_desc_valid = 1'b0;
+assign m_axis_data_dma_write_desc_dma_addr = 0;
+assign m_axis_data_dma_write_desc_ram_sel = 0;
+assign m_axis_data_dma_write_desc_ram_addr = 0;
+assign m_axis_data_dma_write_desc_imm = 0;
+assign m_axis_data_dma_write_desc_imm_en = 0;
+assign m_axis_data_dma_write_desc_len = 0;
+assign m_axis_data_dma_write_desc_tag = 0;
+assign m_axis_data_dma_write_desc_valid = 1'b0;
+
+assign data_dma_ram_wr_cmd_ready = 1'b1;
+assign data_dma_ram_wr_done = data_dma_ram_wr_cmd_valid;
+assign data_dma_ram_rd_cmd_ready = data_dma_ram_rd_resp_ready;
+assign data_dma_ram_rd_resp_data = 0;
+assign data_dma_ram_rd_resp_valid = data_dma_ram_rd_cmd_valid;
+
+/*
  * Ethernet (direct MAC interface - lowest latency raw traffic)
  */
 assign m_axis_direct_tx_tdata = s_axis_direct_tx_tdata;
@@ -598,52 +792,70 @@ assign m_axis_if_rx_tdest = s_axis_if_rx_tdest;
 assign m_axis_if_rx_tuser = s_axis_if_rx_tuser;
 
 /*
- * DMA interface (control)
+ * DDR
  */
-assign m_axis_ctrl_dma_read_desc_dma_addr = 0;
-assign m_axis_ctrl_dma_read_desc_ram_sel = 0;
-assign m_axis_ctrl_dma_read_desc_ram_addr = 0;
-assign m_axis_ctrl_dma_read_desc_len = 0;
-assign m_axis_ctrl_dma_read_desc_tag = 0;
-assign m_axis_ctrl_dma_read_desc_valid = 1'b0;
-assign m_axis_ctrl_dma_write_desc_dma_addr = 0;
-assign m_axis_ctrl_dma_write_desc_ram_sel = 0;
-assign m_axis_ctrl_dma_write_desc_ram_addr = 0;
-assign m_axis_ctrl_dma_write_desc_imm = 0;
-assign m_axis_ctrl_dma_write_desc_imm_en = 0;
-assign m_axis_ctrl_dma_write_desc_len = 0;
-assign m_axis_ctrl_dma_write_desc_tag = 0;
-assign m_axis_ctrl_dma_write_desc_valid = 1'b0;
-
-assign ctrl_dma_ram_wr_cmd_ready = 1'b1;
-assign ctrl_dma_ram_wr_done = ctrl_dma_ram_wr_cmd_valid;
-assign ctrl_dma_ram_rd_cmd_ready = ctrl_dma_ram_rd_resp_ready;
-assign ctrl_dma_ram_rd_resp_data = 0;
-assign ctrl_dma_ram_rd_resp_valid = ctrl_dma_ram_rd_cmd_valid;
+assign m_axi_ddr_awid = 0;
+assign m_axi_ddr_awaddr = 0;
+assign m_axi_ddr_awlen = 0;
+assign m_axi_ddr_awsize = 0;
+assign m_axi_ddr_awburst = 0;
+assign m_axi_ddr_awlock = 0;
+assign m_axi_ddr_awcache = 0;
+assign m_axi_ddr_awprot = 0;
+assign m_axi_ddr_awqos = 0;
+assign m_axi_ddr_awuser = 0;
+assign m_axi_ddr_awvalid = 0;
+assign m_axi_ddr_wdata = 0;
+assign m_axi_ddr_wstrb = 0;
+assign m_axi_ddr_wlast = 0;
+assign m_axi_ddr_wuser = 0;
+assign m_axi_ddr_wvalid = 0;
+assign m_axi_ddr_bready = 0;
+assign m_axi_ddr_arid = 0;
+assign m_axi_ddr_araddr = 0;
+assign m_axi_ddr_arlen = 0;
+assign m_axi_ddr_arsize = 0;
+assign m_axi_ddr_arburst = 0;
+assign m_axi_ddr_arlock = 0;
+assign m_axi_ddr_arcache = 0;
+assign m_axi_ddr_arprot = 0;
+assign m_axi_ddr_arqos = 0;
+assign m_axi_ddr_aruser = 0;
+assign m_axi_ddr_arvalid = 0;
+assign m_axi_ddr_rready = 0;
 
 /*
- * DMA interface (data)
+ * HBM
  */
-assign m_axis_data_dma_read_desc_dma_addr = 0;
-assign m_axis_data_dma_read_desc_ram_sel = 0;
-assign m_axis_data_dma_read_desc_ram_addr = 0;
-assign m_axis_data_dma_read_desc_len = 0;
-assign m_axis_data_dma_read_desc_tag = 0;
-assign m_axis_data_dma_read_desc_valid = 1'b0;
-assign m_axis_data_dma_write_desc_dma_addr = 0;
-assign m_axis_data_dma_write_desc_ram_sel = 0;
-assign m_axis_data_dma_write_desc_ram_addr = 0;
-assign m_axis_data_dma_write_desc_imm = 0;
-assign m_axis_data_dma_write_desc_imm_en = 0;
-assign m_axis_data_dma_write_desc_len = 0;
-assign m_axis_data_dma_write_desc_tag = 0;
-assign m_axis_data_dma_write_desc_valid = 1'b0;
-
-assign data_dma_ram_wr_cmd_ready = 1'b1;
-assign data_dma_ram_wr_done = data_dma_ram_wr_cmd_valid;
-assign data_dma_ram_rd_cmd_ready = data_dma_ram_rd_resp_ready;
-assign data_dma_ram_rd_resp_data = 0;
-assign data_dma_ram_rd_resp_valid = data_dma_ram_rd_cmd_valid;
+assign m_axi_hbm_awid = 0;
+assign m_axi_hbm_awaddr = 0;
+assign m_axi_hbm_awlen = 0;
+assign m_axi_hbm_awsize = 0;
+assign m_axi_hbm_awburst = 0;
+assign m_axi_hbm_awlock = 0;
+assign m_axi_hbm_awcache = 0;
+assign m_axi_hbm_awprot = 0;
+assign m_axi_hbm_awqos = 0;
+assign m_axi_hbm_awuser = 0;
+assign m_axi_hbm_awvalid = 0;
+assign m_axi_hbm_wdata = 0;
+assign m_axi_hbm_wstrb = 0;
+assign m_axi_hbm_wlast = 0;
+assign m_axi_hbm_wuser = 0;
+assign m_axi_hbm_wvalid = 0;
+assign m_axi_hbm_bready = 0;
+assign m_axi_hbm_arid = 0;
+assign m_axi_hbm_araddr = 0;
+assign m_axi_hbm_arlen = 0;
+assign m_axi_hbm_arsize = 0;
+assign m_axi_hbm_arburst = 0;
+assign m_axi_hbm_arlock = 0;
+assign m_axi_hbm_arcache = 0;
+assign m_axi_hbm_arprot = 0;
+assign m_axi_hbm_arqos = 0;
+assign m_axi_hbm_aruser = 0;
+assign m_axi_hbm_arvalid = 0;
+assign m_axi_hbm_rready = 0;
 
 /*
  * Statistics increment output

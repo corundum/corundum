@@ -253,6 +253,174 @@ Parameters
 
     Receive scratchpad RAM size per interface, default ``32768``.
 
+.. object:: DDR_CH
+
+    Number of DDR memory interfaces, default ``1``.
+
+.. object:: DDR_ENABLE
+
+    Enable DDR memory interfaces, default ``0``.
+
+.. object:: DDR_GROUP_SIZE
+
+    DDR channel group size, default ``1``.  All channels in each group share the same address space.
+
+.. object:: AXI_DDR_DATA_WIDTH
+
+    DDR memory interface AXI data width, default ``256``.
+
+.. object:: AXI_DDR_ADDR_WIDTH
+
+    DDR memory interface AXI address width, default ``32``.
+
+.. object:: AXI_DDR_STRB_WIDTH
+
+    DDR memory interface AXI strobe width, default ``(AXI_DDR_DATA_WIDTH/8)``.
+
+.. object:: AXI_DDR_ID_WIDTH
+
+    DDR memory interface AXI ID width, default ``8``.
+
+.. object:: AXI_DDR_AWUSER_ENABLE
+
+    DDR memory interface AXI AWUSER signal enable, default ``0``.
+
+.. object:: AXI_DDR_AWUSER_WIDTH
+
+    DDR memory interface AXI AWUSER signal width, default ``1``.
+
+.. object:: AXI_DDR_WUSER_ENABLE
+
+    DDR memory interface AXI WUSER signal enable, default ``0``.
+
+.. object:: AXI_DDR_WUSER_WIDTH
+
+    DDR memory interface AXI WUSER signal width, default ``1``.
+
+.. object:: AXI_DDR_BUSER_ENABLE
+
+    DDR memory interface AXI BUSER signal enable, default ``0``.
+
+.. object:: AXI_DDR_BUSER_WIDTH
+
+    DDR memory interface AXI BUSER signal width, default ``1``.
+
+.. object:: AXI_DDR_ARUSER_ENABLE
+
+    DDR memory interface AXI ARUSER signal enable, default ``0``.
+
+.. object:: AXI_DDR_ARUSER_WIDTH
+
+    DDR memory interface AXI ARUSER signal width, default ``1``.
+
+.. object:: AXI_DDR_RUSER_ENABLE
+
+    DDR memory interface AXI RUSER signal enable, default ``0``.
+
+.. object:: AXI_DDR_RUSER_WIDTH
+
+    DDR memory interface AXI RUSER signal width, default ``1``.
+
+.. object:: AXI_DDR_MAX_BURST_LEN
+
+    DDR memory interface max AXI burst length, default ``256``.
+
+.. object:: AXI_DDR_NARROW_BURST
+
+    DDR memory interface AXI narrow burst support, default ``0``.
+
+.. object:: AXI_DDR_FIXED_BURST
+
+    DDR memory interface AXI fixed burst support, default ``0``.
+
+.. object:: AXI_DDR_WRAP_BURST
+
+    DDR memory interface AXI wrap burst support, default ``0``.
+
+.. object:: HBM_CH
+
+    Number of HBM memory interfaces, default ``1``.
+
+.. object:: HBM_ENABLE
+
+    Enable HBM memory interfaces, default ``0``.
+
+.. object:: HBM_GROUP_SIZE
+
+    HBM channel group size, default ``1``.  All channels in each group share the same address space.
+
+.. object:: AXI_HBM_DATA_WIDTH
+
+    HBM memory interface AXI data width, default ``256``.
+
+.. object:: AXI_HBM_AHBM_WIDTH
+
+    HBM memory interface AXI address width, default ``32``.
+
+.. object:: AXI_HBM_STRB_WIDTH
+
+    HBM memory interface AXI strobe width, default ``(AXI_HBM_DATA_WIDTH/8)``.
+
+.. object:: AXI_HBM_ID_WIDTH
+
+    HBM memory interface AXI ID width, default ``8``.
+
+.. object:: AXI_HBM_AWUSER_ENABLE
+
+    HBM memory interface AXI AWUSER signal enable, default ``0``.
+
+.. object:: AXI_HBM_AWUSER_WIDTH
+
+    HBM memory interface AXI AWUSER signal width, default ``1``.
+
+.. object:: AXI_HBM_WUSER_ENABLE
+
+    HBM memory interface AXI WUSER signal enable, default ``0``.
+
+.. object:: AXI_HBM_WUSER_WIDTH
+
+    HBM memory interface AXI WUSER signal width, default ``1``.
+
+.. object:: AXI_HBM_BUSER_ENABLE
+
+    HBM memory interface AXI BUSER signal enable, default ``0``.
+
+.. object:: AXI_HBM_BUSER_WIDTH
+
+    HBM memory interface AXI BUSER signal width, default ``1``.
+
+.. object:: AXI_HBM_ARUSER_ENABLE
+
+    HBM memory interface AXI ARUSER signal enable, default ``0``.
+
+.. object:: AXI_HBM_ARUSER_WIDTH
+
+    HBM memory interface AXI ARUSER signal width, default ``1``.
+
+.. object:: AXI_HBM_RUSER_ENABLE
+
+    HBM memory interface AXI RUSER signal enable, default ``0``.
+
+.. object:: AXI_HBM_RUSER_WIDTH
+
+    HBM memory interface AXI RUSER signal width, default ``1``.
+
+.. object:: AXI_HBM_MAX_BURST_LEN
+
+    HBM memory interface max AXI burst length, default ``256``.
+
+.. object:: AXI_HBM_NARROW_BURST
+
+    HBM memory interface AXI narrow burst support, default ``0``.
+
+.. object:: AXI_HBM_FIXED_BURST
+
+    HBM memory interface AXI fixed burst support, default ``0``.
+
+.. object:: AXI_HBM_WRAP_BURST
+
+    HBM memory interface AXI wrap burst support, default ``0``.
+
 .. object:: APP_ID
 
     Application ID, default ``0``.

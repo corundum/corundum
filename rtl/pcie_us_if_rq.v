@@ -653,7 +653,7 @@ always @* begin
         seg_tlp_hdr = fifo_tlp_hdr[out_sel_port[seg]][out_sel_seg[seg]*TLP_HDR_WIDTH +: TLP_HDR_WIDTH];
         seg_rq_hdr[1:0] = seg_tlp_hdr[107:106]; // address type
         seg_rq_hdr[63:2] = seg_tlp_hdr[63:2]; // address
-        seg_rq_hdr[74:64] = seg_tlp_hdr[105:96]; // DWORD count
+        seg_rq_hdr[74:64] = {seg_tlp_hdr[105:96] == 0, seg_tlp_hdr[105:96]}; // DWORD count
         casez (seg_tlp_hdr[127:120])
             8'b00z_00000: seg_rq_hdr[78:75] = REQ_MEM_READ;
             8'b00z_00001: seg_rq_hdr[78:75] = REQ_MEM_READ_LOCKED;

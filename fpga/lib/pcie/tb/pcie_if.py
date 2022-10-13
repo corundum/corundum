@@ -1485,6 +1485,46 @@ class PcieIfTestDevice:
         self.tag_active[tag] = False
         self.tag_release.set()
 
+    async def perform_posted_operation(self, source, req):
+        await source.send(PcieIfFrame.from_tlp(req, self.force_64bit_addr))
+
+    async def perform_nonposted_operation(self, source, req, timeout=0, timeout_unit='ns'):
+        completions = []
+
+        req.tag = await self.alloc_tag()
+
+        await source.send(PcieIfFrame.from_tlp(req, self.force_64bit_addr))
+
+        while True:
+            cpl = await self.recv_cpl(req.tag, timeout, timeout_unit)
+
+            if not cpl:
+                break
+
+            completions.append(cpl)
+
+            if cpl.status != CplStatus.SC:
+                # bad status
+                break
+            elif req.fmt_type in {TlpType.MEM_READ, TlpType.MEM_READ_64}:
+                # completion for memory read request
+
+                # request completed
+                if cpl.byte_count <= cpl.length*4 - (cpl.lower_address & 0x3):
+                    break
+
+                # completion for read request has SC status but no data
+                if cpl.fmt_type in {TlpType.CPL, TlpType.CPL_LOCKED}:
+                    break
+
+            else:
+                # completion for other request
+                break
+
+        self.release_tag(req.tag)
+
+        return completions
+
     async def dma_io_write(self, addr, data, timeout=0, timeout_unit='ns'):
         n = 0
 
@@ -1492,84 +1532,78 @@ class PcieIfTestDevice:
         if zero_len:
             data = b'\x00'
 
-        while True:
-            tlp = Tlp()
-            tlp.fmt_type = TlpType.IO_WRITE
-            tlp.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
+        op_list = []
+
+        while n < len(data):
+            req = Tlp()
+            req.fmt_type = TlpType.IO_WRITE
+            req.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
 
             first_pad = addr % 4
             byte_length = min(len(data)-n, 4-first_pad)
-            tlp.set_addr_be_data(addr, data[n:n+byte_length])
+            req.set_addr_be_data(addr, data[n:n+byte_length])
 
             if zero_len:
-                tlp.first_be = 0
+                req.first_be = 0
 
-            tlp.tag = await self.alloc_tag()
-
-            await self.tx_wr_req_tlp_source.send(PcieIfFrame.from_tlp(tlp, self.force_64bit_addr))
-            cpl = await self.recv_cpl(tlp.tag, timeout, timeout_unit)
-
-            self.release_tag(tlp.tag)
-
-            if not cpl:
-                raise Exception("Timeout")
-
-            if cpl.status != CplStatus.SC:
-                raise Exception("Unsuccessful completion")
+            op_list.append(cocotb.start_soon(self.perform_nonposted_operation(self.tx_wr_req_tlp_source, req, timeout, timeout_unit)))
 
             n += byte_length
             addr += byte_length
 
-            if n >= len(data):
-                break
+        for op in op_list:
+            cpl_list = await op.join()
+
+            if not cpl_list:
+                raise Exception("Timeout")
+            if cpl_list[0].status != CplStatus.SC:
+                raise Exception("Unsuccessful completion")
 
     async def dma_io_read(self, addr, length, timeout=0, timeout_unit='ns'):
-        data = b''
+        data = bytearray()
         n = 0
 
         zero_len = length <= 0
         if zero_len:
             length = 1
 
-        while True:
-            tlp = Tlp()
-            tlp.fmt_type = TlpType.IO_READ
-            tlp.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
+        op_list = []
+
+        while n < length:
+            req = Tlp()
+            req.fmt_type = TlpType.IO_READ
+            req.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
 
             first_pad = addr % 4
             byte_length = min(length-n, 4-first_pad)
-            tlp.set_addr_be(addr, byte_length)
+            req.set_addr_be(addr, byte_length)
 
             if zero_len:
-                tlp.first_be = 0
+                req.first_be = 0
 
-            tlp.tag = await self.alloc_tag()
-
-            await self.tx_rd_req_tlp_source.send(PcieIfFrame.from_tlp(tlp, self.force_64bit_addr))
-            cpl = await self.recv_cpl(tlp.tag, timeout, timeout_unit)
-
-            self.release_tag(tlp.tag)
-
-            if not cpl:
-                raise Exception("Timeout")
-
-            if cpl.status != CplStatus.SC:
-                raise Exception("Unsuccessful completion")
-            else:
-                d = cpl.get_data()
-
-            data += d[first_pad:]
+            op_list.append((first_pad, cocotb.start_soon(self.perform_nonposted_operation(self.tx_rd_req_tlp_source, req, timeout, timeout_unit))))
 
             n += byte_length
             addr += byte_length
 
-            if n >= length:
-                break
+        for first_pad, op in op_list:
+            cpl_list = await op.join()
+
+            if not cpl_list:
+                raise Exception("Timeout")
+            cpl = cpl_list[0]
+            if cpl.status != CplStatus.SC:
+                raise Exception("Unsuccessful completion")
+
+            assert cpl.length == 1
+            d = cpl.get_data()
+
+            data.extend(d[first_pad:])
 
         if zero_len:
             return b''
 
-        return data[:length]
+        return bytes(data[:length])
 
     async def dma_mem_write(self, addr, data, timeout=0, timeout_unit='ns'):
         n = 0
@@ -1578,13 +1612,13 @@ class PcieIfTestDevice:
         if zero_len:
             data = b'\x00'
 
-        while True:
-            tlp = Tlp()
+        while n < len(data):
+            req = Tlp()
             if addr > 0xffffffff:
-                tlp.fmt_type = TlpType.MEM_WRITE_64
+                req.fmt_type = TlpType.MEM_WRITE_64
             else:
-                tlp.fmt_type = TlpType.MEM_WRITE
-            tlp.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
+                req.fmt_type = TlpType.MEM_WRITE
+            req.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
 
             first_pad = addr % 4
             byte_length = len(data)-n
@@ -1592,98 +1626,93 @@ class PcieIfTestDevice:
             byte_length = min(byte_length, (128 << self.dev_max_payload)-first_pad)
             # 4k address align
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff))
-            tlp.set_addr_be_data(addr, data[n:n+byte_length])
+            req.set_addr_be_data(addr, data[n:n+byte_length])
 
             if zero_len:
-                tlp.first_be = 0
+                req.first_be = 0
 
-            await self.tx_wr_req_tlp_source.send(PcieIfFrame.from_tlp(tlp, self.force_64bit_addr))
+            await self.perform_posted_operation(self.tx_wr_req_tlp_source, req)
 
             n += byte_length
             addr += byte_length
 
-            if n >= len(data):
-                break
-
     async def dma_mem_read(self, addr, length, timeout=0, timeout_unit='ns'):
-        data = b''
+        data = bytearray()
         n = 0
 
         zero_len = length <= 0
         if zero_len:
             length = 1
 
-        while True:
-            tlp = Tlp()
+        op_list = []
+
+        while n < length:
+            req = Tlp()
             if addr > 0xffffffff:
-                tlp.fmt_type = TlpType.MEM_READ_64
+                req.fmt_type = TlpType.MEM_READ_64
             else:
-                tlp.fmt_type = TlpType.MEM_READ
-            tlp.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
+                req.fmt_type = TlpType.MEM_READ
+            req.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
 
             first_pad = addr % 4
+            # remaining length
             byte_length = length-n
-            # max read request size
-            byte_length = min(byte_length, (128 << self.dev_max_read_req)-first_pad)
-            # 4k address align
+            # limit to max read request size
+            if byte_length > (128 << self.dev_max_read_req) - first_pad:
+                # split on 128-byte read completion boundary
+                byte_length = min(byte_length, (128 << self.dev_max_read_req) - (addr & 0x7f))
+            # 4k align
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff))
-            tlp.set_addr_be(addr, byte_length)
+            req.set_addr_be(addr, byte_length)
 
             if zero_len:
-                tlp.first_be = 0
+                req.first_be = 0
 
-            tlp.tag = await self.alloc_tag()
-
-            await self.tx_rd_req_tlp_source.send(PcieIfFrame.from_tlp(tlp, self.force_64bit_addr))
-
-            m = 0
-
-            while True:
-                cpl = await self.recv_cpl(tlp.tag, timeout, timeout_unit)
-
-                if not cpl:
-                    raise Exception("Timeout")
-
-                if cpl.status != CplStatus.SC:
-                    raise Exception("Unsuccessful completion")
-                else:
-                    assert cpl.byte_count+3+(cpl.lower_address & 3) >= cpl.length*4
-                    assert cpl.byte_count == max(byte_length - m, 1)
-
-                    d = cpl.get_data()
-
-                    offset = cpl.lower_address & 3
-                    data += d[offset:offset+cpl.byte_count]
-
-                m += len(d)-offset
-
-                if m >= byte_length:
-                    break
-
-            self.release_tag(tlp.tag)
+            op_list.append((byte_length, cocotb.start_soon(self.perform_nonposted_operation(self.tx_rd_req_tlp_source, req, timeout, timeout_unit))))
 
             n += byte_length
             addr += byte_length
 
-            if n >= length:
-                break
+        for byte_length, op in op_list:
+            cpl_list = await op.join()
+
+            m = 0
+
+            while m < byte_length:
+                if not cpl_list:
+                    raise Exception("Timeout")
+
+                cpl = cpl_list.pop(0)
+
+                if cpl.status != CplStatus.SC:
+                    raise Exception("Unsuccessful completion")
+
+                assert cpl.byte_count+3+(cpl.lower_address & 3) >= cpl.length*4
+                assert cpl.byte_count == max(byte_length - m, 1)
+
+                d = cpl.get_data()
+
+                offset = cpl.lower_address & 3
+                data.extend(d[offset:offset+cpl.byte_count])
+
+                m += len(d)-offset
 
         if zero_len:
             return b''
 
-        return data[:length]
+        return bytes(data[:length])
 
     async def issue_msi_interrupt(self, addr, data):
         data = data.to_bytes(4, 'little')
         n = 0
 
         while True:
-            tlp = Tlp()
+            req = Tlp()
             if addr > 0xffffffff:
-                tlp.fmt_type = TlpType.MEM_WRITE_64
+                req.fmt_type = TlpType.MEM_WRITE_64
             else:
-                tlp.fmt_type = TlpType.MEM_WRITE
-            tlp.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
+                req.fmt_type = TlpType.MEM_WRITE
+            req.requester_id = PcieId(self.dev_bus_num, self.dev_device_num, 0)
 
             first_pad = addr % 4
             byte_length = len(data)-n
@@ -1691,9 +1720,9 @@ class PcieIfTestDevice:
             byte_length = min(byte_length, (128 << self.dev_max_payload)-first_pad)
             # 4k address align
             byte_length = min(byte_length, 0x1000 - (addr & 0xfff))
-            tlp.set_addr_be_data(addr, data[n:n+byte_length])
+            req.set_addr_be_data(addr, data[n:n+byte_length])
 
-            await self.tx_msi_wr_req_tlp_source.send(PcieIfFrame.from_tlp(tlp, self.force_64bit_addr))
+            await self.perform_posted_operation(self.tx_msi_wr_req_tlp_source, req)
 
             n += byte_length
             addr += byte_length

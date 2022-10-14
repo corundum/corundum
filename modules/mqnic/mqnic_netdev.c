@@ -230,6 +230,7 @@ void mqnic_update_stats(struct net_device *ndev)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	unsigned long packets, bytes;
+	unsigned long dropped;
 	int k;
 
 	if (unlikely(!priv->port_up))
@@ -237,25 +238,31 @@ void mqnic_update_stats(struct net_device *ndev)
 
 	packets = 0;
 	bytes = 0;
+	dropped = 0;
 	for (k = 0; k < priv->rx_queue_count; k++) {
 		const struct mqnic_ring *ring = priv->rx_ring[k];
 
 		packets += READ_ONCE(ring->packets);
 		bytes += READ_ONCE(ring->bytes);
+		dropped += READ_ONCE(ring->dropped_packets);
 	}
 	ndev->stats.rx_packets = packets;
 	ndev->stats.rx_bytes = bytes;
+	ndev->stats.rx_dropped = dropped;
 
 	packets = 0;
 	bytes = 0;
+	dropped = 0;
 	for (k = 0; k < priv->tx_queue_count; k++) {
 		const struct mqnic_ring *ring = priv->tx_ring[k];
 
 		packets += READ_ONCE(ring->packets);
 		bytes += READ_ONCE(ring->bytes);
+		dropped += READ_ONCE(ring->dropped_packets);
 	}
 	ndev->stats.tx_packets = packets;
 	ndev->stats.tx_bytes = bytes;
+	ndev->stats.tx_dropped = dropped;
 }
 
 static void mqnic_get_stats64(struct net_device *ndev,

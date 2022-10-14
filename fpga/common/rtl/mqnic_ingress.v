@@ -47,7 +47,6 @@ module mqnic_ingress #
     // Receive queue index width
     parameter RX_QUEUE_INDEX_WIDTH = 8,
     // Enable RX RSS
-    parameter RX_RSS_ENABLE = 1,
     // Enable RX hashing
     parameter RX_HASH_ENABLE = 1,
     // Enable RX checksum offload

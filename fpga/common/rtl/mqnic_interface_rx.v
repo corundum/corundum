@@ -73,7 +73,6 @@ module mqnic_interface_rx #
 
     // Interface configuration
     parameter PTP_TS_ENABLE = 1,
-    parameter RX_RSS_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
     parameter MAX_RX_SIZE = 9214,
@@ -548,7 +547,6 @@ wire [INT_AXIS_RX_USER_WIDTH-1:0]  rx_axis_tuser_int;
 mqnic_ingress #(
     .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
     .RX_QUEUE_INDEX_WIDTH(RX_QUEUE_INDEX_WIDTH),
-    .RX_RSS_ENABLE(RX_RSS_ENABLE),
     .RX_HASH_ENABLE(RX_HASH_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
     .AXIS_DATA_WIDTH(AXIS_DATA_WIDTH),

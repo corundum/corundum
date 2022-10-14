@@ -837,7 +837,6 @@ def test_mqnic_core_pcie_ptile(request, if_count, ports_per_if, pcie_data_width,
     parameters['TX_CPL_FIFO_DEPTH'] = 32
     parameters['TX_TAG_WIDTH'] = 16
     parameters['TX_CHECKSUM_ENABLE'] = 1
-    parameters['RX_RSS_ENABLE'] = 1
     parameters['RX_HASH_ENABLE'] = 1
     parameters['RX_CHECKSUM_ENABLE'] = 1
     parameters['TX_FIFO_DEPTH'] = 32768

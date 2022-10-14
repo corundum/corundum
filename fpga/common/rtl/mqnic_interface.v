@@ -90,7 +90,6 @@ module mqnic_interface #
     parameter TX_CPL_FIFO_DEPTH = 32,
     parameter TX_TAG_WIDTH = $clog2(TX_DESC_TABLE_SIZE)+1,
     parameter TX_CHECKSUM_ENABLE = 1,
-    parameter RX_RSS_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
     parameter TX_FIFO_DEPTH = 32768,
@@ -1147,7 +1146,7 @@ always @(posedge clk) begin
             RBB+8'h08: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h40;          // IF ctrl: Next header
             RBB+8'h0C: begin
                 // IF ctrl: features
-                ctrl_reg_rd_data_reg[0] <= RX_RSS_ENABLE && RX_HASH_ENABLE;
+                ctrl_reg_rd_data_reg[0] <= RX_HASH_ENABLE;
                 ctrl_reg_rd_data_reg[4] <= PTP_TS_ENABLE;
                 ctrl_reg_rd_data_reg[8] <= TX_CHECKSUM_ENABLE;
                 ctrl_reg_rd_data_reg[9] <= RX_CHECKSUM_ENABLE;
@@ -2601,7 +2600,6 @@ mqnic_interface_rx #(
 
     // Interface configuration
     .PTP_TS_ENABLE(PTP_TS_ENABLE),
-    .RX_RSS_ENABLE(RX_RSS_ENABLE),
     .RX_HASH_ENABLE(RX_HASH_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
     .MAX_RX_SIZE(MAX_RX_SIZE),

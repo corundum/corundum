@@ -217,13 +217,9 @@ Parameters
 
     Enable TCP/UDP checksum offloading on transmit path, default ``1``.
 
-.. object:: RX_RSS_ENABLE
-
-    Enable receive side scaling, default ``1``.  Requires ``RX_HASH_ENABLE`` to be set.
-
 .. object:: RX_HASH_ENABLE
 
-    Enable Toeplitz flow hashing for RX traffic, default ``1``.
+    Enable Toeplitz flow hashing and receive side scaling for RX traffic, default ``1``.
 
 .. object:: RX_CHECKSUM_ENABLE
 

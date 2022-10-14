@@ -519,7 +519,6 @@ def test_fpga_core(request):
     parameters['PTP_TS_ENABLE'] = 1
     parameters['TX_CPL_FIFO_DEPTH'] = 32
     parameters['TX_CHECKSUM_ENABLE'] = 1
-    parameters['RX_RSS_ENABLE'] = 1
     parameters['RX_HASH_ENABLE'] = 1
     parameters['RX_CHECKSUM_ENABLE'] = 1
     parameters['TX_FIFO_DEPTH'] = 32768

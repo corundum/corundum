@@ -16,8 +16,8 @@ set_property -dict {LOC F31  IOSTANDARD DIFF_SSTL12} [get_ports clk_300mhz_1_n]
 create_clock -period 3.333 -name clk_300mhz_1 [get_ports clk_300mhz_1_p]
 
 # DDR ref clock sharing
-set_property CLOCK_DEDICATED_ROUTE BACKBONE [get_pins -hier -filter {name =~ */u_ddr4_infrastructure/gen_mmcme*.u_mmcme_adv_inst/CLKIN1 && name =~*ddr4_c1_inst*}]
-set_property CLOCK_DEDICATED_ROUTE BACKBONE [get_pins -hier -filter {name =~ */u_ddr4_infrastructure/gen_mmcme*.u_mmcme_adv_inst/CLKIN1 && name =~*ddr4_c2_inst*}]
+set_property -quiet CLOCK_DEDICATED_ROUTE BACKBONE [get_pins -quiet -hier -filter {name =~ */u_ddr4_infrastructure/gen_mmcme*.u_mmcme_adv_inst/CLKIN1 && name =~*ddr4_c1_inst*}]
+set_property -quiet CLOCK_DEDICATED_ROUTE BACKBONE [get_pins -quiet -hier -filter {name =~ */u_ddr4_infrastructure/gen_mmcme*.u_mmcme_adv_inst/CLKIN1 && name =~*ddr4_c2_inst*}]
 
 #set_property -dict {LOC G22  IOSTANDARD DIFF_SSTL12} [get_ports clk_300mhz_2_p]
 #set_property -dict {LOC G21  IOSTANDARD DIFF_SSTL12} [get_ports clk_300mhz_2_n]

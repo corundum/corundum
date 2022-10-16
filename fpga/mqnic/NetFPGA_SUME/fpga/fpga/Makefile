@@ -28,6 +28,7 @@ SYN_FILES += rtl/common/mqnic_rx_queue_map.v
 SYN_FILES += rtl/common/mqnic_ptp.v
 SYN_FILES += rtl/common/mqnic_ptp_clock.v
 SYN_FILES += rtl/common/mqnic_ptp_perout.v
+SYN_FILES += rtl/common/mqnic_rb_clk_info.v
 SYN_FILES += rtl/common/mqnic_port_map_phy_xgmii.v
 SYN_FILES += rtl/common/cpl_write.v
 SYN_FILES += rtl/common/cpl_op_mux.v
@@ -129,6 +130,7 @@ XDC_FILES += lib/axis/syn/vivado/sync_reset.tcl
 XDC_FILES += lib/eth/syn/vivado/ptp_clock_cdc.tcl
 XDC_FILES += ../../../common/syn/vivado/mqnic_port.tcl
 XDC_FILES += ../../../common/syn/vivado/mqnic_ptp_clock.tcl
+XDC_FILES += ../../../common/syn/vivado/mqnic_rb_clk_info.tcl
 
 # IP
 IP_TCL_FILES = ip/pcie3_7x_0.tcl

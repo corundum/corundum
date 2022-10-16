@@ -397,6 +397,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "mqnic_ptp.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_clock.v"),
         os.path.join(rtl_dir, "common", "mqnic_ptp_perout.v"),
+        os.path.join(rtl_dir, "common", "mqnic_rb_clk_info.v"),
         os.path.join(rtl_dir, "common", "mqnic_port_map_phy_xgmii.v"),
         os.path.join(rtl_dir, "common", "cpl_write.v"),
         os.path.join(rtl_dir, "common", "cpl_op_mux.v"),

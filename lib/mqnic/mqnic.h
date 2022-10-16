@@ -152,6 +152,7 @@ struct mqnic {
     struct mqnic_reg_block *fw_id_rb;
     struct mqnic_reg_block *if_rb;
     struct mqnic_reg_block *phc_rb;
+    struct mqnic_reg_block *clk_info_rb;
 
     uint32_t fpga_id;
     const char *fpga_part;
@@ -164,6 +165,14 @@ struct mqnic {
     uint32_t rel_info;
 
     uint32_t app_id;
+
+    uint16_t core_clk_nom_per_ns_num;
+    uint16_t core_clk_nom_per_ns_denom;
+    uint32_t core_clk_nom_freq_hz;
+    uint16_t ref_clk_nom_per_ns_num;
+    uint16_t ref_clk_nom_per_ns_denom;
+    uint32_t ref_clk_nom_freq_hz;
+    uint32_t clk_info_channels;
 
     uint32_t if_offset;
     uint32_t if_count;
@@ -182,6 +191,10 @@ struct mqnic {
 struct mqnic *mqnic_open(const char *dev_name);
 void mqnic_close(struct mqnic *dev);
 void mqnic_print_fw_id(struct mqnic *dev);
+uint32_t mqnic_get_core_clk_nom_freq_hz(struct mqnic *dev);
+uint32_t mqnic_get_ref_clk_nom_freq_hz(struct mqnic *dev);
+uint32_t mqnic_get_core_clk_freq_hz(struct mqnic *dev);
+uint32_t mqnic_get_clk_freq_hz(struct mqnic *dev, int ch);
 
 // mqnic_if.c
 struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs);

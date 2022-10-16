@@ -163,6 +163,63 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (dev->clk_info_rb)
+    {
+        uint32_t num;
+        uint32_t denom;
+        uint32_t ns;
+        uint32_t fns;
+        uint32_t mhz;
+        uint32_t hz;
+
+        num = dev->ref_clk_nom_per_ns_num;
+        denom = dev->ref_clk_nom_per_ns_denom;
+
+        ns = num/denom;
+        fns = ((num-ns*denom)*1000000000ull)/denom;
+
+        printf("Ref clock nominal period: %d.%09d ns (raw %d/%d ns)\n", ns, fns, num, denom);
+
+        hz = mqnic_get_ref_clk_nom_freq_hz(dev);
+
+        mhz = hz / 1000000;
+        hz = hz - (mhz * 1000000);
+
+        printf("Ref clock nominal freq: %d.%06d MHz\n", mhz, hz);
+
+        num = dev->core_clk_nom_per_ns_num;
+        denom = dev->core_clk_nom_per_ns_denom;
+
+        ns = num/denom;
+        fns = ((num-ns*denom)*1000000000ull)/denom;
+
+        printf("Core clock nominal period: %d.%09d ns (raw %d/%d ns)\n", ns, fns, num, denom);
+
+        hz = mqnic_get_core_clk_nom_freq_hz(dev);
+
+        mhz = hz / 1000000;
+        hz = hz - (mhz * 1000000);
+
+        printf("Core clock nominal freq: %d.%06d MHz\n", mhz, hz);
+
+        hz = mqnic_get_core_clk_freq_hz(dev);
+
+        mhz = hz / 1000000;
+        hz = hz - (mhz * 1000000);
+
+        printf("Core clock freq: %d.%06d MHz\n", mhz, hz);
+
+        for (int ch = 0; ch < dev->clk_info_channels; ch++)
+        {
+            hz = mqnic_get_clk_freq_hz(dev, ch);
+
+            mhz = hz / 1000000;
+            hz = hz - (mhz * 1000000);
+
+            printf("CH%d: clock freq: %d.%06d MHz\n", ch, mhz, hz);
+        }
+    }
+
     if (interface < 0 || interface >= dev->if_count)
     {
         fprintf(stderr, "Interface out of range\n");

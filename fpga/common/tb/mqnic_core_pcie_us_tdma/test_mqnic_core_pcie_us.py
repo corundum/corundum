@@ -781,6 +781,7 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
         os.path.join(rtl_dir, "mqnic_ptp.v"),
         os.path.join(rtl_dir, "mqnic_ptp_clock.v"),
         os.path.join(rtl_dir, "mqnic_ptp_perout.v"),
+        os.path.join(rtl_dir, "mqnic_rb_clk_info.v"),
         os.path.join(rtl_dir, "cpl_write.v"),
         os.path.join(rtl_dir, "cpl_op_mux.v"),
         os.path.join(rtl_dir, "desc_fetch.v"),

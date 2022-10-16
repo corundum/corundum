@@ -606,6 +606,7 @@ parameter AXIS_IF_RX_USER_WIDTH = AXIS_RX_USER_WIDTH;
 localparam CLK_CYCLES_PER_US = (1000*CLK_PERIOD_NS_DENOM)/CLK_PERIOD_NS_NUM;
 
 localparam PHC_RB_BASE_ADDR = 32'h100;
+localparam CLK_RB_BASE_ADDR = PHC_RB_BASE_ADDR + 32'h100;
 
 // check configuration
 initial begin
@@ -743,17 +744,23 @@ wire [AXIL_CTRL_DATA_WIDTH-1:0] ptp_ctrl_reg_rd_data;
 wire ptp_ctrl_reg_rd_wait;
 wire ptp_ctrl_reg_rd_ack;
 
+wire clk_ctrl_reg_wr_wait;
+wire clk_ctrl_reg_wr_ack;
+wire [AXIL_CTRL_DATA_WIDTH-1:0] clk_ctrl_reg_rd_data;
+wire clk_ctrl_reg_rd_wait;
+wire clk_ctrl_reg_rd_ack;
+
 reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
 reg [15:0] irq_rate_limit_min_interval_reg = 10;
 
-assign ctrl_reg_wr_wait_int = ctrl_reg_wr_wait | ptp_ctrl_reg_wr_wait;
-assign ctrl_reg_wr_ack_int = ctrl_reg_wr_ack | ctrl_reg_wr_ack_reg | ptp_ctrl_reg_wr_ack;
-assign ctrl_reg_rd_data_int = ctrl_reg_rd_data | ctrl_reg_rd_data_reg | ptp_ctrl_reg_rd_data;
-assign ctrl_reg_rd_wait_int = ctrl_reg_rd_wait | ptp_ctrl_reg_rd_wait;
-assign ctrl_reg_rd_ack_int = ctrl_reg_rd_ack | ctrl_reg_rd_ack_reg | ptp_ctrl_reg_rd_ack;
+assign ctrl_reg_wr_wait_int = ctrl_reg_wr_wait | ptp_ctrl_reg_wr_wait | clk_ctrl_reg_wr_wait;
+assign ctrl_reg_wr_ack_int = ctrl_reg_wr_ack | ctrl_reg_wr_ack_reg | ptp_ctrl_reg_wr_ack | clk_ctrl_reg_wr_ack;
+assign ctrl_reg_rd_data_int = ctrl_reg_rd_data | ctrl_reg_rd_data_reg | ptp_ctrl_reg_rd_data | clk_ctrl_reg_rd_data;
+assign ctrl_reg_rd_wait_int = ctrl_reg_rd_wait | ptp_ctrl_reg_rd_wait | clk_ctrl_reg_rd_wait;
+assign ctrl_reg_rd_ack_int = ctrl_reg_rd_ack | ctrl_reg_rd_ack_reg | ptp_ctrl_reg_rd_ack | clk_ctrl_reg_rd_ack;
 
 always @(posedge clk) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
@@ -836,7 +843,7 @@ mqnic_ptp #(
     .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
     .RB_BASE_ADDR(PHC_RB_BASE_ADDR),
-    .RB_NEXT_PTR(RB_NEXT_PTR)
+    .RB_NEXT_PTR(CLK_RB_BASE_ADDR)
 )
 mqnic_ptp_inst (
     .clk(clk),
@@ -873,6 +880,50 @@ mqnic_ptp_inst (
     .ptp_perout_locked(ptp_perout_locked),
     .ptp_perout_error(ptp_perout_error),
     .ptp_perout_pulse(ptp_perout_pulse)
+);
+
+localparam CLK_CNT = PORT_COUNT*2;
+
+wire [CLK_CNT-1:0] all_clocks;
+
+mqnic_rb_clk_info #(
+    .CLK_PERIOD_NS_NUM(CLK_PERIOD_NS_NUM),
+    .CLK_PERIOD_NS_DENOM(CLK_PERIOD_NS_DENOM),
+    .REF_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
+    .REF_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
+    .CH_CNT(PORT_COUNT*2),
+    .REG_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
+    .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+    .RB_BASE_ADDR(CLK_RB_BASE_ADDR),
+    .RB_NEXT_PTR(RB_NEXT_PTR)
+)
+mqnic_rb_clk_info_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * Register interface
+     */
+    .reg_wr_addr(ctrl_reg_wr_addr),
+    .reg_wr_data(ctrl_reg_wr_data),
+    .reg_wr_strb(ctrl_reg_wr_strb),
+    .reg_wr_en(ctrl_reg_wr_en),
+    .reg_wr_wait(clk_ctrl_reg_wr_wait),
+    .reg_wr_ack(clk_ctrl_reg_wr_ack),
+    .reg_rd_addr(ctrl_reg_rd_addr),
+    .reg_rd_en(ctrl_reg_rd_en),
+    .reg_rd_data(clk_ctrl_reg_rd_data),
+    .reg_rd_wait(clk_ctrl_reg_rd_wait),
+    .reg_rd_ack(clk_ctrl_reg_rd_ack),
+
+    /*
+     * Clock inputs
+     */
+    .ref_clk(ptp_clk),
+    .ref_rst(ptp_rst),
+
+    .ch_clk(all_clocks)
 );
 
 localparam CTRL_XBAR_MAIN_OFFSET = 0;
@@ -2995,6 +3046,9 @@ generate
 
             assign app_direct_rx_clk[n*PORTS_PER_IF+m] = port_rx_clk;
             assign app_direct_rx_rst[n*PORTS_PER_IF+m] = port_rx_rst;
+
+            assign all_clocks[(n*PORTS_PER_IF+m)*2+0] = port_tx_clk;
+            assign all_clocks[(n*PORTS_PER_IF+m)*2+1] = port_rx_clk;
 
             wire [PTP_TS_WIDTH-1:0] port_rx_ptp_ts_96;
             wire port_rx_ptp_ts_step;

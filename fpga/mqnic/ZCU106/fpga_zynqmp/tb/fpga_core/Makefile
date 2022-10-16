@@ -55,6 +55,7 @@ VERILOG_SOURCES += ../../rtl/common/mqnic_rx_queue_map.v
 VERILOG_SOURCES += ../../rtl/common/mqnic_ptp.v
 VERILOG_SOURCES += ../../rtl/common/mqnic_ptp_clock.v
 VERILOG_SOURCES += ../../rtl/common/mqnic_ptp_perout.v
+VERILOG_SOURCES += ../../rtl/common/mqnic_rb_clk_info.v
 VERILOG_SOURCES += ../../rtl/common/mqnic_port_map_phy_xgmii.v
 VERILOG_SOURCES += ../../rtl/common/cpl_write.v
 VERILOG_SOURCES += ../../rtl/common/cpl_op_mux.v

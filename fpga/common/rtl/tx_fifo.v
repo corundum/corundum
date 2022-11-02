@@ -73,8 +73,8 @@ module tx_fifo #
     parameter USER_ENABLE = 1,
     // tuser signal width
     parameter USER_WIDTH = 1,
-    // number of output pipeline registers
-    parameter PIPELINE_OUTPUT = 2
+    // number of RAM pipeline registers
+    parameter RAM_PIPELINE = 1
 )
 (
     input  wire                           clk,
@@ -200,7 +200,7 @@ for (n = 0; n < PORTS; n = n + 1) begin : fifo
         .DEST_WIDTH(M_DEST_WIDTH),
         .USER_ENABLE(USER_ENABLE),
         .USER_WIDTH(USER_WIDTH),
-        .PIPELINE_OUTPUT(PIPELINE_OUTPUT),
+        .RAM_PIPELINE(RAM_PIPELINE),
         .FRAME_FIFO(1),
         .USER_BAD_FRAME_VALUE(1'b1),
         .USER_BAD_FRAME_MASK(1'b1),

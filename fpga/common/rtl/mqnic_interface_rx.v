@@ -243,7 +243,7 @@ axis_fifo #(
     .ID_WIDTH(DESC_REQ_TAG_WIDTH),
     .DEST_ENABLE(0),
     .USER_ENABLE(0),
-    .PIPELINE_OUTPUT(3),
+    .RAM_PIPELINE(2),
     .FRAME_FIFO(0)
 )
 rx_desc_fifo (

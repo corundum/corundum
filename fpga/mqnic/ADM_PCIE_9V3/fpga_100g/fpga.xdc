@@ -73,7 +73,7 @@ set_property -dict {LOC F29  IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp_0_
 set_property -dict {LOC D31  IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 12} [get_ports qsfp_0_sel_l]
 
 # 161.1328125 MHz MGT reference clock
-#create_clock -period 6.206 -name qsfp_0_mgt_refclk [get_ports qsfp_0_mgt_refclk_p]
+create_clock -period 6.206 -name qsfp_0_mgt_refclk [get_ports qsfp_0_mgt_refclk_p]
 
 set_property -dict {LOC R38  } [get_ports qsfp_1_rx_0_p] ;# MGTYRXP0_127 GTYE4_CHANNEL_X0Y12 / GTYE4_COMMON_X0Y3
 set_property -dict {LOC R39  } [get_ports qsfp_1_rx_0_n] ;# MGTYRXN0_127 GTYE4_CHANNEL_X0Y12 / GTYE4_COMMON_X0Y3
@@ -97,7 +97,7 @@ set_property -dict {LOC F33  IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp_1_
 set_property -dict {LOC D30  IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 12} [get_ports qsfp_1_sel_l]
 
 # 161.1328125 MHz MGT reference clock
-#create_clock -period 6.206 -name qsfp_1_mgt_refclk [get_ports qsfp_1_mgt_refclk_p]
+create_clock -period 6.206 -name qsfp_1_mgt_refclk [get_ports qsfp_1_mgt_refclk_p]
 
 set_property -dict {LOC B29  IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 12} [get_ports qsfp_reset_l]
 set_property -dict {LOC C29  IOSTANDARD LVCMOS18 PULLUP true} [get_ports qsfp_int_l]

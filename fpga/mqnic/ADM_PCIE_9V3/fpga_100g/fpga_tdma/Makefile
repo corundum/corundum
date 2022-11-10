@@ -43,6 +43,9 @@ SYN_FILES += rtl/common/rx_engine.v
 SYN_FILES += rtl/common/tx_checksum.v
 SYN_FILES += rtl/common/rx_hash.v
 SYN_FILES += rtl/common/rx_checksum.v
+SYN_FILES += rtl/common/rb_drp.v
+SYN_FILES += rtl/common/cmac_gty_wrapper.v
+SYN_FILES += rtl/common/cmac_gty_ch_wrapper.v
 SYN_FILES += rtl/common/stats_counter.v
 SYN_FILES += rtl/common/stats_collect.v
 SYN_FILES += rtl/common/stats_pcie_if.v
@@ -118,11 +121,14 @@ XDC_FILES += lib/eth/syn/vivado/ptp_clock_cdc.tcl
 XDC_FILES += ../../../common/syn/vivado/mqnic_port.tcl
 XDC_FILES += ../../../common/syn/vivado/mqnic_ptp_clock.tcl
 XDC_FILES += ../../../common/syn/vivado/mqnic_rb_clk_info.tcl
+XDC_FILES += ../../../common/syn/vivado/rb_drp.tcl
+XDC_FILES += ../../../common/syn/vivado/cmac_gty_wrapper.tcl
+XDC_FILES += ../../../common/syn/vivado/cmac_gty_ch_wrapper.tcl
 
 # IP
 IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl
-IP_TCL_FILES += ip/cmac_usplus_0.tcl
-IP_TCL_FILES += ip/cmac_usplus_1.tcl
+IP_TCL_FILES += ip/cmac_usplus.tcl
+IP_TCL_FILES += ip/cmac_gty.tcl
 #IP_TCL_FILES += ip/ddr4_0.tcl
 
 # Configuration

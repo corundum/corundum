@@ -73,6 +73,7 @@ VERILOG_SOURCES += ../../rtl/common/rx_engine.v
 VERILOG_SOURCES += ../../rtl/common/tx_checksum.v
 VERILOG_SOURCES += ../../rtl/common/rx_hash.v
 VERILOG_SOURCES += ../../rtl/common/rx_checksum.v
+VERILOG_SOURCES += ../../rtl/common/rb_drp.v
 VERILOG_SOURCES += ../../rtl/common/stats_counter.v
 VERILOG_SOURCES += ../../rtl/common/stats_collect.v
 VERILOG_SOURCES += ../../rtl/common/stats_pcie_if.v

@@ -112,7 +112,7 @@ set_property -dict {LOC B8   IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 4} [get_ports q
 set_property -dict {LOC B7   IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 4} [get_ports qsfp_0_i2c_sda]
 
 # 161.1328125 MHz MGT reference clock
-#create_clock -period 6.206 -name qsfp_0_mgt_refclk [get_ports qsfp_0_mgt_refclk_p]
+create_clock -period 6.206 -name qsfp_0_mgt_refclk [get_ports qsfp_0_mgt_refclk_p]
 
 set_false_path -to [get_ports {qsfp_0_reset_n qsfp_0_lp_mode}]
 set_output_delay 0 [get_ports {qsfp_0_reset_n qsfp_0_lp_mode}]
@@ -150,7 +150,7 @@ set_property -dict {LOC C9   IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 4} [get_ports q
 set_property -dict {LOC D8   IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 4} [get_ports qsfp_1_i2c_sda]
 
 # 161.1328125 MHz MGT reference clock
-#create_clock -period 6.206 -name qsfp_1_mgt_refclk [get_ports qsfp_1_mgt_refclk_p]
+create_clock -period 6.206 -name qsfp_1_mgt_refclk [get_ports qsfp_1_mgt_refclk_p]
 
 set_false_path -to [get_ports {qsfp_1_reset_n qsfp_1_lp_mode}]
 set_output_delay 0 [get_ports {qsfp_1_reset_n qsfp_1_lp_mode}]

@@ -347,10 +347,20 @@ class TB(object):
         dut.qsfp_0_rx_status.setimmediatevalue(1)
         dut.qsfp_1_rx_status.setimmediatevalue(1)
 
+        cocotb.start_soon(Clock(dut.qsfp_0_drp_clk, 8, units="ns").start())
+        dut.qsfp_0_drp_rst.setimmediatevalue(0)
+        dut.qsfp_0_drp_do.setimmediatevalue(0)
+        dut.qsfp_0_drp_rdy.setimmediatevalue(0)
+
         dut.qsfp_0_i2c_scl_i.setimmediatevalue(1)
         dut.qsfp_0_i2c_sda_i.setimmediatevalue(1)
         dut.qsfp_0_intr_n.setimmediatevalue(1)
         dut.qsfp_0_mod_prsnt_n.setimmediatevalue(0)
+
+        cocotb.start_soon(Clock(dut.qsfp_1_drp_clk, 8, units="ns").start())
+        dut.qsfp_1_drp_rst.setimmediatevalue(0)
+        dut.qsfp_1_drp_do.setimmediatevalue(0)
+        dut.qsfp_1_drp_rdy.setimmediatevalue(0)
 
         dut.qsfp_1_i2c_scl_i.setimmediatevalue(1)
         dut.qsfp_1_i2c_sda_i.setimmediatevalue(1)
@@ -656,6 +666,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "tx_checksum.v"),
         os.path.join(rtl_dir, "common", "rx_hash.v"),
         os.path.join(rtl_dir, "common", "rx_checksum.v"),
+        os.path.join(rtl_dir, "common", "rb_drp.v"),
         os.path.join(rtl_dir, "common", "stats_counter.v"),
         os.path.join(rtl_dir, "common", "stats_collect.v"),
         os.path.join(rtl_dir, "common", "stats_pcie_if.v"),

@@ -102,7 +102,7 @@ set_property -dict {LOC G32 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qs
 #create_clock -period 6.400 -name qsfp0_mgt_refclk_1 [get_ports qsfp0_mgt_refclk_1_p]
 
 # 161.1328125 MHz MGT reference clock (from SI546, fs = 1)
-#create_clock -period 6.206 -name qsfp0_mgt_refclk_1 [get_ports qsfp0_mgt_refclk_1_p]
+create_clock -period 6.206 -name qsfp0_mgt_refclk_1 [get_ports qsfp0_mgt_refclk_1_p]
 
 set_false_path -to [get_ports {qsfp0_refclk_oe_b qsfp0_refclk_fs}]
 set_output_delay 0 [get_ports {qsfp0_refclk_oe_b qsfp0_refclk_fs}]
@@ -137,7 +137,7 @@ set_property -dict {LOC G33 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports qs
 #create_clock -period 6.400 -name qsfp1_mgt_refclk_1 [get_ports qsfp1_mgt_refclk_1_p]
 
 # 161.1328125 MHz MGT reference clock (from SI546, fs = 1)
-#create_clock -period 6.206 -name qsfp1_mgt_refclk_1 [get_ports qsfp1_mgt_refclk_1_p]
+create_clock -period 6.206 -name qsfp1_mgt_refclk_1 [get_ports qsfp1_mgt_refclk_1_p]
 
 set_false_path -to [get_ports {qsfp1_refclk_oe_b qsfp1_refclk_fs}]
 set_output_delay 0 [get_ports {qsfp1_refclk_oe_b qsfp1_refclk_fs}]

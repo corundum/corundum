@@ -113,7 +113,7 @@ set_property -dict {LOC N37 } [get_ports qsfp_mgt_refclk_0_n] ;# MGTREFCLK0N_131
 #set_property -dict {LOC F18 IOSTANDARD LVDS} [get_ports qsfp_recclk_n] ;# to SI5394 IN0
 
 # 161.1328125 MHz MGT reference clock (SI5394 OUT0)
-#create_clock -period 6.206 -name qsfp_mgt_refclk_0 [get_ports qsfp_mgt_refclk_0_p]
+create_clock -period 6.206 -name qsfp_mgt_refclk_0 [get_ports qsfp_mgt_refclk_0_p]
 
 # 322.265625 MHz MGT reference clock (SI5394 OUT2)
 #create_clock -period 3.103 -name qsfp_mgt_refclk_1 [get_ports qsfp_mgt_refclk_1_p]

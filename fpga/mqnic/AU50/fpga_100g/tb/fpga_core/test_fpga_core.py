@@ -326,6 +326,11 @@ class TB(object):
 
         dut.qsfp_rx_status.setimmediatevalue(1)
 
+        cocotb.start_soon(Clock(dut.qsfp_drp_clk, 8, units="ns").start())
+        dut.qsfp_drp_rst.setimmediatevalue(0)
+        dut.qsfp_drp_do.setimmediatevalue(0)
+        dut.qsfp_drp_rdy.setimmediatevalue(0)
+
         dut.qspi_dq_i.setimmediatevalue(0)
 
         self.cms_ram = AxiLiteRam(AxiLiteBus.from_prefix(dut, "m_axil_cms"), dut.m_axil_cms_clk, dut.m_axil_cms_rst, size=256*1024)
@@ -600,6 +605,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "tx_checksum.v"),
         os.path.join(rtl_dir, "common", "rx_hash.v"),
         os.path.join(rtl_dir, "common", "rx_checksum.v"),
+        os.path.join(rtl_dir, "common", "rb_drp.v"),
         os.path.join(rtl_dir, "common", "stats_counter.v"),
         os.path.join(rtl_dir, "common", "stats_collect.v"),
         os.path.join(rtl_dir, "common", "stats_pcie_if.v"),

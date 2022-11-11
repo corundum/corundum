@@ -951,13 +951,6 @@ wire                           qsfp_tx_axis_tready_int;
 wire                           qsfp_tx_axis_tlast_int;
 wire [16+1-1:0]                qsfp_tx_axis_tuser_int;
 
-wire [AXIS_ETH_DATA_WIDTH-1:0] qsfp_mac_tx_axis_tdata;
-wire [AXIS_ETH_KEEP_WIDTH-1:0] qsfp_mac_tx_axis_tkeep;
-wire                           qsfp_mac_tx_axis_tvalid;
-wire                           qsfp_mac_tx_axis_tready;
-wire                           qsfp_mac_tx_axis_tlast;
-wire [16+1-1:0]                qsfp_mac_tx_axis_tuser;
-
 wire [79:0]                    qsfp_tx_ptp_time_int;
 wire [79:0]                    qsfp_tx_ptp_ts_int;
 wire [15:0]                    qsfp_tx_ptp_ts_tag_int;
@@ -972,401 +965,137 @@ wire                           qsfp_rx_axis_tvalid_int;
 wire                           qsfp_rx_axis_tlast_int;
 wire [80+1-1:0]                qsfp_rx_axis_tuser_int;
 
-wire [AXIS_ETH_DATA_WIDTH-1:0] qsfp_mac_rx_axis_tdata;
-wire [AXIS_ETH_KEEP_WIDTH-1:0] qsfp_mac_rx_axis_tkeep;
-wire                           qsfp_mac_rx_axis_tvalid;
-wire                           qsfp_mac_rx_axis_tlast;
-wire                           qsfp_mac_rx_axis_tuser;
-wire [79:0]                    qsfp_mac_rx_ptp_ts;
-
 wire                           qsfp_rx_ptp_clk_int;
 wire                           qsfp_rx_ptp_rst_int;
 wire [79:0]                    qsfp_rx_ptp_time_int;
 
+wire        qsfp_drp_clk = clk_125mhz_int;
+wire        qsfp_drp_rst = rst_125mhz_int;
+wire [23:0] qsfp_drp_addr;
+wire [15:0] qsfp_drp_di;
+wire        qsfp_drp_en;
+wire        qsfp_drp_we;
+wire [15:0] qsfp_drp_do;
+wire        qsfp_drp_rdy;
+
 wire qsfp_rx_status;
 
-wire qsfp_ref_clk;
-wire qsfp_txuserclk2;
-wire qsfp_rxuserclk2;
+wire qsfp_gtpowergood;
 
-assign qsfp_tx_clk_int = qsfp_txuserclk2;
-assign qsfp_rx_clk_int = qsfp_txuserclk2;
-assign qsfp_rx_ptp_clk_int = qsfp_rxuserclk2;
+wire qsfp_mgt_refclk_0;
+wire qsfp_mgt_refclk_0_int;
+wire qsfp_mgt_refclk_0_bufg;
 
-assign clk_161mhz_ref_int = qsfp_ref_clk;
+assign clk_161mhz_ref_int = qsfp_mgt_refclk_0_bufg;
+
+IBUFDS_GTE4 ibufds_gte4_qsfp_mgt_refclk_0_inst (
+    .I     (qsfp_mgt_refclk_0_p),
+    .IB    (qsfp_mgt_refclk_0_n),
+    .CEB   (1'b0),
+    .O     (qsfp_mgt_refclk_0),
+    .ODIV2 (qsfp_mgt_refclk_0_int)
+);
+
+BUFG_GT bufg_gt_qsfp_mgt_refclk_0_inst (
+    .CE      (qsfp_gtpowergood),
+    .CEMASK  (1'b1),
+    .CLR     (1'b0),
+    .CLRMASK (1'b1),
+    .DIV     (3'd0),
+    .I       (qsfp_mgt_refclk_0_int),
+    .O       (qsfp_mgt_refclk_0_bufg)
+);
+
+wire qsfp_rst;
 
 sync_reset #(
     .N(4)
 )
-sync_reset_qsfp_rx_ptp_rst_inst (
-    .clk(qsfp_rx_ptp_clk_int),
-    .rst(qsfp_tx_rst_int),
-    .out(qsfp_rx_ptp_rst_int)
+qsfp_sync_reset_inst (
+    .clk(qsfp_mgt_refclk_0_bufg),
+    .rst(rst_125mhz_int),
+    .out(qsfp_rst)
 );
 
-cmac_pad #(
-    .DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
-    .KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
-    .USER_WIDTH(16+1)
+cmac_gty_wrapper #(
+    .DRP_CLK_FREQ_HZ(125000000),
+    .AXIS_DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
+    .AXIS_KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
+    .TX_SERDES_PIPELINE(0),
+    .RX_SERDES_PIPELINE(0),
+    .RS_FEC_ENABLE(1)
 )
-qsfp_cmac_pad_inst (
-    .clk(qsfp_tx_clk_int),
-    .rst(qsfp_tx_rst_int),
-
-    .s_axis_tdata(qsfp_tx_axis_tdata_int),
-    .s_axis_tkeep(qsfp_tx_axis_tkeep_int),
-    .s_axis_tvalid(qsfp_tx_axis_tvalid_int),
-    .s_axis_tready(qsfp_tx_axis_tready_int),
-    .s_axis_tlast(qsfp_tx_axis_tlast_int),
-    .s_axis_tuser(qsfp_tx_axis_tuser_int),
-
-    .m_axis_tdata(qsfp_mac_tx_axis_tdata),
-    .m_axis_tkeep(qsfp_mac_tx_axis_tkeep),
-    .m_axis_tvalid(qsfp_mac_tx_axis_tvalid),
-    .m_axis_tready(qsfp_mac_tx_axis_tready),
-    .m_axis_tlast(qsfp_mac_tx_axis_tlast),
-    .m_axis_tuser(qsfp_mac_tx_axis_tuser)
-);
-
-mac_ts_insert #(
-    .PTP_TS_WIDTH(80),
-    .DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
-    .KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
-    .S_USER_WIDTH(1),
-    .M_USER_WIDTH(80+1)
-)
-qsfp_mac_ts_insert_inst (
-    .clk(qsfp_rx_clk_int),
-    .rst(qsfp_rx_rst_int),
-
-    .ptp_ts(qsfp_mac_rx_ptp_ts),
-
-    .s_axis_tdata(qsfp_mac_rx_axis_tdata),
-    .s_axis_tkeep(qsfp_mac_rx_axis_tkeep),
-    .s_axis_tvalid(qsfp_mac_rx_axis_tvalid),
-    .s_axis_tready(),
-    .s_axis_tlast(qsfp_mac_rx_axis_tlast),
-    .s_axis_tuser(qsfp_mac_rx_axis_tuser),
-
-    .m_axis_tdata(qsfp_rx_axis_tdata_int),
-    .m_axis_tkeep(qsfp_rx_axis_tkeep_int),
-    .m_axis_tvalid(qsfp_rx_axis_tvalid_int),
-    .m_axis_tready(1'b1),
-    .m_axis_tlast(qsfp_rx_axis_tlast_int),
-    .m_axis_tuser(qsfp_rx_axis_tuser_int)
-);
-
-cmac_usplus_0
 qsfp_cmac_inst (
-    .gt_rxp_in({qsfp_rx4_p, qsfp_rx3_p, qsfp_rx2_p, qsfp_rx1_p}), // input
-    .gt_rxn_in({qsfp_rx4_n, qsfp_rx3_n, qsfp_rx2_n, qsfp_rx1_n}), // input
-    .gt_txp_out({qsfp_tx4_p, qsfp_tx3_p, qsfp_tx2_p, qsfp_tx1_p}), // output
-    .gt_txn_out({qsfp_tx4_n, qsfp_tx3_n, qsfp_tx2_n, qsfp_tx1_n}), // output
-    .gt_txusrclk2(qsfp_txuserclk2), // output
-    .gt_loopback_in(12'd0), // input [11:0]
-    .gt_rxrecclkout(), // output [3:0]
-    .gt_powergoodout(), // output [3:0]
-    .gt_ref_clk_out(qsfp_ref_clk), // output
-    .gtwiz_reset_tx_datapath(1'b0), // input
-    .gtwiz_reset_rx_datapath(1'b0), // input
-    .sys_reset(rst_125mhz_int), // input
-    .gt_ref_clk_p(qsfp_mgt_refclk_0_p), // input
-    .gt_ref_clk_n(qsfp_mgt_refclk_0_n), // input
-    .init_clk(clk_125mhz_int), // input
+    .xcvr_ctrl_clk(clk_125mhz_int),
+    .xcvr_ctrl_rst(qsfp_rst),
 
-    .rx_axis_tvalid(qsfp_mac_rx_axis_tvalid), // output
-    .rx_axis_tdata(qsfp_mac_rx_axis_tdata), // output [511:0]
-    .rx_axis_tlast(qsfp_mac_rx_axis_tlast), // output
-    .rx_axis_tkeep(qsfp_mac_rx_axis_tkeep), // output [63:0]
-    .rx_axis_tuser(qsfp_mac_rx_axis_tuser), // output
+    /*
+     * Common
+     */
+    .xcvr_gtpowergood_out(qsfp_gtpowergood),
+    .xcvr_ref_clk(qsfp_mgt_refclk_0),
 
-    .rx_otn_bip8_0(), // output [7:0]
-    .rx_otn_bip8_1(), // output [7:0]
-    .rx_otn_bip8_2(), // output [7:0]
-    .rx_otn_bip8_3(), // output [7:0]
-    .rx_otn_bip8_4(), // output [7:0]
-    .rx_otn_data_0(), // output [65:0]
-    .rx_otn_data_1(), // output [65:0]
-    .rx_otn_data_2(), // output [65:0]
-    .rx_otn_data_3(), // output [65:0]
-    .rx_otn_data_4(), // output [65:0]
-    .rx_otn_ena(), // output
-    .rx_otn_lane0(), // output
-    .rx_otn_vlmarker(), // output
-    .rx_preambleout(), // output [55:0]
-    .usr_rx_reset(qsfp_rx_rst_int), // output
-    .gt_rxusrclk2(qsfp_rxuserclk2), // output
+    /*
+     * DRP
+     */
+    .drp_clk(qsfp_drp_clk),
+    .drp_rst(qsfp_drp_rst),
+    .drp_addr(qsfp_drp_addr),
+    .drp_di(qsfp_drp_di),
+    .drp_en(qsfp_drp_en),
+    .drp_we(qsfp_drp_we),
+    .drp_do(qsfp_drp_do),
+    .drp_rdy(qsfp_drp_rdy),
 
-    .rx_lane_aligner_fill_0(), // output [6:0]
-    .rx_lane_aligner_fill_1(), // output [6:0]
-    .rx_lane_aligner_fill_10(), // output [6:0]
-    .rx_lane_aligner_fill_11(), // output [6:0]
-    .rx_lane_aligner_fill_12(), // output [6:0]
-    .rx_lane_aligner_fill_13(), // output [6:0]
-    .rx_lane_aligner_fill_14(), // output [6:0]
-    .rx_lane_aligner_fill_15(), // output [6:0]
-    .rx_lane_aligner_fill_16(), // output [6:0]
-    .rx_lane_aligner_fill_17(), // output [6:0]
-    .rx_lane_aligner_fill_18(), // output [6:0]
-    .rx_lane_aligner_fill_19(), // output [6:0]
-    .rx_lane_aligner_fill_2(), // output [6:0]
-    .rx_lane_aligner_fill_3(), // output [6:0]
-    .rx_lane_aligner_fill_4(), // output [6:0]
-    .rx_lane_aligner_fill_5(), // output [6:0]
-    .rx_lane_aligner_fill_6(), // output [6:0]
-    .rx_lane_aligner_fill_7(), // output [6:0]
-    .rx_lane_aligner_fill_8(), // output [6:0]
-    .rx_lane_aligner_fill_9(), // output [6:0]
-    .rx_ptp_tstamp_out(qsfp_mac_rx_ptp_ts), // output [79:0]
-    .rx_ptp_pcslane_out(), // output [4:0]
-    .ctl_rx_systemtimerin(qsfp_rx_ptp_time_int), // input [79:0]
+    /*
+     * Serial data
+     */
+    .xcvr_txp({qsfp_tx4_p, qsfp_tx3_p, qsfp_tx2_p, qsfp_tx1_p}),
+    .xcvr_txn({qsfp_tx4_n, qsfp_tx3_n, qsfp_tx2_n, qsfp_tx1_n}),
+    .xcvr_rxp({qsfp_rx4_p, qsfp_rx3_p, qsfp_rx2_p, qsfp_rx1_p}),
+    .xcvr_rxn({qsfp_rx4_n, qsfp_rx3_n, qsfp_rx2_n, qsfp_rx1_n}),
 
-    .stat_rx_aligned(), // output
-    .stat_rx_aligned_err(), // output
-    .stat_rx_bad_code(), // output [2:0]
-    .stat_rx_bad_fcs(), // output [2:0]
-    .stat_rx_bad_preamble(), // output
-    .stat_rx_bad_sfd(), // output
-    .stat_rx_bip_err_0(), // output
-    .stat_rx_bip_err_1(), // output
-    .stat_rx_bip_err_10(), // output
-    .stat_rx_bip_err_11(), // output
-    .stat_rx_bip_err_12(), // output
-    .stat_rx_bip_err_13(), // output
-    .stat_rx_bip_err_14(), // output
-    .stat_rx_bip_err_15(), // output
-    .stat_rx_bip_err_16(), // output
-    .stat_rx_bip_err_17(), // output
-    .stat_rx_bip_err_18(), // output
-    .stat_rx_bip_err_19(), // output
-    .stat_rx_bip_err_2(), // output
-    .stat_rx_bip_err_3(), // output
-    .stat_rx_bip_err_4(), // output
-    .stat_rx_bip_err_5(), // output
-    .stat_rx_bip_err_6(), // output
-    .stat_rx_bip_err_7(), // output
-    .stat_rx_bip_err_8(), // output
-    .stat_rx_bip_err_9(), // output
-    .stat_rx_block_lock(), // output [19:0]
-    .stat_rx_broadcast(), // output
-    .stat_rx_fragment(), // output [2:0]
-    .stat_rx_framing_err_0(), // output [1:0]
-    .stat_rx_framing_err_1(), // output [1:0]
-    .stat_rx_framing_err_10(), // output [1:0]
-    .stat_rx_framing_err_11(), // output [1:0]
-    .stat_rx_framing_err_12(), // output [1:0]
-    .stat_rx_framing_err_13(), // output [1:0]
-    .stat_rx_framing_err_14(), // output [1:0]
-    .stat_rx_framing_err_15(), // output [1:0]
-    .stat_rx_framing_err_16(), // output [1:0]
-    .stat_rx_framing_err_17(), // output [1:0]
-    .stat_rx_framing_err_18(), // output [1:0]
-    .stat_rx_framing_err_19(), // output [1:0]
-    .stat_rx_framing_err_2(), // output [1:0]
-    .stat_rx_framing_err_3(), // output [1:0]
-    .stat_rx_framing_err_4(), // output [1:0]
-    .stat_rx_framing_err_5(), // output [1:0]
-    .stat_rx_framing_err_6(), // output [1:0]
-    .stat_rx_framing_err_7(), // output [1:0]
-    .stat_rx_framing_err_8(), // output [1:0]
-    .stat_rx_framing_err_9(), // output [1:0]
-    .stat_rx_framing_err_valid_0(), // output
-    .stat_rx_framing_err_valid_1(), // output
-    .stat_rx_framing_err_valid_10(), // output
-    .stat_rx_framing_err_valid_11(), // output
-    .stat_rx_framing_err_valid_12(), // output
-    .stat_rx_framing_err_valid_13(), // output
-    .stat_rx_framing_err_valid_14(), // output
-    .stat_rx_framing_err_valid_15(), // output
-    .stat_rx_framing_err_valid_16(), // output
-    .stat_rx_framing_err_valid_17(), // output
-    .stat_rx_framing_err_valid_18(), // output
-    .stat_rx_framing_err_valid_19(), // output
-    .stat_rx_framing_err_valid_2(), // output
-    .stat_rx_framing_err_valid_3(), // output
-    .stat_rx_framing_err_valid_4(), // output
-    .stat_rx_framing_err_valid_5(), // output
-    .stat_rx_framing_err_valid_6(), // output
-    .stat_rx_framing_err_valid_7(), // output
-    .stat_rx_framing_err_valid_8(), // output
-    .stat_rx_framing_err_valid_9(), // output
-    .stat_rx_got_signal_os(), // output
-    .stat_rx_hi_ber(), // output
-    .stat_rx_inrangeerr(), // output
-    .stat_rx_internal_local_fault(), // output
-    .stat_rx_jabber(), // output
-    .stat_rx_local_fault(), // output
-    .stat_rx_mf_err(), // output [19:0]
-    .stat_rx_mf_len_err(), // output [19:0]
-    .stat_rx_mf_repeat_err(), // output [19:0]
-    .stat_rx_misaligned(), // output
-    .stat_rx_multicast(), // output
-    .stat_rx_oversize(), // output
-    .stat_rx_packet_1024_1518_bytes(), // output
-    .stat_rx_packet_128_255_bytes(), // output
-    .stat_rx_packet_1519_1522_bytes(), // output
-    .stat_rx_packet_1523_1548_bytes(), // output
-    .stat_rx_packet_1549_2047_bytes(), // output
-    .stat_rx_packet_2048_4095_bytes(), // output
-    .stat_rx_packet_256_511_bytes(), // output
-    .stat_rx_packet_4096_8191_bytes(), // output
-    .stat_rx_packet_512_1023_bytes(), // output
-    .stat_rx_packet_64_bytes(), // output
-    .stat_rx_packet_65_127_bytes(), // output
-    .stat_rx_packet_8192_9215_bytes(), // output
-    .stat_rx_packet_bad_fcs(), // output
-    .stat_rx_packet_large(), // output
-    .stat_rx_packet_small(), // output [2:0]
+    /*
+     * CMAC connections
+     */
+    .tx_clk(qsfp_tx_clk_int),
+    .tx_rst(qsfp_tx_rst_int),
 
-    .ctl_rx_enable(1'b1), // input
-    .ctl_rx_force_resync(1'b0), // input
-    .ctl_rx_test_pattern(1'b0), // input
-    .ctl_rsfec_ieee_error_indication_mode(1'b0), // input
-    .ctl_rx_rsfec_enable(1'b1), // input
-    .ctl_rx_rsfec_enable_correction(1'b1), // input
-    .ctl_rx_rsfec_enable_indication(1'b1), // input
-    .core_rx_reset(1'b0), // input
-    .rx_clk(qsfp_rx_clk_int), // input
+    .tx_axis_tdata(qsfp_tx_axis_tdata_int),
+    .tx_axis_tkeep(qsfp_tx_axis_tkeep_int),
+    .tx_axis_tvalid(qsfp_tx_axis_tvalid_int),
+    .tx_axis_tready(qsfp_tx_axis_tready_int),
+    .tx_axis_tlast(qsfp_tx_axis_tlast_int),
+    .tx_axis_tuser(qsfp_tx_axis_tuser_int),
 
-    .stat_rx_received_local_fault(), // output
-    .stat_rx_remote_fault(), // output
-    .stat_rx_status(qsfp_rx_status), // output
-    .stat_rx_stomped_fcs(), // output [2:0]
-    .stat_rx_synced(), // output [19:0]
-    .stat_rx_synced_err(), // output [19:0]
-    .stat_rx_test_pattern_mismatch(), // output [2:0]
-    .stat_rx_toolong(), // output
-    .stat_rx_total_bytes(), // output [6:0]
-    .stat_rx_total_good_bytes(), // output [13:0]
-    .stat_rx_total_good_packets(), // output
-    .stat_rx_total_packets(), // output [2:0]
-    .stat_rx_truncated(), // output
-    .stat_rx_undersize(), // output [2:0]
-    .stat_rx_unicast(), // output
-    .stat_rx_vlan(), // output
-    .stat_rx_pcsl_demuxed(), // output [19:0]
-    .stat_rx_pcsl_number_0(), // output [4:0]
-    .stat_rx_pcsl_number_1(), // output [4:0]
-    .stat_rx_pcsl_number_10(), // output [4:0]
-    .stat_rx_pcsl_number_11(), // output [4:0]
-    .stat_rx_pcsl_number_12(), // output [4:0]
-    .stat_rx_pcsl_number_13(), // output [4:0]
-    .stat_rx_pcsl_number_14(), // output [4:0]
-    .stat_rx_pcsl_number_15(), // output [4:0]
-    .stat_rx_pcsl_number_16(), // output [4:0]
-    .stat_rx_pcsl_number_17(), // output [4:0]
-    .stat_rx_pcsl_number_18(), // output [4:0]
-    .stat_rx_pcsl_number_19(), // output [4:0]
-    .stat_rx_pcsl_number_2(), // output [4:0]
-    .stat_rx_pcsl_number_3(), // output [4:0]
-    .stat_rx_pcsl_number_4(), // output [4:0]
-    .stat_rx_pcsl_number_5(), // output [4:0]
-    .stat_rx_pcsl_number_6(), // output [4:0]
-    .stat_rx_pcsl_number_7(), // output [4:0]
-    .stat_rx_pcsl_number_8(), // output [4:0]
-    .stat_rx_pcsl_number_9(), // output [4:0]
-    .stat_rx_rsfec_am_lock0(), // output
-    .stat_rx_rsfec_am_lock1(), // output
-    .stat_rx_rsfec_am_lock2(), // output
-    .stat_rx_rsfec_am_lock3(), // output
-    .stat_rx_rsfec_corrected_cw_inc(), // output
-    .stat_rx_rsfec_cw_inc(), // output
-    .stat_rx_rsfec_err_count0_inc(), // output [2:0]
-    .stat_rx_rsfec_err_count1_inc(), // output [2:0]
-    .stat_rx_rsfec_err_count2_inc(), // output [2:0]
-    .stat_rx_rsfec_err_count3_inc(), // output [2:0]
-    .stat_rx_rsfec_hi_ser(), // output
-    .stat_rx_rsfec_lane_alignment_status(), // output
-    .stat_rx_rsfec_lane_fill_0(), // output [13:0]
-    .stat_rx_rsfec_lane_fill_1(), // output [13:0]
-    .stat_rx_rsfec_lane_fill_2(), // output [13:0]
-    .stat_rx_rsfec_lane_fill_3(), // output [13:0]
-    .stat_rx_rsfec_lane_mapping(), // output [7:0]
-    .stat_rx_rsfec_uncorrected_cw_inc(), // output
+    .tx_ptp_time(qsfp_tx_ptp_time_int),
+    .tx_ptp_ts(qsfp_tx_ptp_ts_int),
+    .tx_ptp_ts_tag(qsfp_tx_ptp_ts_tag_int),
+    .tx_ptp_ts_valid(qsfp_tx_ptp_ts_valid_int),
 
-    .ctl_tx_systemtimerin(qsfp_tx_ptp_time_int), // input [79:0]
+    .rx_clk(qsfp_rx_clk_int),
+    .rx_rst(qsfp_rx_rst_int),
 
-    .stat_tx_ptp_fifo_read_error(), // output
-    .stat_tx_ptp_fifo_write_error(), // output
+    .rx_axis_tdata(qsfp_rx_axis_tdata_int),
+    .rx_axis_tkeep(qsfp_rx_axis_tkeep_int),
+    .rx_axis_tvalid(qsfp_rx_axis_tvalid_int),
+    .rx_axis_tlast(qsfp_rx_axis_tlast_int),
+    .rx_axis_tuser(qsfp_rx_axis_tuser_int),
 
-    .tx_ptp_tstamp_valid_out(qsfp_tx_ptp_ts_valid_int), // output
-    .tx_ptp_pcslane_out(), // output [4:0]
-    .tx_ptp_tstamp_tag_out(qsfp_tx_ptp_ts_tag_int), // output [15:0]
-    .tx_ptp_tstamp_out(qsfp_tx_ptp_ts_int), // output [79:0]
-    .tx_ptp_1588op_in(2'b10), // input [1:0]
-    .tx_ptp_tag_field_in(qsfp_mac_tx_axis_tuser[16:1]), // input [15:0]
+    .rx_ptp_clk(qsfp_rx_ptp_clk_int),
+    .rx_ptp_rst(qsfp_rx_ptp_rst_int),
+    .rx_ptp_time(qsfp_rx_ptp_time_int),
 
-    .stat_tx_bad_fcs(), // output
-    .stat_tx_broadcast(), // output
-    .stat_tx_frame_error(), // output
-    .stat_tx_local_fault(), // output
-    .stat_tx_multicast(), // output
-    .stat_tx_packet_1024_1518_bytes(), // output
-    .stat_tx_packet_128_255_bytes(), // output
-    .stat_tx_packet_1519_1522_bytes(), // output
-    .stat_tx_packet_1523_1548_bytes(), // output
-    .stat_tx_packet_1549_2047_bytes(), // output
-    .stat_tx_packet_2048_4095_bytes(), // output
-    .stat_tx_packet_256_511_bytes(), // output
-    .stat_tx_packet_4096_8191_bytes(), // output
-    .stat_tx_packet_512_1023_bytes(), // output
-    .stat_tx_packet_64_bytes(), // output
-    .stat_tx_packet_65_127_bytes(), // output
-    .stat_tx_packet_8192_9215_bytes(), // output
-    .stat_tx_packet_large(), // output
-    .stat_tx_packet_small(), // output
-    .stat_tx_total_bytes(), // output [5:0]
-    .stat_tx_total_good_bytes(), // output [13:0]
-    .stat_tx_total_good_packets(), // output
-    .stat_tx_total_packets(), // output
-    .stat_tx_unicast(), // output
-    .stat_tx_vlan(), // output
-
-    .ctl_tx_enable(1'b1), // input
-    .ctl_tx_test_pattern(1'b0), // input
-    .ctl_tx_rsfec_enable(1'b1), // input
-    .ctl_tx_send_idle(1'b0), // input
-    .ctl_tx_send_rfi(1'b0), // input
-    .ctl_tx_send_lfi(1'b0), // input
-    .core_tx_reset(1'b0), // input
-
-    .tx_axis_tready(qsfp_mac_tx_axis_tready), // output
-    .tx_axis_tvalid(qsfp_mac_tx_axis_tvalid), // input
-    .tx_axis_tdata(qsfp_mac_tx_axis_tdata), // input [511:0]
-    .tx_axis_tlast(qsfp_mac_tx_axis_tlast), // input
-    .tx_axis_tkeep(qsfp_mac_tx_axis_tkeep), // input [63:0]
-    .tx_axis_tuser(qsfp_mac_tx_axis_tuser[0]), // input
-
-    .tx_ovfout(), // output
-    .tx_unfout(), // output
-    .tx_preamblein(56'd0), // input [55:0]
-    .usr_tx_reset(qsfp_tx_rst_int), // output
-
-    .core_drp_reset(1'b0), // input
-    .drp_clk(1'b0), // input
-    .drp_addr(10'd0), // input [9:0]
-    .drp_di(16'd0), // input [15:0]
-    .drp_en(1'b0), // input
-    .drp_do(), // output [15:0]
-    .drp_rdy(), // output
-    .drp_we(1'b0) // input
+    .rx_status(qsfp_rx_status)
 );
 
 wire ptp_clk;
 wire ptp_rst;
 wire ptp_sample_clk;
 
-assign ptp_clk = qsfp_ref_clk;
+assign ptp_clk = qsfp_mgt_refclk_0_bufg;
+assign ptp_rst = qsfp_rst;
 assign ptp_sample_clk = clk_125mhz_int;
-
-sync_reset #(
-    .N(4)
-)
-sync_reset_ptp_rst_inst (
-    .clk(ptp_clk),
-    .rst(rst_125mhz_int),
-    .out(ptp_rst)
-);
 
 assign qsfp_led_stat_g = qsfp_rx_status;
 
@@ -2983,6 +2712,7 @@ core_inst (
     .qsfp_tx_ptp_ts(qsfp_tx_ptp_ts_int),
     .qsfp_tx_ptp_ts_tag(qsfp_tx_ptp_ts_tag_int),
     .qsfp_tx_ptp_ts_valid(qsfp_tx_ptp_ts_valid_int),
+
     .qsfp_rx_clk(qsfp_rx_clk_int),
     .qsfp_rx_rst(qsfp_rx_rst_int),
     .qsfp_rx_axis_tdata(qsfp_rx_axis_tdata_int),
@@ -2993,7 +2723,17 @@ core_inst (
     .qsfp_rx_ptp_clk(qsfp_rx_ptp_clk_int),
     .qsfp_rx_ptp_rst(qsfp_rx_ptp_rst_int),
     .qsfp_rx_ptp_time(qsfp_rx_ptp_time_int),
+
     .qsfp_rx_status(qsfp_rx_status),
+
+    .qsfp_drp_clk(qsfp_drp_clk),
+    .qsfp_drp_rst(qsfp_drp_rst),
+    .qsfp_drp_addr(qsfp_drp_addr),
+    .qsfp_drp_di(qsfp_drp_di),
+    .qsfp_drp_en(qsfp_drp_en),
+    .qsfp_drp_we(qsfp_drp_we),
+    .qsfp_drp_do(qsfp_drp_do),
+    .qsfp_drp_rdy(qsfp_drp_rdy),
 
     /*
      * HBM

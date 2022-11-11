@@ -44,7 +44,7 @@ set_property -dict {LOC K15  IOSTANDARD LVCMOS33 PULLUP true} [get_ports qsfp0_i
 set_property -dict {LOC L12  IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 8} [get_ports qsfp0_lpmode]
 
 # 322.265625 MHz MGT reference clock (from Y4)
-#create_clock -period 3.103 -name qsfp0_mgt_refclk [get_ports qsfp0_mgt_refclk_p]
+create_clock -period 3.103 -name qsfp0_mgt_refclk [get_ports qsfp0_mgt_refclk_p]
 
 set_false_path -to [get_ports {qsfp0_resetl qsfp0_lpmode}]
 set_output_delay 0 [get_ports {qsfp0_resetl qsfp0_lpmode}]
@@ -75,7 +75,7 @@ set_property -dict {LOC J14  IOSTANDARD LVCMOS33 PULLUP true} [get_ports qsfp1_i
 set_property -dict {LOC K12  IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 8} [get_ports qsfp1_lpmode]
 
 # 322.265625 MHz MGT reference clock (from Y5)
-#create_clock -period 3.103 -name qsfp1_mgt_refclk [get_ports qsfp1_mgt_refclk_p]
+create_clock -period 3.103 -name qsfp1_mgt_refclk [get_ports qsfp1_mgt_refclk_p]
 
 set_false_path -to [get_ports {qsfp1_resetl qsfp1_lpmode}]
 set_output_delay 0 [get_ports {qsfp1_resetl qsfp1_lpmode}]

@@ -121,7 +121,7 @@ set_property -dict {LOC BF24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8 PULLUP true} 
 set_property -dict {LOC BF23 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8 PULLUP true} [get_ports qsfp0_i2c_sda]
 
 # 322.265625 MHz MGT reference clock (from Si5338 B ch 0)
-#create_clock -period 3.103 -name qsfp0_mgt_refclk_b0 [get_ports qsfp0_mgt_refclk_b0_p]
+create_clock -period 3.103 -name qsfp0_mgt_refclk_b0 [get_ports qsfp0_mgt_refclk_b0_p]
 
 # 322.265625 MHz MGT reference clock (from Si5338 B ch 1)
 #create_clock -period 3.103 -name qsfp0_mgt_refclk_b1 [get_ports qsfp0_mgt_refclk_b1_p]
@@ -174,7 +174,7 @@ set_property -dict {LOC BE22 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8 PULLUP true} 
 set_property -dict {LOC BF22 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8 PULLUP true} [get_ports qsfp1_i2c_sda]
 
 # 322.265625 MHz MGT reference clock (from Si5338 B ch 0)
-#create_clock -period 3.103 -name qsfp1_mgt_refclk_b0 [get_ports qsfp1_mgt_refclk_b0_p]
+create_clock -period 3.103 -name qsfp1_mgt_refclk_b0 [get_ports qsfp1_mgt_refclk_b0_p]
 
 # 322.265625 MHz MGT reference clock (from Si5338 B ch 1)
 #create_clock -period 3.103 -name qsfp1_mgt_refclk_b1 [get_ports qsfp1_mgt_refclk_b1_p]
@@ -227,7 +227,7 @@ set_property -dict {LOC BF20 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8 PULLUP true} 
 set_property -dict {LOC BA20 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8 PULLUP true} [get_ports qsfp2_i2c_sda]
 
 # 322.265625 MHz MGT reference clock (from Si5338 B ch 0)
-#create_clock -period 3.103 -name qsfp2_mgt_refclk_b0 [get_ports qsfp2_mgt_refclk_b0_p]
+create_clock -period 3.103 -name qsfp2_mgt_refclk_b0 [get_ports qsfp2_mgt_refclk_b0_p]
 
 # 322.265625 MHz MGT reference clock (from Si5338 B ch 2)
 #create_clock -period 3.103 -name qsfp2_mgt_refclk_b2 [get_ports qsfp2_mgt_refclk_b2_p]
@@ -280,7 +280,7 @@ set_property -dict {LOC BC22 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8 PULLUP true} 
 set_property -dict {LOC BA24 IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8 PULLUP true} [get_ports qsfp3_i2c_sda]
 
 # 322.265625 MHz MGT reference clock (from Si5338 B ch 0)
-#create_clock -period 3.103 -name qsfp3_mgt_refclk_b0 [get_ports qsfp3_mgt_refclk_b0_p]
+create_clock -period 3.103 -name qsfp3_mgt_refclk_b0 [get_ports qsfp3_mgt_refclk_b0_p]
 
 # 322.265625 MHz MGT reference clock (from Si5338 B ch 2)
 #create_clock -period 3.103 -name qsfp3_mgt_refclk_b3 [get_ports qsfp3_mgt_refclk_b3_p]

@@ -227,6 +227,10 @@ uint32_t mqnic_get_core_clk_nom_freq_hz(struct mqnic *dev);
 uint32_t mqnic_get_ref_clk_nom_freq_hz(struct mqnic *dev);
 uint32_t mqnic_get_core_clk_freq_hz(struct mqnic *dev);
 uint32_t mqnic_get_clk_freq_hz(struct mqnic *dev, int ch);
+uint64_t mqnic_core_clk_cycles_to_ns(struct mqnic *dev, uint64_t cycles);
+uint64_t mqnic_core_clk_ns_to_cycles(struct mqnic *dev, uint64_t ns);
+uint64_t mqnic_ref_clk_cycles_to_ns(struct mqnic *dev, uint64_t cycles);
+uint64_t mqnic_ref_clk_ns_to_cycles(struct mqnic *dev, uint64_t ns);
 
 // mqnic_stats.c
 void mqnic_stats_init(struct mqnic *dev);

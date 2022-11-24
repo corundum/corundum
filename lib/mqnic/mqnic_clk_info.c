@@ -80,3 +80,35 @@ uint32_t mqnic_get_clk_freq_hz(struct mqnic *dev, int ch)
 
     return mqnic_reg_read32(dev->clk_info_rb->regs, MQNIC_RB_CLK_INFO_FREQ_BASE + ch*4);
 }
+
+uint64_t mqnic_core_clk_cycles_to_ns(struct mqnic *dev, uint64_t cycles)
+{
+    if (!dev->clk_info_rb || !dev->core_clk_nom_per_ns_denom)
+        return 0;
+
+    return (cycles * (uint64_t)dev->core_clk_nom_per_ns_num) / (uint64_t)dev->core_clk_nom_per_ns_denom;
+}
+
+uint64_t mqnic_core_clk_ns_to_cycles(struct mqnic *dev, uint64_t ns)
+{
+    if (!dev->clk_info_rb || !dev->core_clk_nom_per_ns_num)
+        return 0;
+
+    return (ns * (uint64_t)dev->core_clk_nom_per_ns_denom) / (uint64_t)dev->core_clk_nom_per_ns_num;
+}
+
+uint64_t mqnic_ref_clk_cycles_to_ns(struct mqnic *dev, uint64_t cycles)
+{
+    if (!dev->clk_info_rb || !dev->ref_clk_nom_per_ns_denom)
+        return 0;
+
+    return (cycles * (uint64_t)dev->ref_clk_nom_per_ns_num) / (uint64_t)dev->ref_clk_nom_per_ns_denom;
+}
+
+uint64_t mqnic_ref_clk_ns_to_cycles(struct mqnic *dev, uint64_t ns)
+{
+    if (!dev->clk_info_rb || !dev->ref_clk_nom_per_ns_num)
+        return 0;
+
+    return (ns * (uint64_t)dev->ref_clk_nom_per_ns_denom) / (uint64_t)dev->ref_clk_nom_per_ns_num;
+}

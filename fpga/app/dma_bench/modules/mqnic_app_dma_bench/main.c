@@ -312,7 +312,7 @@ static void dma_block_write(struct mqnic_app_dma_bench *app,
 static void dma_block_read_bench(struct mqnic_app_dma_bench *app,
 		dma_addr_t dma_addr, u64 size, u64 stride, u64 count)
 {
-	u64 cycles;
+	u64 time;
 	u64 op_count;
 	u64 op_latency;
 	u64 req_count;
@@ -328,24 +328,24 @@ static void dma_block_read_bench(struct mqnic_app_dma_bench *app,
 	dma_block_read(app, dma_addr, 0, 0x3fff, stride,
 			0, 0, 0x3fff, stride, size, count);
 
-	cycles = ioread32(app->app_hw_addr + 0x001008);
+	time = mqnic_core_clk_cycles_to_ns(app->mdev, ioread32(app->app_hw_addr + 0x001008));
 
 	udelay(5);
 
 	op_count = mqnic_stats_read(app->mdev, 32) - op_count;
-	op_latency = mqnic_stats_read(app->mdev, 34) - op_latency;
+	op_latency = mqnic_core_clk_cycles_to_ns(app->mdev, mqnic_stats_read(app->mdev, 34) - op_latency);
 	req_count = mqnic_stats_read(app->mdev, 36) - req_count;
-	req_latency = mqnic_stats_read(app->mdev, 37) - req_latency;
+	req_latency = mqnic_core_clk_cycles_to_ns(app->mdev, mqnic_stats_read(app->mdev, 37) - req_latency);
 
 	dev_info(app->dev, "read %lld blocks of %lld bytes (stride %lld) in %lld ns (%lld ns/op, %lld req, %lld ns/req): %lld Mbps",
-			count, size, stride, cycles * 4, (op_latency * 4) / op_count, req_count,
-			(req_latency * 4) / req_count, size * count * 8 * 1000 / (cycles * 4));
+			count, size, stride, time, op_latency / op_count, req_count,
+			req_latency / req_count, size * count * 8 * 1000 / time);
 }
 
 static void dma_block_write_bench(struct mqnic_app_dma_bench *app,
 		dma_addr_t dma_addr, u64 size, u64 stride, u64 count)
 {
-	u64 cycles;
+	u64 time;
 	u64 op_count;
 	u64 op_latency;
 	u64 req_count;
@@ -361,18 +361,18 @@ static void dma_block_write_bench(struct mqnic_app_dma_bench *app,
 	dma_block_write(app, dma_addr, 0, 0x3fff, stride,
 			0, 0, 0x3fff, stride, size, count);
 
-	cycles = ioread32(app->app_hw_addr + 0x001108);
+	time = mqnic_core_clk_cycles_to_ns(app->mdev, ioread32(app->app_hw_addr + 0x001108));
 
 	udelay(5);
 
 	op_count = mqnic_stats_read(app->mdev, 48) - op_count;
-	op_latency = mqnic_stats_read(app->mdev, 50) - op_latency;
+	op_latency = mqnic_core_clk_cycles_to_ns(app->mdev, mqnic_stats_read(app->mdev, 50) - op_latency);
 	req_count = mqnic_stats_read(app->mdev, 52) - req_count;
-	req_latency = mqnic_stats_read(app->mdev, 53) - req_latency;
+	req_latency = mqnic_core_clk_cycles_to_ns(app->mdev, mqnic_stats_read(app->mdev, 53) - req_latency);
 
 	dev_info(app->dev, "wrote %lld blocks of %lld bytes (stride %lld) in %lld ns (%lld ns/op, %lld req, %lld ns/req): %lld Mbps",
-			count, size, stride, cycles * 4, (op_latency * 4) / op_count, req_count,
-			(req_latency * 4) / req_count, size * count * 8 * 1000 / (cycles * 4));
+			count, size, stride, time, op_latency / op_count, req_count,
+			req_latency / req_count, size * count * 8 * 1000 / time);
 }
 
 static int mqnic_app_dma_bench_probe(struct auxiliary_device *adev,

@@ -420,24 +420,9 @@ open:
         dev->app_id = mqnic_reg_read32(rb->regs, MQNIC_RB_APP_INFO_REG_ID);
     }
 
+    mqnic_clk_info_init(dev);
+
     dev->phc_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER, 0);
-    dev->clk_info_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_CLK_INFO_TYPE, MQNIC_RB_CLK_INFO_VER, 0);
-
-    if (dev->clk_info_rb) {
-        uint32_t val = mqnic_reg_read32(dev->clk_info_rb->regs, MQNIC_RB_CLK_INFO_REF_NOM_PER);
-
-        dev->ref_clk_nom_per_ns_num = val >> 16;
-        dev->ref_clk_nom_per_ns_denom = val & 0xffff;
-        dev->ref_clk_nom_freq_hz = (dev->ref_clk_nom_per_ns_denom * 1000000000ull) / dev->ref_clk_nom_per_ns_num;
-
-        val = mqnic_reg_read32(dev->clk_info_rb->regs, MQNIC_RB_CLK_INFO_CLK_NOM_PER);
-
-        dev->core_clk_nom_per_ns_num = val >> 16;
-        dev->core_clk_nom_per_ns_denom = val & 0xffff;
-        dev->core_clk_nom_freq_hz = (dev->core_clk_nom_per_ns_denom * 1000000000ull) / dev->core_clk_nom_per_ns_num;
-
-        dev->clk_info_channels = mqnic_reg_read32(dev->clk_info_rb->regs, MQNIC_RB_CLK_INFO_COUNT);
-    }
 
     // Enumerate interfaces
     dev->if_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_IF_TYPE, MQNIC_RB_IF_VER, 0);
@@ -529,28 +514,4 @@ void mqnic_print_fw_id(struct mqnic *dev)
     printf("Release info: %08x\n", dev->rel_info);
     if (dev->app_id)
         printf("Application ID: 0x%08x\n", dev->app_id);
-}
-
-uint32_t mqnic_get_core_clk_nom_freq_hz(struct mqnic *dev)
-{
-    return dev->core_clk_nom_freq_hz;
-}
-
-uint32_t mqnic_get_ref_clk_nom_freq_hz(struct mqnic *dev)
-{
-    return dev->ref_clk_nom_freq_hz;
-}
-
-uint32_t mqnic_get_core_clk_freq_hz(struct mqnic *dev)
-{
-    if (!dev->clk_info_rb)
-        return 0;
-    return mqnic_reg_read32(dev->clk_info_rb->regs, MQNIC_RB_CLK_INFO_CLK_FREQ);
-}
-
-uint32_t mqnic_get_clk_freq_hz(struct mqnic *dev, int ch)
-{
-    if (!dev->clk_info_rb || ch < 0 || ch >= dev->clk_info_channels)
-        return 0;
-    return mqnic_reg_read32(dev->clk_info_rb->regs, MQNIC_RB_CLK_INFO_FREQ_BASE + ch*4);
 }

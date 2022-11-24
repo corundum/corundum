@@ -151,8 +151,8 @@ struct mqnic {
     struct mqnic_reg_block *rb_list;
     struct mqnic_reg_block *fw_id_rb;
     struct mqnic_reg_block *if_rb;
-    struct mqnic_reg_block *phc_rb;
     struct mqnic_reg_block *clk_info_rb;
+    struct mqnic_reg_block *phc_rb;
 
     uint32_t fpga_id;
     const char *fpga_part;
@@ -191,10 +191,6 @@ struct mqnic {
 struct mqnic *mqnic_open(const char *dev_name);
 void mqnic_close(struct mqnic *dev);
 void mqnic_print_fw_id(struct mqnic *dev);
-uint32_t mqnic_get_core_clk_nom_freq_hz(struct mqnic *dev);
-uint32_t mqnic_get_ref_clk_nom_freq_hz(struct mqnic *dev);
-uint32_t mqnic_get_core_clk_freq_hz(struct mqnic *dev);
-uint32_t mqnic_get_clk_freq_hz(struct mqnic *dev, int ch);
 
 // mqnic_if.c
 struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs);
@@ -218,5 +214,12 @@ void mqnic_sched_block_close(struct mqnic_sched_block *block);
 // mqnic_scheduler.c
 struct mqnic_sched *mqnic_sched_open(struct mqnic_sched_block *block, int index, struct mqnic_reg_block *rb);
 void mqnic_sched_close(struct mqnic_sched *sched);
+
+// mqnic_clk_info.c
+void mqnic_clk_info_init(struct mqnic *dev);
+uint32_t mqnic_get_core_clk_nom_freq_hz(struct mqnic *dev);
+uint32_t mqnic_get_ref_clk_nom_freq_hz(struct mqnic *dev);
+uint32_t mqnic_get_core_clk_freq_hz(struct mqnic *dev);
+uint32_t mqnic_get_clk_freq_hz(struct mqnic *dev, int ch);
 
 #endif /* MQNIC_H */

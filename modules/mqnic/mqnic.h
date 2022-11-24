@@ -168,6 +168,7 @@ struct mqnic_dev {
 	struct mqnic_reg_block *rb_list;
 	struct mqnic_reg_block *fw_id_rb;
 	struct mqnic_reg_block *if_rb;
+	struct mqnic_reg_block *stats_rb;
 	struct mqnic_reg_block *clk_info_rb;
 	struct mqnic_reg_block *phc_rb;
 
@@ -184,6 +185,11 @@ struct mqnic_dev {
 	u32 rel_info;
 
 	u32 app_id;
+
+	u32 stats_offset;
+	u32 stats_count;
+	u32 stats_stride;
+	u32 stats_flags;
 
 	u32 core_clk_nom_per_ns_num;
 	u32 core_clk_nom_per_ns_denom;
@@ -580,6 +586,10 @@ u32 mqnic_get_core_clk_nom_freq_hz(struct mqnic_dev *mdev);
 u32 mqnic_get_ref_clk_nom_freq_hz(struct mqnic_dev *mdev);
 u32 mqnic_get_core_clk_freq_hz(struct mqnic_dev *mdev);
 u32 mqnic_get_clk_freq_hz(struct mqnic_dev *mdev, int ch);
+
+// mqnic_stats.c
+void mqnic_stats_init(struct mqnic_dev *mdev);
+u64 mqnic_stats_read(struct mqnic_dev *mdev, int index);
 
 // mqnic_eq.c
 int mqnic_create_eq_ring(struct mqnic_if *interface, struct mqnic_eq_ring **ring_ptr,

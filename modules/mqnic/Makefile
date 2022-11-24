@@ -15,6 +15,7 @@ mqnic-y += mqnic_ptp.o
 mqnic-y += mqnic_i2c.o
 mqnic-y += mqnic_board.o
 mqnic-y += mqnic_clk_info.o
+mqnic-y += mqnic_stats.o
 mqnic-y += mqnic_tx.o
 mqnic-y += mqnic_rx.o
 mqnic-y += mqnic_cq.o

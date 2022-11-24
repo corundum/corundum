@@ -420,6 +420,7 @@ open:
         dev->app_id = mqnic_reg_read32(rb->regs, MQNIC_RB_APP_INFO_REG_ID);
     }
 
+    mqnic_stats_init(dev);
     mqnic_clk_info_init(dev);
 
     dev->phc_rb = mqnic_find_reg_block(dev->rb_list, MQNIC_RB_PHC_TYPE, MQNIC_RB_PHC_VER, 0);

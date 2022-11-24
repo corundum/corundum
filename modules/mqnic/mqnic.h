@@ -168,6 +168,7 @@ struct mqnic_dev {
 	struct mqnic_reg_block *rb_list;
 	struct mqnic_reg_block *fw_id_rb;
 	struct mqnic_reg_block *if_rb;
+	struct mqnic_reg_block *clk_info_rb;
 	struct mqnic_reg_block *phc_rb;
 
 	int dev_port_max;
@@ -183,6 +184,14 @@ struct mqnic_dev {
 	u32 rel_info;
 
 	u32 app_id;
+
+	u32 core_clk_nom_per_ns_num;
+	u32 core_clk_nom_per_ns_denom;
+	u32 core_clk_nom_freq_hz;
+	u32 ref_clk_nom_per_ns_num;
+	u32 ref_clk_nom_per_ns_denom;
+	u32 ref_clk_nom_freq_hz;
+	u32 clk_info_channels;
 
 	u32 if_offset;
 	u32 if_count;
@@ -564,6 +573,13 @@ void mqnic_i2c_deinit(struct mqnic_dev *mqnic);
 // mqnic_board.c
 int mqnic_board_init(struct mqnic_dev *mqnic);
 void mqnic_board_deinit(struct mqnic_dev *mqnic);
+
+// mqnic_clk_info.c
+void mqnic_clk_info_init(struct mqnic_dev *mdev);
+u32 mqnic_get_core_clk_nom_freq_hz(struct mqnic_dev *mdev);
+u32 mqnic_get_ref_clk_nom_freq_hz(struct mqnic_dev *mdev);
+u32 mqnic_get_core_clk_freq_hz(struct mqnic_dev *mdev);
+u32 mqnic_get_clk_freq_hz(struct mqnic_dev *mdev, int ch);
 
 // mqnic_eq.c
 int mqnic_create_eq_ring(struct mqnic_if *interface, struct mqnic_eq_ring **ring_ptr,

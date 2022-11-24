@@ -471,6 +471,15 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (dev->stats_rb)
+    {
+        printf("Statistics counters\n");
+        for (int k = 0; k < dev->stats_count; k++)
+        {
+            printf("Index %d: %lu\n", k, mqnic_stats_read(dev, k));
+        }
+    }
+
 err:
 
     mqnic_close(dev);

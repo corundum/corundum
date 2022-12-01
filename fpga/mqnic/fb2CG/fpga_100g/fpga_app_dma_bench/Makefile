@@ -58,6 +58,7 @@ SYN_FILES += rtl/common/tx_scheduler_rr.v
 SYN_FILES += rtl/common/cmac_pad.v
 SYN_FILES += rtl/common/mac_ts_insert.v
 SYN_FILES += app/dma_bench/rtl/mqnic_app_block_dma_bench.v
+SYN_FILES += app/dma_bench/rtl/dma_bench.v
 SYN_FILES += lib/eth/rtl/ptp_clock.v
 SYN_FILES += lib/eth/rtl/ptp_clock_cdc.v
 SYN_FILES += lib/eth/rtl/ptp_perout.v

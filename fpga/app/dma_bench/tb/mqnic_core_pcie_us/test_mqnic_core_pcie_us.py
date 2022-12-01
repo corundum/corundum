@@ -648,6 +648,11 @@ async def run_test_nic(dut):
             await block.schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000000)
             await tb.driver.interfaces[0].set_rx_queue_map_offset(block.index, 0)
 
+    app_reg_blocks = mqnic.RegBlockList()
+    await app_reg_blocks.enumerate_reg_blocks(tb.driver.app_hw_regs)
+
+    dma_bench_rb = app_reg_blocks.find(0x12348101, 0x00000100)
+
     mem = tb.rc.mem_pool.alloc_region(16*1024*1024)
     mem_base = mem.get_absolute_address(0)
 
@@ -657,30 +662,30 @@ async def run_test_nic(dut):
     mem[0:1024] = bytearray([x % 256 for x in range(1024)])
 
     # write pcie read descriptor
-    await tb.driver.app_hw_regs.write_dword(0x000100, (mem_base+0x0000) & 0xffffffff)
-    await tb.driver.app_hw_regs.write_dword(0x000104, (mem_base+0x0000 >> 32) & 0xffffffff)
-    await tb.driver.app_hw_regs.write_dword(0x000108, 0x100)
-    await tb.driver.app_hw_regs.write_dword(0x000110, 0x400)
-    await tb.driver.app_hw_regs.write_dword(0x000114, 0xAA)
+    await dma_bench_rb.write_dword(0x100, (mem_base+0x0000) & 0xffffffff)
+    await dma_bench_rb.write_dword(0x104, (mem_base+0x0000 >> 32) & 0xffffffff)
+    await dma_bench_rb.write_dword(0x108, 0x100)
+    await dma_bench_rb.write_dword(0x110, 0x400)
+    await dma_bench_rb.write_dword(0x114, 0xAA)
 
     await Timer(2000, 'ns')
 
     # read status
-    val = await tb.driver.app_hw_regs.read_dword(0x000118)
+    val = await dma_bench_rb.read_dword(0x000118)
     tb.log.info("Status: 0x%x", val)
     assert val == 0x800000AA
 
     # write pcie write descriptor
-    await tb.driver.app_hw_regs.write_dword(0x000200, (mem_base+0x1000) & 0xffffffff)
-    await tb.driver.app_hw_regs.write_dword(0x000204, (mem_base+0x1000 >> 32) & 0xffffffff)
-    await tb.driver.app_hw_regs.write_dword(0x000208, 0x100)
-    await tb.driver.app_hw_regs.write_dword(0x000210, 0x400)
-    await tb.driver.app_hw_regs.write_dword(0x000214, 0x55)
+    await dma_bench_rb.write_dword(0x200, (mem_base+0x1000) & 0xffffffff)
+    await dma_bench_rb.write_dword(0x204, (mem_base+0x1000 >> 32) & 0xffffffff)
+    await dma_bench_rb.write_dword(0x208, 0x100)
+    await dma_bench_rb.write_dword(0x210, 0x400)
+    await dma_bench_rb.write_dword(0x214, 0x55)
 
     await Timer(2000, 'ns')
 
     # read status
-    val = await tb.driver.app_hw_regs.read_dword(0x000218)
+    val = await dma_bench_rb.read_dword(0x000218)
     tb.log.info("Status: 0x%x", val)
     assert val == 0x80000055
 
@@ -691,16 +696,16 @@ async def run_test_nic(dut):
     tb.log.info("Test immediate write")
 
     # write pcie write descriptor
-    await tb.driver.app_hw_regs.write_dword(0x000200, (mem_base+0x1000) & 0xffffffff)
-    await tb.driver.app_hw_regs.write_dword(0x000204, (mem_base+0x1000 >> 32) & 0xffffffff)
-    await tb.driver.app_hw_regs.write_dword(0x000208, 0x44332211)
-    await tb.driver.app_hw_regs.write_dword(0x000210, 0x4)
-    await tb.driver.app_hw_regs.write_dword(0x000214, 0x800000AA)
+    await dma_bench_rb.write_dword(0x200, (mem_base+0x1000) & 0xffffffff)
+    await dma_bench_rb.write_dword(0x204, (mem_base+0x1000 >> 32) & 0xffffffff)
+    await dma_bench_rb.write_dword(0x208, 0x44332211)
+    await dma_bench_rb.write_dword(0x210, 0x4)
+    await dma_bench_rb.write_dword(0x214, 0x800000AA)
 
     await Timer(2000, 'ns')
 
     # read status
-    val = await tb.driver.app_hw_regs.read_dword(0x000218)
+    val = await dma_bench_rb.read_dword(0x000218)
     tb.log.info("Status: 0x%x", val)
     assert val == 0x800000AA
 
@@ -721,91 +726,89 @@ async def run_test_nic(dut):
     # write packet data
     mem[src_offset:src_offset+region_len] = bytearray([x % 256 for x in range(region_len)])
 
-    # enable DMA
-    await tb.driver.app_hw_regs.write_dword(0x000000, 1)
     # disable interrupts
-    await tb.driver.app_hw_regs.write_dword(0x000008, 0)
+    await dma_bench_rb.write_dword(0x00C, 0)
 
     # configure operation (read)
     # DMA base address
-    await tb.driver.app_hw_regs.write_dword(0x001080, (mem_base+src_offset) & 0xffffffff)
-    await tb.driver.app_hw_regs.write_dword(0x001084, (mem_base+src_offset >> 32) & 0xffffffff)
+    await dma_bench_rb.write_dword(0x380, (mem_base+src_offset) & 0xffffffff)
+    await dma_bench_rb.write_dword(0x384, (mem_base+src_offset >> 32) & 0xffffffff)
     # DMA offset address
-    await tb.driver.app_hw_regs.write_dword(0x001088, 0)
-    await tb.driver.app_hw_regs.write_dword(0x00108c, 0)
+    await dma_bench_rb.write_dword(0x388, 0)
+    await dma_bench_rb.write_dword(0x38c, 0)
     # DMA offset mask
-    await tb.driver.app_hw_regs.write_dword(0x001090, region_len-1)
-    await tb.driver.app_hw_regs.write_dword(0x001094, 0)
+    await dma_bench_rb.write_dword(0x390, region_len-1)
+    await dma_bench_rb.write_dword(0x394, 0)
     # DMA stride
-    await tb.driver.app_hw_regs.write_dword(0x001098, block_stride)
-    await tb.driver.app_hw_regs.write_dword(0x00109c, 0)
+    await dma_bench_rb.write_dword(0x398, block_stride)
+    await dma_bench_rb.write_dword(0x39c, 0)
     # RAM base address
-    await tb.driver.app_hw_regs.write_dword(0x0010c0, 0)
-    await tb.driver.app_hw_regs.write_dword(0x0010c4, 0)
+    await dma_bench_rb.write_dword(0x3c0, 0)
+    await dma_bench_rb.write_dword(0x3c4, 0)
     # RAM offset address
-    await tb.driver.app_hw_regs.write_dword(0x0010c8, 0)
-    await tb.driver.app_hw_regs.write_dword(0x0010cc, 0)
+    await dma_bench_rb.write_dword(0x3c8, 0)
+    await dma_bench_rb.write_dword(0x3cc, 0)
     # RAM offset mask
-    await tb.driver.app_hw_regs.write_dword(0x0010d0, region_len-1)
-    await tb.driver.app_hw_regs.write_dword(0x0010d4, 0)
+    await dma_bench_rb.write_dword(0x3d0, region_len-1)
+    await dma_bench_rb.write_dword(0x3d4, 0)
     # RAM stride
-    await tb.driver.app_hw_regs.write_dword(0x0010d8, block_stride)
-    await tb.driver.app_hw_regs.write_dword(0x0010dc, 0)
+    await dma_bench_rb.write_dword(0x3d8, block_stride)
+    await dma_bench_rb.write_dword(0x3dc, 0)
     # clear cycle count
-    await tb.driver.app_hw_regs.write_dword(0x001008, 0)
-    await tb.driver.app_hw_regs.write_dword(0x00100c, 0)
+    await dma_bench_rb.write_dword(0x308, 0)
+    await dma_bench_rb.write_dword(0x30c, 0)
     # block length
-    await tb.driver.app_hw_regs.write_dword(0x001010, block_size)
+    await dma_bench_rb.write_dword(0x310, block_size)
     # block count
-    await tb.driver.app_hw_regs.write_dword(0x001018, block_count)
-    await tb.driver.app_hw_regs.write_dword(0x00101c, 0)
+    await dma_bench_rb.write_dword(0x318, block_count)
+    await dma_bench_rb.write_dword(0x31c, 0)
     # start
-    await tb.driver.app_hw_regs.write_dword(0x001000, 1)
+    await dma_bench_rb.write_dword(0x300, 1)
 
     for k in range(10):
-        cnt = await tb.driver.app_hw_regs.read_dword(0x001018)
+        cnt = await dma_bench_rb.read_dword(0x318)
         await Timer(1000, 'ns')
         if cnt == 0:
             break
 
     # configure operation (write)
     # DMA base address
-    await tb.driver.app_hw_regs.write_dword(0x001180, (mem_base+dest_offset) & 0xffffffff)
-    await tb.driver.app_hw_regs.write_dword(0x001184, (mem_base+dest_offset >> 32) & 0xffffffff)
+    await dma_bench_rb.write_dword(0x480, (mem_base+dest_offset) & 0xffffffff)
+    await dma_bench_rb.write_dword(0x484, (mem_base+dest_offset >> 32) & 0xffffffff)
     # DMA offset address
-    await tb.driver.app_hw_regs.write_dword(0x001188, 0)
-    await tb.driver.app_hw_regs.write_dword(0x00118c, 0)
+    await dma_bench_rb.write_dword(0x488, 0)
+    await dma_bench_rb.write_dword(0x48c, 0)
     # DMA offset mask
-    await tb.driver.app_hw_regs.write_dword(0x001190, region_len-1)
-    await tb.driver.app_hw_regs.write_dword(0x001194, 0)
+    await dma_bench_rb.write_dword(0x490, region_len-1)
+    await dma_bench_rb.write_dword(0x494, 0)
     # DMA stride
-    await tb.driver.app_hw_regs.write_dword(0x001198, block_stride)
-    await tb.driver.app_hw_regs.write_dword(0x00119c, 0)
+    await dma_bench_rb.write_dword(0x498, block_stride)
+    await dma_bench_rb.write_dword(0x49c, 0)
     # RAM base address
-    await tb.driver.app_hw_regs.write_dword(0x0011c0, 0)
-    await tb.driver.app_hw_regs.write_dword(0x0011c4, 0)
+    await dma_bench_rb.write_dword(0x4c0, 0)
+    await dma_bench_rb.write_dword(0x4c4, 0)
     # RAM offset address
-    await tb.driver.app_hw_regs.write_dword(0x0011c8, 0)
-    await tb.driver.app_hw_regs.write_dword(0x0011cc, 0)
+    await dma_bench_rb.write_dword(0x4c8, 0)
+    await dma_bench_rb.write_dword(0x4cc, 0)
     # RAM offset mask
-    await tb.driver.app_hw_regs.write_dword(0x0011d0, region_len-1)
-    await tb.driver.app_hw_regs.write_dword(0x0011d4, 0)
+    await dma_bench_rb.write_dword(0x4d0, region_len-1)
+    await dma_bench_rb.write_dword(0x4d4, 0)
     # RAM stride
-    await tb.driver.app_hw_regs.write_dword(0x0011d8, block_stride)
-    await tb.driver.app_hw_regs.write_dword(0x0011dc, 0)
+    await dma_bench_rb.write_dword(0x4d8, block_stride)
+    await dma_bench_rb.write_dword(0x4dc, 0)
     # clear cycle count
-    await tb.driver.app_hw_regs.write_dword(0x001108, 0)
-    await tb.driver.app_hw_regs.write_dword(0x00110c, 0)
+    await dma_bench_rb.write_dword(0x408, 0)
+    await dma_bench_rb.write_dword(0x40c, 0)
     # block length
-    await tb.driver.app_hw_regs.write_dword(0x001110, block_size)
+    await dma_bench_rb.write_dword(0x410, block_size)
     # block count
-    await tb.driver.app_hw_regs.write_dword(0x001118, block_count)
-    await tb.driver.app_hw_regs.write_dword(0x00111c, 0)
+    await dma_bench_rb.write_dword(0x418, block_count)
+    await dma_bench_rb.write_dword(0x41c, 0)
     # start
-    await tb.driver.app_hw_regs.write_dword(0x001100, 1)
+    await dma_bench_rb.write_dword(0x400, 1)
 
     for k in range(10):
-        cnt = await tb.driver.app_hw_regs.read_dword(0x001118)
+        cnt = await dma_bench_rb.read_dword(0x418)
         await Timer(1000, 'ns')
         if cnt == 0:
             break
@@ -900,6 +903,7 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
         os.path.join(rtl_dir, "common", "mqnic_tx_scheduler_block_rr.v"),
         os.path.join(rtl_dir, "common", "tx_scheduler_rr.v"),
         os.path.join(rtl_dir, "mqnic_app_block_dma_bench.v"),
+        os.path.join(rtl_dir, "dma_bench.v"),
         os.path.join(eth_rtl_dir, "ptp_clock.v"),
         os.path.join(eth_rtl_dir, "ptp_clock_cdc.v"),
         os.path.join(eth_rtl_dir, "ptp_perout.v"),

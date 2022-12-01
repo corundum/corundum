@@ -80,6 +80,7 @@ VERILOG_SOURCES += ../../rtl/common/stats_dma_latency.v
 VERILOG_SOURCES += ../../rtl/common/mqnic_tx_scheduler_block_rr.v
 VERILOG_SOURCES += ../../rtl/common/tx_scheduler_rr.v
 VERILOG_SOURCES += ../../rtl/mqnic_app_block_dma_bench.v
+VERILOG_SOURCES += ../../rtl/dma_bench.v
 VERILOG_SOURCES += ../../lib/eth/rtl/ptp_clock.v
 VERILOG_SOURCES += ../../lib/eth/rtl/ptp_clock_cdc.v
 VERILOG_SOURCES += ../../lib/eth/rtl/ptp_perout.v

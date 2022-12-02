@@ -38,7 +38,7 @@ export PARAM_STAT_COUNT_WIDTH ?= 32
 export PARAM_AXIL_DATA_WIDTH ?= 32
 export PARAM_AXIL_ADDR_WIDTH ?= $(shell python -c "print($(PARAM_STAT_ID_WIDTH) + (($(PARAM_STAT_COUNT_WIDTH)+7)//8-1).bit_length())")
 export PARAM_AXIL_STRB_WIDTH ?= $(shell expr $(PARAM_AXIL_DATA_WIDTH) / 8 )
-export PARAM_PIPELINE ?= 0
+export PARAM_PIPELINE ?= 2
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

@@ -9,7 +9,9 @@ set_property -dict [list \
     CONFIG.extended_tag_field {true} \
     CONFIG.pf0_dev_cap_max_payload {1024_bytes} \
     CONFIG.axisten_freq {250} \
-    CONFIG.PF0_CLASS_CODE {020000} \
+    CONFIG.pf0_class_code_base {02} \
+    CONFIG.pf0_class_code_sub {00} \
+    CONFIG.pf0_class_code_interface {00} \
     CONFIG.PF0_DEVICE_ID {1001} \
     CONFIG.PF0_SUBSYSTEM_ID {806c} \
     CONFIG.PF0_SUBSYSTEM_VENDOR_ID {10ee} \

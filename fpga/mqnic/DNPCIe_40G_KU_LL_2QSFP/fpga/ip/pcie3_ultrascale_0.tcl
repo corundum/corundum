@@ -28,4 +28,5 @@ set_property -dict [list \
     CONFIG.PF0_MSIX_CAP_PBA_BIR {BAR_1:0} \
     CONFIG.PF0_MSIX_CAP_PBA_OFFSET {00018000} \
     CONFIG.vendor_id {1234} \
+    CONFIG.mode_selection {Advanced} \
 ] [get_ips pcie3_ultrascale_0]

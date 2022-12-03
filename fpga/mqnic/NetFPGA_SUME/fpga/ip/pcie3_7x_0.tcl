@@ -31,4 +31,5 @@ set_property -dict [list \
     CONFIG.PF0_MSIX_CAP_PBA_OFFSET {00018000} \
     CONFIG.aspm_support {No_ASPM} \
     CONFIG.vendor_id {1234} \
+    CONFIG.mode_selection {Advanced} \
 ] [get_ips pcie3_7x_0]

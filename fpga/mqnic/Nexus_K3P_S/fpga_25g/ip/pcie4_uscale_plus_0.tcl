@@ -27,6 +27,7 @@ set_property -dict [list \
     CONFIG.PF0_MSIX_CAP_PBA_OFFSET {00018000} \
     CONFIG.MSI_X_OPTIONS {MSI-X_External} \
     CONFIG.vendor_id {1234} \
+    CONFIG.mode_selection {Advanced} \
     CONFIG.en_gt_selection {true} \
     CONFIG.select_quad {GTY_Quad_225} \
 ] [get_ips pcie4_uscale_plus_0]

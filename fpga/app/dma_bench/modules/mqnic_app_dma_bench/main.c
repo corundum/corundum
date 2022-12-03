@@ -106,9 +106,9 @@ const char *dma_bench_stats_names[] = {
 	"dma_rd_req_timeout",      // index 6
 	"dma_rd_op_table_full",    // index 7
 	"dma_rd_no_tags",          // index 8
-	"dma_rd_tx_no_credit",     // index 9
-	"dma_rd_tx_limit",         // index 10
-	"dma_rd_tx_stall",         // index 11
+	"dma_rd_tx_limit",         // index 9
+	"dma_rd_tx_stall",         // index 10
+	"",                        // index 11
 	"",                        // index 12
 	"",                        // index 13
 	"",                        // index 14
@@ -122,9 +122,9 @@ const char *dma_bench_stats_names[] = {
 	"",                        // index 22
 	"dma_wr_op_table_full",    // index 23
 	"",                        // index 24
-	"dma_wr_tx_no_credit",     // index 25
-	"dma_wr_tx_limit",         // index 26
-	"dma_wr_tx_stall",         // index 27
+	"dma_wr_tx_limit",         // index 25
+	"dma_wr_tx_stall",         // index 26
+	"",                        // index 27
 	"",                        // index 28
 	"",                        // index 29
 	"",                        // index 30

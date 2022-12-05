@@ -766,11 +766,6 @@ def test_fpga_core(request):
     parameters['AXIS_PCIE_DATA_WIDTH'] = 256
     parameters['PF_COUNT'] = 1
     parameters['VF_COUNT'] = 0
-    parameters['PCIE_TAG_COUNT'] = 256
-    parameters['PCIE_DMA_READ_OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
-    parameters['PCIE_DMA_READ_TX_LIMIT'] = 16
-    parameters['PCIE_DMA_WRITE_OP_TABLE_SIZE'] = 16
-    parameters['PCIE_DMA_WRITE_TX_LIMIT'] = 3
 
     # Interrupt configuration
     parameters['IRQ_INDEX_WIDTH'] = parameters['EVENT_QUEUE_INDEX_WIDTH']

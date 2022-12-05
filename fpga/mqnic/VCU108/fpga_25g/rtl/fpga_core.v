@@ -164,10 +164,6 @@ module fpga_core #
     parameter PF_COUNT = 1,
     parameter VF_COUNT = 0,
     parameter PCIE_TAG_COUNT = 64,
-    parameter PCIE_DMA_READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
-    parameter PCIE_DMA_READ_TX_LIMIT = 8,
-    parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 8,
-    parameter PCIE_DMA_WRITE_TX_LIMIT = 3,
 
     // Interrupt configuration
     parameter IRQ_INDEX_WIDTH = EVENT_QUEUE_INDEX_WIDTH,
@@ -1104,10 +1100,6 @@ mqnic_core_pcie_us #(
     .VF_COUNT(VF_COUNT),
     .F_COUNT(F_COUNT),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
-    .PCIE_DMA_READ_OP_TABLE_SIZE(PCIE_DMA_READ_OP_TABLE_SIZE),
-    .PCIE_DMA_READ_TX_LIMIT(PCIE_DMA_READ_TX_LIMIT),
-    .PCIE_DMA_WRITE_OP_TABLE_SIZE(PCIE_DMA_WRITE_OP_TABLE_SIZE),
-    .PCIE_DMA_WRITE_TX_LIMIT(PCIE_DMA_WRITE_TX_LIMIT),
 
     // Interrupt configuration
     .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),

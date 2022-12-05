@@ -165,13 +165,6 @@ dict set params DMA_TAG_WIDTH "16"
 dict set params RAM_ADDR_WIDTH [expr int(ceil(log(max([dict get $params TX_RAM_SIZE], [dict get $params RX_RAM_SIZE]))/log(2)))]
 dict set params RAM_PIPELINE "2"
 
-# PCIe interface configuration
-dict set params PCIE_TAG_COUNT "256"
-dict set params PCIE_DMA_READ_OP_TABLE_SIZE [dict get $params PCIE_TAG_COUNT]
-dict set params PCIE_DMA_READ_TX_LIMIT "16"
-dict set params PCIE_DMA_WRITE_OP_TABLE_SIZE "16"
-dict set params PCIE_DMA_WRITE_TX_LIMIT "3"
-
 # Interrupt configuration
 dict set params IRQ_INDEX_WIDTH [dict get $params EVENT_QUEUE_INDEX_WIDTH]
 
@@ -215,12 +208,6 @@ set pcie [get_ips pcie4c_uscale_plus_0]
 
 # Internal interface settings
 dict set params AXIS_PCIE_DATA_WIDTH [regexp -all -inline -- {[0-9]+} [get_property CONFIG.axisten_if_width $pcie]]
-dict set params AXIS_PCIE_KEEP_WIDTH [expr [dict get $params AXIS_PCIE_DATA_WIDTH]/32]
-dict set params AXIS_PCIE_RC_USER_WIDTH [expr [dict get $params AXIS_PCIE_DATA_WIDTH] < 512 ? 75 : 161]
-dict set params AXIS_PCIE_RQ_USER_WIDTH [expr [dict get $params AXIS_PCIE_DATA_WIDTH] < 512 ? 62 : 137]
-dict set params AXIS_PCIE_CQ_USER_WIDTH [expr [dict get $params AXIS_PCIE_DATA_WIDTH] < 512 ? 85 : 183]
-dict set params AXIS_PCIE_CC_USER_WIDTH [expr [dict get $params AXIS_PCIE_DATA_WIDTH] < 512 ? 33 : 81]
-dict set params RQ_SEQ_NUM_WIDTH [expr [dict get $params AXIS_PCIE_RQ_USER_WIDTH] == 60 ? 4 : 6]
 
 # configure BAR settings
 proc configure_bar {pcie pf bar aperture} {

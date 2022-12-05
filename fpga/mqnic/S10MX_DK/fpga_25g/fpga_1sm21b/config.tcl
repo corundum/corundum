@@ -157,17 +157,6 @@ dict set params DMA_TAG_WIDTH "16"
 dict set params RAM_ADDR_WIDTH [expr int(ceil(log(max([dict get $params TX_RAM_SIZE], [dict get $params RX_RAM_SIZE]))/log(2)))]
 dict set params RAM_PIPELINE "2"
 
-# PCIe interface configuration
-dict set params SEG_COUNT "1"
-dict set params SEG_DATA_WIDTH "256"
-dict set params SEG_EMPTY_WIDTH [expr int(ceil(log([dict get $params SEG_DATA_WIDTH]/32.0)/log(2)))]
-dict set params TX_SEQ_NUM_WIDTH "6"
-dict set params PCIE_TAG_COUNT "256"
-dict set params PCIE_DMA_READ_OP_TABLE_SIZE [dict get $params PCIE_TAG_COUNT]
-dict set params PCIE_DMA_READ_TX_LIMIT [expr 2**[dict get $params TX_SEQ_NUM_WIDTH]]
-dict set params PCIE_DMA_WRITE_OP_TABLE_SIZE [expr 2**[dict get $params TX_SEQ_NUM_WIDTH]]
-dict set params PCIE_DMA_WRITE_TX_LIMIT [expr 2**[dict get $params TX_SEQ_NUM_WIDTH]]
-
 # Interrupt configuration
 dict set params IRQ_INDEX_WIDTH [dict get $params EVENT_QUEUE_INDEX_WIDTH]
 

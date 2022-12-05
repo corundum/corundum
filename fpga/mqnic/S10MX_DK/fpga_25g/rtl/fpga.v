@@ -132,15 +132,8 @@ module fpga #
     // PCIe interface configuration
     parameter SEG_COUNT = 1,
     parameter SEG_DATA_WIDTH = 256,
-    parameter SEG_EMPTY_WIDTH = $clog2(SEG_DATA_WIDTH/32),
-    parameter TX_SEQ_NUM_WIDTH = 6,
     parameter PF_COUNT = 1,
     parameter VF_COUNT = 0,
-    parameter PCIE_TAG_COUNT = 256,
-    parameter PCIE_DMA_READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
-    parameter PCIE_DMA_READ_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
-    parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 2**TX_SEQ_NUM_WIDTH,
-    parameter PCIE_DMA_WRITE_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
 
     // Interrupt configuration
     parameter IRQ_INDEX_WIDTH = EVENT_QUEUE_INDEX_WIDTH,
@@ -224,6 +217,11 @@ parameter IF_PTP_PERIOD_FNS = 16'h6666;
 
 // Interface configuration
 parameter TX_TAG_WIDTH = 16;
+
+// PCIe interface configuration
+parameter SEG_EMPTY_WIDTH = $clog2(SEG_DATA_WIDTH/32);
+parameter TX_SEQ_NUM_WIDTH = 6;
+parameter PCIE_TAG_COUNT = 256;
 
 // Ethernet interface configuration
 parameter XGMII_DATA_WIDTH = 64;
@@ -1047,10 +1045,6 @@ fpga_core #(
     .PF_COUNT(PF_COUNT),
     .VF_COUNT(VF_COUNT),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
-    .PCIE_DMA_READ_OP_TABLE_SIZE(PCIE_DMA_READ_OP_TABLE_SIZE),
-    .PCIE_DMA_READ_TX_LIMIT(PCIE_DMA_READ_TX_LIMIT),
-    .PCIE_DMA_WRITE_OP_TABLE_SIZE(PCIE_DMA_WRITE_OP_TABLE_SIZE),
-    .PCIE_DMA_WRITE_TX_LIMIT(PCIE_DMA_WRITE_TX_LIMIT),
 
     // Interrupt configuration
     .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),

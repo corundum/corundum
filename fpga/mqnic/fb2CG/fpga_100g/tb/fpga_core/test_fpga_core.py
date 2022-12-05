@@ -812,11 +812,6 @@ def test_fpga_core(request):
     parameters['AXIS_PCIE_DATA_WIDTH'] = 512
     parameters['PF_COUNT'] = 1
     parameters['VF_COUNT'] = 0
-    parameters['PCIE_TAG_COUNT'] = 256
-    parameters['PCIE_DMA_READ_OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
-    parameters['PCIE_DMA_READ_TX_LIMIT'] = 16
-    parameters['PCIE_DMA_WRITE_OP_TABLE_SIZE'] = 16
-    parameters['PCIE_DMA_WRITE_TX_LIMIT'] = 3
 
     # AXI lite interface configuration (control)
     parameters['AXIL_CTRL_DATA_WIDTH'] = 32

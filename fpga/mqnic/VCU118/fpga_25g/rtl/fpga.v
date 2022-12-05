@@ -140,23 +140,8 @@ module fpga #
 
     // PCIe interface configuration
     parameter AXIS_PCIE_DATA_WIDTH = 512,
-    parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
-    parameter AXIS_PCIE_RC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 75 : 161,
-    parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 62 : 137,
-    parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183,
-    parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81,
-    parameter RC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 256,
-    parameter RQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512,
-    parameter CQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512,
-    parameter CC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512,
-    parameter RQ_SEQ_NUM_WIDTH = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 4 : 6,
     parameter PF_COUNT = 1,
     parameter VF_COUNT = 0,
-    parameter PCIE_TAG_COUNT = 256,
-    parameter PCIE_DMA_READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
-    parameter PCIE_DMA_READ_TX_LIMIT = 16,
-    parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 16,
-    parameter PCIE_DMA_WRITE_TX_LIMIT = 3,
 
     // Interrupt configuration
     parameter IRQ_INDEX_WIDTH = EVENT_QUEUE_INDEX_WIDTH,
@@ -345,6 +330,19 @@ parameter TX_TAG_WIDTH = 16;
 
 // RAM configuration
 parameter AXI_DDR_STRB_WIDTH = (AXI_DDR_DATA_WIDTH/8);
+
+// PCIe interface configuration
+parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
+parameter AXIS_PCIE_RC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 75 : 161;
+parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 62 : 137;
+parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183;
+parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81;
+parameter RC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 256;
+parameter RQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512;
+parameter CQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512;
+parameter CC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512;
+parameter RQ_SEQ_NUM_WIDTH = 6;
+parameter PCIE_TAG_COUNT = 256;
 
 // Ethernet interface configuration
 parameter XGMII_DATA_WIDTH = 64;
@@ -1810,10 +1808,6 @@ fpga_core #(
     .PF_COUNT(PF_COUNT),
     .VF_COUNT(VF_COUNT),
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
-    .PCIE_DMA_READ_OP_TABLE_SIZE(PCIE_DMA_READ_OP_TABLE_SIZE),
-    .PCIE_DMA_READ_TX_LIMIT(PCIE_DMA_READ_TX_LIMIT),
-    .PCIE_DMA_WRITE_OP_TABLE_SIZE(PCIE_DMA_WRITE_OP_TABLE_SIZE),
-    .PCIE_DMA_WRITE_TX_LIMIT(PCIE_DMA_WRITE_TX_LIMIT),
 
     // Interrupt configuration
     .IRQ_INDEX_WIDTH(IRQ_INDEX_WIDTH),

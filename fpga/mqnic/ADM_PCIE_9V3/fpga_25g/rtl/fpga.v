@@ -2144,6 +2144,8 @@ core_inst (
     .m_axi_ddr_rvalid(m_axi_ddr_rvalid),
     .m_axi_ddr_rready(m_axi_ddr_rready),
 
+    .ddr_status(ddr_status),
+
     /*
      * QSPI flash
      */

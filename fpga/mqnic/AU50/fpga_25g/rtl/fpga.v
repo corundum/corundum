@@ -2876,6 +2876,8 @@ core_inst (
     .m_axi_hbm_rvalid(m_axi_hbm_rvalid),
     .m_axi_hbm_rready(m_axi_hbm_rready),
 
+    .hbm_status(hbm_status),
+
     /*
      * QSPI flash
      */

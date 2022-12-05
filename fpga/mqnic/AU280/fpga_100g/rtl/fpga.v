@@ -1236,6 +1236,7 @@ qsfp1_sync_reset_inst (
 );
 
 cmac_gty_wrapper #(
+    .DRP_CLK_FREQ_HZ(125000000),
     .AXIS_DATA_WIDTH(AXIS_ETH_DATA_WIDTH),
     .AXIS_KEEP_WIDTH(AXIS_ETH_KEEP_WIDTH),
     .TX_SERDES_PIPELINE(0),

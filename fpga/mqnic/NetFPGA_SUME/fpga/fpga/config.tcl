@@ -173,7 +173,7 @@ dict set params AXIS_ETH_RX_PIPELINE "0"
 dict set params AXIS_ETH_RX_FIFO_PIPELINE "2"
 
 # Statistics counter subsystem
-dict set params STAT_ENABLE "0"
+dict set params STAT_ENABLE "1"
 dict set params STAT_DMA_ENABLE "1"
 dict set params STAT_PCIE_ENABLE "1"
 dict set params STAT_INC_WIDTH "24"

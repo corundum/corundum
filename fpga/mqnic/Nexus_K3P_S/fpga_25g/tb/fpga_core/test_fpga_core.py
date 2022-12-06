@@ -301,7 +301,7 @@ class TB(object):
         if hasattr(dut.core_inst.core_pcie_inst, 'pcie_app_ctrl'):
             self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
-        cocotb.start_soon(Clock(dut.ptp_clk, 6.206, units="ns").start())
+        cocotb.start_soon(Clock(dut.ptp_clk, 4, units="ns").start())
         dut.ptp_rst.setimmediatevalue(0)
         cocotb.start_soon(Clock(dut.ptp_sample_clk, 8, units="ns").start())
 

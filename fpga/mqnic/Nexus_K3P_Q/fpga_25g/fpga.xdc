@@ -13,8 +13,11 @@ set_property BITSTREAM.CONFIG.SPI_FALL_EDGE Yes              [current_design]
 set_property BITSTREAM.CONFIG.OVERTEMPSHUTDOWN Enable        [current_design]
 
 # 10 MHz TXCO
-#set_property -dict {LOC E13  IOSTANDARD LVCMOS33} [get_ports clk_10mhz]
-#create_clock -period 100 -name clk_100mhz [get_ports clk_10mhz]
+set_property -dict {LOC E13  IOSTANDARD LVCMOS33} [get_ports clk_10mhz]
+create_clock -period 100.000 -name clk_10mhz [get_ports clk_10mhz]
+
+# E13 cannot directly drive MMCM, so need to set CLOCK_DEDICATED_ROUTE to satisfy DRC
+set_property CLOCK_DEDICATED_ROUTE ANY_CMT_COLUMN [get_nets clk_10mhz_bufg]
 
 # LEDs
 set_property -dict {LOC AB15 IOSTANDARD LVCMOS33 SLEW SLOW DRIVE 12} [get_ports {qsfp_0_led_green}]

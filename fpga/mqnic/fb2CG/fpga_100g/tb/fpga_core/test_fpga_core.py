@@ -297,8 +297,6 @@ class TB(object):
 
         self.driver = mqnic.Driver()
 
-        self.dev.functions[0].msi_cap.msi_multiple_message_capable = 5
-
         self.dev.functions[0].configure_bar(0, 2**len(dut.core_inst.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
         if hasattr(dut.core_inst.core_pcie_inst, 'pcie_app_ctrl'):
             self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
@@ -812,6 +810,9 @@ def test_fpga_core(request):
     parameters['AXIS_PCIE_DATA_WIDTH'] = 512
     parameters['PF_COUNT'] = 1
     parameters['VF_COUNT'] = 0
+
+    # Interrupt configuration
+    parameters['IRQ_INDEX_WIDTH'] = parameters['EVENT_QUEUE_INDEX_WIDTH']
 
     # AXI lite interface configuration (control)
     parameters['AXIL_CTRL_DATA_WIDTH'] = 32

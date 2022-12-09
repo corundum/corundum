@@ -32,7 +32,7 @@
 foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == mqnic_rb_clk_info || REF_NAME == mqnic_rb_clk_info)}] {
     puts "Inserting timing constraints for mqnic_rb_clk_info instance $inst"
 
-    set clk [get_clocks -of_objects [get_pins "$inst/ref_strb_sync_1_reg_reg/C"]]
+    set clk [get_clocks -of_objects [get_cells "$inst/ref_strb_sync_1_reg_reg"]]
 
     set_property ASYNC_REG TRUE [get_cells -hier -regexp ".*/ref_strb_sync_\[123\]_reg_reg" -filter "PARENT == $inst"]
 

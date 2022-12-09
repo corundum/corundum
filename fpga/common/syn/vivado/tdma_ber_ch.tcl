@@ -33,15 +33,13 @@ foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == tdma_ber_ch || REF_NAME
     puts "Inserting timing constraints for tdma_ber_ch instance $inst"
 
     # get clock periods
-    set clk [get_clocks -of_objects [get_pins $inst/tx_prbs31_enable_reg_reg/C]]
-    set tx_clk [get_clocks -of_objects [get_pins $inst/phy_tx_prbs31_enable_reg_reg/C]]
-    set rx_clk [get_clocks -of_objects [get_pins $inst/phy_rx_prbs31_enable_reg_reg/C]]
+    set clk [get_clocks -of_objects [get_cells "$inst/tx_prbs31_enable_reg_reg"]]
+    set tx_clk [get_clocks -of_objects [get_cells "$inst/phy_tx_prbs31_enable_reg_reg"]]
+    set rx_clk [get_clocks -of_objects [get_cells "$inst/phy_rx_prbs31_enable_reg_reg"]]
 
-    set clk_period [get_property -min PERIOD $clk]
-    set tx_clk_period [get_property -min PERIOD $tx_clk]
-    set rx_clk_period [get_property -min PERIOD $rx_clk]
-
-    set min_clk_period [expr $tx_clk_period < $write_clk_period ? $tx_clk_period : $write_clk_period]
+    set clk_period [if {[llength $clk]} {get_property -min PERIOD $clk} {expr 1.0}]
+    set tx_clk_period [if {[llength $tx_clk]} {get_property -min PERIOD $tx_clk} {expr 1.0}]
+    set rx_clk_period [if {[llength $rx_clk]} {get_property -min PERIOD $rx_clk} {expr 1.0}]
 
     # control synchronization
     set_property ASYNC_REG TRUE [get_cells -hier -regexp ".*/phy_(rx|tx)_prbs31_enable_reg_reg" -filter "PARENT == $inst"]

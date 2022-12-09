@@ -33,19 +33,17 @@ foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == rb_drp || REF_NAME == r
     puts "Inserting timing constraints for rb_drp instance $inst"
 
     # get clock periods
-    set drp_clk [get_clocks -of_objects [get_pins $inst/drp_flag_reg_reg/C]]
-    set rb_clk [get_clocks -of_objects [get_pins $inst/rb_flag_reg_reg/C]]
+    set drp_clk [get_clocks -of_objects [get_cells "$inst/drp_flag_reg_reg"]]
+    set rb_clk [get_clocks -of_objects [get_cells "$inst/rb_flag_reg_reg"]]
 
-    set drp_clk_period [get_property -min PERIOD $drp_clk]
-    set rb_clk_period [get_property -min PERIOD $rb_clk]
-
-    set min_clk_period [expr $drp_clk_period < $rb_clk_period ? $drp_clk_period : $rb_clk_period]
+    set drp_clk_period [if {[llength $drp_clk]} {get_property -min PERIOD $drp_clk} {expr 1.0}]
+    set rb_clk_period [if {[llength $rb_clk]} {get_property -min PERIOD $rb_clk} {expr 1.0}]
 
     set_property ASYNC_REG TRUE [get_cells -quiet -hier -regexp ".*/drp_flag_sync_reg_\[12\]_reg" -filter "PARENT == $inst"]
     set_property ASYNC_REG TRUE [get_cells -quiet -hier -regexp ".*/rb_flag_sync_reg_\[12\]_reg" -filter "PARENT == $inst"]
 
-    set_max_delay -from [get_cells $inst/drp_flag_reg_reg] -to [get_cells $inst/drp_flag_sync_reg_1_reg] -datapath_only $rb_clk_period
-    set_max_delay -from [get_cells $inst/rb_flag_reg_reg] -to [get_cells $inst/rb_flag_sync_reg_1_reg] -datapath_only $drp_clk_period
+    set_max_delay -from [get_cells "$inst/drp_flag_reg_reg"] -to [get_cells "$inst/drp_flag_sync_reg_1_reg"] -datapath_only $rb_clk_period
+    set_max_delay -from [get_cells "$inst/rb_flag_reg_reg"] -to [get_cells "$inst/rb_flag_sync_reg_1_reg"] -datapath_only $drp_clk_period
 
     set source [get_cells -quiet -hier -regexp ".*/rb_(addr|di|we)_reg_reg(\\\[\\d+\\\])?" -filter "PARENT == $inst"]
     set dest   [get_cells -quiet -hier -regexp ".*/drp_(addr|di|we)_reg_reg(\\\[\\d+\\\])?" -filter "PARENT == $inst"]

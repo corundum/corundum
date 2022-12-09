@@ -38,9 +38,11 @@ foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == cmac_gty_wrapper || REF
         if {[llength $sync_ffs]} {
             set_property ASYNC_REG TRUE $sync_ffs
 
-            set src_clk [get_clocks -of_objects [get_pins "$inst/$driver/C"]]
+            set src_clk [get_clocks -of_objects [get_cells "$inst/$driver"]]
 
-            set_max_delay -from [get_cells "$inst/$driver"] -to [get_cells "$inst/[lindex $args 0]"] -datapath_only [get_property -min PERIOD $src_clk]
+            set src_clk_period [if {[llength $src_clk]} {get_property -min PERIOD $src_clk} {expr 1.0}]
+
+            set_max_delay -from [get_cells "$inst/$driver"] -to [get_cells "$inst/[lindex $args 0]"] -datapath_only $src_clk_period
         }
     }
 

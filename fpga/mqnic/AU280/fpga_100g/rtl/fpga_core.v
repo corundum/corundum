@@ -125,12 +125,12 @@ module fpga_core #
     parameter AXI_DDR_NARROW_BURST = 0,
     parameter HBM_CH = 32,
     parameter HBM_ENABLE = 0,
-    parameter HBM_GROUP_SIZE = 32,
+    parameter HBM_GROUP_SIZE = HBM_CH,
     parameter AXI_HBM_DATA_WIDTH = 256,
     parameter AXI_HBM_ADDR_WIDTH = 33,
     parameter AXI_HBM_STRB_WIDTH = (AXI_HBM_DATA_WIDTH/8),
     parameter AXI_HBM_ID_WIDTH = 6,
-    parameter AXI_HBM_MAX_BURST_LEN = 256,
+    parameter AXI_HBM_MAX_BURST_LEN = 16,
 
     // Application block configuration
     parameter APP_ID = 32'h00000000,

@@ -155,9 +155,8 @@ dict set params AXI_DDR_ID_WIDTH "8"
 dict set params AXI_DDR_MAX_BURST_LEN "256"
 dict set params HBM_CH "32"
 dict set params HBM_ENABLE "0"
-dict set params HBM_GROUP_SIZE "32"
-dict set params AXI_HBM_ADDR_WIDTH "33"
-dict set params AXI_HBM_MAX_BURST_LEN "256"
+dict set params HBM_GROUP_SIZE [dict get $params HBM_CH]
+dict set params AXI_HBM_MAX_BURST_LEN "16"
 
 # Application block configuration
 dict set params APP_ID "32'h00000000"
@@ -214,6 +213,24 @@ if {[dict get $params DDR_ENABLE]} {
     dict set params AXI_DDR_DATA_WIDTH [get_property CONFIG.C0.DDR4_AxiDataWidth $ddr4]
     dict set params AXI_DDR_ADDR_WIDTH [get_property CONFIG.C0.DDR4_AxiAddressWidth $ddr4]
     dict set params AXI_DDR_NARROW_BURST [expr [get_property CONFIG.C0.DDR4_AxiNarrowBurst $ddr4] && 1]
+}
+
+# HBM settings
+if {[dict get $params HBM_ENABLE]} {
+    set hbm [get_ips hbm_0]
+
+    # switch configuration
+    if {[dict get $params HBM_GROUP_SIZE] == 1} {
+        set_property CONFIG.USER_SWITCH_ENABLE_00 "FALSE" $hbm
+        set_property CONFIG.USER_SWITCH_ENABLE_01 "FALSE" $hbm
+        dict set params HBM_GROUP_SIZE "1"
+        dict set params AXI_HBM_ADDR_WIDTH "28"
+    } else {
+        set_property CONFIG.USER_SWITCH_ENABLE_00 "TRUE" $hbm
+        set_property CONFIG.USER_SWITCH_ENABLE_01 "TRUE" $hbm
+        dict set params HBM_GROUP_SIZE [dict get $params HBM_CH]
+        dict set params AXI_HBM_ADDR_WIDTH "33"
+    }
 }
 
 # PCIe IP core settings

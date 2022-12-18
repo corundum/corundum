@@ -1231,7 +1231,7 @@ if (HBM_ENABLE) begin
 
 wire hbm_ref_clk;
 
-wire hbm_mmcm_rst;
+wire hbm_mmcm_rst = rst_125mhz_int;
 wire hbm_mmcm_locked;
 wire hbm_mmcm_clkfb;
 

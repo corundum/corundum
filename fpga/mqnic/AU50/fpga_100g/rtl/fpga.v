@@ -1299,12 +1299,16 @@ reg hbm_axi_rst_reg_1 = 1'b1;
 (* shreg_extract = "no" *)
 reg hbm_axi_rst_reg_2 = 1'b1;
 
-assign hbm_axi_rst = hbm_axi_rst_reg_2;
-
 always @(posedge hbm_axi_clk) begin
     hbm_axi_rst_reg_1 <= hbm_axi_rst_int;
     hbm_axi_rst_reg_2 <= hbm_axi_rst_reg_1;
 end
+
+BUFG
+hbm_axi_rst_bufg_inst (
+    .I(hbm_axi_rst_reg_2),
+    .O(hbm_axi_rst)
+);
 
 wire hbm_cattrip_1;
 wire hbm_cattrip_2;

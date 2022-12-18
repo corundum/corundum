@@ -583,8 +583,8 @@ wire [1:0]  axil_cms_rresp_int;
 wire        axil_cms_rvalid_int;
 wire        axil_cms_rready_int;
 
-wire [7:0] hbm_temp_1;
-wire [7:0] hbm_temp_2;
+wire [6:0] hbm_temp_1;
+wire [6:0] hbm_temp_2;
 
 axil_cdc #(
     .DATA_WIDTH(32),
@@ -2514,6 +2514,11 @@ assign m_axi_hbm_rlast = 0;
 assign m_axi_hbm_rvalid = 0;
 
 assign hbm_status = 0;
+
+assign hbm_cattrip = 1'b0;
+
+assign hbm_temp_1 = 7'd0;
+assign hbm_temp_2 = 7'd0;
 
 end
 

@@ -10,6 +10,7 @@ SYN_FILES += rtl/fpga_core.v
 SYN_FILES += rtl/debounce_switch.v
 SYN_FILES += rtl/common/mqnic_core_axi.v
 SYN_FILES += rtl/common/mqnic_core.v
+SYN_FILES += rtl/common/mqnic_dram_if.v
 SYN_FILES += rtl/common/mqnic_interface.v
 SYN_FILES += rtl/common/mqnic_interface_tx.v
 SYN_FILES += rtl/common/mqnic_interface_rx.v

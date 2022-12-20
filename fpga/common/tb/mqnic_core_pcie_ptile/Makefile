@@ -41,6 +41,7 @@ MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 VERILOG_SOURCES += ../../rtl/mqnic_core_pcie.v
 VERILOG_SOURCES += ../../rtl/mqnic_core.v
+VERILOG_SOURCES += ../../rtl/mqnic_dram_if.v
 VERILOG_SOURCES += ../../rtl/mqnic_interface.v
 VERILOG_SOURCES += ../../rtl/mqnic_interface_tx.v
 VERILOG_SOURCES += ../../rtl/mqnic_interface_rx.v

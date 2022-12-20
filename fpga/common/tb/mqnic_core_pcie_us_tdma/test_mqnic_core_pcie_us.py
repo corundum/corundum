@@ -765,8 +765,9 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
 
     verilog_sources = [
         os.path.join(rtl_dir, f"{dut}.v"),
-        os.path.join(rtl_dir, "mqnic_core.v"),
         os.path.join(rtl_dir, "mqnic_core_pcie.v"),
+        os.path.join(rtl_dir, "mqnic_core.v"),
+        os.path.join(rtl_dir, "mqnic_dram_if.v"),
         os.path.join(rtl_dir, "mqnic_interface.v"),
         os.path.join(rtl_dir, "mqnic_interface_tx.v"),
         os.path.join(rtl_dir, "mqnic_interface_rx.v"),

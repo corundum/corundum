@@ -679,6 +679,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "mqnic_core_pcie_us.v"),
         os.path.join(rtl_dir, "common", "mqnic_core_pcie.v"),
         os.path.join(rtl_dir, "common", "mqnic_core.v"),
+        os.path.join(rtl_dir, "common", "mqnic_dram_if.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_tx.v"),
         os.path.join(rtl_dir, "common", "mqnic_interface_rx.v"),

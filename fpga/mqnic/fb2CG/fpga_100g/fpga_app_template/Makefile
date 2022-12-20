@@ -13,6 +13,7 @@ SYN_FILES += rtl/sync_signal.v
 SYN_FILES += rtl/common/mqnic_core_pcie_us.v
 SYN_FILES += rtl/common/mqnic_core_pcie.v
 SYN_FILES += rtl/common/mqnic_core.v
+SYN_FILES += rtl/common/mqnic_dram_if.v
 SYN_FILES += rtl/common/mqnic_interface.v
 SYN_FILES += rtl/common/mqnic_interface_tx.v
 SYN_FILES += rtl/common/mqnic_interface_rx.v

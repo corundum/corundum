@@ -24,13 +24,13 @@ foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == axil_cdc_rd || REF_NAME
     puts "Inserting timing constraints for axil_cdc instance $inst"
 
     # get clock periods
-    set m_clk [get_clocks -of_objects [get_pins $inst/m_flag_reg_reg/C]]
-    set s_clk [get_clocks -of_objects [get_pins $inst/s_flag_reg_reg/C]]
+    set s_clk [get_clocks -of_objects [get_cells "$inst/s_flag_reg_reg"]]
+    set m_clk [get_clocks -of_objects [get_cells "$inst/m_flag_reg_reg"]]
 
-    set m_clk_period [get_property -min PERIOD $m_clk]
-    set s_clk_period [get_property -min PERIOD $s_clk]
+    set s_clk_period [if {[llength $s_clk]} {get_property -min PERIOD $s_clk} {expr 1.0}]
+    set m_clk_period [if {[llength $m_clk]} {get_property -min PERIOD $m_clk} {expr 1.0}]
 
-    set min_clk_period [expr $m_clk_period < $s_clk_period ? $m_clk_period : $s_clk_period]
+    set min_clk_period [expr min($s_clk_period, $m_clk_period)]
 
     set_property ASYNC_REG TRUE [get_cells -quiet -hier -regexp ".*/m_flag_sync_reg_\[12\]_reg" -filter "PARENT == $inst"]
     set_property ASYNC_REG TRUE [get_cells -quiet -hier -regexp ".*/s_flag_sync_reg_\[12\]_reg" -filter "PARENT == $inst"]

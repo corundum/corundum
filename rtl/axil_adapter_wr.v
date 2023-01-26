@@ -85,6 +85,8 @@ parameter S_WORD_WIDTH = S_STRB_WIDTH;
 parameter M_WORD_WIDTH = M_STRB_WIDTH;
 parameter S_WORD_SIZE = S_DATA_WIDTH/S_WORD_WIDTH;
 parameter M_WORD_SIZE = M_DATA_WIDTH/M_WORD_WIDTH;
+parameter S_ADDR_MASK = {ADDR_WIDTH{1'b1}} << S_ADDR_BIT_OFFSET;
+parameter M_ADDR_MASK = {ADDR_WIDTH{1'b1}} << M_ADDR_BIT_OFFSET;
 
 // output bus is wider
 parameter EXPAND = M_STRB_WIDTH > S_STRB_WIDTH;
@@ -239,12 +241,12 @@ always @* begin
             STATE_IDLE: begin
                 s_axil_awready_next = !m_axil_awvalid;
 
-                current_segment_next = 0;
+                current_segment_next = s_axil_awaddr >> M_ADDR_BIT_OFFSET;
                 s_axil_bresp_next = 2'd0;
 
                 if (s_axil_awready && s_axil_awvalid) begin
                     s_axil_awready_next = 1'b0;
-                    m_axil_awaddr_next = s_axil_awaddr & ({ADDR_WIDTH{1'b1}} << S_ADDR_BIT_OFFSET);
+                    m_axil_awaddr_next = s_axil_awaddr;
                     m_axil_awprot_next = s_axil_awprot;
                     m_axil_awvalid_next = 1'b1;
                     s_axil_wready_next = !m_axil_wvalid;
@@ -260,10 +262,11 @@ always @* begin
                     s_axil_wready_next = 1'b0;
                     data_next = s_axil_wdata;
                     strb_next = s_axil_wstrb;
-                    m_axil_wdata_next = s_axil_wdata;
-                    m_axil_wstrb_next = s_axil_wstrb;
+                    m_axil_wdata_next = data_next >> current_segment_reg*SEGMENT_DATA_WIDTH;
+                    m_axil_wstrb_next = strb_next >> current_segment_reg*SEGMENT_STRB_WIDTH;
                     m_axil_wvalid_next = 1'b1;
                     m_axil_bready_next = !s_axil_bvalid;
+                    current_segment_next = current_segment_reg + 1;
                     state_next = STATE_RESP;
                 end else begin
                     state_next = STATE_DATA;
@@ -274,19 +277,19 @@ always @* begin
 
                 if (m_axil_bready && m_axil_bvalid) begin
                     m_axil_bready_next = 1'b0;
+                    m_axil_awaddr_next = (m_axil_awaddr_reg & M_ADDR_MASK) + SEGMENT_STRB_WIDTH;
+                    m_axil_wdata_next = data_next >> current_segment_reg*SEGMENT_DATA_WIDTH;
+                    m_axil_wstrb_next = strb_next >> current_segment_reg*SEGMENT_STRB_WIDTH;
+                    current_segment_next = current_segment_reg + 1;
                     if (m_axil_bresp != 0) begin
                         s_axil_bresp_next = m_axil_bresp;
                     end
-                    if (current_segment_reg == SEGMENT_COUNT-1) begin
+                    if (current_segment_reg == 0) begin
                         s_axil_bvalid_next = 1'b1;
                         s_axil_awready_next = !m_axil_awvalid;
                         state_next = STATE_IDLE;
                     end else begin
-                        current_segment_next = current_segment_reg + 1;
-                        m_axil_awaddr_next = m_axil_awaddr_reg + SEGMENT_STRB_WIDTH;
                         m_axil_awvalid_next = 1'b1;
-                        m_axil_wdata_next = data_reg >> (current_segment_reg+1)*SEGMENT_DATA_WIDTH;
-                        m_axil_wstrb_next = strb_reg >> (current_segment_reg+1)*SEGMENT_STRB_WIDTH;
                         m_axil_wvalid_next = 1'b1;
                         state_next = STATE_RESP;
                     end

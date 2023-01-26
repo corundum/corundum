@@ -456,7 +456,7 @@ always @* begin
                     m_axil_wvalid_next = 1'b1;
                     burst_next = burst_reg - 1;
                     burst_active_next = burst_reg != 0;
-                    addr_next = addr_reg + (1 << master_burst_size_reg);
+                    addr_next = (addr_reg + (1 << master_burst_size_reg)) & ({ADDR_WIDTH{1'b1}} << master_burst_size_reg);
                     last_segment_next = addr_next[burst_size_reg] != addr_reg[burst_size_reg];
                     s_axi_wready_next = 1'b0;
                     m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
@@ -472,7 +472,7 @@ always @* begin
                     m_axil_wdata_next = data_reg >> (addr_reg[AXI_ADDR_BIT_OFFSET-1:AXIL_ADDR_BIT_OFFSET] * AXIL_DATA_WIDTH);
                     m_axil_wstrb_next = strb_reg >> (addr_reg[AXI_ADDR_BIT_OFFSET-1:AXIL_ADDR_BIT_OFFSET] * AXIL_STRB_WIDTH);
                     m_axil_wvalid_next = 1'b1;
-                    addr_next = addr_reg + (1 << master_burst_size_reg);
+                    addr_next = (addr_reg + (1 << master_burst_size_reg)) & ({ADDR_WIDTH{1'b1}} << master_burst_size_reg);
                     last_segment_next = addr_next[burst_size_reg] != addr_reg[burst_size_reg];
                     s_axi_wready_next = 1'b0;
                     m_axil_bready_next = !s_axi_bvalid && !m_axil_awvalid;
@@ -487,6 +487,7 @@ always @* begin
 
                 if (m_axil_bready && m_axil_bvalid) begin
                     first_transfer_next = 1'b0;
+                    m_axil_awaddr_next = addr_reg;
                     m_axil_bready_next = 1'b0;
                     s_axi_bid_next = id_reg;
                     if (first_transfer_reg || m_axil_bresp != 0) begin
@@ -494,7 +495,6 @@ always @* begin
                     end
                     if (burst_active_reg || !last_segment_reg) begin
                         // burst on slave interface still active; start new burst
-                        m_axil_awaddr_next = addr_reg;
                         m_axil_awvalid_next = 1'b1;
                         if (last_segment_reg) begin
                             s_axi_wready_next = !m_axil_wvalid;

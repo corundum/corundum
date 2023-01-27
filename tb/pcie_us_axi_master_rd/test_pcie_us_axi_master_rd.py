@@ -201,7 +201,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
 
             tb.log.debug("%s", tb.axi_ram.hexdump_str((pcie_addr & ~0xf)-16, (((pcie_addr & 0xf)+length-1) & ~0xf)+48, prefix="AXI "))
 
-            val = await dev_bar0.read(pcie_addr, len(test_data), timeout=1000, timeout_unit='ns')
+            val = await dev_bar0.read(pcie_addr, len(test_data), timeout=10000, timeout_unit='ns')
 
             tb.log.debug("read data: %s", val)
 

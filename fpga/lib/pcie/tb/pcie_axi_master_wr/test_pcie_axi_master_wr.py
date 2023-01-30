@@ -133,6 +133,11 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
 
     byte_lanes = tb.axi_ram.byte_lanes
 
+    pcie_offsets = list(range(byte_lanes))+list(range(4096-byte_lanes, 4096))
+    if os.getenv("OFFSET_GROUP") is not None:
+        group = int(os.getenv("OFFSET_GROUP"))
+        pcie_offsets = pcie_offsets[group::8]
+
     tb.set_idle_generator(idle_inserter)
     tb.set_backpressure_generator(backpressure_inserter)
 
@@ -146,7 +151,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
     dev_bar0 = dev.bar_window[0]
 
     for length in list(range(0, byte_lanes*2))+[1024]:
-        for pcie_offset in list(range(byte_lanes))+list(range(4096-byte_lanes, 4096)):
+        for pcie_offset in pcie_offsets:
             tb.log.info("length %d, pcie_offset %d", length, pcie_offset)
             pcie_addr = pcie_offset+0x1000
             test_data = bytearray([x % 256 for x in range(length)])
@@ -265,8 +270,9 @@ tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
+@pytest.mark.parametrize("offset_group", list(range(8)))
 @pytest.mark.parametrize("pcie_data_width", [64, 128])
-def test_pcie_axi_master_wr(request, pcie_data_width):
+def test_pcie_axi_master_wr(request, pcie_data_width, offset_group):
     dut = "pcie_axi_master_wr"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -289,6 +295,7 @@ def test_pcie_axi_master_wr(request, pcie_data_width):
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 
+    extra_env['OFFSET_GROUP'] = str(offset_group)
     extra_env['COCOTB_RESOLVE_X'] = 'RANDOM'
 
     sim_build = os.path.join(tests_dir, "sim_build",

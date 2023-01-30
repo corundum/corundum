@@ -117,6 +117,11 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
     ram_byte_lanes = tb.dma_ram.write_if.byte_lanes
     tag_count = 2**len(tb.write_desc_source.bus.tag)
 
+    axi_offsets = list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096))
+    if os.getenv("OFFSET_GROUP") is not None:
+        group = int(os.getenv("OFFSET_GROUP"))
+        axi_offsets = axi_offsets[group::8]
+
     cur_tag = 1
 
     tb.set_idle_generator(idle_inserter)
@@ -127,7 +132,7 @@ async def run_test_write(dut, idle_inserter=None, backpressure_inserter=None):
     tb.dut.write_enable.value = 1
 
     for length in list(range(1, ram_byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
-        for axi_offset in list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096)):
+        for axi_offset in axi_offsets:
             for ram_offset in range(1):
                 tb.log.info("length %d, axi_offset %d, ram_offset %d", length, axi_offset, ram_offset)
                 axi_addr = axi_offset+0x1000
@@ -168,6 +173,11 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
     ram_byte_lanes = tb.dma_ram.write_if.byte_lanes
     tag_count = 2**len(tb.read_desc_source.bus.tag)
 
+    axi_offsets = list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096))
+    if os.getenv("OFFSET_GROUP") is not None:
+        group = int(os.getenv("OFFSET_GROUP"))
+        axi_offsets = axi_offsets[group::8]
+
     cur_tag = 1
 
     tb.set_idle_generator(idle_inserter)
@@ -178,7 +188,7 @@ async def run_test_read(dut, idle_inserter=None, backpressure_inserter=None):
     tb.dut.read_enable.value = 1
 
     for length in list(range(1, ram_byte_lanes+3))+list(range(128-4, 128+4))+[1024]:
-        for axi_offset in list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096)):
+        for axi_offset in axi_offsets:
             for ram_offset in range(1):
                 tb.log.info("length %d, axi_offset %d, ram_offset %d", length, axi_offset, ram_offset)
                 axi_addr = axi_offset+0x1000
@@ -218,6 +228,11 @@ async def run_test_write_imm(dut, idle_inserter=None, backpressure_inserter=None
     axi_byte_lanes = tb.axi_ram.write_if.byte_lanes
     tag_count = 2**len(tb.write_desc_source.bus.tag)
 
+    axi_offsets = list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096))
+    if os.getenv("OFFSET_GROUP") is not None:
+        group = int(os.getenv("OFFSET_GROUP"))
+        axi_offsets = axi_offsets[group::8]
+
     cur_tag = 1
 
     tb.set_idle_generator(idle_inserter)
@@ -228,7 +243,7 @@ async def run_test_write_imm(dut, idle_inserter=None, backpressure_inserter=None
     tb.dut.write_enable.value = 1
 
     for length in list(range(1, len(dut.s_axis_write_desc_imm) // 8)):
-        for axi_offset in list(range(axi_byte_lanes+1))+list(range(4096-axi_byte_lanes, 4096)):
+        for axi_offset in axi_offsets:
             tb.log.info("length %d, axi_offset %d", length, axi_offset)
             axi_addr = axi_offset+0x1000
             test_data = bytearray([x % 256 for x in range(length)])
@@ -278,8 +293,9 @@ tests_dir = os.path.dirname(__file__)
 rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
+@pytest.mark.parametrize("offset_group", list(range(8)))
 @pytest.mark.parametrize("axi_data_width", [64, 128])
-def test_dma_if_axi(request, axi_data_width):
+def test_dma_if_axi(request, axi_data_width, offset_group):
     dut = "dma_if_axi"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -312,6 +328,8 @@ def test_dma_if_axi(request, axi_data_width):
     parameters['WRITE_USE_AXI_ID'] = 1
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
+
+    extra_env['OFFSET_GROUP'] = str(offset_group)
 
     sim_build = os.path.join(tests_dir, "sim_build",
         request.node.name.replace('[', '-').replace(']', ''))

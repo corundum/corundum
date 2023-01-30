@@ -79,6 +79,8 @@ parameter S_WORD_WIDTH = S_STRB_WIDTH;
 parameter M_WORD_WIDTH = M_STRB_WIDTH;
 parameter S_WORD_SIZE = S_DATA_WIDTH/S_WORD_WIDTH;
 parameter M_WORD_SIZE = M_DATA_WIDTH/M_WORD_WIDTH;
+parameter S_ADDR_MASK = {ADDR_WIDTH{1'b1}} << S_ADDR_BIT_OFFSET;
+parameter M_ADDR_MASK = {ADDR_WIDTH{1'b1}} << M_ADDR_BIT_OFFSET;
 
 // output bus is wider
 parameter EXPAND = M_STRB_WIDTH > S_STRB_WIDTH;
@@ -203,12 +205,12 @@ always @* begin
             STATE_IDLE: begin
                 s_axil_arready_next = !m_axil_arvalid;
 
-                current_segment_next = 0;
+                current_segment_next = s_axil_araddr >> M_ADDR_BIT_OFFSET;
                 s_axil_rresp_next = 2'd0;
 
                 if (s_axil_arready && s_axil_arvalid) begin
                     s_axil_arready_next = 1'b0;
-                    m_axil_araddr_next = s_axil_araddr & ({ADDR_WIDTH{1'b1}} << S_ADDR_BIT_OFFSET);
+                    m_axil_araddr_next = s_axil_araddr;
                     m_axil_arprot_next = s_axil_arprot;
                     m_axil_arvalid_next = 1'b1;
                     m_axil_rready_next = !m_axil_rvalid;
@@ -222,7 +224,9 @@ always @* begin
 
                 if (m_axil_rready && m_axil_rvalid) begin
                     m_axil_rready_next = 1'b0;
+                    m_axil_araddr_next = (m_axil_araddr_reg & M_ADDR_MASK) + SEGMENT_STRB_WIDTH;
                     s_axil_rdata_next[current_segment_reg*SEGMENT_DATA_WIDTH +: SEGMENT_DATA_WIDTH] = m_axil_rdata;
+                    current_segment_next = current_segment_reg + 1;
                     if (m_axil_rresp) begin
                         s_axil_rresp_next = m_axil_rresp;
                     end
@@ -231,8 +235,6 @@ always @* begin
                         s_axil_arready_next = !m_axil_arvalid;
                         state_next = STATE_IDLE;
                     end else begin
-                        current_segment_next = current_segment_reg + 1;
-                        m_axil_araddr_next = m_axil_araddr_reg + SEGMENT_STRB_WIDTH;
                         m_axil_arvalid_next = 1'b1;
                         state_next = STATE_DATA;
                     end

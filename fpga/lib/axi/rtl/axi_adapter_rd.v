@@ -465,11 +465,11 @@ always @* begin
                     burst_size_next = s_axi_arsize;
                     if (s_axi_arsize > M_BURST_SIZE) begin
                         // need to adjust burst size
-                        if ({s_axi_arlen, {S_BURST_SIZE-M_BURST_SIZE{1'b1}}} >> (S_BURST_SIZE-s_axi_arsize) > 255) begin
+                        if (s_axi_arlen >> (8+M_BURST_SIZE-s_axi_arsize) != 0) begin
                             // limit burst length to max
-                            master_burst_next = 8'd255;
+                            master_burst_next = (8'd255 << (s_axi_arsize-M_BURST_SIZE)) | ((~s_axi_araddr & (8'hff >> (8-s_axi_arsize))) >> M_BURST_SIZE);
                         end else begin
-                            master_burst_next = {s_axi_arlen, {S_BURST_SIZE-M_BURST_SIZE{1'b1}}} >> (S_BURST_SIZE-s_axi_arsize);
+                            master_burst_next = (s_axi_arlen << (s_axi_arsize-M_BURST_SIZE)) | ((~s_axi_araddr & (8'hff >> (8-s_axi_arsize))) >> M_BURST_SIZE);
                         end
                         master_burst_size_next = M_BURST_SIZE;
                         m_axi_arlen_next = master_burst_next;
@@ -510,13 +510,22 @@ always @* begin
                     s_axi_ruser_int = m_axi_ruser;
                     s_axi_rvalid_int = 1'b0;
                     master_burst_next = master_burst_reg - 1;
-                    addr_next = addr_reg + (1 << master_burst_size_reg);
+                    addr_next = (addr_reg + (1 << master_burst_size_reg)) & ({ADDR_WIDTH{1'b1}} << master_burst_size_reg);
+                    m_axi_araddr_next = addr_next;
                     if (addr_next[burst_size_reg] != addr_reg[burst_size_reg]) begin
                         data_next = {DATA_WIDTH{1'b0}};
                         burst_next = burst_reg - 1;
                         s_axi_rvalid_int = 1'b1;
                     end
                     if (master_burst_reg == 0) begin
+                        if (burst_next >> (8+M_BURST_SIZE-burst_size_reg) != 0) begin
+                            // limit burst length to max
+                            master_burst_next = 8'd255;
+                        end else begin
+                            master_burst_next = (burst_next << (burst_size_reg-M_BURST_SIZE)) | (8'hff >> (8-burst_size_reg) >> M_BURST_SIZE);
+                        end
+                        m_axi_arlen_next = master_burst_next;
+
                         if (burst_reg == 0) begin
                             m_axi_rready_next = 1'b0;
                             s_axi_rlast_int = 1'b1;
@@ -525,25 +534,6 @@ always @* begin
                             state_next = STATE_IDLE;
                         end else begin
                             // start new burst
-                            m_axi_araddr_next = addr_next;
-                            if (burst_size_reg > M_BURST_SIZE) begin
-                                // need to adjust burst size
-                                if ({burst_next, {S_BURST_SIZE-M_BURST_SIZE{1'b1}}} >> (S_BURST_SIZE-burst_size_reg) > 255) begin
-                                    // limit burst length to max
-                                    master_burst_next = 8'd255;
-                                end else begin
-                                    master_burst_next = {burst_next, {S_BURST_SIZE-M_BURST_SIZE{1'b1}}} >> (S_BURST_SIZE-burst_size_reg);
-                                end
-                                master_burst_size_next = M_BURST_SIZE;
-                                m_axi_arlen_next = master_burst_next;
-                                m_axi_arsize_next = master_burst_size_next;
-                            end else begin
-                                // pass through narrow (enough) burst
-                                master_burst_next = burst_next;
-                                master_burst_size_next = burst_size_reg;
-                                m_axi_arlen_next = burst_next;
-                                m_axi_arsize_next = burst_size_reg;
-                            end
                             m_axi_arvalid_next = 1'b1;
                             m_axi_rready_next = 1'b0;
                             state_next = STATE_DATA;

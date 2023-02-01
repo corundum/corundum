@@ -141,8 +141,10 @@ class PsdpRamWrite(Memory):
     async def _run(self):
         cmd_ready = 0
 
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
             wr_done = 0
 
@@ -191,9 +193,11 @@ class PsdpRamWrite(Memory):
             self.bus.wr_done.value = wr_done
 
     async def _run_pause(self):
+        clock_edge_event = RisingEdge(self.clock)
+
         for val in self._pause_generator:
             self.pause = val
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
 
 class PsdpRamRead(Memory):
@@ -257,8 +261,10 @@ class PsdpRamRead(Memory):
         resp_valid = 0
         resp_data = 0
 
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
             cmd_valid_sample = self.bus.rd_cmd_valid.value
 
@@ -319,9 +325,11 @@ class PsdpRamRead(Memory):
             self.bus.rd_resp_valid.value = resp_valid
 
     async def _run_pause(self):
+        clock_edge_event = RisingEdge(self.clock)
+
         for val in self._pause_generator:
             self.pause = val
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
 
 class PsdpRam(Memory):

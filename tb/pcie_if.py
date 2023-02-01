@@ -354,9 +354,11 @@ class PcieIfBase:
         self.set_pause_generator(None)
 
     async def _run_pause(self):
+        clock_edge_event = RisingEdge(self.clock)
+
         for val in self._pause_generator:
             self.pause = val
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
 
 class PcieIfSource(PcieIfBase):
@@ -459,8 +461,10 @@ class PcieIfSource(PcieIfBase):
     async def _run_source(self):
         self.active = False
 
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
             # read handshake signals
             ready_sample = self.bus.ready.value
@@ -613,8 +617,10 @@ class PcieIfSink(PcieIfBase):
             await self.active_event.wait()
 
     async def _run_sink(self):
+        clock_edge_event = RisingEdge(self.clock)
+
         while True:
-            await RisingEdge(self.clock)
+            await clock_edge_event
 
             # read handshake signals
             ready_sample = self.bus.ready.value
@@ -1189,11 +1195,13 @@ class PcieIfDevice(Device):
             self.rd_req_tx_seq_num_queue.put_nowait(frame.seq)
 
     async def _run_rd_req_tx_seq_num_logic(self):
+        clock_edge_event = RisingEdge(self.clk)
+
         if self.rd_req_tx_seq_num is not None:
             width = len(self.rd_req_tx_seq_num) // len(self.rd_req_tx_seq_num_valid)
 
         while True:
-            await RisingEdge(self.clk)
+            await clock_edge_event
 
             if self.rd_req_tx_seq_num is not None:
                 data = 0
@@ -1215,11 +1223,13 @@ class PcieIfDevice(Device):
             self.wr_req_tx_seq_num_queue.put_nowait(frame.seq)
 
     async def _run_wr_req_tx_seq_num_logic(self):
+        clock_edge_event = RisingEdge(self.clk)
+
         if self.wr_req_tx_seq_num is not None:
             width = len(self.wr_req_tx_seq_num) // len(self.wr_req_tx_seq_num_valid)
 
         while True:
-            await RisingEdge(self.clk)
+            await clock_edge_event
 
             if self.wr_req_tx_seq_num is not None:
                 data = 0
@@ -1240,8 +1250,10 @@ class PcieIfDevice(Device):
             await self.send(tlp)
 
     async def _run_cfg_status_logic(self):
+        clock_edge_event = RisingEdge(self.clk)
+
         while True:
-            await RisingEdge(self.clk)
+            await clock_edge_event
 
             if self.cfg_max_payload is not None:
                 self.cfg_max_payload.value = self.functions[0].pcie_cap.max_payload_size
@@ -1251,8 +1263,10 @@ class PcieIfDevice(Device):
                 self.cfg_ext_tag_enable.value = self.functions[0].pcie_cap.extended_tag_field_enable
 
     async def _run_fc_logic(self):
+        clock_edge_event = RisingEdge(self.clk)
+
         while True:
-            await RisingEdge(self.clk)
+            await clock_edge_event
 
             if self.tx_fc_ph_av is not None:
                 self.tx_fc_ph_av.value = self.upstream_port.fc_state[0].ph.tx_credits_available & 0xff

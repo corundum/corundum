@@ -67,7 +67,7 @@ The NIC register space is constructed from a linked list of register blocks.  Ea
     0x0000C002  0x00000200  :ref:`rb_port`
     0x0000C003  0x00000200  :ref:`rb_port_ctrl`
     0x0000C004  0x00000300  :ref:`rb_sched_block`
-    0x0000C005  0x00000200  application
+    0x0000C005  0x00000200  :ref:`rb_app_info`
     0x0000C006  0x00000100  stats
     0x0000C007  0x00000100  IRQ config
     0x0000C008  0x00000100  Clock info

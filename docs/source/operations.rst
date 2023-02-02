@@ -55,16 +55,25 @@ Packet transmission
 #. :ref:`mod_tx_checksum`: The transmit checksum module computes and inserts the checksum
 #. :ref:`mod_mqnic_app_block` ``s_axis_if_tx``: data is presented to the application section
 #. :ref:`mod_mqnic_app_block` ``m_axis_if_tx``: data is returned from the application section
-#. :ref:`mod_mqnic_core`: Data passes enters per-interface transmit FIFO module and is divided into per-port, per-traffic-class FIFOs
+#. :ref:`mod_mqnic_core`: Data enters per-interface transmit FIFO module and is divided into per-port, per-traffic-class FIFOs
 #. :ref:`mod_mqnic_app_block` ``s_axis_sync_tx``: data is presented to the application section
 #. :ref:`mod_mqnic_app_block` ``m_axis_sync_tx``: data is returned from the application section
-#. :ref:`mod_mqnic_core`: Data passes through per-port transmit async FIFO module and is transferred to MAC TX clock domain
+#. :ref:`mod_mqnic_core`: Data enters per-port transmit async FIFO module and is transferred to MAC TX clock domain
 #. :ref:`mod_mqnic_app_block` ``s_axis_direct_tx``: data is presented to the application section
 #. :ref:`mod_mqnic_app_block` ``m_axis_direct_tx``: data is returned from the application section
 #. :ref:`mod_mqnic_l2_egress`: layer 2 egress processing
 #. :ref:`mod_mqnic_core`: data leaves through transmit streaming interfaces
-#. The packet arrives at the MAC
-#. The MAC produces a PTP timestamp
+#. Packet is transmitted and timestamped by MAC
+#. :ref:`mod_mqnic_core`: timestamp and TX tag arrive through TX completion streaming interfaces
+#. :ref:`mod_mqnic_app_block` ``s_axis_direct_tx_cpl``: TX completion is presented to the application section
+#. :ref:`mod_mqnic_app_block` ``m_axis_direct_tx_cpl``: TX completion is returned from the application section
+#. :ref:`mod_mqnic_core`: TX completion enters per-port async FIFO module and is transferred to core clock domain
+#. :ref:`mod_mqnic_app_block` ``s_axis_sync_tx_cpl``: TX completion is presented to the application section
+#. :ref:`mod_mqnic_app_block` ``m_axis_sync_tx_cpl``: TX completion is returned from the application section
+#. :ref:`mod_mqnic_core`: TX completion enters per-interface transmit FIFO module and is placed into per-port FIFOs, then aggregated into a single stream
+#. :ref:`mod_mqnic_app_block` ``s_axis_if_tx_cpl``: TX completion is presented to the application section
+#. :ref:`mod_mqnic_app_block` ``m_axis_if_tx_cpl``: TX completion is returned from the application section
+#. :ref:`mod_mqnic_interface_tx`: Transmit operation is marked as completed, timestamp is included in completion record and sent to the host
 #. :ref:`mod_tx_engine`: The PTP timestamp arrives at the transmit engine
 #. :ref:`mod_tx_engine` ``m_axis_cpl_req_*``: The transmit engine issues a completion write request
 #. :ref:`mod_cpl_write`: The completion write module writes the completion data into its local DMA RAM
@@ -137,16 +146,15 @@ init:
 
 receive:
 
-#. A packet arrives at the MAC
-#. The MAC produces a PTP timestamp
+#. Packet is received and timestamped by MAC
 #. :ref:`mod_mqnic_core`: data enters through receive streaming interfaces
 #. :ref:`mod_mqnic_l2_ingress`: layer 2 ingress processing
 #. :ref:`mod_mqnic_app_block` ``s_axis_direct_rx``: data is presented to the application section
 #. :ref:`mod_mqnic_app_block` ``m_axis_direct_rx``: data is returned from the application section
-#. :ref:`mod_mqnic_core`: Data passes through per-port receive async FIFO module and is transferred to core clock domain
+#. :ref:`mod_mqnic_core`: Data enters per-port receive async FIFO module and is transferred to core clock domain
 #. :ref:`mod_mqnic_app_block` ``s_axis_sync_rx``: data is presented to the application section
 #. :ref:`mod_mqnic_app_block` ``m_axis_sync_rx``: data is returned from the application section
-#. :ref:`mod_mqnic_core`: Data passes enters per-interface receive FIFO module and is placed into per-port FIFOs, then aggregated into a single stream
+#. :ref:`mod_mqnic_core`: Data enters per-interface receive FIFO module and is placed into per-port FIFOs, then aggregated into a single stream
 #. :ref:`mod_mqnic_app_block` ``s_axis_if_rx``: data is presented to the application section
 #. :ref:`mod_mqnic_app_block` ``m_axis_if_rx``: data is returned from the application section
 #. :ref:`mod_mqnic_ingress`: ingress processing

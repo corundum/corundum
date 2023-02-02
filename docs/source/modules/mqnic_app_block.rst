@@ -27,33 +27,45 @@ Packet data from the host passes through all three streaming interfaces on its w
 
 On the transmit path, data flows as follows:
 
-1. :ref:`mod_mqnic_interface_tx`: data is read from host memory via DMA
-2. :ref:`mod_mqnic_egress`: egress processing
-3. ``s_axis_if_tx``: data is presented to the application section
-4. ``m_axis_if_tx``: data is returned from the application section
-5. Data passes enters per-interface transmit FIFO module and is divided into per-port, per-traffic-class FIFOs
-6. ``s_axis_sync_tx``: data is presented to the application section
-7. ``m_axis_sync_tx``: data is returned from the application section
-8. Data passes through per-port transmit async FIFO module and is transferred to MAC TX clock domain
-9. ``s_axis_direct_tx``: data is presented to the application section
-10. ``m_axis_direct_tx``: data is returned from the application section
-11. :ref:`mod_mqnic_l2_egress`: layer 2 egress processing
-12. :ref:`mod_mqnic_core`: data leaves through transmit streaming interfaces
+#. :ref:`mod_mqnic_interface_tx`: data is read from host memory via DMA
+#. :ref:`mod_mqnic_egress`: egress processing
+#. ``s_axis_if_tx``: data is presented to the application section
+#. ``m_axis_if_tx``: data is returned from the application section
+#. Data enters per-interface transmit FIFO module and is divided into per-port, per-traffic-class FIFOs
+#. ``s_axis_sync_tx``: data is presented to the application section
+#. ``m_axis_sync_tx``: data is returned from the application section
+#. Data enters per-port transmit async FIFO module and is transferred to MAC TX clock domain
+#. ``s_axis_direct_tx``: data is presented to the application section
+#. ``m_axis_direct_tx``: data is returned from the application section
+#. :ref:`mod_mqnic_l2_egress`: layer 2 egress processing
+#. :ref:`mod_mqnic_core`: data leaves through transmit streaming interfaces
+#. Packet is transmitted and timestamped by MAC
+#. :ref:`mod_mqnic_core`: timestamp and TX tag arrive through TX completion streaming interfaces
+#. ``s_axis_direct_tx_cpl``: TX completion is presented to the application section
+#. ``m_axis_direct_tx_cpl``: TX completion is returned from the application section
+#. TX completion enters per-port async FIFO module and is transferred to core clock domain
+#. ``s_axis_sync_tx_cpl``: TX completion is presented to the application section
+#. ``m_axis_sync_tx_cpl``: TX completion is returned from the application section
+#. TX completion enters per-interface transmit FIFO module and is placed into per-port FIFOs, then aggregated into a single stream
+#. ``s_axis_if_tx_cpl``: TX completion is presented to the application section
+#. ``m_axis_if_tx_cpl``: TX completion is returned from the application section
+#. :ref:`mod_mqnic_interface_tx`: Transmit operation is marked as completed, timestamp is included in completion record and sent to the host
 
 On the receive path, data flows as follows:
 
-1. :ref:`mod_mqnic_core`: data enters through receive streaming interfaces
-2. :ref:`mod_mqnic_l2_ingress`: layer 2 ingress processing
-3. ``s_axis_direct_rx``: data is presented to the application section
-4. ``m_axis_direct_rx``: data is returned from the application section
-5. Data passes through per-port receive async FIFO module and is transferred to core clock domain
-6. ``s_axis_sync_rx``: data is presented to the application section
-7. ``m_axis_sync_rx``: data is returned from the application section
-8. Data passes enters per-interface receive FIFO module and is placed into per-port FIFOs, then aggregated into a single stream
-9. ``s_axis_if_rx``: data is presented to the application section
-10. ``m_axis_if_rx``: data is returned from the application section
-11. :ref:`mod_mqnic_ingress`: ingress processing
-12. :ref:`mod_mqnic_interface_rx`: data is read from host memory via DMA
+#. Packet is received and timestamped by MAC
+#. :ref:`mod_mqnic_core`: data enters through receive streaming interfaces
+#. :ref:`mod_mqnic_l2_ingress`: layer 2 ingress processing
+#. ``s_axis_direct_rx``: data is presented to the application section
+#. ``m_axis_direct_rx``: data is returned from the application section
+#. Data enters per-port receive async FIFO module and is transferred to core clock domain
+#. ``s_axis_sync_rx``: data is presented to the application section
+#. ``m_axis_sync_rx``: data is returned from the application section
+#. Data enters per-interface receive FIFO module and is placed into per-port FIFOs, then aggregated into a single stream
+#. ``s_axis_if_rx``: data is presented to the application section
+#. ``m_axis_if_rx``: data is returned from the application section
+#. :ref:`mod_mqnic_ingress`: ingress processing
+#. :ref:`mod_mqnic_interface_rx`: data is read from host memory via DMA
 
 Parameters
 ==========

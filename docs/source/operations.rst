@@ -9,7 +9,7 @@ This is a list of all of the operations involved in sending and receiving packet
 Packet transmission
 ===================
 
-#. linux: The linux kernel calls ``mqnic_start_xmit()`` (via ``ndo_start_xmit()``) with an ``sk_buff`` for transmission
+#. linux: The Linux kernel calls ``mqnic_start_xmit()`` (via ``ndo_start_xmit()``) with an ``sk_buff`` for transmission
 #. ``mqnic_start_xmit()`` (``mqnic_tx.c``): The driver determines the destination transmit queue with ``skb_get_queue_mapping``
 #. ``mqnic_start_xmit()`` (``mqnic_tx.c``): The driver marks the ``sk_buff`` for timestamping, if requested
 #. ``mqnic_start_xmit()`` (``mqnic_tx.c``): The driver generates the hardware IP checksum command and writes it into the descriptor
@@ -33,7 +33,7 @@ Packet transmission
 #. :ref:`mod_desc_fetch` ``s_axis_desc_dequeue_resp_*``: The response arrives at the descriptor fetch module
 #. :ref:`mod_desc_fetch` ``m_axis_req_status_*``: The descriptor module reports the descriptor fetch status
 #. :ref:`mod_desc_fetch` ``m_axis_dma_read_desc_*``: The descriptor module issues a DMA read request
-#. ``dma_if_pcie_rd`` ``s_axis_read_desc_*``: The requst arrives at the DMA read interface
+#. ``dma_if_pcie_rd`` ``s_axis_read_desc_*``: The request arrives at the DMA read interface
 #. ``dma_if_pcie_rd``: The DMA read interface issues a PCIe read request
 #. ``dma_if_pcie_rd``: The read data comes back in a completion packet and is written to the descriptor fetch local DMA RAM
 #. ``dma_if_pcie_rd`` ``m_axis_read_desc_status_*``: The DMA read interface issues a status message
@@ -44,7 +44,7 @@ Packet transmission
 #. :ref:`mod_tx_engine`: The descriptor arrives at the transmit engine
 #. :ref:`mod_tx_engine`: The transmit engine stores the descriptor data
 #. :ref:`mod_tx_engine` ``m_axis_dma_read_desc_*``: The transmit engine issues a DMA read request
-#. ``dma_if_pcie_rd`` ``s_axis_read_desc_*``: The requst arrives at the DMA read interface
+#. ``dma_if_pcie_rd`` ``s_axis_read_desc_*``: The request arrives at the DMA read interface
 #. ``dma_if_pcie_rd``: The DMA read interface issues a PCIe read request
 #. ``dma_if_pcie_rd``: The read data comes back in a completion packet and is written to the interface local DMA RAM
 #. ``dma_if_pcie_rd`` ``m_axis_read_desc_status_*``: The DMA read interface issues a status message
@@ -73,8 +73,7 @@ Packet transmission
 #. :ref:`mod_mqnic_core`: TX completion enters per-interface transmit FIFO module and is placed into per-port FIFOs, then aggregated into a single stream
 #. :ref:`mod_mqnic_app_block` ``s_axis_if_tx_cpl``: TX completion is presented to the application section
 #. :ref:`mod_mqnic_app_block` ``m_axis_if_tx_cpl``: TX completion is returned from the application section
-#. :ref:`mod_mqnic_interface_tx`: Transmit operation is marked as completed, timestamp is included in completion record and sent to the host
-#. :ref:`mod_tx_engine`: The PTP timestamp arrives at the transmit engine
+#. :ref:`mod_tx_engine`: TX completion arrives at the transmit engine
 #. :ref:`mod_tx_engine` ``m_axis_cpl_req_*``: The transmit engine issues a completion write request
 #. :ref:`mod_cpl_write`: The completion write module writes the completion data into its local DMA RAM
 #. :ref:`mod_cpl_write` ``m_axis_cpl_enqueue_req_*``: The completion write module issues an enqueue request to the completion queue manager
@@ -84,7 +83,7 @@ Packet transmission
 #. :ref:`mod_cpl_write`: The response arrives at the completion write module
 #. :ref:`mod_cpl_write` ``m_axis_req_status_*``: The completion write module reports the completion write status
 #. :ref:`mod_desc_fetch` ``m_axis_dma_write_desc_*``: The completion write module issues a DMA write request
-#. ``dma_if_pcie_wr`` ``s_axis_write_desc_*``: The requst arrives at the DMA write interface
+#. ``dma_if_pcie_wr`` ``s_axis_write_desc_*``: The request arrives at the DMA write interface
 #. ``dma_if_pcie_wr``: The DMA write interface reads the completion data from the completion write module local DMA RAM
 #. ``dma_if_pcie_wr``: The DMA write interface issues a PCIe write request
 #. ``dma_if_pcie_wr`` ``m_axis_write_desc_status_*``: The DMA write interface issues a status message
@@ -100,20 +99,20 @@ Packet transmission
 #. :ref:`mod_cpl_write` ``s_axis_cpl_enqueue_resp_*``: The response arrives at the completion write module
 #. :ref:`mod_cpl_write` ``m_axis_req_status_*``: The completion write module reports the completion write status
 #. :ref:`mod_desc_fetch` ``m_axis_dma_write_desc_*``: The completion write module issues a DMA write request
-#. ``dma_if_pcie_wr`` ``s_axis_write_desc_*``: The requst arrives at the DMA write interface
+#. ``dma_if_pcie_wr`` ``s_axis_write_desc_*``: The request arrives at the DMA write interface
 #. ``dma_if_pcie_wr``: The DMA write interface reads the event data from the completion write module local DMA RAM
 #. ``dma_if_pcie_wr``: The DMA write interface issues a PCIe write request
 #. ``dma_if_pcie_wr`` ``m_axis_write_desc_status_*``: The DMA write interface issues a status message
 #. :ref:`mod_cpl_write` ``m_axis_desc_enqueue_commit_*``: The completion write module issues an enqueue commit message
 #. :ref:`mod_cpl_queue_manager`: The completion queue manager commits the enqueue operation and updates the producer pointer
 #. :ref:`mod_cpl_queue_manager` ``m_axis_event_*``: The completion queue manager issues an interrupt, if armed
-#. linux: The linux kernel calls ``mqnic_irq_handler()``
+#. linux: The Linux kernel calls ``mqnic_irq_handler()``
 #. ``mqnic_irq_handler()`` (``mqnic_irq.c``): The driver calls the EQ handler via the notifier chain (``atomic_notifier_call_chain()``)
 #. ``mqnic_eq_int()`` (``mqnic_eq.c``): The driver calls ``mqnic_process_eq()``
 #. ``mqnic_process_eq()`` (``mqnic_eq.c``): The driver processes the event queue, which calls the appropriate handler (``mqnic_tx_irq()``)
 #. ``mqnic_tx_irq()`` (``mqnic_tx.c``): The driver enables NAPI polling on the queue (``napi_schedule_irqoff()``)
 #. ``mqnic_eq_int()`` (``mqnic_eq.c``): The driver rearms the EQ (``mqnic_arm_eq()``)
-#. NAPI: The linux kernel calls ``mqnic_poll_tx_cq()``
+#. NAPI: The Linux kernel calls ``mqnic_poll_tx_cq()``
 #. ``mqnic_poll_tx_cq()`` (``mqnic_tx.c``): The driver calls ``mqnic_process_tx_cq()``
 #. ``mqnic_process_tx_cq()`` (``mqnic_tx.c``): The driver reads the completion queue producer pointer from the NIC
 #. ``mqnic_process_tx_cq()`` (``mqnic_tx.c``): The driver reads the completion record
@@ -175,7 +174,7 @@ receive:
 #. :ref:`mod_desc_fetch` ``m_axis_desc_dequeue_resp_*``: The response arrives at the descriptor fetch module
 #. :ref:`mod_desc_fetch` ``m_axis_req_status_*``: The descriptor module reports the descriptor fetch status
 #. :ref:`mod_desc_fetch` ``m_axis_dma_read_desc_*``: The descriptor module issues a DMA read request
-#. ``dma_if_pcie_us_rd`` ``s_axis_read_desc_*``: The requst arrives at the DMA read interface
+#. ``dma_if_pcie_us_rd`` ``s_axis_read_desc_*``: The request arrives at the DMA read interface
 #. ``dma_if_pcie_us_rd``: The DMA read interface issues a PCIe read request
 #. ``dma_if_pcie_us_rd``: The read data comes back in a completion packet and is written to the descriptor fetch local DMA RAM
 #. ``dma_if_pcie_us_rd`` ``m_axis_read_desc_status_*``: The DMA read interface issues a status message
@@ -186,7 +185,7 @@ receive:
 #. :ref:`mod_rx_engine`: The descriptor arrives at the receive engine
 #. :ref:`mod_rx_engine`: The receive engine stores the descriptor data
 #. :ref:`mod_rx_engine` ``m_axis_dma_write_desc_*``: The receive engine issues a DMA write request
-#. ``dma_if_pcie_us_wr`` ``s_axis_write_desc_*``: The requst arrives at the DMA write interface
+#. ``dma_if_pcie_us_wr`` ``s_axis_write_desc_*``: The request arrives at the DMA write interface
 #. ``dma_if_pcie_us_wr``: The DMA write interface reads the packet data from the interface local DMA RAM
 #. ``dma_if_pcie_us_wr``: The DMA write interface issues a PCIe write request
 #. ``dma_if_pcie_us_wr`` ``m_axis_write_desc_status_*``: The DMA write interface issues a status message
@@ -199,7 +198,7 @@ receive:
 #. :ref:`mod_cpl_write` ``s_axis_cpl_enqueue_resp_*``: The response arrives at the completion write module
 #. :ref:`mod_cpl_write` ``m_axis_req_status_*``: The completion write module reports the completion write status
 #. :ref:`mod_desc_fetch` ``m_axis_dma_write_desc_*``: The completion write module issues a DMA write request
-#. ``dma_if_pcie_us_wr`` ``s_axis_write_desc_*``: The requst arrives at the DMA write interface
+#. ``dma_if_pcie_us_wr`` ``s_axis_write_desc_*``: The request arrives at the DMA write interface
 #. ``dma_if_pcie_us_wr``: The DMA write interface reads the completion data from the completion write module local DMA RAM
 #. ``dma_if_pcie_us_wr``: The DMA write interface issues a PCIe write request
 #. ``dma_if_pcie_us_wr`` ``m_axis_write_desc_status_*``: The DMA write interface issues a status message
@@ -215,20 +214,20 @@ receive:
 #. :ref:`mod_cpl_write` ``s_axis_cpl_enqueue_resp_*``: The response arrives at the completion write module
 #. :ref:`mod_cpl_write` ``m_axis_req_status_*``: The completion write module reports the completion write status
 #. :ref:`mod_desc_fetch` ``m_axis_dma_write_desc_*``: The completion write module issues a DMA write request
-#. ``dma_if_pcie_us_wr`` ``s_axis_write_desc_*``: The requst arrives at the DMA write interface
+#. ``dma_if_pcie_us_wr`` ``s_axis_write_desc_*``: The request arrives at the DMA write interface
 #. ``dma_if_pcie_us_wr``: The DMA write interface reads the event data from the completion write module local DMA RAM
 #. ``dma_if_pcie_us_wr``: The DMA write interface issues a PCIe write request
 #. ``dma_if_pcie_us_wr`` ``m_axis_write_desc_status_*``: The DMA write interface issues a status message
 #. :ref:`mod_cpl_write` ``m_axis_desc_enqueue_commit_*``: The completion write module issues an enqueue commit message
 #. :ref:`mod_cpl_queue_manager`: The completion queue manager commits the enqueue operation and updates the producer pointer
 #. :ref:`mod_cpl_queue_manager` ``m_axis_event_*``: The completion queue manager issues an interrupt, if armed
-#. linux: The linux kernel calls ``mqnic_irq_handler()``
+#. linux: The Linux kernel calls ``mqnic_irq_handler()``
 #. ``mqnic_irq_handler()`` (``mqnic_irq.c``): The driver calls the EQ handler via the notifier chain (``atomic_notifier_call_chain()``)
 #. ``mqnic_eq_int()`` (``mqnic_eq.c``): The driver calls ``mqnic_process_eq()``
 #. ``mqnic_process_eq()`` (``mqnic_eq.c``): The driver processes the event queue, which calls the appropriate handler (``mqnic_rx_irq()``)
 #. ``mqnic_rx_irq()`` (``mqnic_rx.c``): The driver enables NAPI polling on the queue (``napi_schedule_irqoff()``)
 #. ``mqnic_eq_int()`` (``mqnic_eq.c``): The driver rearms the EQ (``mqnic_arm_eq()``)
-#. NAPI: The linux kernel calls ``mqnic_poll_rx_cq()``
+#. NAPI: The Linux kernel calls ``mqnic_poll_rx_cq()``
 #. ``mqnic_poll_rx_cq()`` (``mqnic_rx.c``): The driver calls ``mqnic_process_rx_cq()``
 #. ``mqnic_process_rx_cq()`` (``mqnic_rx.c``): The driver reads the CQ producer pointer from the NIC
 #. ``mqnic_process_rx_cq()`` (``mqnic_rx.c``): The driver reads the completion record

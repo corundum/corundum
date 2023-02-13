@@ -148,7 +148,7 @@ integer i, j;
 // check configuration
 initial begin
     for (i = 0; i < M_COUNT*M_REGIONS; i = i + 1) begin
-        if (M_ADDR_WIDTH[i*32 +: 32] && (M_ADDR_WIDTH[i*32 +: 32] < 0 || M_ADDR_WIDTH[i*32 +: 32] > ADDR_WIDTH)) begin
+        if (M_ADDR_WIDTH[i*32 +: 32] && (M_ADDR_WIDTH[i*32 +: 32] < $clog2(STRB_WIDTH) || M_ADDR_WIDTH[i*32 +: 32] > ADDR_WIDTH)) begin
             $error("Error: address width out of range (instance %m)");
             $finish;
         end

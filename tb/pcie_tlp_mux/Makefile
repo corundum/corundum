@@ -36,13 +36,13 @@ VERILOG_SOURCES += $(WRAPPER).v
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 
 # module parameters
-export PARAM_TLP_DATA_WIDTH ?= 64
-export PARAM_TLP_STRB_WIDTH ?= $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )
-export PARAM_TLP_HDR_WIDTH ?= 128
-export PARAM_SEQ_NUM_WIDTH ?= 6
-export PARAM_TLP_SEG_COUNT ?= 1
-export PARAM_ARB_TYPE_ROUND_ROBIN ?= 0
-export PARAM_ARB_LSB_HIGH_PRIORITY ?= 1
+export PARAM_TLP_DATA_WIDTH := 64
+export PARAM_TLP_STRB_WIDTH := $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )
+export PARAM_TLP_HDR_WIDTH := 128
+export PARAM_SEQ_NUM_WIDTH := 6
+export PARAM_TLP_SEG_COUNT := 1
+export PARAM_ARB_TYPE_ROUND_ROBIN := 0
+export PARAM_ARB_LSB_HIGH_PRIORITY := 1
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

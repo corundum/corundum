@@ -32,25 +32,25 @@ MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 
 # module parameters
-export PARAM_AXIS_PCIE_DATA_WIDTH ?= 64
-export PARAM_AXIS_PCIE_KEEP_WIDTH ?= $(shell expr $(PARAM_AXIS_PCIE_DATA_WIDTH) / 32 )
-export PARAM_AXIS_PCIE_RQ_USER_WIDTH ?= $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),62,137)
-export PARAM_AXIS_PCIE_RC_USER_WIDTH ?= $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),75,161)
-export PARAM_RQ_SEQ_NUM_WIDTH ?= $(if $(filter-out 60,$(PARAM_AXIS_PCIE_RQ_USER_WIDTH)),6,4)
-export PARAM_RQ_SEQ_NUM_ENABLE ?= 1
-export PARAM_RAM_SEL_WIDTH ?= 2
-export PARAM_RAM_ADDR_WIDTH ?= 16
-export PARAM_SEG_COUNT ?= $(shell python -c "print(max(2, $(PARAM_AXIS_PCIE_DATA_WIDTH) * 2 // 128))")
-export PARAM_SEG_DATA_WIDTH ?= $(shell expr $(PARAM_AXIS_PCIE_DATA_WIDTH) \* 2 / $(PARAM_SEG_COUNT) )
-export PARAM_SEG_BE_WIDTH ?= $(shell expr $(PARAM_SEG_DATA_WIDTH) / 8 )
-export PARAM_SEG_ADDR_WIDTH ?= $(shell python -c "print($(PARAM_RAM_ADDR_WIDTH) - ($(PARAM_SEG_COUNT)*$(PARAM_SEG_BE_WIDTH)-1).bit_length())")
-export PARAM_PCIE_ADDR_WIDTH ?= 64
-export PARAM_PCIE_TAG_COUNT ?= $(if $(filter-out 60,$(PARAM_AXIS_PCIE_RQ_USER_WIDTH)),256,64)
-export PARAM_LEN_WIDTH ?= 20
-export PARAM_TAG_WIDTH ?= 8
-export PARAM_OP_TABLE_SIZE ?= $(PARAM_PCIE_TAG_COUNT)
-export PARAM_TX_LIMIT ?= $(shell echo "$$(( 1 << ($(PARAM_RQ_SEQ_NUM_WIDTH)-1) ))" )
-export PARAM_TX_FC_ENABLE ?= 1
+export PARAM_AXIS_PCIE_DATA_WIDTH := 64
+export PARAM_AXIS_PCIE_KEEP_WIDTH := $(shell expr $(PARAM_AXIS_PCIE_DATA_WIDTH) / 32 )
+export PARAM_AXIS_PCIE_RQ_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),62,137)
+export PARAM_AXIS_PCIE_RC_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),75,161)
+export PARAM_RQ_SEQ_NUM_WIDTH := $(if $(filter-out 60,$(PARAM_AXIS_PCIE_RQ_USER_WIDTH)),6,4)
+export PARAM_RQ_SEQ_NUM_ENABLE := 1
+export PARAM_RAM_SEL_WIDTH := 2
+export PARAM_RAM_ADDR_WIDTH := 16
+export PARAM_SEG_COUNT := $(shell python -c "print(max(2, $(PARAM_AXIS_PCIE_DATA_WIDTH) * 2 // 128))")
+export PARAM_SEG_DATA_WIDTH := $(shell expr $(PARAM_AXIS_PCIE_DATA_WIDTH) \* 2 / $(PARAM_SEG_COUNT) )
+export PARAM_SEG_BE_WIDTH := $(shell expr $(PARAM_SEG_DATA_WIDTH) / 8 )
+export PARAM_SEG_ADDR_WIDTH := $(shell python -c "print($(PARAM_RAM_ADDR_WIDTH) - ($(PARAM_SEG_COUNT)*$(PARAM_SEG_BE_WIDTH)-1).bit_length())")
+export PARAM_PCIE_ADDR_WIDTH := 64
+export PARAM_PCIE_TAG_COUNT := $(if $(filter-out 60,$(PARAM_AXIS_PCIE_RQ_USER_WIDTH)),256,64)
+export PARAM_LEN_WIDTH := 20
+export PARAM_TAG_WIDTH := 8
+export PARAM_OP_TABLE_SIZE := $(PARAM_PCIE_TAG_COUNT)
+export PARAM_TX_LIMIT := $(shell echo "$$(( 1 << ($(PARAM_RQ_SEQ_NUM_WIDTH)-1) ))" )
+export PARAM_TX_FC_ENABLE := 1
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

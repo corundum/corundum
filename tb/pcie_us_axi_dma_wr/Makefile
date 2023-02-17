@@ -32,22 +32,22 @@ MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 
 # module parameters
-export PARAM_AXIS_PCIE_DATA_WIDTH ?= 64
-export PARAM_AXIS_PCIE_KEEP_WIDTH ?= $(shell expr $(PARAM_AXIS_PCIE_DATA_WIDTH) / 32 )
-export PARAM_AXIS_PCIE_RQ_USER_WIDTH ?= $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),62,137)
-export PARAM_RQ_SEQ_NUM_WIDTH ?= $(if $(filter-out 60,$(PARAM_AXIS_PCIE_RQ_USER_WIDTH)),6,4)
-export PARAM_RQ_SEQ_NUM_ENABLE ?= 1
-export PARAM_AXI_DATA_WIDTH ?= $(PARAM_AXIS_PCIE_DATA_WIDTH)
-export PARAM_AXI_ADDR_WIDTH ?= 24
-export PARAM_AXI_STRB_WIDTH ?= $(shell expr $(PARAM_AXI_DATA_WIDTH) / 8 )
-export PARAM_AXI_ID_WIDTH ?= 8
-export PARAM_AXI_MAX_BURST_LEN ?= 256
-export PARAM_PCIE_ADDR_WIDTH ?= 64
-export PARAM_LEN_WIDTH ?= 20
-export PARAM_TAG_WIDTH ?= 8
-export PARAM_OP_TABLE_SIZE ?= $(shell echo "$$(( 1 << ($(PARAM_RQ_SEQ_NUM_WIDTH)-1) ))" )
-export PARAM_TX_LIMIT ?= $(shell echo "$$(( 1 << ($(PARAM_RQ_SEQ_NUM_WIDTH)-1) ))" )
-export PARAM_TX_FC_ENABLE ?= 1
+export PARAM_AXIS_PCIE_DATA_WIDTH := 64
+export PARAM_AXIS_PCIE_KEEP_WIDTH := $(shell expr $(PARAM_AXIS_PCIE_DATA_WIDTH) / 32 )
+export PARAM_AXIS_PCIE_RQ_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),62,137)
+export PARAM_RQ_SEQ_NUM_WIDTH := $(if $(filter-out 60,$(PARAM_AXIS_PCIE_RQ_USER_WIDTH)),6,4)
+export PARAM_RQ_SEQ_NUM_ENABLE := 1
+export PARAM_AXI_DATA_WIDTH := $(PARAM_AXIS_PCIE_DATA_WIDTH)
+export PARAM_AXI_ADDR_WIDTH := 24
+export PARAM_AXI_STRB_WIDTH := $(shell expr $(PARAM_AXI_DATA_WIDTH) / 8 )
+export PARAM_AXI_ID_WIDTH := 8
+export PARAM_AXI_MAX_BURST_LEN := 256
+export PARAM_PCIE_ADDR_WIDTH := 64
+export PARAM_LEN_WIDTH := 20
+export PARAM_TAG_WIDTH := 8
+export PARAM_OP_TABLE_SIZE := $(shell echo "$$(( 1 << ($(PARAM_RQ_SEQ_NUM_WIDTH)-1) ))" )
+export PARAM_TX_LIMIT := $(shell echo "$$(( 1 << ($(PARAM_RQ_SEQ_NUM_WIDTH)-1) ))" )
+export PARAM_TX_FC_ENABLE := 1
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

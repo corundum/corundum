@@ -32,14 +32,14 @@ MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 
 # module parameters
-export PARAM_AXI_DATA_WIDTH = 32
-export PARAM_AXI_ADDR_WIDTH = 16
-export PARAM_AXI_STRB_WIDTH = $(shell expr $(PARAM_AXI_DATA_WIDTH) / 8 )
-export PARAM_AXI_ID_WIDTH = 8
-export PARAM_AXI_MAX_BURST_LEN = 16
-export PARAM_LEN_WIDTH = 20
-export PARAM_TAG_WIDTH = 8
-export PARAM_ENABLE_UNALIGNED = 0
+export PARAM_AXI_DATA_WIDTH := 32
+export PARAM_AXI_ADDR_WIDTH := 16
+export PARAM_AXI_STRB_WIDTH := $(shell expr $(PARAM_AXI_DATA_WIDTH) / 8 )
+export PARAM_AXI_ID_WIDTH := 8
+export PARAM_AXI_MAX_BURST_LEN := 16
+export PARAM_LEN_WIDTH := 20
+export PARAM_TAG_WIDTH := 8
+export PARAM_ENABLE_UNALIGNED := 0
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

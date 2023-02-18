@@ -34,11 +34,11 @@ VERILOG_SOURCES += ../../rtl/$(DUT)_wr.v
 VERILOG_SOURCES += ../../rtl/$(DUT)_rd.v
 
 # module parameters
-export PARAM_ADDR_WIDTH ?= 32
-export PARAM_S_DATA_WIDTH ?= 32
-export PARAM_S_STRB_WIDTH ?= $(shell expr $(PARAM_S_DATA_WIDTH) / 8 )
-export PARAM_M_DATA_WIDTH ?= 32
-export PARAM_M_STRB_WIDTH ?= $(shell expr $(PARAM_M_DATA_WIDTH) / 8 )
+export PARAM_ADDR_WIDTH := 32
+export PARAM_S_DATA_WIDTH := 32
+export PARAM_S_STRB_WIDTH := $(shell expr $(PARAM_S_DATA_WIDTH) / 8 )
+export PARAM_M_DATA_WIDTH := 32
+export PARAM_M_STRB_WIDTH := $(shell expr $(PARAM_M_DATA_WIDTH) / 8 )
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

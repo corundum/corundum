@@ -36,14 +36,14 @@ VERILOG_SOURCES += ../../rtl/$(DUT)_rd.v
 REG_TYPE ?= 1
 
 # module parameters
-export PARAM_DATA_WIDTH ?= 32
-export PARAM_ADDR_WIDTH ?= 32
-export PARAM_STRB_WIDTH ?= $(shell expr $(PARAM_DATA_WIDTH) / 8 )
-export PARAM_AW_REG_TYPE ?= $(REG_TYPE)
-export PARAM_W_REG_TYPE ?= $(REG_TYPE)
-export PARAM_B_REG_TYPE ?= $(REG_TYPE)
-export PARAM_AR_REG_TYPE ?= $(REG_TYPE)
-export PARAM_R_REG_TYPE ?= $(REG_TYPE)
+export PARAM_DATA_WIDTH := 32
+export PARAM_ADDR_WIDTH := 32
+export PARAM_STRB_WIDTH := $(shell expr $(PARAM_DATA_WIDTH) / 8 )
+export PARAM_AW_REG_TYPE := $(REG_TYPE)
+export PARAM_W_REG_TYPE := $(REG_TYPE)
+export PARAM_B_REG_TYPE := $(REG_TYPE)
+export PARAM_AR_REG_TYPE := $(REG_TYPE)
+export PARAM_R_REG_TYPE := $(REG_TYPE)
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

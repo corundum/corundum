@@ -34,25 +34,25 @@ VERILOG_SOURCES += ../../rtl/$(DUT)_wr.v
 VERILOG_SOURCES += ../../rtl/$(DUT)_rd.v
 
 # module parameters
-export PARAM_ADDR_WIDTH ?= 32
-export PARAM_S_DATA_WIDTH ?= 32
-export PARAM_S_STRB_WIDTH ?= $(shell expr $(PARAM_S_DATA_WIDTH) / 8 )
-export PARAM_M_DATA_WIDTH ?= 32
-export PARAM_M_STRB_WIDTH ?= $(shell expr $(PARAM_M_DATA_WIDTH) / 8 )
-export PARAM_ID_WIDTH ?= 8
-export PARAM_AWUSER_ENABLE ?= 0
-export PARAM_AWUSER_WIDTH ?= 1
-export PARAM_WUSER_ENABLE ?= 0
-export PARAM_WUSER_WIDTH ?= 1
-export PARAM_BUSER_ENABLE ?= 0
-export PARAM_BUSER_WIDTH ?= 1
-export PARAM_ARUSER_ENABLE ?= 0
-export PARAM_ARUSER_WIDTH ?= 1
-export PARAM_RUSER_ENABLE ?= 0
-export PARAM_RUSER_WIDTH ?= 1
-export PARAM_CONVERT_BURST ?= 1
-export PARAM_CONVERT_NARROW_BURST ?= 1
-export PARAM_FORWARD_ID ?= 1
+export PARAM_ADDR_WIDTH := 32
+export PARAM_S_DATA_WIDTH := 32
+export PARAM_S_STRB_WIDTH := $(shell expr $(PARAM_S_DATA_WIDTH) / 8 )
+export PARAM_M_DATA_WIDTH := 32
+export PARAM_M_STRB_WIDTH := $(shell expr $(PARAM_M_DATA_WIDTH) / 8 )
+export PARAM_ID_WIDTH := 8
+export PARAM_AWUSER_ENABLE := 0
+export PARAM_AWUSER_WIDTH := 1
+export PARAM_WUSER_ENABLE := 0
+export PARAM_WUSER_WIDTH := 1
+export PARAM_BUSER_ENABLE := 0
+export PARAM_BUSER_WIDTH := 1
+export PARAM_ARUSER_ENABLE := 0
+export PARAM_ARUSER_WIDTH := 1
+export PARAM_RUSER_ENABLE := 0
+export PARAM_RUSER_WIDTH := 1
+export PARAM_CONVERT_BURST := 1
+export PARAM_CONVERT_NARROW_BURST := 1
+export PARAM_FORWARD_ID := 1
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

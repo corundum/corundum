@@ -32,7 +32,7 @@ MODULE   = test_$(DUT)
 VERILOG_SOURCES  = ../../rtl/$(DUT).v
 
 # module parameters
-export PARAM_IRQ_INDEX_WIDTH ?= 11
+export PARAM_IRQ_INDEX_WIDTH := 11
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

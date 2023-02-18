@@ -32,24 +32,24 @@ MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 
 # module parameters
-export PARAM_RAM_DATA_WIDTH ?= 128
-export PARAM_RAM_ADDR_WIDTH ?= 16
-export PARAM_SEG_COUNT ?= $(shell python -c "print(max(2, $(PARAM_RAM_DATA_WIDTH) // 128))")
-export PARAM_SEG_DATA_WIDTH ?= $(shell expr $(PARAM_RAM_DATA_WIDTH) / $(PARAM_SEG_COUNT) )
-export PARAM_SEG_BE_WIDTH ?= $(shell expr $(PARAM_SEG_DATA_WIDTH) / 8 )
-export PARAM_SEG_ADDR_WIDTH ?= $(shell python -c "print($(PARAM_RAM_ADDR_WIDTH) - ($(PARAM_SEG_COUNT)*$(PARAM_SEG_BE_WIDTH)-1).bit_length())")
-export PARAM_AXIS_DATA_WIDTH ?= 64
-export PARAM_AXIS_KEEP_ENABLE ?= $(shell expr $(PARAM_AXIS_DATA_WIDTH) \> 8 )
-export PARAM_AXIS_KEEP_WIDTH ?= $(shell expr $(PARAM_AXIS_DATA_WIDTH) / 8 )
-export PARAM_AXIS_LAST_ENABLE ?= 1
-export PARAM_AXIS_ID_ENABLE ?= 1
-export PARAM_AXIS_ID_WIDTH ?= 8
-export PARAM_AXIS_DEST_ENABLE ?= 1
-export PARAM_AXIS_DEST_WIDTH ?= 8
-export PARAM_AXIS_USER_ENABLE ?= 1
-export PARAM_AXIS_USER_WIDTH ?= 1
-export PARAM_LEN_WIDTH ?= 20
-export PARAM_TAG_WIDTH ?= 8
+export PARAM_RAM_DATA_WIDTH := 128
+export PARAM_RAM_ADDR_WIDTH := 16
+export PARAM_SEG_COUNT := $(shell python -c "print(max(2, $(PARAM_RAM_DATA_WIDTH) // 128))")
+export PARAM_SEG_DATA_WIDTH := $(shell expr $(PARAM_RAM_DATA_WIDTH) / $(PARAM_SEG_COUNT) )
+export PARAM_SEG_BE_WIDTH := $(shell expr $(PARAM_SEG_DATA_WIDTH) / 8 )
+export PARAM_SEG_ADDR_WIDTH := $(shell python -c "print($(PARAM_RAM_ADDR_WIDTH) - ($(PARAM_SEG_COUNT)*$(PARAM_SEG_BE_WIDTH)-1).bit_length())")
+export PARAM_AXIS_DATA_WIDTH := 64
+export PARAM_AXIS_KEEP_ENABLE := $(shell expr $(PARAM_AXIS_DATA_WIDTH) \> 8 )
+export PARAM_AXIS_KEEP_WIDTH := $(shell expr $(PARAM_AXIS_DATA_WIDTH) / 8 )
+export PARAM_AXIS_LAST_ENABLE := 1
+export PARAM_AXIS_ID_ENABLE := 1
+export PARAM_AXIS_ID_WIDTH := 8
+export PARAM_AXIS_DEST_ENABLE := 1
+export PARAM_AXIS_DEST_WIDTH := 8
+export PARAM_AXIS_USER_ENABLE := 1
+export PARAM_AXIS_USER_WIDTH := 1
+export PARAM_LEN_WIDTH := 20
+export PARAM_TAG_WIDTH := 8
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

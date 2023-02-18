@@ -57,22 +57,22 @@ VERILOG_SOURCES += ../../../../rtl/priority_encoder.v
 VERILOG_SOURCES += ../../../../rtl/pulse_merge.v
 
 # module parameters
-export PARAM_SEG_COUNT ?= 1
-export PARAM_SEG_DATA_WIDTH ?= 256
-export PARAM_SEG_EMPTY_WIDTH ?= $(shell python -c "print((($(PARAM_SEG_DATA_WIDTH)//32)-1).bit_length())" )
-export PARAM_TX_SEQ_NUM_WIDTH ?= 6
-export PARAM_TX_SEQ_NUM_ENABLE ?= 1
-export PARAM_L_TILE ?= 0
-export PARAM_PCIE_TAG_COUNT ?= 256
-export PARAM_IMM_ENABLE ?= 1
-export PARAM_IMM_WIDTH ?= 32
-export PARAM_READ_OP_TABLE_SIZE ?= $(PARAM_PCIE_TAG_COUNT)
-export PARAM_READ_TX_LIMIT ?= $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
-export PARAM_WRITE_OP_TABLE_SIZE ?= $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
-export PARAM_WRITE_TX_LIMIT ?= $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
-export PARAM_BAR0_APERTURE ?= 24
-export PARAM_BAR2_APERTURE ?= 24
-export PARAM_BAR4_APERTURE ?= 16
+export PARAM_SEG_COUNT := 1
+export PARAM_SEG_DATA_WIDTH := 256
+export PARAM_SEG_EMPTY_WIDTH := $(shell python -c "print((($(PARAM_SEG_DATA_WIDTH)//32)-1).bit_length())" )
+export PARAM_TX_SEQ_NUM_WIDTH := 6
+export PARAM_TX_SEQ_NUM_ENABLE := 1
+export PARAM_L_TILE := 0
+export PARAM_PCIE_TAG_COUNT := 256
+export PARAM_IMM_ENABLE := 1
+export PARAM_IMM_WIDTH := 32
+export PARAM_READ_OP_TABLE_SIZE := $(PARAM_PCIE_TAG_COUNT)
+export PARAM_READ_TX_LIMIT := $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
+export PARAM_WRITE_OP_TABLE_SIZE := $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
+export PARAM_WRITE_TX_LIMIT := $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
+export PARAM_BAR0_APERTURE := 24
+export PARAM_BAR2_APERTURE := 24
+export PARAM_BAR4_APERTURE := 16
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

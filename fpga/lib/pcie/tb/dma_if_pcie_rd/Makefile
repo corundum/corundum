@@ -32,26 +32,26 @@ MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 
 # module parameters
-export PARAM_TLP_DATA_WIDTH ?= 64
-export PARAM_TLP_HDR_WIDTH ?= 128
-export PARAM_TLP_SEG_COUNT ?= 1
-export PARAM_TX_SEQ_NUM_COUNT ?= 1
-export PARAM_TX_SEQ_NUM_WIDTH ?= 6
-export PARAM_TX_SEQ_NUM_ENABLE ?= 1
-export PARAM_RAM_SEL_WIDTH ?= 2
-export PARAM_RAM_ADDR_WIDTH ?= 16
-export PARAM_RAM_SEG_COUNT ?= $(shell expr $(PARAM_TLP_SEG_COUNT) \* 2 )
-export PARAM_RAM_SEG_DATA_WIDTH ?= $(shell expr $(PARAM_TLP_DATA_WIDTH) \* 2 / $(PARAM_RAM_SEG_COUNT) )
-export PARAM_RAM_SEG_BE_WIDTH ?= $(shell expr $(PARAM_RAM_SEG_DATA_WIDTH) / 8 )
-export PARAM_RAM_SEG_ADDR_WIDTH ?= $(shell python -c "print($(PARAM_RAM_ADDR_WIDTH) - ($(PARAM_RAM_SEG_COUNT)*$(PARAM_RAM_SEG_BE_WIDTH)-1).bit_length())")
-export PARAM_PCIE_ADDR_WIDTH ?= 64
-export PARAM_PCIE_TAG_COUNT ?= 256
-export PARAM_LEN_WIDTH ?= 20
-export PARAM_TAG_WIDTH ?= 8
-export PARAM_OP_TABLE_SIZE ?= $(PARAM_PCIE_TAG_COUNT)
-export PARAM_TX_LIMIT ?= $(shell echo "$$(( 1 << ($(PARAM_TX_SEQ_NUM_WIDTH)-1) ))" )
-export PARAM_TLP_FORCE_64_BIT_ADDR ?= 0
-export PARAM_CHECK_BUS_NUMBER ?= 1
+export PARAM_TLP_DATA_WIDTH := 64
+export PARAM_TLP_HDR_WIDTH := 128
+export PARAM_TLP_SEG_COUNT := 1
+export PARAM_TX_SEQ_NUM_COUNT := 1
+export PARAM_TX_SEQ_NUM_WIDTH := 6
+export PARAM_TX_SEQ_NUM_ENABLE := 1
+export PARAM_RAM_SEL_WIDTH := 2
+export PARAM_RAM_ADDR_WIDTH := 16
+export PARAM_RAM_SEG_COUNT := $(shell expr $(PARAM_TLP_SEG_COUNT) \* 2 )
+export PARAM_RAM_SEG_DATA_WIDTH := $(shell expr $(PARAM_TLP_DATA_WIDTH) \* 2 / $(PARAM_RAM_SEG_COUNT) )
+export PARAM_RAM_SEG_BE_WIDTH := $(shell expr $(PARAM_RAM_SEG_DATA_WIDTH) / 8 )
+export PARAM_RAM_SEG_ADDR_WIDTH := $(shell python -c "print($(PARAM_RAM_ADDR_WIDTH) - ($(PARAM_RAM_SEG_COUNT)*$(PARAM_RAM_SEG_BE_WIDTH)-1).bit_length())")
+export PARAM_PCIE_ADDR_WIDTH := 64
+export PARAM_PCIE_TAG_COUNT := 256
+export PARAM_LEN_WIDTH := 20
+export PARAM_TAG_WIDTH := 8
+export PARAM_OP_TABLE_SIZE := $(PARAM_PCIE_TAG_COUNT)
+export PARAM_TX_LIMIT := $(shell echo "$$(( 1 << ($(PARAM_TX_SEQ_NUM_WIDTH)-1) ))" )
+export PARAM_TLP_FORCE_64_BIT_ADDR := 0
+export PARAM_CHECK_BUS_NUMBER := 1
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

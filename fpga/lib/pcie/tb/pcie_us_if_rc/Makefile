@@ -34,14 +34,14 @@ VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo.v
 VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_raw.v
 
 # module parameters
-export PARAM_AXIS_PCIE_DATA_WIDTH ?= 64
-export PARAM_AXIS_PCIE_KEEP_WIDTH ?= $(shell expr $(PARAM_AXIS_PCIE_DATA_WIDTH) / 32 )
-export PARAM_AXIS_PCIE_RC_USER_WIDTH ?= $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),75,161)
-export PARAM_RC_STRADDLE ?= $(if $(filter-out 256 512,$(PARAM_DATA_WIDTH)),0,1)
-export PARAM_TLP_DATA_WIDTH ?= $(PARAM_AXIS_PCIE_DATA_WIDTH)
-export PARAM_TLP_STRB_WIDTH ?= $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )
-export PARAM_TLP_HDR_WIDTH ?= 128
-export PARAM_TLP_SEG_COUNT ?= 1
+export PARAM_AXIS_PCIE_DATA_WIDTH := 64
+export PARAM_AXIS_PCIE_KEEP_WIDTH := $(shell expr $(PARAM_AXIS_PCIE_DATA_WIDTH) / 32 )
+export PARAM_AXIS_PCIE_RC_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),75,161)
+export PARAM_RC_STRADDLE := $(if $(filter-out 256 512,$(PARAM_DATA_WIDTH)),0,1)
+export PARAM_TLP_DATA_WIDTH := $(PARAM_AXIS_PCIE_DATA_WIDTH)
+export PARAM_TLP_STRB_WIDTH := $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )
+export PARAM_TLP_HDR_WIDTH := 128
+export PARAM_TLP_SEG_COUNT := 1
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

@@ -43,21 +43,21 @@ VERILOG_SOURCES += ../../rtl/arbiter.v
 VERILOG_SOURCES += ../../rtl/priority_encoder.v
 
 # module parameters
-export PARAM_SEG_COUNT ?= 2
-export PARAM_SEG_DATA_WIDTH ?= 256
-export PARAM_SEG_EMPTY_WIDTH ?= $(shell python -c "print((($(PARAM_SEG_DATA_WIDTH)//32)-1).bit_length())" )
-export PARAM_TLP_DATA_WIDTH ?= $(shell expr $(PARAM_SEG_COUNT) \* $(PARAM_SEG_DATA_WIDTH) )
-export PARAM_TLP_STRB_WIDTH ?= $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )
-export PARAM_TLP_HDR_WIDTH ?= 128
-export PARAM_TLP_SEG_COUNT ?= 1
-export PARAM_TX_SEQ_NUM_WIDTH ?= 6
-export PARAM_L_TILE ?= 0
-export PARAM_PF_COUNT ?= 1
-export PARAM_VF_COUNT ?= 0
-export PARAM_F_COUNT ?= $(shell expr $(PARAM_PF_COUNT) + $(PARAM_VF_COUNT) )
-export PARAM_IO_BAR_INDEX ?= 3
-export PARAM_MSI_ENABLE ?= 1
-export PARAM_MSI_COUNT ?= 32
+export PARAM_SEG_COUNT := 2
+export PARAM_SEG_DATA_WIDTH := 256
+export PARAM_SEG_EMPTY_WIDTH := $(shell python -c "print((($(PARAM_SEG_DATA_WIDTH)//32)-1).bit_length())" )
+export PARAM_TLP_DATA_WIDTH := $(shell expr $(PARAM_SEG_COUNT) \* $(PARAM_SEG_DATA_WIDTH) )
+export PARAM_TLP_STRB_WIDTH := $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )
+export PARAM_TLP_HDR_WIDTH := 128
+export PARAM_TLP_SEG_COUNT := 1
+export PARAM_TX_SEQ_NUM_WIDTH := 6
+export PARAM_L_TILE := 0
+export PARAM_PF_COUNT := 1
+export PARAM_VF_COUNT := 0
+export PARAM_F_COUNT := $(shell expr $(PARAM_PF_COUNT) + $(PARAM_VF_COUNT) )
+export PARAM_IO_BAR_INDEX := 3
+export PARAM_MSI_ENABLE := 1
+export PARAM_MSI_COUNT := 32
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

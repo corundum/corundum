@@ -48,13 +48,13 @@ VERILOG_SOURCES += ../../lib/pcie/rtl/priority_encoder.v
 VERILOG_SOURCES += ../../lib/pcie/rtl/pulse_merge.v
 
 # module parameters
-export PARAM_AXIS_PCIE_DATA_WIDTH ?= 256
-export PARAM_AXIS_PCIE_KEEP_WIDTH ?= $(shell expr $(PARAM_AXIS_PCIE_DATA_WIDTH) / 32 )
-export PARAM_AXIS_PCIE_RQ_USER_WIDTH ?= $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),62,137)
-export PARAM_AXIS_PCIE_RC_USER_WIDTH ?= $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),75,161)
-export PARAM_AXIS_PCIE_CQ_USER_WIDTH ?= $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),88,183)
-export PARAM_AXIS_PCIE_CC_USER_WIDTH ?= $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),33,81)
-export PARAM_RQ_SEQ_NUM_WIDTH ?= 6
+export PARAM_AXIS_PCIE_DATA_WIDTH := 256
+export PARAM_AXIS_PCIE_KEEP_WIDTH := $(shell expr $(PARAM_AXIS_PCIE_DATA_WIDTH) / 32 )
+export PARAM_AXIS_PCIE_RQ_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),62,137)
+export PARAM_AXIS_PCIE_RC_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),75,161)
+export PARAM_AXIS_PCIE_CQ_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),88,183)
+export PARAM_AXIS_PCIE_CC_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),33,81)
+export PARAM_RQ_SEQ_NUM_WIDTH := 6
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

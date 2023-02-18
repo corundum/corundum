@@ -39,18 +39,18 @@ VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo.v
 VERILOG_SOURCES += ../../rtl/pcie_tlp_fifo_raw.v
 
 # module parameters
-export PARAM_TLP_DATA_WIDTH ?= 64
-export PARAM_TLP_STRB_WIDTH ?= $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )
-export PARAM_TLP_HDR_WIDTH ?= 128
-export PARAM_SEQ_NUM_WIDTH ?= 6
-export PARAM_IN_TLP_SEG_COUNT ?= 1
-export PARAM_OUT_TLP_SEG_COUNT ?= $(PARAM_IN_TLP_SEG_COUNT)
-export PARAM_FIFO_ENABLE ?= 1
-export PARAM_FIFO_DEPTH ?= 4096
-export PARAM_FIFO_WATERMARK ?= $(shell expr $(PARAM_FIFO_DEPTH) / 2 )
-export PARAM_BAR_BASE ?= 0
-export PARAM_BAR_STRIDE ?= 1
-export PARAM_BAR_IDS ?= 0
+export PARAM_TLP_DATA_WIDTH := 64
+export PARAM_TLP_STRB_WIDTH := $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )
+export PARAM_TLP_HDR_WIDTH := 128
+export PARAM_SEQ_NUM_WIDTH := 6
+export PARAM_IN_TLP_SEG_COUNT := 1
+export PARAM_OUT_TLP_SEG_COUNT := $(PARAM_IN_TLP_SEG_COUNT)
+export PARAM_FIFO_ENABLE := 1
+export PARAM_FIFO_DEPTH := 4096
+export PARAM_FIFO_WATERMARK := $(shell expr $(PARAM_FIFO_DEPTH) / 2 )
+export PARAM_BAR_BASE := 0
+export PARAM_BAR_STRIDE := 1
+export PARAM_BAR_IDS := 0
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

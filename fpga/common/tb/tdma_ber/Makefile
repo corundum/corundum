@@ -46,21 +46,21 @@ VERILOG_SOURCES += ../../lib/axi/rtl/arbiter.v
 VERILOG_SOURCES += ../../lib/axi/rtl/priority_encoder.v
 
 # module parameters
-export PARAM_COUNT = 2
-export PARAM_INDEX_WIDTH = 6
-export PARAM_SLICE_WIDTH = 5
-export PARAM_AXIL_DATA_WIDTH = 32
-export PARAM_AXIL_ADDR_WIDTH = $(shell python -c "print($(PARAM_INDEX_WIDTH)+4+1+($(PARAM_COUNT)-1).bit_length())")
-export PARAM_AXIL_STRB_WIDTH = $(shell expr $(PARAM_AXIL_DATA_WIDTH) / 8 )
-export PARAM_SCHEDULE_START_S = 0
-export PARAM_SCHEDULE_START_NS = 0
-export PARAM_SCHEDULE_PERIOD_S = 0
-export PARAM_SCHEDULE_PERIOD_NS = 1000000
-export PARAM_TIMESLOT_PERIOD_S = 0
-export PARAM_TIMESLOT_PERIOD_NS = 100000
-export PARAM_ACTIVE_PERIOD_S = 0
-export PARAM_ACTIVE_PERIOD_NS = 100000
-export PARAM_PHY_PIPELINE = 0
+export PARAM_COUNT := 2
+export PARAM_INDEX_WIDTH := 6
+export PARAM_SLICE_WIDTH := 5
+export PARAM_AXIL_DATA_WIDTH := 32
+export PARAM_AXIL_ADDR_WIDTH := $(shell python -c "print($(PARAM_INDEX_WIDTH)+4+1+($(PARAM_COUNT)-1).bit_length())")
+export PARAM_AXIL_STRB_WIDTH := $(shell expr $(PARAM_AXIL_DATA_WIDTH) / 8 )
+export PARAM_SCHEDULE_START_S := 0
+export PARAM_SCHEDULE_START_NS := 0
+export PARAM_SCHEDULE_PERIOD_S := 0
+export PARAM_SCHEDULE_PERIOD_NS := 1000000
+export PARAM_TIMESLOT_PERIOD_S := 0
+export PARAM_TIMESLOT_PERIOD_NS := 100000
+export PARAM_ACTIVE_PERIOD_S := 0
+export PARAM_ACTIVE_PERIOD_NS := 100000
+export PARAM_PHY_PIPELINE := 0
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

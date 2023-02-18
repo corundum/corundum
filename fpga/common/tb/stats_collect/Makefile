@@ -32,11 +32,11 @@ MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 
 # module parameters
-export PARAM_COUNT ?= 8
-export PARAM_INC_WIDTH ?= 8
-export PARAM_STAT_INC_WIDTH ?= 16
-export PARAM_STAT_ID_WIDTH ?= $(shell python -c "print(($(PARAM_COUNT)-1).bit_length())")
-export PARAM_UPDATE_PERIOD ?= 128
+export PARAM_COUNT := 8
+export PARAM_INC_WIDTH := 8
+export PARAM_STAT_INC_WIDTH := 16
+export PARAM_STAT_ID_WIDTH := $(shell python -c "print(($(PARAM_COUNT)-1).bit_length())")
+export PARAM_UPDATE_PERIOD := 128
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

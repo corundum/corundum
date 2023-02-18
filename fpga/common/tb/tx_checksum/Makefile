@@ -42,17 +42,17 @@ VERILOG_SOURCES += ../../rtl/$(DUT).v
 VERILOG_SOURCES += ../../lib/axis/rtl/axis_fifo.v
 
 # module parameters
-export PARAM_DATA_WIDTH ?= 64
-export PARAM_KEEP_WIDTH ?= $(shell expr $(PARAM_DATA_WIDTH) / 8 )
-export PARAM_ID_ENABLE = 0
-export PARAM_ID_WIDTH = 8
-export PARAM_DEST_ENABLE = 0
-export PARAM_DEST_WIDTH = 8
-export PARAM_USER_ENABLE = 1
-export PARAM_USER_WIDTH = 1
-export PARAM_USE_INIT_VALUE = 1
-export PARAM_DATA_FIFO_DEPTH = 16384
-export PARAM_CHECKSUM_FIFO_DEPTH = 4
+export PARAM_DATA_WIDTH := 64
+export PARAM_KEEP_WIDTH := $(shell expr $(PARAM_DATA_WIDTH) / 8 )
+export PARAM_ID_ENABLE := 0
+export PARAM_ID_WIDTH := 8
+export PARAM_DEST_ENABLE := 0
+export PARAM_DEST_WIDTH := 8
+export PARAM_USER_ENABLE := 1
+export PARAM_USER_WIDTH := 1
+export PARAM_USE_INIT_VALUE := 1
+export PARAM_DATA_FIFO_DEPTH := 16384
+export PARAM_CHECKSUM_FIFO_DEPTH := 4
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

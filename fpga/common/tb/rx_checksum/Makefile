@@ -41,8 +41,8 @@ MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 
 # module parameters
-export PARAM_DATA_WIDTH ?= 64
-export PARAM_KEEP_WIDTH ?= $(shell expr $(PARAM_DATA_WIDTH) / 8 )
+export PARAM_DATA_WIDTH := 64
+export PARAM_KEEP_WIDTH := $(shell expr $(PARAM_DATA_WIDTH) / 8 )
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

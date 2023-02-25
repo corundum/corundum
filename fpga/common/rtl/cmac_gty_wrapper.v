@@ -868,16 +868,33 @@ assign gt_rxusrclk2 = {4{gt_rxoutclk_bufg}};
 
 assign tx_clk = gt_txusrclk2;
 
+wire tx_rst_int;
+
 sync_reset #(
     .N(4)
 )
 sync_reset_tx_rst_inst (
     .clk(tx_clk),
     .rst(gt_tx_reset_out[0] || ~gt_tx_reset_done || tx_reset_drp_reg || drp_rst || xcvr_ctrl_rst),
-    .out(tx_rst)
+    .out(tx_rst_int)
 );
 
+// extra register for tx_rst signal
+(* shreg_extract = "no" *)
+reg tx_rst_reg_1 = 1'b1;
+(* shreg_extract = "no" *)
+reg tx_rst_reg_2 = 1'b1;
+
+always @(posedge tx_clk) begin
+    tx_rst_reg_1 <= tx_rst_int;
+    tx_rst_reg_2 <= tx_rst_reg_1;
+end
+
+assign tx_rst = tx_rst_reg_2;
+
 assign rx_clk = gt_txusrclk2;
+
+wire rx_rst_int;
 
 sync_reset #(
     .N(4)
@@ -885,8 +902,21 @@ sync_reset #(
 sync_reset_rx_rst_inst (
     .clk(rx_clk),
     .rst(gt_tx_reset_out[0] || ~gt_rx_reset_done || rx_reset_drp_reg || drp_rst || xcvr_ctrl_rst),
-    .out(rx_rst)
+    .out(rx_rst_int)
 );
+
+// extra register for rx_rst signal
+(* shreg_extract = "no" *)
+reg rx_rst_reg_1 = 1'b1;
+(* shreg_extract = "no" *)
+reg rx_rst_reg_2 = 1'b1;
+
+always @(posedge rx_clk) begin
+    rx_rst_reg_1 <= rx_rst_int;
+    rx_rst_reg_2 <= rx_rst_reg_1;
+end
+
+assign rx_rst = rx_rst_reg_2;
 
 assign rx_ptp_clk = gt_rxusrclk2[0];
 

@@ -1512,16 +1512,33 @@ endgenerate
 
 assign phy_tx_clk = gt_txusrclk2;
 
+wire phy_tx_rst_int;
+
 sync_reset #(
     .N(4)
 )
 tx_reset_sync_inst (
     .clk(phy_tx_clk),
     .rst(!tx_reset_done_reg),
-    .out(phy_tx_rst)
+    .out(phy_tx_rst_int)
 );
 
+// extra register for phy_tx_rst signal
+(* shreg_extract = "no" *)
+reg phy_tx_rst_reg_1 = 1'b1;
+(* shreg_extract = "no" *)
+reg phy_tx_rst_reg_2 = 1'b1;
+
+always @(posedge phy_tx_clk) begin
+    phy_tx_rst_reg_1 <= phy_tx_rst_int;
+    phy_tx_rst_reg_2 <= phy_tx_rst_reg_1;
+end
+
+assign phy_tx_rst = phy_tx_rst_reg_2;
+
 assign phy_rx_clk = gt_rxusrclk2;
+
+wire phy_rx_rst_int;
 
 sync_reset #(
     .N(4)
@@ -1529,8 +1546,21 @@ sync_reset #(
 rx_reset_sync_inst (
     .clk(phy_rx_clk),
     .rst(!rx_reset_done_reg),
-    .out(phy_rx_rst)
+    .out(phy_rx_rst_int)
 );
+
+// extra register for phy_rx_rst signal
+(* shreg_extract = "no" *)
+reg phy_rx_rst_reg_1 = 1'b1;
+(* shreg_extract = "no" *)
+reg phy_rx_rst_reg_2 = 1'b1;
+
+always @(posedge phy_rx_clk) begin
+    phy_rx_rst_reg_1 <= phy_rx_rst_int;
+    phy_rx_rst_reg_2 <= phy_rx_rst_reg_1;
+end
+
+assign phy_rx_rst = phy_rx_rst_reg_2;
 
 eth_phy_10g #(
     .DATA_WIDTH(DATA_WIDTH),

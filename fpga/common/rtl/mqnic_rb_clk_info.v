@@ -77,7 +77,6 @@ module mqnic_rb_clk_info #
      * Clock inputs
      */
     input  wire                       ref_clk,
-    input  wire                       ref_rst,
 
     input  wire [CH_CNT-1:0]          ch_clk
 );
@@ -132,11 +131,6 @@ always @(posedge ref_clk) begin
     end else begin
         ref_cnt_reg <= (REF_CLK_CYCLES_PER_SEC >> SHIFT) - 1;
         ref_strb_reg <= !ref_strb_reg;
-    end
-
-    if (ref_rst) begin
-        ref_cnt_reg <= 0;
-        ref_strb_reg <= 0;
     end
 end
 

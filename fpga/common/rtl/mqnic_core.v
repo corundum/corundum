@@ -923,7 +923,6 @@ mqnic_rb_clk_info_inst (
      * Clock inputs
      */
     .ref_clk(ptp_clk),
-    .ref_rst(ptp_rst),
 
     .ch_clk(all_clocks)
 );

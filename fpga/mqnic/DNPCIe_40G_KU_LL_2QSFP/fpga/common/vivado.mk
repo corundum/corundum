@@ -112,7 +112,6 @@ $(PROJECT).runs/synth_1/$(PROJECT).dcp: $(PROJECT).xpr $(SYN_FILES_REL) $(INC_FI
 # implementation run
 $(PROJECT).runs/impl_1/$(PROJECT)_routed.dcp: $(PROJECT).runs/synth_1/$(PROJECT).dcp
 	echo "open_project $(PROJECT).xpr" > run_impl.tcl
-	echo "set_property strategy Performance_ExtraTimingOpt [get_runs impl_1]" >> run_impl.tcl
 	echo "reset_run impl_1" >> run_impl.tcl
 	echo "launch_runs -jobs 4 impl_1" >> run_impl.tcl
 	echo "wait_on_run impl_1" >> run_impl.tcl

@@ -279,3 +279,6 @@ dict for {name value} $params {
 
 # set_property generic $param_list [current_fileset]
 set_property generic $param_list [get_filesets sources_1]
+
+# set implementation strategy
+set_property strategy Performance_ExtraTimingOpt [get_runs impl_1]

@@ -9,13 +9,13 @@ add_cells_to_pblock [get_pblocks pblock_slr0] [get_cells -quiet "core_inst/core_
 add_cells_to_pblock [get_pblocks pblock_slr0] [get_cells -quiet "core_inst/core_inst/core_pcie_inst/core_inst/iface[*].interface_inst/rx_fifo_inst"]
 resize_pblock [get_pblocks pblock_slr0] -add {SLR0}
 
-#create_pblock pblock_slr1
+create_pblock pblock_slr1
 #add_cells_to_pblock [get_pblocks pblock_slr1] [get_cells -quiet ""]
-#resize_pblock [get_pblocks pblock_slr1] -add {SLR1}
+resize_pblock [get_pblocks pblock_slr1] -add {SLR1}
 
-#create_pblock pblock_slr2
+create_pblock pblock_slr2
 #add_cells_to_pblock [get_pblocks pblock_slr2] [get_cells -quiet ""]
-#resize_pblock [get_pblocks pblock_slr2] -add {SLR2}
+resize_pblock [get_pblocks pblock_slr2] -add {SLR2}
 
 create_pblock pblock_pcie
 add_cells_to_pblock [get_pblocks pblock_pcie] [get_cells -quiet "pcie4c_uscale_plus_inst"]

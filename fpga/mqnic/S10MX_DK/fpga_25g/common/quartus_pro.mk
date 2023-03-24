@@ -39,7 +39,7 @@
 CONFIG ?= config.mk
 -include ../$(CONFIG)
 
-SYN_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(SYN_FILES))) $(filter /% ./%,$(SYN_FILES))
+SYN_FILES_REL = $(foreach p,$(SYN_FILES),$(if $(filter /% ./%,$p),$p,../$p))
 
 IP_FILES_REL = $(patsubst %, ../%, $(IP_FILES))
 IP_FILES_INT = $(patsubst %, ip/%, $(notdir $(IP_FILES)))
@@ -48,15 +48,15 @@ IP_TCL_FILES_REL = $(patsubst %, ../%, $(IP_TCL_FILES))
 IP_TCL_FILES_INT = $(patsubst %, ip/%, $(notdir $(IP_TCL_FILES)))
 IP_TCL_FILES_IP_INT = $(patsubst %.tcl, ip/%.ip, $(notdir $(IP_TCL_FILES)))
 
-CONFIG_TCL_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(CONFIG_TCL_FILES))) $(filter /% ./%,$(CONFIG_TCL_FILES))
+CONFIG_TCL_FILES_REL = $(foreach p,$(CONFIG_TCL_FILES),$(if $(filter /% ./%,$p),$p,../$p))
 
 ifdef QSF_FILES
-  QSF_FILES_REL = $(patsubst %, ../%, $(filter-out /% ./%,$(QSF_FILES))) $(filter /% ./%,$(QSF_FILES))
+  QSF_FILES_REL = $(foreach p,$(QSF_FILES),$(if $(filter /% ./%,$p),$p,../$p))
 else
   QSF_FILES_REL = ../$(FPGA_TOP).qsf
 endif
 
-SDC_FILES_REL = $(patsubst %, ../%, $(SDC_FILES))
+SDC_FILES_REL = $(foreach p,$(SDC_FILES),$(if $(filter /% ./%,$p),$p,../$p))
 
 ASSIGNMENT_FILES = $(FPGA_TOP).qpf $(FPGA_TOP).qsf
 

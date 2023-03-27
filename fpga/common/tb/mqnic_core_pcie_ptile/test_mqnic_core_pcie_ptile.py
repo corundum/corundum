@@ -280,10 +280,12 @@ class TB(object):
         if hasattr(dut.core_pcie_inst, 'pcie_app_ctrl'):
             self.dev.functions[0].configure_bar(2, 2**len(dut.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
+        core_inst = dut.core_pcie_inst.core_inst
+
         # Ethernet
         self.port_mac = []
 
-        eth_int_if_width = len(dut.core_pcie_inst.core_inst.m_axis_tx_tdata) / len(dut.core_pcie_inst.core_inst.m_axis_tx_tvalid)
+        eth_int_if_width = len(core_inst.m_axis_tx_tdata) / len(core_inst.m_axis_tx_tvalid)
         eth_clock_period = 6.4
         eth_speed = 10e9
 
@@ -300,7 +302,7 @@ class TB(object):
             eth_clock_period = 3.102
             eth_speed = 100e9
 
-        for iface in dut.core_pcie_inst.core_inst.iface:
+        for iface in core_inst.iface:
             for k in range(len(iface.port)):
                 cocotb.start_soon(Clock(iface.port[k].port_rx_clk, eth_clock_period, units="ns").start())
                 cocotb.start_soon(Clock(iface.port[k].port_tx_clk, eth_clock_period, units="ns").start())
@@ -325,8 +327,8 @@ class TB(object):
 
                 self.port_mac.append(mac)
 
-        dut.eth_tx_status.setimmediatevalue(2**len(dut.core_pcie_inst.core_inst.m_axis_tx_tvalid)-1)
-        dut.eth_rx_status.setimmediatevalue(2**len(dut.core_pcie_inst.core_inst.m_axis_tx_tvalid)-1)
+        dut.eth_tx_status.setimmediatevalue(2**len(core_inst.m_axis_tx_tvalid)-1)
+        dut.eth_rx_status.setimmediatevalue(2**len(core_inst.m_axis_tx_tvalid)-1)
 
         dut.ctrl_reg_wr_wait.setimmediatevalue(0)
         dut.ctrl_reg_wr_ack.setimmediatevalue(0)

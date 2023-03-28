@@ -196,6 +196,22 @@ export PARAM_MAX_RX_SIZE := 9214
 export PARAM_TX_RAM_SIZE := 131072
 export PARAM_RX_RAM_SIZE := 131072
 
+# RAM configuration
+export PARAM_DDR_CH := 1
+export PARAM_DDR_ENABLE := 0
+export PARAM_DDR_GROUP_SIZE := 1
+export PARAM_AXI_DDR_DATA_WIDTH := 256
+export PARAM_AXI_DDR_ADDR_WIDTH := 32
+export PARAM_AXI_DDR_ID_WIDTH := 8
+export PARAM_AXI_DDR_MAX_BURST_LEN := 256
+export PARAM_HBM_CH := 1
+export PARAM_HBM_ENABLE := 0
+export PARAM_HBM_GROUP_SIZE := $(PARAM_HBM_CH)
+export PARAM_AXI_HBM_DATA_WIDTH := 256
+export PARAM_AXI_HBM_ADDR_WIDTH := 32
+export PARAM_AXI_HBM_ID_WIDTH := 6
+export PARAM_AXI_HBM_MAX_BURST_LEN := 16
+
 # Application block configuration
 export PARAM_APP_ID := $(shell echo $$((0x00000000)) )
 export PARAM_APP_ENABLE := 0

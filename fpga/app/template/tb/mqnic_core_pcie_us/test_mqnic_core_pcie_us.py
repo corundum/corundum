@@ -48,6 +48,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, FallingEdge, Timer
 
 from cocotbext.axi import AxiStreamBus
+from cocotbext.axi import AxiSlave, AxiBus, SparseMemoryRegion
 from cocotbext.eth import EthMac
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
@@ -352,6 +353,38 @@ class TB(object):
         dut.eth_tx_status.setimmediatevalue(2**len(core_inst.m_axis_tx_tvalid)-1)
         dut.eth_rx_status.setimmediatevalue(2**len(core_inst.m_axis_tx_tvalid)-1)
 
+        # DDR
+        self.ddr_group_size = core_inst.DDR_GROUP_SIZE.value
+        self.ddr_ram = []
+        self.ddr_axi_if = []
+        if hasattr(core_inst, 'ddr'):
+            ram = None
+            for i, ch in enumerate(core_inst.ddr.dram_if_inst.ch):
+                cocotb.start_soon(Clock(ch.ch_clk, 3.332, units="ns").start())
+                ch.ch_rst.setimmediatevalue(0)
+                ch.ch_status.setimmediatevalue(1)
+
+                if i % self.ddr_group_size == 0:
+                    ram = SparseMemoryRegion()
+                    self.ddr_ram.append(ram)
+                self.ddr_axi_if.append(AxiSlave(AxiBus.from_prefix(ch, "axi_ch"), ch.ch_clk, ch.ch_rst, target=ram))
+
+        # HBM
+        self.hbm_group_size = core_inst.HBM_GROUP_SIZE.value
+        self.hbm_ram = []
+        self.hbm_axi_if = []
+        if hasattr(core_inst, 'hbm'):
+            ram = None
+            for i, ch in enumerate(core_inst.hbm.dram_if_inst.ch):
+                cocotb.start_soon(Clock(ch.ch_clk, 2.222, units="ns").start())
+                ch.ch_rst.setimmediatevalue(0)
+                ch.ch_status.setimmediatevalue(1)
+
+                if i % self.hbm_group_size == 0:
+                    ram = SparseMemoryRegion()
+                    self.hbm_ram.append(ram)
+                self.hbm_axi_if.append(AxiSlave(AxiBus.from_prefix(ch, "axi_ch"), ch.ch_clk, ch.ch_rst, target=ram))
+
         dut.ctrl_reg_wr_wait.setimmediatevalue(0)
         dut.ctrl_reg_wr_ack.setimmediatevalue(0)
         dut.ctrl_reg_rd_data.setimmediatevalue(0)
@@ -377,6 +410,9 @@ class TB(object):
 
         self.dut.ptp_rst.setimmediatevalue(0)
 
+        for ram in self.ddr_axi_if + self.ddr_axi_if:
+            ram.write_if.reset.setimmediatevalue(0)
+
         await RisingEdge(self.dut.clk)
         await RisingEdge(self.dut.clk)
 
@@ -385,6 +421,9 @@ class TB(object):
             mac.tx.reset.setimmediatevalue(1)
 
         self.dut.ptp_rst.setimmediatevalue(1)
+
+        for ram in self.ddr_axi_if + self.ddr_axi_if:
+            ram.write_if.reset.setimmediatevalue(1)
 
         await FallingEdge(self.dut.rst)
         await Timer(100, 'ns')
@@ -397,6 +436,9 @@ class TB(object):
             mac.tx.reset.setimmediatevalue(0)
 
         self.dut.ptp_rst.setimmediatevalue(0)
+
+        for ram in self.ddr_axi_if + self.ddr_axi_if:
+            ram.write_if.reset.setimmediatevalue(0)
 
         await self.rc.enumerate()
 
@@ -859,6 +901,22 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
     parameters['MAX_RX_SIZE'] = 9214
     parameters['TX_RAM_SIZE'] = 131072
     parameters['RX_RAM_SIZE'] = 131072
+
+    # RAM configuration
+    parameters['DDR_CH'] = 1
+    parameters['DDR_ENABLE'] = 0
+    parameters['DDR_GROUP_SIZE'] = 1
+    parameters['AXI_DDR_DATA_WIDTH'] = 256
+    parameters['AXI_DDR_ADDR_WIDTH'] = 32
+    parameters['AXI_DDR_ID_WIDTH'] = 8
+    parameters['AXI_DDR_MAX_BURST_LEN'] = 256
+    parameters['HBM_CH'] = 1
+    parameters['HBM_ENABLE'] = 0
+    parameters['HBM_GROUP_SIZE'] = parameters['HBM_CH']
+    parameters['AXI_HBM_DATA_WIDTH'] = 256
+    parameters['AXI_HBM_ADDR_WIDTH'] = 32
+    parameters['AXI_HBM_ID_WIDTH'] = 6
+    parameters['AXI_HBM_MAX_BURST_LEN'] = 16
 
     # Application block configuration
     parameters['APP_ID'] = 0x12340001

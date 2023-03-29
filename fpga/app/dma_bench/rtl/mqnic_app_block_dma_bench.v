@@ -625,6 +625,13 @@ localparam RBB = RB_BASE_ADDR & {AXIL_APP_CTRL_ADDR_WIDTH{1'b1}};
 
 localparam DMA_BENCH_RB_BASE_ADDR = RB_BASE_ADDR;
 
+localparam DRAM_CH_RB_BASE_ADDR = DMA_BENCH_RB_BASE_ADDR + 16'h1000;
+localparam DRAM_CH_RB_STRIDE = 16'h0100;
+
+localparam DDR_CH_OFFSET = 0;
+localparam HBM_CH_OFFSET = DDR_CH_OFFSET + (DDR_ENABLE ? DDR_CH : 0);
+localparam DRAM_CH_COUNT = HBM_CH_OFFSET + (HBM_ENABLE ? HBM_CH : 0);
+
 // check configuration
 initial begin
     if (APP_ID != 32'h12348001) begin
@@ -750,72 +757,6 @@ assign m_axis_if_rx_tdest = s_axis_if_rx_tdest;
 assign m_axis_if_rx_tuser = s_axis_if_rx_tuser;
 
 /*
- * DDR
- */
-assign m_axi_ddr_awid = 0;
-assign m_axi_ddr_awaddr = 0;
-assign m_axi_ddr_awlen = 0;
-assign m_axi_ddr_awsize = 0;
-assign m_axi_ddr_awburst = 0;
-assign m_axi_ddr_awlock = 0;
-assign m_axi_ddr_awcache = 0;
-assign m_axi_ddr_awprot = 0;
-assign m_axi_ddr_awqos = 0;
-assign m_axi_ddr_awuser = 0;
-assign m_axi_ddr_awvalid = 0;
-assign m_axi_ddr_wdata = 0;
-assign m_axi_ddr_wstrb = 0;
-assign m_axi_ddr_wlast = 0;
-assign m_axi_ddr_wuser = 0;
-assign m_axi_ddr_wvalid = 0;
-assign m_axi_ddr_bready = 0;
-assign m_axi_ddr_arid = 0;
-assign m_axi_ddr_araddr = 0;
-assign m_axi_ddr_arlen = 0;
-assign m_axi_ddr_arsize = 0;
-assign m_axi_ddr_arburst = 0;
-assign m_axi_ddr_arlock = 0;
-assign m_axi_ddr_arcache = 0;
-assign m_axi_ddr_arprot = 0;
-assign m_axi_ddr_arqos = 0;
-assign m_axi_ddr_aruser = 0;
-assign m_axi_ddr_arvalid = 0;
-assign m_axi_ddr_rready = 0;
-
-/*
- * HBM
- */
-assign m_axi_hbm_awid = 0;
-assign m_axi_hbm_awaddr = 0;
-assign m_axi_hbm_awlen = 0;
-assign m_axi_hbm_awsize = 0;
-assign m_axi_hbm_awburst = 0;
-assign m_axi_hbm_awlock = 0;
-assign m_axi_hbm_awcache = 0;
-assign m_axi_hbm_awprot = 0;
-assign m_axi_hbm_awqos = 0;
-assign m_axi_hbm_awuser = 0;
-assign m_axi_hbm_awvalid = 0;
-assign m_axi_hbm_wdata = 0;
-assign m_axi_hbm_wstrb = 0;
-assign m_axi_hbm_wlast = 0;
-assign m_axi_hbm_wuser = 0;
-assign m_axi_hbm_wvalid = 0;
-assign m_axi_hbm_bready = 0;
-assign m_axi_hbm_arid = 0;
-assign m_axi_hbm_araddr = 0;
-assign m_axi_hbm_arlen = 0;
-assign m_axi_hbm_arsize = 0;
-assign m_axi_hbm_arburst = 0;
-assign m_axi_hbm_arlock = 0;
-assign m_axi_hbm_arcache = 0;
-assign m_axi_hbm_arprot = 0;
-assign m_axi_hbm_arqos = 0;
-assign m_axi_hbm_aruser = 0;
-assign m_axi_hbm_arvalid = 0;
-assign m_axi_hbm_rready = 0;
-
-/*
  * Statistics increment output
  */
 assign m_axis_stat_tdata = 0;
@@ -850,7 +791,7 @@ axil_reg_if #(
     .DATA_WIDTH(REG_DATA_WIDTH),
     .ADDR_WIDTH(REG_ADDR_WIDTH),
     .STRB_WIDTH(REG_STRB_WIDTH),
-    .TIMEOUT(4)
+    .TIMEOUT(8)
 )
 axil_reg_if_inst (
     .clk(clk),
@@ -895,6 +836,49 @@ axil_reg_if_inst (
     .reg_rd_ack(ctrl_reg_rd_ack)
 );
 
+wire dma_bench_ctrl_reg_wr_wait;
+wire dma_bench_ctrl_reg_wr_ack;
+wire [REG_DATA_WIDTH-1:0] dma_bench_ctrl_reg_rd_data;
+wire dma_bench_ctrl_reg_rd_wait;
+wire dma_bench_ctrl_reg_rd_ack;
+
+wire ch_ctrl_reg_wr_wait[DRAM_CH_COUNT-1:0];
+wire ch_ctrl_reg_wr_ack[DRAM_CH_COUNT-1:0];
+wire [REG_DATA_WIDTH-1:0] ch_ctrl_reg_rd_data[DRAM_CH_COUNT-1:0];
+wire ch_ctrl_reg_rd_wait[DRAM_CH_COUNT-1:0];
+wire ch_ctrl_reg_rd_ack[DRAM_CH_COUNT-1:0];
+
+reg ctrl_reg_wr_wait_cmb;
+reg ctrl_reg_wr_ack_cmb;
+reg [REG_DATA_WIDTH-1:0] ctrl_reg_rd_data_cmb;
+reg ctrl_reg_rd_wait_cmb;
+reg ctrl_reg_rd_ack_cmb;
+
+assign ctrl_reg_wr_wait = ctrl_reg_wr_wait_cmb;
+assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_cmb;
+assign ctrl_reg_rd_data = ctrl_reg_rd_data_cmb;
+assign ctrl_reg_rd_wait = ctrl_reg_rd_wait_cmb;
+assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_cmb;
+
+integer k;
+
+always @* begin
+    ctrl_reg_wr_wait_cmb = dma_bench_ctrl_reg_wr_wait;
+    ctrl_reg_wr_ack_cmb = dma_bench_ctrl_reg_wr_ack;
+    ctrl_reg_rd_data_cmb = dma_bench_ctrl_reg_rd_data;
+    ctrl_reg_rd_wait_cmb = dma_bench_ctrl_reg_rd_wait;
+    ctrl_reg_rd_ack_cmb = dma_bench_ctrl_reg_rd_ack;
+
+    for (k = 0; k < DRAM_CH_COUNT; k = k + 1) begin
+        ctrl_reg_wr_wait_cmb = ctrl_reg_wr_wait_cmb | ch_ctrl_reg_wr_wait[k];
+        ctrl_reg_wr_ack_cmb = ctrl_reg_wr_ack_cmb | ch_ctrl_reg_wr_ack[k];
+        ctrl_reg_rd_data_cmb = ctrl_reg_rd_data_cmb | ch_ctrl_reg_rd_data[k];
+        ctrl_reg_rd_wait_cmb = ctrl_reg_rd_wait_cmb | ch_ctrl_reg_rd_wait[k];
+        ctrl_reg_rd_ack_cmb = ctrl_reg_rd_ack_cmb | ch_ctrl_reg_rd_ack[k];
+    end
+end
+
+// DMA benchmark
 dma_bench #(
     // DMA interface configuration
     .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
@@ -915,7 +899,7 @@ dma_bench #(
     .REG_DATA_WIDTH(REG_DATA_WIDTH),
     .REG_STRB_WIDTH(REG_STRB_WIDTH),
     .RB_BASE_ADDR(DMA_BENCH_RB_BASE_ADDR),
-    .RB_NEXT_PTR(0)
+    .RB_NEXT_PTR((DDR_ENABLE || HBM_ENABLE) ? DRAM_CH_RB_BASE_ADDR : 0)
 )
 dma_bench_inst (
     .clk(clk),
@@ -928,13 +912,13 @@ dma_bench_inst (
     .reg_wr_data(ctrl_reg_wr_data),
     .reg_wr_strb(ctrl_reg_wr_strb),
     .reg_wr_en(ctrl_reg_wr_en),
-    .reg_wr_wait(ctrl_reg_wr_wait),
-    .reg_wr_ack(ctrl_reg_wr_ack),
+    .reg_wr_wait(dma_bench_ctrl_reg_wr_wait),
+    .reg_wr_ack(dma_bench_ctrl_reg_wr_ack),
     .reg_rd_addr(ctrl_reg_rd_addr),
     .reg_rd_en(ctrl_reg_rd_en),
-    .reg_rd_data(ctrl_reg_rd_data),
-    .reg_rd_wait(ctrl_reg_rd_wait),
-    .reg_rd_ack(ctrl_reg_rd_ack),
+    .reg_rd_data(dma_bench_ctrl_reg_rd_data),
+    .reg_rd_wait(dma_bench_ctrl_reg_rd_wait),
+    .reg_rd_ack(dma_bench_ctrl_reg_rd_ack),
 
     /*
      * DMA read descriptor output
@@ -992,6 +976,383 @@ dma_bench_inst (
     .dma_ram_rd_resp_valid(data_dma_ram_rd_resp_valid),
     .dma_ram_rd_resp_ready(data_dma_ram_rd_resp_ready)
 );
+
+// DRAM test
+generate
+
+genvar n;
+
+if (DDR_ENABLE) begin : ddr
+
+    for (n = 0; n < DDR_CH; n = n + 1) begin : ddr_ch
+
+        localparam GROUP_INDEX = n % DDR_GROUP_SIZE;
+        localparam GROUP_ADDR_WIDTH = AXI_DDR_ADDR_WIDTH - $clog2(DDR_GROUP_SIZE);
+
+        localparam BASE_ADDR = ({AXI_DDR_ADDR_WIDTH{1'b0}} | GROUP_INDEX) << GROUP_ADDR_WIDTH;
+        localparam SIZE_MASK = {GROUP_ADDR_WIDTH{1'b1}};
+
+        (* shreg_extract = "no" *)
+        reg [REG_ADDR_WIDTH-1:0]  ch_reg_wr_addr_reg = 0;
+        (* shreg_extract = "no" *)
+        reg [REG_DATA_WIDTH-1:0]  ch_reg_wr_data_reg = 0;
+        (* shreg_extract = "no" *)
+        reg [REG_STRB_WIDTH-1:0]  ch_reg_wr_strb_reg = 0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_wr_en_reg = 1'b0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_wr_wait_reg = 1'b0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_wr_ack_reg = 1'b0;
+        (* shreg_extract = "no" *)
+        reg [REG_ADDR_WIDTH-1:0]  ch_reg_rd_addr_reg = 0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_rd_en_reg = 1'b0;
+        (* shreg_extract = "no" *)
+        reg [REG_DATA_WIDTH-1:0]  ch_reg_rd_data_reg = 0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_rd_wait_reg = 1'b0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_rd_ack_reg = 1'b0;
+
+        wire ch_reg_wr_wait;
+        wire ch_reg_wr_ack;
+        wire [REG_DATA_WIDTH-1:0] ch_reg_rd_data;
+        wire ch_reg_rd_wait;
+        wire ch_reg_rd_ack;
+
+        always @(posedge clk) begin
+            ch_reg_wr_addr_reg <= ctrl_reg_wr_addr;
+            ch_reg_wr_data_reg <= ctrl_reg_wr_data;
+            ch_reg_wr_strb_reg <= ctrl_reg_wr_strb;
+            ch_reg_wr_en_reg <= ctrl_reg_wr_en;
+            ch_reg_wr_wait_reg <= ch_reg_wr_wait;
+            ch_reg_wr_ack_reg <= ch_reg_wr_ack;
+            ch_reg_rd_addr_reg <= ctrl_reg_rd_addr;
+            ch_reg_rd_en_reg <= ctrl_reg_rd_en;
+            ch_reg_rd_data_reg <= ch_reg_rd_data;
+            ch_reg_rd_wait_reg <= ch_reg_rd_wait;
+            ch_reg_rd_ack_reg <= ch_reg_rd_ack;
+
+            if (rst) begin
+                ch_reg_wr_en_reg <= 1'b0;
+                ch_reg_wr_wait_reg <= 1'b0;
+                ch_reg_wr_ack_reg <= 1'b0;
+                ch_reg_rd_en_reg <= 1'b0;
+                ch_reg_rd_wait_reg <= 1'b0;
+                ch_reg_rd_ack_reg <= 1'b0;
+            end
+        end
+
+        assign ch_ctrl_reg_wr_wait[DDR_CH_OFFSET+n] = ch_reg_wr_wait;
+        assign ch_ctrl_reg_wr_ack[DDR_CH_OFFSET+n] = ch_reg_wr_ack;
+        assign ch_ctrl_reg_rd_data[DDR_CH_OFFSET+n] = ch_reg_rd_data;
+        assign ch_ctrl_reg_rd_wait[DDR_CH_OFFSET+n] = ch_reg_rd_wait;
+        assign ch_ctrl_reg_rd_ack[DDR_CH_OFFSET+n] = ch_reg_rd_ack;
+
+        dram_test_ch #(
+            // AXI configuration
+            .AXI_DATA_WIDTH(AXI_DDR_DATA_WIDTH),
+            .AXI_ADDR_WIDTH(AXI_DDR_ADDR_WIDTH),
+            .AXI_STRB_WIDTH(AXI_DDR_STRB_WIDTH),
+            .AXI_ID_WIDTH(AXI_DDR_ID_WIDTH),
+            .AXI_MAX_BURST_LEN(AXI_DDR_MAX_BURST_LEN),
+
+            // FIFO config
+            .FIFO_BASE_ADDR(BASE_ADDR),
+            .FIFO_SIZE_MASK(SIZE_MASK),
+
+            // Register interface
+            .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
+            .REG_DATA_WIDTH(REG_DATA_WIDTH),
+            .REG_STRB_WIDTH(REG_STRB_WIDTH),
+            .RB_BASE_ADDR(DRAM_CH_RB_BASE_ADDR + (DDR_CH_OFFSET+n)*DRAM_CH_RB_STRIDE),
+            .RB_NEXT_PTR(DDR_CH_OFFSET+n < DRAM_CH_COUNT-1 ? DRAM_CH_RB_BASE_ADDR + (DDR_CH_OFFSET+n+1)*DRAM_CH_RB_STRIDE : 0)
+        )
+        dram_test_ch_inst (
+            .clk(clk),
+            .rst(rst),
+
+            /*
+             * Register interface
+             */
+            .reg_wr_addr(ch_reg_wr_addr_reg),
+            .reg_wr_data(ch_reg_wr_data_reg),
+            .reg_wr_strb(ch_reg_wr_strb_reg),
+            .reg_wr_en(ch_reg_wr_en_reg),
+            .reg_wr_wait(ch_reg_wr_wait),
+            .reg_wr_ack(ch_reg_wr_ack),
+            .reg_rd_addr(ch_reg_rd_addr_reg),
+            .reg_rd_en(ch_reg_rd_en_reg),
+            .reg_rd_data(ch_reg_rd_data),
+            .reg_rd_wait(ch_reg_rd_wait),
+            .reg_rd_ack(ch_reg_rd_ack),
+
+            /*
+             * AXI master interface
+             */
+            .m_axi_clk(ddr_clk[n]),
+            .m_axi_rst(ddr_rst[n]),
+            .m_axi_awid(m_axi_ddr_awid[n*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
+            .m_axi_awaddr(m_axi_ddr_awaddr[n*AXI_DDR_ADDR_WIDTH +: AXI_DDR_ADDR_WIDTH]),
+            .m_axi_awlen(m_axi_ddr_awlen[n*8 +: 8]),
+            .m_axi_awsize(m_axi_ddr_awsize[n*3 +: 3]),
+            .m_axi_awburst(m_axi_ddr_awburst[n*2 +: 2]),
+            .m_axi_awlock(m_axi_ddr_awlock[n +: 1]),
+            .m_axi_awcache(m_axi_ddr_awcache[n*4 +: 4]),
+            .m_axi_awprot(m_axi_ddr_awprot[n*3 +: 3]),
+            .m_axi_awvalid(m_axi_ddr_awvalid[n +: 1]),
+            .m_axi_awready(m_axi_ddr_awready[n +: 1]),
+            .m_axi_wdata(m_axi_ddr_wdata[n*AXI_DDR_DATA_WIDTH +: AXI_DDR_DATA_WIDTH]),
+            .m_axi_wstrb(m_axi_ddr_wstrb[n*AXI_DDR_STRB_WIDTH +: AXI_DDR_STRB_WIDTH]),
+            .m_axi_wlast(m_axi_ddr_wlast[n +: 1]),
+            .m_axi_wvalid(m_axi_ddr_wvalid[n +: 1]),
+            .m_axi_wready(m_axi_ddr_wready[n +: 1]),
+            .m_axi_bid(m_axi_ddr_bid[n*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
+            .m_axi_bresp(m_axi_ddr_bresp[n*2 +: 2]),
+            .m_axi_bvalid(m_axi_ddr_bvalid[n +: 1]),
+            .m_axi_bready(m_axi_ddr_bready[n +: 1]),
+            .m_axi_arid(m_axi_ddr_arid[n*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
+            .m_axi_araddr(m_axi_ddr_araddr[n*AXI_DDR_ADDR_WIDTH +: AXI_DDR_ADDR_WIDTH]),
+            .m_axi_arlen(m_axi_ddr_arlen[n*8 +: 8]),
+            .m_axi_arsize(m_axi_ddr_arsize[n*3 +: 3]),
+            .m_axi_arburst(m_axi_ddr_arburst[n*2 +: 2]),
+            .m_axi_arlock(m_axi_ddr_arlock[n +: 1]),
+            .m_axi_arcache(m_axi_ddr_arcache[n*4 +: 4]),
+            .m_axi_arprot(m_axi_ddr_arprot[n*3 +: 3]),
+            .m_axi_arvalid(m_axi_ddr_arvalid[n +: 1]),
+            .m_axi_arready(m_axi_ddr_arready[n +: 1]),
+            .m_axi_rid(m_axi_ddr_rid[n*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
+            .m_axi_rdata(m_axi_ddr_rdata[n*AXI_DDR_DATA_WIDTH +: AXI_DDR_DATA_WIDTH]),
+            .m_axi_rresp(m_axi_ddr_rresp[n*2 +: 2]),
+            .m_axi_rlast(m_axi_ddr_rlast[n +: 1]),
+            .m_axi_rvalid(m_axi_ddr_rvalid[n +: 1]),
+            .m_axi_rready(m_axi_ddr_rready[n +: 1])
+        );
+
+    end
+
+end else begin
+
+    assign m_axi_ddr_awid = 0;
+    assign m_axi_ddr_awaddr = 0;
+    assign m_axi_ddr_awlen = 0;
+    assign m_axi_ddr_awsize = 0;
+    assign m_axi_ddr_awburst = 0;
+    assign m_axi_ddr_awlock = 0;
+    assign m_axi_ddr_awcache = 0;
+    assign m_axi_ddr_awprot = 0;
+    assign m_axi_ddr_awvalid = 0;
+    assign m_axi_ddr_wdata = 0;
+    assign m_axi_ddr_wstrb = 0;
+    assign m_axi_ddr_wlast = 0;
+    assign m_axi_ddr_wvalid = 0;
+    assign m_axi_ddr_bready = 0;
+    assign m_axi_ddr_arid = 0;
+    assign m_axi_ddr_araddr = 0;
+    assign m_axi_ddr_arlen = 0;
+    assign m_axi_ddr_arsize = 0;
+    assign m_axi_ddr_arburst = 0;
+    assign m_axi_ddr_arlock = 0;
+    assign m_axi_ddr_arcache = 0;
+    assign m_axi_ddr_arprot = 0;
+    assign m_axi_ddr_arvalid = 0;
+    assign m_axi_ddr_rready = 0;
+
+end
+
+assign m_axi_ddr_awqos = 0;
+assign m_axi_ddr_awuser = 0;
+assign m_axi_ddr_wuser = 0;
+assign m_axi_ddr_arqos = 0;
+assign m_axi_ddr_aruser = 0;
+
+if (HBM_ENABLE) begin : hbm
+
+    for (n = 0; n < HBM_CH; n = n + 1) begin : hbm_ch
+
+        localparam GROUP_INDEX = n % HBM_GROUP_SIZE;
+        localparam GROUP_ADDR_WIDTH = AXI_HBM_ADDR_WIDTH - $clog2(HBM_GROUP_SIZE);
+
+        localparam BASE_ADDR = ({AXI_HBM_ADDR_WIDTH{1'b0}} | GROUP_INDEX) << GROUP_ADDR_WIDTH;
+        localparam SIZE_MASK = {GROUP_ADDR_WIDTH{1'b1}};
+
+        (* shreg_extract = "no" *)
+        reg [REG_ADDR_WIDTH-1:0]  ch_reg_wr_addr_reg = 0;
+        (* shreg_extract = "no" *)
+        reg [REG_DATA_WIDTH-1:0]  ch_reg_wr_data_reg = 0;
+        (* shreg_extract = "no" *)
+        reg [REG_STRB_WIDTH-1:0]  ch_reg_wr_strb_reg = 0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_wr_en_reg = 1'b0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_wr_wait_reg = 1'b0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_wr_ack_reg = 1'b0;
+        (* shreg_extract = "no" *)
+        reg [REG_ADDR_WIDTH-1:0]  ch_reg_rd_addr_reg = 0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_rd_en_reg = 1'b0;
+        (* shreg_extract = "no" *)
+        reg [REG_DATA_WIDTH-1:0]  ch_reg_rd_data_reg = 0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_rd_wait_reg = 1'b0;
+        (* shreg_extract = "no" *)
+        reg                       ch_reg_rd_ack_reg = 1'b0;
+
+        wire ch_reg_wr_wait;
+        wire ch_reg_wr_ack;
+        wire [REG_DATA_WIDTH-1:0] ch_reg_rd_data;
+        wire ch_reg_rd_wait;
+        wire ch_reg_rd_ack;
+
+        always @(posedge clk) begin
+            ch_reg_wr_addr_reg <= ctrl_reg_wr_addr;
+            ch_reg_wr_data_reg <= ctrl_reg_wr_data;
+            ch_reg_wr_strb_reg <= ctrl_reg_wr_strb;
+            ch_reg_wr_en_reg <= ctrl_reg_wr_en;
+            ch_reg_wr_wait_reg <= ch_reg_wr_wait;
+            ch_reg_wr_ack_reg <= ch_reg_wr_ack;
+            ch_reg_rd_addr_reg <= ctrl_reg_rd_addr;
+            ch_reg_rd_en_reg <= ctrl_reg_rd_en;
+            ch_reg_rd_data_reg <= ch_reg_rd_data;
+            ch_reg_rd_wait_reg <= ch_reg_rd_wait;
+            ch_reg_rd_ack_reg <= ch_reg_rd_ack;
+
+            if (rst) begin
+                ch_reg_wr_en_reg <= 1'b0;
+                ch_reg_wr_wait_reg <= 1'b0;
+                ch_reg_wr_ack_reg <= 1'b0;
+                ch_reg_rd_en_reg <= 1'b0;
+                ch_reg_rd_wait_reg <= 1'b0;
+                ch_reg_rd_ack_reg <= 1'b0;
+            end
+        end
+
+        assign ch_ctrl_reg_wr_wait[HBM_CH_OFFSET+n] = ch_reg_wr_wait;
+        assign ch_ctrl_reg_wr_ack[HBM_CH_OFFSET+n] = ch_reg_wr_ack;
+        assign ch_ctrl_reg_rd_data[HBM_CH_OFFSET+n] = ch_reg_rd_data;
+        assign ch_ctrl_reg_rd_wait[HBM_CH_OFFSET+n] = ch_reg_rd_wait;
+        assign ch_ctrl_reg_rd_ack[HBM_CH_OFFSET+n] = ch_reg_rd_ack;
+
+        dram_test_ch #(
+            // AXI configuration
+            .AXI_DATA_WIDTH(AXI_HBM_DATA_WIDTH),
+            .AXI_ADDR_WIDTH(AXI_HBM_ADDR_WIDTH),
+            .AXI_STRB_WIDTH(AXI_HBM_STRB_WIDTH),
+            .AXI_ID_WIDTH(AXI_HBM_ID_WIDTH),
+            .AXI_MAX_BURST_LEN(AXI_HBM_MAX_BURST_LEN),
+
+            // FIFO config
+            .FIFO_BASE_ADDR(BASE_ADDR),
+            .FIFO_SIZE_MASK(SIZE_MASK),
+
+            // Register interface
+            .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
+            .REG_DATA_WIDTH(REG_DATA_WIDTH),
+            .REG_STRB_WIDTH(REG_STRB_WIDTH),
+            .RB_BASE_ADDR(DRAM_CH_RB_BASE_ADDR + (HBM_CH_OFFSET+n)*DRAM_CH_RB_STRIDE),
+            .RB_NEXT_PTR(HBM_CH_OFFSET+n < DRAM_CH_COUNT-1 ? DRAM_CH_RB_BASE_ADDR + (HBM_CH_OFFSET+n+1)*DRAM_CH_RB_STRIDE : 0)
+        )
+        dram_test_ch_inst (
+            .clk(clk),
+            .rst(rst),
+
+            /*
+             * Register interface
+             */
+            .reg_wr_addr(ch_reg_wr_addr_reg),
+            .reg_wr_data(ch_reg_wr_data_reg),
+            .reg_wr_strb(ch_reg_wr_strb_reg),
+            .reg_wr_en(ch_reg_wr_en_reg),
+            .reg_wr_wait(ch_reg_wr_wait),
+            .reg_wr_ack(ch_reg_wr_ack),
+            .reg_rd_addr(ch_reg_rd_addr_reg),
+            .reg_rd_en(ch_reg_rd_en_reg),
+            .reg_rd_data(ch_reg_rd_data),
+            .reg_rd_wait(ch_reg_rd_wait),
+            .reg_rd_ack(ch_reg_rd_ack),
+
+            /*
+             * AXI master interface
+             */
+            .m_axi_clk(hbm_clk[n]),
+            .m_axi_rst(hbm_rst[n]),
+            .m_axi_awid(m_axi_hbm_awid[n*AXI_HBM_ID_WIDTH +: AXI_HBM_ID_WIDTH]),
+            .m_axi_awaddr(m_axi_hbm_awaddr[n*AXI_HBM_ADDR_WIDTH +: AXI_HBM_ADDR_WIDTH]),
+            .m_axi_awlen(m_axi_hbm_awlen[n*8 +: 8]),
+            .m_axi_awsize(m_axi_hbm_awsize[n*3 +: 3]),
+            .m_axi_awburst(m_axi_hbm_awburst[n*2 +: 2]),
+            .m_axi_awlock(m_axi_hbm_awlock[n +: 1]),
+            .m_axi_awcache(m_axi_hbm_awcache[n*4 +: 4]),
+            .m_axi_awprot(m_axi_hbm_awprot[n*3 +: 3]),
+            .m_axi_awvalid(m_axi_hbm_awvalid[n +: 1]),
+            .m_axi_awready(m_axi_hbm_awready[n +: 1]),
+            .m_axi_wdata(m_axi_hbm_wdata[n*AXI_HBM_DATA_WIDTH +: AXI_HBM_DATA_WIDTH]),
+            .m_axi_wstrb(m_axi_hbm_wstrb[n*AXI_HBM_STRB_WIDTH +: AXI_HBM_STRB_WIDTH]),
+            .m_axi_wlast(m_axi_hbm_wlast[n +: 1]),
+            .m_axi_wvalid(m_axi_hbm_wvalid[n +: 1]),
+            .m_axi_wready(m_axi_hbm_wready[n +: 1]),
+            .m_axi_bid(m_axi_hbm_bid[n*AXI_HBM_ID_WIDTH +: AXI_HBM_ID_WIDTH]),
+            .m_axi_bresp(m_axi_hbm_bresp[n*2 +: 2]),
+            .m_axi_bvalid(m_axi_hbm_bvalid[n +: 1]),
+            .m_axi_bready(m_axi_hbm_bready[n +: 1]),
+            .m_axi_arid(m_axi_hbm_arid[n*AXI_HBM_ID_WIDTH +: AXI_HBM_ID_WIDTH]),
+            .m_axi_araddr(m_axi_hbm_araddr[n*AXI_HBM_ADDR_WIDTH +: AXI_HBM_ADDR_WIDTH]),
+            .m_axi_arlen(m_axi_hbm_arlen[n*8 +: 8]),
+            .m_axi_arsize(m_axi_hbm_arsize[n*3 +: 3]),
+            .m_axi_arburst(m_axi_hbm_arburst[n*2 +: 2]),
+            .m_axi_arlock(m_axi_hbm_arlock[n +: 1]),
+            .m_axi_arcache(m_axi_hbm_arcache[n*4 +: 4]),
+            .m_axi_arprot(m_axi_hbm_arprot[n*3 +: 3]),
+            .m_axi_arvalid(m_axi_hbm_arvalid[n +: 1]),
+            .m_axi_arready(m_axi_hbm_arready[n +: 1]),
+            .m_axi_rid(m_axi_hbm_rid[n*AXI_HBM_ID_WIDTH +: AXI_HBM_ID_WIDTH]),
+            .m_axi_rdata(m_axi_hbm_rdata[n*AXI_HBM_DATA_WIDTH +: AXI_HBM_DATA_WIDTH]),
+            .m_axi_rresp(m_axi_hbm_rresp[n*2 +: 2]),
+            .m_axi_rlast(m_axi_hbm_rlast[n +: 1]),
+            .m_axi_rvalid(m_axi_hbm_rvalid[n +: 1]),
+            .m_axi_rready(m_axi_hbm_rready[n +: 1])
+        );
+
+    end
+
+end else begin
+
+    assign m_axi_hbm_awid = 0;
+    assign m_axi_hbm_awaddr = 0;
+    assign m_axi_hbm_awlen = 0;
+    assign m_axi_hbm_awsize = 0;
+    assign m_axi_hbm_awburst = 0;
+    assign m_axi_hbm_awlock = 0;
+    assign m_axi_hbm_awcache = 0;
+    assign m_axi_hbm_awprot = 0;
+    assign m_axi_hbm_awvalid = 0;
+    assign m_axi_hbm_wdata = 0;
+    assign m_axi_hbm_wstrb = 0;
+    assign m_axi_hbm_wlast = 0;
+    assign m_axi_hbm_wvalid = 0;
+    assign m_axi_hbm_bready = 0;
+    assign m_axi_hbm_arid = 0;
+    assign m_axi_hbm_araddr = 0;
+    assign m_axi_hbm_arlen = 0;
+    assign m_axi_hbm_arsize = 0;
+    assign m_axi_hbm_arburst = 0;
+    assign m_axi_hbm_arlock = 0;
+    assign m_axi_hbm_arcache = 0;
+    assign m_axi_hbm_arprot = 0;
+    assign m_axi_hbm_arvalid = 0;
+    assign m_axi_hbm_rready = 0;
+
+end
+
+assign m_axi_hbm_awqos = 0;
+assign m_axi_hbm_awuser = 0;
+assign m_axi_hbm_wuser = 0;
+assign m_axi_hbm_arqos = 0;
+assign m_axi_hbm_aruser = 0;
+
+endgenerate
 
 endmodule
 

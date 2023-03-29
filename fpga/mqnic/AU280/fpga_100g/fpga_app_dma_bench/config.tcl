@@ -141,8 +141,8 @@ dict set params DDR_CH "2"
 dict set params DDR_ENABLE "1"
 dict set params AXI_DDR_ID_WIDTH "8"
 dict set params AXI_DDR_MAX_BURST_LEN "256"
-dict set params HBM_CH "32"
-dict set params HBM_ENABLE "1"
+dict set params HBM_CH "16"
+dict set params HBM_ENABLE "0"
 dict set params HBM_GROUP_SIZE [dict get $params HBM_CH]
 dict set params AXI_HBM_MAX_BURST_LEN "16"
 
@@ -195,8 +195,8 @@ if {[dict get $params DDR_ENABLE]} {
 
     # performance-related configuration
     set_property CONFIG.C0.DDR4_AxiArbitrationScheme {RD_PRI_REG} $ddr4
-    set_property CONFIG.C0.DDR4_AUTO_AP_COL_A3 {true} $ddr4
-    set_property CONFIG.C0.DDR4_Mem_Add_Map {ROW_COLUMN_BANK_INTLV} $ddr4
+    set_property CONFIG.C0.DDR4_AUTO_AP_COL_A3 {false} $ddr4
+    set_property CONFIG.C0.DDR4_Mem_Add_Map {ROW_COLUMN_BANK} $ddr4
 
     # set AXI ID width
     set_property CONFIG.C0.DDR4_AxiIDWidth [dict get $params AXI_DDR_ID_WIDTH] $ddr4

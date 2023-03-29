@@ -137,7 +137,7 @@ dict set params TX_RAM_SIZE "131072"
 dict set params RX_RAM_SIZE "131072"
 
 # RAM configuration
-dict set params HBM_CH "32"
+dict set params HBM_CH "16"
 dict set params HBM_ENABLE "1"
 dict set params HBM_GROUP_SIZE [dict get $params HBM_CH]
 dict set params AXI_HBM_MAX_BURST_LEN "16"

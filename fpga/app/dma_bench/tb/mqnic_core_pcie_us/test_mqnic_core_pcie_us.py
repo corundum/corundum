@@ -861,6 +861,42 @@ async def run_test_nic(dut):
 
     assert mem[src_offset:src_offset+region_len] == mem[dest_offset:dest_offset+region_len]
 
+    tb.log.info("Test DRAM channels")
+
+    index = 0
+    while True:
+        dram_test_rb = app_reg_blocks.find(0x12348102, 0x00000100, index)
+        index = index+1
+
+        if not dram_test_rb:
+            break
+
+        # configure FIFO
+        await dram_test_rb.write_dword(0x48, (16*2**20)-1)
+        await dram_test_rb.write_dword(0x4C, 0x00000000)
+
+        # reset FIFO and data generator/checker
+        await dram_test_rb.write_dword(0x20, 0x00000002)
+        await dram_test_rb.write_dword(0x20, 0x00000202)
+
+        await Timer(100, 'ns')
+
+        # enable FIFO
+        await dram_test_rb.write_dword(0x20, 0x00000001)
+
+        # enable data generation and checking
+        await dram_test_rb.write_dword(0x68, 1024)
+        await dram_test_rb.write_dword(0x6C, 1024)
+        await dram_test_rb.write_dword(0x24, 0x00000101)
+
+        # wait for transfer to complete
+        while True:
+            val = await dram_test_rb.read_dword(0x24)
+            if val == 0:
+                break
+
+        await Timer(1000, 'ns')
+
     tb.log.info("Read statistics counters")
 
     await Timer(2000, 'ns')
@@ -949,10 +985,14 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
         os.path.join(rtl_dir, "common", "tx_scheduler_rr.v"),
         os.path.join(rtl_dir, "mqnic_app_block_dma_bench.v"),
         os.path.join(rtl_dir, "dma_bench.v"),
+        os.path.join(rtl_dir, "dram_test_ch.v"),
         os.path.join(eth_rtl_dir, "ptp_clock.v"),
         os.path.join(eth_rtl_dir, "ptp_clock_cdc.v"),
         os.path.join(eth_rtl_dir, "ptp_perout.v"),
-        os.path.join(eth_rtl_dir, "ptp_ts_extract.v"),
+        os.path.join(eth_rtl_dir, "lfsr.v"),
+        os.path.join(axi_rtl_dir, "axi_vfifo_raw.v"),
+        os.path.join(axi_rtl_dir, "axi_vfifo_raw_rd.v"),
+        os.path.join(axi_rtl_dir, "axi_vfifo_raw_wr.v"),
         os.path.join(axi_rtl_dir, "axil_crossbar.v"),
         os.path.join(axi_rtl_dir, "axil_crossbar_addr.v"),
         os.path.join(axi_rtl_dir, "axil_crossbar_rd.v"),
@@ -1067,18 +1107,18 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
     parameters['RX_RAM_SIZE'] = 131072
 
     # RAM configuration
-    parameters['DDR_CH'] = 1
-    parameters['DDR_ENABLE'] = 0
+    parameters['DDR_CH'] = 2
+    parameters['DDR_ENABLE'] = 1
     parameters['DDR_GROUP_SIZE'] = 1
-    parameters['AXI_DDR_DATA_WIDTH'] = 256
-    parameters['AXI_DDR_ADDR_WIDTH'] = 32
+    parameters['AXI_DDR_DATA_WIDTH'] = 512
+    parameters['AXI_DDR_ADDR_WIDTH'] = 34
     parameters['AXI_DDR_ID_WIDTH'] = 8
     parameters['AXI_DDR_MAX_BURST_LEN'] = 256
-    parameters['HBM_CH'] = 1
-    parameters['HBM_ENABLE'] = 0
+    parameters['HBM_CH'] = 2
+    parameters['HBM_ENABLE'] = 1
     parameters['HBM_GROUP_SIZE'] = parameters['HBM_CH']
     parameters['AXI_HBM_DATA_WIDTH'] = 256
-    parameters['AXI_HBM_ADDR_WIDTH'] = 32
+    parameters['AXI_HBM_ADDR_WIDTH'] = 33
     parameters['AXI_HBM_ID_WIDTH'] = 6
     parameters['AXI_HBM_MAX_BURST_LEN'] = 16
 

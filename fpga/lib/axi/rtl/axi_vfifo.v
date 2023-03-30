@@ -415,10 +415,14 @@ for (n = 0; n < AXI_CH; n = n + 1) begin : axi_ch
     // control sync
     (* shreg_extract = "no" *)
     reg ch_cfg_enable_sync_1_reg = 1'b0,  ch_cfg_enable_sync_2_reg = 1'b0;
+    (* shreg_extract = "no" *)
+    reg ch_cfg_reset_sync_1_reg = 1'b0,  ch_cfg_reset_sync_2_reg = 1'b0;
 
     always @(posedge ch_clk) begin
         ch_cfg_enable_sync_1_reg <= cfg_enable_reg;
         ch_cfg_enable_sync_2_reg <= ch_cfg_enable_sync_1_reg;
+        ch_cfg_reset_sync_1_reg <= cfg_reset_reg;
+        ch_cfg_reset_sync_2_reg <= ch_cfg_reset_sync_1_reg;
     end
 
     // status sync
@@ -535,7 +539,7 @@ for (n = 0; n < AXI_CH; n = n + 1) begin : axi_ch
         .cfg_fifo_base_addr(cfg_fifo_base_addr_reg[AXI_ADDR_WIDTH*n +: AXI_ADDR_WIDTH]),
         .cfg_fifo_size_mask(cfg_fifo_size_mask_reg),
         .cfg_enable(ch_cfg_enable_sync_2_reg),
-        .cfg_reset(cfg_reset_reg),
+        .cfg_reset(ch_cfg_reset_sync_2_reg),
 
         /*
          * Status

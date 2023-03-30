@@ -49,6 +49,7 @@ foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == axi_vfifo || REF_NAME =
 
     # control
     constrain_sync_chain $inst "cfg_enable_reg_reg" "axi_ch[*].ch_cfg_enable_sync_1_reg_reg" "axi_ch[*].ch_cfg_enable_sync_2_reg_reg"
+    constrain_sync_chain $inst "cfg_reset_reg_reg" "axi_ch[*].ch_cfg_reset_sync_1_reg_reg" "axi_ch[*].ch_cfg_reset_sync_2_reg_reg"
 
     set sync_ffs [get_cells "$inst/cfg_fifo_base_addr_reg_reg[*] $inst/axi_ch[*].axi_vfifo_raw_inst/fifo_base_addr_reg_reg[*]"]
     

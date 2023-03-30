@@ -4,6 +4,7 @@ package require -exact qsys 21.3
 proc do_create_mac_13 {} {
 	# create the system
 	create_system mac_13
+	set_project_property BOARD {Intel Agilex F-Series FPGA Development Kit DK-DEV-AGF014EA}
 	set_project_property DEVICE {AGFB014R24B2E2V}
 	set_project_property DEVICE_FAMILY {Agilex}
 	set_project_property HIDE_FROM_IP_CATALOG {true}
@@ -106,7 +107,10 @@ proc do_create_mac_13 {} {
 	set_instance_parameter_value alt_ehipc3_fm_0 {custom_pcs_include_alternate_ports} {0}
 	set_instance_parameter_value alt_ehipc3_fm_0 {custom_pcs_modulation} {NRZ}
 	set_instance_parameter_value alt_ehipc3_fm_0 {custom_pcs_number_of_channel} {1}
+	set_instance_parameter_value alt_ehipc3_fm_0 {design_environment} {NATIVE}
+	set_instance_parameter_value alt_ehipc3_fm_0 {dis_anlt_std_recipe} {0}
 	set_instance_parameter_value alt_ehipc3_fm_0 {disable_internal_dr} {0}
+	set_instance_parameter_value alt_ehipc3_fm_0 {dr_100g_nrz_pam4} {0}
 	set_instance_parameter_value alt_ehipc3_fm_0 {dr_25g_cpri} {0}
 	set_instance_parameter_value alt_ehipc3_fm_0 {duplex_mode} {enable}
 	set_instance_parameter_value alt_ehipc3_fm_0 {ehip_mode_gui} {MAC+1588PTP+PCS+(528,514)RSFEC}
@@ -202,25 +206,8 @@ proc do_create_mac_13 {} {
 	set_interface_property i_stats_snapshot EXPORT_OF alt_ehipc3_fm_0.i_stats_snapshot
 	set_interface_property o_cdr_lock EXPORT_OF alt_ehipc3_fm_0.o_cdr_lock
 	set_interface_property o_tx_pll_locked EXPORT_OF alt_ehipc3_fm_0.o_tx_pll_locked
-	set_interface_property i_eth_reconfig_addr EXPORT_OF alt_ehipc3_fm_0.i_eth_reconfig_addr
-	set_interface_property i_eth_reconfig_read EXPORT_OF alt_ehipc3_fm_0.i_eth_reconfig_read
-	set_interface_property i_eth_reconfig_write EXPORT_OF alt_ehipc3_fm_0.i_eth_reconfig_write
-	set_interface_property o_eth_reconfig_readdata EXPORT_OF alt_ehipc3_fm_0.o_eth_reconfig_readdata
-	set_interface_property o_eth_reconfig_readdata_valid EXPORT_OF alt_ehipc3_fm_0.o_eth_reconfig_readdata_valid
-	set_interface_property i_eth_reconfig_writedata EXPORT_OF alt_ehipc3_fm_0.i_eth_reconfig_writedata
-	set_interface_property o_eth_reconfig_waitrequest EXPORT_OF alt_ehipc3_fm_0.o_eth_reconfig_waitrequest
-	set_interface_property i_rsfec_reconfig_addr EXPORT_OF alt_ehipc3_fm_0.i_rsfec_reconfig_addr
-	set_interface_property i_rsfec_reconfig_read EXPORT_OF alt_ehipc3_fm_0.i_rsfec_reconfig_read
-	set_interface_property i_rsfec_reconfig_write EXPORT_OF alt_ehipc3_fm_0.i_rsfec_reconfig_write
-	set_interface_property o_rsfec_reconfig_readdata EXPORT_OF alt_ehipc3_fm_0.o_rsfec_reconfig_readdata
-	set_interface_property i_rsfec_reconfig_writedata EXPORT_OF alt_ehipc3_fm_0.i_rsfec_reconfig_writedata
-	set_interface_property o_rsfec_reconfig_waitrequest EXPORT_OF alt_ehipc3_fm_0.o_rsfec_reconfig_waitrequest
-	set_interface_property i_ptp_reconfig_address EXPORT_OF alt_ehipc3_fm_0.i_ptp_reconfig_address
-	set_interface_property i_ptp_reconfig_read EXPORT_OF alt_ehipc3_fm_0.i_ptp_reconfig_read
-	set_interface_property i_ptp_reconfig_write EXPORT_OF alt_ehipc3_fm_0.i_ptp_reconfig_write
-	set_interface_property o_ptp_reconfig_readdata EXPORT_OF alt_ehipc3_fm_0.o_ptp_reconfig_readdata
-	set_interface_property i_ptp_reconfig_writedata EXPORT_OF alt_ehipc3_fm_0.i_ptp_reconfig_writedata
-	set_interface_property o_ptp_reconfig_waitrequest EXPORT_OF alt_ehipc3_fm_0.o_ptp_reconfig_waitrequest
+	set_interface_property eth_reconfig EXPORT_OF alt_ehipc3_fm_0.eth_reconfig
+	set_interface_property rsfec_reconfig EXPORT_OF alt_ehipc3_fm_0.rsfec_reconfig
 	set_interface_property o_tx_lanes_stable EXPORT_OF alt_ehipc3_fm_0.o_tx_lanes_stable
 	set_interface_property o_rx_pcs_ready EXPORT_OF alt_ehipc3_fm_0.o_rx_pcs_ready
 	set_interface_property o_ehip_ready EXPORT_OF alt_ehipc3_fm_0.o_ehip_ready
@@ -229,13 +216,8 @@ proc do_create_mac_13 {} {
 	set_interface_property o_rx_hi_ber EXPORT_OF alt_ehipc3_fm_0.o_rx_hi_ber
 	set_interface_property o_local_fault_status EXPORT_OF alt_ehipc3_fm_0.o_local_fault_status
 	set_interface_property o_remote_fault_status EXPORT_OF alt_ehipc3_fm_0.o_remote_fault_status
-	set_interface_property i_clk_ref EXPORT_OF alt_ehipc3_fm_0.i_clk_ref
 	set_interface_property i_clk_tx EXPORT_OF alt_ehipc3_fm_0.i_clk_tx
 	set_interface_property i_clk_rx EXPORT_OF alt_ehipc3_fm_0.i_clk_rx
-	set_interface_property o_clk_pll_div64 EXPORT_OF alt_ehipc3_fm_0.o_clk_pll_div64
-	set_interface_property o_clk_pll_div66 EXPORT_OF alt_ehipc3_fm_0.o_clk_pll_div66
-	set_interface_property o_clk_rec_div64 EXPORT_OF alt_ehipc3_fm_0.o_clk_rec_div64
-	set_interface_property o_clk_rec_div66 EXPORT_OF alt_ehipc3_fm_0.o_clk_rec_div66
 	set_interface_property i_csr_rst_n EXPORT_OF alt_ehipc3_fm_0.i_csr_rst_n
 	set_interface_property i_tx_rst_n EXPORT_OF alt_ehipc3_fm_0.i_tx_rst_n
 	set_interface_property i_rx_rst_n EXPORT_OF alt_ehipc3_fm_0.i_rx_rst_n
@@ -243,12 +225,25 @@ proc do_create_mac_13 {} {
 	set_interface_property serial_n EXPORT_OF alt_ehipc3_fm_0.serial_n
 	set_interface_property i_reconfig_clk EXPORT_OF alt_ehipc3_fm_0.i_reconfig_clk
 	set_interface_property i_reconfig_reset EXPORT_OF alt_ehipc3_fm_0.i_reconfig_reset
+	set_interface_property tx_streaming EXPORT_OF alt_ehipc3_fm_0.tx_streaming
+	set_interface_property rx_streaming EXPORT_OF alt_ehipc3_fm_0.rx_streaming
 	set_interface_property i_xcvr_reconfig_address EXPORT_OF alt_ehipc3_fm_0.i_xcvr_reconfig_address
 	set_interface_property i_xcvr_reconfig_read EXPORT_OF alt_ehipc3_fm_0.i_xcvr_reconfig_read
 	set_interface_property i_xcvr_reconfig_write EXPORT_OF alt_ehipc3_fm_0.i_xcvr_reconfig_write
 	set_interface_property o_xcvr_reconfig_readdata EXPORT_OF alt_ehipc3_fm_0.o_xcvr_reconfig_readdata
 	set_interface_property i_xcvr_reconfig_writedata EXPORT_OF alt_ehipc3_fm_0.i_xcvr_reconfig_writedata
 	set_interface_property o_xcvr_reconfig_waitrequest EXPORT_OF alt_ehipc3_fm_0.o_xcvr_reconfig_waitrequest
+	set_interface_property i_clk_ref EXPORT_OF alt_ehipc3_fm_0.i_clk_ref
+	set_interface_property o_clk_pll_div64 EXPORT_OF alt_ehipc3_fm_0.o_clk_pll_div64
+	set_interface_property o_clk_pll_div66 EXPORT_OF alt_ehipc3_fm_0.o_clk_pll_div66
+	set_interface_property o_clk_rec_div64 EXPORT_OF alt_ehipc3_fm_0.o_clk_rec_div64
+	set_interface_property o_clk_rec_div66 EXPORT_OF alt_ehipc3_fm_0.o_clk_rec_div66
+	set_interface_property i_ptp_reconfig_address EXPORT_OF alt_ehipc3_fm_0.i_ptp_reconfig_address
+	set_interface_property i_ptp_reconfig_read EXPORT_OF alt_ehipc3_fm_0.i_ptp_reconfig_read
+	set_interface_property i_ptp_reconfig_write EXPORT_OF alt_ehipc3_fm_0.i_ptp_reconfig_write
+	set_interface_property o_ptp_reconfig_readdata EXPORT_OF alt_ehipc3_fm_0.o_ptp_reconfig_readdata
+	set_interface_property i_ptp_reconfig_writedata EXPORT_OF alt_ehipc3_fm_0.i_ptp_reconfig_writedata
+	set_interface_property o_ptp_reconfig_waitrequest EXPORT_OF alt_ehipc3_fm_0.o_ptp_reconfig_waitrequest
 	set_interface_property ptp_tod_ports EXPORT_OF alt_ehipc3_fm_0.ptp_tod_ports
 	set_interface_property ptp_ports EXPORT_OF alt_ehipc3_fm_0.ptp_ports
 	set_interface_property ptp_1step_ports EXPORT_OF alt_ehipc3_fm_0.ptp_1step_ports

@@ -1109,23 +1109,6 @@ class Interface:
         for q in self.rx_queues:
             await q.free_buf()
 
-    async def interrupt(self):
-        self.log.info("Interface interrupt (interface %d)", self.index)
-        if self.interrupt_running:
-            self.interrupt_pending += 1
-            self.log.info("************************ interrupt was running")
-            return
-        self.interrupt_running = True
-        for eq in self.event_queues:
-            await eq.process()
-            await eq.arm()
-        self.interrupt_running = False
-        self.log.info("Interface interrupt done (interface %d)", self.index)
-
-        while self.interrupt_pending:
-            self.interrupt_pending -= 1
-            await self.interrupt()
-
     async def process_tx_cq(self, cq_ring):
         self.log.info("Process TX CQ %d (interface %d)", cq_ring.ring_index, self.index)
 

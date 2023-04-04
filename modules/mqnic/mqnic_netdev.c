@@ -52,8 +52,13 @@ static int mqnic_start_port(struct net_device *ndev)
 		mqnic_activate_cq_ring(priv->rx_cpl_ring[k],
 				priv->event_ring[k % priv->event_queue_count]);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+		netif_napi_add(ndev, &priv->rx_cpl_ring[k]->napi,
+				mqnic_poll_rx_cq);
+#else
 		netif_napi_add(ndev, &priv->rx_cpl_ring[k]->napi,
 				mqnic_poll_rx_cq, NAPI_POLL_WEIGHT);
+#endif
 		napi_enable(&priv->rx_cpl_ring[k]->napi);
 
 		mqnic_arm_cq(priv->rx_cpl_ring[k]);
@@ -73,8 +78,13 @@ static int mqnic_start_port(struct net_device *ndev)
 		mqnic_activate_cq_ring(priv->tx_cpl_ring[k],
 				priv->event_ring[k % priv->event_queue_count]);
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+		netif_napi_add_tx(ndev, &priv->tx_cpl_ring[k]->napi,
+				mqnic_poll_tx_cq);
+#else
 		netif_tx_napi_add(ndev, &priv->tx_cpl_ring[k]->napi,
 				mqnic_poll_tx_cq, NAPI_POLL_WEIGHT);
+#endif
 		napi_enable(&priv->tx_cpl_ring[k]->napi);
 
 		mqnic_arm_cq(priv->tx_cpl_ring[k]);

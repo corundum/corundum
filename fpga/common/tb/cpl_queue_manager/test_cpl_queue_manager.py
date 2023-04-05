@@ -53,7 +53,7 @@ EnqueueReqBus, EnqueueReqTransaction, EnqueueReqSource, EnqueueReqSink, EnqueueR
 )
 
 EnqueueRespBus, EnqueueRespTransaction, EnqueueRespSource, EnqueueRespSink, EnqueueRespMonitor = define_stream("EnqueueResp",
-    signals=["queue", "ptr", "addr", "event", "tag", "op_tag", "full", "error", "valid"],
+    signals=["queue", "ptr", "phase", "addr", "event", "tag", "op_tag", "full", "error", "valid"],
     optional_signals=["ready"]
 )
 
@@ -144,6 +144,7 @@ async def run_test(dut):
 
     assert resp.queue == 0
     assert resp.ptr == head_ptr
+    assert resp.phase == ~(resp.ptr >> 4) & 1
     assert resp.addr == 0x8877665544332211
     assert resp.event == 1
     assert resp.tag == 1
@@ -213,6 +214,7 @@ async def run_test(dut):
 
                 assert resp.queue == q
                 assert resp.ptr == queue_head_ptr[q]
+                assert resp.phase == ~(resp.ptr >> 4) & 1
                 assert (resp.addr >> 16) & 0xf == q
                 assert (resp.addr >> 4) & 0xf == queue_head_ptr[q] & 0xf
                 assert resp.event == q

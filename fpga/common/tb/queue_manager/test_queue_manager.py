@@ -53,7 +53,7 @@ DequeueReqBus, DequeueReqTransaction, DequeueReqSource, DequeueReqSink, DequeueR
 )
 
 DequeueRespBus, DequeueRespTransaction, DequeueRespSource, DequeueRespSink, DequeueRespMonitor = define_stream("DequeueResp",
-    signals=["queue", "ptr", "addr", "block_size", "cpl", "tag", "op_tag", "empty", "error", "valid"],
+    signals=["queue", "ptr", "phase", "addr", "block_size", "cpl", "tag", "op_tag", "empty", "error", "valid"],
     optional_signals=["ready"]
 )
 
@@ -156,6 +156,7 @@ async def run_test(dut):
 
     assert resp.queue == 0
     assert resp.ptr == tail_ptr
+    assert resp.phase == ~(resp.ptr >> 4) & 1
     assert resp.addr == 0x8877665544332211
     assert resp.block_size == 0
     assert resp.cpl == 1
@@ -240,6 +241,7 @@ async def run_test(dut):
 
                 assert resp.queue == q
                 assert resp.ptr == queue_tail_ptr[q]
+                assert resp.phase == ~(resp.ptr >> 4) & 1
                 assert (resp.addr >> 16) & 0xf == q
                 assert (resp.addr >> 4) & 0xf == queue_tail_ptr[q] & 0xf
                 assert resp.block_size == 0

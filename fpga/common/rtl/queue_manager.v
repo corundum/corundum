@@ -88,6 +88,7 @@ module queue_manager #
      */
     output wire [QUEUE_INDEX_WIDTH-1:0]    m_axis_dequeue_resp_queue,
     output wire [QUEUE_PTR_WIDTH-1:0]      m_axis_dequeue_resp_ptr,
+    output wire                            m_axis_dequeue_resp_phase,
     output wire [ADDR_WIDTH-1:0]           m_axis_dequeue_resp_addr,
     output wire [LOG_BLOCK_SIZE_WIDTH-1:0] m_axis_dequeue_resp_block_size,
     output wire [CPL_INDEX_WIDTH-1:0]      m_axis_dequeue_resp_cpl,
@@ -203,6 +204,7 @@ reg s_axis_dequeue_req_ready_reg = 1'b0, s_axis_dequeue_req_ready_next;
 
 reg [QUEUE_INDEX_WIDTH-1:0] m_axis_dequeue_resp_queue_reg = 0, m_axis_dequeue_resp_queue_next;
 reg [QUEUE_PTR_WIDTH-1:0] m_axis_dequeue_resp_ptr_reg = 0, m_axis_dequeue_resp_ptr_next;
+reg m_axis_dequeue_resp_phase_reg = 0, m_axis_dequeue_resp_phase_next;
 reg [ADDR_WIDTH-1:0] m_axis_dequeue_resp_addr_reg = 0, m_axis_dequeue_resp_addr_next;
 reg [LOG_BLOCK_SIZE_WIDTH-1:0] m_axis_dequeue_resp_block_size_reg = 0, m_axis_dequeue_resp_block_size_next;
 reg [CPL_INDEX_WIDTH-1:0] m_axis_dequeue_resp_cpl_reg = 0, m_axis_dequeue_resp_cpl_next;
@@ -262,6 +264,7 @@ assign s_axis_dequeue_req_ready = s_axis_dequeue_req_ready_reg;
 
 assign m_axis_dequeue_resp_queue = m_axis_dequeue_resp_queue_reg;
 assign m_axis_dequeue_resp_ptr = m_axis_dequeue_resp_ptr_reg;
+assign m_axis_dequeue_resp_phase = m_axis_dequeue_resp_phase_reg;
 assign m_axis_dequeue_resp_addr = m_axis_dequeue_resp_addr_reg;
 assign m_axis_dequeue_resp_block_size = m_axis_dequeue_resp_block_size_reg;
 assign m_axis_dequeue_resp_cpl = m_axis_dequeue_resp_cpl_reg;
@@ -343,6 +346,7 @@ always @* begin
 
     m_axis_dequeue_resp_queue_next = m_axis_dequeue_resp_queue_reg;
     m_axis_dequeue_resp_ptr_next = m_axis_dequeue_resp_ptr_reg;
+    m_axis_dequeue_resp_phase_next = m_axis_dequeue_resp_phase_reg;
     m_axis_dequeue_resp_addr_next = m_axis_dequeue_resp_addr_reg;
     m_axis_dequeue_resp_block_size_next = m_axis_dequeue_resp_block_size_reg;
     m_axis_dequeue_resp_cpl_next = m_axis_dequeue_resp_cpl_reg;
@@ -442,6 +446,7 @@ always @* begin
         // request
         m_axis_dequeue_resp_queue_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
         m_axis_dequeue_resp_ptr_next = queue_ram_read_active_tail_ptr;
+        m_axis_dequeue_resp_phase_next = !queue_ram_read_active_tail_ptr[queue_ram_read_data_log_queue_size];
         m_axis_dequeue_resp_addr_next = queue_ram_read_data_base_addr + ((queue_ram_read_active_tail_ptr & ({QUEUE_PTR_WIDTH{1'b1}} >> (QUEUE_PTR_WIDTH - queue_ram_read_data_log_queue_size))) << (CL_DESC_SIZE+queue_ram_read_data_log_block_size));
         m_axis_dequeue_resp_block_size_next = queue_ram_read_data_log_block_size;
         m_axis_dequeue_resp_cpl_next = queue_ram_read_data_cpl_queue;
@@ -661,6 +666,7 @@ always @(posedge clk) begin
 
     m_axis_dequeue_resp_queue_reg <= m_axis_dequeue_resp_queue_next;
     m_axis_dequeue_resp_ptr_reg <= m_axis_dequeue_resp_ptr_next;
+    m_axis_dequeue_resp_phase_reg <= m_axis_dequeue_resp_phase_next;
     m_axis_dequeue_resp_addr_reg <= m_axis_dequeue_resp_addr_next;
     m_axis_dequeue_resp_block_size_reg <= m_axis_dequeue_resp_block_size_next;
     m_axis_dequeue_resp_cpl_reg <= m_axis_dequeue_resp_cpl_next;

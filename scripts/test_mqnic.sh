@@ -170,7 +170,7 @@ logdir=$base_logdir/$logname
 
 mkdir -p $logdir
 
-echo "$nic_info" > $logdir/mqnic_dump.log
+echo "$nic_info" > $logdir/mqnic_dump_pre.log
 
 {
 
@@ -451,3 +451,5 @@ echo
 echo "Done"
 
 } | tee $logdir/test.log 2>&1
+
+$netns_cmd $mqnic_dump -d $netdev > $logdir/mqnic_dump_post.log

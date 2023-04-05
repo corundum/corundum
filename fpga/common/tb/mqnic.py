@@ -663,7 +663,6 @@ class TxRing:
 
         self.head_ptr = 0
         self.tail_ptr = 0
-        self.clean_tail_ptr = 0
 
         self.clean_event = Event()
 
@@ -748,10 +747,10 @@ class TxRing:
         self.active = False
 
     def empty(self):
-        return self.head_ptr == self.clean_tail_ptr
+        return self.head_ptr == self.tail_ptr
 
     def full(self):
-        return self.head_ptr - self.clean_tail_ptr >= self.full_size
+        return self.head_ptr - self.tail_ptr >= self.full_size
 
     async def read_tail_ptr(self):
         val = await self.hw_regs.read_dword(MQNIC_QUEUE_TAIL_PTR_REG)
@@ -767,9 +766,9 @@ class TxRing:
 
     def free_buf(self):
         while not self.empty():
-            index = self.clean_tail_ptr & self.size_mask
+            index = self.tail_ptr & self.size_mask
             self.free_desc(index)
-            self.clean_tail_ptr += 1
+            self.tail_ptr += 1
 
     @staticmethod
     async def process_tx_cq(cq):
@@ -805,19 +804,17 @@ class TxRing:
         await cq.write_tail_ptr()
 
         # process ring
-        await ring.read_tail_ptr()
+        ring_tail_ptr = ring.tail_ptr
+        ring_index = ring_tail_ptr & ring.size_mask
 
-        ring_clean_tail_ptr = ring.clean_tail_ptr
-        ring_index = ring_clean_tail_ptr & ring.size_mask
-
-        while (ring_clean_tail_ptr != ring.tail_ptr):
+        while (ring_tail_ptr != ring.head_ptr):
             if ring.tx_info[ring_index]:
                 break
 
-            ring_clean_tail_ptr += 1
-            ring_index = ring_clean_tail_ptr & ring.size_mask
+            ring_tail_ptr += 1
+            ring_index = ring_tail_ptr & ring.size_mask
 
-        ring.clean_tail_ptr = ring_clean_tail_ptr
+        ring.tail_ptr = ring_tail_ptr
 
         ring.clean_event.set()
 
@@ -846,7 +843,6 @@ class RxRing:
 
         self.head_ptr = 0
         self.tail_ptr = 0
-        self.clean_tail_ptr = 0
 
         self.packets = 0
         self.bytes = 0
@@ -931,10 +927,10 @@ class RxRing:
         self.active = False
 
     def empty(self):
-        return self.head_ptr == self.clean_tail_ptr
+        return self.head_ptr == self.tail_ptr
 
     def full(self):
-        return self.head_ptr - self.clean_tail_ptr >= self.full_size
+        return self.head_ptr - self.tail_ptr >= self.full_size
 
     async def read_tail_ptr(self):
         val = await self.hw_regs.read_dword(MQNIC_QUEUE_TAIL_PTR_REG)
@@ -950,9 +946,9 @@ class RxRing:
 
     def free_buf(self):
         while not self.empty():
-            index = self.clean_tail_ptr & self.size_mask
+            index = self.tail_ptr & self.size_mask
             self.free_desc(index)
-            self.clean_tail_ptr += 1
+            self.tail_ptr += 1
 
     def prepare_desc(self, index):
         pkt = self.driver.alloc_pkt()
@@ -969,7 +965,7 @@ class RxRing:
             offset += seg
 
     async def refill_buffers(self):
-        missing = self.size - (self.head_ptr - self.clean_tail_ptr)
+        missing = self.size - (self.head_ptr - self.tail_ptr)
 
         if missing < 8:
             return
@@ -1029,19 +1025,17 @@ class RxRing:
         await cq.write_tail_ptr()
 
         # process ring
-        await ring.read_tail_ptr()
+        ring_tail_ptr = ring.tail_ptr
+        ring_index = ring_tail_ptr & ring.size_mask
 
-        ring_clean_tail_ptr = ring.clean_tail_ptr
-        ring_index = ring_clean_tail_ptr & ring.size_mask
-
-        while (ring_clean_tail_ptr != ring.tail_ptr):
+        while (ring_tail_ptr != ring.head_ptr):
             if ring.rx_info[ring_index]:
                 break
 
-            ring_clean_tail_ptr += 1
-            ring_index = ring_clean_tail_ptr & ring.size_mask
+            ring_tail_ptr += 1
+            ring_index = ring_tail_ptr & ring.size_mask
 
-        ring.clean_tail_ptr = ring_clean_tail_ptr
+        ring.tail_ptr = ring_tail_ptr
 
         # replenish buffers
         await ring.refill_buffers()
@@ -1414,7 +1408,7 @@ class Interface:
 
         while True:
             # check for space in ring
-            if ring.head_ptr - ring.clean_tail_ptr < ring.full_size:
+            if ring.head_ptr - ring.tail_ptr < ring.full_size:
                 break
 
             # wait for space

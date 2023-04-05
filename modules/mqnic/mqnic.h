@@ -251,7 +251,6 @@ struct mqnic_ring {
 
 	// written from completion
 	u32 tail_ptr ____cacheline_aligned_in_smp;
-	u32 clean_tail_ptr;
 	u64 ts_s;
 	u8 ts_valid;
 

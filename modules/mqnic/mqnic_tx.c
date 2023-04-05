@@ -60,7 +60,6 @@ int mqnic_create_tx_ring(struct mqnic_if *interface, struct mqnic_ring **ring_pt
 
 	ring->head_ptr = 0;
 	ring->tail_ptr = 0;
-	ring->clean_tail_ptr = 0;
 
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -107,7 +106,6 @@ int mqnic_alloc_tx_ring(struct mqnic_ring *ring, int size, int stride)
 
 	ring->head_ptr = 0;
 	ring->tail_ptr = 0;
-	ring->clean_tail_ptr = 0;
 
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -199,12 +197,12 @@ void mqnic_deactivate_tx_ring(struct mqnic_ring *ring)
 
 bool mqnic_is_tx_ring_empty(const struct mqnic_ring *ring)
 {
-	return ring->head_ptr == ring->clean_tail_ptr;
+	return ring->head_ptr == ring->tail_ptr;
 }
 
 bool mqnic_is_tx_ring_full(const struct mqnic_ring *ring)
 {
-	return ring->head_ptr - ring->clean_tail_ptr >= ring->full_size;
+	return ring->head_ptr - ring->tail_ptr >= ring->full_size;
 }
 
 void mqnic_tx_read_tail_ptr(struct mqnic_ring *ring)
@@ -244,15 +242,11 @@ int mqnic_free_tx_buf(struct mqnic_ring *ring)
 	int cnt = 0;
 
 	while (!mqnic_is_tx_ring_empty(ring)) {
-		index = ring->clean_tail_ptr & ring->size_mask;
+		index = ring->tail_ptr & ring->size_mask;
 		mqnic_free_tx_desc(ring, index, 0);
-		ring->clean_tail_ptr++;
+		ring->tail_ptr++;
 		cnt++;
 	}
-
-	ring->head_ptr = 0;
-	ring->tail_ptr = 0;
-	ring->clean_tail_ptr = 0;
 
 	return cnt;
 }
@@ -268,7 +262,7 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 	u32 cq_index;
 	u32 cq_tail_ptr;
 	u32 ring_index;
-	u32 ring_clean_tail_ptr;
+	u32 ring_tail_ptr;
 	u32 packets = 0;
 	u32 bytes = 0;
 	int done = 0;
@@ -315,24 +309,21 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 	mqnic_cq_write_tail_ptr(cq_ring);
 
 	// process ring
-	// read tail pointer from NIC
-	mqnic_tx_read_tail_ptr(tx_ring);
+	ring_tail_ptr = READ_ONCE(tx_ring->tail_ptr);
+	ring_index = ring_tail_ptr & tx_ring->size_mask;
 
-	ring_clean_tail_ptr = READ_ONCE(tx_ring->clean_tail_ptr);
-	ring_index = ring_clean_tail_ptr & tx_ring->size_mask;
-
-	while (ring_clean_tail_ptr != tx_ring->tail_ptr) {
+	while (ring_tail_ptr != tx_ring->head_ptr) {
 		tx_info = &tx_ring->tx_info[ring_index];
 
 		if (tx_info->skb)
 			break;
 
-		ring_clean_tail_ptr++;
-		ring_index = ring_clean_tail_ptr & tx_ring->size_mask;
+		ring_tail_ptr++;
+		ring_index = ring_tail_ptr & tx_ring->size_mask;
 	}
 
 	// update ring tail
-	WRITE_ONCE(tx_ring->clean_tail_ptr, ring_clean_tail_ptr);
+	WRITE_ONCE(tx_ring->tail_ptr, ring_tail_ptr);
 
 	// BQL
 	//netdev_tx_completed_queue(tx_ring->tx_queue, packets, bytes);
@@ -445,7 +436,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	int ring_index;
 	u32 index;
 	bool stop_queue;
-	u32 clean_tail_ptr;
+	u32 tail_ptr;
 
 	if (unlikely(!priv->port_up))
 		goto tx_drop;
@@ -458,7 +449,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	ring = priv->tx_ring[ring_index];
 
-	clean_tail_ptr = READ_ONCE(ring->clean_tail_ptr);
+	tail_ptr = READ_ONCE(ring->tail_ptr);
 
 	// prefetch for BQL
 	netdev_txq_bql_enqueue_prefetchw(ring->tx_queue);
@@ -544,7 +535,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (unlikely(stop_queue)) {
 		smp_rmb();
 
-		clean_tail_ptr = READ_ONCE(ring->clean_tail_ptr);
+		tail_ptr = READ_ONCE(ring->tail_ptr);
 
 		if (unlikely(!mqnic_is_tx_ring_full(ring)))
 			netif_tx_wake_queue(ring->tx_queue);

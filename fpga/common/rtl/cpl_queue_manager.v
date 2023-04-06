@@ -577,14 +577,33 @@ always @* begin
                 // head pointer
                 // tail pointer is read-only when queue is active
                 if (!queue_ram_read_data_active) begin
-                    queue_ram_write_data[15:0] = write_data_pipeline_reg[PIPELINE-1];
-                    queue_ram_be[1:0] = write_strobe_pipeline_reg[PIPELINE-1];
+                    queue_ram_write_data[15:0] = write_data_pipeline_reg[PIPELINE-1][15:0];
+                    queue_ram_be[1:0] = write_strobe_pipeline_reg[PIPELINE-1][1:0];
                 end
             end
             3'd6: begin
                 // tail pointer
-                queue_ram_write_data[31:16] = write_data_pipeline_reg[PIPELINE-1];
-                queue_ram_be[3:2] = write_strobe_pipeline_reg[PIPELINE-1];
+                queue_ram_write_data[31:16] = write_data_pipeline_reg[PIPELINE-1][15:0];
+                queue_ram_be[3:2] = write_strobe_pipeline_reg[PIPELINE-1][1:0];
+
+                // re-arm
+                if (write_strobe_pipeline_reg[PIPELINE-1][3] && write_data_pipeline_reg[PIPELINE-1][31]) begin
+                    queue_ram_write_data[54] = 1'b1;
+                    queue_ram_be[6] = 1'b1;
+
+                    if (queue_ram_read_data_head_ptr != write_data_pipeline_reg[PIPELINE-1][15:0]) begin
+                        // armed and queue not empty
+                        // so generate event
+                        m_axis_event_next = queue_ram_read_data_event;
+                        m_axis_event_source_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
+                        m_axis_event_valid_next = 1'b1;
+
+                        if (!write_data_pipeline_reg[PIPELINE-1][30]) begin
+                            queue_ram_write_data[54] = 1'b0;
+                            queue_ram_be[6] = 1'b1;
+                        end
+                    end
+                end
             end
         endcase
     end else if (op_axil_read_pipe_reg[PIPELINE-1]) begin

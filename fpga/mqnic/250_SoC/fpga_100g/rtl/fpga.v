@@ -1095,9 +1095,19 @@ generate
 
 if (DDR_ENABLE && DDR_CH > 0) begin
 
+reg ddr4_rst_reg = 1'b1;
+
+always @(posedge pcie_user_clk or posedge pcie_user_reset) begin
+    if (pcie_user_reset) begin
+        ddr4_rst_reg <= 1'b1;
+    end else begin
+        ddr4_rst_reg <= 1'b0;
+    end
+end
+
 ddr4_0 ddr4_inst (
     .c0_sys_clk_i(clk_200mhz_ibufg),
-    .sys_rst(pcie_user_reset),
+    .sys_rst(ddr4_rst_reg),
 
     .c0_init_calib_complete(ddr_status[0 +: 1]),
     .c0_ddr4_interrupt(),

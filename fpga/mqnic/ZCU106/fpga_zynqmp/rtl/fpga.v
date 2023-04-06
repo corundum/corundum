@@ -773,10 +773,20 @@ generate
 
 if (DDR_ENABLE && DDR_CH > 0) begin
 
+reg ddr4_rst_reg = 1'b1;
+
+always @(posedge zynq_pl_clk or posedge zynq_pl_reset) begin
+    if (zynq_pl_reset) begin
+        ddr4_rst_reg <= 1'b1;
+    end else begin
+        ddr4_rst_reg <= 1'b0;
+    end
+end
+
 ddr4_0 ddr4_inst (
     .c0_sys_clk_p(clk_user_si570_p),
     .c0_sys_clk_n(clk_user_si570_n),
-    .sys_rst(zynq_pl_reset),
+    .sys_rst(ddr4_rst_reg),
 
     .c0_init_calib_complete(ddr_status[0 +: 1]),
     .dbg_clk(),

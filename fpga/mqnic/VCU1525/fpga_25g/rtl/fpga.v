@@ -1464,10 +1464,20 @@ generate
 
 if (DDR_ENABLE && DDR_CH > 0) begin
 
+reg ddr4_rst_reg = 1'b1;
+
+always @(posedge pcie_user_clk or posedge pcie_user_reset) begin
+    if (pcie_user_reset) begin
+        ddr4_rst_reg <= 1'b1;
+    end else begin
+        ddr4_rst_reg <= 1'b0;
+    end
+end
+
 ddr4_0 ddr4_c0_inst (
     .c0_sys_clk_p(clk_300mhz_0_p),
     .c0_sys_clk_n(clk_300mhz_0_n),
-    .sys_rst(pcie_user_reset),
+    .sys_rst(ddr4_rst_reg),
 
     .c0_init_calib_complete(ddr_status[0 +: 1]),
     .c0_ddr4_interrupt(),
@@ -1593,10 +1603,20 @@ end
 
 if (DDR_ENABLE && DDR_CH > 1) begin
 
+reg ddr4_rst_reg = 1'b1;
+
+always @(posedge pcie_user_clk or posedge pcie_user_reset) begin
+    if (pcie_user_reset) begin
+        ddr4_rst_reg <= 1'b1;
+    end else begin
+        ddr4_rst_reg <= 1'b0;
+    end
+end
+
 ddr4_0 ddr4_c1_inst (
     .c0_sys_clk_p(clk_300mhz_1_p),
     .c0_sys_clk_n(clk_300mhz_1_n),
-    .sys_rst(pcie_user_reset),
+    .sys_rst(ddr4_rst_reg),
 
     .c0_init_calib_complete(ddr_status[1 +: 1]),
     .c0_ddr4_interrupt(),
@@ -1705,10 +1725,20 @@ end
 
 if (DDR_ENABLE && DDR_CH > 2) begin
 
+reg ddr4_rst_reg = 1'b1;
+
+always @(posedge pcie_user_clk or posedge pcie_user_reset) begin
+    if (pcie_user_reset) begin
+        ddr4_rst_reg <= 1'b1;
+    end else begin
+        ddr4_rst_reg <= 1'b0;
+    end
+end
+
 ddr4_0 ddr4_c2_inst (
     .c0_sys_clk_p(clk_300mhz_2_p),
     .c0_sys_clk_n(clk_300mhz_2_n),
-    .sys_rst(pcie_user_reset),
+    .sys_rst(ddr4_rst_reg),
 
     .c0_init_calib_complete(ddr_status[2 +: 1]),
     .c0_ddr4_interrupt(),
@@ -1817,10 +1847,20 @@ end
 
 if (DDR_ENABLE && DDR_CH > 3) begin
 
+reg ddr4_rst_reg = 1'b1;
+
+always @(posedge pcie_user_clk or posedge pcie_user_reset) begin
+    if (pcie_user_reset) begin
+        ddr4_rst_reg <= 1'b1;
+    end else begin
+        ddr4_rst_reg <= 1'b0;
+    end
+end
+
 ddr4_0 ddr4_c3_inst (
     .c0_sys_clk_p(clk_300mhz_3_p),
     .c0_sys_clk_n(clk_300mhz_3_n),
-    .sys_rst(pcie_user_reset),
+    .sys_rst(ddr4_rst_reg),
 
     .c0_init_calib_complete(ddr_status[3 +: 1]),
     .c0_ddr4_interrupt(),

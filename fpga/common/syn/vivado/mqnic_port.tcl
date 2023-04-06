@@ -33,7 +33,7 @@ foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == mqnic_port || REF_NAME 
     puts "Inserting timing constraints for mqnic_port instance $inst"
 
     proc constrain_slow_sync {inst driver args} {
-        set sync_ffs [get_cells -hier [concat $driver $args] -filter "PARENT == $inst"]
+        set sync_ffs [get_cells -hier $args -filter "PARENT == $inst"]
 
         if {[llength $sync_ffs]} {
             set_property ASYNC_REG TRUE $sync_ffs

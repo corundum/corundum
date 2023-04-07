@@ -149,6 +149,11 @@ int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, struct mqnic_irq *irq)
 	ring->irq = irq;
 	ring->irq_index = irq->index;
 
+	ring->head_ptr = 0;
+	ring->tail_ptr = 0;
+
+	memset(ring->buf, 1, ring->buf_size);
+
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG);
 	// set base address
@@ -157,10 +162,8 @@ int mqnic_activate_eq_ring(struct mqnic_eq_ring *ring, struct mqnic_irq *irq)
 	// set interrupt index
 	iowrite32(ring->irq_index, ring->hw_addr + MQNIC_EVENT_QUEUE_INTERRUPT_INDEX_REG);
 	// set pointers
-	iowrite32(ring->head_ptr & ring->hw_ptr_mask,
-			ring->hw_addr + MQNIC_EVENT_QUEUE_HEAD_PTR_REG);
-	iowrite32(ring->tail_ptr & ring->hw_ptr_mask,
-			ring->hw_addr + MQNIC_EVENT_QUEUE_TAIL_PTR_REG);
+	iowrite32(ring->head_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_EVENT_QUEUE_HEAD_PTR_REG);
+	iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_EVENT_QUEUE_TAIL_PTR_REG);
 	// set size and activate queue
 	iowrite32(ilog2(ring->size) | MQNIC_EVENT_QUEUE_ACTIVE_MASK,
 			ring->hw_addr + MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG);
@@ -186,16 +189,6 @@ void mqnic_deactivate_eq_ring(struct mqnic_eq_ring *ring)
 	ring->irq = NULL;
 
 	ring->active = 0;
-}
-
-bool mqnic_is_eq_ring_empty(const struct mqnic_eq_ring *ring)
-{
-	return ring->head_ptr == ring->tail_ptr;
-}
-
-bool mqnic_is_eq_ring_full(const struct mqnic_eq_ring *ring)
-{
-	return ring->head_ptr - ring->tail_ptr >= ring->size;
 }
 
 void mqnic_eq_read_head_ptr(struct mqnic_eq_ring *ring)
@@ -227,13 +220,16 @@ void mqnic_process_eq(struct mqnic_eq_ring *eq_ring)
 	int done = 0;
 
 	// read head pointer from NIC
-	mqnic_eq_read_head_ptr(eq_ring);
-
 	eq_tail_ptr = eq_ring->tail_ptr;
 	eq_index = eq_tail_ptr & eq_ring->size_mask;
 
-	while (eq_ring->head_ptr != eq_tail_ptr) {
+	while (1) {
 		event = (struct mqnic_event *)(eq_ring->buf + eq_index * eq_ring->stride);
+
+		if (!!(event->phase & cpu_to_le32(0x80000000)) == !!(eq_tail_ptr & eq_ring->size))
+			break;
+
+		dma_rmb();
 
 		if (event->type == MQNIC_EVENT_TYPE_TX_CPL) {
 			// transmit completion event

@@ -157,6 +157,9 @@ int mqnic_activate_rx_ring(struct mqnic_ring *ring, struct mqnic_priv *priv,
 	cq_ring->src_ring = ring;
 	cq_ring->handler = mqnic_rx_irq;
 
+	ring->head_ptr = 0;
+	ring->tail_ptr = 0;
+
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 	// set base address
@@ -328,16 +331,17 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		return done;
 
 	// process completion queue
-	// read head pointer from NIC
-	mqnic_cq_read_head_ptr(cq_ring);
-
 	cq_tail_ptr = cq_ring->tail_ptr;
 	cq_index = cq_tail_ptr & cq_ring->size_mask;
 
-	mb(); // is a barrier here necessary?  If so, what kind?
-
-	while (cq_ring->head_ptr != cq_tail_ptr && done < budget) {
+	while (done < budget) {
 		cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index * cq_ring->stride);
+
+		if (!!(cpl->phase & cpu_to_le32(0x80000000)) == !!(cq_tail_ptr & cq_ring->size))
+			break;
+
+		dma_rmb();
+
 		ring_index = le16_to_cpu(cpl->index) & rx_ring->size_mask;
 		rx_info = &rx_ring->rx_info[ring_index];
 		page = rx_info->page;

@@ -159,6 +159,9 @@ int mqnic_activate_tx_ring(struct mqnic_ring *ring, struct mqnic_priv *priv,
 	cq_ring->src_ring = ring;
 	cq_ring->handler = mqnic_tx_irq;
 
+	ring->head_ptr = 0;
+	ring->tail_ptr = 0;
+
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 	// set base address
@@ -275,14 +278,17 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 	netdev_txq_bql_complete_prefetchw(tx_ring->tx_queue);
 
 	// process completion queue
-	// read head pointer from NIC
-	mqnic_cq_read_head_ptr(cq_ring);
-
 	cq_tail_ptr = cq_ring->tail_ptr;
 	cq_index = cq_tail_ptr & cq_ring->size_mask;
 
-	while (cq_ring->head_ptr != cq_tail_ptr && done < budget) {
+	while (done < budget) {
 		cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index * cq_ring->stride);
+
+		if (!!(cpl->phase & cpu_to_le32(0x80000000)) == !!(cq_tail_ptr & cq_ring->size))
+			break;
+
+		dma_rmb();
+
 		ring_index = le16_to_cpu(cpl->index) & tx_ring->size_mask;
 		tx_info = &tx_ring->tx_info[ring_index];
 

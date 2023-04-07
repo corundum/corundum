@@ -189,31 +189,31 @@ MQNIC_RB_RX_QUEUE_MAP_CH_REG_RSS_MASK  = 0x04
 MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK  = 0x08
 
 MQNIC_RB_EVENT_QM_TYPE        = 0x0000C010
-MQNIC_RB_EVENT_QM_VER         = 0x00000100
+MQNIC_RB_EVENT_QM_VER         = 0x00000200
 MQNIC_RB_EVENT_QM_REG_OFFSET  = 0x0C
 MQNIC_RB_EVENT_QM_REG_COUNT   = 0x10
 MQNIC_RB_EVENT_QM_REG_STRIDE  = 0x14
 
 MQNIC_RB_TX_QM_TYPE        = 0x0000C020
-MQNIC_RB_TX_QM_VER         = 0x00000100
+MQNIC_RB_TX_QM_VER         = 0x00000200
 MQNIC_RB_TX_QM_REG_OFFSET  = 0x0C
 MQNIC_RB_TX_QM_REG_COUNT   = 0x10
 MQNIC_RB_TX_QM_REG_STRIDE  = 0x14
 
 MQNIC_RB_TX_CQM_TYPE        = 0x0000C030
-MQNIC_RB_TX_CQM_VER         = 0x00000100
+MQNIC_RB_TX_CQM_VER         = 0x00000200
 MQNIC_RB_TX_CQM_REG_OFFSET  = 0x0C
 MQNIC_RB_TX_CQM_REG_COUNT   = 0x10
 MQNIC_RB_TX_CQM_REG_STRIDE  = 0x14
 
 MQNIC_RB_RX_QM_TYPE        = 0x0000C021
-MQNIC_RB_RX_QM_VER         = 0x00000100
+MQNIC_RB_RX_QM_VER         = 0x00000200
 MQNIC_RB_RX_QM_REG_OFFSET  = 0x0C
 MQNIC_RB_RX_QM_REG_COUNT   = 0x10
 MQNIC_RB_RX_QM_REG_STRIDE  = 0x14
 
 MQNIC_RB_RX_CQM_TYPE        = 0x0000C031
-MQNIC_RB_RX_CQM_VER         = 0x00000100
+MQNIC_RB_RX_CQM_VER         = 0x00000200
 MQNIC_RB_RX_CQM_REG_OFFSET  = 0x0C
 MQNIC_RB_RX_CQM_REG_COUNT   = 0x10
 MQNIC_RB_RX_CQM_REG_STRIDE  = 0x14
@@ -454,6 +454,11 @@ class EqRing:
 
         self.irq = irq
 
+        self.head_ptr = 0
+        self.tail_ptr = 0
+
+        self.buf[0:self.buf_size] = b'\x00'*self.buf_size
+
         await self.hw_regs.write_dword(MQNIC_EVENT_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
         await self.hw_regs.write_dword(MQNIC_EVENT_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
         await self.hw_regs.write_dword(MQNIC_EVENT_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
@@ -471,12 +476,6 @@ class EqRing:
         self.irq = None
 
         self.active = False
-
-    def empty(self):
-        return self.head_ptr == self.tail_ptr
-
-    def full(self):
-        return self.head_ptr - self.tail_ptr >= self.size
 
     async def read_head_ptr(self):
         val = await self.hw_regs.read_dword(MQNIC_EVENT_QUEUE_HEAD_PTR_REG)
@@ -497,17 +496,17 @@ class EqRing:
 
         self.log.info("Process event queue")
 
-        await self.read_head_ptr()
-
         eq_tail_ptr = self.tail_ptr
         eq_index = eq_tail_ptr & self.size_mask
 
-        self.log.info("%d events in queue", self.head_ptr - eq_tail_ptr)
+        while True:
+            event_data = struct.unpack_from("<HHLLLLLLL", self.buf, eq_index*self.stride)
 
-        while (self.head_ptr != eq_tail_ptr):
-            event_data = struct.unpack_from("<HH", self.buf, eq_index*self.stride)
+            self.log.info("EQ %d index %d data: %s", self.index, eq_index, repr(event_data))
 
-            self.log.info("Event data: %s", repr(event_data))
+            if bool(event_data[-1] & 0x80000000) == bool(eq_tail_ptr & self.size):
+                self.log.info("EQ %d empty", self.index)
+                break
 
             if event_data[0] == 0:
                 # transmit completion
@@ -601,6 +600,11 @@ class CqRing:
 
         self.eq = eq
 
+        self.head_ptr = 0
+        self.tail_ptr = 0
+
+        self.buf[0:self.buf_size] = b'\x00'*self.buf_size
+
         await self.hw_regs.write_dword(MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
         await self.hw_regs.write_dword(MQNIC_CPL_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
         await self.hw_regs.write_dword(MQNIC_CPL_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
@@ -618,12 +622,6 @@ class CqRing:
         self.eq = None
 
         self.active = False
-
-    def empty(self):
-        return self.head_ptr == self.tail_ptr
-
-    def full(self):
-        return self.head_ptr - self.tail_ptr >= self.size
 
     async def read_head_ptr(self):
         val = await self.hw_regs.read_dword(MQNIC_CPL_QUEUE_HEAD_PTR_REG)
@@ -725,6 +723,9 @@ class TxRing:
         self.cq.src_ring = self
         self.cq.handler = TxRing.process_tx_cq
 
+        self.head_ptr = 0
+        self.tail_ptr = 0
+
         await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
         await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
         await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
@@ -782,16 +783,18 @@ class TxRing:
             return
 
         # process completion queue
-        await cq.read_head_ptr()
-
         cq_tail_ptr = cq.tail_ptr
         cq_index = cq_tail_ptr & cq.size_mask
 
-        while (cq.head_ptr != cq_tail_ptr):
-            cpl_data = struct.unpack_from("<HHHxxQ", cq.buf, cq_index*cq.stride)
+        while True:
+            cpl_data = struct.unpack_from("<HHHxxLHHLBBHLL", cq.buf, cq_index*cq.stride)
             ring_index = cpl_data[1] & ring.size_mask
 
-            interface.log.info("CPL data: %s", cpl_data)
+            interface.log.info("CQ %d index %d data: %s", cq.index, cq_index, repr(cpl_data))
+
+            if bool(cpl_data[-1] & 0x80000000) == bool(cq_tail_ptr & cq.size):
+                interface.log.info("CQ %d empty", cq.index)
+                break
 
             interface.log.info("Ring index: %d", ring_index)
 
@@ -903,6 +906,9 @@ class RxRing:
         self.cq.src_ring = self
         self.cq.handler = RxRing.process_rx_cq
 
+        self.head_ptr = 0
+        self.tail_ptr = 0
+
         await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
         await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
         await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
@@ -988,16 +994,18 @@ class RxRing:
             return
 
         # process completion queue
-        await cq.read_head_ptr()
-
         cq_tail_ptr = cq.tail_ptr
         cq_index = cq_tail_ptr & cq.size_mask
 
-        while (cq.head_ptr != cq_tail_ptr):
-            cpl_data = struct.unpack_from("<HHHxxLHH", cq.buf, cq_index*cq.stride)
+        while True:
+            cpl_data = struct.unpack_from("<HHHxxLHHLBBHLL", cq.buf, cq_index*cq.stride)
             ring_index = cpl_data[1] & ring.size_mask
 
-            interface.log.info("CPL data: %s", cpl_data)
+            interface.log.info("CQ %d index %d data: %s", cq.index, cq_index, repr(cpl_data))
+
+            if bool(cpl_data[-1] & 0x80000000) == bool(cq_tail_ptr & cq.size):
+                interface.log.info("CQ %d empty", cq.index)
+                break
 
             interface.log.info("Ring index: %d", ring_index)
             pkt = ring.rx_info[ring_index]

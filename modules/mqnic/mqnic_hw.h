@@ -218,31 +218,31 @@
 #define MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK  0x08
 
 #define MQNIC_RB_EVENT_QM_TYPE        0x0000C010
-#define MQNIC_RB_EVENT_QM_VER         0x00000100
+#define MQNIC_RB_EVENT_QM_VER         0x00000200
 #define MQNIC_RB_EVENT_QM_REG_OFFSET  0x0C
 #define MQNIC_RB_EVENT_QM_REG_COUNT   0x10
 #define MQNIC_RB_EVENT_QM_REG_STRIDE  0x14
 
 #define MQNIC_RB_TX_QM_TYPE        0x0000C020
-#define MQNIC_RB_TX_QM_VER         0x00000100
+#define MQNIC_RB_TX_QM_VER         0x00000200
 #define MQNIC_RB_TX_QM_REG_OFFSET  0x0C
 #define MQNIC_RB_TX_QM_REG_COUNT   0x10
 #define MQNIC_RB_TX_QM_REG_STRIDE  0x14
 
 #define MQNIC_RB_TX_CQM_TYPE        0x0000C030
-#define MQNIC_RB_TX_CQM_VER         0x00000100
+#define MQNIC_RB_TX_CQM_VER         0x00000200
 #define MQNIC_RB_TX_CQM_REG_OFFSET  0x0C
 #define MQNIC_RB_TX_CQM_REG_COUNT   0x10
 #define MQNIC_RB_TX_CQM_REG_STRIDE  0x14
 
 #define MQNIC_RB_RX_QM_TYPE        0x0000C021
-#define MQNIC_RB_RX_QM_VER         0x00000100
+#define MQNIC_RB_RX_QM_VER         0x00000200
 #define MQNIC_RB_RX_QM_REG_OFFSET  0x0C
 #define MQNIC_RB_RX_QM_REG_COUNT   0x10
 #define MQNIC_RB_RX_QM_REG_STRIDE  0x14
 
 #define MQNIC_RB_RX_CQM_TYPE        0x0000C031
-#define MQNIC_RB_RX_CQM_VER         0x00000100
+#define MQNIC_RB_RX_CQM_VER         0x00000200
 #define MQNIC_RB_RX_CQM_REG_OFFSET  0x0C
 #define MQNIC_RB_RX_CQM_REG_COUNT   0x10
 #define MQNIC_RB_RX_CQM_REG_STRIDE  0x14
@@ -361,12 +361,19 @@ struct mqnic_cpl {
 	__u8 rsvd2;
 	__u8 rsvd3;
 	__le32 rsvd4;
-	__le32 rsvd5;
+	__le32 phase;
 };
 
 struct mqnic_event {
 	__le16 type;
 	__le16 source;
+	__le32 rsvd0;
+	__le32 rsvd1;
+	__le32 rsvd2;
+	__le32 rsvd3;
+	__le32 rsvd4;
+	__le32 rsvd5;
+	__le32 phase;
 };
 
 #endif /* MQNIC_HW_H */

@@ -130,6 +130,11 @@ int mqnic_activate_cq_ring(struct mqnic_cq_ring *ring, struct mqnic_eq_ring *eq_
 	ring->eq_ring = eq_ring;
 	ring->eq_index = eq_ring->index;
 
+	ring->head_ptr = 0;
+	ring->tail_ptr = 0;
+
+	memset(ring->buf, 1, ring->buf_size);
+
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG);
 	// set base address
@@ -159,16 +164,6 @@ void mqnic_deactivate_cq_ring(struct mqnic_cq_ring *ring)
 	ring->eq_ring = NULL;
 
 	ring->active = 0;
-}
-
-bool mqnic_is_cq_ring_empty(const struct mqnic_cq_ring *ring)
-{
-	return ring->head_ptr == ring->tail_ptr;
-}
-
-bool mqnic_is_cq_ring_full(const struct mqnic_cq_ring *ring)
-{
-	return ring->head_ptr - ring->tail_ptr >= ring->size;
 }
 
 void mqnic_cq_read_head_ptr(struct mqnic_cq_ring *ring)

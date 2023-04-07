@@ -4,7 +4,7 @@
 Event queue manager register block
 ==================================
 
-The event queue manager register block has a header with type 0x0000C010, version 0x00000100, and indicates the location of the event queue manager registers and number of event queues.
+The event queue manager register block has a header with type 0x0000C010, version 0x00000200, and indicates the location of the event queue manager registers and number of event queues.
 
 .. table::
 
@@ -13,7 +13,7 @@ The event queue manager register block has a header with type 0x0000C010, versio
     ========  =============  ======  ======  ======  ======  =============
     RBB+0x00  Type           Vendor ID       Type            RO 0x0000C010
     --------  -------------  --------------  --------------  -------------
-    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000100
+    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000200
     --------  -------------  ------  ------  ------  ------  -------------
     RBB+0x08  Next pointer   Pointer to next register block  RO -
     --------  -------------  ------------------------------  -------------
@@ -82,5 +82,5 @@ Each queue has several associated control registers, detailed in this table:
     ---------  --------------  ------  ------  --------------  -------------
     Base+0x10  Head pointer                    Head pointer    RW -
     ---------  --------------  --------------  --------------  -------------
-    Base+0x14  Tail pointer                    Tail pointer    RW -
+    Base+0x18  Tail pointer                    Tail pointer    RW -
     =========  ==============  ==============  ==============  =============

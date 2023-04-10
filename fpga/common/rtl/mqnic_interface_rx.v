@@ -70,6 +70,7 @@ module mqnic_interface_rx #
     // TX and RX engine configuration
     parameter RX_DESC_TABLE_SIZE = 32,
     parameter DESC_TABLE_DMA_OP_COUNT_WIDTH = 4,
+    parameter RX_INDIR_TBL_ADDR_WIDTH = RX_QUEUE_INDEX_WIDTH > 8 ? 8 : RX_QUEUE_INDEX_WIDTH,
 
     // Interface configuration
     parameter PTP_TS_ENABLE = 1,
@@ -96,11 +97,17 @@ module mqnic_interface_rx #
     parameter RB_BASE_ADDR = 0,
     parameter RB_NEXT_PTR = 0,
 
+    // AXI lite interface configuration
+    parameter AXIL_DATA_WIDTH = 32,
+    parameter AXIL_ADDR_WIDTH = $clog2(PORTS)+RX_INDIR_TBL_ADDR_WIDTH+2,
+    parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
+    parameter AXIL_BASE_ADDR = 0,
+
     // Streaming interface configuration
     parameter AXIS_DATA_WIDTH = 512*2**$clog2(PORTS),
     parameter AXIS_KEEP_WIDTH = AXIS_DATA_WIDTH/8,
     parameter AXIS_RX_ID_WIDTH = PORTS > 1 ? $clog2(PORTS) : 1,
-    parameter AXIS_RX_DEST_WIDTH = RX_QUEUE_INDEX_WIDTH,
+    parameter AXIS_RX_DEST_WIDTH = RX_QUEUE_INDEX_WIDTH+1,
     parameter AXIS_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1
 )
 (
@@ -121,6 +128,29 @@ module mqnic_interface_rx #
     output wire [REG_DATA_WIDTH-1:0]                    ctrl_reg_rd_data,
     output wire                                         ctrl_reg_rd_wait,
     output wire                                         ctrl_reg_rd_ack,
+
+    /*
+     * AXI-Lite slave interface (indirection table)
+     */
+    input  wire [AXIL_ADDR_WIDTH-1:0]                   s_axil_awaddr,
+    input  wire [2:0]                                   s_axil_awprot,
+    input  wire                                         s_axil_awvalid,
+    output wire                                         s_axil_awready,
+    input  wire [AXIL_DATA_WIDTH-1:0]                   s_axil_wdata,
+    input  wire [AXIL_STRB_WIDTH-1:0]                   s_axil_wstrb,
+    input  wire                                         s_axil_wvalid,
+    output wire                                         s_axil_wready,
+    output wire [1:0]                                   s_axil_bresp,
+    output wire                                         s_axil_bvalid,
+    input  wire                                         s_axil_bready,
+    input  wire [AXIL_ADDR_WIDTH-1:0]                   s_axil_araddr,
+    input  wire [2:0]                                   s_axil_arprot,
+    input  wire                                         s_axil_arvalid,
+    output wire                                         s_axil_arready,
+    output wire [AXIL_DATA_WIDTH-1:0]                   s_axil_rdata,
+    output wire [1:0]                                   s_axil_rresp,
+    output wire                                         s_axil_rvalid,
+    input  wire                                         s_axil_rready,
 
     /*
      * Descriptor request output
@@ -328,11 +358,6 @@ end
 
 rx_engine #(
     .PORTS(PORTS),
-    .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
-    .REG_DATA_WIDTH(REG_DATA_WIDTH),
-    .REG_STRB_WIDTH(REG_STRB_WIDTH),
-    .RB_BASE_ADDR(RB_BASE_ADDR),
-    .RB_NEXT_PTR(RB_NEXT_PTR),
     .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
     .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
     .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
@@ -347,6 +372,7 @@ rx_engine #(
     .CPL_QUEUE_INDEX_WIDTH(RX_CPL_QUEUE_INDEX_WIDTH),
     .DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
     .DESC_TABLE_DMA_OP_COUNT_WIDTH(DESC_TABLE_DMA_OP_COUNT_WIDTH),
+    .INDIR_TBL_ADDR_WIDTH(RX_INDIR_TBL_ADDR_WIDTH),
     .MAX_RX_SIZE(MAX_RX_SIZE),
     .RX_BUFFER_OFFSET(0),
     .RX_BUFFER_SIZE(RX_RAM_SIZE),
@@ -360,6 +386,15 @@ rx_engine #(
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
     .RX_HASH_ENABLE(RX_HASH_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
+    .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
+    .REG_DATA_WIDTH(REG_DATA_WIDTH),
+    .REG_STRB_WIDTH(REG_STRB_WIDTH),
+    .RB_BASE_ADDR(RB_BASE_ADDR),
+    .RB_NEXT_PTR(RB_NEXT_PTR),
+    .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
+    .AXIL_ADDR_WIDTH(AXIL_ADDR_WIDTH),
+    .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
+    .AXIL_BASE_ADDR(AXIL_BASE_ADDR),
     .AXIS_RX_ID_WIDTH(AXIS_RX_ID_WIDTH),
     .AXIS_RX_DEST_WIDTH(AXIS_RX_DEST_WIDTH),
     .AXIS_RX_USER_WIDTH(INT_AXIS_RX_USER_WIDTH)
@@ -382,6 +417,29 @@ rx_engine_inst (
     .ctrl_reg_rd_data(ctrl_reg_rd_data),
     .ctrl_reg_rd_wait(ctrl_reg_rd_wait),
     .ctrl_reg_rd_ack(ctrl_reg_rd_ack),
+
+    /*
+     * AXI-Lite slave interface (indirection table)
+     */
+    .s_axil_awaddr(s_axil_awaddr),
+    .s_axil_awprot(s_axil_awprot),
+    .s_axil_awvalid(s_axil_awvalid),
+    .s_axil_awready(s_axil_awready),
+    .s_axil_wdata(s_axil_wdata),
+    .s_axil_wstrb(s_axil_wstrb),
+    .s_axil_wvalid(s_axil_wvalid),
+    .s_axil_wready(s_axil_wready),
+    .s_axil_bresp(s_axil_bresp),
+    .s_axil_bvalid(s_axil_bvalid),
+    .s_axil_bready(s_axil_bready),
+    .s_axil_araddr(s_axil_araddr),
+    .s_axil_arprot(s_axil_arprot),
+    .s_axil_arvalid(s_axil_arvalid),
+    .s_axil_arready(s_axil_arready),
+    .s_axil_rdata(s_axil_rdata),
+    .s_axil_rresp(s_axil_rresp),
+    .s_axil_rvalid(s_axil_rvalid),
+    .s_axil_rready(s_axil_rready),
 
     /*
      * Receive request input (queue index)

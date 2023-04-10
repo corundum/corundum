@@ -94,6 +94,7 @@ module fpga_core #
     // TX and RX engine configuration
     parameter TX_DESC_TABLE_SIZE = 32,
     parameter RX_DESC_TABLE_SIZE = 32,
+    parameter RX_INDIR_TBL_ADDR_WIDTH = RX_QUEUE_INDEX_WIDTH > 8 ? 8 : RX_QUEUE_INDEX_WIDTH,
 
     // Scheduler configuration
     parameter TX_SCHEDULER_OP_TABLE_SIZE = TX_DESC_TABLE_SIZE,
@@ -1049,6 +1050,7 @@ mqnic_core_pcie_us #(
     // TX and RX engine configuration
     .TX_DESC_TABLE_SIZE(TX_DESC_TABLE_SIZE),
     .RX_DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
+    .RX_INDIR_TBL_ADDR_WIDTH(RX_INDIR_TBL_ADDR_WIDTH),
 
     // Scheduler configuration
     .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),

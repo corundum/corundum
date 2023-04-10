@@ -110,6 +110,9 @@ struct mqnic_if {
     uint32_t max_tx_mtu;
     uint32_t max_rx_mtu;
 
+    uint32_t rx_queue_map_indir_table_size;
+    volatile uint8_t *rx_queue_map_indir_table[MQNIC_MAX_PORTS];
+
     uint32_t event_queue_offset;
     uint32_t event_queue_count;
     uint32_t event_queue_stride;
@@ -203,9 +206,9 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
 void mqnic_if_close(struct mqnic_if *interface);
 uint32_t mqnic_interface_get_tx_mtu(struct mqnic_if *interface);
 uint32_t mqnic_interface_get_rx_mtu(struct mqnic_if *interface);
-uint32_t mqnic_interface_get_rx_queue_map_offset(struct mqnic_if *interface, int port);
 uint32_t mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, int port);
 uint32_t mqnic_interface_get_rx_queue_map_app_mask(struct mqnic_if *interface, int port);
+uint32_t mqnic_interface_get_rx_queue_map_indir_table(struct mqnic_if *interface, int port, int index);
 
 // mqnic_port.c
 struct mqnic_port *mqnic_port_open(struct mqnic_if *interface, int index, struct mqnic_reg_block *port_rb);

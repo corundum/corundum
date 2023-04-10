@@ -44,6 +44,7 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 	int ret = 0;
 	int k;
 	u32 desc_block_size;
+	u32 val;
 
 	interface = kzalloc(sizeof(*interface), GFP_KERNEL);
 	if (!interface)
@@ -191,10 +192,18 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 		goto fail;
 	}
 
+	val = ioread32(interface->rx_queue_map_rb->regs + MQNIC_RB_RX_QUEUE_MAP_REG_CFG);
+	interface->rx_queue_map_indir_table_size = 1 << ((val >> 8) & 0xff);
+
+	dev_info(dev, "RX queue map indirection table size: %d", interface->rx_queue_map_indir_table_size);
+
 	for (k = 0; k < interface->port_count; k++) {
-		mqnic_interface_set_rx_queue_map_offset(interface, k, 0);
+		interface->rx_queue_map_indir_table[k] = interface->hw_addr + ioread32(interface->rx_queue_map_rb->regs +
+			MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET + MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*k + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET);
+
 		mqnic_interface_set_rx_queue_map_rss_mask(interface, k, 0);
 		mqnic_interface_set_rx_queue_map_app_mask(interface, k, 0);
+		mqnic_interface_set_rx_queue_map_indir_table(interface, k, 0, 0);
 	}
 
 	// determine desc block size
@@ -374,20 +383,6 @@ void mqnic_interface_set_rx_mtu(struct mqnic_if *interface, u32 mtu)
 }
 EXPORT_SYMBOL(mqnic_interface_set_rx_mtu);
 
-u32 mqnic_interface_get_rx_queue_map_offset(struct mqnic_if *interface, int port)
-{
-	return ioread32(interface->rx_queue_map_rb->regs + MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
-			MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET);
-}
-EXPORT_SYMBOL(mqnic_interface_get_rx_queue_map_offset);
-
-void mqnic_interface_set_rx_queue_map_offset(struct mqnic_if *interface, int port, u32 val)
-{
-	iowrite32(val, interface->rx_queue_map_rb->regs + MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
-			MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET);
-}
-EXPORT_SYMBOL(mqnic_interface_set_rx_queue_map_offset);
-
 u32 mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, int port)
 {
 	return ioread32(interface->rx_queue_map_rb->regs + MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
@@ -415,3 +410,15 @@ void mqnic_interface_set_rx_queue_map_app_mask(struct mqnic_if *interface, int p
 			MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK);
 }
 EXPORT_SYMBOL(mqnic_interface_set_rx_queue_map_app_mask);
+
+u32 mqnic_interface_get_rx_queue_map_indir_table(struct mqnic_if *interface, int port, int index)
+{
+	return ioread32(interface->rx_queue_map_indir_table[port] + index*4);
+}
+EXPORT_SYMBOL(mqnic_interface_get_rx_queue_map_indir_table);
+
+void mqnic_interface_set_rx_queue_map_indir_table(struct mqnic_if *interface, int port, int index, u32 val)
+{
+	iowrite32(val, interface->rx_queue_map_indir_table[port] + index*4);
+}
+EXPORT_SYMBOL(mqnic_interface_set_rx_queue_map_indir_table);

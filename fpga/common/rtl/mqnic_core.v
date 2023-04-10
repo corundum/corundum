@@ -96,6 +96,7 @@ module mqnic_core #
     // TX and RX engine configuration
     parameter TX_DESC_TABLE_SIZE = 32,
     parameter RX_DESC_TABLE_SIZE = 32,
+    parameter RX_INDIR_TBL_ADDR_WIDTH = RX_QUEUE_INDEX_WIDTH > 8 ? 8 : RX_QUEUE_INDEX_WIDTH,
 
     // Scheduler configuration
     parameter TX_SCHEDULER_OP_TABLE_SIZE = TX_DESC_TABLE_SIZE,
@@ -590,7 +591,7 @@ parameter IF_DMA_TAG_WIDTH = DMA_TAG_WIDTH-$clog2(IF_COUNT_INT)-1;
 
 parameter AXIS_TX_ID_WIDTH = TX_QUEUE_INDEX_WIDTH;
 parameter AXIS_TX_DEST_WIDTH = 4;
-parameter AXIS_RX_DEST_WIDTH = RX_QUEUE_INDEX_WIDTH;
+parameter AXIS_RX_DEST_WIDTH = RX_QUEUE_INDEX_WIDTH+1;
 
 parameter AXIS_SYNC_KEEP_WIDTH = AXIS_SYNC_DATA_WIDTH/(AXIS_DATA_WIDTH/AXIS_KEEP_WIDTH);
 
@@ -599,7 +600,7 @@ parameter AXIS_IF_KEEP_WIDTH = AXIS_IF_DATA_WIDTH/(AXIS_DATA_WIDTH/AXIS_KEEP_WID
 parameter AXIS_IF_TX_ID_WIDTH = AXIS_TX_ID_WIDTH;
 parameter AXIS_IF_RX_ID_WIDTH = PORTS_PER_IF > 1 ? $clog2(PORTS_PER_IF) : 1;
 parameter AXIS_IF_TX_DEST_WIDTH = $clog2(PORTS_PER_IF)+AXIS_TX_DEST_WIDTH;
-parameter AXIS_IF_RX_DEST_WIDTH = RX_QUEUE_INDEX_WIDTH;
+parameter AXIS_IF_RX_DEST_WIDTH = AXIS_RX_DEST_WIDTH;
 parameter AXIS_IF_TX_USER_WIDTH = AXIS_TX_USER_WIDTH;
 parameter AXIS_IF_RX_USER_WIDTH = AXIS_RX_USER_WIDTH;
 
@@ -3078,6 +3079,7 @@ generate
             // TX and RX engine configuration
             .TX_DESC_TABLE_SIZE(TX_DESC_TABLE_SIZE),
             .RX_DESC_TABLE_SIZE(RX_DESC_TABLE_SIZE),
+            .RX_INDIR_TBL_ADDR_WIDTH(RX_INDIR_TBL_ADDR_WIDTH),
 
             // Scheduler configuration
             .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),

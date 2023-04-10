@@ -117,6 +117,7 @@ dict set params RX_CPL_QUEUE_PIPELINE [dict get $params RX_QUEUE_PIPELINE]
 # TX and RX engine configuration
 dict set params TX_DESC_TABLE_SIZE "32"
 dict set params RX_DESC_TABLE_SIZE "32"
+dict set params RX_INDIR_TBL_ADDR_WIDTH [expr min([dict get $params RX_QUEUE_INDEX_WIDTH], 8)]
 
 # Scheduler configuration
 dict set params TX_SCHEDULER_OP_TABLE_SIZE [dict get $params TX_DESC_TABLE_SIZE]

@@ -176,6 +176,7 @@ export PARAM_RX_CPL_QUEUE_PIPELINE := $(PARAM_RX_QUEUE_PIPELINE)
 # TX and RX engine configuration
 export PARAM_TX_DESC_TABLE_SIZE := 32
 export PARAM_RX_DESC_TABLE_SIZE := 32
+export PARAM_RX_INDIR_TBL_ADDR_WIDTH := $(shell python -c "print(min($(PARAM_RX_QUEUE_INDEX_WIDTH), 8))")
 
 # Scheduler configuration
 export PARAM_TX_SCHEDULER_OP_TABLE_SIZE := $(PARAM_TX_DESC_TABLE_SIZE)

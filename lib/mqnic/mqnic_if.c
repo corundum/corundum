@@ -39,6 +39,7 @@ either expressed or implied, of The Regents of the University of California.
 struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs)
 {
     struct mqnic_if *interface = calloc(1, sizeof(struct mqnic_if));
+    uint32_t val;
 
     if (!interface)
         return NULL;
@@ -163,6 +164,15 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
         goto fail;
     }
 
+    val = mqnic_reg_read32(interface->rx_queue_map_rb->regs, MQNIC_RB_RX_QUEUE_MAP_REG_CFG);
+    interface->rx_queue_map_indir_table_size = 1 << ((val >> 8) & 0xff);
+
+    for (int k = 0; k < interface->port_count; k++)
+    {
+        interface->rx_queue_map_indir_table[k] = interface->regs + mqnic_reg_read32(interface->rx_queue_map_rb->regs, MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+            MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*k + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET);
+    }
+
     for (int k = 0; k < interface->port_count; k++)
     {
         struct mqnic_reg_block *port_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_PORT_TYPE, MQNIC_RB_PORT_VER, k);
@@ -241,12 +251,6 @@ uint32_t mqnic_interface_get_rx_mtu(struct mqnic_if *interface)
     return mqnic_reg_read32(interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_RX_MTU);
 }
 
-uint32_t mqnic_interface_get_rx_queue_map_offset(struct mqnic_if *interface, int port)
-{
-    return mqnic_reg_read32(interface->rx_queue_map_rb->regs, MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
-        MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET);
-}
-
 uint32_t mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, int port)
 {
     return mqnic_reg_read32(interface->rx_queue_map_rb->regs, MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
@@ -257,4 +261,9 @@ uint32_t mqnic_interface_get_rx_queue_map_app_mask(struct mqnic_if *interface, i
 {
     return mqnic_reg_read32(interface->rx_queue_map_rb->regs, MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
         MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK);
+}
+
+uint32_t mqnic_interface_get_rx_queue_map_indir_table(struct mqnic_if *interface, int port, int index)
+{
+    return mqnic_reg_read32(interface->rx_queue_map_indir_table[port], index*4);
 }

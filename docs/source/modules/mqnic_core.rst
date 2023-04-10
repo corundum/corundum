@@ -185,6 +185,10 @@ Parameters
 
     Receive engine descriptor table size, default ``32``.
 
+.. object:: RX_INDIR_TBL_ADDR_WIDTH
+
+    Receive indirection table size, default ``min(RX_QUEUE_INDEX_WIDTH, 8)``.
+
 .. object:: TX_SCHEDULER_OP_TABLE_SIZE
 
     Transmit scheduler operation table size, default ``TX_DESC_TABLE_SIZE``.

@@ -303,7 +303,7 @@ async def run_test_nic(dut):
     tb.loopback_enable = True
 
     for k in range(4):
-        await tb.driver.interfaces[0].set_rx_queue_map_offset(0, k)
+        await tb.driver.interfaces[0].set_rx_queue_map_indir_table(0, 0, k)
 
         await tb.driver.interfaces[0].start_xmit(data, 0)
 
@@ -315,11 +315,14 @@ async def run_test_nic(dut):
 
     tb.loopback_enable = False
 
-    await tb.driver.interfaces[0].set_rx_queue_map_offset(0, 0)
+    await tb.driver.interfaces[0].set_rx_queue_map_indir_table(0, 0, 0)
 
     tb.log.info("Queue mapping RSS mask test")
 
     await tb.driver.interfaces[0].set_rx_queue_map_rss_mask(0, 0x00000003)
+
+    for k in range(4):
+        await tb.driver.interfaces[0].set_rx_queue_map_indir_table(0, k, k)
 
     tb.loopback_enable = True
 
@@ -456,7 +459,7 @@ async def run_test_nic(dut):
 
         for block in tb.driver.interfaces[0].sched_blocks:
             await block.schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000001)
-            await tb.driver.interfaces[0].set_rx_queue_map_offset(block.index, block.index)
+            await tb.driver.interfaces[0].set_rx_queue_map_indir_table(block.index, 0, block.index)
             for k in range(block.interface.tx_queue_count):
                 if k % len(tb.driver.interfaces[0].sched_blocks) == block.index:
                     await block.schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
@@ -489,7 +492,7 @@ async def run_test_nic(dut):
 
         for block in tb.driver.interfaces[0].sched_blocks[1:]:
             await block.schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000000)
-            await tb.driver.interfaces[0].set_rx_queue_map_offset(block.index, 0)
+            await tb.driver.interfaces[0].set_rx_queue_map_indir_table(block.index, 0, 0)
 
     tb.log.info("Read statistics counters")
 
@@ -655,6 +658,7 @@ def test_mqnic_core_pcie_axi(request, if_count, ports_per_if, axi_data_width,
     # TX and RX engine configuration
     parameters['TX_DESC_TABLE_SIZE'] = 32
     parameters['RX_DESC_TABLE_SIZE'] = 32
+    parameters['RX_INDIR_TBL_ADDR_WIDTH'] = min(parameters['RX_QUEUE_INDEX_WIDTH'], 8)
 
     # Scheduler configuration
     parameters['TX_SCHEDULER_OP_TABLE_SIZE'] = parameters['TX_DESC_TABLE_SIZE']

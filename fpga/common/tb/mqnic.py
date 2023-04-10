@@ -180,8 +180,8 @@ MQNIC_IF_FEATURE_RX_CSUM  = (1 << 9)
 MQNIC_IF_FEATURE_RX_HASH  = (1 << 10)
 
 MQNIC_RB_RX_QUEUE_MAP_TYPE             = 0x0000C090
-MQNIC_RB_RX_QUEUE_MAP_VER              = 0x00000100
-MQNIC_RB_RX_QUEUE_MAP_REG_PORTS        = 0x0C
+MQNIC_RB_RX_QUEUE_MAP_VER              = 0x00000200
+MQNIC_RB_RX_QUEUE_MAP_REG_CFG          = 0x0C
 MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET        = 0x10
 MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE        = 0x10
 MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET    = 0x00
@@ -1195,6 +1195,9 @@ class Interface:
         self.port_count = None
         self.sched_block_count = None
 
+        self.rx_queue_map_indir_table_size = None
+        self.rx_queue_map_indir_table = []
+
         self.event_queues = []
 
         self.tx_queues = []
@@ -1294,10 +1297,17 @@ class Interface:
 
         self.rx_queue_map_rb = self.reg_blocks.find(MQNIC_RB_RX_QUEUE_MAP_TYPE, MQNIC_RB_RX_QUEUE_MAP_VER)
 
+        val = await self.rx_queue_map_rb.read_dword(MQNIC_RB_RX_QUEUE_MAP_REG_CFG)
+        self.rx_queue_map_indir_table_size = 2**((val >> 8) & 0xff)
+        self.rx_queue_map_indir_table = []
         for k in range(self.port_count):
-            await self.set_rx_queue_map_offset(k, 0)
+            offset = await self.rx_queue_map_rb.read_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
+                    MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*k + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET)
+            self.rx_queue_map_indir_table.append(self.rx_queue_map_rb.parent.create_window(offset))
+
             await self.set_rx_queue_map_rss_mask(k, 0)
             await self.set_rx_queue_map_app_mask(k, 0)
+            await self.set_rx_queue_map_indir_table(k, 0, 0)
 
         self.event_queues = []
 
@@ -1462,14 +1472,6 @@ class Interface:
         await self.if_ctrl_rb.write_dword(MQNIC_RB_IF_CTRL_REG_TX_MTU, mtu)
         await self.if_ctrl_rb.write_dword(MQNIC_RB_IF_CTRL_REG_RX_MTU, mtu)
 
-    async def get_rx_queue_map_offset(self, port):
-        return await self.rx_queue_map_rb.read_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
-            MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET)
-
-    async def set_rx_queue_map_offset(self, port, val):
-        await self.rx_queue_map_rb.write_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
-            MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_OFFSET, val)
-
     async def get_rx_queue_map_rss_mask(self, port):
         return await self.rx_queue_map_rb.read_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
             MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_RSS_MASK)
@@ -1485,6 +1487,12 @@ class Interface:
     async def set_rx_queue_map_app_mask(self, port, val):
         await self.rx_queue_map_rb.write_dword(MQNIC_RB_RX_QUEUE_MAP_CH_OFFSET +
             MQNIC_RB_RX_QUEUE_MAP_CH_STRIDE*port + MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK, val)
+
+    async def get_rx_queue_map_indir_table(self, port, index):
+        return await self.rx_queue_map_indir_table[port].read_dword(index*4)
+
+    async def set_rx_queue_map_indir_table(self, port, index, val):
+        await self.rx_queue_map_indir_table[port].write_dword(index*4, val)
 
     async def recv(self):
         if not self.pkt_rx_queue:

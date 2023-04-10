@@ -452,6 +452,9 @@ struct mqnic_if {
 
 	u32 max_desc_block_size;
 
+	u32 rx_queue_map_indir_table_size;
+	u8 __iomem *rx_queue_map_indir_table[MQNIC_MAX_PORTS];
+
 	resource_size_t hw_regs_size;
 	u8 __iomem *hw_addr;
 	u8 __iomem *csr_hw_addr;
@@ -527,12 +530,12 @@ u32 mqnic_interface_get_tx_mtu(struct mqnic_if *interface);
 void mqnic_interface_set_tx_mtu(struct mqnic_if *interface, u32 mtu);
 u32 mqnic_interface_get_rx_mtu(struct mqnic_if *interface);
 void mqnic_interface_set_rx_mtu(struct mqnic_if *interface, u32 mtu);
-u32 mqnic_interface_get_rx_queue_map_offset(struct mqnic_if *interface, int port);
-void mqnic_interface_set_rx_queue_map_offset(struct mqnic_if *interface, int port, u32 val);
 u32 mqnic_interface_get_rx_queue_map_rss_mask(struct mqnic_if *interface, int port);
 void mqnic_interface_set_rx_queue_map_rss_mask(struct mqnic_if *interface, int port, u32 val);
 u32 mqnic_interface_get_rx_queue_map_app_mask(struct mqnic_if *interface, int port);
 void mqnic_interface_set_rx_queue_map_app_mask(struct mqnic_if *interface, int port, u32 val);
+u32 mqnic_interface_get_rx_queue_map_indir_table(struct mqnic_if *interface, int port, int index);
+void mqnic_interface_set_rx_queue_map_indir_table(struct mqnic_if *interface, int port, int index, u32 val);
 
 // mqnic_port.c
 int mqnic_create_port(struct mqnic_if *interface, struct mqnic_port **port_ptr,

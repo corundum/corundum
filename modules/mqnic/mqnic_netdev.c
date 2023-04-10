@@ -98,8 +98,13 @@ static int mqnic_start_port(struct net_device *ndev)
 	mqnic_interface_set_tx_mtu(priv->interface, ndev->mtu + ETH_HLEN);
 	mqnic_interface_set_rx_mtu(priv->interface, ndev->mtu + ETH_HLEN);
 
-	// configure RSS
-	mqnic_interface_set_rx_queue_map_rss_mask(priv->interface, 0, rounddown_pow_of_two(priv->rx_queue_count)-1);
+	// configure RX indirection and RSS
+	mqnic_interface_set_rx_queue_map_rss_mask(priv->interface, 0, 0xffffffff);
+	mqnic_interface_set_rx_queue_map_app_mask(priv->interface, 0, 0);
+
+	for (k = 0; k < priv->interface->rx_queue_map_indir_table_size; k++) {
+		mqnic_interface_set_rx_queue_map_indir_table(priv->interface, 0, k, priv->rx_ring[k % priv->rx_queue_count]->index);
+	}
 
 	// enable first scheduler
 	mqnic_activate_sched_block(priv->sched_block[0]);

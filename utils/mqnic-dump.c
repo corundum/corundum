@@ -269,11 +269,21 @@ int main(int argc, char *argv[])
     printf("RX completion queue count: %d\n", dev_interface->rx_cpl_queue_count);
     printf("RX completion queue stride: 0x%08x\n", dev_interface->rx_cpl_queue_stride);
 
-    for (int k = 0; k < dev_interface->port_count; k++)
+    for (int p = 0; p < dev_interface->port_count; p++)
     {
-        printf("Port %d RX queue map offset: %d\n", k, mqnic_interface_get_rx_queue_map_offset(dev_interface, k));
-        printf("Port %d RX queue map RSS mask: 0x%08x\n", k, mqnic_interface_get_rx_queue_map_rss_mask(dev_interface, k));
-        printf("Port %d RX queue map app mask: 0x%08x\n", k, mqnic_interface_get_rx_queue_map_app_mask(dev_interface, k));
+        printf("Port %d RX queue map RSS mask: 0x%08x\n", p, mqnic_interface_get_rx_queue_map_rss_mask(dev_interface, p));
+        printf("Port %d RX queue map app mask: 0x%08x\n", p, mqnic_interface_get_rx_queue_map_app_mask(dev_interface, p));
+        printf("Port %d RX indirection table size: %d\n", p, dev_interface->rx_queue_map_indir_table_size);
+
+        printf("Port %d RX indirection table:\n", p);
+        for (int k = 0; k < dev_interface->rx_queue_map_indir_table_size; k += 8)
+        {
+            printf("%04x:", k);
+            for (int l = 0; l < 8; l++) {
+                printf(" %04x", mqnic_interface_get_rx_queue_map_indir_table(dev_interface, p, k+l));
+            }
+            printf("\n");
+        }
     }
 
     if (port < 0 || port >= dev_interface->port_count)

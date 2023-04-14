@@ -89,7 +89,10 @@ SYN_FILES += lib/axis/rtl/axis_arb_mux.v
 SYN_FILES += lib/axis/rtl/axis_async_fifo.v
 SYN_FILES += lib/axis/rtl/axis_async_fifo_adapter.v
 SYN_FILES += lib/axis/rtl/axis_demux.v
-SYN_FILES += lib/axis/rtl/axis_fifo.v
+# Workaround for Quartus MLAB RAM read enable bug
+# https://www.intel.com/content/www/us/en/support/programmable/articles/000093130.html
+SYN_FILES += rtl/axis_fifo.v
+# SYN_FILES += lib/axis/rtl/axis_fifo.v
 SYN_FILES += lib/axis/rtl/axis_fifo_adapter.v
 SYN_FILES += lib/axis/rtl/axis_pipeline_fifo.v
 SYN_FILES += lib/axis/rtl/axis_register.v

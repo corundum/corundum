@@ -54,7 +54,7 @@ if { ! [regsub {^.*(\d+\.\d+\.\d+([\.-]\d+)?).*$} $git_tag {\1} tag_ver ] } {
 puts "Tag version: ${tag_ver}"
 
 # FW and board IDs
-set fpga_id [expr 0xC34120DD]
+set fpga_id [expr 0xC341A0DD]
 set fw_id [expr 0x00000000]
 set fw_ver $tag_ver
 set board_vendor_id [expr 0x1172]

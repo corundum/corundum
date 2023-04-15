@@ -43,7 +43,7 @@ either expressed or implied, of The Regents of the University of California.
 module fpga_core #
 (
     // FW and board IDs
-    parameter FPGA_ID = 32'hC34120DD,
+    parameter FPGA_ID = 32'hC341A0DD,
     parameter FW_ID = 32'h00000000,
     parameter FW_VER = 32'h00_00_01_00,
     parameter BOARD_ID = 32'h1172_B00A,

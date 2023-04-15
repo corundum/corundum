@@ -26,6 +26,8 @@ set_global_assignment -name MIN_CORE_JUNCTION_TEMP 0
 set_global_assignment -name MAX_CORE_JUNCTION_TEMP 100
 set_global_assignment -name STRATIXV_CONFIGURATION_SCHEME "AVST X8"
 set_global_assignment -name USE_CONFIGURATION_DEVICE OFF
+set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION ON
+set_global_assignment -name GENERATE_COMPRESSED_SOF ON
 set_global_assignment -name GENERATE_PR_RBF_FILE ON
 set_global_assignment -name ENABLE_ED_CRC_CHECK ON
 set_global_assignment -name MINIMUM_SEU_INTERVAL 0

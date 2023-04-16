@@ -28,6 +28,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     Intel         DK-DEV-1SMX-H-A          1SM21BHU2F53E1VG      0x11720001
     Intel         DK-DEV-1SMC-H-A          1SM21CHU1F53E1VG      0x11720001
     Intel         DK-DEV-1SDX-P-A          1SD280PT2F55E1VG      0x1172a00d
+    Intel         DK-DEV-AGF014EA          AGFB014R24B2E2V       0x1172b00e
     Terasic       DE10-Agilex              AGFB014R24B2E2V       0x1172b00a
     Xilinx        Alveo U50                XCU50-2FSVH2104E      0x10ee9032
     Xilinx        Alveo U200               XCU200-2FSGD2104E     0x10ee90c8
@@ -56,6 +57,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     DK-DEV-1SMX-H-A          Gen 3 x16  2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     8 GB
     DK-DEV-1SMC-H-A          Gen 3 x16  2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     16 GB
     DK-DEV-1SDX-P-A          Gen 4 x16  2x QSFP28   2x 4GB DDR4 512M x72, 2x DIMM    \-
+    DK-DEV-AGF014EA          Gen 4 x16  2x QSFP-DD  4x 8GB DDR4 3200 DIMM (4x 72)    \-
     DE10-Agilex              Gen 4 x16  2x QSFP-DD  4x 8GB DDR4 3200 DIMM (4x 72)    \-
     Alveo U50                Gen 3 x16  1x QSFP28   \-                               8 GB
     Alveo U200               Gen 3 x16  2x QSFP28   64 GB DDR4 2400 (4x 2G x72)      \-
@@ -81,10 +83,11 @@ This section details PCIe form-factor targets, which interface with a separate h
     NetFPGA SUME             Y             N :sup:`7`    N :sup:`8`
     250-SoC                  Y             N             N :sup:`9`
     XUP-P3R                  Y             Y             Y
-    DK-DEV-1SMX-H-A          N             N             N
-    DK-DEV-1SMC-H-A          N             N             N
-    DK-DEV-1SDX-P-A          N             N             N :sup:`10`
-    DE10-Agilex              Y             N             N
+    DK-DEV-1SMX-H-A          N :sup:`3`    N             N
+    DK-DEV-1SMC-H-A          N :sup:`3`    N             N
+    DK-DEV-1SDX-P-A          N :sup:`3`    N             N :sup:`10`
+    DK-DEV-AGF014EA          N :sup:`3`    Y :sup:`5`    N
+    DE10-Agilex              Y             N             N :sup:`10`
     Alveo U50                N :sup:`4`    Y             Y
     Alveo U200               Y             Y             Y
     Alveo U250               Y             Y             Y
@@ -141,6 +144,9 @@ This section details PCIe form-factor targets, which interface with a separate h
     DK-DEV-1SMC-H-A          mqnic/fpga_25g/fpga_10g_1sm21c   2x1   256/1K   10G   Y    RR
     DK-DEV-1SDX-P-A          mqnic/fpga_25g/fpga              2x1   256/1K   25G   Y    RR
     DK-DEV-1SDX-P-A          mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   Y    RR
+    DK-DEV-AGF014EA          mqnic/fpga_25g/fpga              2x1   256/1K   25G   Y    RR
+    DK-DEV-AGF014EA          mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   Y    RR
+    DK-DEV-AGF014EA          mqnic/fpga_100g/fpga             2x1   256/1K   100G  N    RR
     DE10-Agilex              mqnic/fpga_25g/fpga              2x1   256/1K   25G   Y    RR
     DE10-Agilex              mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   Y    RR
     DE10-Agilex              mqnic/fpga_100g/fpga             2x1   256/1K   100G  N    RR

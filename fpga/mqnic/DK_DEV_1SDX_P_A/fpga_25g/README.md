@@ -1,11 +1,11 @@
-# Corundum mqnic for Stratix 10 MX
+# Corundum mqnic for DK-DEV-1SDX-P-A
 
 ## Introduction
 
-This design targets the Intel Stratix 10 MX FPGA development board.
+This design targets the Intel DK-DEV-1SDX-P-A FPGA development board.
 
-*  FPGA: 1SM21BHU2F53E1VG (8 GB HBM2) or 1SM21CHU1F53E1VG (16 GB HBM2)
-*  PHY: Transceiver in 10G BASE-R native mode
+*  FPGA: 1SD280PT2F55E1VG
+*  PHY: E-Tile
 
 ## How to build
 

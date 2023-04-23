@@ -205,6 +205,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 {
 	struct i2c_adapter *adapter;
 	struct i2c_client *mux;
+	struct i2c_client *client;
 	int ret = 0;
 
 	mqnic->mod_i2c_client_count = 0;
@@ -429,6 +430,47 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 
 		// read MACs from EEPROM
 		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0x20, MQNIC_MAX_IF);
+
+		break;
+	case MQNIC_BOARD_ID_DK_DEV_1SDX_P_A:
+
+		request_module("at24");
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
+
+		// FPC202 default address 0x0f, module addresses 0x78 and 0x7c
+		// release reset and deassert lpmode
+		client = create_i2c_client(adapter, "24c02", 0x0f, NULL);
+
+		if (client) {
+			i2c_smbus_write_i2c_block_data(client, 0x08, 1, "\x55");
+			i2c_smbus_write_i2c_block_data(client, 0x0A, 1, "\x05");
+
+			i2c_unregister_device(client);
+		}
+
+		// QSFP 1
+		mqnic->mod_i2c_client[0] = create_i2c_client(adapter, "24c02", 0x78, NULL);
+
+		// QSFP 2
+		mqnic->mod_i2c_client[1] = create_i2c_client(adapter, "24c02", 0x7c, NULL);
+
+		mqnic->mod_i2c_client_count = 2;
+
+		// U94 I2C EEPROM
+		mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c128", 0x57, NULL);
+
+		break;
+	case MQNIC_BOARD_ID_DK_DEV_AGF014EA:
+
+		request_module("at24");
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
+
+		// U23 I2C EEPROM
+		mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c64", 0x50, NULL);
 
 		break;
 	case MQNIC_BOARD_ID_DE10_AGILEX:

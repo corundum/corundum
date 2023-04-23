@@ -440,27 +440,8 @@ class TB(object):
 
         dut.user_pb.setimmediatevalue(0)
 
-        # dut.qsfp0_i2c_scl_i.setimmediatevalue(1)
-        # dut.qsfp0_i2c_sda_i.setimmediatevalue(1)
-        # dut.qsfp0_intr_n.setimmediatevalue(1)
-        # dut.qsfp0_mod_prsnt_n.setimmediatevalue(0)
-
-        # dut.qsfp0_rx_error_count_0.setimmediatevalue(0)
-        # dut.qsfp0_rx_error_count_1.setimmediatevalue(0)
-        # dut.qsfp0_rx_error_count_2.setimmediatevalue(0)
-        # dut.qsfp0_rx_error_count_3.setimmediatevalue(0)
-
-        # dut.qsfp1_i2c_scl_i.setimmediatevalue(1)
-        # dut.qsfp1_i2c_sda_i.setimmediatevalue(1)
-        # dut.qsfp1_intr_n.setimmediatevalue(1)
-        # dut.qsfp1_mod_prsnt_n.setimmediatevalue(0)
-
-        # dut.qsfp1_rx_error_count_0.setimmediatevalue(0)
-        # dut.qsfp1_rx_error_count_1.setimmediatevalue(0)
-        # dut.qsfp1_rx_error_count_2.setimmediatevalue(0)
-        # dut.qsfp1_rx_error_count_3.setimmediatevalue(0)
-
-        # dut.qspi_dq_i.setimmediatevalue(0)
+        dut.i2c2_scl_i.setimmediatevalue(1)
+        dut.i2c2_sda_i.setimmediatevalue(1)
 
         self.loopback_enable = False
         cocotb.start_soon(self._run_loopback())

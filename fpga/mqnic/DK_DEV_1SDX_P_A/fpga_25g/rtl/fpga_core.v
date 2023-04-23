@@ -200,6 +200,17 @@ module fpga_core #
     output wire [3:0]                            user_led_g,
 
     /*
+     * I2C
+     */
+    input  wire                                  i2c2_scl_i,
+    output wire                                  i2c2_scl_o,
+    output wire                                  i2c2_scl_t,
+    input  wire                                  i2c2_sda_i,
+    output wire                                  i2c2_sda_o,
+    output wire                                  i2c2_sda_t,
+    output wire                                  bmc_i2c2_disable,
+
+    /*
      * P-Tile interface
      */
     input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]   rx_st_data,
@@ -572,22 +583,8 @@ reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
-reg qsfp0_reset_reg = 1'b0;
-reg qsfp0_lp_mode_reg = 1'b0;
-// reg qsfp0_i2c_scl_o_reg = 1'b1;
-// reg qsfp0_i2c_sda_o_reg = 1'b1;
-
-reg qsfp1_reset_reg = 1'b0;
-reg qsfp1_lp_mode_reg = 1'b0;
-// reg qsfp1_i2c_scl_o_reg = 1'b1;
-// reg qsfp1_i2c_sda_o_reg = 1'b1;
-
-// reg fpga_boot_reg = 1'b0;
-
-// reg qspi_clk_reg = 1'b0;
-// reg qspi_cs_reg = 1'b1;
-// reg [3:0] qspi_dq_o_reg = 4'd0;
-// reg [3:0] qspi_dq_oe_reg = 4'd0;
+reg i2c2_scl_o_reg = 1'b1;
+reg i2c2_sda_o_reg = 1'b1;
 
 assign ctrl_reg_wr_wait = 1'b0;
 assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg;
@@ -595,26 +592,11 @@ assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg;
 assign ctrl_reg_rd_wait = 1'b0;
 assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg;
 
-// assign qsfp0_reset_n = !qsfp0_reset_reg;
-// assign qsfp0_lp_mode = qsfp0_lp_mode_reg;
-// assign qsfp0_i2c_scl_o = qsfp0_i2c_scl_o_reg;
-// assign qsfp0_i2c_scl_t = qsfp0_i2c_scl_o_reg;
-// assign qsfp0_i2c_sda_o = qsfp0_i2c_sda_o_reg;
-// assign qsfp0_i2c_sda_t = qsfp0_i2c_sda_o_reg;
-
-// assign qsfp1_reset_n = !qsfp1_reset_reg;
-// assign qsfp1_lp_mode = qsfp1_lp_mode_reg;
-// assign qsfp1_i2c_scl_o = qsfp1_i2c_scl_o_reg;
-// assign qsfp1_i2c_scl_t = qsfp1_i2c_scl_o_reg;
-// assign qsfp1_i2c_sda_o = qsfp1_i2c_sda_o_reg;
-// assign qsfp1_i2c_sda_t = qsfp1_i2c_sda_o_reg;
-
-// assign fpga_boot = fpga_boot_reg;
-
-// assign qspi_clk = qspi_clk_reg;
-// assign qspi_cs = qspi_cs_reg;
-// assign qspi_dq_o = qspi_dq_o_reg;
-// assign qspi_dq_oe = qspi_dq_oe_reg;
+assign i2c2_scl_o = i2c2_scl_o_reg;
+assign i2c2_scl_t = i2c2_scl_o_reg;
+assign i2c2_sda_o = i2c2_sda_o_reg;
+assign i2c2_sda_t = i2c2_sda_o_reg;
+assign bmc_i2c2_disable = 1'b1;
 
 always @(posedge clk_250mhz) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
@@ -625,54 +607,16 @@ always @(posedge clk_250mhz) begin
         // write operation
         ctrl_reg_wr_ack_reg <= 1'b0;
         case ({ctrl_reg_wr_addr >> 2, 2'b00})
-            // 16'h0040: begin
-            //     // FPGA ID
-            //     fpga_boot_reg <= ctrl_reg_wr_data == 32'hFEE1DEAD;
-            // end
-            // GPIO
-            // 16'h0110: begin
-            //     // GPIO I2C 0
-            //     if (ctrl_reg_wr_strb[0]) begin
-            //         qsfp0_i2c_scl_o_reg <= ctrl_reg_wr_data[1];
-            //     end
-            //     if (ctrl_reg_wr_strb[1]) begin
-            //         qsfp0_i2c_sda_o_reg <= ctrl_reg_wr_data[9];
-            //     end
-            // end
-            // 16'h0114: begin
-            //     // GPIO I2C 1
-            //     if (ctrl_reg_wr_strb[0]) begin
-            //         qsfp1_i2c_scl_o_reg <= ctrl_reg_wr_data[1];
-            //     end
-            //     if (ctrl_reg_wr_strb[1]) begin
-            //         qsfp1_i2c_sda_o_reg <= ctrl_reg_wr_data[9];
-            //     end
-            // end
-            // 16'h0120: begin
-            //     // GPIO XCVR 0123
-            //     if (ctrl_reg_wr_strb[0]) begin
-            //         qsfp0_reset_reg <= ctrl_reg_wr_data[4];
-            //         qsfp0_lp_mode_reg <= ctrl_reg_wr_data[5];
-            //     end
-            //     if (ctrl_reg_wr_strb[1]) begin
-            //         qsfp1_reset_reg <= ctrl_reg_wr_data[12];
-            //         qsfp1_lp_mode_reg <= ctrl_reg_wr_data[13];
-            //     end
-            // end
-            // Flash
-            // 16'h0144: begin
-            //     // QSPI control
-            //     if (ctrl_reg_wr_strb[0]) begin
-            //         qspi_dq_o_reg <= ctrl_reg_wr_data[3:0];
-            //     end
-            //     if (ctrl_reg_wr_strb[1]) begin
-            //         qspi_dq_oe_reg <= ctrl_reg_wr_data[11:8];
-            //     end
-            //     if (ctrl_reg_wr_strb[2]) begin
-            //         qspi_clk_reg <= ctrl_reg_wr_data[16];
-            //         qspi_cs_reg <= ctrl_reg_wr_data[17];
-            //     end
-            // end
+            // I2C 0
+            RBB+8'h0C: begin
+                // I2C ctrl: control
+                if (ctrl_reg_wr_strb[0]) begin
+                    i2c2_scl_o_reg <= ctrl_reg_wr_data[1];
+                end
+                if (ctrl_reg_wr_strb[1]) begin
+                    i2c2_sda_o_reg <= ctrl_reg_wr_data[9];
+                end
+            end
             default: ctrl_reg_wr_ack_reg <= 1'b0;
         endcase
     end
@@ -681,48 +625,17 @@ always @(posedge clk_250mhz) begin
         // read operation
         ctrl_reg_rd_ack_reg <= 1'b1;
         case ({ctrl_reg_rd_addr >> 2, 2'b00})
-            // 16'h0040: ctrl_reg_rd_data_reg <= FPGA_ID; // FPGA ID
-            // GPIO
-            // 16'h0110: begin
-            //     // GPIO I2C 0
-            //     ctrl_reg_rd_data_reg[0] <= qsfp0_i2c_scl_i;
-            //     ctrl_reg_rd_data_reg[1] <= qsfp0_i2c_scl_o_reg;
-            //     ctrl_reg_rd_data_reg[8] <= qsfp0_i2c_sda_i;
-            //     ctrl_reg_rd_data_reg[9] <= qsfp0_i2c_sda_o_reg;
-            // end
-            // 16'h0114: begin
-            //     // GPIO I2C 1
-            //     ctrl_reg_rd_data_reg[0] <= qsfp1_i2c_scl_i;
-            //     ctrl_reg_rd_data_reg[1] <= qsfp1_i2c_scl_o_reg;
-            //     ctrl_reg_rd_data_reg[8] <= qsfp1_i2c_sda_i;
-            //     ctrl_reg_rd_data_reg[9] <= qsfp1_i2c_sda_o_reg;
-            // end
-            // 16'h0120: begin
-            //     // GPIO XCVR 0123
-            //     ctrl_reg_rd_data_reg[0] <= !qsfp0_mod_prsnt_n;
-            //     ctrl_reg_rd_data_reg[1] <= !qsfp0_intr_n;
-            //     ctrl_reg_rd_data_reg[4] <= qsfp0_reset_reg;
-            //     ctrl_reg_rd_data_reg[5] <= qsfp0_lp_mode_reg;
-            //     ctrl_reg_rd_data_reg[8] <= !qsfp1_mod_prsnt_n;
-            //     ctrl_reg_rd_data_reg[9] <= !qsfp1_intr_n;
-            //     ctrl_reg_rd_data_reg[12] <= qsfp1_reset_reg;
-            //     ctrl_reg_rd_data_reg[13] <= qsfp1_lp_mode_reg;
-            // end
-            // Flash
-            // 16'h0140: begin
-            //     // Flash ID
-            //     ctrl_reg_rd_data_reg[7:0]   <= 0; // type (SPI)
-            //     ctrl_reg_rd_data_reg[15:8]  <= 1; // configuration (one segment)
-            //     ctrl_reg_rd_data_reg[23:16] <= 4; // data width (QSPI)
-            //     ctrl_reg_rd_data_reg[31:24] <= 0; // address width (N/A for SPI)
-            // end
-            // 16'h0144: begin
-            //     // QSPI control
-            //     ctrl_reg_rd_data_reg[3:0] <= qspi_dq_i;
-            //     ctrl_reg_rd_data_reg[11:8] <= qspi_dq_oe;
-            //     ctrl_reg_rd_data_reg[16] <= qspi_clk;
-            //     ctrl_reg_rd_data_reg[17] <= qspi_cs;
-            // end
+            // I2C 0
+            RBB+8'h00: ctrl_reg_rd_data_reg <= 32'h0000C110;             // I2C ctrl: Type
+            RBB+8'h04: ctrl_reg_rd_data_reg <= 32'h00000100;             // I2C ctrl: Version
+            RBB+8'h08: ctrl_reg_rd_data_reg <= 0;                        // I2C ctrl: Next header
+            RBB+8'h0C: begin
+                // I2C ctrl: control
+                ctrl_reg_rd_data_reg[0] <= i2c2_scl_i;
+                ctrl_reg_rd_data_reg[1] <= i2c2_scl_o_reg;
+                ctrl_reg_rd_data_reg[8] <= i2c2_sda_i;
+                ctrl_reg_rd_data_reg[9] <= i2c2_sda_o_reg;
+            end
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end
@@ -731,20 +644,8 @@ always @(posedge clk_250mhz) begin
         ctrl_reg_wr_ack_reg <= 1'b0;
         ctrl_reg_rd_ack_reg <= 1'b0;
 
-        qsfp0_reset_reg <= 1'b0;
-        qsfp0_lp_mode_reg <= 1'b0;
-        // qsfp0_i2c_scl_o_reg <= 1'b1;
-        // qsfp0_i2c_sda_o_reg <= 1'b1;
-
-        qsfp1_reset_reg <= 1'b0;
-        qsfp1_lp_mode_reg <= 1'b0;
-        // qsfp1_i2c_scl_o_reg <= 1'b1;
-        // qsfp1_i2c_sda_o_reg <= 1'b1;
-
-        // qspi_clk_reg <= 1'b0;
-        // qspi_cs_reg <= 1'b1;
-        // qspi_dq_o_reg <= 4'd0;
-        // qspi_dq_oe_reg <= 4'd0;
+        i2c2_scl_o_reg <= 1'b1;
+        i2c2_sda_o_reg <= 1'b1;
     end
 end
 

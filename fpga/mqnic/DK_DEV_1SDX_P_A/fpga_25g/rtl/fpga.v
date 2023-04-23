@@ -176,6 +176,13 @@ module fpga #
     output wire [3:0]   user_led_g,
 
     /*
+     * I2C
+     */
+    inout  wire         i2c2_scl,
+    inout  wire         i2c2_sda,
+    output wire         bmc_i2c2_disable,
+
+    /*
      * PCIe: gen 4 x16
      */
     output wire [15:0]  pcie_tx_p,
@@ -249,6 +256,39 @@ sync_reset_100mhz_inst (
     .rst(pcie_rst),
     .out(rst_100mhz)
 );
+
+// GPIO
+wire i2c2_scl_i;
+wire i2c2_scl_o;
+wire i2c2_scl_t;
+wire i2c2_sda_i;
+wire i2c2_sda_o;
+wire i2c2_sda_t;
+
+reg i2c2_scl_o_reg;
+reg i2c2_scl_t_reg;
+reg i2c2_sda_o_reg;
+reg i2c2_sda_t_reg;
+
+always @(posedge pcie_clk) begin
+    i2c2_scl_o_reg <= i2c2_scl_o;
+    i2c2_scl_t_reg <= i2c2_scl_t;
+    i2c2_sda_o_reg <= i2c2_sda_o;
+    i2c2_sda_t_reg <= i2c2_sda_t;
+end
+
+sync_signal #(
+    .WIDTH(2),
+    .N(2)
+)
+sync_signal_inst (
+    .clk(pcie_clk),
+    .in({i2c2_scl, i2c2_sda}),
+    .out({i2c2_scl_i, i2c2_sda_i})
+);
+
+assign i2c2_scl = i2c2_scl_t_reg ? 1'bz : i2c2_scl_o_reg;
+assign i2c2_sda = i2c2_sda_t_reg ? 1'bz : i2c2_sda_o_reg;
 
 // PCIe
 wire coreclkout_hip;
@@ -1152,6 +1192,17 @@ core_inst (
      */
     .user_pb(user_pb),
     .user_led_g(user_led_g),
+
+    /*
+     * I2C
+     */
+    .i2c2_scl_i(i2c2_scl_i),
+    .i2c2_scl_o(i2c2_scl_o),
+    .i2c2_scl_t(i2c2_scl_t),
+    .i2c2_sda_i(i2c2_sda_i),
+    .i2c2_sda_o(i2c2_sda_o),
+    .i2c2_sda_t(i2c2_sda_t),
+    .bmc_i2c2_disable(bmc_i2c2_disable),
 
     /*
      * P-Tile interface

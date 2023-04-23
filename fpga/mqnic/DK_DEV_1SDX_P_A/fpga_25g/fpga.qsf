@@ -101,29 +101,29 @@ set_instance_assignment -name IO_STANDARD "1.8 V" -to user_led_g[2]
 set_instance_assignment -name IO_STANDARD "1.8 V" -to user_led_g[3]
 
 # I2C
+set_location_assignment PIN_R31  -to bmc_i2c1_disable
 set_location_assignment PIN_N36  -to bmc_i2c2_disable
 set_location_assignment PIN_P36  -to bmc_i2c3_disable
-set_location_assignment PIN_R31  -to bmc_i2c1_disable
 
-set_location_assignment PIN_C32  -to i2c1_1v8_scl
-set_location_assignment PIN_G32  -to i2c1_1v8_sda
-set_location_assignment PIN_K32  -to i2c2_1v8_scl
-set_location_assignment PIN_B33  -to i2c2_1v8_sda
-set_location_assignment PIN_G33  -to i2c3_1v8_scl
-set_location_assignment PIN_C33  -to i2c3_1v8_sda
+set_location_assignment PIN_C32  -to i2c1_scl
+set_location_assignment PIN_G32  -to i2c1_sda
+set_location_assignment PIN_K32  -to i2c2_scl
+set_location_assignment PIN_B33  -to i2c2_sda
+set_location_assignment PIN_G33  -to i2c3_scl
+set_location_assignment PIN_C33  -to i2c3_sda
 set_location_assignment PIN_N35  -to i2c_ddr4_dimm_sda
 set_location_assignment PIN_P35  -to i2c_ddr4_dimm_scl
 
+set_instance_assignment -name IO_STANDARD "1.8 V" -to bmc_i2c1_disable
 set_instance_assignment -name IO_STANDARD "1.8 V" -to bmc_i2c2_disable
 set_instance_assignment -name IO_STANDARD "1.8 V" -to bmc_i2c3_disable
-set_instance_assignment -name IO_STANDARD "1.8 V" -to bmc_i2c1_disable
 
-set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c1_1v8_scl
-set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c1_1v8_sda
-set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c2_1v8_scl
-set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c2_1v8_sda
-set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c3_1v8_scl
-set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c3_1v8_sda
+set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c1_scl
+set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c1_sda
+set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c2_scl
+set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c2_sda
+set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c3_scl
+set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c3_sda
 set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c_ddr4_dimm_sda
 set_instance_assignment -name IO_STANDARD "1.8 V" -to i2c_ddr4_dimm_scl
 

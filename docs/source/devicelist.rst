@@ -83,11 +83,11 @@ This section details PCIe form-factor targets, which interface with a separate h
     NetFPGA SUME             Y             N :sup:`7`    N :sup:`8`
     250-SoC                  Y             N             N :sup:`9`
     XUP-P3R                  Y             Y             Y
-    DK-DEV-1SMX-H-A          N :sup:`3`    N             N
-    DK-DEV-1SMC-H-A          N :sup:`3`    N             N
-    DK-DEV-1SDX-P-A          N :sup:`3`    N             N :sup:`10`
-    DK-DEV-AGF014EA          N :sup:`3`    Y :sup:`5`    N
-    DE10-Agilex              Y             N             N :sup:`10`
+    DK-DEV-1SMX-H-A          N :sup:`3`    N :sup:`7`    N
+    DK-DEV-1SMC-H-A          N :sup:`3`    N :sup:`7`    N
+    DK-DEV-1SDX-P-A          Y             N :sup:`3`    N :sup:`10`
+    DK-DEV-AGF014EA          N :sup:`3`    N :sup:`3`    N
+    DE10-Agilex              Y             N :sup:`7`    N :sup:`10`
     Alveo U50                N :sup:`4`    Y             Y
     Alveo U200               Y             Y             Y
     Alveo U250               Y             Y             Y
@@ -144,6 +144,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     DK-DEV-1SMC-H-A          mqnic/fpga_25g/fpga_10g_1sm21c   2x1   256/1K   10G   Y    RR
     DK-DEV-1SDX-P-A          mqnic/fpga_25g/fpga              2x1   256/1K   25G   Y    RR
     DK-DEV-1SDX-P-A          mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   Y    RR
+    DK-DEV-1SDX-P-A          mqnic/fpga_100g/fpga             2x1   256/1K   100G  N    RR
     DK-DEV-AGF014EA          mqnic/fpga_25g/fpga              2x1   256/1K   25G   Y    RR
     DK-DEV-AGF014EA          mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   Y    RR
     DK-DEV-AGF014EA          mqnic/fpga_100g/fpga             2x1   256/1K   100G  N    RR

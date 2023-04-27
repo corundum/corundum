@@ -36,6 +36,10 @@ module led_sreg_driver #(
     parameter COUNT = 8,
     // invert output
     parameter INVERT = 0,
+    // reverse order
+    parameter REVERSE = 0,
+    // interleave A and B inputs, otherwise only use A
+    parameter INTERLEAVE = 0,
     // clock prescale
     parameter PRESCALE = 31
 )
@@ -43,14 +47,16 @@ module led_sreg_driver #(
     input  wire             clk,
     input  wire             rst,
 
-    input  wire [COUNT-1:0] led,
+    input  wire [COUNT-1:0] led_a,
+    input  wire [COUNT-1:0] led_b,
 
     output wire             sreg_d,
     output wire             sreg_ld,
     output wire             sreg_clk
 );
 
-localparam CL_COUNT = $clog2(COUNT+1);
+localparam COUNT_INT = INTERLEAVE ? COUNT*2 : COUNT;
+localparam CL_COUNT = $clog2(COUNT_INT+1);
 localparam CL_PRESCALE = $clog2(PRESCALE+1);
 
 reg [CL_COUNT-1:0] count_reg = 0;
@@ -59,9 +65,9 @@ reg enable_reg = 1'b0;
 reg update_reg = 1'b1;
 reg cycle_reg = 1'b0;
 
-reg [COUNT-1:0] led_sync_reg_1 = 0;
-reg [COUNT-1:0] led_sync_reg_2 = 0;
-reg [COUNT-1:0] led_reg = 0;
+reg [COUNT_INT-1:0] led_sync_reg_1 = 0;
+reg [COUNT_INT-1:0] led_sync_reg_2 = 0;
+reg [COUNT_INT-1:0] led_reg = 0;
 
 reg sreg_d_reg = 1'b0;
 reg sreg_ld_reg = 1'b0;
@@ -71,8 +77,16 @@ assign sreg_d = INVERT ? !sreg_d_reg : sreg_d_reg;
 assign sreg_ld = sreg_ld_reg;
 assign sreg_clk = sreg_clk_reg;
 
+integer i;
+
 always @(posedge clk) begin
-    led_sync_reg_1 <= led;
+    if (INTERLEAVE) begin
+        for (i = 0; i < COUNT; i = i + 1) begin
+            led_sync_reg_1[i*2 +: 2] <= {led_b[i], led_a[i]};
+        end
+    end else begin
+        led_sync_reg_1 <= led_a;
+    end
     led_sync_reg_2 <= led_sync_reg_1;
 
     enable_reg <= 1'b0;
@@ -92,10 +106,14 @@ always @(posedge clk) begin
             sreg_clk_reg <= 1'b0;
             sreg_ld_reg <= 1'b0;
 
-            if (count_reg < COUNT) begin
+            if (count_reg < COUNT_INT) begin
                 count_reg <= count_reg + 1;
                 cycle_reg <= 1'b1;
-                sreg_d_reg <= led_reg[count_reg];
+                if (REVERSE) begin
+                    sreg_d_reg <= led_reg[COUNT_INT-1-count_reg];
+                end else begin
+                    sreg_d_reg <= led_reg[count_reg];
+                end
             end else begin
                 count_reg <= 0;
                 cycle_reg <= 1'b0;
@@ -111,7 +129,11 @@ always @(posedge clk) begin
 
                 count_reg <= 1;
                 cycle_reg <= 1'b1;
-                sreg_d_reg <= led_reg[0];
+                if (REVERSE) begin
+                    sreg_d_reg <= led_reg[COUNT_INT-1];
+                end else begin
+                    sreg_d_reg <= led_reg[0];
+                end
             end
         end
     end

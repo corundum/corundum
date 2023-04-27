@@ -535,35 +535,20 @@ assign qsfp_1_i2c_sda = qsfp_1_i2c_sda_t_reg ? 1'bz : qsfp_1_i2c_sda_o_reg;
 
 wire [7:0] led_red;
 wire [7:0] led_green;
-wire [15:0] led_merged;
-
-assign led_merged[0] = led_red[0];
-assign led_merged[1] = led_green[0];
-assign led_merged[2] = led_red[1];
-assign led_merged[3] = led_green[1];
-assign led_merged[4] = led_red[2];
-assign led_merged[5] = led_green[2];
-assign led_merged[6] = led_red[3];
-assign led_merged[7] = led_green[3];
-assign led_merged[8] = led_red[4];
-assign led_merged[9] = led_green[4];
-assign led_merged[10] = led_red[5];
-assign led_merged[11] = led_green[5];
-assign led_merged[12] = led_red[6];
-assign led_merged[13] = led_green[6];
-assign led_merged[14] = led_red[7];
-assign led_merged[15] = led_green[7];
 
 led_sreg_driver #(
-    .COUNT(16),
+    .COUNT(8),
     .INVERT(1),
+    .REVERSE(0),
+    .INTERLEAVE(1),
     .PRESCALE(63)
 )
 led_sreg_driver_inst (
     .clk(pcie_user_clk),
     .rst(pcie_user_reset),
 
-    .led(led_merged),
+    .led_a(led_red),
+    .led_b(led_green),
 
     .sreg_d(led_sreg_d),
     .sreg_ld(led_sreg_ld),

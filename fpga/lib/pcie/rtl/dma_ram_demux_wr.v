@@ -99,11 +99,14 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     // FIFO to maintain response ordering
     reg [FIFO_ADDR_WIDTH+1-1:0] fifo_wr_ptr_reg = 0;
     reg [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_reg = 0;
+    wire [FIFO_ADDR_WIDTH+1-1:0] fifo_rd_ptr_inc = fifo_rd_ptr_reg + 1;
     (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
     reg [CL_PORTS-1:0] fifo_sel[(2**FIFO_ADDR_WIDTH)-1:0];
 
     wire fifo_empty = fifo_wr_ptr_reg == fifo_rd_ptr_reg;
     wire fifo_full = fifo_wr_ptr_reg == (fifo_rd_ptr_reg ^ (1 << FIFO_ADDR_WIDTH));
+
+    reg [CL_PORTS-1:0] select_resp = 0;
 
     integer i;
 
@@ -167,13 +170,31 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
         seg_ram_wr_cmd_valid_int = (seg_ctrl_wr_cmd_valid && seg_ctrl_wr_cmd_ready) << select_cmd;
     end
 
-    always @(posedge clk) begin
+    always @(posedge clk) begin : fifo_p
+
+        reg [FIFO_ADDR_WIDTH+1-1:0] fifo_curr_rd_ptr;
+        fifo_curr_rd_ptr = fifo_rd_ptr_reg;
+
+        if (seg_ctrl_wr_done && !fifo_empty) begin
+            fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
+            select_resp <= fifo_sel[fifo_rd_ptr_inc[FIFO_ADDR_WIDTH-1:0]];
+            fifo_curr_rd_ptr = fifo_rd_ptr_inc;
+        end
+
+
         if (seg_ctrl_wr_cmd_valid && seg_ctrl_wr_cmd_ready) begin
             fifo_sel[fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0]] <= select_cmd;
             fifo_wr_ptr_reg <= fifo_wr_ptr_reg + 1;
+
+            //if fifo is empty we want the data at the output right away
+            if (fifo_wr_ptr_reg[FIFO_ADDR_WIDTH-1:0] == fifo_curr_rd_ptr[FIFO_ADDR_WIDTH-1:0]) begin
+                select_resp <= select_cmd;
+            end
         end
 
         if (rst) begin
+            select_resp <= 0;
+            fifo_rd_ptr_reg <= 0;
             fifo_wr_ptr_reg <= 0;
         end
     end
@@ -277,8 +298,6 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
 
     assign ctrl_wr_done[n] = seg_ctrl_wr_done;
 
-    wire [CL_PORTS-1:0] select_resp = fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
-
     for (p = 0; p < PORTS; p = p + 1) begin
         reg [FIFO_ADDR_WIDTH+1-1:0] done_count_reg = 0;
         reg done_reg = 1'b0;
@@ -306,16 +325,6 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     end
 
     assign seg_ctrl_wr_done = seg_ram_wr_done_sel != 0;
-
-    always @(posedge clk) begin
-        if (seg_ctrl_wr_done && !fifo_empty) begin
-            fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
-        end
-
-        if (rst) begin
-            fifo_rd_ptr_reg <= 0;
-        end
-    end
 
 end
 

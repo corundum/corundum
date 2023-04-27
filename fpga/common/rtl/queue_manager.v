@@ -250,6 +250,10 @@ reg [OP_TABLE_SIZE-1:0] op_table_commit = 0;
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [QUEUE_INDEX_WIDTH-1:0] op_table_queue[OP_TABLE_SIZE-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg [QUEUE_INDEX_WIDTH-1:0] op_table_queue_finish[OP_TABLE_SIZE-1:0];
+reg [QUEUE_INDEX_WIDTH-1:0] op_table_queue_out_reg;
+reg [QUEUE_INDEX_WIDTH-1:0] op_table_queue_finish_out_reg;
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [QUEUE_PTR_WIDTH-1:0] op_table_queue_ptr[OP_TABLE_SIZE-1:0];
 reg [CL_OP_TABLE_SIZE-1:0] op_table_start_ptr_reg = 0;
 reg [QUEUE_INDEX_WIDTH-1:0] op_table_start_queue;
@@ -293,7 +297,7 @@ wire [2:0] s_axil_awaddr_reg = s_axil_awaddr >> 2;
 wire [QUEUE_INDEX_WIDTH-1:0] s_axil_araddr_queue = s_axil_araddr >> 5;
 wire [2:0] s_axil_araddr_reg = s_axil_araddr >> 2;
 
-wire queue_active = op_table_active[queue_ram_read_data_op_index] && op_table_queue[queue_ram_read_data_op_index] == queue_ram_addr_pipeline_reg[PIPELINE-1];
+wire queue_active = op_table_active[queue_ram_read_data_op_index] && op_table_queue_out_reg == queue_ram_addr_pipeline_reg[PIPELINE-1];
 wire queue_empty_idle = queue_ram_read_data_head_ptr == queue_ram_read_data_tail_ptr;
 wire queue_empty_active = queue_ram_read_data_head_ptr == op_table_queue_ptr[queue_ram_read_data_op_index];
 wire queue_empty = queue_active ? queue_empty_active : queue_empty_idle;
@@ -320,6 +324,7 @@ initial begin
     for (i = 0; i < OP_TABLE_SIZE; i = i + 1) begin
         op_table_queue[i] = 0;
         op_table_queue_ptr[i] = 0;
+        op_table_queue_finish[i] = 0;
     end
 end
 
@@ -393,7 +398,7 @@ always @* begin
         op_axil_write_pipe_hazard = op_axil_write_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == s_axil_awaddr_queue);
         op_axil_read_pipe_hazard = op_axil_read_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == s_axil_araddr_queue);
         op_req_pipe_hazard = op_req_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == s_axis_dequeue_req_queue);
-        op_commit_pipe_hazard = op_commit_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == op_table_queue[op_table_finish_ptr_reg]);
+        op_commit_pipe_hazard = op_commit_pipe_hazard || (stage_active && queue_ram_addr_pipeline_reg[j] == op_table_queue_finish_out_reg);
     end
 
     // pipeline stage 0 - receive request
@@ -427,8 +432,8 @@ always @* begin
 
         write_data_pipeline_next[0] = op_table_queue_ptr[op_table_finish_ptr_reg];
 
-        queue_ram_read_ptr = op_table_queue[op_table_finish_ptr_reg];
-        queue_ram_addr_pipeline_next[0] = op_table_queue[op_table_finish_ptr_reg];
+        queue_ram_read_ptr = op_table_queue_finish_out_reg;
+        queue_ram_addr_pipeline_next[0] = op_table_queue_finish_out_reg;
     end else if (enable && !op_table_active[op_table_start_ptr_reg] && s_axis_dequeue_req_valid && (!m_axis_dequeue_resp_valid || m_axis_dequeue_resp_ready) && !op_req_pipe_reg && !op_req_pipe_hazard) begin
         // dequeue request
         op_req_pipe_next[0] = 1'b1;
@@ -607,7 +612,10 @@ always @* begin
     end
 end
 
-always @(posedge clk) begin
+always @(posedge clk) begin : queue_p
+    reg [CL_OP_TABLE_SIZE-1:0] queue_ram_read_data_op_index_var;
+    reg [CL_OP_TABLE_SIZE-1:0] op_table_finish_ptr_var;
+
     if (rst) begin
         op_axil_write_pipe_reg <= {PIPELINE{1'b0}};
         op_axil_read_pipe_reg <= {PIPELINE{1'b0}};
@@ -629,7 +637,9 @@ always @(posedge clk) begin
 
         op_table_start_ptr_reg <= 0;
         op_table_finish_ptr_reg <= 0;
+        op_table_queue_finish_out_reg <= op_table_queue_finish[0];
     end else begin
+        op_table_finish_ptr_var = op_table_finish_ptr_reg;
         op_axil_write_pipe_reg <= op_axil_write_pipe_next;
         op_axil_read_pipe_reg <= op_axil_read_pipe_next;
         op_req_pipe_reg <= op_req_pipe_next;
@@ -652,7 +662,9 @@ always @(posedge clk) begin
         end
         if (op_table_finish_en) begin
             op_table_finish_ptr_reg <= op_table_finish_ptr_reg + 1;
+            op_table_finish_ptr_var = op_table_finish_ptr_reg + 1;
             op_table_active[op_table_finish_ptr_reg] <= 1'b0;
+            op_table_queue_finish_out_reg <= op_table_queue_finish[op_table_finish_ptr_var];
         end
     end
 
@@ -692,10 +704,25 @@ always @(posedge clk) begin
         queue_ram_read_data_pipeline_reg[i] <= queue_ram_read_data_pipeline_reg[i-1];
     end
 
+    if (PIPELINE == 2) begin
+        queue_ram_read_data_op_index_var = queue_ram_read_data_reg[63:56];
+    end else begin
+        queue_ram_read_data_op_index_var = queue_ram_read_data_pipeline_reg[PIPELINE-2][63:56];
+    end
+    op_table_queue_out_reg <= op_table_queue[queue_ram_read_data_op_index_var];
+
     if (op_table_start_en) begin
         op_table_commit[op_table_start_ptr_reg] <= 1'b0;
         op_table_queue[op_table_start_ptr_reg] <= op_table_start_queue;
+        op_table_queue_finish[op_table_start_ptr_reg] <= op_table_start_queue;
         op_table_queue_ptr[op_table_start_ptr_reg] <= op_table_start_queue_ptr;
+        if (op_table_finish_ptr_var == op_table_start_ptr_reg) begin
+            op_table_queue_finish_out_reg <= op_table_start_queue;
+        end
+
+        if (op_table_start_ptr_reg == queue_ram_read_data_op_index_var) begin
+            op_table_queue_out_reg <= op_table_start_queue;
+        end
     end
     if (op_table_commit_en) begin
         op_table_commit[op_table_commit_ptr] <= 1'b1;

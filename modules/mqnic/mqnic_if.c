@@ -94,95 +94,95 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 	dev_info(dev, "Max TX MTU: %d", interface->max_tx_mtu);
 	dev_info(dev, "Max RX MTU: %d", interface->max_rx_mtu);
 
-	interface->event_queue_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_EVENT_QM_TYPE, MQNIC_RB_EVENT_QM_VER, 0);
+	interface->eq_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_EQM_TYPE, MQNIC_RB_EQM_VER, 0);
 
-	if (!interface->event_queue_rb) {
+	if (!interface->eq_rb) {
 		ret = -EIO;
-		dev_err(dev, "Event queue block not found");
+		dev_err(dev, "EQ block not found");
 		goto fail;
 	}
 
-	interface->event_queue_offset = ioread32(interface->event_queue_rb->regs + MQNIC_RB_EVENT_QM_REG_OFFSET);
-	interface->event_queue_count = ioread32(interface->event_queue_rb->regs + MQNIC_RB_EVENT_QM_REG_COUNT);
-	interface->event_queue_stride = ioread32(interface->event_queue_rb->regs + MQNIC_RB_EVENT_QM_REG_STRIDE);
+	interface->eq_offset = ioread32(interface->eq_rb->regs + MQNIC_RB_EQM_REG_OFFSET);
+	interface->eq_count = ioread32(interface->eq_rb->regs + MQNIC_RB_EQM_REG_COUNT);
+	interface->eq_stride = ioread32(interface->eq_rb->regs + MQNIC_RB_EQM_REG_STRIDE);
 
-	dev_info(dev, "Event queue offset: 0x%08x", interface->event_queue_offset);
-	dev_info(dev, "Event queue count: %d", interface->event_queue_count);
-	dev_info(dev, "Event queue stride: 0x%08x", interface->event_queue_stride);
+	dev_info(dev, "EQ offset: 0x%08x", interface->eq_offset);
+	dev_info(dev, "EQ count: %d", interface->eq_count);
+	dev_info(dev, "EQ stride: 0x%08x", interface->eq_stride);
 
-	interface->event_queue_count = min_t(u32, interface->event_queue_count, MQNIC_MAX_EVENT_RINGS);
+	interface->eq_count = min_t(u32, interface->eq_count, MQNIC_MAX_EQ);
 
-	interface->tx_queue_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_TX_QM_TYPE, MQNIC_RB_TX_QM_VER, 0);
+	interface->txq_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_TX_QM_TYPE, MQNIC_RB_TX_QM_VER, 0);
 
-	if (!interface->tx_queue_rb) {
+	if (!interface->txq_rb) {
 		ret = -EIO;
-		dev_err(dev, "TX queue block not found");
+		dev_err(dev, "TXQ block not found");
 		goto fail;
 	}
 
-	interface->tx_queue_offset = ioread32(interface->tx_queue_rb->regs + MQNIC_RB_TX_QM_REG_OFFSET);
-	interface->tx_queue_count = ioread32(interface->tx_queue_rb->regs + MQNIC_RB_TX_QM_REG_COUNT);
-	interface->tx_queue_stride = ioread32(interface->tx_queue_rb->regs + MQNIC_RB_TX_QM_REG_STRIDE);
+	interface->txq_offset = ioread32(interface->txq_rb->regs + MQNIC_RB_TX_QM_REG_OFFSET);
+	interface->txq_count = ioread32(interface->txq_rb->regs + MQNIC_RB_TX_QM_REG_COUNT);
+	interface->txq_stride = ioread32(interface->txq_rb->regs + MQNIC_RB_TX_QM_REG_STRIDE);
 
-	dev_info(dev, "TX queue offset: 0x%08x", interface->tx_queue_offset);
-	dev_info(dev, "TX queue count: %d", interface->tx_queue_count);
-	dev_info(dev, "TX queue stride: 0x%08x", interface->tx_queue_stride);
+	dev_info(dev, "TXQ offset: 0x%08x", interface->txq_offset);
+	dev_info(dev, "TXQ count: %d", interface->txq_count);
+	dev_info(dev, "TXQ stride: 0x%08x", interface->txq_stride);
 
-	interface->tx_queue_count = min_t(u32, interface->tx_queue_count, MQNIC_MAX_TX_RINGS);
+	interface->txq_count = min_t(u32, interface->txq_count, MQNIC_MAX_TXQ);
 
-	interface->tx_cpl_queue_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_TX_CQM_TYPE, MQNIC_RB_TX_CQM_VER, 0);
+	interface->tx_cq_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_TX_CQM_TYPE, MQNIC_RB_TX_CQM_VER, 0);
 
-	if (!interface->tx_cpl_queue_rb) {
+	if (!interface->tx_cq_rb) {
 		ret = -EIO;
-		dev_err(dev, "TX completion queue block not found");
+		dev_err(dev, "TX CQ block not found");
 		goto fail;
 	}
 
-	interface->tx_cpl_queue_offset = ioread32(interface->tx_cpl_queue_rb->regs + MQNIC_RB_TX_CQM_REG_OFFSET);
-	interface->tx_cpl_queue_count = ioread32(interface->tx_cpl_queue_rb->regs + MQNIC_RB_TX_CQM_REG_COUNT);
-	interface->tx_cpl_queue_stride = ioread32(interface->tx_cpl_queue_rb->regs + MQNIC_RB_TX_CQM_REG_STRIDE);
+	interface->tx_cq_offset = ioread32(interface->tx_cq_rb->regs + MQNIC_RB_TX_CQM_REG_OFFSET);
+	interface->tx_cq_count = ioread32(interface->tx_cq_rb->regs + MQNIC_RB_TX_CQM_REG_COUNT);
+	interface->tx_cq_stride = ioread32(interface->tx_cq_rb->regs + MQNIC_RB_TX_CQM_REG_STRIDE);
 
-	dev_info(dev, "TX completion queue offset: 0x%08x", interface->tx_cpl_queue_offset);
-	dev_info(dev, "TX completion queue count: %d", interface->tx_cpl_queue_count);
-	dev_info(dev, "TX completion queue stride: 0x%08x", interface->tx_cpl_queue_stride);
+	dev_info(dev, "TX CQ offset: 0x%08x", interface->tx_cq_offset);
+	dev_info(dev, "TX CQ count: %d", interface->tx_cq_count);
+	dev_info(dev, "TX CQ stride: 0x%08x", interface->tx_cq_stride);
 
-	interface->tx_cpl_queue_count = min_t(u32, interface->tx_cpl_queue_count, MQNIC_MAX_TX_CPL_RINGS);
+	interface->tx_cq_count = min_t(u32, interface->tx_cq_count, MQNIC_MAX_TX_CQ);
 
-	interface->rx_queue_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_QM_TYPE, MQNIC_RB_RX_QM_VER, 0);
+	interface->rxq_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_QM_TYPE, MQNIC_RB_RX_QM_VER, 0);
 
-	if (!interface->rx_queue_rb) {
+	if (!interface->rxq_rb) {
 		ret = -EIO;
-		dev_err(dev, "RX queue block not found");
+		dev_err(dev, "RXQ block not found");
 		goto fail;
 	}
 
-	interface->rx_queue_offset = ioread32(interface->rx_queue_rb->regs + MQNIC_RB_RX_QM_REG_OFFSET);
-	interface->rx_queue_count = ioread32(interface->rx_queue_rb->regs + MQNIC_RB_RX_QM_REG_COUNT);
-	interface->rx_queue_stride = ioread32(interface->rx_queue_rb->regs + MQNIC_RB_RX_QM_REG_STRIDE);
+	interface->rxq_offset = ioread32(interface->rxq_rb->regs + MQNIC_RB_RX_QM_REG_OFFSET);
+	interface->rxq_count = ioread32(interface->rxq_rb->regs + MQNIC_RB_RX_QM_REG_COUNT);
+	interface->rxq_stride = ioread32(interface->rxq_rb->regs + MQNIC_RB_RX_QM_REG_STRIDE);
 
-	dev_info(dev, "RX queue offset: 0x%08x", interface->rx_queue_offset);
-	dev_info(dev, "RX queue count: %d", interface->rx_queue_count);
-	dev_info(dev, "RX queue stride: 0x%08x", interface->rx_queue_stride);
+	dev_info(dev, "RXQ offset: 0x%08x", interface->rxq_offset);
+	dev_info(dev, "RXQ count: %d", interface->rxq_count);
+	dev_info(dev, "RXQ stride: 0x%08x", interface->rxq_stride);
 
-	interface->rx_queue_count = min_t(u32, interface->rx_queue_count, MQNIC_MAX_RX_RINGS);
+	interface->rxq_count = min_t(u32, interface->rxq_count, MQNIC_MAX_RXQ);
 
-	interface->rx_cpl_queue_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_CQM_TYPE, MQNIC_RB_RX_CQM_VER, 0);
+	interface->rx_cq_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_CQM_TYPE, MQNIC_RB_RX_CQM_VER, 0);
 
-	if (!interface->rx_cpl_queue_rb) {
+	if (!interface->rx_cq_rb) {
 		ret = -EIO;
-		dev_err(dev, "RX completion queue block not found");
+		dev_err(dev, "RX CQ block not found");
 		goto fail;
 	}
 
-	interface->rx_cpl_queue_offset = ioread32(interface->rx_cpl_queue_rb->regs + MQNIC_RB_RX_CQM_REG_OFFSET);
-	interface->rx_cpl_queue_count = ioread32(interface->rx_cpl_queue_rb->regs + MQNIC_RB_RX_CQM_REG_COUNT);
-	interface->rx_cpl_queue_stride = ioread32(interface->rx_cpl_queue_rb->regs + MQNIC_RB_RX_CQM_REG_STRIDE);
+	interface->rx_cq_offset = ioread32(interface->rx_cq_rb->regs + MQNIC_RB_RX_CQM_REG_OFFSET);
+	interface->rx_cq_count = ioread32(interface->rx_cq_rb->regs + MQNIC_RB_RX_CQM_REG_COUNT);
+	interface->rx_cq_stride = ioread32(interface->rx_cq_rb->regs + MQNIC_RB_RX_CQM_REG_STRIDE);
 
-	dev_info(dev, "RX completion queue offset: 0x%08x", interface->rx_cpl_queue_offset);
-	dev_info(dev, "RX completion queue count: %d", interface->rx_cpl_queue_count);
-	dev_info(dev, "RX completion queue stride: 0x%08x", interface->rx_cpl_queue_stride);
+	dev_info(dev, "RX CQ offset: 0x%08x", interface->rx_cq_offset);
+	dev_info(dev, "RX CQ count: %d", interface->rx_cq_count);
+	dev_info(dev, "RX CQ stride: 0x%08x", interface->rx_cq_stride);
 
-	interface->rx_cpl_queue_count = min_t(u32, interface->rx_cpl_queue_count, MQNIC_MAX_RX_CPL_RINGS);
+	interface->rx_cq_count = min_t(u32, interface->rx_cq_count, MQNIC_MAX_RX_CQ);
 
 	interface->rx_queue_map_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_QUEUE_MAP_TYPE, MQNIC_RB_RX_QUEUE_MAP_VER, 0);
 
@@ -207,9 +207,9 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 	}
 
 	// determine desc block size
-	iowrite32(0xf << 8, hw_addr + interface->tx_queue_offset + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
-	interface->max_desc_block_size = 1 << ((ioread32(hw_addr + interface->tx_queue_offset + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG) >> 8) & 0xf);
-	iowrite32(0, hw_addr + interface->tx_queue_offset + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+	iowrite32(0xf << 8, hw_addr + interface->txq_offset + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+	interface->max_desc_block_size = 1 << ((ioread32(hw_addr + interface->txq_offset + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG) >> 8) & 0xf);
+	iowrite32(0, hw_addr + interface->txq_offset + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
 	dev_info(dev, "Max desc block size: %d", interface->max_desc_block_size);
 
@@ -218,45 +218,45 @@ int mqnic_create_interface(struct mqnic_dev *mdev, struct mqnic_if **interface_p
 	desc_block_size = min_t(u32, interface->max_desc_block_size, 4);
 
 	// create rings
-	for (k = 0; k < interface->event_queue_count; k++) {
-		ret = mqnic_create_eq_ring(interface, &interface->event_ring[k], k,
-				hw_addr + interface->event_queue_offset + k * interface->event_queue_stride);
+	for (k = 0; k < interface->eq_count; k++) {
+		ret = mqnic_create_eq(interface, &interface->eq[k], k,
+				hw_addr + interface->eq_offset + k * interface->eq_stride);
 		if (ret)
 			goto fail;
 
-		ret = mqnic_alloc_eq_ring(interface->event_ring[k], mqnic_num_ev_queue_entries,
+		ret = mqnic_alloc_eq(interface->eq[k], mqnic_num_eq_entries,
 				MQNIC_EVENT_SIZE);
 		if (ret)
 			goto fail;
 
-		mqnic_activate_eq_ring(interface->event_ring[k], mdev->irq[k % mdev->irq_count]);
-		mqnic_arm_eq(interface->event_ring[k]);
+		mqnic_activate_eq(interface->eq[k], mdev->irq[k % mdev->irq_count]);
+		mqnic_arm_eq(interface->eq[k]);
 	}
 
-	for (k = 0; k < interface->tx_queue_count; k++) {
-		ret = mqnic_create_tx_ring(interface, &interface->tx_ring[k], k,
-				hw_addr + interface->tx_queue_offset + k * interface->tx_queue_stride);
+	for (k = 0; k < interface->txq_count; k++) {
+		ret = mqnic_create_tx_ring(interface, &interface->txq[k], k,
+				hw_addr + interface->txq_offset + k * interface->txq_stride);
 		if (ret)
 			goto fail;
 	}
 
-	for (k = 0; k < interface->tx_cpl_queue_count; k++) {
-		ret = mqnic_create_cq_ring(interface, &interface->tx_cpl_ring[k], k,
-				hw_addr + interface->tx_cpl_queue_offset + k * interface->tx_cpl_queue_stride);
+	for (k = 0; k < interface->tx_cq_count; k++) {
+		ret = mqnic_create_cq(interface, &interface->tx_cq[k], k,
+				hw_addr + interface->tx_cq_offset + k * interface->tx_cq_stride);
 		if (ret)
 			goto fail;
 	}
 
-	for (k = 0; k < interface->rx_queue_count; k++) {
-		ret = mqnic_create_rx_ring(interface, &interface->rx_ring[k], k,
-				hw_addr + interface->rx_queue_offset + k * interface->rx_queue_stride);
+	for (k = 0; k < interface->rxq_count; k++) {
+		ret = mqnic_create_rx_ring(interface, &interface->rxq[k], k,
+				hw_addr + interface->rxq_offset + k * interface->rxq_stride);
 		if (ret)
 			goto fail;
 	}
 
-	for (k = 0; k < interface->rx_cpl_queue_count; k++) {
-		ret = mqnic_create_cq_ring(interface, &interface->rx_cpl_ring[k], k,
-				hw_addr + interface->rx_cpl_queue_offset + k * interface->rx_cpl_queue_stride);
+	for (k = 0; k < interface->rx_cq_count; k++) {
+		ret = mqnic_create_cq(interface, &interface->rx_cq[k], k,
+				hw_addr + interface->rx_cq_offset + k * interface->rx_cq_stride);
 		if (ret)
 			goto fail;
 	}
@@ -322,25 +322,25 @@ void mqnic_destroy_interface(struct mqnic_if **interface_ptr)
 			mqnic_destroy_netdev(&interface->ndev[k]);
 
 	// free rings
-	for (k = 0; k < ARRAY_SIZE(interface->event_ring); k++)
-		if (interface->event_ring[k])
-			mqnic_destroy_eq_ring(&interface->event_ring[k]);
+	for (k = 0; k < ARRAY_SIZE(interface->eq); k++)
+		if (interface->eq[k])
+			mqnic_destroy_eq(&interface->eq[k]);
 
-	for (k = 0; k < ARRAY_SIZE(interface->tx_ring); k++)
-		if (interface->tx_ring[k])
-			mqnic_destroy_tx_ring(&interface->tx_ring[k]);
+	for (k = 0; k < ARRAY_SIZE(interface->txq); k++)
+		if (interface->txq[k])
+			mqnic_destroy_tx_ring(&interface->txq[k]);
 
-	for (k = 0; k < ARRAY_SIZE(interface->tx_cpl_ring); k++)
-		if (interface->tx_cpl_ring[k])
-			mqnic_destroy_cq_ring(&interface->tx_cpl_ring[k]);
+	for (k = 0; k < ARRAY_SIZE(interface->tx_cq); k++)
+		if (interface->tx_cq[k])
+			mqnic_destroy_cq(&interface->tx_cq[k]);
 
-	for (k = 0; k < ARRAY_SIZE(interface->rx_ring); k++)
-		if (interface->rx_ring[k])
-			mqnic_destroy_rx_ring(&interface->rx_ring[k]);
+	for (k = 0; k < ARRAY_SIZE(interface->rxq); k++)
+		if (interface->rxq[k])
+			mqnic_destroy_rx_ring(&interface->rxq[k]);
 
-	for (k = 0; k < ARRAY_SIZE(interface->rx_cpl_ring); k++)
-		if (interface->rx_cpl_ring[k])
-			mqnic_destroy_cq_ring(&interface->rx_cpl_ring[k]);
+	for (k = 0; k < ARRAY_SIZE(interface->rx_cq); k++)
+		if (interface->rx_cq[k])
+			mqnic_destroy_cq(&interface->rx_cq[k]);
 
 	// free schedulers
 	for (k = 0; k < ARRAY_SIZE(interface->sched_block); k++)

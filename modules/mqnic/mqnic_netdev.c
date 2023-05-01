@@ -47,51 +47,45 @@ static int mqnic_start_port(struct net_device *ndev)
 			priv->interface->index, priv->index);
 
 	// set up RX queues
-	for (k = 0; k < min(priv->rx_queue_count, priv->rx_cpl_queue_count); k++) {
+	for (k = 0; k < min(priv->rxq_count, priv->rx_cq_count); k++) {
 		// set up CQ
-		mqnic_activate_cq_ring(priv->rx_cpl_ring[k],
-				priv->event_ring[k % priv->event_queue_count]);
+		mqnic_activate_cq(priv->rx_cq[k], priv->eq[k % priv->eq_count]);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
-		netif_napi_add(ndev, &priv->rx_cpl_ring[k]->napi,
-				mqnic_poll_rx_cq);
+		netif_napi_add(ndev, &priv->rx_cq[k]->napi, mqnic_poll_rx_cq);
 #else
-		netif_napi_add(ndev, &priv->rx_cpl_ring[k]->napi,
-				mqnic_poll_rx_cq, NAPI_POLL_WEIGHT);
+		netif_napi_add(ndev, &priv->rx_cq[k]->napi, mqnic_poll_rx_cq, NAPI_POLL_WEIGHT);
 #endif
-		napi_enable(&priv->rx_cpl_ring[k]->napi);
+		napi_enable(&priv->rx_cq[k]->napi);
 
-		mqnic_arm_cq(priv->rx_cpl_ring[k]);
+		mqnic_arm_cq(priv->rx_cq[k]);
 
 		// set up queue
-		priv->rx_ring[k]->mtu = ndev->mtu;
+		priv->rxq[k]->mtu = ndev->mtu;
 		if (ndev->mtu + ETH_HLEN <= PAGE_SIZE)
-			priv->rx_ring[k]->page_order = 0;
+			priv->rxq[k]->page_order = 0;
 		else
-			priv->rx_ring[k]->page_order = ilog2((ndev->mtu + ETH_HLEN + PAGE_SIZE - 1) / PAGE_SIZE - 1) + 1;
-		mqnic_activate_rx_ring(priv->rx_ring[k], priv, priv->rx_cpl_ring[k]);
+			priv->rxq[k]->page_order = ilog2((ndev->mtu + ETH_HLEN + PAGE_SIZE - 1) / PAGE_SIZE - 1) + 1;
+		mqnic_activate_rx_ring(priv->rxq[k], priv, priv->rx_cq[k]);
 	}
 
 	// set up TX queues
-	for (k = 0; k < min(priv->tx_queue_count, priv->tx_cpl_queue_count); k++) {
+	for (k = 0; k < min(priv->txq_count, priv->tx_cq_count); k++) {
 		// set up CQ
-		mqnic_activate_cq_ring(priv->tx_cpl_ring[k],
-				priv->event_ring[k % priv->event_queue_count]);
+		mqnic_activate_cq(priv->tx_cq[k], priv->eq[k % priv->eq_count]);
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
-		netif_napi_add_tx(ndev, &priv->tx_cpl_ring[k]->napi,
-				mqnic_poll_tx_cq);
+		netif_napi_add_tx(ndev, &priv->tx_cq[k]->napi, mqnic_poll_tx_cq);
 #else
-		netif_tx_napi_add(ndev, &priv->tx_cpl_ring[k]->napi,
-				mqnic_poll_tx_cq, NAPI_POLL_WEIGHT);
+		netif_tx_napi_add(ndev, &priv->tx_cq[k]->napi, mqnic_poll_tx_cq, NAPI_POLL_WEIGHT);
 #endif
-		napi_enable(&priv->tx_cpl_ring[k]->napi);
+		napi_enable(&priv->tx_cq[k]->napi);
 
-		mqnic_arm_cq(priv->tx_cpl_ring[k]);
+		mqnic_arm_cq(priv->tx_cq[k]);
 
 		// set up queue
-		priv->tx_ring[k]->tx_queue = netdev_get_tx_queue(ndev, k);
-		mqnic_activate_tx_ring(priv->tx_ring[k], priv, priv->tx_cpl_ring[k]);
+		priv->txq[k]->tx_queue = netdev_get_tx_queue(ndev, k);
+		mqnic_activate_tx_ring(priv->txq[k], priv, priv->tx_cq[k]);
 	}
 
 	// set MTU
@@ -103,7 +97,7 @@ static int mqnic_start_port(struct net_device *ndev)
 	mqnic_interface_set_rx_queue_map_app_mask(priv->interface, 0, 0);
 
 	for (k = 0; k < priv->interface->rx_queue_map_indir_table_size; k++) {
-		mqnic_interface_set_rx_queue_map_indir_table(priv->interface, 0, k, priv->rx_ring[k % priv->rx_queue_count]->index);
+		mqnic_interface_set_rx_queue_map_indir_table(priv->interface, 0, k, priv->rxq[k % priv->rxq_count]->index);
 	}
 
 	// enable first scheduler
@@ -155,36 +149,36 @@ static int mqnic_stop_port(struct net_device *ndev)
 		mqnic_deactivate_sched_block(priv->sched_block[k]);
 
 	// deactivate TX queues
-	for (k = 0; k < min(priv->tx_queue_count, priv->tx_cpl_queue_count); k++) {
-		napi_disable(&priv->tx_cpl_ring[k]->napi);
+	for (k = 0; k < min(priv->txq_count, priv->tx_cq_count); k++) {
+		napi_disable(&priv->tx_cq[k]->napi);
 
-		mqnic_deactivate_tx_ring(priv->tx_ring[k]);
+		mqnic_deactivate_tx_ring(priv->txq[k]);
 
-		mqnic_deactivate_cq_ring(priv->tx_cpl_ring[k]);
+		mqnic_deactivate_cq(priv->tx_cq[k]);
 
-		netif_napi_del(&priv->tx_cpl_ring[k]->napi);
+		netif_napi_del(&priv->tx_cq[k]->napi);
 	}
 
 	// deactivate RX queues
-	for (k = 0; k < min(priv->rx_queue_count, priv->rx_cpl_queue_count); k++) {
-		napi_disable(&priv->rx_cpl_ring[k]->napi);
+	for (k = 0; k < min(priv->rxq_count, priv->rx_cq_count); k++) {
+		napi_disable(&priv->rx_cq[k]->napi);
 
-		mqnic_deactivate_rx_ring(priv->rx_ring[k]);
+		mqnic_deactivate_rx_ring(priv->rxq[k]);
 
-		mqnic_deactivate_cq_ring(priv->rx_cpl_ring[k]);
+		mqnic_deactivate_cq(priv->rx_cq[k]);
 
-		netif_napi_del(&priv->rx_cpl_ring[k]->napi);
+		netif_napi_del(&priv->rx_cq[k]->napi);
 	}
 
 	msleep(20);
 
 	// free descriptors in TX queues
-	for (k = 0; k < priv->tx_queue_count; k++)
-		mqnic_free_tx_buf(priv->tx_ring[k]);
+	for (k = 0; k < priv->txq_count; k++)
+		mqnic_free_tx_buf(priv->txq[k]);
 
 	// free descriptors in RX queues
-	for (k = 0; k < priv->rx_queue_count; k++)
-		mqnic_free_rx_buf(priv->rx_ring[k]);
+	for (k = 0; k < priv->rxq_count; k++)
+		mqnic_free_rx_buf(priv->rxq[k]);
 
 	netif_carrier_off(ndev);
 	return 0;
@@ -237,8 +231,8 @@ void mqnic_update_stats(struct net_device *ndev)
 
 	packets = 0;
 	bytes = 0;
-	for (k = 0; k < priv->rx_queue_count; k++) {
-		const struct mqnic_ring *ring = priv->rx_ring[k];
+	for (k = 0; k < priv->rxq_count; k++) {
+		const struct mqnic_ring *ring = priv->rxq[k];
 
 		packets += READ_ONCE(ring->packets);
 		bytes += READ_ONCE(ring->bytes);
@@ -248,8 +242,8 @@ void mqnic_update_stats(struct net_device *ndev)
 
 	packets = 0;
 	bytes = 0;
-	for (k = 0; k < priv->tx_queue_count; k++) {
-		const struct mqnic_ring *ring = priv->tx_ring[k];
+	for (k = 0; k < priv->txq_count; k++) {
+		const struct mqnic_ring *ring = priv->txq[k];
 
 		packets += READ_ONCE(ring->packets);
 		bytes += READ_ONCE(ring->bytes);
@@ -427,7 +421,7 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	int k;
 	u32 desc_block_size;
 
-	ndev = alloc_etherdev_mqs(sizeof(*priv), MQNIC_MAX_TX_RINGS, MQNIC_MAX_RX_RINGS);
+	ndev = alloc_etherdev_mqs(sizeof(*priv), MQNIC_MAX_TXQ, MQNIC_MAX_RXQ);
 	if (!ndev) {
 		dev_err(dev, "Failed to allocate memory");
 		return -ENOMEM;
@@ -454,32 +448,32 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	// associate interface resources
 	priv->if_features = interface->if_features;
 
-	priv->event_queue_count = interface->event_queue_count;
-	for (k = 0; k < interface->event_queue_count; k++)
-		priv->event_ring[k] = interface->event_ring[k];
+	priv->eq_count = interface->eq_count;
+	for (k = 0; k < interface->eq_count; k++)
+		priv->eq[k] = interface->eq[k];
 
-	priv->tx_queue_count = interface->tx_queue_count;
-	for (k = 0; k < interface->tx_queue_count; k++)
-		priv->tx_ring[k] = interface->tx_ring[k];
+	priv->txq_count = interface->txq_count;
+	for (k = 0; k < interface->txq_count; k++)
+		priv->txq[k] = interface->txq[k];
 
-	priv->tx_cpl_queue_count = interface->tx_cpl_queue_count;
-	for (k = 0; k < interface->tx_cpl_queue_count; k++)
-		priv->tx_cpl_ring[k] = interface->tx_cpl_ring[k];
+	priv->tx_cq_count = interface->tx_cq_count;
+	for (k = 0; k < interface->tx_cq_count; k++)
+		priv->tx_cq[k] = interface->tx_cq[k];
 
-	priv->rx_queue_count = interface->rx_queue_count;
-	for (k = 0; k < interface->rx_queue_count; k++)
-		priv->rx_ring[k] = interface->rx_ring[k];
+	priv->rxq_count = interface->rxq_count;
+	for (k = 0; k < interface->rxq_count; k++)
+		priv->rxq[k] = interface->rxq[k];
 
-	priv->rx_cpl_queue_count = interface->rx_cpl_queue_count;
-	for (k = 0; k < interface->rx_cpl_queue_count; k++)
-		priv->rx_cpl_ring[k] = interface->rx_cpl_ring[k];
+	priv->rx_cq_count = interface->rx_cq_count;
+	for (k = 0; k < interface->rx_cq_count; k++)
+		priv->rx_cq[k] = interface->rx_cq[k];
 
 	priv->sched_block_count = interface->sched_block_count;
 	for (k = 0; k < interface->sched_block_count; k++)
 		priv->sched_block[k] = interface->sched_block[k];
 
-	netif_set_real_num_tx_queues(ndev, priv->tx_queue_count);
-	netif_set_real_num_rx_queues(ndev, priv->rx_queue_count);
+	netif_set_real_num_tx_queues(ndev, priv->txq_count);
+	netif_set_real_num_rx_queues(ndev, priv->rxq_count);
 
 	// set MAC
 	ndev->addr_len = ETH_ALEN;
@@ -507,29 +501,29 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	desc_block_size = min_t(u32, interface->max_desc_block_size, 4);
 
 	// allocate ring buffers
-	for (k = 0; k < priv->tx_queue_count; k++) {
-		ret = mqnic_alloc_tx_ring(priv->tx_ring[k], mqnic_num_tx_queue_entries,
+	for (k = 0; k < priv->txq_count; k++) {
+		ret = mqnic_alloc_tx_ring(priv->txq[k], mqnic_num_txq_entries,
 				MQNIC_DESC_SIZE * desc_block_size);
 		if (ret)
 			goto fail;
 	}
 
-	for (k = 0; k < priv->tx_cpl_queue_count; k++) {
-		ret = mqnic_alloc_cq_ring(priv->tx_cpl_ring[k], mqnic_num_tx_queue_entries,
+	for (k = 0; k < priv->tx_cq_count; k++) {
+		ret = mqnic_alloc_cq(priv->tx_cq[k], mqnic_num_txq_entries,
 				MQNIC_CPL_SIZE);
 		if (ret)
 			goto fail;
 	}
 
-	for (k = 0; k < priv->rx_queue_count; k++) {
-		ret = mqnic_alloc_rx_ring(priv->rx_ring[k], mqnic_num_rx_queue_entries,
+	for (k = 0; k < priv->rxq_count; k++) {
+		ret = mqnic_alloc_rx_ring(priv->rxq[k], mqnic_num_rxq_entries,
 				MQNIC_DESC_SIZE);
 		if (ret)
 			goto fail;
 	}
 
-	for (k = 0; k < priv->rx_cpl_queue_count; k++) {
-		ret = mqnic_alloc_cq_ring(priv->rx_cpl_ring[k], mqnic_num_rx_queue_entries,
+	for (k = 0; k < priv->rx_cq_count; k++) {
+		ret = mqnic_alloc_cq(priv->rx_cq[k], mqnic_num_rxq_entries,
 				MQNIC_CPL_SIZE);
 
 		if (ret)
@@ -588,21 +582,21 @@ void mqnic_destroy_netdev(struct net_device **ndev_ptr)
 		unregister_netdev(ndev);
 
 	// free rings
-	for (k = 0; k < ARRAY_SIZE(priv->tx_ring); k++)
-		if (priv->tx_ring[k])
-			mqnic_free_tx_ring(priv->tx_ring[k]);
+	for (k = 0; k < ARRAY_SIZE(priv->txq); k++)
+		if (priv->txq[k])
+			mqnic_free_tx_ring(priv->txq[k]);
 
-	for (k = 0; k < ARRAY_SIZE(priv->tx_cpl_ring); k++)
-		if (priv->tx_cpl_ring[k])
-			mqnic_free_cq_ring(priv->tx_cpl_ring[k]);
+	for (k = 0; k < ARRAY_SIZE(priv->tx_cq); k++)
+		if (priv->tx_cq[k])
+			mqnic_free_cq(priv->tx_cq[k]);
 
-	for (k = 0; k < ARRAY_SIZE(priv->rx_ring); k++)
-		if (priv->rx_ring[k])
-			mqnic_free_rx_ring(priv->rx_ring[k]);
+	for (k = 0; k < ARRAY_SIZE(priv->rxq); k++)
+		if (priv->rxq[k])
+			mqnic_free_rx_ring(priv->rxq[k]);
 
-	for (k = 0; k < ARRAY_SIZE(priv->rx_cpl_ring); k++)
-		if (priv->rx_cpl_ring[k])
-			mqnic_free_cq_ring(priv->rx_cpl_ring[k]);
+	for (k = 0; k < ARRAY_SIZE(priv->rx_cq); k++)
+		if (priv->rx_cq[k])
+			mqnic_free_cq(priv->rx_cq[k]);
 
 	*ndev_ptr = NULL;
 	free_netdev(ndev);

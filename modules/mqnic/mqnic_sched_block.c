@@ -55,7 +55,7 @@ int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_bloc
 
 	block->index = index;
 
-	block->tx_queue_count = interface->tx_queue_count;
+	block->txq_count = interface->txq_count;
 
 	block->block_rb = block_rb;
 

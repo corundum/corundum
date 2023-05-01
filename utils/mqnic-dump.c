@@ -249,25 +249,25 @@ int main(int argc, char *argv[])
     printf("TX MTU: %d\n", mqnic_interface_get_tx_mtu(dev_interface));
     printf("RX MTU: %d\n", mqnic_interface_get_rx_mtu(dev_interface));
 
-    printf("Event queue offset: 0x%08x\n", dev_interface->event_queue_offset);
-    printf("Event queue count: %d\n", dev_interface->event_queue_count);
-    printf("Event queue stride: 0x%08x\n", dev_interface->event_queue_stride);
+    printf("EQ offset: 0x%08x\n", dev_interface->eq_offset);
+    printf("EQ count: %d\n", dev_interface->eq_count);
+    printf("EQ stride: 0x%08x\n", dev_interface->eq_stride);
 
-    printf("TX queue offset: 0x%08x\n", dev_interface->tx_queue_offset);
-    printf("TX queue count: %d\n", dev_interface->tx_queue_count);
-    printf("TX queue stride: 0x%08x\n", dev_interface->tx_queue_stride);
+    printf("TXQ offset: 0x%08x\n", dev_interface->txq_offset);
+    printf("TXQ count: %d\n", dev_interface->txq_count);
+    printf("TXQ stride: 0x%08x\n", dev_interface->txq_stride);
 
-    printf("TX completion queue offset: 0x%08x\n", dev_interface->tx_cpl_queue_offset);
-    printf("TX completion queue count: %d\n", dev_interface->tx_cpl_queue_count);
-    printf("TX completion queue stride: 0x%08x\n", dev_interface->tx_cpl_queue_stride);
+    printf("TX CQ offset: 0x%08x\n", dev_interface->tx_cq_offset);
+    printf("TX CQ count: %d\n", dev_interface->tx_cq_count);
+    printf("TX CQ stride: 0x%08x\n", dev_interface->tx_cq_stride);
 
-    printf("RX queue offset: 0x%08x\n", dev_interface->rx_queue_offset);
-    printf("RX queue count: %d\n", dev_interface->rx_queue_count);
-    printf("RX queue stride: 0x%08x\n", dev_interface->rx_queue_stride);
+    printf("RXQ offset: 0x%08x\n", dev_interface->rxq_offset);
+    printf("RXQ count: %d\n", dev_interface->rxq_count);
+    printf("RXQ stride: 0x%08x\n", dev_interface->rxq_stride);
 
-    printf("RX completion queue offset: 0x%08x\n", dev_interface->rx_cpl_queue_offset);
-    printf("RX completion queue count: %d\n", dev_interface->rx_cpl_queue_count);
-    printf("RX completion queue stride: 0x%08x\n", dev_interface->rx_cpl_queue_stride);
+    printf("RX CQ offset: 0x%08x\n", dev_interface->rx_cq_offset);
+    printf("RX CQ count: %d\n", dev_interface->rx_cq_count);
+    printf("RX CQ stride: 0x%08x\n", dev_interface->rx_cq_stride);
 
     for (int p = 0; p < dev_interface->port_count; p++)
     {
@@ -379,11 +379,11 @@ int main(int argc, char *argv[])
         }
     }
 
-    printf("TX queue info\n");
+    printf("TXQ info\n");
     printf("  Queue      Base Address     E  B  LS   CPL    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->tx_queue_count; k++)
+    for (int k = 0; k < dev_interface->txq_count; k++)
     {
-        volatile uint8_t *base = dev_interface->regs+dev_interface->tx_queue_offset+k*dev_interface->tx_queue_stride;
+        volatile uint8_t *base = dev_interface->regs+dev_interface->txq_offset+k*dev_interface->txq_stride;
 
         uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_QUEUE_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_QUEUE_BASE_ADDR_REG+4) << 32);
         uint8_t active = (mqnic_reg_read32(base, MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG) & MQNIC_QUEUE_ACTIVE_MASK) != 0;
@@ -397,30 +397,30 @@ int main(int argc, char *argv[])
         printf("TXQ %4d  0x%016lx  %d  %d  %2d  %4d  %6d  %6d  %6d\n", k, base_addr, active, log_desc_block_size, log_queue_size, cpl_queue_index, head_ptr, tail_ptr, occupancy);
     }
 
-    printf("TX completion queue info\n");
+    printf("TX CQ info\n");
     printf("  Queue       Base Address     E  LS  A C   Int    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->tx_queue_count; k++)
+    for (int k = 0; k < dev_interface->tx_cq_count; k++)
     {
-        volatile uint8_t *base = dev_interface->regs+dev_interface->tx_cpl_queue_offset+k*dev_interface->tx_cpl_queue_stride;
+        volatile uint8_t *base = dev_interface->regs+dev_interface->tx_cq_offset+k*dev_interface->tx_cq_stride;
 
-        uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_CPL_QUEUE_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_CPL_QUEUE_BASE_ADDR_REG+4) << 32);
-        uint8_t active = (mqnic_reg_read32(base, MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG) & MQNIC_CPL_QUEUE_ACTIVE_MASK) != 0;
-        uint8_t log_queue_size = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG) & 0xff;
-        uint8_t armed = (mqnic_reg_read32(base, MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG) & MQNIC_CPL_QUEUE_ARM_MASK) != 0;
-        uint8_t continuous = (mqnic_reg_read32(base, MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG) & MQNIC_CPL_QUEUE_CONT_MASK) != 0;
-        uint32_t interrupt_index = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG) & 0xffff;
-        uint32_t head_ptr = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_HEAD_PTR_REG);
-        uint32_t tail_ptr = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_TAIL_PTR_REG);
+        uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_CQ_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_CQ_BASE_ADDR_REG+4) << 32);
+        uint8_t active = (mqnic_reg_read32(base, MQNIC_CQ_ACTIVE_LOG_SIZE_REG) & MQNIC_CQ_ACTIVE_MASK) != 0;
+        uint8_t log_queue_size = mqnic_reg_read32(base, MQNIC_CQ_ACTIVE_LOG_SIZE_REG) & 0xff;
+        uint8_t armed = (mqnic_reg_read32(base, MQNIC_CQ_INTERRUPT_INDEX_REG) & MQNIC_CQ_ARM_MASK) != 0;
+        uint8_t continuous = (mqnic_reg_read32(base, MQNIC_CQ_INTERRUPT_INDEX_REG) & MQNIC_CQ_CONT_MASK) != 0;
+        uint32_t interrupt_index = mqnic_reg_read32(base, MQNIC_CQ_INTERRUPT_INDEX_REG) & 0xffff;
+        uint32_t head_ptr = mqnic_reg_read32(base, MQNIC_CQ_HEAD_PTR_REG);
+        uint32_t tail_ptr = mqnic_reg_read32(base, MQNIC_CQ_TAIL_PTR_REG);
         uint32_t occupancy = (head_ptr - tail_ptr) & 0xffff;
 
-        printf("TXCQ %4d  0x%016lx  %d  %2d  %d %d  %4d  %6d  %6d  %6d\n", k, base_addr, active, log_queue_size, armed, continuous, interrupt_index, head_ptr, tail_ptr, occupancy);
+        printf("TX CQ %4d  0x%016lx  %d  %2d  %d %d  %4d  %6d  %6d  %6d\n", k, base_addr, active, log_queue_size, armed, continuous, interrupt_index, head_ptr, tail_ptr, occupancy);
     }
 
-    printf("RX queue info\n");
+    printf("RXQ info\n");
     printf("  Queue      Base Address     E  B  LS   CPL    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->rx_queue_count; k++)
+    for (int k = 0; k < dev_interface->rxq_count; k++)
     {
-        volatile uint8_t *base = dev_interface->regs+dev_interface->rx_queue_offset+k*dev_interface->rx_queue_stride;
+        volatile uint8_t *base = dev_interface->regs+dev_interface->rxq_offset+k*dev_interface->rxq_stride;
 
         uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_QUEUE_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_QUEUE_BASE_ADDR_REG+4) << 32);
         uint8_t active = (mqnic_reg_read32(base, MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG) & MQNIC_QUEUE_ACTIVE_MASK) != 0;
@@ -434,39 +434,39 @@ int main(int argc, char *argv[])
         printf("RXQ %4d  0x%016lx  %d  %d  %2d  %4d  %6d  %6d  %6d\n", k, base_addr, active, log_desc_block_size, log_queue_size, cpl_queue_index, head_ptr, tail_ptr, occupancy);
     }
 
-    printf("RX completion queue info\n");
+    printf("RX CQ info\n");
     printf("  Queue       Base Address     E  LS  A C   Int    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->rx_queue_count; k++)
+    for (int k = 0; k < dev_interface->rx_cq_count; k++)
     {
-        volatile uint8_t *base = dev_interface->regs+dev_interface->rx_cpl_queue_offset+k*dev_interface->rx_cpl_queue_stride;
+        volatile uint8_t *base = dev_interface->regs+dev_interface->rx_cq_offset+k*dev_interface->rx_cq_stride;
 
-        uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_CPL_QUEUE_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_CPL_QUEUE_BASE_ADDR_REG+4) << 32);
-        uint8_t active = (mqnic_reg_read32(base, MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG) & MQNIC_CPL_QUEUE_ACTIVE_MASK) != 0;
-        uint8_t log_queue_size = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG) & 0xff;
-        uint8_t armed = (mqnic_reg_read32(base, MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG) & MQNIC_CPL_QUEUE_ARM_MASK) != 0;
-        uint8_t continuous = (mqnic_reg_read32(base, MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG) & MQNIC_CPL_QUEUE_CONT_MASK) != 0;
-        uint32_t interrupt_index = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG) & 0xffff;
-        uint32_t head_ptr = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_HEAD_PTR_REG);
-        uint32_t tail_ptr = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_TAIL_PTR_REG);
+        uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_CQ_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_CQ_BASE_ADDR_REG+4) << 32);
+        uint8_t active = (mqnic_reg_read32(base, MQNIC_CQ_ACTIVE_LOG_SIZE_REG) & MQNIC_CQ_ACTIVE_MASK) != 0;
+        uint8_t log_queue_size = mqnic_reg_read32(base, MQNIC_CQ_ACTIVE_LOG_SIZE_REG) & 0xff;
+        uint8_t armed = (mqnic_reg_read32(base, MQNIC_CQ_INTERRUPT_INDEX_REG) & MQNIC_CQ_ARM_MASK) != 0;
+        uint8_t continuous = (mqnic_reg_read32(base, MQNIC_CQ_INTERRUPT_INDEX_REG) & MQNIC_CQ_CONT_MASK) != 0;
+        uint32_t interrupt_index = mqnic_reg_read32(base, MQNIC_CQ_INTERRUPT_INDEX_REG) & 0xffff;
+        uint32_t head_ptr = mqnic_reg_read32(base, MQNIC_CQ_HEAD_PTR_REG);
+        uint32_t tail_ptr = mqnic_reg_read32(base, MQNIC_CQ_TAIL_PTR_REG);
         uint32_t occupancy = (head_ptr - tail_ptr) & 0xffff;
 
-        printf("RXCQ %4d  0x%016lx  %d  %2d  %d %d  %4d  %6d  %6d  %6d\n", k, base_addr, active, log_queue_size, armed, continuous, interrupt_index, head_ptr, tail_ptr, occupancy);
+        printf("RX CQ %4d  0x%016lx  %d  %2d  %d %d  %4d  %6d  %6d  %6d\n", k, base_addr, active, log_queue_size, armed, continuous, interrupt_index, head_ptr, tail_ptr, occupancy);
     }
 
-    printf("Event queue info\n");
+    printf("EQ info\n");
     printf(" Queue      Base Address     E  LS  A C   Int    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->event_queue_count; k++)
+    for (int k = 0; k < dev_interface->eq_count; k++)
     {
-        volatile uint8_t *base = dev_interface->regs+dev_interface->event_queue_offset+k*dev_interface->event_queue_stride;
+        volatile uint8_t *base = dev_interface->regs+dev_interface->eq_offset+k*dev_interface->eq_stride;
 
-        uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_CPL_QUEUE_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_CPL_QUEUE_BASE_ADDR_REG+4) << 32);
-        uint8_t active = (mqnic_reg_read32(base, MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG) & MQNIC_CPL_QUEUE_ACTIVE_MASK) != 0;
-        uint8_t log_queue_size = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_ACTIVE_LOG_SIZE_REG) & 0xff;
-        uint8_t armed = (mqnic_reg_read32(base, MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG) & MQNIC_CPL_QUEUE_ARM_MASK) != 0;
-        uint8_t continuous = (mqnic_reg_read32(base, MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG) & MQNIC_CPL_QUEUE_CONT_MASK) != 0;
-        uint32_t interrupt_index = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_INTERRUPT_INDEX_REG) & 0xffff;
-        uint32_t head_ptr = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_HEAD_PTR_REG);
-        uint32_t tail_ptr = mqnic_reg_read32(base, MQNIC_CPL_QUEUE_TAIL_PTR_REG);
+        uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_EQ_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_EQ_BASE_ADDR_REG+4) << 32);
+        uint8_t active = (mqnic_reg_read32(base, MQNIC_EQ_ACTIVE_LOG_SIZE_REG) & MQNIC_EQ_ACTIVE_MASK) != 0;
+        uint8_t log_queue_size = mqnic_reg_read32(base, MQNIC_EQ_ACTIVE_LOG_SIZE_REG) & 0xff;
+        uint8_t armed = (mqnic_reg_read32(base, MQNIC_EQ_INTERRUPT_INDEX_REG) & MQNIC_EQ_ARM_MASK) != 0;
+        uint8_t continuous = (mqnic_reg_read32(base, MQNIC_EQ_INTERRUPT_INDEX_REG) & MQNIC_EQ_CONT_MASK) != 0;
+        uint32_t interrupt_index = mqnic_reg_read32(base, MQNIC_EQ_INTERRUPT_INDEX_REG) & 0xffff;
+        uint32_t head_ptr = mqnic_reg_read32(base, MQNIC_EQ_HEAD_PTR_REG);
+        uint32_t tail_ptr = mqnic_reg_read32(base, MQNIC_EQ_TAIL_PTR_REG);
         uint32_t occupancy = (head_ptr - tail_ptr) & 0xffff;
 
         printf("EQ %4d  0x%016lx  %d  %2d  %d %d  %4d  %6d  %6d  %6d\n", k, base_addr, active, log_queue_size, armed, continuous, interrupt_index, head_ptr, tail_ptr, occupancy);
@@ -475,7 +475,7 @@ int main(int argc, char *argv[])
     for (int k = 0; k < dev_sched_block->sched_count; k++)
     {
         printf("Scheduler block %d scheduler %d\n", sched_block, k);
-        for (int l = 0; l < dev_interface->tx_queue_count; l++)
+        for (int l = 0; l < dev_interface->txq_count; l++)
         {
             printf("Sched %2d queue %4d state: 0x%08x\n", k, l, mqnic_reg_read32(dev_sched_block->sched[k]->regs, l*4));
         }

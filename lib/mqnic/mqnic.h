@@ -98,11 +98,11 @@ struct mqnic_if {
 
     struct mqnic_reg_block *rb_list;
     struct mqnic_reg_block *if_ctrl_rb;
-    struct mqnic_reg_block *event_queue_rb;
-    struct mqnic_reg_block *tx_queue_rb;
-    struct mqnic_reg_block *tx_cpl_queue_rb;
-    struct mqnic_reg_block *rx_queue_rb;
-    struct mqnic_reg_block *rx_cpl_queue_rb;
+    struct mqnic_reg_block *eq_rb;
+    struct mqnic_reg_block *txq_rb;
+    struct mqnic_reg_block *tx_cq_rb;
+    struct mqnic_reg_block *rxq_rb;
+    struct mqnic_reg_block *rx_cq_rb;
     struct mqnic_reg_block *rx_queue_map_rb;
 
     uint32_t if_features;
@@ -113,22 +113,22 @@ struct mqnic_if {
     uint32_t rx_queue_map_indir_table_size;
     volatile uint8_t *rx_queue_map_indir_table[MQNIC_MAX_PORTS];
 
-    uint32_t event_queue_offset;
-    uint32_t event_queue_count;
-    uint32_t event_queue_stride;
+    uint32_t eq_offset;
+    uint32_t eq_count;
+    uint32_t eq_stride;
 
-    uint32_t tx_queue_offset;
-    uint32_t tx_queue_count;
-    uint32_t tx_queue_stride;
-    uint32_t tx_cpl_queue_offset;
-    uint32_t tx_cpl_queue_count;
-    uint32_t tx_cpl_queue_stride;
-    uint32_t rx_queue_offset;
-    uint32_t rx_queue_count;
-    uint32_t rx_queue_stride;
-    uint32_t rx_cpl_queue_offset;
-    uint32_t rx_cpl_queue_count;
-    uint32_t rx_cpl_queue_stride;
+    uint32_t txq_offset;
+    uint32_t txq_count;
+    uint32_t txq_stride;
+    uint32_t tx_cq_offset;
+    uint32_t tx_cq_count;
+    uint32_t tx_cq_stride;
+    uint32_t rxq_offset;
+    uint32_t rxq_count;
+    uint32_t rxq_stride;
+    uint32_t rx_cq_offset;
+    uint32_t rx_cq_count;
+    uint32_t rx_cq_stride;
 
     uint32_t port_count;
     struct mqnic_port *ports[MQNIC_MAX_PORTS];

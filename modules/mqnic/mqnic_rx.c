@@ -145,17 +145,17 @@ void mqnic_free_rx_ring(struct mqnic_ring *ring)
 }
 
 int mqnic_activate_rx_ring(struct mqnic_ring *ring, struct mqnic_priv *priv,
-		struct mqnic_cq_ring *cq_ring)
+		struct mqnic_cq *cq)
 {
 	mqnic_deactivate_rx_ring(ring);
 
-	if (!ring->buf || !priv || !cq_ring || cq_ring->handler || cq_ring->src_ring)
+	if (!ring->buf || !priv || !cq || cq->handler || cq->src_ring)
 		return -EINVAL;
 
 	ring->priv = priv;
-	ring->cq_ring = cq_ring;
-	cq_ring->src_ring = ring;
-	cq_ring->handler = mqnic_rx_irq;
+	ring->cq = cq;
+	cq->src_ring = ring;
+	cq->handler = mqnic_rx_irq;
 
 	ring->head_ptr = 0;
 	ring->tail_ptr = 0;
@@ -165,8 +165,8 @@ int mqnic_activate_rx_ring(struct mqnic_ring *ring, struct mqnic_priv *priv,
 	// set base address
 	iowrite32(ring->buf_dma_addr, ring->hw_addr + MQNIC_QUEUE_BASE_ADDR_REG + 0);
 	iowrite32(ring->buf_dma_addr >> 32, ring->hw_addr + MQNIC_QUEUE_BASE_ADDR_REG + 4);
-	// set completion queue index
-	iowrite32(cq_ring->index, ring->hw_addr + MQNIC_QUEUE_CPL_QUEUE_INDEX_REG);
+	// set CQN
+	iowrite32(cq->cqn, ring->hw_addr + MQNIC_QUEUE_CPL_QUEUE_INDEX_REG);
 	// set pointers
 	iowrite32(ring->head_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_QUEUE_HEAD_PTR_REG);
 	iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_QUEUE_TAIL_PTR_REG);
@@ -187,13 +187,13 @@ void mqnic_deactivate_rx_ring(struct mqnic_ring *ring)
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
 			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
-	if (ring->cq_ring) {
-		ring->cq_ring->src_ring = NULL;
-		ring->cq_ring->handler = NULL;
+	if (ring->cq) {
+		ring->cq->src_ring = NULL;
+		ring->cq->handler = NULL;
 	}
 
 	ring->priv = NULL;
-	ring->cq_ring = NULL;
+	ring->cq = NULL;
 
 	ring->active = 0;
 }
@@ -309,11 +309,11 @@ void mqnic_refill_rx_buffers(struct mqnic_ring *ring)
 	mqnic_rx_write_head_ptr(ring);
 }
 
-int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
+int mqnic_process_rx_cq(struct mqnic_cq *cq, int napi_budget)
 {
-	struct mqnic_if *interface = cq_ring->interface;
+	struct mqnic_if *interface = cq->interface;
 	struct device *dev = interface->dev;
-	struct mqnic_ring *rx_ring = cq_ring->src_ring;
+	struct mqnic_ring *rx_ring = cq->src_ring;
 	struct mqnic_priv *priv = rx_ring->priv;
 	struct mqnic_rx_info *rx_info;
 	struct mqnic_cpl *cpl;
@@ -331,13 +331,13 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		return done;
 
 	// process completion queue
-	cq_tail_ptr = cq_ring->tail_ptr;
-	cq_index = cq_tail_ptr & cq_ring->size_mask;
+	cq_tail_ptr = cq->tail_ptr;
+	cq_index = cq_tail_ptr & cq->size_mask;
 
 	while (done < budget) {
-		cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index * cq_ring->stride);
+		cpl = (struct mqnic_cpl *)(cq->buf + cq_index * cq->stride);
 
-		if (!!(cpl->phase & cpu_to_le32(0x80000000)) == !!(cq_tail_ptr & cq_ring->size))
+		if (!!(cpl->phase & cpu_to_le32(0x80000000)) == !!(cq_tail_ptr & cq->size))
 			break;
 
 		dma_rmb();
@@ -348,16 +348,16 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 
 		if (unlikely(!page)) {
 			dev_err(dev, "%s: ring %d null page at index %d",
-					__func__, cq_ring->index, ring_index);
+					__func__, rx_ring->index, ring_index);
 			print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 					cpl, MQNIC_CPL_SIZE, true);
 			break;
 		}
 
-		skb = napi_get_frags(&cq_ring->napi);
+		skb = napi_get_frags(&cq->napi);
 		if (unlikely(!skb)) {
 			dev_err(dev, "%s: ring %d failed to allocate skb",
-					__func__, cq_ring->index);
+					__func__, rx_ring->index);
 			break;
 		}
 
@@ -392,7 +392,7 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		skb->truesize += rx_info->len;
 
 		// hand off SKB
-		napi_gro_frags(&cq_ring->napi);
+		napi_gro_frags(&cq->napi);
 
 		rx_ring->packets++;
 		rx_ring->bytes += le16_to_cpu(cpl->len);
@@ -400,12 +400,12 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		done++;
 
 		cq_tail_ptr++;
-		cq_index = cq_tail_ptr & cq_ring->size_mask;
+		cq_index = cq_tail_ptr & cq->size_mask;
 	}
 
 	// update CQ tail
-	cq_ring->tail_ptr = cq_tail_ptr;
-	mqnic_cq_write_tail_ptr(cq_ring);
+	cq->tail_ptr = cq_tail_ptr;
+	mqnic_cq_write_tail_ptr(cq);
 
 	// process ring
 	ring_tail_ptr = READ_ONCE(rx_ring->tail_ptr);
@@ -430,24 +430,24 @@ int mqnic_process_rx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 	return done;
 }
 
-void mqnic_rx_irq(struct mqnic_cq_ring *cq)
+void mqnic_rx_irq(struct mqnic_cq *cq)
 {
 	napi_schedule_irqoff(&cq->napi);
 }
 
 int mqnic_poll_rx_cq(struct napi_struct *napi, int budget)
 {
-	struct mqnic_cq_ring *cq_ring = container_of(napi, struct mqnic_cq_ring, napi);
+	struct mqnic_cq *cq = container_of(napi, struct mqnic_cq, napi);
 	int done;
 
-	done = mqnic_process_rx_cq(cq_ring, budget);
+	done = mqnic_process_rx_cq(cq, budget);
 
 	if (done == budget)
 		return done;
 
 	napi_complete(napi);
 
-	mqnic_arm_cq(cq_ring);
+	mqnic_arm_cq(cq);
 
 	return done;
 }

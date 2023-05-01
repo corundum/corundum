@@ -182,25 +182,25 @@ int main(int argc, char *argv[])
     printf("TX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_TX_MTU));
     printf("RX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_RX_MTU));
 
-    printf("Event queue offset: 0x%08x\n", dev_interface->event_queue_offset);
-    printf("Event queue count: %d\n", dev_interface->event_queue_count);
-    printf("Event queue stride: 0x%08x\n", dev_interface->event_queue_stride);
+    printf("EQ offset: 0x%08x\n", dev_interface->eq_offset);
+    printf("EQ count: %d\n", dev_interface->eq_count);
+    printf("EQ stride: 0x%08x\n", dev_interface->eq_stride);
 
-    printf("TX queue offset: 0x%08x\n", dev_interface->tx_queue_offset);
-    printf("TX queue count: %d\n", dev_interface->tx_queue_count);
-    printf("TX queue stride: 0x%08x\n", dev_interface->tx_queue_stride);
+    printf("TXQ offset: 0x%08x\n", dev_interface->txq_offset);
+    printf("TXQ count: %d\n", dev_interface->txq_count);
+    printf("TXQ stride: 0x%08x\n", dev_interface->txq_stride);
 
-    printf("TX completion queue offset: 0x%08x\n", dev_interface->tx_cpl_queue_offset);
-    printf("TX completion queue count: %d\n", dev_interface->tx_cpl_queue_count);
-    printf("TX completion queue stride: 0x%08x\n", dev_interface->tx_cpl_queue_stride);
+    printf("TX CQ offset: 0x%08x\n", dev_interface->tx_cq_offset);
+    printf("TX CQ count: %d\n", dev_interface->tx_cq_count);
+    printf("TX CQ stride: 0x%08x\n", dev_interface->tx_cq_stride);
 
-    printf("RX queue offset: 0x%08x\n", dev_interface->rx_queue_offset);
-    printf("RX queue count: %d\n", dev_interface->rx_queue_count);
-    printf("RX queue stride: 0x%08x\n", dev_interface->rx_queue_stride);
+    printf("RXQ offset: 0x%08x\n", dev_interface->rxq_offset);
+    printf("RXQ count: %d\n", dev_interface->rxq_count);
+    printf("RXQ stride: 0x%08x\n", dev_interface->rxq_stride);
 
-    printf("RX completion queue offset: 0x%08x\n", dev_interface->rx_cpl_queue_offset);
-    printf("RX completion queue count: %d\n", dev_interface->rx_cpl_queue_count);
-    printf("RX completion queue stride: 0x%08x\n", dev_interface->rx_cpl_queue_stride);
+    printf("RX CQ offset: 0x%08x\n", dev_interface->rx_cq_offset);
+    printf("RX CQ count: %d\n", dev_interface->rx_cq_count);
+    printf("RX CQ stride: 0x%08x\n", dev_interface->rx_cq_stride);
 
     if (port < 0 || port >= dev_interface->port_count)
     {

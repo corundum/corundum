@@ -511,7 +511,7 @@ async def run_test_nic(dut):
     # enable queues
     tb.log.info("Enable queues")
     await tb.driver.interfaces[0].sched_blocks[0].schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000001)
-    for k in range(tb.driver.interfaces[0].tx_queue_count):
+    for k in range(tb.driver.interfaces[0].txq_count):
         await tb.driver.interfaces[0].sched_blocks[0].schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
 
     # wait for all writes to complete

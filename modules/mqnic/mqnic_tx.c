@@ -147,17 +147,17 @@ void mqnic_free_tx_ring(struct mqnic_ring *ring)
 }
 
 int mqnic_activate_tx_ring(struct mqnic_ring *ring, struct mqnic_priv *priv,
-		struct mqnic_cq_ring *cq_ring)
+		struct mqnic_cq *cq)
 {
 	mqnic_deactivate_tx_ring(ring);
 
-	if (!ring->buf || !priv || !cq_ring || cq_ring->handler || cq_ring->src_ring)
+	if (!ring->buf || !priv || !cq || cq->handler || cq->src_ring)
 		return -EINVAL;
 
 	ring->priv = priv;
-	ring->cq_ring = cq_ring;
-	cq_ring->src_ring = ring;
-	cq_ring->handler = mqnic_tx_irq;
+	ring->cq = cq;
+	cq->src_ring = ring;
+	cq->handler = mqnic_tx_irq;
 
 	ring->head_ptr = 0;
 	ring->tail_ptr = 0;
@@ -167,8 +167,8 @@ int mqnic_activate_tx_ring(struct mqnic_ring *ring, struct mqnic_priv *priv,
 	// set base address
 	iowrite32(ring->buf_dma_addr, ring->hw_addr + MQNIC_QUEUE_BASE_ADDR_REG + 0);
 	iowrite32(ring->buf_dma_addr >> 32, ring->hw_addr + MQNIC_QUEUE_BASE_ADDR_REG + 4);
-	// set completion queue index
-	iowrite32(cq_ring->index, ring->hw_addr + MQNIC_QUEUE_CPL_QUEUE_INDEX_REG);
+	// set CQN
+	iowrite32(cq->cqn, ring->hw_addr + MQNIC_QUEUE_CPL_QUEUE_INDEX_REG);
 	// set pointers
 	iowrite32(ring->head_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_QUEUE_HEAD_PTR_REG);
 	iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_QUEUE_TAIL_PTR_REG);
@@ -187,13 +187,13 @@ void mqnic_deactivate_tx_ring(struct mqnic_ring *ring)
 	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
 			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
-	if (ring->cq_ring) {
-		ring->cq_ring->src_ring = NULL;
-		ring->cq_ring->handler = NULL;
+	if (ring->cq) {
+		ring->cq->src_ring = NULL;
+		ring->cq->handler = NULL;
 	}
 
 	ring->priv = NULL;
-	ring->cq_ring = NULL;
+	ring->cq = NULL;
 
 	ring->active = 0;
 }
@@ -254,10 +254,10 @@ int mqnic_free_tx_buf(struct mqnic_ring *ring)
 	return cnt;
 }
 
-int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
+int mqnic_process_tx_cq(struct mqnic_cq *cq, int napi_budget)
 {
-	struct mqnic_if *interface = cq_ring->interface;
-	struct mqnic_ring *tx_ring = cq_ring->src_ring;
+	struct mqnic_if *interface = cq->interface;
+	struct mqnic_ring *tx_ring = cq->src_ring;
 	struct mqnic_priv *priv = tx_ring->priv;
 	struct mqnic_tx_info *tx_info;
 	struct mqnic_cpl *cpl;
@@ -278,13 +278,13 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 	netdev_txq_bql_complete_prefetchw(tx_ring->tx_queue);
 
 	// process completion queue
-	cq_tail_ptr = cq_ring->tail_ptr;
-	cq_index = cq_tail_ptr & cq_ring->size_mask;
+	cq_tail_ptr = cq->tail_ptr;
+	cq_index = cq_tail_ptr & cq->size_mask;
 
 	while (done < budget) {
-		cpl = (struct mqnic_cpl *)(cq_ring->buf + cq_index * cq_ring->stride);
+		cpl = (struct mqnic_cpl *)(cq->buf + cq_index * cq->stride);
 
-		if (!!(cpl->phase & cpu_to_le32(0x80000000)) == !!(cq_tail_ptr & cq_ring->size))
+		if (!!(cpl->phase & cpu_to_le32(0x80000000)) == !!(cq_tail_ptr & cq->size))
 			break;
 
 		dma_rmb();
@@ -307,12 +307,12 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 		done++;
 
 		cq_tail_ptr++;
-		cq_index = cq_tail_ptr & cq_ring->size_mask;
+		cq_index = cq_tail_ptr & cq->size_mask;
 	}
 
 	// update CQ tail
-	cq_ring->tail_ptr = cq_tail_ptr;
-	mqnic_cq_write_tail_ptr(cq_ring);
+	cq->tail_ptr = cq_tail_ptr;
+	mqnic_cq_write_tail_ptr(cq);
 
 	// process ring
 	ring_tail_ptr = READ_ONCE(tx_ring->tail_ptr);
@@ -341,24 +341,24 @@ int mqnic_process_tx_cq(struct mqnic_cq_ring *cq_ring, int napi_budget)
 	return done;
 }
 
-void mqnic_tx_irq(struct mqnic_cq_ring *cq)
+void mqnic_tx_irq(struct mqnic_cq *cq)
 {
 	napi_schedule_irqoff(&cq->napi);
 }
 
 int mqnic_poll_tx_cq(struct napi_struct *napi, int budget)
 {
-	struct mqnic_cq_ring *cq_ring = container_of(napi, struct mqnic_cq_ring, napi);
+	struct mqnic_cq *cq = container_of(napi, struct mqnic_cq, napi);
 	int done;
 
-	done = mqnic_process_tx_cq(cq_ring, budget);
+	done = mqnic_process_tx_cq(cq, budget);
 
 	if (done == budget)
 		return done;
 
 	napi_complete(napi);
 
-	mqnic_arm_cq(cq_ring);
+	mqnic_arm_cq(cq);
 
 	return done;
 }
@@ -449,11 +449,11 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 
 	ring_index = skb_get_queue_mapping(skb);
 
-	if (unlikely(ring_index >= priv->tx_queue_count))
+	if (unlikely(ring_index >= priv->txq_count))
 		// queue mapping out of range
 		goto tx_drop;
 
-	ring = priv->tx_ring[ring_index];
+	ring = priv->txq[ring_index];
 
 	tail_ptr = READ_ONCE(ring->tail_ptr);
 

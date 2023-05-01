@@ -48,16 +48,16 @@ MODULE_AUTHOR("Alex Forencich");
 MODULE_LICENSE("Dual BSD/GPL");
 MODULE_VERSION(DRIVER_VERSION);
 
-unsigned int mqnic_num_ev_queue_entries = 1024;
-unsigned int mqnic_num_tx_queue_entries = 1024;
-unsigned int mqnic_num_rx_queue_entries = 1024;
+unsigned int mqnic_num_eq_entries = 1024;
+unsigned int mqnic_num_txq_entries = 1024;
+unsigned int mqnic_num_rxq_entries = 1024;
 
-module_param_named(num_ev_queue_entries, mqnic_num_ev_queue_entries, uint, 0444);
-MODULE_PARM_DESC(num_ev_queue_entries, "number of entries to allocate per event queue (default: 1024)");
-module_param_named(num_tx_queue_entries, mqnic_num_tx_queue_entries, uint, 0444);
-MODULE_PARM_DESC(num_tx_queue_entries, "number of entries to allocate per transmit queue (default: 1024)");
-module_param_named(num_rx_queue_entries, mqnic_num_rx_queue_entries, uint, 0444);
-MODULE_PARM_DESC(num_rx_queue_entries, "number of entries to allocate per receive queue (default: 1024)");
+module_param_named(num_eq_entries, mqnic_num_eq_entries, uint, 0444);
+MODULE_PARM_DESC(num_eq_entries, "number of entries to allocate per event queue (default: 1024)");
+module_param_named(num_txq_entries, mqnic_num_txq_entries, uint, 0444);
+MODULE_PARM_DESC(num_txq_entries, "number of entries to allocate per transmit queue (default: 1024)");
+module_param_named(num_rxq_entries, mqnic_num_rxq_entries, uint, 0444);
+MODULE_PARM_DESC(num_rxq_entries, "number of entries to allocate per receive queue (default: 1024)");
 
 unsigned int mqnic_link_status_poll = MQNIC_LINK_STATUS_POLL_MS;
 

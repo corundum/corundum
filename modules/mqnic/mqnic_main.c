@@ -397,12 +397,14 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 	mqnic->if_count = min_t(u32, mqnic->if_count, MQNIC_MAX_IF);
 
 	for (k = 0; k < mqnic->if_count; k++) {
+		struct mqnic_if *interface;
 		dev_info(dev, "Creating interface %d", k);
-		ret = mqnic_create_interface(mqnic, &mqnic->interface[k], k, mqnic->hw_addr + k * mqnic->if_stride);
-		if (ret) {
+		interface = mqnic_create_interface(mqnic, k, mqnic->hw_addr + k * mqnic->if_stride);
+		if (IS_ERR_OR_NULL(interface)) {
 			dev_err(dev, "Failed to create interface: %d", ret);
 			goto fail_create_if;
 		}
+		mqnic->interface[k] = interface;
 		mqnic->dev_port_max = mqnic->interface[k]->dev_port_max;
 	}
 
@@ -497,9 +499,12 @@ static void mqnic_common_remove(struct mqnic_dev *mqnic)
 	if (mqnic->misc_dev.this_device)
 		misc_deregister(&mqnic->misc_dev);
 
-	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++)
-		if (mqnic->interface[k])
-			mqnic_destroy_interface(&mqnic->interface[k]);
+	for (k = 0; k < ARRAY_SIZE(mqnic->interface); k++) {
+		if (mqnic->interface[k]) {
+			mqnic_destroy_interface(mqnic->interface[k]);
+			mqnic->interface[k] = NULL;
+		}
+	}
 
 	mqnic_unregister_phc(mqnic);
 	if (mqnic->pfdev) {

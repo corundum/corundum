@@ -35,7 +35,7 @@
 
 #include "mqnic.h"
 
-int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_block **block_ptr,
+struct mqnic_sched_block *mqnic_create_sched_block(struct mqnic_if *interface,
 		int index, struct mqnic_reg_block *block_rb)
 {
 	struct device *dev = interface->dev;
@@ -46,9 +46,7 @@ int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_bloc
 
 	block = kzalloc(sizeof(*block), GFP_KERNEL);
 	if (!block)
-		return -ENOMEM;
-
-	*block_ptr = block;
+		return ERR_PTR(-ENOMEM);
 
 	block->dev = dev;
 	block->interface = interface;
@@ -77,12 +75,15 @@ int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_bloc
 	block->sched_count = 0;
 	for (rb = block->rb_list; rb->regs; rb++) {
 		if (rb->type == MQNIC_RB_SCHED_RR_TYPE && rb->version == MQNIC_RB_SCHED_RR_VER) {
-			ret = mqnic_create_scheduler(block, &block->sched[block->sched_count],
+			struct mqnic_sched *sched = mqnic_create_scheduler(block,
 					block->sched_count, rb);
 
-			if (ret)
+			if (IS_ERR_OR_NULL(sched)) {
+				ret = PTR_ERR(sched);
 				goto fail;
+			}
 
+			block->sched[block->sched_count] = sched;
 			block->sched_count++;
 		}
 	}
@@ -91,28 +92,29 @@ int mqnic_create_sched_block(struct mqnic_if *interface, struct mqnic_sched_bloc
 
 	mqnic_deactivate_sched_block(block);
 
-	return 0;
+	return block;
 
 fail:
-	mqnic_destroy_sched_block(block_ptr);
-	return ret;
+	mqnic_destroy_sched_block(block);
+	return ERR_PTR(ret);
 }
 
-void mqnic_destroy_sched_block(struct mqnic_sched_block **block_ptr)
+void mqnic_destroy_sched_block(struct mqnic_sched_block *block)
 {
-	struct mqnic_sched_block *block = *block_ptr;
 	int k;
 
 	mqnic_deactivate_sched_block(block);
 
-	for (k = 0; k < ARRAY_SIZE(block->sched); k++)
-		if (block->sched[k])
-			mqnic_destroy_scheduler(&block->sched[k]);
+	for (k = 0; k < ARRAY_SIZE(block->sched); k++) {
+		if (block->sched[k]) {
+			mqnic_destroy_scheduler(block->sched[k]);
+			block->sched[k] = NULL;
+		}
+	}
 
 	if (block->rb_list)
 		mqnic_free_reg_block_list(block->rb_list);
 
-	*block_ptr = NULL;
 	kfree(block);
 }
 

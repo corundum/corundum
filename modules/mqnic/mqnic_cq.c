@@ -35,16 +35,14 @@
 
 #include "mqnic.h"
 
-int mqnic_create_cq(struct mqnic_if *interface, struct mqnic_cq **cq_ptr,
+struct mqnic_cq *mqnic_create_cq(struct mqnic_if *interface,
 		int cqn, u8 __iomem *hw_addr)
 {
 	struct mqnic_cq *cq;
 
 	cq = kzalloc(sizeof(*cq), GFP_KERNEL);
 	if (!cq)
-		return -ENOMEM;
-
-	*cq_ptr = cq;
+		return ERR_PTR(-ENOMEM);
 
 	cq->dev = interface->dev;
 	cq->interface = interface;
@@ -63,16 +61,13 @@ int mqnic_create_cq(struct mqnic_if *interface, struct mqnic_cq **cq_ptr,
 	// deactivate queue
 	iowrite32(0, cq->hw_addr + MQNIC_CQ_ACTIVE_LOG_SIZE_REG);
 
-	return 0;
+	return cq;
 }
 
-void mqnic_destroy_cq(struct mqnic_cq **cq_ptr)
+void mqnic_destroy_cq(struct mqnic_cq *cq)
 {
-	struct mqnic_cq *cq = *cq_ptr;
-
 	mqnic_free_cq(cq);
 
-	*cq_ptr = NULL;
 	kfree(cq);
 }
 

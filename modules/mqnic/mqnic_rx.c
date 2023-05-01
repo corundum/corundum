@@ -35,16 +35,14 @@
 
 #include "mqnic.h"
 
-int mqnic_create_rx_ring(struct mqnic_if *interface, struct mqnic_ring **ring_ptr,
+struct mqnic_ring *mqnic_create_rx_ring(struct mqnic_if *interface,
 		int index, u8 __iomem *hw_addr)
 {
 	struct mqnic_ring *ring;
 
 	ring = kzalloc(sizeof(*ring), GFP_KERNEL);
 	if (!ring)
-		return -ENOMEM;
-
-	*ring_ptr = ring;
+		return ERR_PTR(-ENOMEM);
 
 	ring->dev = interface->dev;
 	ring->interface = interface;
@@ -63,16 +61,13 @@ int mqnic_create_rx_ring(struct mqnic_if *interface, struct mqnic_ring **ring_pt
 	// deactivate queue
 	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
-	return 0;
+	return ring;
 }
 
-void mqnic_destroy_rx_ring(struct mqnic_ring **ring_ptr)
+void mqnic_destroy_rx_ring(struct mqnic_ring *ring)
 {
-	struct mqnic_ring *ring = *ring_ptr;
-
 	mqnic_free_rx_ring(ring);
 
-	*ring_ptr = NULL;
 	kfree(ring);
 }
 

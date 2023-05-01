@@ -35,7 +35,7 @@
 
 #include "mqnic.h"
 
-int mqnic_create_scheduler(struct mqnic_sched_block *block, struct mqnic_sched **sched_ptr,
+struct mqnic_sched *mqnic_create_scheduler(struct mqnic_sched_block *block,
 		int index, struct mqnic_reg_block *rb)
 {
 	struct device *dev = block->dev;
@@ -43,9 +43,7 @@ int mqnic_create_scheduler(struct mqnic_sched_block *block, struct mqnic_sched *
 
 	sched = kzalloc(sizeof(*sched), GFP_KERNEL);
 	if (!sched)
-		return -ENOMEM;
-
-	*sched_ptr = sched;
+		return ERR_PTR(-ENOMEM);
 
 	sched->dev = dev;
 	sched->interface = block->interface;
@@ -69,14 +67,11 @@ int mqnic_create_scheduler(struct mqnic_sched_block *block, struct mqnic_sched *
 
 	mqnic_scheduler_disable(sched);
 
-	return 0;
+	return sched;
 }
 
-void mqnic_destroy_scheduler(struct mqnic_sched **sched_ptr)
+void mqnic_destroy_scheduler(struct mqnic_sched *sched)
 {
-	struct mqnic_sched *sched = *sched_ptr;
-	*sched_ptr = NULL;
-
 	mqnic_scheduler_disable(sched);
 
 	kfree(sched);

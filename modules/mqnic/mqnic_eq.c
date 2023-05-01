@@ -45,16 +45,14 @@ static int mqnic_eq_int(struct notifier_block *nb, unsigned long action, void *d
 	return NOTIFY_DONE;
 }
 
-int mqnic_create_eq(struct mqnic_if *interface, struct mqnic_eq **eq_ptr,
+struct mqnic_eq *mqnic_create_eq(struct mqnic_if *interface,
 		int eqn, u8 __iomem *hw_addr)
 {
 	struct mqnic_eq *eq;
 
 	eq = kzalloc(sizeof(*eq), GFP_KERNEL);
 	if (!eq)
-		return -ENOMEM;
-
-	*eq_ptr = eq;
+		return ERR_PTR(-ENOMEM);
 
 	eq->dev = interface->dev;
 	eq->interface = interface;
@@ -75,16 +73,13 @@ int mqnic_create_eq(struct mqnic_if *interface, struct mqnic_eq **eq_ptr,
 	// deactivate queue
 	iowrite32(0, eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
 
-	return 0;
+	return eq;
 }
 
-void mqnic_destroy_eq(struct mqnic_eq **eq_ptr)
+void mqnic_destroy_eq(struct mqnic_eq *eq)
 {
-	struct mqnic_eq *eq = *eq_ptr;
-
 	mqnic_free_eq(eq);
 
-	*eq_ptr = NULL;
 	kfree(eq);
 }
 

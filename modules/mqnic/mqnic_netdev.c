@@ -410,8 +410,7 @@ static void mqnic_link_status_timeout(struct timer_list *timer)
 	mod_timer(&priv->link_status_timer, jiffies + msecs_to_jiffies(mqnic_link_status_poll));
 }
 
-int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr,
-		int index, int dev_port)
+struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, int dev_port)
 {
 	struct mqnic_dev *mdev = interface->mdev;
 	struct device *dev = interface->dev;
@@ -424,10 +423,8 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 	ndev = alloc_etherdev_mqs(sizeof(*priv), MQNIC_MAX_TXQ, MQNIC_MAX_RXQ);
 	if (!ndev) {
 		dev_err(dev, "Failed to allocate memory");
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 	}
-
-	*ndev_ptr = ndev;
 
 	SET_NETDEV_DEV(ndev, dev);
 	ndev->dev_port = dev_port;
@@ -565,16 +562,15 @@ int mqnic_create_netdev(struct mqnic_if *interface, struct net_device **ndev_ptr
 
 	priv->registered = 1;
 
-	return 0;
+	return ndev;
 
 fail:
-	mqnic_destroy_netdev(ndev_ptr);
-	return ret;
+	mqnic_destroy_netdev(ndev);
+	return ERR_PTR(ret);
 }
 
-void mqnic_destroy_netdev(struct net_device **ndev_ptr)
+void mqnic_destroy_netdev(struct net_device *ndev)
 {
-	struct net_device *ndev = *ndev_ptr;
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	int k;
 
@@ -598,6 +594,5 @@ void mqnic_destroy_netdev(struct net_device **ndev_ptr)
 		if (priv->rx_cq[k])
 			mqnic_free_cq(priv->rx_cq[k]);
 
-	*ndev_ptr = NULL;
 	free_netdev(ndev);
 }

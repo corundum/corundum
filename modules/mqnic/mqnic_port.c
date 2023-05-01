@@ -35,8 +35,8 @@
 
 #include "mqnic.h"
 
-int mqnic_create_port(struct mqnic_if *interface, struct mqnic_port **port_ptr,
-		int index, struct mqnic_reg_block *port_rb)
+struct mqnic_port *mqnic_create_port(struct mqnic_if *interface, int index,
+		struct mqnic_reg_block *port_rb)
 {
 	struct device *dev = interface->dev;
 	struct mqnic_port *port;
@@ -46,9 +46,7 @@ int mqnic_create_port(struct mqnic_if *interface, struct mqnic_port **port_ptr,
 
 	port = kzalloc(sizeof(*port), GFP_KERNEL);
 	if (!port)
-		return -ENOMEM;
-
-	*port_ptr = port;
+		return ERR_PTR(-ENOMEM);
 
 	port->dev = dev;
 	port->interface = interface;
@@ -87,21 +85,18 @@ int mqnic_create_port(struct mqnic_if *interface, struct mqnic_port **port_ptr,
 	dev_info(dev, "Port TX status: 0x%08x", mqnic_port_get_tx_status(port));
 	dev_info(dev, "Port RX status: 0x%08x", mqnic_port_get_rx_status(port));
 
-	return 0;
+	return port;
 
 fail:
-	mqnic_destroy_port(port_ptr);
-	return ret;
+	mqnic_destroy_port(port);
+	return ERR_PTR(ret);
 }
 
-void mqnic_destroy_port(struct mqnic_port **port_ptr)
+void mqnic_destroy_port(struct mqnic_port *port)
 {
-	struct mqnic_port *port = *port_ptr;
-
 	if (port->rb_list)
 		mqnic_free_reg_block_list(port->rb_list);
 
-	*port_ptr = NULL;
 	kfree(port);
 }
 

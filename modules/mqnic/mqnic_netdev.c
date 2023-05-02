@@ -137,6 +137,7 @@ static int mqnic_stop_port(struct net_device *ndev)
 	netif_tx_stop_all_queues(ndev);
 	netif_tx_unlock_bh(ndev);
 
+	netif_carrier_off(ndev);
 	netif_tx_disable(ndev);
 
 	spin_lock_bh(&priv->stats_lock);
@@ -148,39 +149,30 @@ static int mqnic_stop_port(struct net_device *ndev)
 	for (k = 0; k < priv->sched_block_count; k++)
 		mqnic_deactivate_sched_block(priv->sched_block[k]);
 
-	// deactivate TX queues
-	for (k = 0; k < min(priv->txq_count, priv->tx_cq_count); k++) {
-		napi_disable(&priv->tx_cq[k]->napi);
-
+	// disable TX and RX queues
+	for (k = 0; k < min(priv->txq_count, priv->tx_cq_count); k++)
 		mqnic_deactivate_tx_ring(priv->txq[k]);
 
-		mqnic_deactivate_cq(priv->tx_cq[k]);
-
-		netif_napi_del(&priv->tx_cq[k]->napi);
-	}
-
-	// deactivate RX queues
-	for (k = 0; k < min(priv->rxq_count, priv->rx_cq_count); k++) {
-		napi_disable(&priv->rx_cq[k]->napi);
-
+	for (k = 0; k < min(priv->rxq_count, priv->rx_cq_count); k++)
 		mqnic_deactivate_rx_ring(priv->rxq[k]);
-
-		mqnic_deactivate_cq(priv->rx_cq[k]);
-
-		netif_napi_del(&priv->rx_cq[k]->napi);
-	}
 
 	msleep(20);
 
-	// free descriptors in TX queues
-	for (k = 0; k < priv->txq_count; k++)
+	// shut down NAPI and clean queues
+	for (k = 0; k < priv->txq_count; k++) {
+		napi_disable(&priv->tx_cq[k]->napi);
+		mqnic_deactivate_cq(priv->tx_cq[k]);
+		netif_napi_del(&priv->tx_cq[k]->napi);
 		mqnic_free_tx_buf(priv->txq[k]);
+	}
 
-	// free descriptors in RX queues
-	for (k = 0; k < priv->rxq_count; k++)
+	for (k = 0; k < priv->rxq_count; k++) {
+		napi_disable(&priv->rx_cq[k]->napi);
+		mqnic_deactivate_cq(priv->rx_cq[k]);
+		netif_napi_del(&priv->rx_cq[k]->napi);
 		mqnic_free_rx_buf(priv->rxq[k]);
+	}
 
-	netif_carrier_off(ndev);
 	return 0;
 }
 

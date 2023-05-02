@@ -182,25 +182,11 @@ int main(int argc, char *argv[])
     printf("TX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_TX_MTU));
     printf("RX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_RX_MTU));
 
-    printf("EQ offset: 0x%08x\n", dev_interface->eq_offset);
-    printf("EQ count: %d\n", dev_interface->eq_count);
-    printf("EQ stride: 0x%08x\n", dev_interface->eq_stride);
-
-    printf("TXQ offset: 0x%08x\n", dev_interface->txq_offset);
-    printf("TXQ count: %d\n", dev_interface->txq_count);
-    printf("TXQ stride: 0x%08x\n", dev_interface->txq_stride);
-
-    printf("TX CQ offset: 0x%08x\n", dev_interface->tx_cq_offset);
-    printf("TX CQ count: %d\n", dev_interface->tx_cq_count);
-    printf("TX CQ stride: 0x%08x\n", dev_interface->tx_cq_stride);
-
-    printf("RXQ offset: 0x%08x\n", dev_interface->rxq_offset);
-    printf("RXQ count: %d\n", dev_interface->rxq_count);
-    printf("RXQ stride: 0x%08x\n", dev_interface->rxq_stride);
-
-    printf("RX CQ offset: 0x%08x\n", dev_interface->rx_cq_offset);
-    printf("RX CQ count: %d\n", dev_interface->rx_cq_count);
-    printf("RX CQ stride: 0x%08x\n", dev_interface->rx_cq_stride);
+    printf("EQ count: %d\n", mqnic_res_get_count(dev_interface->eq_res));
+    printf("TXQ count: %d\n", mqnic_res_get_count(dev_interface->txq_res));
+    printf("TX CQ count: %d\n", mqnic_res_get_count(dev_interface->tx_cq_res));
+    printf("RXQ count: %d\n", mqnic_res_get_count(dev_interface->rxq_res));
+    printf("RX CQ count: %d\n", mqnic_res_get_count(dev_interface->rx_cq_res));
 
     if (port < 0 || port >= dev_interface->port_count)
     {

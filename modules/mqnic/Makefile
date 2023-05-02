@@ -3,6 +3,7 @@ ifneq ($(KERNELRELEASE),)
 # object files to build
 obj-m += mqnic.o
 mqnic-y += mqnic_main.o
+mqnic-y += mqnic_res.o
 mqnic-y += mqnic_reg_block.o
 mqnic-y += mqnic_irq.o
 mqnic-y += mqnic_dev.o

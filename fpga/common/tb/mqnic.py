@@ -312,6 +312,23 @@ MQNIC_CPL_SIZE = 32
 MQNIC_EVENT_SIZE = 32
 
 
+class Resource:
+    def __init__(self, count, parent, stride):
+        self.count = count
+        self.parent = parent
+        self.stride = stride
+
+        self.windows = {}
+
+    def get_count(self):
+        return self.count
+
+    def get_window(self, index):
+        if index not in self.windows:
+            self.windows[index] = self.parent.create_window(index*self.stride, self.stride)
+        return self.windows[index]
+
+
 class RegBlock(Window):
     def __init__(self, parent, offset, size, base=0, **kwargs):
         super().__init__(parent, offset, size, base, **kwargs)
@@ -1176,21 +1193,11 @@ class Interface:
         self.max_tx_mtu = 0
         self.max_rx_mtu = 0
 
-        self.eq_offset = None
-        self.eq_count = None
-        self.eq_stride = None
-        self.txq_offset = None
-        self.txq_count = None
-        self.txq_stride = None
-        self.tx_cq_offset = None
-        self.tx_cq_count = None
-        self.tx_cq_stride = None
-        self.rxq_offset = None
-        self.rxq_count = None
-        self.rxq_stride = None
-        self.rx_cq_offset = None
-        self.rx_cq_count = None
-        self.rx_cq_stride = None
+        self.eq_res = None
+        self.txq_res = None
+        self.tx_cq_res = None
+        self.rxq_res = None
+        self.rx_cq_res = None
 
         self.port_count = None
         self.sched_block_count = None
@@ -1237,63 +1244,73 @@ class Interface:
 
         self.eq_rb = self.reg_blocks.find(MQNIC_RB_EQM_TYPE, MQNIC_RB_EQM_VER)
 
-        self.eq_offset = await self.eq_rb.read_dword(MQNIC_RB_EQM_REG_OFFSET)
-        self.eq_count = await self.eq_rb.read_dword(MQNIC_RB_EQM_REG_COUNT)
-        self.eq_stride = await self.eq_rb.read_dword(MQNIC_RB_EQM_REG_STRIDE)
+        offset = await self.eq_rb.read_dword(MQNIC_RB_EQM_REG_OFFSET)
+        count = await self.eq_rb.read_dword(MQNIC_RB_EQM_REG_COUNT)
+        stride = await self.eq_rb.read_dword(MQNIC_RB_EQM_REG_STRIDE)
 
-        self.log.info("EQ offset: 0x%08x", self.eq_offset)
-        self.log.info("EQ count: %d", self.eq_count)
-        self.log.info("EQ stride: 0x%08x", self.eq_stride)
+        self.log.info("EQ offset: 0x%08x", offset)
+        self.log.info("EQ count: %d", count)
+        self.log.info("EQ stride: 0x%08x", stride)
 
-        self.eq_count = min(self.eq_count, MQNIC_MAX_EQ)
+        count = min(count, MQNIC_MAX_EQ)
+
+        self.eq_res = Resource(count, self.hw_regs.create_window(offset), stride)
 
         self.txq_rb = self.reg_blocks.find(MQNIC_RB_TX_QM_TYPE, MQNIC_RB_TX_QM_VER)
 
-        self.txq_offset = await self.txq_rb.read_dword(MQNIC_RB_TX_QM_REG_OFFSET)
-        self.txq_count = await self.txq_rb.read_dword(MQNIC_RB_TX_QM_REG_COUNT)
-        self.txq_stride = await self.txq_rb.read_dword(MQNIC_RB_TX_QM_REG_STRIDE)
+        offset = await self.txq_rb.read_dword(MQNIC_RB_TX_QM_REG_OFFSET)
+        count = await self.txq_rb.read_dword(MQNIC_RB_TX_QM_REG_COUNT)
+        stride = await self.txq_rb.read_dword(MQNIC_RB_TX_QM_REG_STRIDE)
 
-        self.log.info("TXQ offset: 0x%08x", self.txq_offset)
-        self.log.info("TXQ count: %d", self.txq_count)
-        self.log.info("TXQ stride: 0x%08x", self.txq_stride)
+        self.log.info("TXQ offset: 0x%08x", offset)
+        self.log.info("TXQ count: %d", count)
+        self.log.info("TXQ stride: 0x%08x", stride)
 
-        self.txq_count = min(self.txq_count, MQNIC_MAX_TXQ)
+        count = min(count, MQNIC_MAX_TXQ)
+
+        self.txq_res = Resource(count, self.hw_regs.create_window(offset), stride)
 
         self.tx_cq_rb = self.reg_blocks.find(MQNIC_RB_TX_CQM_TYPE, MQNIC_RB_TX_CQM_VER)
 
-        self.tx_cq_offset = await self.tx_cq_rb.read_dword(MQNIC_RB_TX_CQM_REG_OFFSET)
-        self.tx_cq_count = await self.tx_cq_rb.read_dword(MQNIC_RB_TX_CQM_REG_COUNT)
-        self.tx_cq_stride = await self.tx_cq_rb.read_dword(MQNIC_RB_TX_CQM_REG_STRIDE)
+        offset = await self.tx_cq_rb.read_dword(MQNIC_RB_TX_CQM_REG_OFFSET)
+        count = await self.tx_cq_rb.read_dword(MQNIC_RB_TX_CQM_REG_COUNT)
+        stride = await self.tx_cq_rb.read_dword(MQNIC_RB_TX_CQM_REG_STRIDE)
 
-        self.log.info("TX CQ offset: 0x%08x", self.tx_cq_offset)
-        self.log.info("TX CQ count: %d", self.tx_cq_count)
-        self.log.info("TX CQ stride: 0x%08x", self.tx_cq_stride)
+        self.log.info("TX CQ offset: 0x%08x", offset)
+        self.log.info("TX CQ count: %d", count)
+        self.log.info("TX CQ stride: 0x%08x", stride)
 
-        self.tx_cq_count = min(self.tx_cq_count, MQNIC_MAX_TX_CQ)
+        count = min(count, MQNIC_MAX_TX_CQ)
+
+        self.tx_cq_res = Resource(count, self.hw_regs.create_window(offset), stride)
 
         self.rxq_rb = self.reg_blocks.find(MQNIC_RB_RX_QM_TYPE, MQNIC_RB_RX_QM_VER)
 
-        self.rxq_offset = await self.rxq_rb.read_dword(MQNIC_RB_RX_QM_REG_OFFSET)
-        self.rxq_count = await self.rxq_rb.read_dword(MQNIC_RB_RX_QM_REG_COUNT)
-        self.rxq_stride = await self.rxq_rb.read_dword(MQNIC_RB_RX_QM_REG_STRIDE)
+        offset = await self.rxq_rb.read_dword(MQNIC_RB_RX_QM_REG_OFFSET)
+        count = await self.rxq_rb.read_dword(MQNIC_RB_RX_QM_REG_COUNT)
+        stride = await self.rxq_rb.read_dword(MQNIC_RB_RX_QM_REG_STRIDE)
 
-        self.log.info("RXQ offset: 0x%08x", self.rxq_offset)
-        self.log.info("RXQ count: %d", self.rxq_count)
-        self.log.info("RXQ stride: 0x%08x", self.rxq_stride)
+        self.log.info("RXQ offset: 0x%08x", offset)
+        self.log.info("RXQ count: %d", count)
+        self.log.info("RXQ stride: 0x%08x", stride)
 
-        self.rxq_count = min(self.rxq_count, MQNIC_MAX_RXQ)
+        count = min(count, MQNIC_MAX_RXQ)
+
+        self.rxq_res = Resource(count, self.hw_regs.create_window(offset), stride)
 
         self.rx_cq_rb = self.reg_blocks.find(MQNIC_RB_RX_CQM_TYPE, MQNIC_RB_RX_CQM_VER)
 
-        self.rx_cq_offset = await self.rx_cq_rb.read_dword(MQNIC_RB_RX_CQM_REG_OFFSET)
-        self.rx_cq_count = await self.rx_cq_rb.read_dword(MQNIC_RB_RX_CQM_REG_COUNT)
-        self.rx_cq_stride = await self.rx_cq_rb.read_dword(MQNIC_RB_RX_CQM_REG_STRIDE)
+        offset = await self.rx_cq_rb.read_dword(MQNIC_RB_RX_CQM_REG_OFFSET)
+        count = await self.rx_cq_rb.read_dword(MQNIC_RB_RX_CQM_REG_COUNT)
+        stride = await self.rx_cq_rb.read_dword(MQNIC_RB_RX_CQM_REG_STRIDE)
 
-        self.log.info("RX CQ offset: 0x%08x", self.rx_cq_offset)
-        self.log.info("RX CQ count: %d", self.rx_cq_count)
-        self.log.info("RX CQ stride: 0x%08x", self.rx_cq_stride)
+        self.log.info("RX CQ offset: 0x%08x", offset)
+        self.log.info("RX CQ count: %d", count)
+        self.log.info("RX CQ stride: 0x%08x", stride)
 
-        self.rx_cq_count = min(self.rx_cq_count, MQNIC_MAX_RX_CQ)
+        count = min(count, MQNIC_MAX_RX_CQ)
+
+        self.rx_cq_res = Resource(count, self.hw_regs.create_window(offset), stride)
 
         self.rx_queue_map_rb = self.reg_blocks.find(MQNIC_RB_RX_QUEUE_MAP_TYPE, MQNIC_RB_RX_QUEUE_MAP_VER)
 
@@ -1318,28 +1335,28 @@ class Interface:
         self.ports = []
         self.sched_blocks = []
 
-        for k in range(self.eq_count):
-            eq = Eq(self, k, self.hw_regs.create_window(self.eq_offset + k*self.eq_stride, self.eq_stride))
+        for k in range(self.eq_res.get_count()):
+            eq = Eq(self, k, self.eq_res.get_window(k))
             await eq.init()
             self.eq.append(eq)
 
-        for k in range(self.txq_count):
-            txq = Txq(self, k, self.hw_regs.create_window(self.txq_offset + k*self.txq_stride, self.txq_stride))
+        for k in range(self.txq_res.get_count()):
+            txq = Txq(self, k, self.txq_res.get_window(k))
             await txq.init()
             self.txq.append(txq)
 
-        for k in range(self.tx_cq_count):
-            cq = Cq(self, k, self.hw_regs.create_window(self.tx_cq_offset + k*self.tx_cq_stride, self.tx_cq_stride))
+        for k in range(self.tx_cq_res.get_count()):
+            cq = Cq(self, k, self.tx_cq_res.get_window(k))
             await cq.init()
             self.tx_cq.append(cq)
 
-        for k in range(self.rxq_count):
-            rxq = Rxq(self, k, self.hw_regs.create_window(self.rxq_offset + k*self.rxq_stride, self.rxq_stride))
+        for k in range(self.rxq_res.get_count()):
+            rxq = Rxq(self, k, self.rxq_res.get_window(k))
             await rxq.init()
             self.rxq.append(rxq)
 
-        for k in range(self.rx_cq_count):
-            cq = Cq(self, k, self.hw_regs.create_window(self.rx_cq_offset + k*self.rx_cq_stride, self.rx_cq_stride))
+        for k in range(self.rx_cq_res.get_count()):
+            cq = Cq(self, k, self.rx_cq_res.get_window(k))
             await cq.init()
             self.rx_cq.append(cq)
 
@@ -1371,7 +1388,7 @@ class Interface:
         for rxq in self.rxq:
             cq = self.rx_cq[rxq.index]
             await cq.alloc(1024, MQNIC_CPL_SIZE)
-            await cq.activate(self.eq[cq.cqn % self.eq_count])
+            await cq.activate(self.eq[cq.cqn % len(self.eq)])
             await cq.arm()
             await rxq.alloc(1024, MQNIC_DESC_SIZE*4)
             await rxq.activate(cq)
@@ -1379,7 +1396,7 @@ class Interface:
         for txq in self.txq:
             cq = self.tx_cq[txq.index]
             await cq.alloc(1024, MQNIC_CPL_SIZE)
-            await cq.activate(self.eq[cq.cqn % self.eq_count])
+            await cq.activate(self.eq[cq.cqn % len(self.eq)])
             await cq.arm()
             await txq.alloc(1024, MQNIC_DESC_SIZE*4)
             await txq.activate(cq)

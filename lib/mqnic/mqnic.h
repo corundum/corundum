@@ -45,6 +45,12 @@ either expressed or implied, of The Regents of the University of California.
 
 struct mqnic;
 
+struct mqnic_res {
+    unsigned int count;
+    volatile uint8_t *base;
+    unsigned int stride;
+};
+
 struct mqnic_sched {
     struct mqnic *mqnic;
     struct mqnic_if *interface;
@@ -113,22 +119,11 @@ struct mqnic_if {
     uint32_t rx_queue_map_indir_table_size;
     volatile uint8_t *rx_queue_map_indir_table[MQNIC_MAX_PORTS];
 
-    uint32_t eq_offset;
-    uint32_t eq_count;
-    uint32_t eq_stride;
-
-    uint32_t txq_offset;
-    uint32_t txq_count;
-    uint32_t txq_stride;
-    uint32_t tx_cq_offset;
-    uint32_t tx_cq_count;
-    uint32_t tx_cq_stride;
-    uint32_t rxq_offset;
-    uint32_t rxq_count;
-    uint32_t rxq_stride;
-    uint32_t rx_cq_offset;
-    uint32_t rx_cq_count;
-    uint32_t rx_cq_stride;
+    struct mqnic_res *eq_res;
+    struct mqnic_res *txq_res;
+    struct mqnic_res *tx_cq_res;
+    struct mqnic_res *rxq_res;
+    struct mqnic_res *rx_cq_res;
 
     uint32_t port_count;
     struct mqnic_port *ports[MQNIC_MAX_PORTS];
@@ -200,6 +195,12 @@ struct mqnic {
 struct mqnic *mqnic_open(const char *dev_name);
 void mqnic_close(struct mqnic *dev);
 void mqnic_print_fw_id(struct mqnic *dev);
+
+// mqnic_res.c
+struct mqnic_res *mqnic_res_open(unsigned int count, volatile uint8_t *base, unsigned int stride);
+void mqnic_res_close(struct mqnic_res *res);
+unsigned int mqnic_res_get_count(struct mqnic_res *res);
+volatile uint8_t *mqnic_res_get_addr(struct mqnic_res *res, int index);
 
 // mqnic_if.c
 struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs);

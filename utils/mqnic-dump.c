@@ -249,25 +249,25 @@ int main(int argc, char *argv[])
     printf("TX MTU: %d\n", mqnic_interface_get_tx_mtu(dev_interface));
     printf("RX MTU: %d\n", mqnic_interface_get_rx_mtu(dev_interface));
 
-    printf("EQ offset: 0x%08x\n", dev_interface->eq_offset);
-    printf("EQ count: %d\n", dev_interface->eq_count);
-    printf("EQ stride: 0x%08x\n", dev_interface->eq_stride);
+    printf("EQ offset: 0x%08lx\n", dev_interface->eq_res->base - dev_interface->regs);
+    printf("EQ count: %d\n", mqnic_res_get_count(dev_interface->eq_res));
+    printf("EQ stride: 0x%08x\n", dev_interface->eq_res->stride);
 
-    printf("TXQ offset: 0x%08x\n", dev_interface->txq_offset);
-    printf("TXQ count: %d\n", dev_interface->txq_count);
-    printf("TXQ stride: 0x%08x\n", dev_interface->txq_stride);
+    printf("TXQ offset: 0x%08lx\n", dev_interface->txq_res->base - dev_interface->regs);
+    printf("TXQ count: %d\n", mqnic_res_get_count(dev_interface->txq_res));
+    printf("TXQ stride: 0x%08x\n", dev_interface->txq_res->stride);
 
-    printf("TX CQ offset: 0x%08x\n", dev_interface->tx_cq_offset);
-    printf("TX CQ count: %d\n", dev_interface->tx_cq_count);
-    printf("TX CQ stride: 0x%08x\n", dev_interface->tx_cq_stride);
+    printf("TX CQ offset: 0x%08lx\n", dev_interface->tx_cq_res->base - dev_interface->regs);
+    printf("TX CQ count: %d\n", mqnic_res_get_count(dev_interface->tx_cq_res));
+    printf("TX CQ stride: 0x%08x\n", dev_interface->tx_cq_res->stride);
 
-    printf("RXQ offset: 0x%08x\n", dev_interface->rxq_offset);
-    printf("RXQ count: %d\n", dev_interface->rxq_count);
-    printf("RXQ stride: 0x%08x\n", dev_interface->rxq_stride);
+    printf("RXQ offset: 0x%08lx\n", dev_interface->rxq_res->base - dev_interface->regs);
+    printf("RXQ count: %d\n", mqnic_res_get_count(dev_interface->rxq_res));
+    printf("RXQ stride: 0x%08x\n", dev_interface->rxq_res->stride);
 
-    printf("RX CQ offset: 0x%08x\n", dev_interface->rx_cq_offset);
-    printf("RX CQ count: %d\n", dev_interface->rx_cq_count);
-    printf("RX CQ stride: 0x%08x\n", dev_interface->rx_cq_stride);
+    printf("RX CQ offset: 0x%08lx\n", dev_interface->rx_cq_res->base - dev_interface->regs);
+    printf("RX CQ count: %d\n", mqnic_res_get_count(dev_interface->rx_cq_res));
+    printf("RX CQ stride: 0x%08x\n", dev_interface->rx_cq_res->stride);
 
     for (int p = 0; p < dev_interface->port_count; p++)
     {
@@ -381,9 +381,9 @@ int main(int argc, char *argv[])
 
     printf("TXQ info\n");
     printf("  Queue      Base Address     E  B  LS   CPL    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->txq_count; k++)
+    for (int k = 0; k < mqnic_res_get_count(dev_interface->txq_res); k++)
     {
-        volatile uint8_t *base = dev_interface->regs+dev_interface->txq_offset+k*dev_interface->txq_stride;
+        volatile uint8_t *base = mqnic_res_get_addr(dev_interface->txq_res, k);
 
         uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_QUEUE_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_QUEUE_BASE_ADDR_REG+4) << 32);
         uint8_t active = (mqnic_reg_read32(base, MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG) & MQNIC_QUEUE_ACTIVE_MASK) != 0;
@@ -399,9 +399,9 @@ int main(int argc, char *argv[])
 
     printf("TX CQ info\n");
     printf("  Queue       Base Address     E  LS  A C   Int    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->tx_cq_count; k++)
+    for (int k = 0; k < mqnic_res_get_count(dev_interface->tx_cq_res); k++)
     {
-        volatile uint8_t *base = dev_interface->regs+dev_interface->tx_cq_offset+k*dev_interface->tx_cq_stride;
+        volatile uint8_t *base = mqnic_res_get_addr(dev_interface->tx_cq_res, k);
 
         uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_CQ_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_CQ_BASE_ADDR_REG+4) << 32);
         uint8_t active = (mqnic_reg_read32(base, MQNIC_CQ_ACTIVE_LOG_SIZE_REG) & MQNIC_CQ_ACTIVE_MASK) != 0;
@@ -418,9 +418,9 @@ int main(int argc, char *argv[])
 
     printf("RXQ info\n");
     printf("  Queue      Base Address     E  B  LS   CPL    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->rxq_count; k++)
+    for (int k = 0; k < mqnic_res_get_count(dev_interface->rxq_res); k++)
     {
-        volatile uint8_t *base = dev_interface->regs+dev_interface->rxq_offset+k*dev_interface->rxq_stride;
+        volatile uint8_t *base = mqnic_res_get_addr(dev_interface->rxq_res, k);
 
         uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_QUEUE_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_QUEUE_BASE_ADDR_REG+4) << 32);
         uint8_t active = (mqnic_reg_read32(base, MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG) & MQNIC_QUEUE_ACTIVE_MASK) != 0;
@@ -436,9 +436,9 @@ int main(int argc, char *argv[])
 
     printf("RX CQ info\n");
     printf("  Queue       Base Address     E  LS  A C   Int    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->rx_cq_count; k++)
+    for (int k = 0; k < mqnic_res_get_count(dev_interface->rx_cq_res); k++)
     {
-        volatile uint8_t *base = dev_interface->regs+dev_interface->rx_cq_offset+k*dev_interface->rx_cq_stride;
+        volatile uint8_t *base = mqnic_res_get_addr(dev_interface->rx_cq_res, k);
 
         uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_CQ_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_CQ_BASE_ADDR_REG+4) << 32);
         uint8_t active = (mqnic_reg_read32(base, MQNIC_CQ_ACTIVE_LOG_SIZE_REG) & MQNIC_CQ_ACTIVE_MASK) != 0;
@@ -455,9 +455,9 @@ int main(int argc, char *argv[])
 
     printf("EQ info\n");
     printf(" Queue      Base Address     E  LS  A C   Int    Head    Tail     Len\n");
-    for (int k = 0; k < dev_interface->eq_count; k++)
+    for (int k = 0; k < mqnic_res_get_count(dev_interface->eq_res); k++)
     {
-        volatile uint8_t *base = dev_interface->regs+dev_interface->eq_offset+k*dev_interface->eq_stride;
+        volatile uint8_t *base = mqnic_res_get_addr(dev_interface->eq_res, k);
 
         uint64_t base_addr = (uint64_t)mqnic_reg_read32(base, MQNIC_EQ_BASE_ADDR_REG) + ((uint64_t)mqnic_reg_read32(base, MQNIC_EQ_BASE_ADDR_REG+4) << 32);
         uint8_t active = (mqnic_reg_read32(base, MQNIC_EQ_ACTIVE_LOG_SIZE_REG) & MQNIC_EQ_ACTIVE_MASK) != 0;
@@ -475,7 +475,7 @@ int main(int argc, char *argv[])
     for (int k = 0; k < dev_sched_block->sched_count; k++)
     {
         printf("Scheduler block %d scheduler %d\n", sched_block, k);
-        for (int l = 0; l < dev_interface->txq_count; l++)
+        for (int l = 0; l < mqnic_res_get_count(dev_interface->txq_res); l++)
         {
             printf("Sched %2d queue %4d state: 0x%08x\n", k, l, mqnic_reg_read32(dev_sched_block->sched[k]->regs, l*4));
         }

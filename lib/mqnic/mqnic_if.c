@@ -39,6 +39,7 @@ either expressed or implied, of The Regents of the University of California.
 struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *regs)
 {
     struct mqnic_if *interface = calloc(1, sizeof(struct mqnic_if));
+    uint32_t count, offset, stride;
     uint32_t val;
 
     if (!interface)
@@ -89,12 +90,17 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
         goto fail;
     }
 
-    interface->eq_offset = mqnic_reg_read32(interface->eq_rb->regs, MQNIC_RB_EQM_REG_OFFSET);
-    interface->eq_count = mqnic_reg_read32(interface->eq_rb->regs, MQNIC_RB_EQM_REG_COUNT);
-    interface->eq_stride = mqnic_reg_read32(interface->eq_rb->regs, MQNIC_RB_EQM_REG_STRIDE);
+    offset = mqnic_reg_read32(interface->eq_rb->regs, MQNIC_RB_EQM_REG_OFFSET);
+    count = mqnic_reg_read32(interface->eq_rb->regs, MQNIC_RB_EQM_REG_COUNT);
+    stride = mqnic_reg_read32(interface->eq_rb->regs, MQNIC_RB_EQM_REG_STRIDE);
 
-    if (interface->eq_count > MQNIC_MAX_EQ)
-        interface->eq_count = MQNIC_MAX_EQ;
+    if (count > MQNIC_MAX_EQ)
+        count = MQNIC_MAX_EQ;
+
+    interface->eq_res = mqnic_res_open(count, interface->regs + offset, stride);
+
+    if (!interface->eq_res)
+        goto fail;
 
     interface->txq_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_TX_QM_TYPE, MQNIC_RB_TX_QM_VER, 0);
 
@@ -104,12 +110,17 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
         goto fail;
     }
 
-    interface->txq_offset = mqnic_reg_read32(interface->txq_rb->regs, MQNIC_RB_TX_QM_REG_OFFSET);
-    interface->txq_count = mqnic_reg_read32(interface->txq_rb->regs, MQNIC_RB_TX_QM_REG_COUNT);
-    interface->txq_stride = mqnic_reg_read32(interface->txq_rb->regs, MQNIC_RB_TX_QM_REG_STRIDE);
+    offset = mqnic_reg_read32(interface->txq_rb->regs, MQNIC_RB_TX_QM_REG_OFFSET);
+    count = mqnic_reg_read32(interface->txq_rb->regs, MQNIC_RB_TX_QM_REG_COUNT);
+    stride = mqnic_reg_read32(interface->txq_rb->regs, MQNIC_RB_TX_QM_REG_STRIDE);
 
-    if (interface->txq_count > MQNIC_MAX_TXQ)
-        interface->txq_count = MQNIC_MAX_TXQ;
+    if (count > MQNIC_MAX_TXQ)
+        count = MQNIC_MAX_TXQ;
+
+    interface->txq_res = mqnic_res_open(count, interface->regs + offset, stride);
+
+    if (!interface->txq_res)
+        goto fail;
 
     interface->tx_cq_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_TX_CQM_TYPE, MQNIC_RB_TX_CQM_VER, 0);
 
@@ -119,12 +130,17 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
         goto fail;
     }
 
-    interface->tx_cq_offset = mqnic_reg_read32(interface->tx_cq_rb->regs, MQNIC_RB_TX_CQM_REG_OFFSET);
-    interface->tx_cq_count = mqnic_reg_read32(interface->tx_cq_rb->regs, MQNIC_RB_TX_CQM_REG_COUNT);
-    interface->tx_cq_stride = mqnic_reg_read32(interface->tx_cq_rb->regs, MQNIC_RB_TX_CQM_REG_STRIDE);
+    offset = mqnic_reg_read32(interface->tx_cq_rb->regs, MQNIC_RB_TX_CQM_REG_OFFSET);
+    count = mqnic_reg_read32(interface->tx_cq_rb->regs, MQNIC_RB_TX_CQM_REG_COUNT);
+    stride = mqnic_reg_read32(interface->tx_cq_rb->regs, MQNIC_RB_TX_CQM_REG_STRIDE);
 
-    if (interface->tx_cq_count > MQNIC_MAX_TX_CQ)
-        interface->tx_cq_count = MQNIC_MAX_TX_CQ;
+    if (count > MQNIC_MAX_TX_CQ)
+        count = MQNIC_MAX_TX_CQ;
+
+    interface->tx_cq_res = mqnic_res_open(count, interface->regs + offset, stride);
+
+    if (!interface->tx_cq_res)
+        goto fail;
 
     interface->rxq_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_QM_TYPE, MQNIC_RB_RX_QM_VER, 0);
 
@@ -134,12 +150,17 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
         goto fail;
     }
 
-    interface->rxq_offset = mqnic_reg_read32(interface->rxq_rb->regs, MQNIC_RB_RX_QM_REG_OFFSET);
-    interface->rxq_count = mqnic_reg_read32(interface->rxq_rb->regs, MQNIC_RB_RX_QM_REG_COUNT);
-    interface->rxq_stride = mqnic_reg_read32(interface->rxq_rb->regs, MQNIC_RB_RX_QM_REG_STRIDE);
+    offset = mqnic_reg_read32(interface->rxq_rb->regs, MQNIC_RB_RX_QM_REG_OFFSET);
+    count = mqnic_reg_read32(interface->rxq_rb->regs, MQNIC_RB_RX_QM_REG_COUNT);
+    stride = mqnic_reg_read32(interface->rxq_rb->regs, MQNIC_RB_RX_QM_REG_STRIDE);
 
-    if (interface->rxq_count > MQNIC_MAX_RXQ)
-        interface->rxq_count = MQNIC_MAX_RXQ;
+    if (count > MQNIC_MAX_RXQ)
+        count = MQNIC_MAX_RXQ;
+
+    interface->rxq_res = mqnic_res_open(count, interface->regs + offset, stride);
+
+    if (!interface->rxq_res)
+        goto fail;
 
     interface->rx_cq_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_CQM_TYPE, MQNIC_RB_RX_CQM_VER, 0);
 
@@ -149,12 +170,17 @@ struct mqnic_if *mqnic_if_open(struct mqnic *dev, int index, volatile uint8_t *r
         goto fail;
     }
 
-    interface->rx_cq_offset = mqnic_reg_read32(interface->rx_cq_rb->regs, MQNIC_RB_RX_CQM_REG_OFFSET);
-    interface->rx_cq_count = mqnic_reg_read32(interface->rx_cq_rb->regs, MQNIC_RB_RX_CQM_REG_COUNT);
-    interface->rx_cq_stride = mqnic_reg_read32(interface->rx_cq_rb->regs, MQNIC_RB_RX_CQM_REG_STRIDE);
+    offset = mqnic_reg_read32(interface->rx_cq_rb->regs, MQNIC_RB_RX_CQM_REG_OFFSET);
+    count = mqnic_reg_read32(interface->rx_cq_rb->regs, MQNIC_RB_RX_CQM_REG_COUNT);
+    stride = mqnic_reg_read32(interface->rx_cq_rb->regs, MQNIC_RB_RX_CQM_REG_STRIDE);
 
-    if (interface->rx_cq_count > MQNIC_MAX_RX_CQ)
-        interface->rx_cq_count = MQNIC_MAX_RX_CQ;
+    if (count > MQNIC_MAX_RX_CQ)
+        count = MQNIC_MAX_RX_CQ;
+
+    interface->rx_cq_res = mqnic_res_open(count, interface->regs + offset, stride);
+
+    if (!interface->rx_cq_res)
+        goto fail;
 
     interface->rx_queue_map_rb = mqnic_find_reg_block(interface->rb_list, MQNIC_RB_RX_QUEUE_MAP_TYPE, MQNIC_RB_RX_QUEUE_MAP_VER, 0);
 
@@ -234,6 +260,12 @@ void mqnic_if_close(struct mqnic_if *interface)
         mqnic_port_close(interface->ports[k]);
         interface->ports[k] = NULL;
     }
+
+    mqnic_res_close(interface->eq_res);
+    mqnic_res_close(interface->txq_res);
+    mqnic_res_close(interface->tx_cq_res);
+    mqnic_res_close(interface->rxq_res);
+    mqnic_res_close(interface->rx_cq_res);
 
     if (interface->rb_list)
         mqnic_free_reg_block_list(interface->rb_list);

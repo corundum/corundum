@@ -79,6 +79,12 @@ extern unsigned int mqnic_link_status_poll;
 struct mqnic_dev;
 struct mqnic_if;
 
+struct mqnic_res {
+	unsigned int count;
+	u8 __iomem *base;
+	unsigned int stride;
+};
+
 struct mqnic_reg_block {
 	u32 type;
 	u32 version;
@@ -417,29 +423,25 @@ struct mqnic_if {
 	u32 max_tx_mtu;
 	u32 max_rx_mtu;
 
-	u32 eq_offset;
+	struct mqnic_res *eq_res;
+	struct mqnic_res *txq_res;
+	struct mqnic_res *tx_cq_res;
+	struct mqnic_res *rxq_res;
+	struct mqnic_res *rx_cq_res;
+
 	u32 eq_count;
-	u32 eq_stride;
 	struct mqnic_eq *eq[MQNIC_MAX_EQ];
 
-	u32 txq_offset;
 	u32 txq_count;
-	u32 txq_stride;
 	struct mqnic_ring *txq[MQNIC_MAX_TXQ];
 
-	u32 tx_cq_offset;
 	u32 tx_cq_count;
-	u32 tx_cq_stride;
 	struct mqnic_cq *tx_cq[MQNIC_MAX_TX_CQ];
 
-	u32 rxq_offset;
 	u32 rxq_count;
-	u32 rxq_stride;
 	struct mqnic_ring *rxq[MQNIC_MAX_RXQ];
 
-	u32 rx_cq_offset;
 	u32 rx_cq_count;
-	u32 rx_cq_stride;
 	struct mqnic_cq *rx_cq[MQNIC_MAX_RX_CQ];
 
 	u32 port_count;
@@ -506,6 +508,12 @@ struct mqnic_priv {
 };
 
 // mqnic_main.c
+
+// mqnic_res.c
+struct mqnic_res *mqnic_create_res(unsigned int count, u8 __iomem *base, unsigned int stride);
+void mqnic_destroy_res(struct mqnic_res *res);
+unsigned int mqnic_res_get_count(struct mqnic_res *res);
+u8 __iomem *mqnic_res_get_addr(struct mqnic_res *res, int index);
 
 // mqnic_reg_block.c
 struct mqnic_reg_block *mqnic_enumerate_reg_block_list(u8 __iomem *base, size_t offset, size_t size);

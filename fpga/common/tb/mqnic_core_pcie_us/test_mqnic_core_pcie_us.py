@@ -468,7 +468,7 @@ async def run_test_nic(dut):
     tb.log.info("Enable queues")
     for interface in tb.driver.interfaces:
         await interface.sched_blocks[0].schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000001)
-        for k in range(interface.txq_count):
+        for k in range(len(interface.txq)):
             await interface.sched_blocks[0].schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
 
     # wait for all writes to complete
@@ -603,7 +603,7 @@ async def run_test_nic(dut):
     tb.loopback_enable = True
 
     for k in range(len(pkts)):
-        await tb.driver.interfaces[0].start_xmit(pkts[k], k % tb.driver.interfaces[0].txq_count)
+        await tb.driver.interfaces[0].start_xmit(pkts[k], k % len(tb.driver.interfaces[0].txq))
 
     for k in range(count):
         pkt = await tb.driver.interfaces[0].recv()
@@ -680,7 +680,7 @@ async def run_test_nic(dut):
         for block in tb.driver.interfaces[0].sched_blocks:
             await block.schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000001)
             await tb.driver.interfaces[0].set_rx_queue_map_indir_table(block.index, 0, block.index)
-            for k in range(block.interface.txq_count):
+            for k in range(len(block.interface.txq)):
                 if k % len(tb.driver.interfaces[0].sched_blocks) == block.index:
                     await block.schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
                 else:

@@ -567,8 +567,8 @@ struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, in
 	// associate interface resources
 	priv->if_features = interface->if_features;
 
-	priv->txq_count = mqnic_res_get_count(interface->txq_res);
-	priv->rxq_count = mqnic_res_get_count(interface->rxq_res);
+	priv->txq_count = min_t(u32, mqnic_res_get_count(interface->txq_res), 256);
+	priv->rxq_count = min_t(u32, mqnic_res_get_count(interface->rxq_res), num_online_cpus());
 
 	priv->tx_ring_size = mqnic_num_txq_entries;
 	priv->rx_ring_size = mqnic_num_rxq_entries;

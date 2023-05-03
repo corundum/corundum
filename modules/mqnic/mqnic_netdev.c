@@ -169,15 +169,7 @@ int mqnic_start_port(struct net_device *ndev)
 	mqnic_interface_set_rx_mtu(iface, ndev->mtu + ETH_HLEN);
 
 	// configure RX indirection and RSS
-	mqnic_interface_set_rx_queue_map_rss_mask(iface, 0, 0xffffffff);
-	mqnic_interface_set_rx_queue_map_app_mask(iface, 0, 0);
-
-	for (k = 0; k < iface->rx_queue_map_indir_table_size; k++) {
-		rcu_read_lock();
-		q = radix_tree_lookup(&priv->rxq_table, k % priv->rxq_count);
-		rcu_read_unlock();
-		mqnic_interface_set_rx_queue_map_indir_table(iface, 0, k, q->index);
-	}
+	mqnic_update_indir_table(ndev);
 
 	priv->port_up = true;
 
@@ -334,6 +326,28 @@ static int mqnic_close(struct net_device *ndev)
 
 	mutex_unlock(&mdev->state_lock);
 	return ret;
+}
+
+int mqnic_update_indir_table(struct net_device *ndev)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	struct mqnic_if *iface = priv->interface;
+	struct mqnic_ring *q;
+	int k;
+
+	mqnic_interface_set_rx_queue_map_rss_mask(iface, 0, 0xffffffff);
+	mqnic_interface_set_rx_queue_map_app_mask(iface, 0, 0);
+
+	for (k = 0; k < priv->rx_queue_map_indir_table_size; k++) {
+		rcu_read_lock();
+		q = radix_tree_lookup(&priv->rxq_table, priv->rx_queue_map_indir_table[k]);
+		rcu_read_unlock();
+
+		if (q)
+			mqnic_interface_set_rx_queue_map_indir_table(iface, 0, k, q->index);
+	}
+
+	return 0;
 }
 
 void mqnic_update_stats(struct net_device *ndev)
@@ -613,6 +627,16 @@ struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, in
 
 	desc_block_size = min_t(u32, interface->max_desc_block_size, 4);
 
+	priv->rx_queue_map_indir_table_size = interface->rx_queue_map_indir_table_size;
+	priv->rx_queue_map_indir_table = kzalloc(sizeof(u32)*priv->rx_queue_map_indir_table_size, GFP_KERNEL);
+	if (!priv->rx_queue_map_indir_table) {
+		ret = -ENOMEM;
+		goto fail;
+	}
+
+	for (k = 0; k < priv->rx_queue_map_indir_table_size; k++)
+		priv->rx_queue_map_indir_table[k] = k % priv->rxq_count;
+
 	// entry points
 	ndev->netdev_ops = &mqnic_netdev_ops;
 	ndev->ethtool_ops = &mqnic_ethtool_ops;
@@ -661,6 +685,8 @@ void mqnic_destroy_netdev(struct net_device *ndev)
 
 	if (priv->registered)
 		unregister_netdev(ndev);
+
+	kfree(priv->rx_queue_map_indir_table);
 
 	free_netdev(ndev);
 }

@@ -492,6 +492,9 @@ struct mqnic_priv {
 
 	u32 max_desc_block_size;
 
+	u32 rx_queue_map_indir_table_size;
+	u32 *rx_queue_map_indir_table;
+
 	struct hwtstamp_config hwts_config;
 
 	struct i2c_client *mod_i2c_client;
@@ -544,6 +547,7 @@ u32 mqnic_port_get_rx_status(struct mqnic_port *port);
 // mqnic_netdev.c
 int mqnic_start_port(struct net_device *ndev);
 void mqnic_stop_port(struct net_device *ndev);
+int mqnic_update_indir_table(struct net_device *ndev);
 void mqnic_update_stats(struct net_device *ndev);
 struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, int dev_port);
 void mqnic_destroy_netdev(struct net_device *ndev);

@@ -160,6 +160,7 @@ static int mqnic_set_channels(struct net_device *ndev,
 	u32 txq_count, rxq_count;
 	int port_up = priv->port_up;
 	int ret = 0;
+	int k;
 
 	if (channel->combined_count || channel->other_count)
 		return -EINVAL;
@@ -178,6 +179,10 @@ static int mqnic_set_channels(struct net_device *ndev,
 
 	dev_info(priv->dev, "New TX channel count: %d", txq_count);
 	dev_info(priv->dev, "New RX channel count: %d", rxq_count);
+
+	if (rxq_count != priv->rxq_count)
+		for (k = 0; k < priv->rx_queue_map_indir_table_size; k++)
+			priv->rx_queue_map_indir_table[k] = k % rxq_count;
 
 	mutex_lock(&priv->mdev->state_lock);
 

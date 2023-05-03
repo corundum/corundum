@@ -161,6 +161,15 @@ static int mqnic_set_channels(struct net_device *ndev,
 	int port_up = priv->port_up;
 	int ret = 0;
 
+	if (channel->combined_count || channel->other_count)
+		return -EINVAL;
+
+	if (priv->rxq_count > mqnic_res_get_count(priv->interface->rxq_res))
+		return -EINVAL;
+
+	if (priv->txq_count > mqnic_res_get_count(priv->interface->txq_res))
+		return -EINVAL;
+
 	rxq_count = channel->rx_count;
 	txq_count = channel->tx_count;
 

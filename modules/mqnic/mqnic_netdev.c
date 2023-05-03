@@ -570,8 +570,10 @@ struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, in
 	priv->txq_count = min_t(u32, mqnic_res_get_count(interface->txq_res), 256);
 	priv->rxq_count = min_t(u32, mqnic_res_get_count(interface->rxq_res), num_online_cpus());
 
-	priv->tx_ring_size = mqnic_num_txq_entries;
-	priv->rx_ring_size = mqnic_num_rxq_entries;
+	priv->tx_ring_size = roundup_pow_of_two(clamp_t(u32, mqnic_num_txq_entries,
+			MQNIC_MIN_TX_RING_SZ, MQNIC_MAX_TX_RING_SZ));
+	priv->rx_ring_size = roundup_pow_of_two(clamp_t(u32, mqnic_num_rxq_entries,
+			MQNIC_MIN_RX_RING_SZ, MQNIC_MAX_RX_RING_SZ));
 
 	init_rwsem(&priv->txq_table_sem);
 	INIT_RADIX_TREE(&priv->txq_table, GFP_KERNEL);

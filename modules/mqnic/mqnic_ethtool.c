@@ -58,6 +58,94 @@ static void mqnic_get_drvinfo(struct net_device *ndev,
 	strscpy(drvinfo->bus_info, dev_name(mdev->dev), sizeof(drvinfo->bus_info));
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+static void mqnic_get_ringparam(struct net_device *ndev,
+		struct ethtool_ringparam *param,
+		struct kernel_ethtool_ringparam *kernel_param,
+		struct netlink_ext_ack *ext_ack)
+#else
+static void mqnic_get_ringparam(struct net_device *ndev,
+		struct ethtool_ringparam *param)
+#endif
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+
+	memset(param, 0, sizeof(*param));
+
+	param->rx_max_pending = MQNIC_MAX_RX_RING_SZ;
+	param->tx_max_pending = MQNIC_MAX_TX_RING_SZ;
+
+	param->rx_pending = priv->rx_ring_size;
+	param->tx_pending = priv->tx_ring_size;
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+	memset(kernel_param, 0, sizeof(*kernel_param));
+
+	kernel_param->cqe_size = MQNIC_CPL_SIZE;
+#endif
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
+static int mqnic_set_ringparam(struct net_device *ndev,
+		struct ethtool_ringparam *param,
+		struct kernel_ethtool_ringparam *kernel_param,
+		struct netlink_ext_ack *ext_ack)
+#else
+static int mqnic_set_ringparam(struct net_device *ndev,
+		struct ethtool_ringparam *param)
+#endif
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	u32 tx_ring_size, rx_ring_size;
+	int port_up = priv->port_up;
+	int ret = 0;
+
+	if (param->rx_mini_pending || param->rx_jumbo_pending)
+		return -EINVAL;
+
+	if (param->rx_pending < MQNIC_MIN_RX_RING_SZ)
+		return -EINVAL;
+
+	if (param->rx_pending > MQNIC_MAX_RX_RING_SZ)
+		return -EINVAL;
+
+	if (param->tx_pending < MQNIC_MIN_TX_RING_SZ)
+		return -EINVAL;
+
+	if (param->tx_pending > MQNIC_MAX_TX_RING_SZ)
+		return -EINVAL;
+
+	rx_ring_size = roundup_pow_of_two(param->rx_pending);
+	tx_ring_size = roundup_pow_of_two(param->tx_pending);
+
+	if (rx_ring_size == priv->rx_ring_size &&
+			tx_ring_size == priv->tx_ring_size)
+		return 0;
+
+	dev_info(priv->dev, "New TX ring size: %d", tx_ring_size);
+	dev_info(priv->dev, "New RX ring size: %d", rx_ring_size);
+
+	mutex_lock(&priv->mdev->state_lock);
+
+	if (port_up)
+		mqnic_stop_port(ndev);
+
+	priv->tx_ring_size = tx_ring_size;
+	priv->rx_ring_size = rx_ring_size;
+
+	if (port_up) {
+		ret = mqnic_start_port(ndev);
+
+		if (ret)
+			dev_err(priv->dev, "%s: Failed to start port on interface %d netdev %d: %d",
+					__func__, priv->interface->index, priv->index, ret);
+	}
+
+	mutex_unlock(&priv->mdev->state_lock);
+
+	return ret;
+}
+
 static int mqnic_get_ts_info(struct net_device *ndev,
 		struct ethtool_ts_info *info)
 {
@@ -343,6 +431,8 @@ static int mqnic_get_module_eeprom_by_page(struct net_device *ndev,
 const struct ethtool_ops mqnic_ethtool_ops = {
 	.get_drvinfo = mqnic_get_drvinfo,
 	.get_link = ethtool_op_get_link,
+	.get_ringparam = mqnic_get_ringparam,
+	.set_ringparam = mqnic_set_ringparam,
 	.get_ts_info = mqnic_get_ts_info,
 	.get_module_info = mqnic_get_module_info,
 	.get_module_eeprom = mqnic_get_module_eeprom,

@@ -64,7 +64,7 @@ int mqnic_start_port(struct net_device *ndev)
 			goto fail;
 		}
 
-		ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], mqnic_num_rxq_entries, 0);
+		ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], priv->rx_ring_size, 0);
 		if (ret) {
 			mqnic_destroy_cq(cq);
 			goto fail;
@@ -93,7 +93,7 @@ int mqnic_start_port(struct net_device *ndev)
 		else
 			q->page_order = ilog2((ndev->mtu + ETH_HLEN + PAGE_SIZE - 1) / PAGE_SIZE - 1) + 1;
 
-		ret = mqnic_open_rx_ring(q, priv, cq, mqnic_num_rxq_entries, 1);
+		ret = mqnic_open_rx_ring(q, priv, cq, priv->rx_ring_size, 1);
 		if (ret) {
 			mqnic_destroy_rx_ring(q);
 			mqnic_destroy_cq(cq);
@@ -119,7 +119,7 @@ int mqnic_start_port(struct net_device *ndev)
 			goto fail;
 		}
 
-		ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], mqnic_num_txq_entries, 1);
+		ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], priv->tx_ring_size, 1);
 		if (ret) {
 			mqnic_destroy_cq(cq);
 			goto fail;
@@ -144,7 +144,7 @@ int mqnic_start_port(struct net_device *ndev)
 
 		q->tx_queue = netdev_get_tx_queue(ndev, k);
 
-		ret = mqnic_open_tx_ring(q, priv, cq, mqnic_num_txq_entries, desc_block_size);
+		ret = mqnic_open_tx_ring(q, priv, cq, priv->tx_ring_size, desc_block_size);
 		if (ret) {
 			mqnic_destroy_tx_ring(q);
 			mqnic_destroy_cq(cq);
@@ -565,6 +565,9 @@ struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, in
 
 	priv->txq_count = mqnic_res_get_count(interface->txq_res);
 	priv->rxq_count = mqnic_res_get_count(interface->rxq_res);
+
+	priv->tx_ring_size = mqnic_num_txq_entries;
+	priv->rx_ring_size = mqnic_num_rxq_entries;
 
 	init_rwsem(&priv->txq_table_sem);
 	INIT_RADIX_TREE(&priv->txq_table, GFP_KERNEL);

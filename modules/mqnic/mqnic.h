@@ -478,6 +478,9 @@ struct mqnic_priv {
 	u32 txq_count;
 	u32 rxq_count;
 
+	u32 tx_ring_size;
+	u32 rx_ring_size;
+
 	struct rw_semaphore txq_table_sem;
 	struct radix_tree_root txq_table;
 

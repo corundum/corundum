@@ -539,6 +539,8 @@ u32 mqnic_port_get_tx_status(struct mqnic_port *port);
 u32 mqnic_port_get_rx_status(struct mqnic_port *port);
 
 // mqnic_netdev.c
+int mqnic_start_port(struct net_device *ndev);
+void mqnic_stop_port(struct net_device *ndev);
 void mqnic_update_stats(struct net_device *ndev);
 struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, int dev_port);
 void mqnic_destroy_netdev(struct net_device *ndev);

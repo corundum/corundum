@@ -37,9 +37,7 @@
 
 #include <linux/version.h>
 
-static int mqnic_stop_port(struct net_device *ndev);
-
-static int mqnic_start_port(struct net_device *ndev)
+int mqnic_start_port(struct net_device *ndev)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	struct mqnic_dev *mdev = priv->mdev;
@@ -218,7 +216,7 @@ fail:
 	return ret;
 }
 
-static int mqnic_stop_port(struct net_device *ndev)
+void mqnic_stop_port(struct net_device *ndev)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	struct mqnic_dev *mdev = priv->mdev;
@@ -301,8 +299,6 @@ static int mqnic_stop_port(struct net_device *ndev)
 		mqnic_destroy_cq(cq);
 	}
 	up_write(&priv->rxq_table_sem);
-
-	return 0;
 }
 
 static int mqnic_open(struct net_device *ndev)
@@ -331,11 +327,7 @@ static int mqnic_close(struct net_device *ndev)
 
 	mutex_lock(&mdev->state_lock);
 
-	ret = mqnic_stop_port(ndev);
-
-	if (ret)
-		dev_err(mdev->dev, "Failed to stop port on interface %d netdev %d: %d",
-				priv->interface->index, priv->index, ret);
+	mqnic_stop_port(ndev);
 
 	mutex_unlock(&mdev->state_lock);
 	return ret;

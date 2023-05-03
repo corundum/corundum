@@ -45,8 +45,7 @@ static int mqnic_eq_int(struct notifier_block *nb, unsigned long action, void *d
 	return NOTIFY_DONE;
 }
 
-struct mqnic_eq *mqnic_create_eq(struct mqnic_if *interface,
-		int eqn, u8 __iomem *hw_addr)
+struct mqnic_eq *mqnic_create_eq(struct mqnic_if *interface)
 {
 	struct mqnic_eq *eq;
 
@@ -57,91 +56,65 @@ struct mqnic_eq *mqnic_create_eq(struct mqnic_if *interface,
 	eq->dev = interface->dev;
 	eq->interface = interface;
 
-	eq->eqn = eqn;
-	eq->active = 0;
+	eq->eqn = -1;
+	eq->enabled = 0;
 
 	eq->irq_nb.notifier_call = mqnic_eq_int;
 
-	eq->hw_addr = hw_addr;
+	eq->hw_addr = NULL;
 	eq->hw_ptr_mask = 0xffff;
-	eq->hw_head_ptr = hw_addr + MQNIC_EQ_HEAD_PTR_REG;
-	eq->hw_tail_ptr = hw_addr + MQNIC_EQ_TAIL_PTR_REG;
+	eq->hw_head_ptr = NULL;
+	eq->hw_tail_ptr = NULL;
 
 	eq->head_ptr = 0;
 	eq->tail_ptr = 0;
 
-	// deactivate queue
-	iowrite32(0, eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
+	spin_lock_init(&eq->table_lock);
+
+	INIT_RADIX_TREE(&eq->cq_table, GFP_KERNEL);
 
 	return eq;
 }
 
 void mqnic_destroy_eq(struct mqnic_eq *eq)
 {
-	mqnic_free_eq(eq);
+	mqnic_close_eq(eq);
 
 	kfree(eq);
 }
 
-int mqnic_alloc_eq(struct mqnic_eq *eq, int size, int stride)
+int mqnic_open_eq(struct mqnic_eq *eq, struct mqnic_irq *irq, int size)
 {
-	if (eq->active || eq->buf)
+	int ret;
+
+	if (eq->enabled || eq->hw_addr || eq->buf || !irq)
 		return -EINVAL;
+
+	eq->eqn = mqnic_res_alloc(eq->interface->eq_res);
+	if (eq->eqn < 0)
+		return -ENOMEM;
 
 	eq->size = roundup_pow_of_two(size);
 	eq->size_mask = eq->size - 1;
-	eq->stride = roundup_pow_of_two(stride);
+	eq->stride = roundup_pow_of_two(MQNIC_EVENT_SIZE);
 
 	eq->buf_size = eq->size * eq->stride;
 	eq->buf = dma_alloc_coherent(eq->dev, eq->buf_size, &eq->buf_dma_addr, GFP_KERNEL);
-	if (!eq->buf)
-		return -ENOMEM;
-
-	eq->head_ptr = 0;
-	eq->tail_ptr = 0;
-
-	// deactivate queue
-	iowrite32(0, eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
-	// set base address
-	iowrite32(eq->buf_dma_addr, eq->hw_addr + MQNIC_EQ_BASE_ADDR_REG + 0);
-	iowrite32(eq->buf_dma_addr >> 32, eq->hw_addr + MQNIC_EQ_BASE_ADDR_REG + 4);
-	// set interrupt index
-	iowrite32(0, eq->hw_addr + MQNIC_EQ_INTERRUPT_INDEX_REG);
-	// set pointers
-	iowrite32(eq->head_ptr & eq->hw_ptr_mask, eq->hw_addr + MQNIC_EQ_HEAD_PTR_REG);
-	iowrite32(eq->tail_ptr & eq->hw_ptr_mask, eq->hw_addr + MQNIC_EQ_TAIL_PTR_REG);
-	// set size
-	iowrite32(ilog2(eq->size), eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
-
-	return 0;
-}
-
-void mqnic_free_eq(struct mqnic_eq *eq)
-{
-	mqnic_deactivate_eq(eq);
-
-	if (eq->buf) {
-		dma_free_coherent(eq->dev, eq->buf_size, eq->buf, eq->buf_dma_addr);
-		eq->buf = NULL;
-		eq->buf_dma_addr = 0;
+	if (!eq->buf) {
+		ret = -ENOMEM;
+		goto fail;
 	}
-}
-
-int mqnic_activate_eq(struct mqnic_eq *eq, struct mqnic_irq *irq)
-{
-	int ret = 0;
-
-	mqnic_deactivate_eq(eq);
-
-	if (!eq->buf || !irq)
-		return -EINVAL;
 
 	// register interrupt
 	ret = atomic_notifier_chain_register(&irq->nh, &eq->irq_nb);
 	if (ret)
-		return ret;
+		goto fail;
 
 	eq->irq = irq;
+
+	eq->hw_addr = mqnic_res_get_addr(eq->interface->eq_res, eq->eqn);
+	eq->hw_head_ptr = eq->hw_addr + MQNIC_EQ_HEAD_PTR_REG;
+	eq->hw_tail_ptr = eq->hw_addr + MQNIC_EQ_TAIL_PTR_REG;
 
 	eq->head_ptr = 0;
 	eq->tail_ptr = 0;
@@ -158,23 +131,30 @@ int mqnic_activate_eq(struct mqnic_eq *eq, struct mqnic_irq *irq)
 	// set pointers
 	iowrite32(eq->head_ptr & eq->hw_ptr_mask, eq->hw_addr + MQNIC_EQ_HEAD_PTR_REG);
 	iowrite32(eq->tail_ptr & eq->hw_ptr_mask, eq->hw_addr + MQNIC_EQ_TAIL_PTR_REG);
+	// set size
+	iowrite32(ilog2(eq->size), eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
 	// set size and activate queue
-	iowrite32(ilog2(eq->size) | MQNIC_EQ_ACTIVE_MASK,
-			eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
+	iowrite32(ilog2(eq->size) | MQNIC_EQ_ACTIVE_MASK, eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
 
-	eq->active = 1;
+	eq->enabled = 1;
 
 	return 0;
+
+fail:
+	mqnic_close_eq(eq);
+	return ret;
 }
 
-void mqnic_deactivate_eq(struct mqnic_eq *eq)
+void mqnic_close_eq(struct mqnic_eq *eq)
 {
-	int ret = 0;
+	int ret;
 
-	// deactivate queue
-	iowrite32(ilog2(eq->size), eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
-	// disarm queue
-	iowrite32(0, eq->hw_addr + MQNIC_EQ_INTERRUPT_INDEX_REG);
+	if (eq->hw_addr) {
+		// deactivate queue
+		iowrite32(ilog2(eq->size), eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
+		// disarm queue
+		iowrite32(0, eq->hw_addr + MQNIC_EQ_INTERRUPT_INDEX_REG);
+	}
 
 	// unregister interrupt
 	if (eq->irq)
@@ -182,7 +162,56 @@ void mqnic_deactivate_eq(struct mqnic_eq *eq)
 
 	eq->irq = NULL;
 
-	eq->active = 0;
+	eq->hw_addr = NULL;
+	eq->hw_head_ptr = NULL;
+	eq->hw_tail_ptr = NULL;
+
+	if (eq->buf) {
+		dma_free_coherent(eq->dev, eq->buf_size, eq->buf, eq->buf_dma_addr);
+		eq->buf = NULL;
+		eq->buf_dma_addr = 0;
+	}
+
+	mqnic_res_free(eq->interface->eq_res, eq->eqn);
+	eq->eqn = -1;
+
+	eq->enabled = 0;
+}
+
+int mqnic_eq_attach_cq(struct mqnic_eq *eq, struct mqnic_cq *cq)
+{
+	int ret;
+	int cqn = cq->cqn;
+	if (cq->is_txcq)
+		cqn |= 0x80000000;
+
+	spin_lock_irq(&eq->table_lock);
+	ret = radix_tree_insert(&eq->cq_table, cqn, cq);
+	spin_unlock_irq(&eq->table_lock);
+	return ret;
+}
+
+void mqnic_eq_detach_cq(struct mqnic_eq *eq, struct mqnic_cq *cq)
+{
+	struct mqnic_cq *item;
+	int cqn = cq->cqn;
+	if (cq->is_txcq)
+		cqn |= 0x80000000;
+
+	spin_lock_irq(&eq->table_lock);
+	item = radix_tree_delete(&eq->cq_table, cqn);
+	spin_unlock_irq(&eq->table_lock);
+
+	if (IS_ERR(item)) {
+		dev_err(eq->dev, "%s on IF %d EQ %d: radix_tree_delete failed: %ld",
+				__func__, eq->interface->index, eq->eqn, PTR_ERR(item));
+	} else if (!item) {
+		dev_err(eq->dev, "%s on IF %d EQ %d: CQ %d not in table",
+				__func__, eq->interface->index, eq->eqn, cqn);
+	} else if (item != cq) {
+		dev_err(eq->dev, "%s on IF %d EQ %d: entry mismatch when removing CQ %d",
+				__func__, eq->interface->index, eq->eqn, cqn);
+	}
 }
 
 void mqnic_eq_read_head_ptr(struct mqnic_eq *eq)
@@ -197,11 +226,10 @@ void mqnic_eq_write_tail_ptr(struct mqnic_eq *eq)
 
 void mqnic_arm_eq(struct mqnic_eq *eq)
 {
-	if (!eq->active)
+	if (!eq->enabled)
 		return;
 
-	iowrite32(eq->irq->index | MQNIC_EQ_ARM_MASK,
-			eq->hw_addr + MQNIC_EQ_INTERRUPT_INDEX_REG);
+	iowrite32(eq->irq->index | MQNIC_EQ_ARM_MASK, eq->hw_addr + MQNIC_EQ_INTERRUPT_INDEX_REG);
 }
 
 void mqnic_process_eq(struct mqnic_eq *eq)
@@ -212,6 +240,7 @@ void mqnic_process_eq(struct mqnic_eq *eq)
 	u32 eq_index;
 	u32 eq_tail_ptr;
 	int done = 0;
+	int cqn;
 
 	// read head pointer from NIC
 	eq_tail_ptr = eq->tail_ptr;
@@ -227,34 +256,44 @@ void mqnic_process_eq(struct mqnic_eq *eq)
 
 		if (event->type == MQNIC_EVENT_TYPE_TX_CPL) {
 			// transmit completion event
-			if (unlikely(le16_to_cpu(event->source) > interface->tx_cq_count)) {
-				dev_err(eq->dev, "%s on port %d: unknown event source %d (index %d, type %d)",
-						__func__, interface->index, le16_to_cpu(event->source), eq_index,
-						le16_to_cpu(event->type));
+			cqn = le16_to_cpu(event->source) | 0x80000000;
+
+			rcu_read_lock();
+			cq = radix_tree_lookup(&eq->cq_table, cqn);
+			rcu_read_unlock();
+
+			if (likely(cq)) {
+				if (likely(cq->handler))
+					cq->handler(cq);
+			} else {
+				dev_err(eq->dev, "%s on IF %d EQ %d: unknown event source %d (index %d, type %d)",
+						__func__, interface->index, eq->eqn, le16_to_cpu(event->source),
+						eq_index, le16_to_cpu(event->type));
 				print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 						event, MQNIC_EVENT_SIZE, true);
-			} else {
-				cq = interface->tx_cq[le16_to_cpu(event->source)];
-				if (likely(cq && cq->handler))
-					cq->handler(cq);
 			}
 		} else if (le16_to_cpu(event->type) == MQNIC_EVENT_TYPE_RX_CPL) {
 			// receive completion event
-			if (unlikely(le16_to_cpu(event->source) > interface->rx_cq_count)) {
-				dev_err(eq->dev, "%s on port %d: unknown event source %d (index %d, type %d)",
-						__func__, interface->index, le16_to_cpu(event->source), eq_index,
-						le16_to_cpu(event->type));
+			cqn = le16_to_cpu(event->source);
+
+			rcu_read_lock();
+			cq = radix_tree_lookup(&eq->cq_table, cqn);
+			rcu_read_unlock();
+
+			if (likely(cq)) {
+				if (likely(cq->handler))
+					cq->handler(cq);
+			} else {
+				dev_err(eq->dev, "%s on IF %d EQ %d: unknown event source %d (index %d, type %d)",
+						__func__, interface->index, eq->eqn, le16_to_cpu(event->source),
+						eq_index, le16_to_cpu(event->type));
 				print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 						event, MQNIC_EVENT_SIZE, true);
-			} else {
-				cq = interface->rx_cq[le16_to_cpu(event->source)];
-				if (likely(cq && cq->handler))
-					cq->handler(cq);
 			}
 		} else {
-			dev_err(eq->dev, "%s on port %d: unknown event type %d (index %d, source %d)",
-					__func__, interface->index, le16_to_cpu(event->type), eq_index,
-					le16_to_cpu(event->source));
+			dev_err(eq->dev, "%s on IF %d EQ %d: unknown event type %d (index %d, source %d)",
+					__func__, interface->index, eq->eqn, le16_to_cpu(event->type),
+					eq_index, le16_to_cpu(event->source));
 			print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 					event, MQNIC_EVENT_SIZE, true);
 		}

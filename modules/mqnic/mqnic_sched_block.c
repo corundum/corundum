@@ -53,8 +53,6 @@ struct mqnic_sched_block *mqnic_create_sched_block(struct mqnic_if *interface,
 
 	block->index = index;
 
-	block->txq_count = interface->txq_count;
-
 	block->block_rb = block_rb;
 
 	offset = ioread32(block_rb->regs + MQNIC_RB_SCHED_BLOCK_REG_OFFSET);

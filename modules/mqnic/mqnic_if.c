@@ -250,70 +250,21 @@ struct mqnic_if *mqnic_create_interface(struct mqnic_dev *mdev, int index, u8 __
 
 	desc_block_size = min_t(u32, interface->max_desc_block_size, 4);
 
-	// create rings
-	interface->eq_count = mqnic_res_get_count(interface->eq_res);
-	for (k = 0; k < interface->eq_count; k++) {
-		struct mqnic_eq *eq = mqnic_create_eq(interface, k,
-				mqnic_res_get_addr(interface->eq_res, k));
-		if (IS_ERR_OR_NULL(eq)) {
-			ret = PTR_ERR(eq);
-			goto fail;
-		}
+	// disable queues
+	for (k = 0; k < mqnic_res_get_count(interface->eq_res); k++)
+		iowrite32(0, mqnic_res_get_addr(interface->eq_res, k) + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
 
-		interface->eq[k] = eq;
+	for (k = 0; k < mqnic_res_get_count(interface->txq_res); k++)
+		iowrite32(0, mqnic_res_get_addr(interface->txq_res, k) + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
-		ret = mqnic_alloc_eq(eq, mqnic_num_eq_entries,
-				MQNIC_EVENT_SIZE);
-		if (ret)
-			goto fail;
+	for (k = 0; k < mqnic_res_get_count(interface->tx_cq_res); k++)
+		iowrite32(0, mqnic_res_get_addr(interface->tx_cq_res, k) + MQNIC_CQ_ACTIVE_LOG_SIZE_REG);
 
-		mqnic_activate_eq(eq, mdev->irq[k % mdev->irq_count]);
-		mqnic_arm_eq(eq);
-	}
+	for (k = 0; k < mqnic_res_get_count(interface->rxq_res); k++)
+		iowrite32(0, mqnic_res_get_addr(interface->rxq_res, k) + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
 
-	interface->txq_count = mqnic_res_get_count(interface->txq_res);
-	for (k = 0; k < interface->txq_count; k++) {
-		struct mqnic_ring *txq = mqnic_create_tx_ring(interface, k,
-				mqnic_res_get_addr(interface->txq_res, k));
-		if (IS_ERR_OR_NULL(txq)) {
-			ret = PTR_ERR(txq);
-			goto fail;
-		}
-		interface->txq[k] = txq;
-	}
-
-	interface->tx_cq_count = mqnic_res_get_count(interface->tx_cq_res);
-	for (k = 0; k < interface->tx_cq_count; k++) {
-		struct mqnic_cq *cq = mqnic_create_cq(interface, k,
-				mqnic_res_get_addr(interface->tx_cq_res, k));
-		if (IS_ERR_OR_NULL(cq)) {
-			ret = PTR_ERR(cq);
-			goto fail;
-		}
-		interface->tx_cq[k] = cq;
-	}
-
-	interface->rxq_count = mqnic_res_get_count(interface->rxq_res);
-	for (k = 0; k < interface->rxq_count; k++) {
-		struct mqnic_ring *rxq = mqnic_create_rx_ring(interface, k,
-				mqnic_res_get_addr(interface->rxq_res, k));
-		if (IS_ERR_OR_NULL(rxq)) {
-			ret = PTR_ERR(rxq);
-			goto fail;
-		}
-		interface->rxq[k] = rxq;
-	}
-
-	interface->rx_cq_count = mqnic_res_get_count(interface->rx_cq_res);
-	for (k = 0; k < interface->rx_cq_count; k++) {
-		struct mqnic_cq *cq = mqnic_create_cq(interface, k,
-				mqnic_res_get_addr(interface->rx_cq_res, k));
-		if (IS_ERR_OR_NULL(cq)) {
-			ret = PTR_ERR(cq);
-			goto fail;
-		}
-		interface->rx_cq[k] = cq;
-	}
+	for (k = 0; k < mqnic_res_get_count(interface->rx_cq_res); k++)
+		iowrite32(0, mqnic_res_get_addr(interface->rx_cq_res, k) + MQNIC_CQ_ACTIVE_LOG_SIZE_REG);
 
 	// create ports
 	for (k = 0; k < interface->port_count; k++) {
@@ -353,6 +304,24 @@ struct mqnic_if *mqnic_create_interface(struct mqnic_dev *mdev, int index, u8 __
 		interface->sched_block[k] = sched_block;
 	}
 
+	// create EQs
+	interface->eq_count = mqnic_res_get_count(interface->eq_res);
+	for (k = 0; k < interface->eq_count; k++) {
+		struct mqnic_eq *eq = mqnic_create_eq(interface);
+		if (IS_ERR_OR_NULL(eq)) {
+			ret = PTR_ERR(eq);
+			goto fail;
+		}
+
+		interface->eq[k] = eq;
+
+		ret = mqnic_open_eq(eq, mdev->irq[k % mdev->irq_count], mqnic_num_eq_entries);
+		if (ret)
+			goto fail;
+
+		mqnic_arm_eq(eq);
+	}
+
 	// create net_devices
 	interface->dev_port_base = mdev->dev_port_max;
 	interface->dev_port_max = mdev->dev_port_max;
@@ -386,39 +355,11 @@ void mqnic_destroy_interface(struct mqnic_if *interface)
 		}
 	}
 
-	// free rings
+	// free EQs
 	for (k = 0; k < ARRAY_SIZE(interface->eq); k++) {
 		if (interface->eq[k]) {
 			mqnic_destroy_eq(interface->eq[k]);
 			interface->eq[k] = NULL;
-		}
-	}
-
-	for (k = 0; k < ARRAY_SIZE(interface->txq); k++) {
-		if (interface->txq[k]) {
-			mqnic_destroy_tx_ring(interface->txq[k]);
-			interface->txq[k] = NULL;
-		}
-	}
-
-	for (k = 0; k < ARRAY_SIZE(interface->tx_cq); k++) {
-		if (interface->tx_cq[k]) {
-			mqnic_destroy_cq(interface->tx_cq[k]);
-			interface->tx_cq[k] = NULL;
-		}
-	}
-
-	for (k = 0; k < ARRAY_SIZE(interface->rxq); k++) {
-		if (interface->rxq[k]) {
-			mqnic_destroy_rx_ring(interface->rxq[k]);
-			interface->rxq[k] = NULL;
-		}
-	}
-
-	for (k = 0; k < ARRAY_SIZE(interface->rx_cq); k++) {
-		if (interface->rx_cq[k]) {
-			mqnic_destroy_cq(interface->rx_cq[k]);
-			interface->rx_cq[k] = NULL;
 		}
 	}
 

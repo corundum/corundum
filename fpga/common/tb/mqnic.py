@@ -319,6 +319,14 @@ class Resource:
         self.stride = stride
 
         self.windows = {}
+        self.free_list = list(range(count))
+
+    def alloc(self):
+        return self.free_list.pop(0)
+
+    def free(self, index):
+        self.free_list.append(index)
+        self.free_list.sort()
 
     def get_count(self):
         return self.count
@@ -401,7 +409,7 @@ class Packet:
 
 
 class Eq:
-    def __init__(self, interface, eqn, hw_regs):
+    def __init__(self, interface):
         self.interface = interface
         self.log = interface.log
         self.driver = interface.driver
@@ -409,8 +417,8 @@ class Eq:
         self.size = 0
         self.size_mask = 0
         self.stride = 0
-        self.eqn = eqn
-        self.active = False
+        self.eqn = None
+        self.enabled = False
 
         self.buf_size = 0
         self.buf_region = None
@@ -419,80 +427,82 @@ class Eq:
 
         self.irq = None
 
+        self.cq_table = {}
+
         self.head_ptr = 0
         self.tail_ptr = 0
 
         self.hw_ptr_mask = 0xffff
-        self.hw_regs = hw_regs
+        self.hw_regs = None
 
-    async def init(self):
-        self.log.info("Init EQ %d (interface %d)", self.eqn, self.interface.index)
+    async def open(self, irq, size):
+        if self.hw_regs:
+            raise Exception("Already open")
 
-        await self.hw_regs.write_dword(MQNIC_EQ_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        self.eqn = self.interface.eq_res.alloc()
 
-    async def alloc(self, size, stride):
-        if self.active:
-            raise Exception("Cannot allocate active ring")
-        if self.buf:
-            raise Exception("Already allocated")
+        self.log.info("Open EQ %d (interface %d)", self.eqn, self.interface.index)
 
         self.log_size = size.bit_length() - 1
         self.size = 2**self.log_size
         self.size_mask = self.size-1
-        self.stride = stride
+        self.stride = MQNIC_EVENT_SIZE
 
         self.buf_size = self.size*self.stride
         self.buf_region = self.driver.pool.alloc_region(self.buf_size)
         self.buf_dma = self.buf_region.get_absolute_address(0)
         self.buf = self.buf_region.mem
 
+        self.buf[0:self.buf_size] = b'\x00'*self.buf_size
+
         self.head_ptr = 0
         self.tail_ptr = 0
-
-        await self.hw_regs.write_dword(MQNIC_EQ_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
-        await self.hw_regs.write_dword(MQNIC_EQ_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
-        await self.hw_regs.write_dword(MQNIC_EQ_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
-        await self.hw_regs.write_dword(MQNIC_EQ_INTERRUPT_INDEX_REG, 0)  # interrupt index
-        await self.hw_regs.write_dword(MQNIC_EQ_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
-        await self.hw_regs.write_dword(MQNIC_EQ_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
-        await self.hw_regs.write_dword(MQNIC_EQ_ACTIVE_LOG_SIZE_REG, self.log_size)  # active, log size
-
-    async def free(self):
-        await self.deactivate()
-
-        if self.buf:
-            # TODO
-            pass
-
-    async def activate(self, irq):
-        self.log.info("Activate Eq %d (interface %d)", self.eqn, self.interface.index)
-
-        await self.deactivate()
 
         self.irq = irq
 
-        self.head_ptr = 0
-        self.tail_ptr = 0
+        self.cq_table = {}
 
-        self.buf[0:self.buf_size] = b'\x00'*self.buf_size
+        self.hw_regs = self.interface.eq_res.get_window(self.eqn)
 
         await self.hw_regs.write_dword(MQNIC_EQ_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
         await self.hw_regs.write_dword(MQNIC_EQ_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
         await self.hw_regs.write_dword(MQNIC_EQ_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
-        await self.hw_regs.write_dword(MQNIC_EQ_INTERRUPT_INDEX_REG, irq)  # interrupt index
+        await self.hw_regs.write_dword(MQNIC_EQ_INTERRUPT_INDEX_REG, self.irq)  # interrupt index
         await self.hw_regs.write_dword(MQNIC_EQ_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
         await self.hw_regs.write_dword(MQNIC_EQ_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
         await self.hw_regs.write_dword(MQNIC_EQ_ACTIVE_LOG_SIZE_REG, self.log_size | MQNIC_EQ_ACTIVE_MASK)  # active, log size
 
-        self.active = True
+        self.enabled = True
 
-    async def deactivate(self):
+    async def close(self):
+        if not self.hw_regs:
+            return
+
         await self.hw_regs.write_dword(MQNIC_EQ_ACTIVE_LOG_SIZE_REG, self.log_size)  # active, log size
         await self.hw_regs.write_dword(MQNIC_EQ_INTERRUPT_INDEX_REG, 0)  # interrupt index
 
+        # TODO free buffer
+
         self.irq = None
 
-        self.active = False
+        self.enabled = False
+
+        self.hw_regs = None
+
+        self.interface.eq_res.free(self.eqn)
+        self.eqn = None
+
+    def attach_cq(self, cq):
+        if cq.is_txcq:
+            self.cq_table[cq.cqn | 0x80000000] = cq
+        else:
+            self.cq_table[cq.cqn] = cq
+
+    def detach_cq(self, cq):
+        if cq.is_txcq:
+            del self.cq_table[cq.cqn | 0x80000000]
+        else:
+            del self.cq_table[cq.cqn]
 
     async def read_head_ptr(self):
         val = await self.hw_regs.read_dword(MQNIC_EQ_HEAD_PTR_REG)
@@ -502,7 +512,7 @@ class Eq:
         await self.hw_regs.write_dword(MQNIC_EQ_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)
 
     async def arm(self):
-        if not self.active:
+        if not self.hw_regs:
             return
 
         await self.hw_regs.write_dword(MQNIC_EQ_INTERRUPT_INDEX_REG, self.irq | MQNIC_EQ_ARM_MASK)  # interrupt index
@@ -527,12 +537,12 @@ class Eq:
 
             if event_data[0] == 0:
                 # transmit completion
-                cq = self.interface.tx_cq[event_data[1]]
+                cq = self.cq_table[event_data[1] | 0x80000000]
                 await cq.handler(cq)
                 await cq.arm()
             elif event_data[0] == 1:
                 # receive completion
-                cq = self.interface.rx_cq[event_data[1]]
+                cq = self.cq_table[event_data[1]]
                 await cq.handler(cq)
                 await cq.arm()
 
@@ -544,7 +554,7 @@ class Eq:
 
 
 class Cq:
-    def __init__(self, interface, cqn, hw_regs):
+    def __init__(self, interface):
         self.interface = interface
         self.log = interface.log
         self.driver = interface.driver
@@ -552,8 +562,8 @@ class Cq:
         self.size = 0
         self.size_mask = 0
         self.stride = 0
-        self.cqn = cqn
-        self.active = False
+        self.cqn = None
+        self.enabled = False
 
         self.buf_size = 0
         self.buf_region = None
@@ -569,76 +579,74 @@ class Cq:
         self.tail_ptr = 0
 
         self.hw_ptr_mask = 0xffff
-        self.hw_regs = hw_regs
+        self.hw_regs = None
 
-    async def init(self):
-        self.log.info("Init CQ %d (interface %d)", self.cqn, self.interface.index)
+    async def open(self, eq, size, is_txcq=True):
+        if self.hw_regs:
+            raise Exception("Already open")
 
-        await self.hw_regs.write_dword(MQNIC_CQ_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        self.is_txcq = is_txcq
+        if is_txcq:
+            self.cqn = self.interface.tx_cq_res.alloc()
+        else:
+            self.cqn = self.interface.rx_cq_res.alloc()
 
-    async def alloc(self, size, stride):
-        if self.active:
-            raise Exception("Cannot allocate active ring")
-        if self.buf:
-            raise Exception("Already allocated")
+        self.log.info("Open %s CQ %d (interface %d)", "TX" if is_txcq else "RX", self.cqn, self.interface.index)
 
         self.log_size = size.bit_length() - 1
         self.size = 2**self.log_size
         self.size_mask = self.size-1
-        self.stride = stride
+        self.stride = MQNIC_EVENT_SIZE
 
         self.buf_size = self.size*self.stride
         self.buf_region = self.driver.pool.alloc_region(self.buf_size)
         self.buf_dma = self.buf_region.get_absolute_address(0)
         self.buf = self.buf_region.mem
 
-        self.head_ptr = 0
-        self.tail_ptr = 0
-
-        await self.hw_regs.write_dword(MQNIC_CQ_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
-        await self.hw_regs.write_dword(MQNIC_CQ_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
-        await self.hw_regs.write_dword(MQNIC_CQ_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
-        await self.hw_regs.write_dword(MQNIC_CQ_INTERRUPT_INDEX_REG, 0)  # event index
-        await self.hw_regs.write_dword(MQNIC_CQ_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
-        await self.hw_regs.write_dword(MQNIC_CQ_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
-        await self.hw_regs.write_dword(MQNIC_CQ_ACTIVE_LOG_SIZE_REG, self.log_size)  # active, log size
-
-    async def free(self):
-        await self.deactivate()
-
-        if self.buf:
-            # TODO
-            pass
-
-    async def activate(self, eq):
-        self.log.info("Activate CQ %d (interface %d)", self.cqn, self.interface.index)
-
-        await self.deactivate()
-
-        self.eq = eq
-
-        self.head_ptr = 0
-        self.tail_ptr = 0
-
         self.buf[0:self.buf_size] = b'\x00'*self.buf_size
 
+        self.head_ptr = 0
+        self.tail_ptr = 0
+
+        eq.attach_cq(self)
+        self.eq = eq
+
+        if is_txcq:
+            self.hw_regs = self.interface.tx_cq_res.get_window(self.cqn)
+        else:
+            self.hw_regs = self.interface.rx_cq_res.get_window(self.cqn)
+
         await self.hw_regs.write_dword(MQNIC_CQ_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
         await self.hw_regs.write_dword(MQNIC_CQ_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
         await self.hw_regs.write_dword(MQNIC_CQ_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
-        await self.hw_regs.write_dword(MQNIC_CQ_INTERRUPT_INDEX_REG, eq.eqn)  # event index
+        await self.hw_regs.write_dword(MQNIC_CQ_INTERRUPT_INDEX_REG, self.eq.eqn)  # event index
         await self.hw_regs.write_dword(MQNIC_CQ_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
         await self.hw_regs.write_dword(MQNIC_CQ_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
         await self.hw_regs.write_dword(MQNIC_CQ_ACTIVE_LOG_SIZE_REG, self.log_size | MQNIC_CQ_ACTIVE_MASK)  # active, log size
 
-        self.active = True
+        self.enabled = True
 
-    async def deactivate(self):
+    async def close(self):
+        if not self.hw_regs:
+            return
+
         await self.hw_regs.write_dword(MQNIC_CQ_ACTIVE_LOG_SIZE_REG, self.log_size)  # active, log size
         await self.hw_regs.write_dword(MQNIC_CQ_INTERRUPT_INDEX_REG, 0)  # event index
 
+        # TODO free buffer
+
+        self.eq.detach_cq(self)
         self.eq = None
 
-        self.active = False
+        self.enabled = False
+
+        self.hw_regs = None
+
+        if self.is_txcq:
+            self.interface.tx_cq_res.free(self.cqn)
+        else:
+            self.interface.rx_cq_res.free(self.cqn)
+        self.cqn = None
 
     async def read_head_ptr(self):
         val = await self.hw_regs.read_dword(MQNIC_CQ_HEAD_PTR_REG)
@@ -648,14 +656,14 @@ class Cq:
         await self.hw_regs.write_dword(MQNIC_CQ_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)
 
     async def arm(self):
-        if not self.active:
+        if not self.hw_regs:
             return
 
         await self.hw_regs.write_dword(MQNIC_CQ_INTERRUPT_INDEX_REG, self.eq.eqn | MQNIC_CQ_ARM_MASK)  # event index
 
 
 class Txq:
-    def __init__(self, interface, index, hw_regs):
+    def __init__(self, interface):
         self.interface = interface
         self.log = interface.log
         self.driver = interface.driver
@@ -666,8 +674,8 @@ class Txq:
         self.size_mask = 0
         self.full_size = 0
         self.stride = 0
-        self.index = index
-        self.active = False
+        self.index = None
+        self.enabled = False
 
         self.buf_size = 0
         self.buf_region = None
@@ -685,26 +693,23 @@ class Txq:
         self.bytes = 0
 
         self.hw_ptr_mask = 0xffff
-        self.hw_regs = hw_regs
+        self.hw_regs = None
 
-    async def init(self):
-        self.log.info("Init TXQ %d (interface %d)", self.index, self.interface.index)
+    async def open(self, cq, size, desc_block_size):
+        if self.hw_regs:
+            raise Exception("Already open")
 
-        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        self.index = self.interface.txq_res.alloc()
 
-    async def alloc(self, size, stride):
-        if self.active:
-            raise Exception("Cannot allocate active ring")
-        if self.buf:
-            raise Exception("Already allocated")
+        self.log.info("Open TXQ %d (interface %d)", self.index, self.interface.index)
 
         self.log_queue_size = size.bit_length() - 1
-        self.log_desc_block_size = int(stride/MQNIC_DESC_SIZE).bit_length() - 1
+        self.log_desc_block_size = desc_block_size.bit_length() - 1
         self.desc_block_size = 2**self.log_desc_block_size
         self.size = 2**self.log_queue_size
         self.size_mask = self.size-1
         self.full_size = self.size >> 1
-        self.stride = stride
+        self.stride = MQNIC_DESC_SIZE*self.desc_block_size
 
         self.tx_info = [None]*self.size
 
@@ -716,45 +721,27 @@ class Txq:
         self.head_ptr = 0
         self.tail_ptr = 0
 
-        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
-        await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
-        await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
-        await self.hw_regs.write_dword(MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, 0)  # completion queue index
-        await self.hw_regs.write_dword(MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
-        await self.hw_regs.write_dword(MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
-        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
-
-    async def free(self):
-        await self.deactivate()
-
-        if self.buf:
-            # TODO
-            pass
-
-    async def activate(self, cq):
-        self.log.info("Activate TXQ %d (interface %d)", self.index, self.interface.index)
-
-        await self.deactivate()
-
         self.cq = cq
         self.cq.src_ring = self
         self.cq.handler = Txq.process_tx_cq
 
-        self.head_ptr = 0
-        self.tail_ptr = 0
+        self.hw_regs = self.interface.txq_res.get_window(self.index)
 
         await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
         await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
         await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
-        await self.hw_regs.write_dword(MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, cq.cqn)  # completion queue index
+        await self.hw_regs.write_dword(MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, self.cq.cqn)  # completion queue index
         await self.hw_regs.write_dword(MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
         await self.hw_regs.write_dword(MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
-        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK)  # active, log desc block size, log queue size
-
-        self.active = True
-
-    async def deactivate(self):
         await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
+
+    async def close(self):
+        if not self.hw_regs:
+            return
+
+        await self.disable()
+
+        # TODO free buffer
 
         if self.cq:
             self.cq.src_ring = None
@@ -762,7 +749,26 @@ class Txq:
 
         self.cq = None
 
-        self.active = False
+        self.hw_regs = None
+
+        self.interface.txq_res.free(self.index)
+        self.index = None
+
+    async def enable(self):
+        if not self.hw_regs:
+            raise Exception("Not open")
+
+        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK)  # active, log desc block size, log queue size
+
+        self.enabled = True
+
+    async def disable(self):
+        if not self.hw_regs:
+            return
+
+        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
+
+        self.enabled = False
 
     def empty(self):
         return self.head_ptr == self.tail_ptr
@@ -840,7 +846,7 @@ class Txq:
 
 
 class Rxq:
-    def __init__(self, interface, index, hw_regs):
+    def __init__(self, interface):
         self.interface = interface
         self.log = interface.log
         self.driver = interface.driver
@@ -851,8 +857,8 @@ class Rxq:
         self.size_mask = 0
         self.full_size = 0
         self.stride = 0
-        self.index = index
-        self.active = False
+        self.index = None
+        self.enabled = False
 
         self.buf_size = 0
         self.buf_region = None
@@ -868,26 +874,23 @@ class Rxq:
         self.bytes = 0
 
         self.hw_ptr_mask = 0xffff
-        self.hw_regs = hw_regs
+        self.hw_regs = None
 
-    async def init(self):
-        self.log.info("Init RXQ %d (interface %d)", self.index, self.interface.index)
+    async def open(self, cq, size, desc_block_size):
+        if self.hw_regs:
+            raise Exception("Already open")
 
-        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
+        self.index = self.interface.rxq_res.alloc()
 
-    async def alloc(self, size, stride):
-        if self.active:
-            raise Exception("Cannot allocate active ring")
-        if self.buf:
-            raise Exception("Already allocated")
+        self.log.info("Open RXQ %d (interface %d)", self.index, self.interface.index)
 
         self.log_queue_size = size.bit_length() - 1
-        self.log_desc_block_size = int(stride/MQNIC_DESC_SIZE).bit_length() - 1
+        self.log_desc_block_size = desc_block_size.bit_length() - 1
         self.desc_block_size = 2**self.log_desc_block_size
         self.size = 2**self.log_queue_size
         self.size_mask = self.size-1
         self.full_size = self.size >> 1
-        self.stride = stride
+        self.stride = MQNIC_DESC_SIZE*self.desc_block_size
 
         self.rx_info = [None]*self.size
 
@@ -899,47 +902,29 @@ class Rxq:
         self.head_ptr = 0
         self.tail_ptr = 0
 
-        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
-        await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
-        await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
-        await self.hw_regs.write_dword(MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, 0)  # completion queue index
-        await self.hw_regs.write_dword(MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
-        await self.hw_regs.write_dword(MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
-        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
-
-    async def free(self):
-        await self.deactivate()
-
-        if self.buf:
-            # TODO
-            pass
-
-    async def activate(self, cq):
-        self.log.info("Activate RXQ %d (interface %d)", self.index, self.interface.index)
-
-        await self.deactivate()
-
         self.cq = cq
         self.cq.src_ring = self
         self.cq.handler = Rxq.process_rx_cq
 
-        self.head_ptr = 0
-        self.tail_ptr = 0
+        self.hw_regs = self.interface.rxq_res.get_window(self.index)
 
         await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)  # active, log size
         await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG, self.buf_dma & 0xffffffff)  # base address
         await self.hw_regs.write_dword(MQNIC_QUEUE_BASE_ADDR_REG+4, self.buf_dma >> 32)  # base address
-        await self.hw_regs.write_dword(MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, cq.cqn)  # completion queue index
+        await self.hw_regs.write_dword(MQNIC_QUEUE_CPL_QUEUE_INDEX_REG, self.cq.cqn)  # completion queue index
         await self.hw_regs.write_dword(MQNIC_QUEUE_HEAD_PTR_REG, self.head_ptr & self.hw_ptr_mask)  # head pointer
         await self.hw_regs.write_dword(MQNIC_QUEUE_TAIL_PTR_REG, self.tail_ptr & self.hw_ptr_mask)  # tail pointer
-        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK)  # active, log desc block size, log queue size
-
-        self.active = True
+        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
 
         await self.refill_buffers()
 
-    async def deactivate(self):
-        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
+    async def close(self):
+        if not self.hw_regs:
+            return
+
+        await self.disable()
+
+        # TODO free buffer
 
         if self.cq:
             self.cq.src_ring = None
@@ -947,7 +932,26 @@ class Rxq:
 
         self.cq = None
 
-        self.active = False
+        self.hw_regs = None
+
+        self.interface.rxq_res.free(self.index)
+        self.index = None
+
+    async def enable(self):
+        if not self.hw_regs:
+            raise Exception("Not open")
+
+        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK)  # active, log desc block size, log queue size
+
+        self.enabled = True
+
+    async def disable(self):
+        if not self.hw_regs:
+            return
+
+        await self.hw_regs.write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, self.log_queue_size | (self.log_desc_block_size << 8))  # active, log desc block size, log queue size
+
+        self.enabled = False
 
     def empty(self):
         return self.head_ptr == self.tail_ptr
@@ -1326,40 +1330,24 @@ class Interface:
             await self.set_rx_queue_map_app_mask(k, 0)
             await self.set_rx_queue_map_indir_table(k, 0, 0)
 
-        self.eq = []
-
-        self.txq = []
-        self.tx_cq = []
-        self.rxq = []
-        self.rx_cq = []
-        self.ports = []
-        self.sched_blocks = []
-
+        # ensure all queues are disabled
         for k in range(self.eq_res.get_count()):
-            eq = Eq(self, k, self.eq_res.get_window(k))
-            await eq.init()
-            self.eq.append(eq)
+            await self.eq_res.get_window(k).write_dword(MQNIC_EQ_ACTIVE_LOG_SIZE_REG, 0)
 
         for k in range(self.txq_res.get_count()):
-            txq = Txq(self, k, self.txq_res.get_window(k))
-            await txq.init()
-            self.txq.append(txq)
+            await self.txq_res.get_window(k).write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)
 
         for k in range(self.tx_cq_res.get_count()):
-            cq = Cq(self, k, self.tx_cq_res.get_window(k))
-            await cq.init()
-            self.tx_cq.append(cq)
+            await self.tx_cq_res.get_window(k).write_dword(MQNIC_CQ_ACTIVE_LOG_SIZE_REG, 0)
 
         for k in range(self.rxq_res.get_count()):
-            rxq = Rxq(self, k, self.rxq_res.get_window(k))
-            await rxq.init()
-            self.rxq.append(rxq)
+            await self.rxq_res.get_window(k).write_dword(MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG, 0)
 
         for k in range(self.rx_cq_res.get_count()):
-            cq = Cq(self, k, self.rx_cq_res.get_window(k))
-            await cq.init()
-            self.rx_cq.append(cq)
+            await self.rx_cq_res.get_window(k).write_dword(MQNIC_CQ_ACTIVE_LOG_SIZE_REG, 0)
 
+        # create ports
+        self.ports = []
         for k in range(self.port_count):
             rb = self.reg_blocks.find(MQNIC_RB_PORT_TYPE, MQNIC_RB_PORT_VER, index=k)
 
@@ -1367,6 +1355,8 @@ class Interface:
             await p.init()
             self.ports.append(p)
 
+        # create schedulers
+        self.sched_blocks = []
         for k in range(self.sched_block_count):
             rb = self.reg_blocks.find(MQNIC_RB_SCHED_BLOCK_TYPE, MQNIC_RB_SCHED_BLOCK_VER, index=k)
 
@@ -1376,30 +1366,42 @@ class Interface:
 
         assert self.sched_block_count == len(self.sched_blocks)
 
-        for eq in self.eq:
-            await eq.alloc(1024, MQNIC_EVENT_SIZE)
-            await eq.activate(self.index)  # TODO?
+        # create EQs
+        self.eq = []
+        for k in range(self.eq_res.get_count()):
+            eq = Eq(self)
+            await eq.open(self.index, 1024)
+            self.eq.append(eq)
             await eq.arm()
+
+        self.txq = []
+        self.tx_cq = []
+        self.rxq = []
+        self.rx_cq = []
 
         # wait for all writes to complete
         await self.hw_regs.read_dword(0)
 
     async def open(self):
-        for rxq in self.rxq:
-            cq = self.rx_cq[rxq.index]
-            await cq.alloc(1024, MQNIC_CPL_SIZE)
-            await cq.activate(self.eq[cq.cqn % len(self.eq)])
+        for k in range(self.rxq_res.get_count()):
+            cq = Cq(self)
+            await cq.open(self.eq[k % len(self.eq)], 1024, is_txcq=False)
+            self.rx_cq.append(cq)
             await cq.arm()
-            await rxq.alloc(1024, MQNIC_DESC_SIZE*4)
-            await rxq.activate(cq)
+            rxq = Rxq(self)
+            await rxq.open(cq, 1024, 4)
+            await rxq.enable()
+            self.rxq.append(rxq)
 
-        for txq in self.txq:
-            cq = self.tx_cq[txq.index]
-            await cq.alloc(1024, MQNIC_CPL_SIZE)
-            await cq.activate(self.eq[cq.cqn % len(self.eq)])
+        for k in range(self.txq_res.get_count()):
+            cq = Cq(self)
+            await cq.open(self.eq[k % len(self.eq)], 1024, is_txcq=True)
+            self.tx_cq.append(cq)
             await cq.arm()
-            await txq.alloc(1024, MQNIC_DESC_SIZE*4)
-            await txq.activate(cq)
+            txq = Txq(self)
+            await txq.open(cq, 1024, 4)
+            await txq.enable()
+            self.txq.append(txq)
 
         # wait for all writes to complete
         await self.hw_regs.read_dword(0)
@@ -1409,22 +1411,26 @@ class Interface:
     async def close(self):
         self.port_up = False
 
-        for txq in self.txq:
-            await txq.deactivate()
-            await txq.cq.deactivate()
+        for q in self.txq:
+            q.disable()
 
-        for rxq in self.rxq:
-            await rxq.deactivate()
-            await rxq.cq.deactivate()
+        for q in self.rxq:
+            q.disable()
 
         # wait for all writes to complete
         await self.hw_regs.read_dword(0)
 
         for q in self.txq:
+            cq = q.cq
             await q.free_buf()
+            await q.close()
+            await cq.close()
 
         for q in self.rxq:
+            cq = q.cq
             await q.free_buf()
+            await q.close()
+            await cq.close()
 
     async def start_xmit(self, skb, tx_ring=None, csum_start=None, csum_offset=None):
         if not self.port_up:

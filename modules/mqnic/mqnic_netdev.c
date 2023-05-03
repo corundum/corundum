@@ -53,6 +53,9 @@ int mqnic_start_port(struct net_device *ndev)
 	dev_info(mdev->dev, "%s on interface %d netdev %d", __func__,
 			priv->interface->index, priv->index);
 
+	netif_set_real_num_tx_queues(ndev, priv->txq_count);
+	netif_set_real_num_rx_queues(ndev, priv->rxq_count);
+
 	desc_block_size = min_t(u32, priv->interface->max_desc_block_size, 4);
 
 	// set up RX queues

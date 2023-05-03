@@ -146,6 +146,57 @@ static int mqnic_set_ringparam(struct net_device *ndev,
 	return ret;
 }
 
+static void mqnic_get_channels(struct net_device *ndev,
+		struct ethtool_channels *channel)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+
+	channel->max_rx = mqnic_res_get_count(priv->interface->rxq_res);
+	channel->max_tx = mqnic_res_get_count(priv->interface->txq_res);
+
+	channel->rx_count = priv->rxq_count;
+	channel->tx_count = priv->txq_count;
+}
+
+static int mqnic_set_channels(struct net_device *ndev,
+		struct ethtool_channels *channel)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	u32 txq_count, rxq_count;
+	int port_up = priv->port_up;
+	int ret = 0;
+
+	rxq_count = channel->rx_count;
+	txq_count = channel->tx_count;
+
+	if (rxq_count == priv->rxq_count &&
+			txq_count == priv->txq_count)
+		return 0;
+
+	dev_info(priv->dev, "New TX channel count: %d", txq_count);
+	dev_info(priv->dev, "New RX channel count: %d", rxq_count);
+
+	mutex_lock(&priv->mdev->state_lock);
+
+	if (port_up)
+		mqnic_stop_port(ndev);
+
+	priv->txq_count = txq_count;
+	priv->rxq_count = rxq_count;
+
+	if (port_up) {
+		ret = mqnic_start_port(ndev);
+
+		if (ret)
+			dev_err(priv->dev, "%s: Failed to start port on interface %d netdev %d: %d",
+					__func__, priv->interface->index, priv->index, ret);
+	}
+
+	mutex_unlock(&priv->mdev->state_lock);
+
+	return ret;
+}
+
 static int mqnic_get_ts_info(struct net_device *ndev,
 		struct ethtool_ts_info *info)
 {
@@ -433,6 +484,8 @@ const struct ethtool_ops mqnic_ethtool_ops = {
 	.get_link = ethtool_op_get_link,
 	.get_ringparam = mqnic_get_ringparam,
 	.set_ringparam = mqnic_set_ringparam,
+	.get_channels = mqnic_get_channels,
+	.set_channels = mqnic_set_channels,
 	.get_ts_info = mqnic_get_ts_info,
 	.get_module_info = mqnic_get_module_info,
 	.get_module_eeprom = mqnic_get_module_eeprom,

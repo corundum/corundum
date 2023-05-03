@@ -541,7 +541,8 @@ struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, in
 	int k;
 	u32 desc_block_size;
 
-	ndev = alloc_etherdev_mqs(sizeof(*priv), MQNIC_MAX_TXQ, MQNIC_MAX_RXQ);
+	ndev = alloc_etherdev_mqs(sizeof(*priv), mqnic_res_get_count(interface->txq_res),
+			mqnic_res_get_count(interface->rxq_res));
 	if (!ndev) {
 		dev_err(dev, "Failed to allocate memory");
 		return ERR_PTR(-ENOMEM);

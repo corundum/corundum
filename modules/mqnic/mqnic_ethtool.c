@@ -141,6 +141,70 @@ static int mqnic_set_ringparam(struct net_device *ndev,
 	return ret;
 }
 
+static int mqnic_get_rxnfc(struct net_device *ndev,
+		struct ethtool_rxnfc *rxnfc, u32 *rule_locs)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+
+	switch (rxnfc->cmd) {
+	case ETHTOOL_GRXRINGS:
+		rxnfc->data = priv->rxq_count;
+		break;
+	default:
+		return -EOPNOTSUPP;
+	}
+
+	return 0;
+}
+
+static u32 mqnic_get_rxfh_indir_size(struct net_device *ndev)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+
+	return priv->rx_queue_map_indir_table_size;
+}
+
+static int mqnic_get_rxfh(struct net_device *ndev, u32 *indir, u8 *key,
+		u8 *hfunc)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	int k;
+
+	if (hfunc)
+		*hfunc = ETH_RSS_HASH_TOP;
+
+	if (indir)
+		for (k = 0; k < priv->rx_queue_map_indir_table_size; k++)
+			indir[k] = priv->rx_queue_map_indir_table[k];
+
+	return 0;
+}
+
+static int mqnic_set_rxfh(struct net_device *ndev, const u32 *indir,
+		const u8 *key, const u8 hfunc)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	int k;
+
+	if (hfunc != ETH_RSS_HASH_NO_CHANGE && hfunc != ETH_RSS_HASH_TOP)
+		return -EOPNOTSUPP;
+
+	if (!indir)
+		return 0;
+
+	if (indir) {
+		for (k = 0; k < priv->rx_queue_map_indir_table_size; k++) {
+			if (indir[k] >= priv->rxq_count)
+				return -EINVAL;
+		}
+
+		for (k = 0; k < priv->rx_queue_map_indir_table_size; k++)
+			priv->rx_queue_map_indir_table[k] = indir[k];
+	}
+
+	return mqnic_update_indir_table(ndev);
+}
+
 static void mqnic_get_channels(struct net_device *ndev,
 		struct ethtool_channels *channel)
 {
@@ -492,6 +556,10 @@ const struct ethtool_ops mqnic_ethtool_ops = {
 	.get_link = ethtool_op_get_link,
 	.get_ringparam = mqnic_get_ringparam,
 	.set_ringparam = mqnic_set_ringparam,
+	.get_rxnfc = mqnic_get_rxnfc,
+	.get_rxfh_indir_size = mqnic_get_rxfh_indir_size,
+	.get_rxfh = mqnic_get_rxfh,
+	.set_rxfh = mqnic_set_rxfh,
 	.get_channels = mqnic_get_channels,
 	.set_channels = mqnic_set_channels,
 	.get_ts_info = mqnic_get_ts_info,

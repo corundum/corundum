@@ -70,8 +70,6 @@ static void mqnic_get_ringparam(struct net_device *ndev,
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 
-	memset(param, 0, sizeof(*param));
-
 	param->rx_max_pending = MQNIC_MAX_RX_RING_SZ;
 	param->tx_max_pending = MQNIC_MAX_TX_RING_SZ;
 
@@ -79,8 +77,6 @@ static void mqnic_get_ringparam(struct net_device *ndev,
 	param->tx_pending = priv->tx_ring_size;
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
-	memset(kernel_param, 0, sizeof(*kernel_param));
-
 	kernel_param->cqe_size = MQNIC_CPL_SIZE;
 #endif
 }
@@ -118,8 +114,7 @@ static int mqnic_set_ringparam(struct net_device *ndev,
 	rx_ring_size = roundup_pow_of_two(param->rx_pending);
 	tx_ring_size = roundup_pow_of_two(param->tx_pending);
 
-	if (rx_ring_size == priv->rx_ring_size &&
-			tx_ring_size == priv->tx_ring_size)
+	if (rx_ring_size == priv->rx_ring_size && tx_ring_size == priv->tx_ring_size)
 		return 0;
 
 	dev_info(priv->dev, "New TX ring size: %d", tx_ring_size);
@@ -169,8 +164,7 @@ static int mqnic_set_channels(struct net_device *ndev,
 	rxq_count = channel->rx_count;
 	txq_count = channel->tx_count;
 
-	if (rxq_count == priv->rxq_count &&
-			txq_count == priv->txq_count)
+	if (rxq_count == priv->rxq_count && txq_count == priv->txq_count)
 		return 0;
 
 	dev_info(priv->dev, "New TX channel count: %d", txq_count);

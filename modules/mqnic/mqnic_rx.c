@@ -342,7 +342,7 @@ int mqnic_process_rx_cq(struct mqnic_cq *cq, int napi_budget)
 		page = rx_info->page;
 
 		if (unlikely(!page)) {
-			dev_err(dev, "%s: ring %d null page at index %d",
+			netdev_err(priv->ndev, "%s: ring %d null page at index %d",
 					__func__, rx_ring->index, ring_index);
 			print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
 					cpl, MQNIC_CPL_SIZE, true);
@@ -351,7 +351,7 @@ int mqnic_process_rx_cq(struct mqnic_cq *cq, int napi_budget)
 
 		skb = napi_get_frags(&cq->napi);
 		if (unlikely(!skb)) {
-			dev_err(dev, "%s: ring %d failed to allocate skb",
+			netdev_err(priv->ndev, "%s: ring %d failed to allocate skb",
 					__func__, rx_ring->index);
 			break;
 		}

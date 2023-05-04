@@ -137,8 +137,8 @@ static int mqnic_set_ringparam(struct net_device *ndev,
 	if (rx_ring_size == priv->rx_ring_size && tx_ring_size == priv->tx_ring_size)
 		return 0;
 
-	dev_info(priv->dev, "New TX ring size: %d", tx_ring_size);
-	dev_info(priv->dev, "New RX ring size: %d", rx_ring_size);
+	netdev_info(ndev, "New TX ring size: %d", tx_ring_size);
+	netdev_info(ndev, "New RX ring size: %d", rx_ring_size);
 
 	mutex_lock(&priv->mdev->state_lock);
 
@@ -152,8 +152,7 @@ static int mqnic_set_ringparam(struct net_device *ndev,
 		ret = mqnic_start_port(ndev);
 
 		if (ret)
-			dev_err(priv->dev, "%s: Failed to start port on interface %d netdev %d: %d",
-					__func__, priv->interface->index, priv->index, ret);
+			netdev_err(ndev, "%s: Failed to start port: %d", __func__, ret);
 	}
 
 	mutex_unlock(&priv->mdev->state_lock);
@@ -261,8 +260,8 @@ static int mqnic_set_channels(struct net_device *ndev,
 	if (rxq_count == priv->rxq_count && txq_count == priv->txq_count)
 		return 0;
 
-	dev_info(priv->dev, "New TX channel count: %d", txq_count);
-	dev_info(priv->dev, "New RX channel count: %d", rxq_count);
+	netdev_info(ndev, "New TX channel count: %d", txq_count);
+	netdev_info(ndev, "New RX channel count: %d", rxq_count);
 
 	if (rxq_count != priv->rxq_count)
 		for (k = 0; k < priv->rx_queue_map_indir_table_size; k++)
@@ -280,8 +279,7 @@ static int mqnic_set_channels(struct net_device *ndev,
 		ret = mqnic_start_port(ndev);
 
 		if (ret)
-			dev_err(priv->dev, "%s: Failed to start port on interface %d netdev %d: %d",
-					__func__, priv->interface->index, priv->index, ret);
+			netdev_err(ndev, "%s: Failed to start port: %d", __func__, ret);
 	}
 
 	mutex_unlock(&priv->mdev->state_lock);
@@ -357,14 +355,13 @@ static int mqnic_query_module_id(struct net_device *ndev)
 static int mqnic_query_module_eeprom_by_page(struct net_device *ndev,
 		u8 i2c_addr, u16 page, u16 bank, u16 offset, u16 len, u8 *data)
 {
-	struct mqnic_priv *priv = netdev_priv(ndev);
 	int module_id;
 	u8 d;
 
 	module_id = mqnic_query_module_id(ndev);
 
 	if (module_id < 0) {
-		dev_err(priv->dev, "%s: Failed to read module ID (%d)", __func__, module_id);
+		netdev_err(ndev, "%s: Failed to read module ID (%d)", __func__, module_id);
 		return module_id;
 	}
 
@@ -380,7 +377,7 @@ static int mqnic_query_module_eeprom_by_page(struct net_device *ndev,
 			return -EINVAL;
 		break;
 	default:
-		dev_err(priv->dev, "%s: Unknown module ID (0x%x)", __func__, module_id);
+		netdev_err(ndev, "%s: Unknown module ID (0x%x)", __func__, module_id);
 		return -EINVAL;
 	}
 
@@ -402,7 +399,7 @@ static int mqnic_query_module_eeprom_by_page(struct net_device *ndev,
 		}
 		break;
 	default:
-		dev_err(priv->dev, "%s: Unknown module ID (0x%x)", __func__, module_id);
+		netdev_err(ndev, "%s: Unknown module ID (0x%x)", __func__, module_id);
 		return -EINVAL;
 	}
 
@@ -413,7 +410,6 @@ static int mqnic_query_module_eeprom_by_page(struct net_device *ndev,
 static int mqnic_query_module_eeprom(struct net_device *ndev,
 		u16 offset, u16 len, u8 *data)
 {
-	struct mqnic_priv *priv = netdev_priv(ndev);
 	int module_id;
 	u8 i2c_addr = 0x50;
 	u16 page = 0;
@@ -422,7 +418,7 @@ static int mqnic_query_module_eeprom(struct net_device *ndev,
 	module_id = mqnic_query_module_id(ndev);
 
 	if (module_id < 0) {
-		dev_err(priv->dev, "%s: Failed to read module ID (%d)", __func__, module_id);
+		netdev_err(ndev, "%s: Failed to read module ID (%d)", __func__, module_id);
 		return module_id;
 	}
 
@@ -447,7 +443,7 @@ static int mqnic_query_module_eeprom(struct net_device *ndev,
 		}
 		break;
 	default:
-		dev_err(priv->dev, "%s: Unknown module ID (0x%x)", __func__, module_id);
+		netdev_err(ndev, "%s: Unknown module ID (0x%x)", __func__, module_id);
 		return -EINVAL;
 	}
 
@@ -462,7 +458,6 @@ static int mqnic_query_module_eeprom(struct net_device *ndev,
 static int mqnic_get_module_info(struct net_device *ndev,
 		struct ethtool_modinfo *modinfo)
 {
-	struct mqnic_priv *priv = netdev_priv(ndev);
 	int read_len = 0;
 	u8 data[16];
 
@@ -500,7 +495,7 @@ static int mqnic_get_module_info(struct net_device *ndev,
 		modinfo->eeprom_len = ETH_MODULE_SFF_8636_LEN;
 		break;
 	default:
-		dev_err(priv->dev, "%s: Unknown module ID (0x%x)", __func__, data[0]);
+		netdev_err(ndev, "%s: Unknown module ID (0x%x)", __func__, data[0]);
 		return -EINVAL;
 	}
 
@@ -510,7 +505,6 @@ static int mqnic_get_module_info(struct net_device *ndev,
 static int mqnic_get_module_eeprom(struct net_device *ndev,
 		struct ethtool_eeprom *eeprom, u8 *data)
 {
-	struct mqnic_priv *priv = netdev_priv(ndev);
 	int i = 0;
 	int read_len;
 
@@ -527,7 +521,7 @@ static int mqnic_get_module_eeprom(struct net_device *ndev,
 			return 0;
 
 		if (read_len < 0) {
-			dev_err(priv->dev, "%s: Failed to read module EEPROM (%d)", __func__, read_len);
+			netdev_err(ndev, "%s: Failed to read module EEPROM (%d)", __func__, read_len);
 			return read_len;
 		}
 
@@ -542,7 +536,6 @@ static int mqnic_get_module_eeprom_by_page(struct net_device *ndev,
 		const struct ethtool_module_eeprom *eeprom,
 		struct netlink_ext_ack *extack)
 {
-	struct mqnic_priv *priv = netdev_priv(ndev);
 	int i = 0;
 	int read_len;
 
@@ -560,7 +553,7 @@ static int mqnic_get_module_eeprom_by_page(struct net_device *ndev,
 			return 0;
 
 		if (read_len < 0) {
-			dev_err(priv->dev, "%s: Failed to read module EEPROM (%d)", __func__, read_len);
+			netdev_err(ndev, "%s: Failed to read module EEPROM (%d)", __func__, read_len);
 			return read_len;
 		}
 

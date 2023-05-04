@@ -40,7 +40,6 @@
 int mqnic_start_port(struct net_device *ndev)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
-	struct mqnic_dev *mdev = priv->mdev;
 	struct mqnic_if *iface = priv->interface;
 	struct mqnic_ring *q;
 	struct mqnic_cq *cq;
@@ -50,7 +49,7 @@ int mqnic_start_port(struct net_device *ndev)
 	int ret;
 	u32 desc_block_size;
 
-	dev_info(mdev->dev, "%s on interface %d netdev %d", __func__,
+	netdev_info(ndev, "%s on interface %d netdev %d", __func__,
 			priv->interface->index, priv->index);
 
 	netif_set_real_num_tx_queues(ndev, priv->txq_count);
@@ -214,13 +213,12 @@ fail:
 void mqnic_stop_port(struct net_device *ndev)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
-	struct mqnic_dev *mdev = priv->mdev;
 	struct mqnic_cq *cq;
 	struct radix_tree_iter iter;
 	void **slot;
 	int k;
 
-	dev_info(mdev->dev, "%s on interface %d netdev %d", __func__,
+	netdev_info(ndev, "%s on interface %d netdev %d", __func__,
 			priv->interface->index, priv->index);
 
 	if (mqnic_link_status_poll)
@@ -307,7 +305,7 @@ static int mqnic_open(struct net_device *ndev)
 	ret = mqnic_start_port(ndev);
 
 	if (ret)
-		dev_err(mdev->dev, "Failed to start port on interface %d netdev %d: %d",
+		netdev_err(ndev, "Failed to start port on interface %d netdev %d: %d",
 				priv->interface->index, priv->index, ret);
 
 	mutex_unlock(&mdev->state_lock);
@@ -465,11 +463,11 @@ static int mqnic_change_mtu(struct net_device *ndev, int new_mtu)
 	struct mqnic_dev *mdev = priv->mdev;
 
 	if (new_mtu < ndev->min_mtu || new_mtu > ndev->max_mtu) {
-		dev_err(mdev->dev, "Bad MTU: %d", new_mtu);
+		netdev_err(ndev, "Bad MTU: %d", new_mtu);
 		return -EPERM;
 	}
 
-	dev_info(mdev->dev, "New MTU: %d", new_mtu);
+	netdev_info(ndev, "New MTU: %d", new_mtu);
 
 	ndev->mtu = new_mtu;
 

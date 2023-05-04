@@ -56,6 +56,26 @@ static void mqnic_get_drvinfo(struct net_device *ndev,
 			mdev->fw_ver >> 24, (mdev->fw_ver >> 16) & 0xff,
 			(mdev->fw_ver >> 8) & 0xff, mdev->fw_ver & 0xff);
 	strscpy(drvinfo->bus_info, dev_name(mdev->dev), sizeof(drvinfo->bus_info));
+
+	drvinfo->regdump_len = priv->mdev->hw_regs_size;
+}
+
+static int mqnic_get_regs_len(struct net_device *ndev)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+
+	return priv->mdev->hw_regs_size;
+}
+
+static void mqnic_get_regs(struct net_device *ndev,
+		struct ethtool_regs *regs, void *p)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	u32 *out = p;
+	int k;
+
+	for (k = 0; k < priv->mdev->hw_regs_size/4; k ++)
+		out[k] = ioread32(priv->mdev->hw_addr + k*4);
 }
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 17, 0)
@@ -553,6 +573,8 @@ static int mqnic_get_module_eeprom_by_page(struct net_device *ndev,
 
 const struct ethtool_ops mqnic_ethtool_ops = {
 	.get_drvinfo = mqnic_get_drvinfo,
+	.get_regs_len = mqnic_get_regs_len,
+	.get_regs = mqnic_get_regs,
 	.get_link = ethtool_op_get_link,
 	.get_ringparam = mqnic_get_ringparam,
 	.set_ringparam = mqnic_set_ringparam,

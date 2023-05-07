@@ -169,15 +169,30 @@ class PsdpRamWrite(Memory):
 
                     addr = (seg_addr*self.seg_count+seg)*self.seg_byte_lanes
 
-                    self.mem.seek(addr % self.size)
+                    # generate operation list
+                    offset = 0
+                    start_offset = None
+                    write_ops = []
 
                     data = seg_data.to_bytes(self.seg_byte_lanes, 'little')
 
-                    for i in range(self.seg_byte_lanes):
+                    for i in range(self.byte_lanes):
                         if seg_be & (1 << i):
-                            self.mem.write(data[i:i+1])
+                            if start_offset is None:
+                                start_offset = offset
                         else:
-                            self.mem.seek(1, 1)
+                            if start_offset is not None and offset != start_offset:
+                                write_ops.append((addr+start_offset, data[start_offset:offset]))
+                            start_offset = None
+
+                        offset += 1
+
+                    if start_offset is not None and offset != start_offset:
+                        write_ops.append((addr+start_offset, data[start_offset:offset]))
+
+                    # perform writes
+                    for addr, data in write_ops:
+                        self.write(addr, data)
 
                     wr_done |= 1 << seg
 
@@ -303,9 +318,7 @@ class PsdpRamRead(Memory):
 
                     addr = (seg_addr*self.seg_count+seg)*self.seg_byte_lanes
 
-                    self.mem.seek(addr % self.size)
-
-                    data = self.mem.read(self.seg_byte_lanes)
+                    data = self.read(addr % self.size, self.seg_byte_lanes)
                     pipeline[seg][0] = int.from_bytes(data, 'little')
 
                     self.log.info("Read word seg: %d addr: 0x%08x data %s",

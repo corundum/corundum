@@ -869,8 +869,8 @@ end
 
 always @(posedge clk) begin
     max_payload_size_fc_reg <= 9'd8 << (max_payload_size > 5 ? 5 : max_payload_size);
-    have_p_credit_reg <= (tx_fc_ph_av > 4) && (tx_fc_pd_av > (max_payload_size_fc_reg << 1));
-    have_np_credit_reg <= tx_fc_nph_av > 4;
+    have_p_credit_reg <= (tx_fc_ph_av > 8) && (tx_fc_pd_av > (max_payload_size_fc_reg << 1));
+    have_np_credit_reg <= tx_fc_nph_av > 8;
 
     frame_reg <= frame_next;
     tlp_hdr1_reg <= tlp_hdr1_next;

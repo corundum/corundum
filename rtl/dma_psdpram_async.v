@@ -118,8 +118,8 @@ generate
             for (i = 0; i < SEG_BE_WIDTH; i = i + 1) begin
                 if (wr_cmd_valid[n] && wr_cmd_be[n*SEG_BE_WIDTH+i]) begin
                     mem_reg[wr_cmd_addr[SEG_ADDR_WIDTH*n +: INT_ADDR_WIDTH]][i*8 +: 8] <= wr_cmd_data[SEG_DATA_WIDTH*n+i*8 +: 8];
-                    wr_done_reg <= 1'b1;
                 end
+                wr_done_reg <= wr_cmd_valid[n];
             end
 
             if (rst_wr) begin

@@ -198,6 +198,8 @@ module dma_if_pcie #
     /*
      * Status
      */
+    output wire                                          status_rd_busy,
+    output wire                                          status_wr_busy,
     output wire                                          status_error_cor,
     output wire                                          status_error_uncor,
 
@@ -331,6 +333,7 @@ dma_if_pcie_rd_inst (
     /*
      * Status
      */
+    .status_busy(status_rd_busy),
     .status_error_cor(status_error_cor),
     .status_error_uncor(status_error_uncor),
 
@@ -438,6 +441,11 @@ dma_if_pcie_wr_inst (
     .enable(write_enable),
     .requester_id(requester_id),
     .max_payload_size(max_payload_size),
+
+    /*
+     * Status
+     */
+    .status_busy(status_wr_busy),
 
     /*
      * Statistics

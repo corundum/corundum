@@ -123,6 +123,11 @@ module dma_if_axi_rd #
     input  wire                                         enable,
 
     /*
+     * Status
+     */
+    output wire                                         status_busy,
+
+    /*
      * Statistics
      */
     output wire [$clog2(OP_TABLE_SIZE)-1:0]             stat_rd_op_start_tag,
@@ -291,6 +296,10 @@ reg status_fifo_rd_finish_reg = 1'b0, status_fifo_rd_finish_next;
 reg [3:0] status_fifo_rd_error_reg = 4'd0, status_fifo_rd_error_next;
 reg status_fifo_rd_valid_reg = 1'b0, status_fifo_rd_valid_next;
 
+reg [OP_TAG_WIDTH+1-1:0] active_op_count_reg = 0;
+reg inc_active_op;
+reg dec_active_op;
+
 reg [AXI_DATA_WIDTH-1:0] m_axi_rdata_int_reg = {AXI_DATA_WIDTH{1'b0}}, m_axi_rdata_int_next;
 reg m_axi_rvalid_int_reg = 1'b0, m_axi_rvalid_int_next;
 
@@ -305,6 +314,8 @@ reg s_axis_read_desc_ready_reg = 1'b0, s_axis_read_desc_ready_next;
 reg [TAG_WIDTH-1:0] m_axis_read_desc_status_tag_reg = {TAG_WIDTH{1'b0}}, m_axis_read_desc_status_tag_next;
 reg [3:0] m_axis_read_desc_status_error_reg = 4'd0, m_axis_read_desc_status_error_next;
 reg m_axis_read_desc_status_valid_reg = 1'b0, m_axis_read_desc_status_valid_next;
+
+reg status_busy_reg = 1'b0;
 
 reg [OP_TAG_WIDTH-1:0] stat_rd_op_start_tag_reg = 0, stat_rd_op_start_tag_next;
 reg [LEN_WIDTH-1:0] stat_rd_op_start_len_reg = 0, stat_rd_op_start_len_next;
@@ -348,6 +359,8 @@ assign s_axis_read_desc_ready = s_axis_read_desc_ready_reg;
 assign m_axis_read_desc_status_tag = m_axis_read_desc_status_tag_reg;
 assign m_axis_read_desc_status_error = m_axis_read_desc_status_error_reg;
 assign m_axis_read_desc_status_valid = m_axis_read_desc_status_valid_reg;
+
+assign status_busy = status_busy_reg;
 
 assign stat_rd_op_start_tag = stat_rd_op_start_tag_reg;
 assign stat_rd_op_start_len = stat_rd_op_start_len_reg;
@@ -467,6 +480,8 @@ always @* begin
     op_table_start_last = 0;
     op_table_start_en = 1'b0;
 
+    inc_active_op = 1'b0;
+
     // segmentation and request generation
     case (req_state_reg)
         REQ_STATE_IDLE: begin
@@ -532,6 +547,7 @@ always @* begin
                 op_table_start_cycle_count = (req_tr_count_next + (req_axi_addr_reg & OFFSET_MASK) - 1) >> AXI_BURST_SIZE;
                 op_table_start_last = req_op_count_reg == req_tr_count_next;
                 op_table_start_en = 1'b1;
+                inc_active_op = 1'b1;
 
                 stat_rd_req_start_tag_next = op_table_start_ptr_reg[OP_TAG_WIDTH-1:0];
                 stat_rd_req_start_len_next = req_zero_len_reg ? 0 : req_tr_count_reg;
@@ -836,6 +852,7 @@ always @* begin
 
     // commit operations in-order
     op_table_finish_en = 1'b0;
+    dec_active_op = 1'b0;
 
     if (m_axis_read_desc_status_valid_reg) begin
         m_axis_read_desc_status_error_next = DMA_ERROR_NONE;
@@ -852,6 +869,7 @@ always @* begin
 
     if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_write_complete[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && op_table_finish_ptr_reg != op_table_start_ptr_reg) begin
         op_table_finish_en = 1'b1;
+        dec_active_op = 1'b1;
 
         if (op_table_error_a[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] != op_table_error_b[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) begin
             m_axis_read_desc_status_error_next = op_table_error_code[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]];
@@ -910,6 +928,8 @@ always @(posedge clk) begin
     m_axis_read_desc_status_error_reg <= m_axis_read_desc_status_error_next;
     m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
 
+    status_busy_reg <= active_op_count_reg != 0;
+
     stat_rd_op_start_tag_reg <= stat_rd_op_start_tag_next;
     stat_rd_op_start_len_reg <= stat_rd_op_start_len_next;
     stat_rd_op_start_valid_reg <= stat_rd_op_start_valid_next;
@@ -946,6 +966,8 @@ always @(posedge clk) begin
     status_fifo_rd_valid_reg <= status_fifo_rd_valid_next;
 
     status_fifo_half_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**(STATUS_FIFO_ADDR_WIDTH-1);
+
+    active_op_count_reg <= active_op_count_reg + inc_active_op - dec_active_op;
 
     if (op_table_start_en) begin
         op_table_start_ptr_reg <= op_table_start_ptr_reg + 1;
@@ -995,6 +1017,8 @@ always @(posedge clk) begin
         m_axis_read_desc_status_error_reg = 4'd0;
         m_axis_read_desc_status_valid_reg <= 1'b0;
 
+        status_busy_reg <= 1'b0;
+
         stat_rd_op_start_tag_reg <= 0;
         stat_rd_op_start_valid_reg <= 1'b0;
         stat_rd_op_finish_tag_reg <= 0;
@@ -1008,6 +1032,8 @@ always @(posedge clk) begin
         status_fifo_rd_ptr_reg <= 0;
         status_fifo_we_reg <= 1'b0;
         status_fifo_rd_valid_reg <= 1'b0;
+
+        active_op_count_reg <= 0;
 
         op_table_start_ptr_reg <= 0;
         op_table_read_complete_ptr_reg <= 0;

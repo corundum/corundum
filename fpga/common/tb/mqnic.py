@@ -1193,6 +1193,11 @@ class Interface:
         self.rx_queue_map_rb = None
 
         self.if_features = None
+        self.if_feature_rss = None
+        self.if_feature_ptp_ts = None
+        self.if_feature_tx_csum = None
+        self.if_feature_rx_csum = None
+        self.if_feature_rx_hash = None
 
         self.max_tx_mtu = 0
         self.max_rx_mtu = 0
@@ -1237,6 +1242,12 @@ class Interface:
         self.sched_block_count = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_SCHED_COUNT)
         self.max_tx_mtu = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU)
         self.max_rx_mtu = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU)
+
+        self.if_feature_rss = bool(self.if_features & MQNIC_IF_FEATURE_RSS)
+        self.if_feature_ptp_ts = bool(self.if_features & MQNIC_IF_FEATURE_PTP_TS)
+        self.if_feature_tx_csum = bool(self.if_features & MQNIC_IF_FEATURE_TX_CSUM)
+        self.if_feature_rx_csum = bool(self.if_features & MQNIC_IF_FEATURE_RX_CSUM)
+        self.if_feature_rx_hash = bool(self.if_features & MQNIC_IF_FEATURE_RX_HASH)
 
         self.log.info("IF features: 0x%08x", self.if_features)
         self.log.info("Port count: %d", self.port_count)

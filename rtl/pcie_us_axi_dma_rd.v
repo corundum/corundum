@@ -413,7 +413,7 @@ reg status_fifo_skip_reg = 1'b0, status_fifo_skip_next;
 reg status_fifo_finish_reg = 1'b0, status_fifo_finish_next;
 reg [3:0] status_fifo_error_reg = 4'd0, status_fifo_error_next;
 reg status_fifo_we_reg = 1'b0, status_fifo_we_next;
-reg status_fifo_half_full_reg = 1'b0;
+reg status_fifo_full_reg = 1'b0;
 reg [OP_TAG_WIDTH-1:0] status_fifo_rd_op_tag_reg = 0, status_fifo_rd_op_tag_next;
 reg status_fifo_rd_skip_reg = 1'b0, status_fifo_rd_skip_next;
 reg status_fifo_rd_finish_reg = 1'b0, status_fifo_rd_finish_next;
@@ -907,7 +907,7 @@ always @* begin
             if (AXIS_PCIE_DATA_WIDTH > 64) begin
                 s_axis_rc_tready_next = 1'b0;
 
-                if (init_done_reg && s_axis_rc_tvalid && !status_fifo_half_full_reg) begin
+                if (init_done_reg && s_axis_rc_tvalid && !status_fifo_full_reg) begin
                     // header fields
                     lower_addr_next = s_axis_rc_tdata[11:0]; // lower address
                     error_code_next = s_axis_rc_tdata[15:12]; // error code
@@ -1036,7 +1036,7 @@ always @* begin
                     tlp_state_next = TLP_STATE_IDLE;
                 end
             end else begin
-                s_axis_rc_tready_next = init_done_reg && !status_fifo_half_full_reg;
+                s_axis_rc_tready_next = init_done_reg && !status_fifo_full_reg;
 
                 if (s_axis_rc_tready && s_axis_rc_tvalid) begin
                     // header fields
@@ -1070,14 +1070,14 @@ always @* begin
                     end
 
                     if (s_axis_rc_tlast) begin
-                        s_axis_rc_tready_next = init_done_reg && !status_fifo_half_full_reg;
+                        s_axis_rc_tready_next = init_done_reg && !status_fifo_full_reg;
                         tlp_state_next = TLP_STATE_IDLE;
                     end else begin
                         s_axis_rc_tready_next = 1'b0;
                         tlp_state_next = TLP_STATE_HEADER;
                     end
                 end else begin
-                    s_axis_rc_tready_next = init_done_reg && !status_fifo_half_full_reg;
+                    s_axis_rc_tready_next = init_done_reg && !status_fifo_full_reg;
                     tlp_state_next = TLP_STATE_IDLE;
                 end
             end
@@ -1341,7 +1341,7 @@ always @* begin
                     if (AXIS_PCIE_DATA_WIDTH > 64) begin
                         s_axis_rc_tready_next = 1'b0;
                     end else begin
-                        s_axis_rc_tready_next = init_done_reg && !status_fifo_half_full_reg;
+                        s_axis_rc_tready_next = init_done_reg && !status_fifo_full_reg;
                     end
                     tlp_state_next = TLP_STATE_IDLE;
                 end
@@ -1358,7 +1358,7 @@ always @* begin
                     if (AXIS_PCIE_DATA_WIDTH > 64) begin
                         s_axis_rc_tready_next = 1'b0;
                     end else begin
-                        s_axis_rc_tready_next = init_done_reg && !status_fifo_half_full_reg;
+                        s_axis_rc_tready_next = init_done_reg && !status_fifo_full_reg;
                     end
                     tlp_state_next = TLP_STATE_IDLE;
                 end else begin
@@ -1571,7 +1571,7 @@ always @(posedge clk) begin
     status_fifo_rd_error_reg <= status_fifo_rd_error_next;
     status_fifo_rd_valid_reg <= status_fifo_rd_valid_next;
 
-    status_fifo_half_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**(STATUS_FIFO_ADDR_WIDTH-1);
+    status_fifo_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**STATUS_FIFO_ADDR_WIDTH-4;
 
     if (inc_active_tx && !s_axis_rq_seq_num_valid_0 && !s_axis_rq_seq_num_valid_1) begin
         // inc by 1

@@ -409,7 +409,7 @@ reg status_fifo_mask_reg = 1'b0, status_fifo_mask_next;
 reg status_fifo_finish_reg = 1'b0, status_fifo_finish_next;
 reg [3:0] status_fifo_error_reg = 4'd0, status_fifo_error_next;
 reg status_fifo_wr_en_reg = 1'b0, status_fifo_wr_en_next;
-reg status_fifo_half_full_reg = 1'b0;
+reg status_fifo_full_reg = 1'b0;
 reg status_fifo_rd_en;
 reg [OP_TAG_WIDTH-1:0] status_fifo_rd_op_tag_reg = 0;
 reg [SEG_COUNT-1:0] status_fifo_rd_mask_reg = 0;
@@ -906,7 +906,7 @@ always @* begin
         TLP_STATE_IDLE: begin
             // idle state, wait for completion
             if (AXIS_PCIE_DATA_WIDTH > 64) begin
-                s_axis_rc_tready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
+                s_axis_rc_tready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_full_reg;
 
                 if (s_axis_rc_tready && s_axis_rc_tvalid) begin
                     // header fields
@@ -1132,7 +1132,7 @@ always @* begin
                         s_axis_rc_tready_next = init_done_reg;
                         tlp_state_next = TLP_STATE_IDLE;
                     end else begin
-                        s_axis_rc_tready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
+                        s_axis_rc_tready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_full_reg;
                         tlp_state_next = TLP_STATE_HEADER;
                     end
                 end else begin
@@ -1143,7 +1143,7 @@ always @* begin
         end
         TLP_STATE_HEADER: begin
             // header state; process header (64 bit interface only)
-            s_axis_rc_tready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
+            s_axis_rc_tready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_full_reg;
 
             if (s_axis_rc_tready && s_axis_rc_tvalid) begin
                 pcie_tag_next = s_axis_rc_tdata[7:0]; // tag
@@ -1285,7 +1285,7 @@ always @* begin
         end
         TLP_STATE_WRITE: begin
             // write state - generate write operations
-            s_axis_rc_tready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
+            s_axis_rc_tready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_full_reg;
 
             if (s_axis_rc_tready && s_axis_rc_tvalid) begin
                 rc_tdata_int_next = s_axis_rc_tdata;
@@ -1350,7 +1350,7 @@ always @* begin
             if (s_axis_rc_tready & s_axis_rc_tvalid) begin
                 if (s_axis_rc_tlast) begin
                     if (AXIS_PCIE_DATA_WIDTH > 64) begin
-                        s_axis_rc_tready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
+                        s_axis_rc_tready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_full_reg;
                     end else begin
                         s_axis_rc_tready_next = init_done_reg;
                     end
@@ -1538,7 +1538,7 @@ always @(posedge clk) begin
 
     status_fifo_rd_valid_reg <= status_fifo_rd_valid_next;
 
-    status_fifo_half_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**(STATUS_FIFO_ADDR_WIDTH-1);
+    status_fifo_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**STATUS_FIFO_ADDR_WIDTH-4;
 
     if (active_tx_count_reg < TX_LIMIT && inc_active_tx && !s_axis_rq_seq_num_valid_0 && !s_axis_rq_seq_num_valid_1) begin
         // inc by 1

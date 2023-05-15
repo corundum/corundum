@@ -268,7 +268,8 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
     // RAM write done mux
 
     wire [PORTS-1:0] seg_ram_wr_done;
-    wire [PORTS-1:0] seg_ram_wr_done_sel;
+    wire [PORTS-1:0] seg_ram_wr_done_out;
+    wire [PORTS-1:0] seg_ram_wr_done_ack;
     wire seg_ctrl_wr_done;
 
     for (p = 0; p < PORTS; p = p + 1) begin
@@ -277,25 +278,19 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
 
     assign ctrl_wr_done[n] = seg_ctrl_wr_done;
 
-    wire [CL_PORTS-1:0] select_resp = fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
-
     for (p = 0; p < PORTS; p = p + 1) begin
         reg [FIFO_ADDR_WIDTH+1-1:0] done_count_reg = 0;
         reg done_reg = 1'b0;
 
-        assign seg_ram_wr_done_sel[p] = done_reg;
+        assign seg_ram_wr_done_out[p] = done_reg;
 
         always @(posedge clk) begin
-            if (select_resp == p && (done_count_reg != 0 || seg_ram_wr_done[p])) begin
-                done_reg <= 1'b1;
-                if (!seg_ram_wr_done[p]) begin
-                    done_count_reg <= done_count_reg - 1;
-                end
-            end else begin
-                done_reg <= 1'b0;
-                if (seg_ram_wr_done[p]) begin
-                    done_count_reg <= done_count_reg + 1;
-                end
+            if (done_count_reg < 2**FIFO_ADDR_WIDTH && seg_ram_wr_done[p] && !seg_ram_wr_done_ack[p]) begin
+                done_count_reg <= done_count_reg + 1;
+                done_reg <= 1;
+            end else if (done_count_reg > 0 && !seg_ram_wr_done[p] && seg_ram_wr_done_ack[p]) begin
+                done_count_reg <= done_count_reg - 1;
+                done_reg <= done_count_reg > 1;
             end
 
             if (rst) begin
@@ -305,15 +300,25 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
         end
     end
 
-    assign seg_ctrl_wr_done = seg_ram_wr_done_sel != 0;
+    reg [CL_PORTS-1:0] select_resp_reg = 0;
+    reg select_resp_valid_reg = 0;
+
+    assign seg_ram_wr_done_ack = seg_ram_wr_done_out & (select_resp_valid_reg ? (1 << select_resp_reg) : 0);
+    assign seg_ctrl_wr_done = |seg_ram_wr_done_ack;
 
     always @(posedge clk) begin
-        if (seg_ctrl_wr_done && !fifo_empty) begin
-            fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
+        if (!select_resp_valid_reg || seg_ctrl_wr_done) begin
+            select_resp_valid_reg <= 1'b0;
+            if (!fifo_empty) begin
+                select_resp_reg <= fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
+                fifo_rd_ptr_reg = fifo_rd_ptr_reg + 1;
+                select_resp_valid_reg <= 1'b1;
+            end
         end
 
         if (rst) begin
             fifo_rd_ptr_reg <= 0;
+            select_resp_valid_reg <= 1'b0;
         end
     end
 

@@ -1206,7 +1206,7 @@ always @* begin
     if (init_pcie_tag_reg) begin
         // initialize FIFO
         pcie_tag_fifo_wr_tag = init_count_reg;
-        if (pcie_tag_fifo_wr_tag < PCIE_TAG_COUNT_1) begin
+        if (pcie_tag_fifo_wr_tag < PCIE_TAG_COUNT_1 || !PCIE_TAG_COUNT_2) begin
             pcie_tag_fifo_1_we = 1'b1;
         end else if (pcie_tag_fifo_wr_tag) begin
             pcie_tag_fifo_2_we = 1'b1;
@@ -1217,7 +1217,7 @@ always @* begin
         dec_active_tag = 1'b1;
 
         pcie_tag_fifo_wr_tag = pcie_tag_reg;
-        if (pcie_tag_fifo_wr_tag < PCIE_TAG_COUNT_1) begin
+        if (pcie_tag_fifo_wr_tag < PCIE_TAG_COUNT_1 || !PCIE_TAG_COUNT_2) begin
             pcie_tag_fifo_1_we = 1'b1;
         end else begin
             pcie_tag_fifo_2_we = 1'b1;
@@ -1460,11 +1460,13 @@ always @(posedge clk) begin
         pcie_tag_fifo_1_wr_ptr_reg <= pcie_tag_fifo_1_wr_ptr_reg + 1;
     end
     pcie_tag_fifo_1_rd_ptr_reg <= pcie_tag_fifo_1_rd_ptr_next;
-    if (pcie_tag_fifo_2_we) begin
-        pcie_tag_fifo_2_mem[pcie_tag_fifo_2_wr_ptr_reg[PCIE_TAG_WIDTH_2-1:0]] <= pcie_tag_fifo_wr_tag;
-        pcie_tag_fifo_2_wr_ptr_reg <= pcie_tag_fifo_2_wr_ptr_reg + 1;
+    if (PCIE_TAG_COUNT_2) begin
+        if (pcie_tag_fifo_2_we) begin
+            pcie_tag_fifo_2_mem[pcie_tag_fifo_2_wr_ptr_reg[PCIE_TAG_WIDTH_2-1:0]] <= pcie_tag_fifo_wr_tag;
+            pcie_tag_fifo_2_wr_ptr_reg <= pcie_tag_fifo_2_wr_ptr_reg + 1;
+        end
+        pcie_tag_fifo_2_rd_ptr_reg <= pcie_tag_fifo_2_rd_ptr_next;
     end
-    pcie_tag_fifo_2_rd_ptr_reg <= pcie_tag_fifo_2_rd_ptr_next;
 
     if (init_op_tag_reg) begin
         op_table_read_init_a[init_count_reg] <= 1'b0;

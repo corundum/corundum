@@ -143,7 +143,6 @@ module fpga #
     parameter AXIS_PCIE_DATA_WIDTH = 512,
     parameter PF_COUNT = 1,
     parameter VF_COUNT = 0,
-    parameter PCIE_TAG_COUNT = 256,
 
     // Interrupt configuration
     parameter IRQ_INDEX_WIDTH = EVENT_QUEUE_INDEX_WIDTH,
@@ -327,6 +326,7 @@ parameter RQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512;
 parameter CQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512;
 parameter CC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512;
 parameter RQ_SEQ_NUM_WIDTH = 6;
+parameter PCIE_TAG_COUNT = 256;
 
 // Ethernet interface configuration
 parameter XGMII_DATA_WIDTH = 64;

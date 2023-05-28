@@ -298,9 +298,10 @@ reg [1:0] tlp_state_reg = TLP_STATE_IDLE, tlp_state_next;
 // datapath control signals
 reg last_cycle;
 
-reg [3:0] first_be;
-reg [3:0] last_be;
-reg [10:0] dword_count;
+reg [3:0] req_first_be;
+reg [3:0] req_last_be;
+reg [12:0] req_tlp_count;
+reg [10:0] req_dword_count;
 reg req_last_tlp;
 reg [PCIE_ADDR_WIDTH-1:0] req_pcie_addr;
 
@@ -313,7 +314,6 @@ reg [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, req_pcie_
 reg [RAM_SEL_WIDTH-1:0] req_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, req_ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] req_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, req_ram_addr_next;
 reg [LEN_WIDTH-1:0] req_op_count_reg = {LEN_WIDTH{1'b0}}, req_op_count_next;
-reg [12:0] req_tlp_count_reg = 13'd0, req_tlp_count_next;
 reg req_zero_len_reg = 1'b0, req_zero_len_next;
 reg [OP_TAG_WIDTH-1:0] req_op_tag_reg = {OP_TAG_WIDTH{1'b0}}, req_op_tag_next;
 reg req_op_tag_valid_reg = 1'b0, req_op_tag_valid_next;
@@ -612,7 +612,6 @@ always @* begin
     req_ram_sel_next = req_ram_sel_reg;
     req_ram_addr_next = req_ram_addr_reg;
     req_op_count_next = req_op_count_reg;
-    req_tlp_count_next = req_tlp_count_reg;
     req_zero_len_next = req_zero_len_reg;
     req_op_tag_next = req_op_tag_reg;
     req_op_tag_valid_next = req_op_tag_valid_reg;
@@ -636,16 +635,16 @@ always @* begin
         // packet smaller than max read request size
         if (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) >> 12 != 0 || req_op_count_reg >> 12 != 0) begin
             // crosses 4k boundary, split on 4K boundary
-            req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
-            dword_count = 11'h400 - req_pcie_addr_reg[11:2];
+            req_tlp_count = 13'h1000 - req_pcie_addr_reg[11:0];
+            req_dword_count = 11'h400 - req_pcie_addr_reg[11:2];
             req_last_tlp = (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) & 12'hfff) == 0 && req_op_count_reg >> 12 == 0;
-            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
+            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12]+1;
             req_pcie_addr[11:0] = 12'd0;
         end else begin
             // does not cross 4k boundary, send one TLP
-            req_tlp_count_next = req_op_count_reg;
-            dword_count = (req_op_count_reg + req_pcie_addr_reg[1:0] + 3) >> 2;
+            req_tlp_count = req_op_count_reg;
+            req_dword_count = (req_op_count_reg + req_pcie_addr_reg[1:0] + 3) >> 2;
             req_last_tlp = 1'b1;
             // always last TLP, so next address is irrelevant
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12];
@@ -655,18 +654,18 @@ always @* begin
         // packet larger than max read request size
         if (((req_pcie_addr_reg & 12'hfff) + {max_read_request_size_dw_reg, 2'b00}) >> 12 != 0) begin
             // crosses 4k boundary, split on 4K boundary
-            req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
-            dword_count = 11'h400 - req_pcie_addr_reg[11:2];
+            req_tlp_count = 13'h1000 - req_pcie_addr_reg[11:0];
+            req_dword_count = 11'h400 - req_pcie_addr_reg[11:2];
             req_last_tlp = 1'b0;
-            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
+            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12]+1;
             req_pcie_addr[11:0] = 12'd0;
         end else begin
             // does not cross 4k boundary, split on 128-byte read completion boundary
-            req_tlp_count_next = {max_read_request_size_dw_reg, 2'b00} - req_pcie_addr_reg[6:0];
-            dword_count = max_read_request_size_dw_reg - req_pcie_addr_reg[6:2];
+            req_tlp_count = {max_read_request_size_dw_reg, 2'b00} - req_pcie_addr_reg[6:0];
+            req_dword_count = max_read_request_size_dw_reg - req_pcie_addr_reg[6:2];
             req_last_tlp = 1'b0;
-            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
+            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12];
             req_pcie_addr[11:0] = {{req_pcie_addr_reg[11:7], 5'd0} + max_read_request_size_dw_reg, 2'b00};
         end
@@ -674,13 +673,13 @@ always @* begin
 
     pcie_tag_table_start_ptr_next = req_pcie_tag_reg;
     pcie_tag_table_start_ram_sel_next = req_ram_sel_reg;
-    pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
+    pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count;
     pcie_tag_table_start_op_tag_next = req_op_tag_reg;
     pcie_tag_table_start_zero_len_next = req_zero_len_reg;
     pcie_tag_table_start_en_next = 1'b0;
 
-    first_be = 4'b1111 << req_pcie_addr_reg[1:0];
-    last_be = 4'b1111 >> (3 - ((req_pcie_addr_reg[1:0] + req_tlp_count_next[1:0] - 1) & 3));
+    req_first_be = 4'b1111 << req_pcie_addr_reg[1:0];
+    req_last_be = 4'b1111 >> (3 - ((req_pcie_addr_reg[1:0] + req_tlp_count[1:0] - 1) & 3));
 
     tx_rd_req_tlp_hdr_next = tx_rd_req_tlp_hdr_reg;
     tx_rd_req_tlp_valid_next = tx_rd_req_tlp_valid_reg && !tx_rd_req_tlp_ready;
@@ -703,12 +702,12 @@ always @* begin
     tlp_hdr[110] = 1'b0; // EP
     tlp_hdr[109:108] = 2'b00; // attr
     tlp_hdr[107:106] = 3'b000; // AT
-    tlp_hdr[105:96] = dword_count; // length
+    tlp_hdr[105:96] = req_dword_count; // length
     // DW 1
     tlp_hdr[95:80] = requester_id; // requester ID
     tlp_hdr[79:72] = req_pcie_tag_reg; // tag
-    tlp_hdr[71:68] = req_zero_len_reg ? 4'b0000 : (dword_count == 1 ? 4'b0000 : last_be); // last BE
-    tlp_hdr[67:64] = req_zero_len_reg ? 4'b0000 : (dword_count == 1 ? first_be & last_be : first_be); // first BE
+    tlp_hdr[71:68] = req_zero_len_reg ? 4'b0000 : (req_dword_count == 1 ? 4'b0000 : req_last_be); // last BE
+    tlp_hdr[67:64] = req_zero_len_reg ? 4'b0000 : (req_dword_count == 1 ? req_first_be & req_last_be : req_first_be); // first BE
     if (((req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:2] >> 30) != 0) || TLP_FORCE_64_BIT_ADDR) begin
         // DW 2+3
         tlp_hdr[63:2] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:2]; // address
@@ -762,12 +761,12 @@ always @* begin
                 inc_active_tx = 1'b1;
 
                 req_pcie_addr_next = req_pcie_addr;
-                req_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
-                req_op_count_next = req_op_count_reg - req_tlp_count_next;
+                req_ram_addr_next = req_ram_addr_reg + req_tlp_count;
+                req_op_count_next = req_op_count_reg - req_tlp_count;
 
                 pcie_tag_table_start_ptr_next = req_pcie_tag_reg;
                 pcie_tag_table_start_ram_sel_next = req_ram_sel_reg;
-                pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
+                pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count;
                 pcie_tag_table_start_op_tag_next = req_op_tag_reg;
                 pcie_tag_table_start_zero_len_next = req_zero_len_reg;
                 pcie_tag_table_start_en_next = 1'b1;
@@ -780,7 +779,7 @@ always @* begin
                 req_pcie_tag_valid_next = 1'b0;
 
                 stat_rd_req_start_tag_next = req_pcie_tag_reg;
-                stat_rd_req_start_len_next = req_zero_len_reg ? 0 : req_tlp_count_next;
+                stat_rd_req_start_len_next = req_zero_len_reg ? 0 : req_tlp_count;
                 stat_rd_req_start_valid_next = 1'b1;
 
                 if (!req_last_tlp) begin
@@ -1329,7 +1328,6 @@ always @(posedge clk) begin
     req_ram_sel_reg <= req_ram_sel_next;
     req_ram_addr_reg <= req_ram_addr_next;
     req_op_count_reg <= req_op_count_next;
-    req_tlp_count_reg <= req_tlp_count_next;
     req_zero_len_reg <= req_zero_len_next;
     req_op_tag_reg <= req_op_tag_next;
     req_op_tag_valid_reg <= req_op_tag_valid_next;

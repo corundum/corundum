@@ -1231,6 +1231,8 @@ dma_if_pcie_inst (
     /*
      * Status
      */
+    .status_rd_busy(),
+    .status_wr_busy(),
     .status_error_cor(pcie_error_cor_int[2]),
     .status_error_uncor(pcie_error_uncor_int[2]),
 

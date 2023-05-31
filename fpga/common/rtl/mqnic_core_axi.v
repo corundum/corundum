@@ -778,6 +778,12 @@ dma_if_axi_inst (
     .write_enable(dma_enable),
 
     /*
+     * Status
+     */
+    .status_rd_busy(),
+    .status_wr_busy(),
+
+    /*
      * Statistics
      */
     .stat_rd_op_start_tag(stat_rd_op_start_tag),

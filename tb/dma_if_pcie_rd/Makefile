@@ -50,6 +50,8 @@ export PARAM_LEN_WIDTH := 20
 export PARAM_TAG_WIDTH := 8
 export PARAM_OP_TABLE_SIZE := $(PARAM_PCIE_TAG_COUNT)
 export PARAM_TX_LIMIT := $(shell echo "$$(( 1 << ($(PARAM_TX_SEQ_NUM_WIDTH)-1) ))" )
+export PARAM_CPLH_FC_LIMIT := 512
+export PARAM_CPLD_FC_LIMIT := $(shell expr $(PARAM_CPLH_FC_LIMIT) \* 4 )
 export PARAM_TLP_FORCE_64_BIT_ADDR := 0
 export PARAM_CHECK_BUS_NUMBER := 1
 

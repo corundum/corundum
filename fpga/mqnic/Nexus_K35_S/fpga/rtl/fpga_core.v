@@ -251,6 +251,7 @@ module fpga_core #
 
     input  wire [2:0]                         cfg_max_payload,
     input  wire [2:0]                         cfg_max_read_req,
+    input  wire [3:0]                         cfg_rcb_status,
 
     output wire [18:0]                        cfg_mgmt_addr,
     output wire                               cfg_mgmt_write,
@@ -1086,6 +1087,7 @@ core_inst (
      */
     .cfg_max_read_req(cfg_max_read_req),
     .cfg_max_payload(cfg_max_payload),
+    .cfg_rcb_status(cfg_rcb_status),
 
     /*
      * Configuration interface

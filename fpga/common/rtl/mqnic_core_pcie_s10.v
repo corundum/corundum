@@ -195,6 +195,8 @@ module mqnic_core_pcie_s10 #
     parameter PCIE_TAG_COUNT = 256,
     parameter PCIE_DMA_READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
     parameter PCIE_DMA_READ_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
+    parameter PCIE_DMA_READ_CPLH_FC_LIMIT = 770,
+    parameter PCIE_DMA_READ_CPLD_FC_LIMIT = 2500,
     parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 2**TX_SEQ_NUM_WIDTH,
     parameter PCIE_DMA_WRITE_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
 
@@ -570,6 +572,7 @@ wire                                          pcie_tx_msix_wr_req_tlp_eop;
 wire                                          pcie_tx_msix_wr_req_tlp_ready;
 
 wire [F_COUNT-1:0] ext_tag_enable;
+wire [F_COUNT-1:0] rcb_128b;
 wire [7:0] bus_num;
 wire [F_COUNT*3-1:0] max_read_request_size;
 wire [F_COUNT*3-1:0] max_payload_size;
@@ -745,6 +748,7 @@ pcie_s10_if_inst (
      * Configuration outputs
      */
     .ext_tag_enable(ext_tag_enable),
+    .rcb_128b(rcb_128b),
     .bus_num(bus_num),
     .max_read_request_size(max_read_request_size),
     .max_payload_size(max_payload_size),
@@ -910,6 +914,8 @@ mqnic_core_pcie #(
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .PCIE_DMA_READ_OP_TABLE_SIZE(PCIE_DMA_READ_OP_TABLE_SIZE),
     .PCIE_DMA_READ_TX_LIMIT(PCIE_DMA_READ_TX_LIMIT),
+    .PCIE_DMA_READ_CPLH_FC_LIMIT(PCIE_DMA_READ_CPLH_FC_LIMIT),
+    .PCIE_DMA_READ_CPLD_FC_LIMIT(PCIE_DMA_READ_CPLD_FC_LIMIT),
     .PCIE_DMA_WRITE_OP_TABLE_SIZE(PCIE_DMA_WRITE_OP_TABLE_SIZE),
     .PCIE_DMA_WRITE_TX_LIMIT(PCIE_DMA_WRITE_TX_LIMIT),
     .TLP_FORCE_64_BIT_ADDR(0),
@@ -1042,6 +1048,7 @@ core_pcie_inst (
      */
     .bus_num(bus_num),
     .ext_tag_enable(ext_tag_enable),
+    .rcb_128b(rcb_128b),
     .max_read_request_size(max_read_request_size),
     .max_payload_size(max_payload_size),
     .msix_enable(msix_enable),

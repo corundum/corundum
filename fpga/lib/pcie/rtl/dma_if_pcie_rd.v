@@ -69,6 +69,10 @@ module dma_if_pcie_rd #
     parameter OP_TABLE_SIZE = PCIE_TAG_COUNT,
     // In-flight transmit limit
     parameter TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
+    // Completion header flow control credit limit
+    parameter CPLH_FC_LIMIT = 0,
+    // Completion data flow control credit limit
+    parameter CPLD_FC_LIMIT = CPLH_FC_LIMIT*4,
     // Force 64 bit address
     parameter TLP_FORCE_64_BIT_ADDR = 0,
     // Requester ID mash
@@ -139,12 +143,14 @@ module dma_if_pcie_rd #
      */
     input  wire                                          enable,
     input  wire                                          ext_tag_enable,
+    input  wire                                          rcb_128b,
     input  wire [15:0]                                   requester_id,
     input  wire [2:0]                                    max_read_request_size,
 
     /*
      * Status
      */
+    output wire                                          status_busy,
     output wire                                          status_error_cor,
     output wire                                          status_error_uncor,
 
@@ -190,6 +196,9 @@ parameter OP_TAG_WIDTH = $clog2(OP_TABLE_SIZE);
 parameter OP_TABLE_READ_COUNT_WIDTH = PCIE_TAG_WIDTH+1;
 
 parameter TX_COUNT_WIDTH = $clog2(TX_LIMIT+1);
+
+parameter CL_CPLH_FC_LIMIT = $clog2(CPLH_FC_LIMIT);
+parameter CL_CPLD_FC_LIMIT = $clog2(CPLD_FC_LIMIT);
 
 parameter STATUS_FIFO_ADDR_WIDTH = 5;
 parameter OUTPUT_FIFO_ADDR_WIDTH = 5;
@@ -297,9 +306,12 @@ reg [1:0] tlp_state_reg = TLP_STATE_IDLE, tlp_state_next;
 // datapath control signals
 reg last_cycle;
 
-reg [3:0] first_be;
-reg [3:0] last_be;
-reg [10:0] dword_count;
+reg [3:0] req_first_be;
+reg [3:0] req_last_be;
+reg [12:0] req_tlp_count;
+reg [10:0] req_dword_count;
+reg [6:0] req_cplh_fc_count;
+reg [8:0] req_cpld_fc_count;
 reg req_last_tlp;
 reg [PCIE_ADDR_WIDTH-1:0] req_pcie_addr;
 
@@ -312,7 +324,6 @@ reg [PCIE_ADDR_WIDTH-1:0] req_pcie_addr_reg = {PCIE_ADDR_WIDTH{1'b0}}, req_pcie_
 reg [RAM_SEL_WIDTH-1:0] req_ram_sel_reg = {RAM_SEL_WIDTH{1'b0}}, req_ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] req_ram_addr_reg = {RAM_ADDR_WIDTH{1'b0}}, req_ram_addr_next;
 reg [LEN_WIDTH-1:0] req_op_count_reg = {LEN_WIDTH{1'b0}}, req_op_count_next;
-reg [12:0] req_tlp_count_reg = 13'd0, req_tlp_count_next;
 reg req_zero_len_reg = 1'b0, req_zero_len_next;
 reg [OP_TAG_WIDTH-1:0] req_op_tag_reg = {OP_TAG_WIDTH{1'b0}}, req_op_tag_next;
 reg req_op_tag_valid_reg = 1'b0, req_op_tag_valid_next;
@@ -370,6 +381,7 @@ reg [6:0] rx_cpl_tlp_hdr_lower_addr;
 reg [127:0] tlp_hdr;
 
 reg [10:0] max_read_request_size_dw_reg = 11'd0;
+reg rcb_128b_reg = 1'b0;
 
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_wr_ptr_reg = 0;
 reg [STATUS_FIFO_ADDR_WIDTH+1-1:0] status_fifo_rd_ptr_reg = 0;
@@ -390,7 +402,7 @@ reg status_fifo_mask_reg = 1'b0, status_fifo_mask_next;
 reg status_fifo_finish_reg = 1'b0, status_fifo_finish_next;
 reg [3:0] status_fifo_error_reg = 4'd0, status_fifo_error_next;
 reg status_fifo_wr_en_reg = 1'b0, status_fifo_wr_en_next;
-reg status_fifo_half_full_reg = 1'b0;
+reg status_fifo_full_reg = 1'b0;
 reg status_fifo_rd_en;
 reg [OP_TAG_WIDTH-1:0] status_fifo_rd_op_tag_reg = 0;
 reg [RAM_SEG_COUNT-1:0] status_fifo_rd_mask_reg = 0;
@@ -401,6 +413,24 @@ reg status_fifo_rd_valid_reg = 1'b0, status_fifo_rd_valid_next;
 reg [TX_COUNT_WIDTH-1:0] active_tx_count_reg = {TX_COUNT_WIDTH{1'b0}}, active_tx_count_next;
 reg active_tx_count_av_reg = 1'b1, active_tx_count_av_next;
 reg inc_active_tx;
+
+reg [PCIE_TAG_WIDTH+1-1:0] active_tag_count_reg = 0;
+reg inc_active_tag;
+reg dec_active_tag;
+
+reg [OP_TAG_WIDTH+1-1:0] active_op_count_reg = 0;
+reg inc_active_op;
+reg dec_active_op;
+
+reg [CL_CPLH_FC_LIMIT+1-1:0] active_cplh_fc_count_reg = 0;
+reg active_cplh_fc_av_reg = 1'b1;
+reg [6:0] inc_active_cplh_fc_count;
+reg [6:0] dec_active_cplh_fc_count;
+
+reg [CL_CPLD_FC_LIMIT+1-1:0] active_cpld_fc_count_reg = 0;
+reg active_cpld_fc_av_reg = 1'b1;
+reg [8:0] inc_active_cpld_fc_count;
+reg [8:0] dec_active_cpld_fc_count;
 
 reg rx_cpl_tlp_ready_reg = 1'b0, rx_cpl_tlp_ready_next;
 
@@ -413,6 +443,7 @@ reg [TAG_WIDTH-1:0] m_axis_read_desc_status_tag_reg = {TAG_WIDTH{1'b0}}, m_axis_
 reg [3:0] m_axis_read_desc_status_error_reg = 4'd0, m_axis_read_desc_status_error_next;
 reg m_axis_read_desc_status_valid_reg = 1'b0, m_axis_read_desc_status_valid_next;
 
+reg status_busy_reg = 1'b0;
 reg status_error_cor_reg = 1'b0, status_error_cor_next;
 reg status_error_uncor_reg = 1'b0, status_error_uncor_next;
 
@@ -459,6 +490,7 @@ assign m_axis_read_desc_status_tag = m_axis_read_desc_status_tag_reg;
 assign m_axis_read_desc_status_error = m_axis_read_desc_status_error_reg;
 assign m_axis_read_desc_status_valid = m_axis_read_desc_status_valid_reg;
 
+assign status_busy = status_busy_reg;
 assign status_error_cor = status_error_cor_reg;
 assign status_error_uncor = status_error_uncor_reg;
 
@@ -485,6 +517,8 @@ reg [PCIE_TAG_WIDTH-1:0] pcie_tag_table_start_ptr_reg = 0, pcie_tag_table_start_
 reg [RAM_SEL_WIDTH-1:0] pcie_tag_table_start_ram_sel_reg = 0, pcie_tag_table_start_ram_sel_next;
 reg [RAM_ADDR_WIDTH-1:0] pcie_tag_table_start_ram_addr_reg = 0, pcie_tag_table_start_ram_addr_next;
 reg [OP_TAG_WIDTH-1:0] pcie_tag_table_start_op_tag_reg = 0, pcie_tag_table_start_op_tag_next;
+reg [6:0] pcie_tag_table_start_cplh_fc_reg = 0, pcie_tag_table_start_cplh_fc_next;
+reg [8:0] pcie_tag_table_start_cpld_fc_reg = 0, pcie_tag_table_start_cpld_fc_next;
 reg pcie_tag_table_start_zero_len_reg = 1'b0, pcie_tag_table_start_zero_len_next;
 reg pcie_tag_table_start_en_reg = 1'b0, pcie_tag_table_start_en_next;
 reg [PCIE_TAG_WIDTH-1:0] pcie_tag_table_finish_ptr;
@@ -496,6 +530,10 @@ reg [RAM_SEL_WIDTH-1:0] pcie_tag_table_ram_sel[(2**PCIE_TAG_WIDTH)-1:0];
 reg [RAM_ADDR_WIDTH-1:0] pcie_tag_table_ram_addr[(2**PCIE_TAG_WIDTH)-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [OP_TAG_WIDTH-1:0] pcie_tag_table_op_tag[(2**PCIE_TAG_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg [6:0] pcie_tag_table_cplh_fc[(2**PCIE_TAG_WIDTH)-1:0];
+(* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
+reg [8:0] pcie_tag_table_cpld_fc[(2**PCIE_TAG_WIDTH)-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg pcie_tag_table_zero_len[(2**PCIE_TAG_WIDTH)-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
@@ -601,7 +639,6 @@ always @* begin
     req_ram_sel_next = req_ram_sel_reg;
     req_ram_addr_next = req_ram_addr_reg;
     req_op_count_next = req_op_count_reg;
-    req_tlp_count_next = req_tlp_count_reg;
     req_zero_len_next = req_zero_len_reg;
     req_op_tag_next = req_op_tag_reg;
     req_op_tag_valid_next = req_op_tag_valid_reg;
@@ -609,6 +646,10 @@ always @* begin
     req_pcie_tag_valid_next = req_pcie_tag_valid_reg;
 
     inc_active_tx = 1'b0;
+    inc_active_tag = 1'b0;
+    inc_active_op = 1'b0;
+    inc_active_cplh_fc_count = 0;
+    inc_active_cpld_fc_count = 0;
 
     op_table_start_ptr = req_op_tag_reg;
     op_table_start_tag = s_axis_read_desc_tag;
@@ -623,16 +664,27 @@ always @* begin
         // packet smaller than max read request size
         if (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) >> 12 != 0 || req_op_count_reg >> 12 != 0) begin
             // crosses 4k boundary, split on 4K boundary
-            req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
-            dword_count = 11'h400 - req_pcie_addr_reg[11:2];
+            req_tlp_count = 13'h1000 - req_pcie_addr_reg[11:0];
+            req_dword_count = 11'h400 - req_pcie_addr_reg[11:2];
+            req_cpld_fc_count = 9'h100 - req_pcie_addr_reg[11:4];
+            if (rcb_128b_reg) begin
+                req_cplh_fc_count = 6'h20 - req_pcie_addr_reg[11:7];
+            end else begin
+                req_cplh_fc_count = 7'h40 - req_pcie_addr_reg[11:6];
+            end
             req_last_tlp = (((req_pcie_addr_reg & 12'hfff) + (req_op_count_reg & 12'hfff)) & 12'hfff) == 0 && req_op_count_reg >> 12 == 0;
-            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12]+1;
             req_pcie_addr[11:0] = 12'd0;
         end else begin
             // does not cross 4k boundary, send one TLP
-            req_tlp_count_next = req_op_count_reg;
-            dword_count = (req_op_count_reg + req_pcie_addr_reg[1:0] + 3) >> 2;
+            req_tlp_count = req_op_count_reg;
+            req_dword_count = (req_op_count_reg + req_pcie_addr_reg[1:0] + 3) >> 2;
+            req_cpld_fc_count = (req_op_count_reg + req_pcie_addr_reg[1:0] + 15) >> 4;
+            if (rcb_128b_reg) begin
+                req_cplh_fc_count = (req_pcie_addr_reg[6:0]+req_op_count_reg+127) >> 7;
+            end else begin
+                req_cplh_fc_count = (req_pcie_addr_reg[5:0]+req_op_count_reg+63) >> 6;
+            end
             req_last_tlp = 1'b1;
             // always last TLP, so next address is irrelevant
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12];
@@ -642,32 +694,54 @@ always @* begin
         // packet larger than max read request size
         if (((req_pcie_addr_reg & 12'hfff) + {max_read_request_size_dw_reg, 2'b00}) >> 12 != 0) begin
             // crosses 4k boundary, split on 4K boundary
-            req_tlp_count_next = 13'h1000 - req_pcie_addr_reg[11:0];
-            dword_count = 11'h400 - req_pcie_addr_reg[11:2];
+            req_tlp_count = 13'h1000 - req_pcie_addr_reg[11:0];
+            req_dword_count = 11'h400 - req_pcie_addr_reg[11:2];
+            req_cpld_fc_count = 9'h100 - req_pcie_addr_reg[11:4];
+            if (rcb_128b_reg) begin
+                req_cplh_fc_count = 6'h20 - req_pcie_addr_reg[11:7];
+            end else begin
+                req_cplh_fc_count = 7'h40 - req_pcie_addr_reg[11:6];
+            end
             req_last_tlp = 1'b0;
-            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12]+1;
             req_pcie_addr[11:0] = 12'd0;
         end else begin
             // does not cross 4k boundary, split on 128-byte read completion boundary
-            req_tlp_count_next = {max_read_request_size_dw_reg, 2'b00} - req_pcie_addr_reg[6:0];
-            dword_count = max_read_request_size_dw_reg - req_pcie_addr_reg[6:2];
+            req_tlp_count = {max_read_request_size_dw_reg, 2'b00} - req_pcie_addr_reg[6:0];
+            req_dword_count = max_read_request_size_dw_reg - req_pcie_addr_reg[6:2];
+            req_cpld_fc_count = max_read_request_size_dw_reg[10:2] - req_pcie_addr_reg[6:4];
+            if (rcb_128b_reg) begin
+                req_cplh_fc_count = max_read_request_size_dw_reg[10:5];
+            end else begin
+                req_cplh_fc_count = max_read_request_size_dw_reg[10:4] - req_pcie_addr_reg[6];
+            end
             req_last_tlp = 1'b0;
-            // optimized req_pcie_addr = req_pcie_addr_reg + req_tlp_count_next
             req_pcie_addr[PCIE_ADDR_WIDTH-1:12] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:12];
             req_pcie_addr[11:0] = {{req_pcie_addr_reg[11:7], 5'd0} + max_read_request_size_dw_reg, 2'b00};
         end
     end
 
+    // un-optimized TLP size computations (for reference)
+    // req_dword_count = (req_tlp_count + req_pcie_addr_reg[1:0] + 3) >> 2
+    // req_cpld_fc_count = (req_dword_count + 3) >> 2
+    // if (rcb_128b_reg) begin
+    //     req_cplh_fc_count = (req_pcie_addr_reg[6:0]+req_tlp_count+127) >> 7
+    // end lse begin
+    //     req_cplh_fc_count = (req_pcie_addr_reg[5:0]+req_tlp_count+63) >> 6
+    // end
+    // req_pcie_addr = req_pcie_addr_reg + req_tlp_count
+
     pcie_tag_table_start_ptr_next = req_pcie_tag_reg;
     pcie_tag_table_start_ram_sel_next = req_ram_sel_reg;
-    pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
+    pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count;
     pcie_tag_table_start_op_tag_next = req_op_tag_reg;
+    pcie_tag_table_start_cplh_fc_next = req_cplh_fc_count;
+    pcie_tag_table_start_cpld_fc_next = req_cpld_fc_count;
     pcie_tag_table_start_zero_len_next = req_zero_len_reg;
     pcie_tag_table_start_en_next = 1'b0;
 
-    first_be = 4'b1111 << req_pcie_addr_reg[1:0];
-    last_be = 4'b1111 >> (3 - ((req_pcie_addr_reg[1:0] + req_tlp_count_next[1:0] - 1) & 3));
+    req_first_be = 4'b1111 << req_pcie_addr_reg[1:0];
+    req_last_be = 4'b1111 >> (3 - ((req_pcie_addr_reg[1:0] + req_tlp_count[1:0] - 1) & 3));
 
     tx_rd_req_tlp_hdr_next = tx_rd_req_tlp_hdr_reg;
     tx_rd_req_tlp_valid_next = tx_rd_req_tlp_valid_reg && !tx_rd_req_tlp_ready;
@@ -690,12 +764,12 @@ always @* begin
     tlp_hdr[110] = 1'b0; // EP
     tlp_hdr[109:108] = 2'b00; // attr
     tlp_hdr[107:106] = 3'b000; // AT
-    tlp_hdr[105:96] = dword_count; // length
+    tlp_hdr[105:96] = req_dword_count; // length
     // DW 1
     tlp_hdr[95:80] = requester_id; // requester ID
     tlp_hdr[79:72] = req_pcie_tag_reg; // tag
-    tlp_hdr[71:68] = req_zero_len_reg ? 4'b0000 : (dword_count == 1 ? 4'b0000 : last_be); // last BE
-    tlp_hdr[67:64] = req_zero_len_reg ? 4'b0000 : (dword_count == 1 ? first_be & last_be : first_be); // first BE
+    tlp_hdr[71:68] = req_zero_len_reg ? 4'b0000 : (req_dword_count == 1 ? 4'b0000 : req_last_be); // last BE
+    tlp_hdr[67:64] = req_zero_len_reg ? 4'b0000 : (req_dword_count == 1 ? req_first_be & req_last_be : req_first_be); // first BE
     if (((req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:2] >> 30) != 0) || TLP_FORCE_64_BIT_ADDR) begin
         // DW 2+3
         tlp_hdr[63:2] = req_pcie_addr_reg[PCIE_ADDR_WIDTH-1:2]; // address
@@ -729,6 +803,7 @@ always @* begin
                 op_table_start_ptr = req_op_tag_reg;
                 op_table_start_tag = s_axis_read_desc_tag;
                 op_table_start_en = 1'b1;
+                inc_active_op = 1'b1;
                 stat_rd_op_start_tag_next = req_op_tag_reg;
                 stat_rd_op_start_len_next = s_axis_read_desc_len;
                 stat_rd_op_start_valid_next = 1'b1;
@@ -742,21 +817,26 @@ always @* begin
                 tx_rd_req_tlp_hdr_next = tlp_hdr;
             end
 
-            if ((!tx_rd_req_tlp_valid_reg || tx_rd_req_tlp_ready) && req_pcie_tag_valid_reg && (!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg)) begin
+            if ((!tx_rd_req_tlp_valid_reg || tx_rd_req_tlp_ready) && req_pcie_tag_valid_reg && (!TX_SEQ_NUM_ENABLE || active_tx_count_av_reg) && active_cplh_fc_av_reg && active_cpld_fc_av_reg) begin
                 tx_rd_req_tlp_valid_next = 1'b1;
 
                 inc_active_tx = 1'b1;
 
                 req_pcie_addr_next = req_pcie_addr;
-                req_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
-                req_op_count_next = req_op_count_reg - req_tlp_count_next;
+                req_ram_addr_next = req_ram_addr_reg + req_tlp_count;
+                req_op_count_next = req_op_count_reg - req_tlp_count;
 
                 pcie_tag_table_start_ptr_next = req_pcie_tag_reg;
                 pcie_tag_table_start_ram_sel_next = req_ram_sel_reg;
-                pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count_next;
+                pcie_tag_table_start_ram_addr_next = req_ram_addr_reg + req_tlp_count;
                 pcie_tag_table_start_op_tag_next = req_op_tag_reg;
+                pcie_tag_table_start_cplh_fc_next = req_cplh_fc_count;
+                pcie_tag_table_start_cpld_fc_next = req_cpld_fc_count;
                 pcie_tag_table_start_zero_len_next = req_zero_len_reg;
                 pcie_tag_table_start_en_next = 1'b1;
+                inc_active_tag = 1'b1;
+                inc_active_cplh_fc_count = req_cplh_fc_count;
+                inc_active_cpld_fc_count = req_cpld_fc_count;
 
                 op_table_read_start_ptr = req_op_tag_reg;
                 op_table_read_start_commit = req_last_tlp;
@@ -765,7 +845,7 @@ always @* begin
                 req_pcie_tag_valid_next = 1'b0;
 
                 stat_rd_req_start_tag_next = req_pcie_tag_reg;
-                stat_rd_req_start_len_next = req_zero_len_reg ? 0 : req_tlp_count_next;
+                stat_rd_req_start_len_next = req_zero_len_reg ? 0 : req_tlp_count;
                 stat_rd_req_start_valid_next = 1'b1;
 
                 if (!req_last_tlp) begin
@@ -852,6 +932,11 @@ always @* begin
 
     out_done_ack = {RAM_SEG_COUNT{1'b0}};
 
+    dec_active_tag = 1'b0;
+    dec_active_op = 1'b0;
+    dec_active_cplh_fc_count = 0;
+    dec_active_cpld_fc_count = 0;
+
     // Write generation
     ram_wr_cmd_sel_pipe_next = {RAM_SEG_COUNT{ram_sel_reg}};
     if (!ram_wrap_reg) begin
@@ -910,7 +995,7 @@ always @* begin
     case (tlp_state_reg)
         TLP_STATE_IDLE: begin
             // idle state, wait for completion
-            rx_cpl_tlp_ready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
+            rx_cpl_tlp_ready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_full_reg;
 
             if (rx_cpl_tlp_ready && rx_cpl_tlp_valid && rx_cpl_tlp_sop) begin
                 op_dword_count_next = rx_cpl_tlp_hdr_length;
@@ -1097,7 +1182,7 @@ always @* begin
         end
         TLP_STATE_WRITE: begin
             // write state - generate write operations
-            rx_cpl_tlp_ready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
+            rx_cpl_tlp_ready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_full_reg;
 
             if (rx_cpl_tlp_ready && rx_cpl_tlp_valid) begin
                 tlp_data_int_next = rx_cpl_tlp_data;
@@ -1167,7 +1252,7 @@ always @* begin
 
             if (rx_cpl_tlp_ready && rx_cpl_tlp_valid) begin
                 if (rx_cpl_tlp_eop) begin
-                    rx_cpl_tlp_ready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_half_full_reg;
+                    rx_cpl_tlp_ready_next = init_done_reg && &ram_wr_cmd_ready_int && !status_fifo_full_reg;
                     tlp_state_next = TLP_STATE_IDLE;
                 end else begin
                     tlp_state_next = TLP_STATE_WAIT_END;
@@ -1188,7 +1273,7 @@ always @* begin
     if (init_pcie_tag_reg) begin
         // initialize FIFO
         pcie_tag_fifo_wr_tag = init_count_reg;
-        if (pcie_tag_fifo_wr_tag < PCIE_TAG_COUNT_1) begin
+        if (pcie_tag_fifo_wr_tag < PCIE_TAG_COUNT_1 || !PCIE_TAG_COUNT_2) begin
             pcie_tag_fifo_1_we = 1'b1;
         end else if (pcie_tag_fifo_wr_tag) begin
             pcie_tag_fifo_2_we = 1'b1;
@@ -1196,9 +1281,12 @@ always @* begin
     end else if (finish_tag_reg) begin
         pcie_tag_table_finish_ptr = pcie_tag_reg;
         pcie_tag_table_finish_en = 1'b1;
+        dec_active_tag = 1'b1;
+        dec_active_cplh_fc_count = pcie_tag_table_cplh_fc[pcie_tag_reg];
+        dec_active_cpld_fc_count = pcie_tag_table_cpld_fc[pcie_tag_reg];
 
         pcie_tag_fifo_wr_tag = pcie_tag_reg;
-        if (pcie_tag_fifo_wr_tag < PCIE_TAG_COUNT_1) begin
+        if (pcie_tag_fifo_wr_tag < PCIE_TAG_COUNT_1 || !PCIE_TAG_COUNT_2) begin
             pcie_tag_fifo_1_we = 1'b1;
         end else begin
             pcie_tag_fifo_2_we = 1'b1;
@@ -1259,6 +1347,7 @@ always @* begin
 
             if (op_table_read_commit[op_table_read_finish_ptr] && (op_table_read_count_start[op_table_read_finish_ptr] == op_table_read_count_finish[op_table_read_finish_ptr])) begin
                 op_tag_fifo_we = 1'b1;
+                dec_active_op = 1'b1;
                 stat_rd_op_finish_valid_next = 1'b1;
                 m_axis_read_desc_status_valid_next = 1'b1;
             end
@@ -1309,7 +1398,6 @@ always @(posedge clk) begin
     req_ram_sel_reg <= req_ram_sel_next;
     req_ram_addr_reg <= req_ram_addr_next;
     req_op_count_reg <= req_op_count_next;
-    req_tlp_count_reg <= req_tlp_count_next;
     req_zero_len_reg <= req_zero_len_next;
     req_op_tag_reg <= req_op_tag_next;
     req_op_tag_valid_reg <= req_op_tag_valid_next;
@@ -1357,6 +1445,7 @@ always @(posedge clk) begin
     m_axis_read_desc_status_error_reg <= m_axis_read_desc_status_error_next;
     m_axis_read_desc_status_valid_reg <= m_axis_read_desc_status_valid_next;
 
+    status_busy_reg <= active_op_count_reg != 0 || active_tx_count_reg != 0;
     status_error_cor_reg <= status_error_cor_next;
     status_error_uncor_reg <= status_error_uncor_next;
 
@@ -1379,6 +1468,7 @@ always @(posedge clk) begin
     stat_rd_tx_stall_reg <= stat_rd_tx_stall_next;
 
     max_read_request_size_dw_reg <= 11'd32 << (max_read_request_size > 5 ? 5 : max_read_request_size);
+    rcb_128b_reg <= rcb_128b;
 
     if (status_fifo_wr_en) begin
         status_fifo_op_tag[status_fifo_wr_ptr_reg[STATUS_FIFO_ADDR_WIDTH-1:0]] <= status_fifo_wr_op_tag;
@@ -1403,15 +1493,26 @@ always @(posedge clk) begin
 
     status_fifo_rd_valid_reg <= status_fifo_rd_valid_next;
 
-    status_fifo_half_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**(STATUS_FIFO_ADDR_WIDTH-1);
+    status_fifo_full_reg <= $unsigned(status_fifo_wr_ptr_reg - status_fifo_rd_ptr_reg) >= 2**STATUS_FIFO_ADDR_WIDTH-4;
 
     active_tx_count_reg <= active_tx_count_next;
     active_tx_count_av_reg <= active_tx_count_av_next;
+
+    active_tag_count_reg <= active_tag_count_reg + inc_active_tag - dec_active_tag;
+    active_op_count_reg <= active_op_count_reg + inc_active_op - dec_active_op;
+
+    active_cplh_fc_count_reg <= active_cplh_fc_count_reg + inc_active_cplh_fc_count - dec_active_cplh_fc_count;
+    active_cplh_fc_av_reg <= !CPLH_FC_LIMIT || active_cplh_fc_count_reg < CPLH_FC_LIMIT;
+
+    active_cpld_fc_count_reg <= active_cpld_fc_count_reg + inc_active_cpld_fc_count - dec_active_cpld_fc_count;
+    active_cpld_fc_av_reg <= !CPLD_FC_LIMIT || active_cpld_fc_count_reg < CPLD_FC_LIMIT;
 
     pcie_tag_table_start_ptr_reg <= pcie_tag_table_start_ptr_next;
     pcie_tag_table_start_ram_sel_reg <= pcie_tag_table_start_ram_sel_next;
     pcie_tag_table_start_ram_addr_reg <= pcie_tag_table_start_ram_addr_next;
     pcie_tag_table_start_op_tag_reg <= pcie_tag_table_start_op_tag_next;
+    pcie_tag_table_start_cplh_fc_reg <= pcie_tag_table_start_cplh_fc_next;
+    pcie_tag_table_start_cpld_fc_reg <= pcie_tag_table_start_cpld_fc_next;
     pcie_tag_table_start_zero_len_reg <= pcie_tag_table_start_zero_len_next;
     pcie_tag_table_start_en_reg <= pcie_tag_table_start_en_next;
 
@@ -1421,6 +1522,8 @@ always @(posedge clk) begin
         pcie_tag_table_ram_sel[pcie_tag_table_start_ptr_reg] <= pcie_tag_table_start_ram_sel_reg;
         pcie_tag_table_ram_addr[pcie_tag_table_start_ptr_reg] <= pcie_tag_table_start_ram_addr_reg;
         pcie_tag_table_op_tag[pcie_tag_table_start_ptr_reg] <= pcie_tag_table_start_op_tag_reg;
+        pcie_tag_table_cplh_fc[pcie_tag_table_start_ptr_reg] <= pcie_tag_table_start_cplh_fc_reg;
+        pcie_tag_table_cpld_fc[pcie_tag_table_start_ptr_reg] <= pcie_tag_table_start_cpld_fc_reg;
         pcie_tag_table_zero_len[pcie_tag_table_start_ptr_reg] <= pcie_tag_table_start_zero_len_reg;
         pcie_tag_table_active_a[pcie_tag_table_start_ptr_reg] <= !pcie_tag_table_active_b[pcie_tag_table_start_ptr_reg];
     end
@@ -1436,11 +1539,13 @@ always @(posedge clk) begin
         pcie_tag_fifo_1_wr_ptr_reg <= pcie_tag_fifo_1_wr_ptr_reg + 1;
     end
     pcie_tag_fifo_1_rd_ptr_reg <= pcie_tag_fifo_1_rd_ptr_next;
-    if (pcie_tag_fifo_2_we) begin
-        pcie_tag_fifo_2_mem[pcie_tag_fifo_2_wr_ptr_reg[PCIE_TAG_WIDTH_2-1:0]] <= pcie_tag_fifo_wr_tag;
-        pcie_tag_fifo_2_wr_ptr_reg <= pcie_tag_fifo_2_wr_ptr_reg + 1;
+    if (PCIE_TAG_COUNT_2) begin
+        if (pcie_tag_fifo_2_we) begin
+            pcie_tag_fifo_2_mem[pcie_tag_fifo_2_wr_ptr_reg[PCIE_TAG_WIDTH_2-1:0]] <= pcie_tag_fifo_wr_tag;
+            pcie_tag_fifo_2_wr_ptr_reg <= pcie_tag_fifo_2_wr_ptr_reg + 1;
+        end
+        pcie_tag_fifo_2_rd_ptr_reg <= pcie_tag_fifo_2_rd_ptr_next;
     end
-    pcie_tag_fifo_2_rd_ptr_reg <= pcie_tag_fifo_2_rd_ptr_next;
 
     if (init_op_tag_reg) begin
         op_table_read_init_a[init_count_reg] <= 1'b0;
@@ -1509,6 +1614,7 @@ always @(posedge clk) begin
 
         m_axis_read_desc_status_valid_reg <= 1'b0;
 
+        status_busy_reg <= 1'b0;
         status_error_cor_reg <= 1'b0;
         status_error_uncor_reg <= 1'b0;
 
@@ -1529,6 +1635,15 @@ always @(posedge clk) begin
 
         active_tx_count_reg <= {TX_COUNT_WIDTH{1'b0}};
         active_tx_count_av_reg <= 1'b1;
+
+        active_tag_count_reg <= 0;
+        active_op_count_reg <= 0;
+
+        active_cplh_fc_count_reg <= 0;
+        active_cplh_fc_av_reg <= 1'b1;
+
+        active_cpld_fc_count_reg <= 0;
+        active_cpld_fc_av_reg <= 1'b1;
 
         pcie_tag_table_start_en_reg <= 1'b0;
 

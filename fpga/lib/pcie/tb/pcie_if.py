@@ -789,6 +789,7 @@ class PcieIfDevice(Device):
             cfg_max_payload=None,
             cfg_max_read_req=None,
             cfg_ext_tag_enable=None,
+            cfg_rcb=None,
 
             # Flow control
             tx_fc_ph_av=None,
@@ -921,6 +922,7 @@ class PcieIfDevice(Device):
         self.cfg_max_payload = init_signal(cfg_max_payload, 3, 0)
         self.cfg_max_read_req = init_signal(cfg_max_read_req, 3, 0)
         self.cfg_ext_tag_enable = init_signal(cfg_ext_tag_enable, 1, 0)
+        self.cfg_rcb = init_signal(cfg_rcb, 1, 0)
 
         # Flow control
         self.tx_fc_ph_av = init_signal(tx_fc_ph_av, 8, 0)
@@ -1261,6 +1263,8 @@ class PcieIfDevice(Device):
                 self.cfg_max_read_req.value = self.functions[0].pcie_cap.max_read_request_size
             if self.cfg_ext_tag_enable is not None:
                 self.cfg_ext_tag_enable.value = self.functions[0].pcie_cap.extended_tag_field_enable
+            if self.cfg_rcb is not None:
+                self.cfg_rcb.value = self.functions[0].pcie_cap.read_completion_boundary
 
     async def _run_fc_logic(self):
         clock_edge_event = RisingEdge(self.clk)

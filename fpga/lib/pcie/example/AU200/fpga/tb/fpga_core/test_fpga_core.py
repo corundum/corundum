@@ -167,7 +167,7 @@ class TB(object):
             # cfg_rx_pm_state
             # cfg_tx_pm_state
             # cfg_ltssm_state
-            # cfg_rcb_status
+            cfg_rcb_status=dut.cfg_rcb_status,
             # cfg_obff_enable
             # cfg_pl_status_change
             # cfg_tph_requester_enable

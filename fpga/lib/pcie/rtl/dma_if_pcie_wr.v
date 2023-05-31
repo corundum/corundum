@@ -137,6 +137,11 @@ module dma_if_pcie_wr #
     input  wire [2:0]                                    max_payload_size,
 
     /*
+     * Status
+     */
+    output wire                                          status_busy,
+
+    /*
      * Statistics
      */
     output wire [$clog2(OP_TABLE_SIZE)-1:0]              stat_wr_op_start_tag,
@@ -327,6 +332,10 @@ reg [TX_COUNT_WIDTH-1:0] active_tx_count_reg = {TX_COUNT_WIDTH{1'b0}}, active_tx
 reg active_tx_count_av_reg = 1'b1, active_tx_count_av_next;
 reg inc_active_tx;
 
+reg [OP_TAG_WIDTH+1-1:0] active_op_count_reg = 0;
+reg inc_active_op;
+reg dec_active_op;
+
 reg [TLP_DATA_WIDTH-1:0] tx_wr_req_tlp_data_reg = 0, tx_wr_req_tlp_data_next;
 reg [TLP_STRB_WIDTH-1:0] tx_wr_req_tlp_strb_reg = 0, tx_wr_req_tlp_strb_next;
 reg [TLP_SEG_COUNT*TLP_HDR_WIDTH-1:0] tx_wr_req_tlp_hdr_reg = 0, tx_wr_req_tlp_hdr_next;
@@ -344,6 +353,8 @@ reg [RAM_SEG_COUNT*RAM_SEL_WIDTH-1:0] ram_rd_cmd_sel_reg = 0, ram_rd_cmd_sel_nex
 reg [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0] ram_rd_cmd_addr_reg = 0, ram_rd_cmd_addr_next;
 reg [RAM_SEG_COUNT-1:0] ram_rd_cmd_valid_reg = 0, ram_rd_cmd_valid_next;
 reg [RAM_SEG_COUNT-1:0] ram_rd_resp_ready_cmb;
+
+reg status_busy_reg = 1'b0;
 
 reg [OP_TAG_WIDTH-1:0] stat_wr_op_start_tag_reg = 0, stat_wr_op_start_tag_next;
 reg [LEN_WIDTH-1:0] stat_wr_op_start_len_reg = 0, stat_wr_op_start_len_next;
@@ -377,6 +388,8 @@ assign ram_rd_cmd_sel = ram_rd_cmd_sel_reg;
 assign ram_rd_cmd_addr = ram_rd_cmd_addr_reg;
 assign ram_rd_cmd_valid = ram_rd_cmd_valid_reg;
 assign ram_rd_resp_ready = ram_rd_resp_ready_cmb;
+
+assign status_busy = status_busy_reg;
 
 assign stat_wr_op_start_tag = stat_wr_op_start_tag_reg;
 assign stat_wr_op_start_len = stat_wr_op_start_len_reg;
@@ -501,6 +514,8 @@ always @* begin
     op_table_start_last = op_count_reg == tlp_count_reg;
     op_table_start_en = 1'b0;
 
+    inc_active_op = 1'b0;
+
     // TLP segmentation
     case (req_state_reg)
         REQ_STATE_IDLE: begin
@@ -587,6 +602,7 @@ always @* begin
 
                 op_table_start_tag = tag_reg;
                 op_table_start_en = 1'b1;
+                inc_active_op = 1'b1;
 
                 stat_wr_req_start_tag_next = op_table_start_ptr_reg;
                 stat_wr_req_start_len_next = zero_len_reg ? 0 : tlp_count_reg;
@@ -814,6 +830,7 @@ always @* begin
     op_table_tx_finish_en = 1'b0;
 
     inc_active_tx = 1'b0;
+    dec_active_op = 1'b0;
 
     tx_wr_req_tlp_data_next = tx_wr_req_tlp_data_reg;
     tx_wr_req_tlp_strb_next = tx_wr_req_tlp_strb_reg;
@@ -965,6 +982,7 @@ always @* begin
 
     if (op_table_active[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]] && (!TX_SEQ_NUM_ENABLE || op_table_tx_done[op_table_finish_ptr_reg[OP_TAG_WIDTH-1:0]]) && op_table_finish_ptr_reg != op_table_tx_finish_ptr_reg) begin
         op_table_finish_en = 1'b1;
+        dec_active_op = 1'b1;
 
         stat_wr_req_finish_valid_next = 1'b1;
 
@@ -1072,6 +1090,8 @@ always @(posedge clk) begin
     ram_rd_cmd_addr_reg <= ram_rd_cmd_addr_next;
     ram_rd_cmd_valid_reg <= ram_rd_cmd_valid_next;
 
+    status_busy_reg <= active_op_count_reg != 0 || active_tx_count_reg != 0;
+
     stat_wr_op_start_tag_reg <= stat_wr_op_start_tag_next;
     stat_wr_op_start_len_reg <= stat_wr_op_start_len_next;
     stat_wr_op_start_valid_reg <= stat_wr_op_start_valid_next;
@@ -1090,6 +1110,8 @@ always @(posedge clk) begin
 
     active_tx_count_reg <= active_tx_count_next;
     active_tx_count_av_reg <= active_tx_count_av_next;
+
+    active_op_count_reg <= active_op_count_reg + inc_active_op - dec_active_op;
 
     if (mask_fifo_we) begin
         mask_fifo_mask[mask_fifo_wr_ptr_reg[MASK_FIFO_ADDR_WIDTH-1:0]] <= mask_fifo_wr_mask;
@@ -1161,6 +1183,8 @@ always @(posedge clk) begin
 
         active_tx_count_reg <= {TX_COUNT_WIDTH{1'b0}};
         active_tx_count_av_reg <= 1'b1;
+
+        active_op_count_reg <= 0;
 
         mask_fifo_wr_ptr_reg <= 0;
         mask_fifo_rd_ptr_reg <= 0;

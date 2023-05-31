@@ -1,4 +1,4 @@
-# Copyright (c) 2021 Alex Forencich
+# Copyright (c) 2023 Alex Forencich
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -26,49 +26,18 @@ WAVES ?= 0
 COCOTB_HDL_TIMEUNIT = 1ns
 COCOTB_HDL_TIMEPRECISION = 1ps
 
-DUT      = example_core_pcie
+DUT      = dma_psdpram
 TOPLEVEL = $(DUT)
 MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
-VERILOG_SOURCES += ../../rtl/example_core.v
-VERILOG_SOURCES += ../../rtl/axi_ram.v
-VERILOG_SOURCES += ../../../../rtl/pcie_axil_master.v
-VERILOG_SOURCES += ../../../../rtl/pcie_axi_master.v
-VERILOG_SOURCES += ../../../../rtl/pcie_axi_master_rd.v
-VERILOG_SOURCES += ../../../../rtl/pcie_axi_master_wr.v
-VERILOG_SOURCES += ../../../../rtl/pcie_tlp_demux_bar.v
-VERILOG_SOURCES += ../../../../rtl/pcie_tlp_demux.v
-VERILOG_SOURCES += ../../../../rtl/pcie_tlp_mux.v
-VERILOG_SOURCES += ../../../../rtl/pcie_msix.v
-VERILOG_SOURCES += ../../../../rtl/dma_if_pcie.v
-VERILOG_SOURCES += ../../../../rtl/dma_if_pcie_rd.v
-VERILOG_SOURCES += ../../../../rtl/dma_if_pcie_wr.v
-VERILOG_SOURCES += ../../../../rtl/dma_psdpram.v
-VERILOG_SOURCES += ../../../../rtl/priority_encoder.v
-VERILOG_SOURCES += ../../../../rtl/pulse_merge.v
 
 # module parameters
-export PARAM_TLP_DATA_WIDTH := 512
-export PARAM_TLP_STRB_WIDTH := $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )
-export PARAM_TLP_HDR_WIDTH := 128
-export PARAM_TLP_SEG_COUNT := 1
-export PARAM_TX_SEQ_NUM_COUNT := 1
-export PARAM_TX_SEQ_NUM_WIDTH := 6
-export PARAM_TX_SEQ_NUM_ENABLE := 1
-export PARAM_PCIE_TAG_COUNT := 256
-export PARAM_IMM_ENABLE := 1
-export PARAM_IMM_WIDTH := 32
-export PARAM_READ_OP_TABLE_SIZE := $(PARAM_PCIE_TAG_COUNT)
-export PARAM_READ_TX_LIMIT := $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
-export PARAM_READ_CPLH_FC_LIMIT := 0
-export PARAM_READ_CPLD_FC_LIMIT := $(shell expr $(PARAM_READ_CPLH_FC_LIMIT) \* 4 )
-export PARAM_WRITE_OP_TABLE_SIZE := $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
-export PARAM_WRITE_TX_LIMIT := $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
-export PARAM_TLP_FORCE_64_BIT_ADDR := 0
-export PARAM_CHECK_BUS_NUMBER := 1
-export PARAM_BAR0_APERTURE := 24
-export PARAM_BAR2_APERTURE := 24
-export PARAM_BAR4_APERTURE := 16
+export PARAM_SIZE := 65536
+export PARAM_SEG_COUNT := 2
+export PARAM_SEG_DATA_WIDTH := 32
+export PARAM_SEG_BE_WIDTH := $(shell expr $(PARAM_SEG_DATA_WIDTH) / 8 )
+export PARAM_SEG_ADDR_WIDTH := $(shell python -c "print(($(PARAM_SIZE)//($(PARAM_SEG_COUNT)*$(PARAM_SEG_BE_WIDTH))-1).bit_length())"),
+export PARAM_PIPELINE := 2
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

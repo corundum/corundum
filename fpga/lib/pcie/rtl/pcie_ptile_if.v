@@ -210,6 +210,7 @@ module pcie_ptile_if #
      * Configuration outputs
      */
     output wire [F_COUNT-1:0]                         ext_tag_enable,
+    output wire [F_COUNT-1:0]                         rcb_128b,
     output wire [7:0]                                 bus_num,
     output wire [F_COUNT*3-1:0]                       max_read_request_size,
     output wire [F_COUNT*3-1:0]                       max_payload_size,
@@ -416,7 +417,7 @@ pcie_ptile_cfg_inst (
     .cfg_device_num(),
     .cfg_bus_num(bus_num),
     .cfg_pm_no_soft_rst(),
-    .cfg_rcb_ctrl(),
+    .cfg_rcb_ctrl(rcb_128b),
     .cfg_irq_disable(),
     .cfg_pcie_cap_irq_msg_num(),
     .cfg_sys_pwr_ctrl(),

@@ -148,6 +148,7 @@ wire                               pcie_rq_seq_num_vld1;
 
 wire [2:0] cfg_max_payload;
 wire [2:0] cfg_max_read_req;
+wire [3:0] cfg_rcb_status;
 
 wire [9:0]  cfg_mgmt_addr;
 wire [7:0]  cfg_mgmt_function_number;
@@ -266,7 +267,7 @@ pcie4c_uscale_plus_inst (
     .cfg_ltssm_state(),
     .cfg_rx_pm_state(),
     .cfg_tx_pm_state(),
-    .cfg_rcb_status(),
+    .cfg_rcb_status(cfg_rcb_status),
     .cfg_obff_enable(),
     .cfg_pl_status_change(),
     .cfg_tph_requester_enable(),
@@ -412,7 +413,8 @@ core_inst (
 
     .cfg_max_payload(cfg_max_payload),
     .cfg_max_read_req(cfg_max_read_req),
-    
+    .cfg_rcb_status(cfg_rcb_status),
+
     .cfg_mgmt_addr(cfg_mgmt_addr),
     .cfg_mgmt_function_number(cfg_mgmt_function_number),
     .cfg_mgmt_write(cfg_mgmt_write),

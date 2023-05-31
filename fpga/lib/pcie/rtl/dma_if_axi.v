@@ -178,6 +178,12 @@ module dma_if_axi #
     input  wire                                         write_enable,
 
     /*
+     * Status
+     */
+    output wire                                         status_rd_busy,
+    output wire                                         status_wr_busy,
+
+    /*
      * Statistics
      */
     output wire [$clog2(READ_OP_TABLE_SIZE)-1:0]        stat_rd_op_start_tag,
@@ -286,6 +292,11 @@ dma_if_axi_rd_inst (
     .enable(read_enable),
 
     /*
+     * Status
+     */
+    .status_busy(status_rd_busy),
+
+    /*
      * Statistics
      */
     .stat_rd_op_start_tag(stat_rd_op_start_tag),
@@ -385,6 +396,11 @@ dma_if_axi_wr_inst (
      * Configuration
      */
     .enable(write_enable),
+
+    /*
+     * Status
+     */
+    .status_busy(status_wr_busy),
 
     /*
      * Statistics

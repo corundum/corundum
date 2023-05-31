@@ -67,6 +67,10 @@ module example_core_pcie_us #
     parameter READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
     // In-flight transmit limit (read)
     parameter READ_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
+    // Completion header flow control credit limit (read)
+    parameter READ_CPLH_FC_LIMIT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 128,
+    // Completion data flow control credit limit (read)
+    parameter READ_CPLD_FC_LIMIT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 992 : 2048,
     // Operation table size (write)
     parameter WRITE_OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1),
     // In-flight transmit limit (write)
@@ -147,6 +151,7 @@ module example_core_pcie_us #
      */
     input  wire [2:0]                          cfg_max_read_req,
     input  wire [2:0]                          cfg_max_payload,
+    input  wire [3:0]                          cfg_rcb_status,
 
     /*
      * Configuration flow control interface
@@ -513,6 +518,8 @@ example_core_pcie #(
     .PCIE_TAG_COUNT(PCIE_TAG_COUNT),
     .READ_OP_TABLE_SIZE(READ_OP_TABLE_SIZE),
     .READ_TX_LIMIT(READ_TX_LIMIT),
+    .READ_CPLH_FC_LIMIT(READ_CPLH_FC_LIMIT),
+    .READ_CPLD_FC_LIMIT(READ_CPLD_FC_LIMIT),
     .WRITE_OP_TABLE_SIZE(WRITE_OP_TABLE_SIZE),
     .WRITE_TX_LIMIT(WRITE_TX_LIMIT),
     .TLP_FORCE_64_BIT_ADDR(1),
@@ -607,6 +614,7 @@ core_pcie_inst (
      */
     .bus_num(8'd0),
     .ext_tag_enable(ext_tag_enable),
+    .rcb_128b(cfg_rcb_status[0]),
     .max_read_request_size(cfg_max_read_req),
     .max_payload_size(cfg_max_payload),
     .msix_enable(msix_enable),

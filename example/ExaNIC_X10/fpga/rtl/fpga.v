@@ -141,6 +141,7 @@ wire                               pcie_rq_seq_num_vld;
 
 wire [2:0] cfg_max_payload;
 wire [2:0] cfg_max_read_req;
+wire [3:0] cfg_rcb_status;
 
 wire [18:0] cfg_mgmt_addr;
 wire        cfg_mgmt_write;
@@ -249,7 +250,7 @@ pcie3_ultrascale_inst (
     .cfg_local_error(),
     .cfg_ltr_enable(),
     .cfg_ltssm_state(),
-    .cfg_rcb_status(),
+    .cfg_rcb_status(cfg_rcb_status),
     .cfg_dpa_substate_change(),
     .cfg_obff_enable(),
     .cfg_pl_status_change(),
@@ -401,6 +402,7 @@ core_inst (
 
     .cfg_max_payload(cfg_max_payload),
     .cfg_max_read_req(cfg_max_read_req),
+    .cfg_rcb_status(cfg_rcb_status),
 
     .cfg_mgmt_addr(cfg_mgmt_addr),
     .cfg_mgmt_write(cfg_mgmt_write),

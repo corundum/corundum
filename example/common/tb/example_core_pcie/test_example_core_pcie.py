@@ -121,6 +121,7 @@ class TB(object):
             cfg_max_payload=dut.max_payload_size,
             cfg_max_read_req=dut.max_read_request_size,
             cfg_ext_tag_enable=dut.ext_tag_enable,
+            cfg_rcb=dut.rcb_128b,
         )
 
         self.dev.log.setLevel(logging.DEBUG)
@@ -422,6 +423,8 @@ def test_example_core_pcie(request, pcie_data_width):
     parameters['IMM_WIDTH'] = 32
     parameters['READ_OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
     parameters['READ_TX_LIMIT'] = 2**parameters['TX_SEQ_NUM_WIDTH']
+    parameters['READ_CPLH_FC_LIMIT'] = 0
+    parameters['READ_CPLD_FC_LIMIT'] = parameters['READ_CPLH_FC_LIMIT']*4
     parameters['WRITE_OP_TABLE_SIZE'] = 2**parameters['TX_SEQ_NUM_WIDTH']
     parameters['WRITE_TX_LIMIT'] = 2**parameters['TX_SEQ_NUM_WIDTH']
     parameters['TLP_FORCE_64_BIT_ADDR'] = 0

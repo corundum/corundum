@@ -465,6 +465,8 @@ def test_example_core_pcie_s10(request, data_width, l_tile):
     parameters['IMM_WIDTH'] = 32
     parameters['READ_OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
     parameters['READ_TX_LIMIT'] = 2**parameters['TX_SEQ_NUM_WIDTH']
+    parameters['READ_CPLH_FC_LIMIT'] = 770
+    parameters['READ_CPLD_FC_LIMIT'] = 2500
     parameters['WRITE_OP_TABLE_SIZE'] = 2**parameters['TX_SEQ_NUM_WIDTH']
     parameters['WRITE_TX_LIMIT'] = 2**parameters['TX_SEQ_NUM_WIDTH']
     parameters['BAR0_APERTURE'] = 24

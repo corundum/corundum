@@ -168,7 +168,7 @@ class TB(object):
             # cfg_rx_pm_state
             # cfg_tx_pm_state
             # cfg_ltssm_state
-            # cfg_rcb_status
+            cfg_rcb_status=dut.cfg_rcb_status,
             # cfg_obff_enable
             # cfg_pl_status_change
             # cfg_tph_requester_enable
@@ -566,6 +566,8 @@ def test_example_core_pcie_us(request, axis_pcie_data_width, straddle):
     parameters['IMM_WIDTH'] = 32
     parameters['READ_OP_TABLE_SIZE'] = parameters['PCIE_TAG_COUNT']
     parameters['READ_TX_LIMIT'] = 2**(parameters['RQ_SEQ_NUM_WIDTH']-1)
+    parameters['READ_CPLH_FC_LIMIT'] = 64 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 128
+    parameters['READ_CPLD_FC_LIMIT'] = 992 if parameters['AXIS_PCIE_RQ_USER_WIDTH'] == 60 else 2048
     parameters['WRITE_OP_TABLE_SIZE'] = 2**(parameters['RQ_SEQ_NUM_WIDTH']-1)
     parameters['WRITE_TX_LIMIT'] = 2**(parameters['RQ_SEQ_NUM_WIDTH']-1)
     parameters['BAR0_APERTURE'] = 24

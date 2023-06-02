@@ -139,3 +139,23 @@ program: $(FPGA_TOP).bit
 	echo "program_hw_devices [current_hw_device]" >> program.tcl
 	echo "exit" >> program.tcl
 	vivado -nojournal -nolog -mode batch -source program.tcl
+
+APP_DIR = app
+
+$(APP_DIR)/shell.json:
+	@mkdir -p $(@D)
+	echo '{"shell_type": "XRT_FLAT", "num_slots": "1"}' > $@
+
+$(APP_DIR)/$(FPGA_TOP).bin: $(FPGA_TOP).bin
+	@mkdir -p $(@D)
+	cp $< $@
+
+$(APP_DIR)/overlay.dtbo: ../ps/overlay.dtsi
+	@mkdir -p $(@D)
+	dtc -@ -O dtb -o $@ $^
+
+.PHONY: app
+app: $(APP_DIR)/$(FPGA_TOP).bin $(APP_DIR)/shell.json $(APP_DIR)/overlay.dtbo
+
+clean::
+	-rm -rf $(APP_DIR)

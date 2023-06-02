@@ -1,0 +1,112 @@
+/dts-v1/;
+/plugin/;
+/ {
+	fragment@0 {
+		target = <&fpga_full>;
+		__overlay__ {
+			#address-cells = <2>;
+			#size-cells = <2>;
+			firmware-name = "fpga.bin";
+		};
+	};
+	fragment@1 {
+		target = <&amba>;
+		__overlay__ {
+			#address-cells = <2>;
+			#size-cells = <2>;
+
+			afi0: afi0 {
+				compatible = "xlnx,afi-fpga";
+				config-afi =
+					// PL-to-PS AXI
+					// 0: 128-bit, 1: 64-bit, 2: 32-bit
+					<0 0>, // AFIFM0_RDCTRL [1:0] S_AXI_HPC0_FPD
+					<1 0>, // AFIFM0_WRCTRL [1:0] S_AXI_HPC0_FPD
+					<2 0>, // AFIFM1_RDCTRL [1:0] S_AXI_HPC1_FPD
+					<3 0>, // AFIFM1_WRCTRL [1:0] S_AXI_HPC1_FPD
+					<4 0>, // AFIFM2_RDCTRL [1:0] S_AXI_HP0_FPD
+					<5 0>, // AFIFM2_WRCTRL [1:0] S_AXI_HP0_FPD
+					<6 0>, // AFIFM3_RDCTRL [1:0] S_AXI_HP1_FPD
+					<7 0>, // AFIFM3_WRCTRL [1:0] S_AXI_HP1_FPD
+					<8 0>, // AFIFM4_RDCTRL [1:0] S_AXI_HP2_FPD
+					<9 0>, // AFIFM4_WRCTRL [1:0] S_AXI_HP2_FPD
+					<10 0>, // AFIFM5_RDCTRL [1:0] S_AXI_HP3_FPD
+					<11 0>, // AFIFM5_WRCTRL [1:0] S_AXI_HP3_FPD
+					<12 0>, // AFIFM6_RDCTRL [1:0] S_AXI_LPD
+					<13 0>, // AFIFM6_WRCTRL [1:0] S_AXI_LPD
+					// PS-to-PL AXI
+					// 0: 32-bit, 1: 64-bit, 2: 128-bit
+					<14 0x000>, // FPD_SLCR [9:8] AFIFS0 M_AXI_HPM0_FPD [11:10] AFIFS1 M_AXI_HPM1_FPD
+					<15 0x000>; // LPD_SLCR [9:8] AFIFS2 M_AXI_HPM0_LPD
+			};
+
+			mqnic0: ethernet@a0000000 {
+				compatible = "corundum,mqnic";
+				reg = <0x0 0xa0000000 0x0 0x1000000>,
+				      <0x0 0xa8000000 0x0 0x1000000>;
+				reg-names = "csr", "app";
+				interrupt-parent = <&gic>;
+				interrupts = <0x0 0x59 0x1>, <0x0 0x5a 0x1>, <0x0 0x5b 0x1>,
+				             <0x0 0x5c 0x1>;
+				assigned-clocks = <&zynqmp_clk 71>, // PL0_REF
+					<&si570_2 0>; // MGT SI570 (U56)
+				assigned-clock-rates = <300000000>,
+					<156250000>;
+				resets = <&zynqmp_reset 116>; // ZYNQMP_RESET_PS_PL0
+				reset-names = "reset";
+
+				nvmem-cells = <&macaddress>;
+				nvmem-cell-names = "mac-address";
+
+				/* NOTE: The nvmem-cells property provides us with a base MAC
+				 * address. We increment its last byte (default) by 0x1. And we
+				 * mark the derived address as "locally administrated". The
+				 * result is used to derive MAC addresses for mqnic interfaces.
+				 */
+				mac-address-increment = <0x1>;
+				mac-address-local;
+
+				module-eeproms = <&module_eeprom_sfp0>, <&module_eeprom_sfp1>;
+			};
+		};
+	};
+	fragment@2 {
+		target = <&eeprom>;
+		__overlay__ {
+			#address-cells = <1>;
+			#size-cells = <1>;
+
+			macaddress: macaddress@20 {
+				/* NOTE: On Xilinx Zynq boards there usually is an
+				 * EEPROM with a MAC address for one of the PS GEMs at
+				 * offset 0x20. So we take that address as our base
+				 * address.
+				 */
+				reg = <0x20 0x06>;
+			};
+		};
+	};
+	fragment@3 {
+		target = <&i2c1>;
+		__overlay__ {
+			i2c-mux@75 {
+				i2c@6 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					module_eeprom_sfp1: eeprom@50 {
+						compatible = "atmel,24c02";
+						reg = <0x50>;
+					};
+				};
+				i2c@7 {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					module_eeprom_sfp0: eeprom@50 {
+						compatible = "atmel,24c02";
+						reg = <0x50>;
+					};
+				};
+			};
+		};
+	};
+};

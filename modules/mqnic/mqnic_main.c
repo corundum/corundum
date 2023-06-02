@@ -37,6 +37,7 @@
 #include <linux/module.h>
 #include <linux/version.h>
 #include <linux/delay.h>
+#include <linux/reset.h>
 #include <linux/rtc.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
@@ -747,6 +748,7 @@ static int mqnic_platform_probe(struct platform_device *pdev)
 	struct mqnic_dev *mqnic;
 	struct device *dev = &pdev->dev;
 	struct resource *res;
+	struct reset_control *rst;
 
 	dev_info(dev, DRIVER_NAME " platform probe");
 
@@ -769,6 +771,17 @@ static int mqnic_platform_probe(struct platform_device *pdev)
 	ret = mqnic_common_setdma(mqnic);
 	if (ret)
 		goto fail;
+
+	// Reset device
+	rst = devm_reset_control_get(dev, NULL);
+	if (IS_ERR(rst)) {
+		dev_warn(dev, "Cannot control device reset");
+	} else {
+		dev_info(dev, "Resetting device");
+		reset_control_assert(rst);
+		udelay(2);
+		reset_control_deassert(rst);
+	}
 
 	// Reserve and map regions
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);

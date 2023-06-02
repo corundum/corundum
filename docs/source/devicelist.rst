@@ -184,6 +184,7 @@ This section details SoC targets, which interface with CPU cores on the same dev
     ============  =================  ====================  ==========
     Manufacturer  Board              FPGA                  Board ID
     ============  =================  ====================  ==========
+    Xilinx        KR260              XCK26-2SFVC784C       0x10ee9104
     Xilinx        ZCU102             XCZU9EG-2FFVB1156E    0x10ee9066
     Xilinx        ZCU106             XCZU7EV-2FFVC1156E    0x10ee906a
     ============  =================  ====================  ==========
@@ -193,6 +194,7 @@ This section details SoC targets, which interface with CPU cores on the same dev
     =================  =========  ==========  ===============================  =====
     Board              PCIe IF    Network IF  DDR                              HBM
     =================  =========  ==========  ===============================  =====
+    KR260              \-         1x SFP+     \-                               \-
     ZCU102             \-         4x SFP+     512 MB DDR4 2400 (256M x16)      \-
     ZCU106             Gen 3 x4   2x SFP+     2 GB DDR4 2400 (256M x64)        \-
     =================  =========  ==========  ===============================  =====
@@ -202,6 +204,7 @@ This section details SoC targets, which interface with CPU cores on the same dev
     =================  ============  ============  ==========
     Board              I2C :sup:`1`  MAC :sup:`2`  FW update
     =================  ============  ============  ==========
+    KR260              N             N             N
     ZCU102             Y             Y :sup:`3`    N
     ZCU106             Y             Y :sup:`3`    N
     =================  ============  ============  ==========
@@ -215,6 +218,7 @@ This section details SoC targets, which interface with CPU cores on the same dev
     =================  =========================  ====  =======  ====  =====
     Board              Design                     IFxP  RXQ/TXQ  MAC   Sched
     =================  =========================  ====  =======  ====  =====
+    KR260              mqnic/fpga/fpga            1x1   32/32    10G   RR
     ZCU102             mqnic/fpga/fpga            2x1   32/32    10G   RR
     ZCU106             mqnic/fpga_zynqmp/fpga     2x1   32/32    10G   RR
     =================  =========================  ====  =======  ====  =====

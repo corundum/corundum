@@ -39,6 +39,7 @@ Corundum currently supports devices from both Xilinx and Intel, on boards from s
 *  Xilinx Alveo U200 (Xilinx Virtex UltraScale+ XCU200)
 *  Xilinx Alveo U250 (Xilinx Virtex UltraScale+ XCU250)
 *  Xilinx Alveo U280 (Xilinx Virtex UltraScale+ XCU280)
+*  Xilinx Kria KR260 (Xilinx Zynq UltraScale+ XCK26)
 *  Xilinx VCU108 (Xilinx Virtex UltraScale XCVU095)
 *  Xilinx VCU118 (Xilinx Virtex UltraScale+ XCVU9P)
 *  Xilinx VCU1525 (Xilinx Virtex UltraScale+ XCVU9P)

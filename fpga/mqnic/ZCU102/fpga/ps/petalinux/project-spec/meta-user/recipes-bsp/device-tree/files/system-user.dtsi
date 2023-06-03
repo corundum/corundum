@@ -3,7 +3,9 @@
 / {
 	/delete-node/ m_axil_ctrl@a0000000;
 	/delete-node/ m_axil_app_ctrl@a8000000;
+};
 
+&amba {
 	mqnic0: ethernet@a0000000 {
 		compatible = "corundum,mqnic";
 		reg = <0x0 0xa0000000 0x0 0x1000000>,
@@ -12,6 +14,12 @@
 		interrupt-parent = <&gic>;
 		interrupts = <0x0 0x59 0x1>, <0x0 0x5a 0x1>, <0x0 0x5b 0x1>,
 			     <0x0 0x5c 0x1>;
+		assigned-clocks = <&zynqmp_clk 71>, // PL0_REF
+		                  <&si570_2 0>; // MGT SI570 (U56)
+		assigned-clock-rates = <300000000>,
+		                       <156250000>;
+		resets = <&zynqmp_reset 116>; // ZYNQMP_RESET_PS_PL0
+		reset-names = "reset";
 
 		nvmem-cells = <&macaddress>;
 		nvmem-cell-names = "mac-address";

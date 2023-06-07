@@ -204,15 +204,15 @@ proc configure_bar {fp pcie core pf bar aperture} {
     if {$aperture > 0} {
         puts "PF${pf} BAR${bar}: aperture ${aperture} bits"
 
-        puts $fp "set_instance_parameter_value ${pcie} {${core}_pf${pf}_bar${bar}_address_width_hwtcl} {${aperture}}"
-        puts $fp "set_instance_parameter_value ${pcie} {${core}_pf${pf}_bar${bar}_type_hwtcl} {64-bit prefetchable memory}"
+        puts $fp "set_instance_parameter_value ${pcie} {${core}_pf${pf}_bar${bar}_address_width_user_hwtcl} {${aperture}}"
+        puts $fp "set_instance_parameter_value ${pcie} {${core}_pf${pf}_bar${bar}_type_user_hwtcl} {64-bit prefetchable memory}"
 
         return
     }
     puts "PF${pf} BAR${bar}: disabled"
 
-    puts $fp "set_instance_parameter_value ${pcie} {${core}_pf${pf}_bar${bar}_address_width_hwtcl} {0}"
-    puts $fp "set_instance_parameter_value ${pcie} {${core}_pf${pf}_bar${bar}_type_hwtcl} {Disabled}"
+    puts $fp "set_instance_parameter_value ${pcie} {${core}_pf${pf}_bar${bar}_address_width_user_hwtcl} {0}"
+    puts $fp "set_instance_parameter_value ${pcie} {${core}_pf${pf}_bar${bar}_type_user_hwtcl} {Disabled}"
 }
 
 # Control BAR (BAR 0)

@@ -630,6 +630,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "tdma_scheduler.v"),
         os.path.join(rtl_dir, "common", "tdma_ber.v"),
         os.path.join(rtl_dir, "common", "tdma_ber_ch.v"),
+        os.path.join(rtl_dir, "common", "i2c_single_reg.v"),
         os.path.join(eth_rtl_dir, "eth_mac_10g.v"),
         os.path.join(eth_rtl_dir, "axis_xgmii_rx_64.v"),
         os.path.join(eth_rtl_dir, "axis_xgmii_tx_64.v"),

@@ -86,6 +86,7 @@ VERILOG_SOURCES += ../../rtl/common/tx_scheduler_rr.v
 VERILOG_SOURCES += ../../rtl/common/tdma_scheduler.v
 VERILOG_SOURCES += ../../rtl/common/tdma_ber.v
 VERILOG_SOURCES += ../../rtl/common/tdma_ber_ch.v
+VERILOG_SOURCES += ../../rtl/common/i2c_single_reg.v
 VERILOG_SOURCES += ../../lib/eth/rtl/eth_mac_10g.v
 VERILOG_SOURCES += ../../lib/eth/rtl/axis_xgmii_rx_64.v
 VERILOG_SOURCES += ../../lib/eth/rtl/axis_xgmii_tx_64.v

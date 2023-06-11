@@ -431,6 +431,25 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		init_mac_list_from_eeprom_base(mqnic, mqnic->eeprom_i2c_client, 0x20, MQNIC_MAX_IF);
 
 		break;
+	case MQNIC_BOARD_ID_DK_DEV_1SMX_H_A:
+
+		request_module("at24");
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
+
+		// Virtual I2C MUX
+		mux = create_i2c_client(adapter, "pca9543", 0x74);
+
+		// J4 QSFP0
+		mqnic->mod_i2c_client[0] = create_i2c_client(get_i2c_mux_channel(mux, 0), "24c02", 0x50);
+
+		// J5 QSFP1
+		mqnic->mod_i2c_client[1] = create_i2c_client(get_i2c_mux_channel(mux, 1), "24c02", 0x50);
+
+		mqnic->mod_i2c_client_count = 2;
+
+		break;
 	case MQNIC_BOARD_ID_DK_DEV_1SDX_P_A:
 
 		request_module("at24");

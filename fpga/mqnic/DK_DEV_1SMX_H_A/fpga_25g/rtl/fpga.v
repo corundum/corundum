@@ -205,7 +205,10 @@ module fpga #
     output wire        qsfp1_reset_l,
     input  wire        qsfp1_modprs_l,
     output wire        qsfp1_lpmode,
-    input  wire        qsfp1_int_l
+    input  wire        qsfp1_int_l,
+
+    inout  wire        qsfp_i2c_scl,
+    inout  wire        qsfp_i2c_sda
 );
 
 // PTP configuration
@@ -251,6 +254,46 @@ sync_reset_100mhz_inst (
     .rst(~cpu_resetn || ninit_done),
     .out(rst_100mhz)
 );
+
+// GPIO
+wire qsfp0_int_l_int;
+wire qsfp0_modprs_l_int;
+wire qsfp1_int_l_int;
+wire qsfp1_modprs_l_int;
+
+wire qsfp_i2c_scl_i;
+wire qsfp_i2c_scl_o;
+wire qsfp_i2c_scl_t;
+wire qsfp_i2c_sda_i;
+wire qsfp_i2c_sda_o;
+wire qsfp_i2c_sda_t;
+
+reg qsfp_i2c_scl_o_reg;
+reg qsfp_i2c_scl_t_reg;
+reg qsfp_i2c_sda_o_reg;
+reg qsfp_i2c_sda_t_reg;
+
+always @(posedge pcie_clk) begin
+    qsfp_i2c_scl_o_reg <= qsfp_i2c_scl_o;
+    qsfp_i2c_scl_t_reg <= qsfp_i2c_scl_t;
+    qsfp_i2c_sda_o_reg <= qsfp_i2c_sda_o;
+    qsfp_i2c_sda_t_reg <= qsfp_i2c_sda_t;
+end
+
+sync_signal #(
+    .WIDTH(6),
+    .N(2)
+)
+sync_signal_inst (
+    .clk(pcie_clk),
+    .in({qsfp0_int_l, qsfp0_modprs_l, qsfp1_int_l, qsfp1_modprs_l,
+        qsfp_i2c_scl, qsfp_i2c_sda}),
+    .out({qsfp0_int_l_int, qsfp0_modprs_l_int, qsfp1_int_l_int, qsfp1_modprs_l_int,
+        qsfp_i2c_scl_i, qsfp_i2c_sda_i})
+);
+
+assign qsfp_i2c_scl = qsfp_i2c_scl_t_reg ? 1'bz : qsfp_i2c_scl_o_reg;
+assign qsfp_i2c_sda = qsfp_i2c_sda_t_reg ? 1'bz : qsfp_i2c_sda_o_reg;
 
 // PCIe
 wire coreclkout_hip;
@@ -620,10 +663,6 @@ pcie pcie_hip_inst (
 // XGMII 10G PHY
 
 // QSFP0
-assign qsfp0_modsel_l = 1'b0;
-assign qsfp0_reset_l = 1'b1;
-assign qsfp0_lpmode = 1'b0;
-
 wire                         qsfp0_tx_clk_1_int;
 wire                         qsfp0_tx_rst_1_int;
 wire [XGMII_DATA_WIDTH-1:0]  qsfp0_txd_1_int;
@@ -771,10 +810,6 @@ qsfp0_eth_xcvr_phy_quad (
 );
 
 // QSFP1
-assign qsfp1_modsel_l = 1'b0;
-assign qsfp1_reset_l = 1'b1;
-assign qsfp1_lpmode = 1'b0;
-
 wire                         qsfp1_tx_clk_1_int;
 wire                         qsfp1_tx_rst_1_int;
 wire [XGMII_DATA_WIDTH-1:0]  qsfp1_txd_1_int;
@@ -1188,6 +1223,12 @@ core_inst (
     .qsfp0_rx_error_count_4(qsfp0_rx_error_count_4_int),
     .qsfp0_rx_status_4(qsfp0_rx_status_4),
 
+    .qsfp0_modsel_l(qsfp0_modsel_l),
+    .qsfp0_reset_l(qsfp0_reset_l),
+    .qsfp0_modprs_l(qsfp0_modprs_l_int),
+    .qsfp0_lpmode(qsfp0_lpmode),
+    .qsfp0_int_l(qsfp0_int_l_int),
+
     .qsfp1_tx_clk_1(qsfp1_tx_clk_1_int),
     .qsfp1_tx_rst_1(qsfp1_tx_rst_1_int),
     .qsfp1_txd_1(qsfp1_txd_1_int),
@@ -1235,7 +1276,20 @@ core_inst (
     .qsfp1_rxc_4(qsfp1_rxc_4_int),
     .qsfp1_rx_prbs31_enable_4(qsfp1_rx_prbs31_enable_4_int),
     .qsfp1_rx_error_count_4(qsfp1_rx_error_count_4_int),
-    .qsfp1_rx_status_4(qsfp1_rx_status_4)
+    .qsfp1_rx_status_4(qsfp1_rx_status_4),
+
+    .qsfp1_modsel_l(qsfp1_modsel_l),
+    .qsfp1_reset_l(qsfp1_reset_l),
+    .qsfp1_modprs_l(qsfp1_modprs_l_int),
+    .qsfp1_lpmode(qsfp1_lpmode),
+    .qsfp1_int_l(qsfp1_int_l_int),
+
+    .qsfp_i2c_scl_i(qsfp_i2c_scl_i),
+    .qsfp_i2c_scl_o(qsfp_i2c_scl_o),
+    .qsfp_i2c_scl_t(qsfp_i2c_scl_t),
+    .qsfp_i2c_sda_i(qsfp_i2c_sda_i),
+    .qsfp_i2c_sda_o(qsfp_i2c_sda_o),
+    .qsfp_i2c_sda_t(qsfp_i2c_sda_t)
 );
 
 endmodule

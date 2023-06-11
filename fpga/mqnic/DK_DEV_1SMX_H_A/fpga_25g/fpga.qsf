@@ -324,20 +324,23 @@ set_location_assignment PIN_AG6  -to "qsfp1_rx_n[3]"   ;# GXBR4F_RX_CH4N
 set_location_assignment PIN_AJ9  -to "refclk_qsfp1_p"  ;# REFCLK_GXBR4F_CHBP
 set_location_assignment PIN_AJ10 -to "refclk_qsfp1_n"  ;# REFCLK_GXBR4F_CHBN
 
-set_location_assignment PIN_AW17 -to "qsfp0_modsel_l"
+# modsel pin functions appear to be swapped, possibly BMC FW bug (other pins not checked)
+# set_location_assignment PIN_AW17 -to "qsfp0_modsel_l"
+set_location_assignment PIN_BA17 -to "qsfp0_modsel_l"
 set_location_assignment PIN_AV16 -to "qsfp0_reset_l"
 set_location_assignment PIN_AW16 -to "qsfp0_modprs_l"
 set_location_assignment PIN_BC16 -to "qsfp0_lpmode"
 set_location_assignment PIN_BB16 -to "qsfp0_int_l"
 
-set_location_assignment PIN_BA17 -to "qsfp1_modsel_l"
+# set_location_assignment PIN_BA17 -to "qsfp1_modsel_l"
+set_location_assignment PIN_AW17 -to "qsfp1_modsel_l"
 set_location_assignment PIN_AY16 -to "qsfp1_reset_l"
 set_location_assignment PIN_AY15 -to "qsfp1_modprs_l"
 set_location_assignment PIN_BE15 -to "qsfp1_lpmode"
 set_location_assignment PIN_BF15 -to "qsfp1_int_l"
 
-set_location_assignment PIN_BD16 -to "qsfp_s10_i2c_sda"
-set_location_assignment PIN_BJ16 -to "qsfp_s10_i2c_scl"
+set_location_assignment PIN_BD16 -to "qsfp_i2c_sda"
+set_location_assignment PIN_BJ16 -to "qsfp_i2c_scl"
 
 set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to "qsfp0_tx_p[*]"
 set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to "qsfp0_rx_p[*]"
@@ -363,8 +366,8 @@ set_instance_assignment -name IO_STANDARD "1.8 V" -to "qsfp1_modprs_l"
 set_instance_assignment -name IO_STANDARD "1.8 V" -to "qsfp1_lpmode"
 set_instance_assignment -name IO_STANDARD "1.8 V" -to "qsfp1_int_l"
 
-set_instance_assignment -name IO_STANDARD "1.8 V" -to "qsfp_s10_i2c_sda"
-set_instance_assignment -name IO_STANDARD "1.8 V" -to "qsfp_s10_i2c_scl"
+set_instance_assignment -name IO_STANDARD "1.8 V" -to "qsfp_i2c_sda"
+set_instance_assignment -name IO_STANDARD "1.8 V" -to "qsfp_i2c_scl"
 
 set_instance_assignment -name IO_STANDARD "Differential LVPECL" -to "refclk_qsfp0_p"
 set_instance_assignment -name IO_STANDARD "Differential LVPECL" -to "refclk_qsfp1_p"

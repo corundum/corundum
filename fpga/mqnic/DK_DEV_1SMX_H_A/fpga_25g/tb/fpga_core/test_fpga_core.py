@@ -279,27 +279,24 @@ class TB(object):
         dut.qsfp1_rx_status_3.setimmediatevalue(1)
         dut.qsfp1_rx_status_4.setimmediatevalue(1)
 
-        # dut.qsfp0_i2c_scl_i.setimmediatevalue(1)
-        # dut.qsfp0_i2c_sda_i.setimmediatevalue(1)
-        # dut.qsfp0_intr_n.setimmediatevalue(1)
-        # dut.qsfp0_mod_prsnt_n.setimmediatevalue(0)
+        dut.qsfp0_rx_error_count_1.setimmediatevalue(0)
+        dut.qsfp0_rx_error_count_2.setimmediatevalue(0)
+        dut.qsfp0_rx_error_count_3.setimmediatevalue(0)
+        dut.qsfp0_rx_error_count_4.setimmediatevalue(0)
 
-        # dut.qsfp0_rx_error_count_0.setimmediatevalue(0)
-        # dut.qsfp0_rx_error_count_1.setimmediatevalue(0)
-        # dut.qsfp0_rx_error_count_2.setimmediatevalue(0)
-        # dut.qsfp0_rx_error_count_3.setimmediatevalue(0)
+        dut.qsfp1_rx_error_count_1.setimmediatevalue(0)
+        dut.qsfp1_rx_error_count_2.setimmediatevalue(0)
+        dut.qsfp1_rx_error_count_3.setimmediatevalue(0)
+        dut.qsfp1_rx_error_count_4.setimmediatevalue(0)
 
-        # dut.qsfp1_i2c_scl_i.setimmediatevalue(1)
-        # dut.qsfp1_i2c_sda_i.setimmediatevalue(1)
-        # dut.qsfp1_intr_n.setimmediatevalue(1)
-        # dut.qsfp1_mod_prsnt_n.setimmediatevalue(0)
+        dut.qsfp0_modprs_l.setimmediatevalue(0)
+        dut.qsfp0_int_l.setimmediatevalue(1)
 
-        # dut.qsfp1_rx_error_count_0.setimmediatevalue(0)
-        # dut.qsfp1_rx_error_count_1.setimmediatevalue(0)
-        # dut.qsfp1_rx_error_count_2.setimmediatevalue(0)
-        # dut.qsfp1_rx_error_count_3.setimmediatevalue(0)
+        dut.qsfp1_modprs_l.setimmediatevalue(0)
+        dut.qsfp1_int_l.setimmediatevalue(1)
 
-        # dut.qspi_dq_i.setimmediatevalue(0)
+        dut.qsfp_i2c_scl_i.setimmediatevalue(1)
+        dut.qsfp_i2c_sda_i.setimmediatevalue(1)
 
         self.loopback_enable = False
         cocotb.start_soon(self._run_loopback())
@@ -634,6 +631,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "tdma_scheduler.v"),
         os.path.join(rtl_dir, "common", "tdma_ber.v"),
         os.path.join(rtl_dir, "common", "tdma_ber_ch.v"),
+        os.path.join(rtl_dir, "common", "i2c_single_reg.v"),
         os.path.join(eth_rtl_dir, "eth_mac_10g.v"),
         os.path.join(eth_rtl_dir, "axis_xgmii_rx_64.v"),
         os.path.join(eth_rtl_dir, "axis_xgmii_tx_64.v"),

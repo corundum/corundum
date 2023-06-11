@@ -83,8 +83,8 @@ This section details PCIe form-factor targets, which interface with a separate h
     NetFPGA SUME             Y             N :sup:`7`    N :sup:`8`
     250-SoC                  Y             N             N :sup:`9`
     XUP-P3R                  Y             Y             Y
-    DK-DEV-1SMX-H-A          N :sup:`3`    N :sup:`7`    N
-    DK-DEV-1SMC-H-A          N :sup:`3`    N :sup:`7`    N
+    DK-DEV-1SMX-H-A          Y             N :sup:`7`    N
+    DK-DEV-1SMC-H-A          Y             N :sup:`7`    N
     DK-DEV-1SDX-P-A          Y             N :sup:`3`    N :sup:`10`
     DK-DEV-AGF014EA          Y             N :sup:`3`    N
     DE10-Agilex              Y             N :sup:`7`    N :sup:`10`

@@ -585,8 +585,12 @@ reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
-reg qsfp_0_sel_reg = 1'b0;
-reg qsfp_1_sel_reg = 1'b0;
+wire qsfp_i2c_select_scl_o;
+wire qsfp_i2c_select_sda_o;
+wire [7:0] qsfp_i2c_select;
+
+wire qsfp_i2c_scl_i_int = qsfp_i2c_scl_i & qsfp_i2c_scl_o;
+wire qsfp_i2c_sda_i_int = qsfp_i2c_sda_i & qsfp_i2c_sda_o;
 
 reg qsfp_reset_reg = 1'b0;
 
@@ -612,20 +616,20 @@ assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg | qsfp_0_drp_reg_rd_data | qsfp_1
 assign ctrl_reg_rd_wait = qsfp_0_drp_reg_rd_wait | qsfp_1_drp_reg_rd_wait;
 assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg | qsfp_0_drp_reg_rd_ack | qsfp_1_drp_reg_rd_ack;
 
-assign qsfp_0_sel_l = !qsfp_0_sel_reg;
-assign qsfp_1_sel_l = !qsfp_1_sel_reg;
+assign qsfp_0_sel_l = !qsfp_i2c_select[0];
+assign qsfp_1_sel_l = !qsfp_i2c_select[1];
 
 assign qsfp_reset_l = !qsfp_reset_reg;
 
-assign qsfp_i2c_scl_o = qsfp_i2c_scl_o_reg;
-assign qsfp_i2c_scl_t = qsfp_i2c_scl_o_reg;
-assign qsfp_i2c_sda_o = qsfp_i2c_sda_o_reg;
-assign qsfp_i2c_sda_t = qsfp_i2c_sda_o_reg;
+assign qsfp_i2c_scl_o = qsfp_i2c_scl_o_reg & qsfp_i2c_select_scl_o;
+assign qsfp_i2c_scl_t = qsfp_i2c_scl_o;
+assign qsfp_i2c_sda_o = qsfp_i2c_sda_o_reg & qsfp_i2c_select_sda_o;
+assign qsfp_i2c_sda_t = qsfp_i2c_sda_o;
 
 assign eeprom_i2c_scl_o = eeprom_i2c_scl_o_reg;
-assign eeprom_i2c_scl_t = eeprom_i2c_scl_o_reg;
+assign eeprom_i2c_scl_t = eeprom_i2c_scl_o;
 assign eeprom_i2c_sda_o = eeprom_i2c_sda_o_reg;
-assign eeprom_i2c_sda_t = eeprom_i2c_sda_o_reg;
+assign eeprom_i2c_sda_t = eeprom_i2c_sda_o;
 assign eeprom_wp = 1'b0;
 
 assign fpga_boot = fpga_boot_reg;
@@ -637,6 +641,32 @@ assign qspi_0_dq_oe = qspi_0_dq_oe_reg;
 assign qspi_1_cs = qspi_1_cs_reg;
 assign qspi_1_dq_o = qspi_1_dq_o_reg;
 assign qspi_1_dq_oe = qspi_1_dq_oe_reg;
+
+i2c_single_reg #(
+    .FILTER_LEN(4),
+    .DEV_ADDR(7'h74)
+)
+qsfp_i2c_select_inst (
+    .clk(clk_250mhz),
+    .rst(rst_250mhz),
+
+    /*
+     * I2C interface
+     */
+    .scl_i(qsfp_i2c_scl_i_int),
+    .scl_o(qsfp_i2c_select_scl_o),
+    .scl_t(),
+    .sda_i(qsfp_i2c_sda_i_int),
+    .sda_o(qsfp_i2c_select_sda_o),
+    .sda_t(),
+
+    /*
+     * Data register
+     */
+    .data_in(8'd0),
+    .data_latch(1'b0),
+    .data_out(qsfp_i2c_select)
+);
 
 always @(posedge clk_250mhz) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
@@ -660,10 +690,6 @@ always @(posedge clk_250mhz) begin
                 end
                 if (ctrl_reg_wr_strb[1]) begin
                     qsfp_i2c_sda_o_reg <= ctrl_reg_wr_data[9];
-                end
-                if (ctrl_reg_wr_strb[2]) begin
-                    qsfp_0_sel_reg <= ctrl_reg_wr_data[16];
-                    qsfp_1_sel_reg <= ctrl_reg_wr_data[17];
                 end
             end
             // I2C 1
@@ -731,12 +757,10 @@ always @(posedge clk_250mhz) begin
             RBB+8'h08: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h10;       // I2C ctrl: Next header
             RBB+8'h0C: begin
                 // I2C ctrl: control
-                ctrl_reg_rd_data_reg[0] <= qsfp_i2c_scl_i;
+                ctrl_reg_rd_data_reg[0] <= qsfp_i2c_scl_i_int;
                 ctrl_reg_rd_data_reg[1] <= qsfp_i2c_scl_o_reg;
-                ctrl_reg_rd_data_reg[8] <= qsfp_i2c_sda_i;
+                ctrl_reg_rd_data_reg[8] <= qsfp_i2c_sda_i_int;
                 ctrl_reg_rd_data_reg[9] <= qsfp_i2c_sda_o_reg;
-                ctrl_reg_rd_data_reg[16] <= qsfp_0_sel_reg;
-                ctrl_reg_rd_data_reg[17] <= qsfp_1_sel_reg;
             end
             // I2C 1
             RBB+8'h10: ctrl_reg_rd_data_reg <= 32'h0000C110;             // I2C ctrl: Type
@@ -794,9 +818,6 @@ always @(posedge clk_250mhz) begin
     if (rst_250mhz) begin
         ctrl_reg_wr_ack_reg <= 1'b0;
         ctrl_reg_rd_ack_reg <= 1'b0;
-
-        qsfp_0_sel_reg <= 1'b0;
-        qsfp_1_sel_reg <= 1'b0;
 
         qsfp_reset_reg <= 1'b0;
 

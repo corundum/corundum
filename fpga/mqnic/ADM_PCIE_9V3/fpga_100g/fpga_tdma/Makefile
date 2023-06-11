@@ -59,6 +59,7 @@ SYN_FILES += rtl/common/tx_scheduler_ctrl_tdma.v
 SYN_FILES += rtl/common/tdma_scheduler.v
 SYN_FILES += rtl/common/cmac_pad.v
 SYN_FILES += rtl/common/mac_ts_insert.v
+SYN_FILES += rtl/common/i2c_single_reg.v
 SYN_FILES += lib/eth/rtl/ptp_clock.v
 SYN_FILES += lib/eth/rtl/ptp_clock_cdc.v
 SYN_FILES += lib/eth/rtl/ptp_perout.v

@@ -675,6 +675,7 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "stats_dma_latency.v"),
         os.path.join(rtl_dir, "common", "mqnic_tx_scheduler_block_rr.v"),
         os.path.join(rtl_dir, "common", "tx_scheduler_rr.v"),
+        os.path.join(rtl_dir, "common", "i2c_single_reg.v"),
         os.path.join(eth_rtl_dir, "ptp_clock.v"),
         os.path.join(eth_rtl_dir, "ptp_clock_cdc.v"),
         os.path.join(eth_rtl_dir, "ptp_perout.v"),

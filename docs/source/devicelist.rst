@@ -74,10 +74,10 @@ This section details PCIe form-factor targets, which interface with a separate h
     =======================  ============  ============  ==========
     Board                    I2C :sup:`1`  MAC :sup:`2`  FW update
     =======================  ============  ============  ==========
-    ADM-PCIE-9V3             N :sup:`3`    Y :sup:`5`    Y
+    ADM-PCIE-9V3             Y             Y :sup:`5`    Y
     DNPCIe_40G_KU_LL_2QSFP   Y             N :sup:`3`    Y
-    Nexus K35-S              N :sup:`3`    Y             Y
-    Nexus K3P-S              N :sup:`3`    Y             Y
+    Nexus K35-S              Y             Y             Y
+    Nexus K3P-S              Y             Y             Y
     Nexus K3P-Q              Y             Y             Y
     fb2CG\@KU15P             Y             Y             Y
     NetFPGA SUME             Y             N :sup:`7`    N :sup:`8`

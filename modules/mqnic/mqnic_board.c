@@ -471,6 +471,20 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		// U23 I2C EEPROM
 		mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c64", 0x50);
 
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 1);
+
+		// Virtual I2C MUX
+		mux = create_i2c_client(adapter, "pca9543", 0x74);
+
+		// QSFPDD0
+		mqnic->mod_i2c_client[0] = create_i2c_client(get_i2c_mux_channel(mux, 0), "24c02", 0x50);
+
+		// QSFPDD1
+		mqnic->mod_i2c_client[1] = create_i2c_client(get_i2c_mux_channel(mux, 1), "24c02", 0x50);
+
+		mqnic->mod_i2c_client_count = 2;
+
 		break;
 	case MQNIC_BOARD_ID_DE10_AGILEX:
 

@@ -86,7 +86,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     DK-DEV-1SMX-H-A          N :sup:`3`    N :sup:`7`    N
     DK-DEV-1SMC-H-A          N :sup:`3`    N :sup:`7`    N
     DK-DEV-1SDX-P-A          Y             N :sup:`3`    N :sup:`10`
-    DK-DEV-AGF014EA          N :sup:`3`    N :sup:`3`    N
+    DK-DEV-AGF014EA          Y             N :sup:`3`    N
     DE10-Agilex              Y             N :sup:`7`    N :sup:`10`
     Alveo U50                N :sup:`4`    Y             Y
     Alveo U200               Y             Y             Y

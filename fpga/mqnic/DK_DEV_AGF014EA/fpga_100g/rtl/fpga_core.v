@@ -434,21 +434,24 @@ reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
+wire qsfpdd_i2c_select_scl_o;
+wire qsfpdd_i2c_select_sda_o;
+wire [7:0] qsfpdd_i2c_select;
+
+wire qsfpdd_i2c_scl_i_int = qsfpdd_i2c_scl_i & qsfpdd_i2c_scl_o;
+wire qsfpdd_i2c_sda_i_int = qsfpdd_i2c_sda_i & qsfpdd_i2c_sda_o;
+
 reg fpga_i2c_scl_o_reg = 1'b1;
 reg fpga_i2c_sda_o_reg = 1'b1;
 
 reg qsfpdd0_reset_reg = 1'b0;
-reg qsfpdd0_modsel_reg = 1'b0;
 reg qsfpdd0_lpmode_reg = 1'b0;
 
 reg qsfpdd1_reset_reg = 1'b0;
-reg qsfpdd1_modsel_reg = 1'b0;
 reg qsfpdd1_lpmode_reg = 1'b0;
 
 reg qsfpdd_i2c_scl_o_reg = 1'b1;
 reg qsfpdd_i2c_sda_o_reg = 1'b1;
-
-// reg fpga_boot_reg = 1'b0;
 
 assign ctrl_reg_wr_wait = 1'b0;
 assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg;
@@ -457,24 +460,48 @@ assign ctrl_reg_rd_wait = 1'b0;
 assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg;
 
 assign fpga_i2c_scl_o = fpga_i2c_scl_o_reg;
-assign fpga_i2c_scl_t = fpga_i2c_scl_o_reg;
+assign fpga_i2c_scl_t = fpga_i2c_scl_o;
 assign fpga_i2c_sda_o = fpga_i2c_sda_o_reg;
-assign fpga_i2c_sda_t = fpga_i2c_sda_o_reg;
+assign fpga_i2c_sda_t = fpga_i2c_sda_o;
 
 assign qsfpdd0_lpmode = qsfpdd0_lpmode_reg;
-assign qsfpdd0_modsel_l = !qsfpdd0_modsel_reg;
+assign qsfpdd0_modsel_l = !qsfpdd_i2c_select[0];
 assign qsfpdd0_reset_l = !qsfpdd0_reset_reg;
 
 assign qsfpdd1_lpmode = qsfpdd1_lpmode_reg;
-assign qsfpdd1_modsel_l = !qsfpdd1_modsel_reg;
+assign qsfpdd1_modsel_l = !qsfpdd_i2c_select[1];
 assign qsfpdd1_reset_l = !qsfpdd1_reset_reg;
 
-assign qsfpdd_i2c_scl_o = qsfpdd_i2c_scl_o_reg;
-assign qsfpdd_i2c_scl_t = qsfpdd_i2c_scl_o_reg;
-assign qsfpdd_i2c_sda_o = qsfpdd_i2c_sda_o_reg;
-assign qsfpdd_i2c_sda_t = qsfpdd_i2c_sda_o_reg;
+assign qsfpdd_i2c_scl_o = qsfpdd_i2c_scl_o_reg & qsfpdd_i2c_select_scl_o;
+assign qsfpdd_i2c_scl_t = qsfpdd_i2c_scl_o;
+assign qsfpdd_i2c_sda_o = qsfpdd_i2c_sda_o_reg & qsfpdd_i2c_select_sda_o;
+assign qsfpdd_i2c_sda_t = qsfpdd_i2c_sda_o;
 
-// assign fpga_boot = fpga_boot_reg;
+i2c_single_reg #(
+    .FILTER_LEN(4),
+    .DEV_ADDR(7'h74)
+)
+qsfpdd_i2c_select_inst (
+    .clk(clk_250mhz),
+    .rst(rst_250mhz),
+
+    /*
+     * I2C interface
+     */
+    .scl_i(qsfpdd_i2c_scl_i_int),
+    .scl_o(qsfpdd_i2c_select_scl_o),
+    .scl_t(),
+    .sda_i(qsfpdd_i2c_sda_i_int),
+    .sda_o(qsfpdd_i2c_select_sda_o),
+    .sda_t(),
+
+    /*
+     * Data register
+     */
+    .data_in(8'd0),
+    .data_latch(1'b0),
+    .data_out(qsfpdd_i2c_select)
+);
 
 always @(posedge clk_250mhz) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
@@ -503,10 +530,6 @@ always @(posedge clk_250mhz) begin
                 end
                 if (ctrl_reg_wr_strb[1]) begin
                     qsfpdd_i2c_sda_o_reg <= ctrl_reg_wr_data[9];
-                end
-                if (ctrl_reg_wr_strb[2]) begin
-                    qsfpdd0_modsel_reg <= ctrl_reg_wr_data[16];
-                    qsfpdd1_modsel_reg <= ctrl_reg_wr_data[17];
                 end
             end
             // XCVR GPIO
@@ -546,12 +569,10 @@ always @(posedge clk_250mhz) begin
             RBB+8'h18: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h20;       // I2C ctrl: Next header
             RBB+8'h1C: begin
                 // I2C ctrl: control
-                ctrl_reg_rd_data_reg[0] <= qsfpdd_i2c_scl_i;
+                ctrl_reg_rd_data_reg[0] <= qsfpdd_i2c_scl_i_int;
                 ctrl_reg_rd_data_reg[1] <= qsfpdd_i2c_scl_o_reg;
-                ctrl_reg_rd_data_reg[8] <= qsfpdd_i2c_sda_i;
+                ctrl_reg_rd_data_reg[8] <= qsfpdd_i2c_sda_i_int;
                 ctrl_reg_rd_data_reg[9] <= qsfpdd_i2c_sda_o_reg;
-                ctrl_reg_rd_data_reg[16] <= qsfpdd0_modsel_reg;
-                ctrl_reg_rd_data_reg[17] <= qsfpdd1_modsel_reg;
             end
             // XCVR GPIO
             RBB+8'h20: ctrl_reg_rd_data_reg <= 32'h0000C101;             // XCVR GPIO: Type
@@ -580,11 +601,9 @@ always @(posedge clk_250mhz) begin
         fpga_i2c_sda_o_reg <= 1'b1;
 
         qsfpdd0_reset_reg <= 1'b0;
-        qsfpdd0_modsel_reg <= 1'b0;
         qsfpdd0_lpmode_reg <= 1'b0;
 
         qsfpdd1_reset_reg <= 1'b0;
-        qsfpdd1_modsel_reg <= 1'b0;
         qsfpdd1_lpmode_reg <= 1'b0;
 
         qsfpdd_i2c_scl_o_reg <= 1'b1;

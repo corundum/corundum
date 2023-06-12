@@ -164,6 +164,31 @@ static int read_mac_from_eeprom_hex(struct mqnic_dev *mqnic,
 	return 0;
 }
 
+static int init_mac_list_from_eeprom(struct mqnic_dev *mqnic,
+		struct i2c_client *eeprom, int offset, int count)
+{
+	int ret, k;
+	char mac[ETH_ALEN];
+
+	count = min(count, MQNIC_MAX_IF);
+
+	for (k = 0; k < count; k++) {
+		ret = read_mac_from_eeprom(mqnic, eeprom, offset + ETH_ALEN*k, mac);
+		if (ret < 0)
+			return ret;
+
+		if (!is_valid_ether_addr(mac)) {
+			dev_warn(mqnic->dev, "MAC is not valid");
+			return -1;
+		}
+
+		memcpy(mqnic->mac_list[k], mac, ETH_ALEN);
+		mqnic->mac_count = k+1;
+	}
+
+	return 0;
+}
+
 static int init_mac_list_from_eeprom_base(struct mqnic_dev *mqnic,
 		struct i2c_client *eeprom, int offset, int count)
 {
@@ -563,6 +588,48 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 
 		// I2C EEPROM
 		mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c16", 0x50);
+
+		break;
+	case MQNIC_BOARD_ID_520NMX:
+		// FPGA I2C
+		//   TCA9548 0x72
+		//     CH0: OC_2 J22
+		//     CH1: OC_3 J23
+		//     CH2: OC_0 J26
+		//     CH3: OC_1 J27
+		//     CH4: QSFP_0
+		//     CH5: QSFP_1
+		//     CH6: QSFP_2
+		//     CH7: QSFP_3
+		//   EEPROM 0x57
+
+		request_module("at24");
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
+
+		// TCA9548 I2C MUX
+		mux = create_i2c_client(adapter, "pca9548", 0x72);
+
+		// QSFP0
+		mqnic->mod_i2c_client[0] = create_i2c_client(get_i2c_mux_channel(mux, 4), "24c02", 0x50);
+
+		// QSFP1
+		mqnic->mod_i2c_client[1] = create_i2c_client(get_i2c_mux_channel(mux, 5), "24c02", 0x50);
+
+		// QSFP2
+		mqnic->mod_i2c_client[2] = create_i2c_client(get_i2c_mux_channel(mux, 6), "24c02", 0x50);
+
+		// QSFP3
+		mqnic->mod_i2c_client[3] = create_i2c_client(get_i2c_mux_channel(mux, 7), "24c02", 0x50);
+
+		mqnic->mod_i2c_client_count = 4;
+
+		// I2C EEPROM
+		mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c02", 0x57);
+
+		// read MACs from EEPROM
+		init_mac_list_from_eeprom(mqnic, mqnic->eeprom_i2c_client, 0x4B, 16);
 
 		break;
 	case MQNIC_BOARD_ID_XUPP3R:

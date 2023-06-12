@@ -458,6 +458,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		break;
 	case MQNIC_BOARD_ID_DK_DEV_1SMX_H_A:
 
+		request_module("i2c_mux_pca954x");
 		request_module("at24");
 
 		// I2C adapter
@@ -507,6 +508,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		break;
 	case MQNIC_BOARD_ID_DK_DEV_AGF014EA:
 
+		request_module("i2c_mux_pca954x");
 		request_module("at24");
 
 		// I2C adapter
@@ -564,6 +566,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		//   AT24C16C U51 0x54
 		//   TMP431C U52 0x4C
 
+		request_module("i2c_mux_pca954x");
 		request_module("at24");
 
 		// I2C adapter
@@ -603,6 +606,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		//     CH7: QSFP_3
 		//   EEPROM 0x57
 
+		request_module("i2c_mux_pca954x");
 		request_module("at24");
 
 		// I2C adapter
@@ -676,6 +680,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 	case MQNIC_BOARD_ID_NEXUS_K3P_S:
 	case MQNIC_BOARD_ID_ADM_PCIE_9V3:
 
+		request_module("i2c_mux_pca954x");
 		request_module("at24");
 
 		// I2C adapter

@@ -257,6 +257,8 @@ async def run_test(dut):
     await Timer(2000, 'ns')
 
     # read status
+    status = await dev_pf0_bar0.read_dword(0x000000)
+    tb.log.info("DMA Status: 0x%x", status)
     val = await dev_pf0_bar0.read_dword(0x000118)
     tb.log.info("Status: 0x%x", val)
     assert val == 0x800000AA
@@ -271,6 +273,8 @@ async def run_test(dut):
     await Timer(2000, 'ns')
 
     # read status
+    status = await dev_pf0_bar0.read_dword(0x000000)
+    tb.log.info("DMA Status: 0x%x", status)
     val = await dev_pf0_bar0.read_dword(0x000218)
     tb.log.info("Status: 0x%x", val)
     assert val == 0x80000055
@@ -291,6 +295,8 @@ async def run_test(dut):
     await Timer(2000, 'ns')
 
     # read status
+    status = await dev_pf0_bar0.read_dword(0x000000)
+    tb.log.info("DMA Status: 0x%x", status)
     val = await dev_pf0_bar0.read_dword(0x000218)
     tb.log.info("Status: 0x%x", val)
     assert val == 0x800000AA
@@ -354,10 +360,14 @@ async def run_test(dut):
     await dev_pf0_bar0.write_dword(0x001000, 1)
 
     for k in range(10):
-        cnt = await dev_pf0_bar0.read_dword(0x001018)
         await Timer(1000, 'ns')
-        if cnt == 0:
+        run = await dev_pf0_bar0.read_dword(0x001000)
+        if run == 0:
             break
+
+    # read status
+    status = await dev_pf0_bar0.read_dword(0x000000)
+    tb.log.info("DMA Status: 0x%x", status)
 
     # configure operation (write)
     # DMA base address
@@ -396,10 +406,16 @@ async def run_test(dut):
     await dev_pf0_bar0.write_dword(0x001100, 1)
 
     for k in range(10):
-        cnt = await dev_pf0_bar0.read_dword(0x001118)
         await Timer(1000, 'ns')
-        if cnt == 0:
+        run = await dev_pf0_bar0.read_dword(0x001100)
+        if run == 0:
             break
+
+    # read status
+    status = await dev_pf0_bar0.read_dword(0x000000)
+    tb.log.info("DMA Status: 0x%x", status)
+
+    assert status & 0x300 == 0
 
     tb.log.info("%s", mem.hexdump_str(dest_offset, region_len))
 

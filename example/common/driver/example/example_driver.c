@@ -103,6 +103,8 @@ static void dma_block_read(struct example_dev *edev,
 
 	if ((ioread32(edev->bar[0] + 0x001000) & 1) != 0)
 		dev_warn(edev->dev, "%s: operation timed out", __func__);
+	if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+		dev_warn(edev->dev, "%s: DMA engine busy", __func__);
 }
 
 static void dma_block_write(struct example_dev *edev,
@@ -157,6 +159,8 @@ static void dma_block_write(struct example_dev *edev,
 
 	if ((ioread32(edev->bar[0] + 0x001100) & 1) != 0)
 		dev_warn(edev->dev, "%s: operation timed out", __func__);
+	if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+		dev_warn(edev->dev, "%s: DMA engine busy", __func__);
 }
 
 static void dma_block_read_bench(struct example_dev *edev,
@@ -365,6 +369,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	msleep(1);
 
 	dev_info(dev, "Read status");
+	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000000));
 	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000118));
 
 	dev_info(dev, "start copy to host");
@@ -378,6 +383,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	msleep(1);
 
 	dev_info(dev, "Read status");
+	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000000));
 	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000218));
 
 	dev_info(dev, "read test data");
@@ -402,6 +408,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	msleep(1);
 
 	dev_info(dev, "Read status");
+	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000000));
 	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000218));
 
 	dev_info(dev, "read data");
@@ -435,6 +442,9 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 			}
 		}
 	}
+
+	dev_info(dev, "Read status");
+	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000000));
 
 	// probe complete
 	return 0;

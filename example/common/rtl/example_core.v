@@ -152,7 +152,14 @@ module example_core #
      */
     output wire [IRQ_INDEX_WIDTH-1:0]                   irq_index,
     output wire                                         irq_valid,
-    input  wire                                         irq_ready
+    input  wire                                         irq_ready,
+
+    /*
+     * Control and status
+     */
+    output wire                                         dma_enable,
+    input  wire                                         dma_rd_busy,
+    input  wire                                         dma_wr_busy
 );
 
 localparam RAM_ADDR_IMM_WIDTH = (DMA_IMM_ENABLE && (DMA_IMM_WIDTH > RAM_ADDR_WIDTH)) ? DMA_IMM_WIDTH : RAM_ADDR_WIDTH;
@@ -283,6 +290,8 @@ assign m_axis_dma_write_desc_valid = dma_write_desc_valid_reg;
 
 assign irq_index = 0;
 assign irq_valid = irq_valid_reg;
+
+assign dma_enable = dma_enable_reg;
 
 always @* begin
     axil_ctrl_awready_next = 1'b0;
@@ -437,6 +446,8 @@ always @* begin
             // control
             16'h0000: begin
                 axil_ctrl_rdata_next[0] = dma_enable_reg;
+                axil_ctrl_rdata_next[8] = dma_wr_busy;
+                axil_ctrl_rdata_next[9] = dma_rd_busy;
             end
             16'h0008: begin
                 axil_ctrl_rdata_next[0] = dma_rd_int_en_reg;

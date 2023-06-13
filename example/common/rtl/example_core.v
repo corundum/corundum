@@ -159,7 +159,10 @@ module example_core #
      */
     output wire                                         dma_enable,
     input  wire                                         dma_rd_busy,
-    input  wire                                         dma_wr_busy
+    input  wire                                         dma_wr_busy,
+    input  wire                                         dma_rd_req,
+    input  wire                                         dma_rd_cpl,
+    input  wire                                         dma_wr_req
 );
 
 localparam RAM_ADDR_IMM_WIDTH = (DMA_IMM_ENABLE && (DMA_IMM_WIDTH > RAM_ADDR_WIDTH)) ? DMA_IMM_WIDTH : RAM_ADDR_WIDTH;
@@ -210,6 +213,9 @@ reg axil_ctrl_rvalid_reg = 1'b0, axil_ctrl_rvalid_next;
 reg [63:0] cycle_count_reg = 0;
 reg [15:0] dma_read_active_count_reg = 0;
 reg [15:0] dma_write_active_count_reg = 0;
+reg [31:0] dma_rd_req_count_reg = 0;
+reg [31:0] dma_rd_cpl_count_reg = 0;
+reg [31:0] dma_wr_req_count_reg = 0;
 
 reg [DMA_ADDR_WIDTH-1:0] dma_read_desc_dma_addr_reg = 0, dma_read_desc_dma_addr_next;
 reg [RAM_ADDR_WIDTH-1:0] dma_read_desc_ram_addr_reg = 0, dma_read_desc_ram_addr_next;
@@ -455,8 +461,11 @@ always @* begin
             end
             16'h0010: axil_ctrl_rdata_next = cycle_count_reg;
             16'h0014: axil_ctrl_rdata_next = cycle_count_reg >> 32;
-            16'h0020: axil_ctrl_rdata_next = dma_read_active_count_reg;
-            16'h0028: axil_ctrl_rdata_next = dma_write_active_count_reg;
+            16'h0018: axil_ctrl_rdata_next = dma_read_active_count_reg;
+            16'h001c: axil_ctrl_rdata_next = dma_write_active_count_reg;
+            16'h0020: axil_ctrl_rdata_next = dma_rd_req_count_reg;
+            16'h0024: axil_ctrl_rdata_next = dma_rd_cpl_count_reg;
+            16'h0028: axil_ctrl_rdata_next = dma_wr_req_count_reg;
             // single read
             16'h0100: axil_ctrl_rdata_next = dma_read_desc_dma_addr_reg;
             16'h0104: axil_ctrl_rdata_next = dma_read_desc_dma_addr_reg >> 32;
@@ -626,6 +635,10 @@ always @(posedge clk) begin
         + (m_axis_dma_write_desc_valid && m_axis_dma_write_desc_ready)
         - s_axis_dma_write_desc_status_valid;
 
+    dma_rd_req_count_reg <= dma_rd_req_count_reg + dma_rd_req;
+    dma_rd_cpl_count_reg <= dma_rd_cpl_count_reg + dma_rd_cpl;
+    dma_wr_req_count_reg <= dma_wr_req_count_reg + dma_wr_req;
+
     dma_read_desc_dma_addr_reg <= dma_read_desc_dma_addr_next;
     dma_read_desc_ram_addr_reg <= dma_read_desc_ram_addr_next;
     dma_read_desc_len_reg <= dma_read_desc_len_next;
@@ -690,6 +703,9 @@ always @(posedge clk) begin
         cycle_count_reg <= 0;
         dma_read_active_count_reg <= 0;
         dma_write_active_count_reg <= 0;
+        dma_rd_req_count_reg <= 0;
+        dma_rd_cpl_count_reg <= 0;
+        dma_wr_req_count_reg <= 0;
 
         dma_read_desc_valid_reg <= 1'b0;
         dma_read_desc_status_valid_reg <= 1'b0;

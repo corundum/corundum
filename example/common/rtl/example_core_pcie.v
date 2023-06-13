@@ -1121,7 +1121,10 @@ core_inst (
      */
     .dma_enable(dma_enable),
     .dma_rd_busy(dma_rd_busy),
-    .dma_wr_busy(dma_wr_busy)
+    .dma_wr_busy(dma_wr_busy),
+    .dma_rd_req(tx_rd_req_tlp_valid && tx_rd_req_tlp_sop && tx_rd_req_tlp_ready),
+    .dma_rd_cpl(rx_cpl_tlp_valid && rx_cpl_tlp_sop && rx_cpl_tlp_ready),
+    .dma_wr_req(tx_wr_req_tlp_valid && tx_wr_req_tlp_sop && tx_wr_req_tlp_ready)
 );
 
 endmodule

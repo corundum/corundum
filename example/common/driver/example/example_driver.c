@@ -167,8 +167,13 @@ static void dma_block_read_bench(struct example_dev *edev,
 		dma_addr_t dma_addr, u64 size, u64 stride, u64 count)
 {
 	u64 cycles;
+	u32 rd_req;
+	u32 rd_cpl;
 
 	udelay(5);
+
+	rd_req = ioread32(edev->bar[0] + 0x000020);
+	rd_cpl = ioread32(edev->bar[0] + 0x000024);
 
 	dma_block_read(edev, dma_addr, 0, 0x3fff, stride,
 			0, 0, 0x3fff, stride, size, count);
@@ -177,16 +182,22 @@ static void dma_block_read_bench(struct example_dev *edev,
 
 	udelay(5);
 
-	dev_info(edev->dev, "read %lld blocks of %lld bytes (stride %lld) in %lld ns: %lld Mbps",
-			count, size, stride, cycles * 4, size * count * 8 * 1000 / (cycles * 4));
+	rd_req = ioread32(edev->bar[0] + 0x000020) - rd_req;
+	rd_cpl = ioread32(edev->bar[0] + 0x000024) - rd_cpl;
+
+	dev_info(edev->dev, "read %lld blocks of %lld bytes (stride %lld) in %lld ns (%d req %d cpl): %lld Mbps",
+			count, size, stride, cycles * 4, rd_req, rd_cpl, size * count * 8 * 1000 / (cycles * 4));
 }
 
 static void dma_block_write_bench(struct example_dev *edev,
 		dma_addr_t dma_addr, u64 size, u64 stride, u64 count)
 {
 	u64 cycles;
+	u32 wr_req;
 
 	udelay(5);
+
+	wr_req = ioread32(edev->bar[0] + 0x000028);
 
 	dma_block_write(edev, dma_addr, 0, 0x3fff, stride,
 			0, 0, 0x3fff, stride, size, count);
@@ -195,8 +206,10 @@ static void dma_block_write_bench(struct example_dev *edev,
 
 	udelay(5);
 
-	dev_info(edev->dev, "wrote %lld blocks of %lld bytes (stride %lld) in %lld ns: %lld Mbps",
-			count, size, stride, cycles * 4, size * count * 8 * 1000 / (cycles * 4));
+	wr_req = ioread32(edev->bar[0] + 0x000028) - wr_req;
+
+	dev_info(edev->dev, "wrote %lld blocks of %lld bytes (stride %lld) in %lld ns (%d req): %lld Mbps",
+			count, size, stride, cycles * 4, wr_req, size * count * 8 * 1000 / (cycles * 4));
 }
 
 static irqreturn_t edev_intr(int irq, void *data)

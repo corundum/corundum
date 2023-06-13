@@ -539,16 +539,20 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	if (pdev->pcie_cap) {
 		u16 devctl;
 		u32 lnkcap;
+		u16 lnkctl;
 		u16 lnksta;
 
 		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_DEVCTL, &devctl);
 		pci_read_config_dword(pdev, pdev->pcie_cap + PCI_EXP_LNKCAP, &lnkcap);
+		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_LNKCTL, &lnkctl);
 		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_LNKSTA, &lnksta);
 
 		dev_info(dev, " Max payload size: %d bytes",
 				128 << ((devctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
 		dev_info(dev, " Max read request size: %d bytes",
 				128 << ((devctl & PCI_EXP_DEVCTL_READRQ) >> 12));
+		dev_info(dev, " Read completion boundary: %d bytes",
+				lnkctl & PCI_EXP_LNKCTL_RCB ? 128 : 64);
 		dev_info(dev, " Link capability: gen %d x%d",
 				lnkcap & PCI_EXP_LNKCAP_SLS, (lnkcap & PCI_EXP_LNKCAP_MLW) >> 4);
 		dev_info(dev, " Link status: gen %d x%d",

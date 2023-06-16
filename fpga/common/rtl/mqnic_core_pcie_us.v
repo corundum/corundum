@@ -200,8 +200,8 @@ module mqnic_core_pcie_us #
     parameter PCIE_TAG_COUNT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 256,
     parameter PCIE_DMA_READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
     parameter PCIE_DMA_READ_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
-    parameter PCIE_DMA_READ_CPLH_FC_LIMIT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 128,
-    parameter PCIE_DMA_READ_CPLD_FC_LIMIT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 992 : 2048,
+    parameter PCIE_DMA_READ_CPLH_FC_LIMIT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 256,
+    parameter PCIE_DMA_READ_CPLD_FC_LIMIT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 1024-64 : 2048-256,
     parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1),
     parameter PCIE_DMA_WRITE_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
 
@@ -1168,8 +1168,7 @@ core_pcie_inst (
      */
     .bus_num(8'd0),
     .ext_tag_enable(ext_tag_enable),
-    // .rcb_128b(cfg_rcb_status),
-    .rcb_128b(1'b1), // force RCB 128 due to insufficient CPLH limit in US+ PCIe HIP
+    .rcb_128b(cfg_rcb_status),
     .max_read_request_size(cfg_max_read_req),
     .max_payload_size(cfg_max_payload),
     .msix_enable(msix_enable),

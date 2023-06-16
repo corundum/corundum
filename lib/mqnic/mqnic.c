@@ -326,13 +326,16 @@ fail_open:
     return -1;
 }
 
-static int mqnic_try_open_if_name(struct mqnic *dev, const char *if_name)
+static int mqnic_try_open_miscdev(struct mqnic *dev, const char *fmt, ...)
 {
+    va_list ap;
     DIR *folder;
     struct dirent *entry;
     char path[PATH_MAX];
 
-    snprintf(path, sizeof(path), "/sys/class/net/%s/device/misc/", if_name);
+    va_start(ap, fmt);
+    vsnprintf(path, sizeof(path), fmt, ap);
+    va_end(ap);
 
     folder = opendir(path);
     if (!folder)
@@ -372,16 +375,28 @@ struct mqnic *mqnic_open(const char *dev_name)
     dev->app_fd = -1;
     dev->ram_fd = -1;
 
-    // absolute path
+    // miscdev absolute path
     if (mqnic_try_open(dev, "%s", dev_name) == 0)
         goto open;
 
-    // device name
+    // miscdev device name
     if (mqnic_try_open(dev, "/dev/%s", dev_name) == 0)
         goto open;
 
-    // network interface
-    if (mqnic_try_open_if_name(dev, dev_name) == 0)
+    // miscdev via network interface name
+    if (mqnic_try_open_miscdev(dev, "/sys/class/net/%s/device/misc/", dev_name) == 0)
+        goto open;
+
+    // miscdev via PCIe sysfs path
+    if (mqnic_try_open_miscdev(dev, "%s/misc/", dev_name) == 0)
+        goto open;
+
+    // miscdev via PCIe BDF (dddd:xx:yy.z)
+    if (mqnic_try_open_miscdev(dev, "/sys/bus/pci/devices/%s/misc/", dev_name) == 0)
+        goto open;
+
+    // miscdev via PCIe BDF (xx:yy.z)
+    if (mqnic_try_open_miscdev(dev, "/sys/bus/pci/devices/0000:%s/misc/", dev_name) == 0)
         goto open;
 
     // PCIe sysfs path

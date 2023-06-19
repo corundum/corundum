@@ -259,6 +259,14 @@ wire ext_tag_enable;
 wire msix_enable;
 wire msix_mask;
 
+wire rx_cpl_stall;
+
+wire s_axis_rc_tvalid_int;
+wire s_axis_rc_tready_int;
+
+assign s_axis_rc_tvalid_int = s_axis_rc_tvalid & ~rx_cpl_stall;
+assign s_axis_rc_tready = s_axis_rc_tready_int & ~rx_cpl_stall;
+
 pcie_us_if #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
@@ -295,8 +303,8 @@ pcie_us_if_inst (
      */
     .s_axis_rc_tdata(s_axis_rc_tdata),
     .s_axis_rc_tkeep(s_axis_rc_tkeep),
-    .s_axis_rc_tvalid(s_axis_rc_tvalid),
-    .s_axis_rc_tready(s_axis_rc_tready),
+    .s_axis_rc_tvalid(s_axis_rc_tvalid_int),
+    .s_axis_rc_tready(s_axis_rc_tready_int),
     .s_axis_rc_tlast(s_axis_rc_tlast),
     .s_axis_rc_tuser(s_axis_rc_tuser),
 
@@ -624,7 +632,12 @@ core_pcie_inst (
      * Status
      */
     .status_error_cor(status_error_cor),
-    .status_error_uncor(status_error_uncor)
+    .status_error_uncor(status_error_uncor),
+
+    /*
+     * Control and status
+     */
+    .rx_cpl_stall(rx_cpl_stall)
 );
 
 endmodule

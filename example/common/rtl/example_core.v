@@ -162,7 +162,8 @@ module example_core #
     input  wire                                         dma_wr_busy,
     input  wire                                         dma_rd_req,
     input  wire                                         dma_rd_cpl,
-    input  wire                                         dma_wr_req
+    input  wire                                         dma_wr_req,
+    output wire                                         rx_cpl_stall
 );
 
 localparam RAM_ADDR_IMM_WIDTH = (DMA_IMM_ENABLE && (DMA_IMM_WIDTH > RAM_ADDR_WIDTH)) ? DMA_IMM_WIDTH : RAM_ADDR_WIDTH;
@@ -243,6 +244,9 @@ reg dma_rd_int_en_reg = 0, dma_rd_int_en_next;
 reg dma_wr_int_en_reg = 0, dma_wr_int_en_next;
 reg irq_valid_reg = 1'b0, irq_valid_next;
 
+reg rx_cpl_stall_reg = 1'b0, rx_cpl_stall_next;
+reg [23:0] rx_cpl_stall_count_reg = 0, rx_cpl_stall_count_next;
+
 reg dma_read_block_run_reg = 1'b0, dma_read_block_run_next;
 reg [DMA_LEN_WIDTH-1:0] dma_read_block_len_reg = 0, dma_read_block_len_next;
 reg [31:0] dma_read_block_count_reg = 0, dma_read_block_count_next;
@@ -298,6 +302,7 @@ assign irq_index = 0;
 assign irq_valid = irq_valid_reg;
 
 assign dma_enable = dma_enable_reg;
+assign rx_cpl_stall = rx_cpl_stall_reg;
 
 always @* begin
     axil_ctrl_awready_next = 1'b0;
@@ -337,6 +342,9 @@ always @* begin
 
     irq_valid_next = irq_valid_reg && !irq_ready;
 
+    rx_cpl_stall_next = 1'b0;
+    rx_cpl_stall_count_next = rx_cpl_stall_count_reg;
+
     dma_read_block_run_next = dma_read_block_run_reg;
     dma_read_block_len_next = dma_read_block_len_reg;
     dma_read_block_count_next = dma_read_block_count_reg;
@@ -363,6 +371,11 @@ always @* begin
     dma_write_block_ram_offset_mask_next = dma_write_block_ram_offset_mask_reg;
     dma_write_block_ram_stride_next = dma_write_block_ram_stride_reg;
 
+    if (rx_cpl_stall_count_reg) begin
+        rx_cpl_stall_count_next = rx_cpl_stall_count_reg - 1;
+        rx_cpl_stall_next = 1'b1;
+    end
+
     if (s_axil_ctrl_awvalid && s_axil_ctrl_wvalid && !axil_ctrl_bvalid_reg) begin
         // write operation
         axil_ctrl_awready_next = 1'b1;
@@ -379,6 +392,7 @@ always @* begin
                 dma_rd_int_en_next = s_axil_ctrl_wdata[0];
                 dma_wr_int_en_next = s_axil_ctrl_wdata[1];
             end
+            16'h0040: rx_cpl_stall_count_next = s_axil_ctrl_wdata;
             // single read
             16'h0100: dma_read_desc_dma_addr_next[31:0] = s_axil_ctrl_wdata;
             16'h0104: dma_read_desc_dma_addr_next[63:32] = s_axil_ctrl_wdata;
@@ -466,6 +480,7 @@ always @* begin
             16'h0020: axil_ctrl_rdata_next = dma_rd_req_count_reg;
             16'h0024: axil_ctrl_rdata_next = dma_rd_cpl_count_reg;
             16'h0028: axil_ctrl_rdata_next = dma_wr_req_count_reg;
+            16'h0040: axil_ctrl_rdata_next = rx_cpl_stall_count_reg;
             // single read
             16'h0100: axil_ctrl_rdata_next = dma_read_desc_dma_addr_reg;
             16'h0104: axil_ctrl_rdata_next = dma_read_desc_dma_addr_reg >> 32;
@@ -667,6 +682,9 @@ always @(posedge clk) begin
 
     irq_valid_reg <= irq_valid_next;
 
+    rx_cpl_stall_reg <= rx_cpl_stall_next;
+    rx_cpl_stall_count_reg <= rx_cpl_stall_count_next;
+
     dma_read_block_run_reg <= dma_read_block_run_next;
     dma_read_block_len_reg <= dma_read_block_len_next;
     dma_read_block_count_reg <= dma_read_block_count_next;
@@ -715,6 +733,8 @@ always @(posedge clk) begin
         dma_rd_int_en_reg <= 1'b0;
         dma_wr_int_en_reg <= 1'b0;
         irq_valid_reg <= 1'b0;
+        rx_cpl_stall_reg <= 1'b0;
+        rx_cpl_stall_count_reg <= 0;
         dma_read_block_run_reg <= 1'b0;
         dma_write_block_run_reg <= 1'b0;
     end

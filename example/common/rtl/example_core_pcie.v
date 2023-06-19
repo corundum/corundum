@@ -172,7 +172,12 @@ module example_core_pcie #
      * Status
      */
     output wire                                          status_error_cor,
-    output wire                                          status_error_uncor
+    output wire                                          status_error_uncor,
+
+    /*
+     * Control and status
+     */
+    output wire                                          rx_cpl_stall
 );
 
 parameter AXIL_CTRL_DATA_WIDTH = 32;
@@ -1124,7 +1129,8 @@ core_inst (
     .dma_wr_busy(dma_wr_busy),
     .dma_rd_req(tx_rd_req_tlp_valid && tx_rd_req_tlp_sop && tx_rd_req_tlp_ready),
     .dma_rd_cpl(rx_cpl_tlp_valid && rx_cpl_tlp_sop && rx_cpl_tlp_ready),
-    .dma_wr_req(tx_wr_req_tlp_valid && tx_wr_req_tlp_sop && tx_wr_req_tlp_ready)
+    .dma_wr_req(tx_wr_req_tlp_valid && tx_wr_req_tlp_sop && tx_wr_req_tlp_ready),
+    .rx_cpl_stall(rx_cpl_stall)
 );
 
 endmodule

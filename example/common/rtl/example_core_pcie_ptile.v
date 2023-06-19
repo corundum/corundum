@@ -200,6 +200,12 @@ wire [2:0] max_payload_size;
 wire msix_enable;
 wire msix_mask;
 
+wire rx_cpl_stall;
+
+wire rx_st_ready_int;
+
+assign rx_st_ready = rx_st_ready_int & !rx_cpl_stall;
+
 pcie_ptile_if #(
     .SEG_COUNT(SEG_COUNT),
     .SEG_DATA_WIDTH(SEG_DATA_WIDTH),
@@ -226,7 +232,7 @@ pcie_ptile_if_inst (
     .rx_st_sop(rx_st_sop),
     .rx_st_eop(rx_st_eop),
     .rx_st_valid(rx_st_valid),
-    .rx_st_ready(rx_st_ready),
+    .rx_st_ready(rx_st_ready_int),
     .rx_st_hdr(rx_st_hdr),
     .rx_st_tlp_prfx(rx_st_tlp_prfx),
     .rx_st_vf_active(rx_st_vf_active),
@@ -488,7 +494,12 @@ core_pcie_inst (
      * Status
      */
     .status_error_cor(),
-    .status_error_uncor()
+    .status_error_uncor(),
+
+    /*
+     * Control and status
+     */
+    .rx_cpl_stall(rx_cpl_stall)
 );
 
 endmodule

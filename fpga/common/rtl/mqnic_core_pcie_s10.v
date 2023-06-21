@@ -196,7 +196,7 @@ module mqnic_core_pcie_s10 #
     parameter PCIE_DMA_READ_OP_TABLE_SIZE = PCIE_TAG_COUNT,
     parameter PCIE_DMA_READ_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
     parameter PCIE_DMA_READ_CPLH_FC_LIMIT = 770,
-    parameter PCIE_DMA_READ_CPLD_FC_LIMIT = 2500,
+    parameter PCIE_DMA_READ_CPLD_FC_LIMIT = 2400,
     parameter PCIE_DMA_WRITE_OP_TABLE_SIZE = 2**TX_SEQ_NUM_WIDTH,
     parameter PCIE_DMA_WRITE_TX_LIMIT = 2**TX_SEQ_NUM_WIDTH,
 

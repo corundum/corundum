@@ -58,7 +58,7 @@ module example_core_pcie_s10 #
     // Completion header flow control credit limit (read)
     parameter READ_CPLH_FC_LIMIT = 770,
     // Completion data flow control credit limit (read)
-    parameter READ_CPLD_FC_LIMIT = 2500,
+    parameter READ_CPLD_FC_LIMIT = 2400,
     // Operation table size (write)
     parameter WRITE_OP_TABLE_SIZE = 2**TX_SEQ_NUM_WIDTH,
     // In-flight transmit limit (write)

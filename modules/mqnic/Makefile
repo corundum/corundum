@@ -26,6 +26,10 @@ mqnic-y += mqnic_cq.o
 mqnic-y += mqnic_eq.o
 mqnic-y += mqnic_ethtool.o
 
+ifneq ($(DEBUG),)
+ccflags-y += -DDEBUG
+endif
+
 else
 
 ifneq ($(KERNEL_SRC),)

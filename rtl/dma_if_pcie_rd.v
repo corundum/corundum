@@ -422,13 +422,13 @@ reg [OP_TAG_WIDTH+1-1:0] active_op_count_reg = 0;
 reg inc_active_op;
 reg dec_active_op;
 
-reg [CL_CPLH_FC_LIMIT+1-1:0] active_cplh_fc_count_reg = 0;
-reg active_cplh_fc_av_reg = 1'b1;
+reg [CL_CPLH_FC_LIMIT+1-1:0] active_cplh_fc_count_reg = 0, active_cplh_fc_count_next;
+reg active_cplh_fc_av_reg = 1'b1, active_cplh_fc_av_next;
 reg [6:0] inc_active_cplh_fc_count;
 reg [6:0] dec_active_cplh_fc_count;
 
-reg [CL_CPLD_FC_LIMIT+1-1:0] active_cpld_fc_count_reg = 0;
-reg active_cpld_fc_av_reg = 1'b1;
+reg [CL_CPLD_FC_LIMIT+1-1:0] active_cpld_fc_count_reg = 0, active_cpld_fc_count_next;
+reg active_cpld_fc_av_reg = 1'b1, active_cpld_fc_av_next;
 reg [8:0] inc_active_cpld_fc_count;
 reg [8:0] dec_active_cpld_fc_count;
 
@@ -1382,6 +1382,12 @@ always @* begin
     end
 
     active_tx_count_av_next = active_tx_count_next < TX_LIMIT;
+
+    active_cplh_fc_count_next <= active_cplh_fc_count_reg + inc_active_cplh_fc_count - dec_active_cplh_fc_count;
+    active_cplh_fc_av_next <= !CPLH_FC_LIMIT || active_cplh_fc_count_next < CPLH_FC_LIMIT;
+
+    active_cpld_fc_count_next <= active_cpld_fc_count_reg + inc_active_cpld_fc_count - dec_active_cpld_fc_count;
+    active_cpld_fc_av_next <= !CPLD_FC_LIMIT || active_cpld_fc_count_next < CPLD_FC_LIMIT;
 end
 
 always @(posedge clk) begin
@@ -1501,11 +1507,11 @@ always @(posedge clk) begin
     active_tag_count_reg <= active_tag_count_reg + inc_active_tag - dec_active_tag;
     active_op_count_reg <= active_op_count_reg + inc_active_op - dec_active_op;
 
-    active_cplh_fc_count_reg <= active_cplh_fc_count_reg + inc_active_cplh_fc_count - dec_active_cplh_fc_count;
-    active_cplh_fc_av_reg <= !CPLH_FC_LIMIT || active_cplh_fc_count_reg < CPLH_FC_LIMIT;
+    active_cplh_fc_count_reg <= active_cplh_fc_count_next;
+    active_cplh_fc_av_reg <= active_cplh_fc_av_next;
 
-    active_cpld_fc_count_reg <= active_cpld_fc_count_reg + inc_active_cpld_fc_count - dec_active_cpld_fc_count;
-    active_cpld_fc_av_reg <= !CPLD_FC_LIMIT || active_cpld_fc_count_reg < CPLD_FC_LIMIT;
+    active_cpld_fc_count_reg <= active_cpld_fc_count_next;
+    active_cpld_fc_av_reg <= active_cpld_fc_av_next;
 
     pcie_tag_table_start_ptr_reg <= pcie_tag_table_start_ptr_next;
     pcie_tag_table_start_ram_sel_reg <= pcie_tag_table_start_ram_sel_next;

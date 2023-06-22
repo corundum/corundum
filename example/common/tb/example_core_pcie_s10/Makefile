@@ -57,7 +57,7 @@ VERILOG_SOURCES += ../../../../rtl/priority_encoder.v
 VERILOG_SOURCES += ../../../../rtl/pulse_merge.v
 
 # module parameters
-export PARAM_SEG_COUNT := 1
+export PARAM_SEG_COUNT := 2
 export PARAM_SEG_DATA_WIDTH := 256
 export PARAM_SEG_EMPTY_WIDTH := $(shell python -c "print((($(PARAM_SEG_DATA_WIDTH)//32)-1).bit_length())" )
 export PARAM_TX_SEQ_NUM_WIDTH := 6

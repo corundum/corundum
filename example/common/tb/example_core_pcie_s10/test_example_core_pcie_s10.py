@@ -249,7 +249,7 @@ async def dma_block_read_bench(tb, dev, addr, mask, size, stride, count):
     # start
     await dev_pf0_bar0.write_dword(0x001000, 1)
 
-    for k in range(100):
+    for k in range(1000):
         await Timer(1000, 'ns')
         run = await dev_pf0_bar0.read_dword(0x001000)
         status = await dev_pf0_bar0.read_dword(0x000000)
@@ -314,7 +314,7 @@ async def dma_block_write_bench(tb, dev, addr, mask, size, stride, count):
     # start
     await dev_pf0_bar0.write_dword(0x001100, 1)
 
-    for k in range(100):
+    for k in range(1000):
         await Timer(1000, 'ns')
         run = await dev_pf0_bar0.read_dword(0x001100)
         status = await dev_pf0_bar0.read_dword(0x000000)

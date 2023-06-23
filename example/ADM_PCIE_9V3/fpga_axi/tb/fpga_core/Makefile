@@ -54,7 +54,6 @@ export PARAM_AXIS_PCIE_RQ_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_
 export PARAM_AXIS_PCIE_RC_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),75,161)
 export PARAM_AXIS_PCIE_CQ_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),88,183)
 export PARAM_AXIS_PCIE_CC_USER_WIDTH := $(if $(filter-out 512,$(PARAM_AXIS_PCIE_DATA_WIDTH)),33,81)
-export PARAM_RQ_SEQ_NUM_WIDTH := 6
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

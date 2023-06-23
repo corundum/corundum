@@ -396,7 +396,6 @@ def test_fpga_core(request):
     parameters['AXIS_PCIE_RC_USER_WIDTH'] = 75 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 161
     parameters['AXIS_PCIE_CQ_USER_WIDTH'] = 88 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 183
     parameters['AXIS_PCIE_CC_USER_WIDTH'] = 33 if parameters['AXIS_PCIE_DATA_WIDTH'] < 512 else 81
-    parameters['RQ_SEQ_NUM_WIDTH'] = 6
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}
 

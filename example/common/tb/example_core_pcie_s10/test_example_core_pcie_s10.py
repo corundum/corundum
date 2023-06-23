@@ -538,14 +538,14 @@ async def run_test(dut):
     size = 8+64
     stride = 0
     for count in range(8, 256+1, 8):
-        await dma_cpl_buf_test(tb, dev, mem_base, region_len-1, size, stride, count, 2000)
+        await dma_cpl_buf_test(tb, dev, mem_base+128-8, region_len-1, size, stride, count, 2000)
 
     tb.log.info("Test RX completion buffer (CPLH, 8+128+8)")
 
     size = 8+128+8
     stride = 0
     for count in range(8, 256+1, 8):
-        await dma_cpl_buf_test(tb, dev, mem_base, region_len-1, size, stride, count, 2000)
+        await dma_cpl_buf_test(tb, dev, mem_base+128-8, region_len-1, size, stride, count, 2000)
 
     tb.log.info("Test RX completion buffer (CPLD)")
 

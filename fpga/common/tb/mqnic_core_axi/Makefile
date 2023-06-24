@@ -222,7 +222,8 @@ export PARAM_DMA_TAG_WIDTH := 16
 export PARAM_RAM_ADDR_WIDTH := $(shell python -c "print((max($(PARAM_TX_RAM_SIZE), $(PARAM_RX_RAM_SIZE))-1).bit_length())")
 export PARAM_RAM_PIPELINE := 2
 export PARAM_AXI_DMA_MAX_BURST_LEN := 16
-export PARAM_AXI_DMA_USE_ID := 1
+export PARAM_AXI_DMA_READ_USE_ID := 0
+export PARAM_AXI_DMA_WRITE_USE_ID := 1
 export PARAM_AXI_DMA_READ_OP_TABLE_SIZE := $(shell echo "$$(( 1 << $(PARAM_AXI_ID_WIDTH) ))" )
 export PARAM_AXI_DMA_WRITE_OP_TABLE_SIZE := $(shell echo "$$(( 1 << $(PARAM_AXI_ID_WIDTH) ))" )
 

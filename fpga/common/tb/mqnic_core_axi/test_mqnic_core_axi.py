@@ -737,7 +737,8 @@ def test_mqnic_core_pcie_axi(request, if_count, ports_per_if, axi_data_width,
     parameters['RAM_ADDR_WIDTH'] = (max(parameters['TX_RAM_SIZE'], parameters['RX_RAM_SIZE'])-1).bit_length()
     parameters['RAM_PIPELINE'] = 2
     parameters['AXI_DMA_MAX_BURST_LEN'] = 16
-    parameters['AXI_DMA_USE_ID'] = 1
+    parameters['AXI_DMA_READ_USE_ID'] = 0
+    parameters['AXI_DMA_WRITE_USE_ID'] = 1
     parameters['AXI_DMA_READ_OP_TABLE_SIZE'] = 2**parameters['AXI_ID_WIDTH']
     parameters['AXI_DMA_WRITE_OP_TABLE_SIZE'] = 2**parameters['AXI_ID_WIDTH']
 

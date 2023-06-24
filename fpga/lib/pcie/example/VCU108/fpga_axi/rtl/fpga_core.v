@@ -34,89 +34,93 @@ THE SOFTWARE.
 module fpga_core #
 (
     parameter AXIS_PCIE_DATA_WIDTH = 256,
-    parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32)
+    parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32),
+    parameter AXIS_PCIE_RC_USER_WIDTH = 75,
+    parameter AXIS_PCIE_RQ_USER_WIDTH = 60,
+    parameter AXIS_PCIE_CQ_USER_WIDTH = 85,
+    parameter AXIS_PCIE_CC_USER_WIDTH = 33
 )
 (
     /*
      * Clock: 250 MHz
      * Synchronous reset
      */
-    input  wire                            clk,
-    input  wire                            rst,
+    input  wire                               clk,
+    input  wire                               rst,
 
     /*
      * GPIO
      */
-    input  wire                            btnu,
-    input  wire                            btnl,
-    input  wire                            btnd,
-    input  wire                            btnr,
-    input  wire                            btnc,
-    input  wire [3:0]                      sw,
-    output wire [7:0]                      led,
+    input  wire                               btnu,
+    input  wire                               btnl,
+    input  wire                               btnd,
+    input  wire                               btnr,
+    input  wire                               btnc,
+    input  wire [3:0]                         sw,
+    output wire [7:0]                         led,
 
     /*
      * PCIe
      */
-    output wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_rq_tdata,
-    output wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_rq_tkeep,
-    output wire                            m_axis_rq_tlast,
-    input  wire                            m_axis_rq_tready,
-    output wire [59:0]                     m_axis_rq_tuser,
-    output wire                            m_axis_rq_tvalid,
+    output wire [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_rq_tdata,
+    output wire [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_rq_tkeep,
+    output wire                               m_axis_rq_tlast,
+    input  wire                               m_axis_rq_tready,
+    output wire [AXIS_PCIE_RQ_USER_WIDTH-1:0] m_axis_rq_tuser,
+    output wire                               m_axis_rq_tvalid,
 
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_rc_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_rc_tkeep,
-    input  wire                            s_axis_rc_tlast,
-    output wire                            s_axis_rc_tready,
-    input  wire [74:0]                     s_axis_rc_tuser,
-    input  wire                            s_axis_rc_tvalid,
+    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]    s_axis_rc_tdata,
+    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]    s_axis_rc_tkeep,
+    input  wire                               s_axis_rc_tlast,
+    output wire                               s_axis_rc_tready,
+    input  wire [AXIS_PCIE_RC_USER_WIDTH-1:0] s_axis_rc_tuser,
+    input  wire                               s_axis_rc_tvalid,
 
-    input  wire [AXIS_PCIE_DATA_WIDTH-1:0] s_axis_cq_tdata,
-    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0] s_axis_cq_tkeep,
-    input  wire                            s_axis_cq_tlast,
-    output wire                            s_axis_cq_tready,
-    input  wire [84:0]                     s_axis_cq_tuser,
-    input  wire                            s_axis_cq_tvalid,
+    input  wire [AXIS_PCIE_DATA_WIDTH-1:0]    s_axis_cq_tdata,
+    input  wire [AXIS_PCIE_KEEP_WIDTH-1:0]    s_axis_cq_tkeep,
+    input  wire                               s_axis_cq_tlast,
+    output wire                               s_axis_cq_tready,
+    input  wire [AXIS_PCIE_CQ_USER_WIDTH-1:0] s_axis_cq_tuser,
+    input  wire                               s_axis_cq_tvalid,
 
-    output wire [AXIS_PCIE_DATA_WIDTH-1:0] m_axis_cc_tdata,
-    output wire [AXIS_PCIE_KEEP_WIDTH-1:0] m_axis_cc_tkeep,
-    output wire                            m_axis_cc_tlast,
-    input  wire                            m_axis_cc_tready,
-    output wire [32:0]                     m_axis_cc_tuser,
-    output wire                            m_axis_cc_tvalid,
+    output wire [AXIS_PCIE_DATA_WIDTH-1:0]    m_axis_cc_tdata,
+    output wire [AXIS_PCIE_KEEP_WIDTH-1:0]    m_axis_cc_tkeep,
+    output wire                               m_axis_cc_tlast,
+    input  wire                               m_axis_cc_tready,
+    output wire [AXIS_PCIE_CC_USER_WIDTH-1:0] m_axis_cc_tuser,
+    output wire                               m_axis_cc_tvalid,
 
-    input  wire [2:0]                      cfg_max_payload,
-    input  wire [2:0]                      cfg_max_read_req,
+    input  wire [2:0]                         cfg_max_payload,
+    input  wire [2:0]                         cfg_max_read_req,
 
-    output wire [18:0]                     cfg_mgmt_addr,
-    output wire                            cfg_mgmt_write,
-    output wire [31:0]                     cfg_mgmt_write_data,
-    output wire [3:0]                      cfg_mgmt_byte_enable,
-    output wire                            cfg_mgmt_read,
-    input  wire [31:0]                     cfg_mgmt_read_data,
-    input  wire                            cfg_mgmt_read_write_done,
+    output wire [18:0]                        cfg_mgmt_addr,
+    output wire                               cfg_mgmt_write,
+    output wire [31:0]                        cfg_mgmt_write_data,
+    output wire [3:0]                         cfg_mgmt_byte_enable,
+    output wire                               cfg_mgmt_read,
+    input  wire [31:0]                        cfg_mgmt_read_data,
+    input  wire                               cfg_mgmt_read_write_done,
 
-    input  wire [3:0]                      cfg_interrupt_msi_enable,
-    input  wire [7:0]                      cfg_interrupt_msi_vf_enable,
-    input  wire [11:0]                     cfg_interrupt_msi_mmenable,
-    input  wire                            cfg_interrupt_msi_mask_update,
-    input  wire [31:0]                     cfg_interrupt_msi_data,
-    output wire [3:0]                      cfg_interrupt_msi_select,
-    output wire [31:0]                     cfg_interrupt_msi_int,
-    output wire [31:0]                     cfg_interrupt_msi_pending_status,
-    output wire                            cfg_interrupt_msi_pending_status_data_enable,
-    output wire [3:0]                      cfg_interrupt_msi_pending_status_function_num,
-    input  wire                            cfg_interrupt_msi_sent,
-    input  wire                            cfg_interrupt_msi_fail,
-    output wire [2:0]                      cfg_interrupt_msi_attr,
-    output wire                            cfg_interrupt_msi_tph_present,
-    output wire [1:0]                      cfg_interrupt_msi_tph_type,
-    output wire [8:0]                      cfg_interrupt_msi_tph_st_tag,
-    output wire [3:0]                      cfg_interrupt_msi_function_number,
+    input  wire [3:0]                         cfg_interrupt_msi_enable,
+    input  wire [7:0]                         cfg_interrupt_msi_vf_enable,
+    input  wire [11:0]                        cfg_interrupt_msi_mmenable,
+    input  wire                               cfg_interrupt_msi_mask_update,
+    input  wire [31:0]                        cfg_interrupt_msi_data,
+    output wire [3:0]                         cfg_interrupt_msi_select,
+    output wire [31:0]                        cfg_interrupt_msi_int,
+    output wire [31:0]                        cfg_interrupt_msi_pending_status,
+    output wire                               cfg_interrupt_msi_pending_status_data_enable,
+    output wire [3:0]                         cfg_interrupt_msi_pending_status_function_num,
+    input  wire                               cfg_interrupt_msi_sent,
+    input  wire                               cfg_interrupt_msi_fail,
+    output wire [2:0]                         cfg_interrupt_msi_attr,
+    output wire                               cfg_interrupt_msi_tph_present,
+    output wire [1:0]                         cfg_interrupt_msi_tph_type,
+    output wire [8:0]                         cfg_interrupt_msi_tph_st_tag,
+    output wire [3:0]                         cfg_interrupt_msi_function_number,
 
-    output wire                            status_error_cor,
-    output wire                            status_error_uncor
+    output wire                               status_error_cor,
+    output wire                               status_error_uncor
 );
 
 parameter PCIE_ADDR_WIDTH = 64;

@@ -172,7 +172,12 @@ module example_core_pcie #
      * Status
      */
     output wire                                          status_error_cor,
-    output wire                                          status_error_uncor
+    output wire                                          status_error_uncor,
+
+    /*
+     * Control and status
+     */
+    output wire                                          rx_cpl_stall
 );
 
 parameter AXIL_CTRL_DATA_WIDTH = 32;
@@ -344,6 +349,11 @@ wire                                    msix_tx_cpl_tlp_ready;
 wire [IRQ_INDEX_WIDTH-1:0]  irq_index;
 wire                        irq_valid;
 wire                        irq_ready;
+
+// Control and status
+wire dma_enable;
+wire dma_rd_busy;
+wire dma_wr_busy;
 
 pcie_tlp_demux_bar #(
     .PORTS(3),
@@ -900,8 +910,8 @@ dma_if_pcie_inst (
     /*
      * Configuration
      */
-    .read_enable(1'b1),
-    .write_enable(1'b1),
+    .read_enable(dma_enable),
+    .write_enable(dma_enable),
     .ext_tag_enable(ext_tag_enable),
     .rcb_128b(rcb_128b),
     .requester_id({bus_num, 5'd0, 3'd0}),
@@ -911,8 +921,8 @@ dma_if_pcie_inst (
     /*
      * Status
      */
-    .status_rd_busy(),
-    .status_wr_busy(),
+    .status_rd_busy(dma_rd_busy),
+    .status_wr_busy(dma_wr_busy),
     .status_error_cor(status_error_cor_int[3]),
     .status_error_uncor(status_error_uncor_int[3])
 );
@@ -1109,7 +1119,18 @@ core_inst (
      */
     .irq_index(irq_index),
     .irq_valid(irq_valid),
-    .irq_ready(irq_ready)
+    .irq_ready(irq_ready),
+
+    /*
+     * Control and status
+     */
+    .dma_enable(dma_enable),
+    .dma_rd_busy(dma_rd_busy),
+    .dma_wr_busy(dma_wr_busy),
+    .dma_rd_req(tx_rd_req_tlp_valid && tx_rd_req_tlp_sop && tx_rd_req_tlp_ready),
+    .dma_rd_cpl(rx_cpl_tlp_valid && rx_cpl_tlp_sop && rx_cpl_tlp_ready),
+    .dma_wr_req(tx_wr_req_tlp_valid && tx_wr_req_tlp_sop && tx_wr_req_tlp_ready),
+    .rx_cpl_stall(rx_cpl_stall)
 );
 
 endmodule

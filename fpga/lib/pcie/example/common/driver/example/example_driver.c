@@ -103,6 +103,8 @@ static void dma_block_read(struct example_dev *edev,
 
 	if ((ioread32(edev->bar[0] + 0x001000) & 1) != 0)
 		dev_warn(edev->dev, "%s: operation timed out", __func__);
+	if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+		dev_warn(edev->dev, "%s: DMA engine busy", __func__);
 }
 
 static void dma_block_write(struct example_dev *edev,
@@ -157,14 +159,21 @@ static void dma_block_write(struct example_dev *edev,
 
 	if ((ioread32(edev->bar[0] + 0x001100) & 1) != 0)
 		dev_warn(edev->dev, "%s: operation timed out", __func__);
+	if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+		dev_warn(edev->dev, "%s: DMA engine busy", __func__);
 }
 
 static void dma_block_read_bench(struct example_dev *edev,
 		dma_addr_t dma_addr, u64 size, u64 stride, u64 count)
 {
 	u64 cycles;
+	u32 rd_req;
+	u32 rd_cpl;
 
 	udelay(5);
+
+	rd_req = ioread32(edev->bar[0] + 0x000020);
+	rd_cpl = ioread32(edev->bar[0] + 0x000024);
 
 	dma_block_read(edev, dma_addr, 0, 0x3fff, stride,
 			0, 0, 0x3fff, stride, size, count);
@@ -173,16 +182,22 @@ static void dma_block_read_bench(struct example_dev *edev,
 
 	udelay(5);
 
-	dev_info(edev->dev, "read %lld blocks of %lld bytes (stride %lld) in %lld ns: %lld Mbps",
-			count, size, stride, cycles * 4, size * count * 8 * 1000 / (cycles * 4));
+	rd_req = ioread32(edev->bar[0] + 0x000020) - rd_req;
+	rd_cpl = ioread32(edev->bar[0] + 0x000024) - rd_cpl;
+
+	dev_info(edev->dev, "read %lld blocks of %lld bytes (total %lld B, stride %lld) in %lld ns (%d req %d cpl): %lld Mbps",
+			count, size, count*size, stride, cycles * 4, rd_req, rd_cpl, size * count * 8 * 1000 / (cycles * 4));
 }
 
 static void dma_block_write_bench(struct example_dev *edev,
 		dma_addr_t dma_addr, u64 size, u64 stride, u64 count)
 {
 	u64 cycles;
+	u32 wr_req;
 
 	udelay(5);
+
+	wr_req = ioread32(edev->bar[0] + 0x000028);
 
 	dma_block_write(edev, dma_addr, 0, 0x3fff, stride,
 			0, 0, 0x3fff, stride, size, count);
@@ -191,8 +206,83 @@ static void dma_block_write_bench(struct example_dev *edev,
 
 	udelay(5);
 
-	dev_info(edev->dev, "wrote %lld blocks of %lld bytes (stride %lld) in %lld ns: %lld Mbps",
-			count, size, stride, cycles * 4, size * count * 8 * 1000 / (cycles * 4));
+	wr_req = ioread32(edev->bar[0] + 0x000028) - wr_req;
+
+	dev_info(edev->dev, "wrote %lld blocks of %lld bytes (total %lld B, stride %lld) in %lld ns (%d req): %lld Mbps",
+			count, size, count*size, stride, cycles * 4, wr_req, size * count * 8 * 1000 / (cycles * 4));
+}
+
+static void dma_cpl_buf_test(struct example_dev *edev, dma_addr_t dma_addr,
+		u64 size, u64 stride, u64 count, int stall)
+{
+	unsigned long t;
+	u64 cycles;
+	u32 rd_req;
+	u32 rd_cpl;
+
+	rd_req = ioread32(edev->bar[0] + 0x000020);
+	rd_cpl = ioread32(edev->bar[0] + 0x000024);
+
+	// DMA base address
+	iowrite32(dma_addr & 0xffffffff, edev->bar[0] + 0x001080);
+	iowrite32((dma_addr >> 32) & 0xffffffff, edev->bar[0] + 0x001084);
+	// DMA offset address
+	iowrite32(0, edev->bar[0] + 0x001088);
+	iowrite32(0, edev->bar[0] + 0x00108c);
+	// DMA offset mask
+	iowrite32(0x3fff, edev->bar[0] + 0x001090);
+	iowrite32(0, edev->bar[0] + 0x001094);
+	// DMA stride
+	iowrite32(stride & 0xffffffff, edev->bar[0] + 0x001098);
+	iowrite32((stride >> 32) & 0xffffffff, edev->bar[0] + 0x00109c);
+	// RAM base address
+	iowrite32(0, edev->bar[0] + 0x0010c0);
+	iowrite32(0, edev->bar[0] + 0x0010c4);
+	// RAM offset address
+	iowrite32(0, edev->bar[0] + 0x0010c8);
+	iowrite32(0, edev->bar[0] + 0x0010cc);
+	// RAM offset mask
+	iowrite32(0x3fff, edev->bar[0] + 0x0010d0);
+	iowrite32(0, edev->bar[0] + 0x0010d4);
+	// RAM stride
+	iowrite32(stride & 0xffffffff, edev->bar[0] + 0x0010d8);
+	iowrite32((stride >> 32) & 0xffffffff, edev->bar[0] + 0x0010dc);
+	// clear cycle count
+	iowrite32(0, edev->bar[0] + 0x001008);
+	iowrite32(0, edev->bar[0] + 0x00100c);
+	// block length
+	iowrite32(size, edev->bar[0] + 0x001010);
+	// block count
+	iowrite32(count, edev->bar[0] + 0x001018);
+
+	if (stall)
+		iowrite32(stall, edev->bar[0] + 0x000040);
+
+	// start
+	iowrite32(1, edev->bar[0] + 0x001000);
+
+	if (stall)
+		msleep(10);
+
+	// wait for transfer to complete
+	t = jiffies + msecs_to_jiffies(20000);
+	while (time_before(jiffies, t)) {
+		if ((ioread32(edev->bar[0] + 0x001000) & 1) == 0)
+			break;
+	}
+
+	if ((ioread32(edev->bar[0] + 0x001000) & 1) != 0)
+		dev_warn(edev->dev, "%s: operation timed out", __func__);
+	if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+		dev_warn(edev->dev, "%s: DMA engine busy", __func__);
+
+	cycles = ioread32(edev->bar[0] + 0x001008);
+
+	rd_req = ioread32(edev->bar[0] + 0x000020) - rd_req;
+	rd_cpl = ioread32(edev->bar[0] + 0x000024) - rd_cpl;
+
+	dev_info(edev->dev, "read %lld x %lld B (total %lld B %lld CPLD, stride %lld) in %lld ns (%d req %d cpl): %lld Mbps",
+			count, size, count*size, count*((size+15) / 16), stride, cycles * 4, rd_req, rd_cpl, size * count * 8 * 1000 / (cycles * 4));
 }
 
 static irqreturn_t edev_intr(int irq, void *data)
@@ -227,16 +317,20 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (pdev->pcie_cap) {
 		u16 devctl;
 		u32 lnkcap;
+		u16 lnkctl;
 		u16 lnksta;
 
 		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_DEVCTL, &devctl);
 		pci_read_config_dword(pdev, pdev->pcie_cap + PCI_EXP_LNKCAP, &lnkcap);
+		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_LNKCTL, &lnkctl);
 		pci_read_config_word(pdev, pdev->pcie_cap + PCI_EXP_LNKSTA, &lnksta);
 
 		dev_info(dev, " Max payload size: %d bytes",
 				128 << ((devctl & PCI_EXP_DEVCTL_PAYLOAD) >> 5));
 		dev_info(dev, " Max read request size: %d bytes",
 				128 << ((devctl & PCI_EXP_DEVCTL_READRQ) >> 12));
+		dev_info(dev, " Read completion boundary: %d bytes",
+				lnkctl & PCI_EXP_LNKCTL_RCB ? 128 : 64);
 		dev_info(dev, " Link capability: gen %d x%d",
 				lnkcap & PCI_EXP_LNKCAP_SLS, (lnkcap & PCI_EXP_LNKCAP_MLW) >> 4);
 		dev_info(dev, " Link status: gen %d x%d",
@@ -361,6 +455,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	msleep(1);
 
 	dev_info(dev, "Read status");
+	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000000));
 	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000118));
 
 	dev_info(dev, "start copy to host");
@@ -374,6 +469,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	msleep(1);
 
 	dev_info(dev, "Read status");
+	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000000));
 	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000218));
 
 	dev_info(dev, "read test data");
@@ -398,6 +494,7 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	msleep(1);
 
 	dev_info(dev, "Read status");
+	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000000));
 	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000218));
 
 	dev_info(dev, "read data");
@@ -407,30 +504,89 @@ static int edev_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	if (!mismatch) {
 		u64 size;
 		u64 stride;
+		u64 count;
 
 		dev_info(dev, "disable interrupts");
 		iowrite32(0x0, edev->bar[0] + 0x000008);
 
+		dev_info(dev, "test RX completion buffer (CPLH, 8)");
+
+		size = 8;
+		stride = size;
+		for (count = 32; count <= 256; count += 8) {
+			dma_cpl_buf_test(edev,
+					edev->dma_region_addr + 0x0000,
+					size, stride, count, 100000);
+			if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+				goto out;
+		}
+
+		dev_info(dev, "test RX completion buffer (CPLH, unaligned 8+64)");
+
+		size = 8+64;
+		stride = 0;
+		for (count = 8; count <= 256; count += 8) {
+			dma_cpl_buf_test(edev,
+					edev->dma_region_addr + 128 - 8,
+					size, stride, count, 400000);
+			if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+				goto out;
+		}
+
+		dev_info(dev, "test RX completion buffer (CPLH, unaligned 8+128+8)");
+
+		size = 8+128+8;
+		stride = 0;
+		for (count = 8; count <= 256; count += 8) {
+			dma_cpl_buf_test(edev,
+					edev->dma_region_addr + 128 - 8,
+					size, stride, count, 100000);
+			if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+				goto out;
+		}
+
+		dev_info(dev, "test RX completion buffer (CPLD)");
+
+		size = 512;
+		stride = size;
+		for (count = 8; count <= 256; count += 8) {
+			dma_cpl_buf_test(edev,
+					edev->dma_region_addr + 0x0000,
+					size, stride, count, 100000);
+			if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+				goto out;
+		}
+
 		dev_info(dev, "perform block reads (dma_alloc_coherent)");
 
+		count = 10000;
 		for (size = 1; size <= 8192; size *= 2) {
 			for (stride = size; stride <= max(size, 256llu); stride *= 2) {
 				dma_block_read_bench(edev,
 						edev->dma_region_addr + 0x0000,
-						size, stride, 10000);
+						size, stride, count);
+				if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+					goto out;
 			}
 		}
 
 		dev_info(dev, "perform block writes (dma_alloc_coherent)");
 
+		count = 10000;
 		for (size = 1; size <= 8192; size *= 2) {
 			for (stride = size; stride <= max(size, 256llu); stride *= 2) {
 				dma_block_write_bench(edev,
 						edev->dma_region_addr + 0x0000,
-						size, stride, 10000);
+						size, stride, count);
+				if ((ioread32(edev->bar[0] + 0x000000) & 0x300) != 0)
+					goto out;
 			}
 		}
 	}
+
+out:
+	dev_info(dev, "Read status");
+	dev_info(dev, "%08x", ioread32(edev->bar[0] + 0x000000));
 
 	// probe complete
 	return 0;

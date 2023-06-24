@@ -57,7 +57,7 @@ VERILOG_SOURCES += ../../../../rtl/priority_encoder.v
 VERILOG_SOURCES += ../../../../rtl/pulse_merge.v
 
 # module parameters
-export PARAM_SEG_COUNT := 1
+export PARAM_SEG_COUNT := 2
 export PARAM_SEG_DATA_WIDTH := 256
 export PARAM_SEG_EMPTY_WIDTH := $(shell python -c "print((($(PARAM_SEG_DATA_WIDTH)//32)-1).bit_length())" )
 export PARAM_TX_SEQ_NUM_WIDTH := 6
@@ -69,7 +69,7 @@ export PARAM_IMM_WIDTH := 32
 export PARAM_READ_OP_TABLE_SIZE := $(PARAM_PCIE_TAG_COUNT)
 export PARAM_READ_TX_LIMIT := $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
 export PARAM_READ_CPLH_FC_LIMIT := 770
-export PARAM_READ_CPLD_FC_LIMIT := 2500
+export PARAM_READ_CPLD_FC_LIMIT := 2400
 export PARAM_WRITE_OP_TABLE_SIZE := $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
 export PARAM_WRITE_TX_LIMIT := $(shell echo "$$(( 1 << $(PARAM_TX_SEQ_NUM_WIDTH) ))" )
 export PARAM_BAR0_APERTURE := 24

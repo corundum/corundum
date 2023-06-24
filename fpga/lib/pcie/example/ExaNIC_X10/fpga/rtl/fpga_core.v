@@ -155,7 +155,7 @@ example_core_pcie_us #(
     .READ_OP_TABLE_SIZE(PCIE_TAG_COUNT),
     .READ_TX_LIMIT(2**(RQ_SEQ_NUM_WIDTH-1)),
     .READ_CPLH_FC_LIMIT(64),
-    .READ_CPLD_FC_LIMIT(992),
+    .READ_CPLD_FC_LIMIT(1024-64),
     .WRITE_OP_TABLE_SIZE(2**(RQ_SEQ_NUM_WIDTH-1)),
     .WRITE_TX_LIMIT(2**(RQ_SEQ_NUM_WIDTH-1)),
     .BAR0_APERTURE(BAR0_APERTURE),
@@ -258,8 +258,7 @@ example_core_pcie_us_inst (
      */
     .cfg_max_read_req(cfg_max_read_req),
     .cfg_max_payload(cfg_max_payload),
-    // .cfg_rcb_status(cfg_rcb_status),
-    .cfg_rcb_status(1'b1), // force RCB 128 due to insufficient CPLH limit in US PCIe HIP
+    .cfg_rcb_status(cfg_rcb_status),
 
     /*
      * Status

@@ -319,8 +319,7 @@ rtl_dir = os.path.abspath(os.path.join(tests_dir, '..', '..', 'rtl'))
 
 
 @pytest.mark.parametrize("axil_data_width", [32, 64])
-@pytest.mark.parametrize("pcie_data_width", [64, 128])
-def test_pcie_msix(request, pcie_data_width, axil_data_width):
+def test_pcie_msix(request, axil_data_width):
     dut = "pcie_msix"
     module = os.path.splitext(os.path.basename(__file__))[0]
     toplevel = dut
@@ -335,10 +334,7 @@ def test_pcie_msix(request, pcie_data_width, axil_data_width):
     parameters['AXIL_DATA_WIDTH'] = axil_data_width
     parameters['AXIL_ADDR_WIDTH'] = parameters['IRQ_INDEX_WIDTH']+5
     parameters['AXIL_STRB_WIDTH'] = (axil_data_width // 8)
-    parameters['TLP_DATA_WIDTH'] = pcie_data_width
-    parameters['TLP_STRB_WIDTH'] = pcie_data_width // 32
     parameters['TLP_HDR_WIDTH'] = 128
-    parameters['TLP_SEG_COUNT'] = 1
     parameters['TLP_FORCE_64_BIT_ADDR'] = 0
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}

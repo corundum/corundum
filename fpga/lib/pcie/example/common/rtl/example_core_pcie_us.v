@@ -68,9 +68,9 @@ module example_core_pcie_us #
     // In-flight transmit limit (read)
     parameter READ_TX_LIMIT = 2**(RQ_SEQ_NUM_WIDTH-1),
     // Completion header flow control credit limit (read)
-    parameter READ_CPLH_FC_LIMIT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 128,
+    parameter READ_CPLH_FC_LIMIT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 64 : 256,
     // Completion data flow control credit limit (read)
-    parameter READ_CPLD_FC_LIMIT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 992 : 2048,
+    parameter READ_CPLD_FC_LIMIT = AXIS_PCIE_RQ_USER_WIDTH == 60 ? 1024-64 : 2048-256,
     // Operation table size (write)
     parameter WRITE_OP_TABLE_SIZE = 2**(RQ_SEQ_NUM_WIDTH-1),
     // In-flight transmit limit (write)
@@ -259,6 +259,14 @@ wire ext_tag_enable;
 wire msix_enable;
 wire msix_mask;
 
+wire rx_cpl_stall;
+
+wire s_axis_rc_tvalid_int;
+wire s_axis_rc_tready_int;
+
+assign s_axis_rc_tvalid_int = s_axis_rc_tvalid & ~rx_cpl_stall;
+assign s_axis_rc_tready = s_axis_rc_tready_int & ~rx_cpl_stall;
+
 pcie_us_if #(
     .AXIS_PCIE_DATA_WIDTH(AXIS_PCIE_DATA_WIDTH),
     .AXIS_PCIE_KEEP_WIDTH(AXIS_PCIE_KEEP_WIDTH),
@@ -295,8 +303,8 @@ pcie_us_if_inst (
      */
     .s_axis_rc_tdata(s_axis_rc_tdata),
     .s_axis_rc_tkeep(s_axis_rc_tkeep),
-    .s_axis_rc_tvalid(s_axis_rc_tvalid),
-    .s_axis_rc_tready(s_axis_rc_tready),
+    .s_axis_rc_tvalid(s_axis_rc_tvalid_int),
+    .s_axis_rc_tready(s_axis_rc_tready_int),
     .s_axis_rc_tlast(s_axis_rc_tlast),
     .s_axis_rc_tuser(s_axis_rc_tuser),
 
@@ -624,7 +632,12 @@ core_pcie_inst (
      * Status
      */
     .status_error_cor(status_error_cor),
-    .status_error_uncor(status_error_uncor)
+    .status_error_uncor(status_error_uncor),
+
+    /*
+     * Control and status
+     */
+    .rx_cpl_stall(rx_cpl_stall)
 );
 
 endmodule

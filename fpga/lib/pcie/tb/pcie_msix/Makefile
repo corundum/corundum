@@ -36,10 +36,7 @@ export PARAM_IRQ_INDEX_WIDTH := 11
 export PARAM_AXIL_DATA_WIDTH := 32
 export PARAM_AXIL_ADDR_WIDTH := $(shell expr $(PARAM_IRQ_INDEX_WIDTH) + 5 )
 export PARAM_AXIL_STRB_WIDTH := $(shell expr $(PARAM_AXIL_DATA_WIDTH) / 8 )
-export PARAM_TLP_DATA_WIDTH := 64
-export PARAM_TLP_STRB_WIDTH := $(shell expr $(PARAM_TLP_DATA_WIDTH) / 32 )
 export PARAM_TLP_HDR_WIDTH := 128
-export PARAM_TLP_SEG_COUNT := 1
 export PARAM_TLP_FORCE_64_BIT_ADDR := 0
 
 ifeq ($(SIM), icarus)

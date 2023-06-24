@@ -528,6 +528,8 @@ async def run_test(dut):
 
     tb.log.info("Test RX completion buffer (CPLH, 8)")
 
+    tb.rc.split_on_all_rcb = True
+
     size = 8
     stride = size
     for count in range(32, 256+1, 8):
@@ -546,6 +548,8 @@ async def run_test(dut):
     stride = 0
     for count in range(8, 256+1, 8):
         await dma_cpl_buf_test(tb, dev, mem_base+128-8, region_len-1, size, stride, count, 2000)
+
+    tb.rc.split_on_all_rcb = False
 
     tb.log.info("Test RX completion buffer (CPLD)")
 

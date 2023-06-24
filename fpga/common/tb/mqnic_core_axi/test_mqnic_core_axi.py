@@ -545,7 +545,7 @@ pcie_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'pcie', 'rtl'))
             (1, 2, 128, 64, 64, 1),
             (1, 1, 128, 64, 128, 1),
         ])
-def test_mqnic_core_pcie_axi(request, if_count, ports_per_if, axi_data_width,
+def test_mqnic_core_axi(request, if_count, ports_per_if, axi_data_width,
         axis_data_width, axis_sync_data_width, ptp_ts_enable):
     dut = "mqnic_core_axi"
     module = os.path.splitext(os.path.basename(__file__))[0]

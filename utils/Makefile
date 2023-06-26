@@ -59,6 +59,7 @@ clean:
 	rm -f $(BIN)
 	rm -f *.o
 	rm -f .*.d
+	$(MAKE) -C $(dir $(LIBMQNIC))/ $@
 
 -include $(wildcard .*.d)
 

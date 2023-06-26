@@ -354,35 +354,42 @@ void mqnic_update_stats(struct net_device *ndev)
 	struct radix_tree_iter iter;
 	void **slot;
 	unsigned long packets, bytes;
+	unsigned long dropped;
 
 	if (unlikely(!priv->port_up))
 		return;
 
 	packets = 0;
 	bytes = 0;
+	dropped = 0;
 	down_read(&priv->rxq_table_sem);
 	radix_tree_for_each_slot(slot, &priv->rxq_table, &iter, 0) {
 		const struct mqnic_ring *q = (struct mqnic_ring *)*slot;
 
 		packets += READ_ONCE(q->packets);
 		bytes += READ_ONCE(q->bytes);
+		dropped += READ_ONCE(q->dropped_packets);
 	}
 	up_read(&priv->rxq_table_sem);
 	ndev->stats.rx_packets = packets;
 	ndev->stats.rx_bytes = bytes;
+	ndev->stats.rx_dropped = dropped;
 
 	packets = 0;
 	bytes = 0;
+	dropped = 0;
 	down_read(&priv->txq_table_sem);
 	radix_tree_for_each_slot(slot, &priv->txq_table, &iter, 0) {
 		const struct mqnic_ring *q = (struct mqnic_ring *)*slot;
 
 		packets += READ_ONCE(q->packets);
 		bytes += READ_ONCE(q->bytes);
+		dropped += READ_ONCE(q->dropped_packets);
 	}
 	up_read(&priv->txq_table_sem);
 	ndev->stats.tx_packets = packets;
 	ndev->stats.tx_bytes = bytes;
+	ndev->stats.tx_dropped = dropped;
 }
 
 static void mqnic_get_stats64(struct net_device *ndev,

@@ -4,15 +4,19 @@
 
 This design targets the Intel DK-DEV-1SDX-P-A FPGA development board.
 
-*  FPGA: 1SD280PT2F55E1VG
-*  PHY: E-Tile
+* FPGA: 1SD280PT2F55E1VG
+* PHY: E-Tile
 
-## How to build
+## Quick start
 
-Run make to build.  Ensure that the Intel Quartus Prime Pro toolchain components are in PATH.
+### Build FPGA bitstream
 
-Run make to build the driver.  Ensure the headers for the running kernel are installed, otherwise the driver cannot be compiled.
+Run `make` in the `fpga` subdirectory to build the bitstream.  Ensure that the Intel Quartus Pro toolchain components are in PATH.
 
-## How to test
+### Build driver and userspace tools
 
-Run make program to program the board with the Intel software.  Then load the driver with insmod mqnic.ko.  Check dmesg for output from driver initialization.
+On the host system, run `make` in `modules/mqnic` to build the driver.  Ensure the headers for the running kernel are installed, otherwise the driver cannot be compiled.  Then, run `make` in `utils` to build the userspace tools.
+
+### Testing
+
+Run `make program` to program the board with Quartus.  Then, reboot the machine to re-enumerate the PCIe bus.  Finally, load the driver on the host system with `insmod mqnic.ko`.  Check `dmesg` for output from driver initialization, and run `mqnic-dump -d /dev/mqnic0` to dump the internal state.

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: BSD-2-Clause-Views
+# Copyright (c) 2020-2023 The Regents of the University of California
 
 PREFIX ?= /usr/local
 INCDIR = $(DESTDIR)$(PREFIX)/include

@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: BSD-2-Clause-Views
+# Copyright (c) 2022-2023 The Regents of the University of California
 
 # FPGA settings
 FPGA_PART = xczu19eg-ffvd1760-2-e

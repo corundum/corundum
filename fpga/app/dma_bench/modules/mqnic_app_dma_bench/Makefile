@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: BSD-2-Clause-Views
+# Copyright (c) 2022-2023 The Regents of the University of California
+
 ifneq ($(KERNELRELEASE),)
 
 KBUILD_EXTRA_SYMBOLS=$(src)/../mqnic/Module.symvers

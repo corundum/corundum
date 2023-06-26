@@ -174,9 +174,9 @@ for (n = 0; n < PORTS; n = n + 1) begin : fifo
         .m_axis_tuser(axis_fifo_tuser[n*USER_WIDTH +: USER_WIDTH]),
 
         // Status
-        .status_overflow(status_overflow),
-        .status_bad_frame(status_bad_frame),
-        .status_good_frame(status_good_frame)
+        .status_overflow(status_overflow[n]),
+        .status_bad_frame(status_bad_frame[n]),
+        .status_good_frame(status_good_frame[n])
     );
 
 end

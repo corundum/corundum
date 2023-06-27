@@ -325,6 +325,7 @@ static int mqnic_query_module_id(struct net_device *ndev)
 static int mqnic_query_module_eeprom_by_page(struct net_device *ndev,
 		unsigned short i2c_addr, u16 page, u16 bank, u16 offset, u16 len, u8 *data)
 {
+	struct mqnic_priv *priv = netdev_priv(ndev);
 	int module_id;
 	u8 d;
 	int ret;

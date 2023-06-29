@@ -240,12 +240,12 @@ To build the driver, you will first need to install the required compiler and ke
     $ cd /path/to/corundum/modules/mqnic
     $ make
 
-Note that the driver currently does not support RHEL, centos, and related distributions that use very old and significantly modified kernels where the reported kernel version number is not a reliable of the internal kernel API.
+Note that the driver currently does not support RHEL, centos, and related distributions that use very old and significantly modified kernels where the reported kernel version number is not a reliable indication of the internal kernel API.
 
 Building the userspace tools
 ============================
 
-To build the driver, you will first need to install the required compiler packages.  After these packages are installed, simply run ``make``. ::
+To build the userspace tools, you will first need to install the required compiler packages.  After these packages are installed, simply run ``make``. ::
 
     $ cd /path/to/corundum/utils
     $ make

@@ -42,7 +42,7 @@ int mqnic_start_port(struct net_device *ndev)
 			goto fail;
 		}
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 19, 0)
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 1, 0)
 		netif_napi_add(ndev, &cq->napi, mqnic_poll_rx_cq);
 #else
 		netif_napi_add(ndev, &cq->napi, mqnic_poll_rx_cq, NAPI_POLL_WEIGHT);

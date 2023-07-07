@@ -37,7 +37,7 @@ module cpl_queue_manager #
     // Width of AXI lite data bus in bits
     parameter AXIL_DATA_WIDTH = 32,
     // Width of AXI lite address bus in bits
-    parameter AXIL_ADDR_WIDTH = 16,
+    parameter AXIL_ADDR_WIDTH = QUEUE_INDEX_WIDTH+4,
     // Width of AXI lite wstrb (width of data bus in words)
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8)
 )
@@ -138,7 +138,7 @@ initial begin
         $finish;
     end
 
-    if (AXIL_ADDR_WIDTH < QUEUE_INDEX_WIDTH+5) begin
+    if (AXIL_ADDR_WIDTH < QUEUE_INDEX_WIDTH+4) begin
         $error("Error: AXI lite address width too narrow (instance %m)");
         $finish;
     end
@@ -166,7 +166,7 @@ reg [PIPELINE-1:0] op_req_pipe_reg = {PIPELINE{1'b0}}, op_req_pipe_next;
 reg [PIPELINE-1:0] op_commit_pipe_reg = {PIPELINE{1'b0}}, op_commit_pipe_next;
 
 reg [QUEUE_INDEX_WIDTH-1:0] queue_ram_addr_pipeline_reg[PIPELINE-1:0], queue_ram_addr_pipeline_next[PIPELINE-1:0];
-reg [2:0] axil_reg_pipeline_reg[PIPELINE-1:0], axil_reg_pipeline_next[PIPELINE-1:0];
+reg [1:0] axil_reg_pipeline_reg[PIPELINE-1:0], axil_reg_pipeline_next[PIPELINE-1:0];
 reg [AXIL_DATA_WIDTH-1:0] write_data_pipeline_reg[PIPELINE-1:0], write_data_pipeline_next[PIPELINE-1:0];
 reg [AXIL_STRB_WIDTH-1:0] write_strobe_pipeline_reg[PIPELINE-1:0], write_strobe_pipeline_next[PIPELINE-1:0];
 reg [REQ_TAG_WIDTH-1:0] req_tag_pipeline_reg[PIPELINE-1:0], req_tag_pipeline_next[PIPELINE-1:0];
@@ -207,15 +207,15 @@ reg [QUEUE_RAM_BE_WIDTH-1:0] queue_ram_be;
 reg [QUEUE_RAM_WIDTH-1:0] queue_ram_read_data_reg = 0;
 reg [QUEUE_RAM_WIDTH-1:0] queue_ram_read_data_pipeline_reg[PIPELINE-1:1];
 
-wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_head_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][15:0];
-wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_tail_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][31:16];
+wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_prod_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][15:0];
+wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_data_cons_ptr = queue_ram_read_data_pipeline_reg[PIPELINE-1][31:16];
 wire [EVENT_WIDTH-1:0] queue_ram_read_data_event = queue_ram_read_data_pipeline_reg[PIPELINE-1][47:32];
 wire [LOG_QUEUE_SIZE_WIDTH-1:0] queue_ram_read_data_log_size = queue_ram_read_data_pipeline_reg[PIPELINE-1][51:48];
 wire queue_ram_read_data_continuous = queue_ram_read_data_pipeline_reg[PIPELINE-1][53];
 wire queue_ram_read_data_armed = queue_ram_read_data_pipeline_reg[PIPELINE-1][54];
-wire queue_ram_read_data_active = queue_ram_read_data_pipeline_reg[PIPELINE-1][55];
+wire queue_ram_read_data_enable = queue_ram_read_data_pipeline_reg[PIPELINE-1][55];
 wire [CL_OP_TABLE_SIZE-1:0] queue_ram_read_data_op_index = queue_ram_read_data_pipeline_reg[PIPELINE-1][63:56];
-wire [ADDR_WIDTH-1:0] queue_ram_read_data_base_addr = queue_ram_read_data_pipeline_reg[PIPELINE-1][127:64];
+wire [ADDR_WIDTH-1:0] queue_ram_read_data_base_addr = {queue_ram_read_data_pipeline_reg[PIPELINE-1][127:76], 12'd0};
 
 reg [OP_TABLE_SIZE-1:0] op_table_active = 0;
 reg [OP_TABLE_SIZE-1:0] op_table_commit = 0;
@@ -260,16 +260,16 @@ assign s_axil_rdata = s_axil_rdata_reg;
 assign s_axil_rresp = 2'b00;
 assign s_axil_rvalid = s_axil_rvalid_reg;
 
-wire [QUEUE_INDEX_WIDTH-1:0] s_axil_awaddr_queue = s_axil_awaddr >> 5;
-wire [2:0] s_axil_awaddr_reg = s_axil_awaddr >> 2;
-wire [QUEUE_INDEX_WIDTH-1:0] s_axil_araddr_queue = s_axil_araddr >> 5;
-wire [2:0] s_axil_araddr_reg = s_axil_araddr >> 2;
+wire [QUEUE_INDEX_WIDTH-1:0] s_axil_awaddr_queue = s_axil_awaddr >> 4;
+wire [1:0] s_axil_awaddr_reg = s_axil_awaddr >> 2;
+wire [QUEUE_INDEX_WIDTH-1:0] s_axil_araddr_queue = s_axil_araddr >> 4;
+wire [1:0] s_axil_araddr_reg = s_axil_araddr >> 2;
 
 wire queue_active = op_table_active[queue_ram_read_data_op_index] && op_table_queue[queue_ram_read_data_op_index] == queue_ram_addr_pipeline_reg[PIPELINE-1];
-wire queue_full_idle = ($unsigned(queue_ram_read_data_head_ptr - queue_ram_read_data_tail_ptr) & ({QUEUE_PTR_WIDTH{1'b1}} << queue_ram_read_data_log_size)) != 0;
-wire queue_full_active = ($unsigned(op_table_queue_ptr[queue_ram_read_data_op_index] - queue_ram_read_data_tail_ptr) & ({QUEUE_PTR_WIDTH{1'b1}} << queue_ram_read_data_log_size)) != 0;
+wire queue_full_idle = ($unsigned(queue_ram_read_data_prod_ptr - queue_ram_read_data_cons_ptr) & ({QUEUE_PTR_WIDTH{1'b1}} << queue_ram_read_data_log_size)) != 0;
+wire queue_full_active = ($unsigned(op_table_queue_ptr[queue_ram_read_data_op_index] - queue_ram_read_data_cons_ptr) & ({QUEUE_PTR_WIDTH{1'b1}} << queue_ram_read_data_log_size)) != 0;
 wire queue_full = queue_active ? queue_full_active : queue_full_idle;
-wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_active_head_ptr = queue_active ? op_table_queue_ptr[queue_ram_read_data_op_index] : queue_ram_read_data_head_ptr;
+wire [QUEUE_PTR_WIDTH-1:0] queue_ram_read_active_prod_ptr = queue_active ? op_table_queue_ptr[queue_ram_read_data_op_index] : queue_ram_read_data_prod_ptr;
 
 integer i, j;
 
@@ -348,7 +348,7 @@ always @* begin
     queue_ram_be = 0;
 
     op_table_start_queue = queue_ram_addr_pipeline_reg[PIPELINE-1];
-    op_table_start_queue_ptr = queue_ram_read_active_head_ptr + 1;
+    op_table_start_queue_ptr = queue_ram_read_active_prod_ptr + 1;
     op_table_start_en = 1'b0;
     op_table_commit_ptr = s_axis_enqueue_commit_op_tag;
     op_table_commit_en = 1'b0;
@@ -417,9 +417,9 @@ always @* begin
     if (op_req_pipe_reg[PIPELINE-1]) begin
         // request
         m_axis_enqueue_resp_queue_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
-        m_axis_enqueue_resp_ptr_next = queue_ram_read_active_head_ptr;
-        m_axis_enqueue_resp_phase_next = !queue_ram_read_active_head_ptr[queue_ram_read_data_log_size];
-        m_axis_enqueue_resp_addr_next = queue_ram_read_data_base_addr + ((queue_ram_read_active_head_ptr & ({QUEUE_PTR_WIDTH{1'b1}} >> (QUEUE_PTR_WIDTH - queue_ram_read_data_log_size))) * CPL_SIZE);
+        m_axis_enqueue_resp_ptr_next = queue_ram_read_active_prod_ptr;
+        m_axis_enqueue_resp_phase_next = !queue_ram_read_active_prod_ptr[queue_ram_read_data_log_size];
+        m_axis_enqueue_resp_addr_next = queue_ram_read_data_base_addr + ((queue_ram_read_active_prod_ptr & ({QUEUE_PTR_WIDTH{1'b1}} >> (QUEUE_PTR_WIDTH - queue_ram_read_data_log_size))) * CPL_SIZE);
         m_axis_enqueue_resp_event_next = queue_ram_read_data_event;
         m_axis_enqueue_resp_tag_next = req_tag_pipeline_reg[PIPELINE-1];
         m_axis_enqueue_resp_op_tag_next = op_table_start_ptr_reg;
@@ -431,9 +431,9 @@ always @* begin
         queue_ram_wr_en = 1'b1;
 
         op_table_start_queue = queue_ram_addr_pipeline_reg[PIPELINE-1];
-        op_table_start_queue_ptr = queue_ram_read_active_head_ptr + 1;
+        op_table_start_queue_ptr = queue_ram_read_active_prod_ptr + 1;
 
-        if (!queue_ram_read_data_active) begin
+        if (!queue_ram_read_data_enable) begin
             // queue inactive
             m_axis_enqueue_resp_error_next = 1'b1;
             m_axis_enqueue_resp_valid_next = 1'b1;
@@ -452,14 +452,14 @@ always @* begin
     end else if (op_commit_pipe_reg[PIPELINE-1]) begin
         // commit
 
-        // update head pointer
+        // update producer pointer
         queue_ram_write_ptr = queue_ram_addr_pipeline_reg[PIPELINE-1];
         queue_ram_write_data[15:0] = write_data_pipeline_reg[PIPELINE-1];
         queue_ram_be[1:0] = 2'b11;
         queue_ram_wr_en = 1'b1;
 
         queue_ram_write_data[55:48] = queue_ram_read_data_pipeline_reg[PIPELINE-1][55:48];
-        // generate event on head pointer update
+        // generate event on producer pointer update
         if (queue_ram_read_data_armed) begin
             m_axis_event_next = queue_ram_read_data_event;
             m_axis_event_source_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
@@ -480,102 +480,99 @@ always @* begin
 
         // TODO parametrize
         case (axil_reg_pipeline_reg[PIPELINE-1])
-            3'd0: begin
+            2'd0: begin
                 // base address lower 32
                 // base address is read-only when queue is active
-                if (!queue_ram_read_data_active) begin
-                    queue_ram_write_data[95:64] = write_data_pipeline_reg[PIPELINE-1];
-                    queue_ram_be[11:8] = write_strobe_pipeline_reg[PIPELINE-1];
+                if (!queue_ram_read_data_enable) begin
+                    queue_ram_write_data[95:76] = write_data_pipeline_reg[PIPELINE-1][31:12];
+                    queue_ram_be[11:9] = write_strobe_pipeline_reg[PIPELINE-1];
                 end
             end
-            3'd1: begin
+            2'd1: begin
                 // base address upper 32
                 // base address is read-only when queue is active
-                if (!queue_ram_read_data_active) begin
+                if (!queue_ram_read_data_enable) begin
                     queue_ram_write_data[127:96] = write_data_pipeline_reg[PIPELINE-1];
                     queue_ram_be[15:12] = write_strobe_pipeline_reg[PIPELINE-1];
                 end
             end
-            3'd2: begin
-                queue_ram_write_data[55:48] = queue_ram_read_data_pipeline_reg[PIPELINE-1][55:48];
-                // log size
-                // log size is read-only when queue is active
-                if (!queue_ram_read_data_active) begin
-                    if (write_strobe_pipeline_reg[PIPELINE-1][0]) begin
-                        queue_ram_write_data[51:48] = write_data_pipeline_reg[PIPELINE-1][3:0];
+            2'd2, 2'd3: begin
+                casez (write_data_pipeline_reg[PIPELINE-1])
+                    32'h8001zzzz: begin
+                        // set VF ID
+                        // TODO
+                    end
+                    32'h8002zzzz: begin
+                        // set size
+                        if (!queue_ram_read_data_enable) begin
+                            queue_ram_write_data[51:48] = write_data_pipeline_reg[PIPELINE-1][15:0];
+                            queue_ram_be[6] = 1'b1;
+                        end
+                    end
+                    32'hC0zzzzzz: begin
+                        // set EQN
+                        if (!queue_ram_read_data_enable) begin
+                            queue_ram_write_data[47:32] = write_data_pipeline_reg[PIPELINE-1][23:0];
+                            queue_ram_be[5:4] = 2'b11;
+                        end
+                    end
+                    32'h8080zzzz: begin
+                        // set producer pointer
+                        if (!queue_ram_read_data_enable) begin
+                            queue_ram_write_data[15:0] = write_data_pipeline_reg[PIPELINE-1][15:0];
+                            queue_ram_be[1:0] = 2'b11;
+                        end
+                    end
+                    32'h8090zzzz: begin
+                        // set consumer pointer
+                        queue_ram_write_data[31:16] = write_data_pipeline_reg[PIPELINE-1][15:0];
+                        queue_ram_be[3:2] = 2'b11;
+                    end
+                    32'h8091zzzz: begin
+                        // set consumer pointer, arm
+                        queue_ram_write_data[31:16] = write_data_pipeline_reg[PIPELINE-1][15:0];
+                        queue_ram_be[3:2] = 2'b11;
+
+                        queue_ram_write_data[54] = 1'b1;
+                        queue_ram_be[6] = 1'b1;
+
+                        if (queue_ram_read_data_enable && queue_ram_read_data_prod_ptr != write_data_pipeline_reg[PIPELINE-1][15:0]) begin
+                            // armed and queue not empty
+                            // so generate event
+                            m_axis_event_next = queue_ram_read_data_event;
+                            m_axis_event_source_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
+                            m_axis_event_valid_next = 1'b1;
+
+                            queue_ram_write_data[54] = 1'b0;
+                            queue_ram_be[6] = 1'b1;
+                        end
+                    end
+                    32'h400001zz: begin
+                        // set enable
+                        queue_ram_write_data[55] = write_data_pipeline_reg[PIPELINE-1][0];
                         queue_ram_be[6] = 1'b1;
                     end
-                end
-                // active
-                if (write_strobe_pipeline_reg[PIPELINE-1][3]) begin
-                    queue_ram_write_data[55] = write_data_pipeline_reg[PIPELINE-1][31];
-                    queue_ram_be[6] = 1'b1;
-                end
-            end
-            3'd3: begin
-                // event index
-                // event index is read-only when queue is active
-                if (!queue_ram_read_data_active) begin
-                    queue_ram_write_data[47:32] = write_data_pipeline_reg[PIPELINE-1];
-                    queue_ram_be[5:4] = write_strobe_pipeline_reg[PIPELINE-1];
-                end
+                    32'h400002zz: begin
+                        // set arm
+                        queue_ram_write_data[54] = write_data_pipeline_reg[PIPELINE-1][0];
+                        queue_ram_be[6] = 1'b1;
 
-                queue_ram_write_data[55:48] = queue_ram_read_data_pipeline_reg[PIPELINE-1][55:48];
-                // continuous
-                if (write_strobe_pipeline_reg[PIPELINE-1][3]) begin
-                    queue_ram_write_data[53] = write_data_pipeline_reg[PIPELINE-1][30];
-                    queue_ram_be[6] = 1'b1;
-                end
-                // armed
-                if (write_strobe_pipeline_reg[PIPELINE-1][3]) begin
-                    queue_ram_write_data[54] = write_data_pipeline_reg[PIPELINE-1][31];
-                    queue_ram_be[6] = 1'b1;
+                        if (queue_ram_read_data_enable && write_data_pipeline_reg[PIPELINE-1][0] && (queue_ram_read_data_prod_ptr != queue_ram_read_data_cons_ptr)) begin
+                            // armed and queue not empty
+                            // so generate event
+                            m_axis_event_next = queue_ram_read_data_event;
+                            m_axis_event_source_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
+                            m_axis_event_valid_next = 1'b1;
 
-                    if (write_data_pipeline_reg[PIPELINE-1][31] && (queue_ram_read_data_head_ptr != queue_ram_read_data_tail_ptr)) begin
-                        // armed and queue not empty
-                        // so generate event
-                        m_axis_event_next = queue_ram_read_data_event;
-                        m_axis_event_source_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
-                        m_axis_event_valid_next = 1'b1;
-
-                        if (!write_data_pipeline_reg[PIPELINE-1][30]) begin
                             queue_ram_write_data[54] = 1'b0;
                             queue_ram_be[6] = 1'b1;
                         end
                     end
-                end
-            end
-            3'd4: begin
-                // head pointer
-                // tail pointer is read-only when queue is active
-                if (!queue_ram_read_data_active) begin
-                    queue_ram_write_data[15:0] = write_data_pipeline_reg[PIPELINE-1][15:0];
-                    queue_ram_be[1:0] = write_strobe_pipeline_reg[PIPELINE-1][1:0];
-                end
-            end
-            3'd6: begin
-                // tail pointer
-                queue_ram_write_data[31:16] = write_data_pipeline_reg[PIPELINE-1][15:0];
-                queue_ram_be[3:2] = write_strobe_pipeline_reg[PIPELINE-1][1:0];
-
-                // re-arm
-                if (write_strobe_pipeline_reg[PIPELINE-1][3] && write_data_pipeline_reg[PIPELINE-1][31]) begin
-                    queue_ram_write_data[54] = 1'b1;
-                    queue_ram_be[6] = 1'b1;
-
-                    if (queue_ram_read_data_head_ptr != write_data_pipeline_reg[PIPELINE-1][15:0]) begin
-                        // armed and queue not empty
-                        // so generate event
-                        m_axis_event_next = queue_ram_read_data_event;
-                        m_axis_event_source_next = queue_ram_addr_pipeline_reg[PIPELINE-1];
-                        m_axis_event_valid_next = 1'b1;
-
-                        if (!write_data_pipeline_reg[PIPELINE-1][30]) begin
-                            queue_ram_write_data[54] = 1'b0;
-                            queue_ram_be[6] = 1'b1;
-                        end
+                    default: begin
+                        // invalid command
+                        $display("Error: Invalid command 0x%x for queue %d (instance %m)", write_data_pipeline_reg[PIPELINE-1], queue_ram_addr_pipeline_reg[PIPELINE-1]);
                     end
-                end
+                endcase
             end
         endcase
     end else if (op_axil_read_pipe_reg[PIPELINE-1]) begin
@@ -583,35 +580,33 @@ always @* begin
         s_axil_rvalid_next = 1'b1;
         s_axil_rdata_next = 0;
 
-        // TODO parametrize
         case (axil_reg_pipeline_reg[PIPELINE-1])
-            3'd0: begin
+            2'd0: begin
+                // VF ID
+                s_axil_rdata_next[11:0] = 0; // TODO
                 // base address lower 32
-                s_axil_rdata_next = queue_ram_read_data_base_addr[31:0];
+                s_axil_rdata_next[31:12] = queue_ram_read_data_base_addr[31:12];
             end
-            3'd1: begin
+            2'd1: begin
                 // base address upper 32
                 s_axil_rdata_next = queue_ram_read_data_base_addr[63:32];
             end
-            3'd2: begin
+            2'd2: begin
+                // EQN
+                s_axil_rdata_next[15:0] = queue_ram_read_data_event;
+                // control/status
+                s_axil_rdata_next[16] = queue_ram_read_data_enable;
+                s_axil_rdata_next[17] = queue_ram_read_data_armed;
+                s_axil_rdata_next[18] = queue_ram_read_data_continuous;
+                s_axil_rdata_next[19] = queue_active;
                 // log size
-                s_axil_rdata_next[3:0] = queue_ram_read_data_log_size;
-                // active
-                s_axil_rdata_next[31] = queue_ram_read_data_active;
+                s_axil_rdata_next[31:28] = queue_ram_read_data_log_size;
             end
-            3'd3: begin
-                // event index
-                s_axil_rdata_next[29:0] = queue_ram_read_data_event;
-                s_axil_rdata_next[30] = queue_ram_read_data_continuous;
-                s_axil_rdata_next[31] = queue_ram_read_data_armed;
-            end
-            3'd4: begin
-                // head pointer
-                s_axil_rdata_next = queue_ram_read_data_head_ptr;
-            end
-            3'd6: begin
-                // tail pointer
-                s_axil_rdata_next = queue_ram_read_data_tail_ptr;
+            2'd3: begin
+                // producer pointer
+                s_axil_rdata_next[15:0] = queue_ram_read_data_prod_ptr;
+                // consumer pointer
+                s_axil_rdata_next[31:16] = queue_ram_read_data_cons_ptr;
             end
         endcase
     end

@@ -32,12 +32,9 @@ struct mqnic_eq *mqnic_create_eq(struct mqnic_if *interface)
 	eq->irq_nb.notifier_call = mqnic_eq_int;
 
 	eq->hw_addr = NULL;
-	eq->hw_ptr_mask = 0xffff;
-	eq->hw_head_ptr = NULL;
-	eq->hw_tail_ptr = NULL;
 
-	eq->head_ptr = 0;
-	eq->tail_ptr = 0;
+	eq->prod_ptr = 0;
+	eq->cons_ptr = 0;
 
 	spin_lock_init(&eq->table_lock);
 
@@ -83,28 +80,32 @@ int mqnic_open_eq(struct mqnic_eq *eq, struct mqnic_irq *irq, int size)
 	eq->irq = irq;
 
 	eq->hw_addr = mqnic_res_get_addr(eq->interface->eq_res, eq->eqn);
-	eq->hw_head_ptr = eq->hw_addr + MQNIC_EQ_HEAD_PTR_REG;
-	eq->hw_tail_ptr = eq->hw_addr + MQNIC_EQ_TAIL_PTR_REG;
 
-	eq->head_ptr = 0;
-	eq->tail_ptr = 0;
+	eq->prod_ptr = 0;
+	eq->cons_ptr = 0;
 
 	memset(eq->buf, 1, eq->buf_size);
 
 	// deactivate queue
-	iowrite32(0, eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
+	iowrite32(MQNIC_EQ_CMD_SET_ENABLE | 0, eq->hw_addr + MQNIC_EQ_CTRL_STATUS_REG);
 	// set base address
-	iowrite32(eq->buf_dma_addr, eq->hw_addr + MQNIC_EQ_BASE_ADDR_REG + 0);
-	iowrite32(eq->buf_dma_addr >> 32, eq->hw_addr + MQNIC_EQ_BASE_ADDR_REG + 4);
-	// set interrupt index
-	iowrite32(eq->irq->index, eq->hw_addr + MQNIC_EQ_INTERRUPT_INDEX_REG);
-	// set pointers
-	iowrite32(eq->head_ptr & eq->hw_ptr_mask, eq->hw_addr + MQNIC_EQ_HEAD_PTR_REG);
-	iowrite32(eq->tail_ptr & eq->hw_ptr_mask, eq->hw_addr + MQNIC_EQ_TAIL_PTR_REG);
+	iowrite32((eq->buf_dma_addr & 0xfffff000),
+			eq->hw_addr + MQNIC_EQ_BASE_ADDR_VF_REG + 0);
+	iowrite32(eq->buf_dma_addr >> 32,
+			eq->hw_addr + MQNIC_EQ_BASE_ADDR_VF_REG + 4);
 	// set size
-	iowrite32(ilog2(eq->size), eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
-	// set size and activate queue
-	iowrite32(ilog2(eq->size) | MQNIC_EQ_ACTIVE_MASK, eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
+	iowrite32(MQNIC_EQ_CMD_SET_SIZE | ilog2(eq->size),
+			eq->hw_addr + MQNIC_EQ_CTRL_STATUS_REG);
+	// set IRQN
+	iowrite32(MQNIC_EQ_CMD_SET_IRQN | eq->irq->index,
+			eq->hw_addr + MQNIC_EQ_CTRL_STATUS_REG);
+	// set pointers
+	iowrite32(MQNIC_EQ_CMD_SET_PROD_PTR | (eq->prod_ptr & MQNIC_EQ_PTR_MASK),
+			eq->hw_addr + MQNIC_EQ_CTRL_STATUS_REG);
+	iowrite32(MQNIC_EQ_CMD_SET_CONS_PTR | (eq->cons_ptr & MQNIC_EQ_PTR_MASK),
+			eq->hw_addr + MQNIC_EQ_CTRL_STATUS_REG);
+	// activate queue
+	iowrite32(MQNIC_EQ_CMD_SET_ENABLE | 1, eq->hw_addr + MQNIC_EQ_CTRL_STATUS_REG);
 
 	eq->enabled = 1;
 
@@ -121,9 +122,7 @@ void mqnic_close_eq(struct mqnic_eq *eq)
 
 	if (eq->hw_addr) {
 		// deactivate queue
-		iowrite32(ilog2(eq->size), eq->hw_addr + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
-		// disarm queue
-		iowrite32(0, eq->hw_addr + MQNIC_EQ_INTERRUPT_INDEX_REG);
+		iowrite32(MQNIC_EQ_CMD_SET_ENABLE | 0, eq->hw_addr + MQNIC_EQ_CTRL_STATUS_REG);
 	}
 
 	// unregister interrupt
@@ -133,8 +132,6 @@ void mqnic_close_eq(struct mqnic_eq *eq)
 	eq->irq = NULL;
 
 	eq->hw_addr = NULL;
-	eq->hw_head_ptr = NULL;
-	eq->hw_tail_ptr = NULL;
 
 	if (eq->buf) {
 		dma_free_coherent(eq->dev, eq->buf_size, eq->buf, eq->buf_dma_addr);
@@ -184,14 +181,15 @@ void mqnic_eq_detach_cq(struct mqnic_eq *eq, struct mqnic_cq *cq)
 	}
 }
 
-void mqnic_eq_read_head_ptr(struct mqnic_eq *eq)
+void mqnic_eq_read_prod_ptr(struct mqnic_eq *eq)
 {
-	eq->head_ptr += (ioread32(eq->hw_head_ptr) - eq->head_ptr) & eq->hw_ptr_mask;
+	eq->prod_ptr += ((ioread32(eq->hw_addr + MQNIC_EQ_PTR_REG) & MQNIC_EQ_PTR_MASK) - eq->prod_ptr) & MQNIC_EQ_PTR_MASK;
 }
 
-void mqnic_eq_write_tail_ptr(struct mqnic_eq *eq)
+void mqnic_eq_write_cons_ptr(struct mqnic_eq *eq)
 {
-	iowrite32(eq->tail_ptr & eq->hw_ptr_mask, eq->hw_tail_ptr);
+	iowrite32(MQNIC_EQ_CMD_SET_CONS_PTR | (eq->cons_ptr & MQNIC_EQ_PTR_MASK),
+			eq->hw_addr + MQNIC_EQ_CTRL_STATUS_REG);
 }
 
 void mqnic_arm_eq(struct mqnic_eq *eq)
@@ -199,7 +197,7 @@ void mqnic_arm_eq(struct mqnic_eq *eq)
 	if (!eq->enabled)
 		return;
 
-	iowrite32(eq->irq->index | MQNIC_EQ_ARM_MASK, eq->hw_addr + MQNIC_EQ_INTERRUPT_INDEX_REG);
+	iowrite32(MQNIC_EQ_CMD_SET_ARM | 1, eq->hw_addr + MQNIC_EQ_CTRL_STATUS_REG);
 }
 
 void mqnic_process_eq(struct mqnic_eq *eq)
@@ -208,18 +206,17 @@ void mqnic_process_eq(struct mqnic_eq *eq)
 	struct mqnic_event *event;
 	struct mqnic_cq *cq;
 	u32 eq_index;
-	u32 eq_tail_ptr;
+	u32 eq_cons_ptr;
 	int done = 0;
 	int cqn;
 
-	// read head pointer from NIC
-	eq_tail_ptr = eq->tail_ptr;
-	eq_index = eq_tail_ptr & eq->size_mask;
+	eq_cons_ptr = eq->cons_ptr;
+	eq_index = eq_cons_ptr & eq->size_mask;
 
 	while (1) {
 		event = (struct mqnic_event *)(eq->buf + eq_index * eq->stride);
 
-		if (!!(event->phase & cpu_to_le32(0x80000000)) == !!(eq_tail_ptr & eq->size))
+		if (!!(event->phase & cpu_to_le32(0x80000000)) == !!(eq_cons_ptr & eq->size))
 			break;
 
 		dma_rmb();
@@ -270,11 +267,11 @@ void mqnic_process_eq(struct mqnic_eq *eq)
 
 		done++;
 
-		eq_tail_ptr++;
-		eq_index = eq_tail_ptr & eq->size_mask;
+		eq_cons_ptr++;
+		eq_index = eq_cons_ptr & eq->size_mask;
 	}
 
-	// update eq tail
-	eq->tail_ptr = eq_tail_ptr;
-	mqnic_eq_write_tail_ptr(eq);
+	// update EQ consumer pointer
+	eq->cons_ptr = eq_cons_ptr;
+	mqnic_eq_write_cons_ptr(eq);
 }

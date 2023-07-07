@@ -4,7 +4,7 @@
 Receive queue manager register block
 =====================================
 
-The receive queue manager register block has a header with type 0x0000C021, version 0x00000200, and indicates the location of the receive queue manager registers and number of queues.
+The receive queue manager register block has a header with type 0x0000C021, version 0x00000300, and indicates the location of the receive queue manager registers and number of queues.
 
 .. table::
 
@@ -13,7 +13,7 @@ The receive queue manager register block has a header with type 0x0000C021, vers
     ========  =============  ======  ======  ======  ======  =============
     RBB+0x00  Type           Vendor ID       Type            RO 0x0000C021
     --------  -------------  --------------  --------------  -------------
-    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000200
+    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000300
     --------  -------------  ------  ------  ------  ------  -------------
     RBB+0x08  Next pointer   Pointer to next register block  RO -
     --------  -------------  ------------------------------  -------------
@@ -72,15 +72,169 @@ Each queue has several associated control registers, detailed in this table:
     =========  ==============  ======  ======  ======  ======  =============
     Address    Field           31..24  23..16  15..8   7..0    Reset value
     =========  ==============  ======  ======  ======  ======  =============
-    Base+0x00  Base address L  Ring base address (lower 32)    RW -
+    Base+0x00  Base addr L     Ring base addr (lower), VF      RW -
     ---------  --------------  ------------------------------  -------------
-    Base+0x04  Base address H  Ring base address (upper 32)    RW -
+    Base+0x04  Base addr H     Ring base addr (upper)          RW -
     ---------  --------------  ------------------------------  -------------
-    Base+0x08  Control 1       Active                  Size    RW -
-    ---------  --------------  ------  ------  ------  ------  -------------
-    Base+0x0C  Control 2                       CQ index        RW -
-    ---------  --------------  --------------  --------------  -------------
-    Base+0x10  Head pointer                    Head pointer    RW -
-    ---------  --------------  --------------  --------------  -------------
-    Base+0x18  Tail pointer                    Tail pointer    RW -
+    Base+0x08  Control/status  Control/status                  RO -
+    ---------  --------------  ------------------------------  -------------
+    Base+0x0C  Config          Size    CQN                     RO -
+    ---------  --------------  ------  ----------------------  -------------
+    Base+0x10  Pointers        Cons pointer    Prod pointer    RO -
     =========  ==============  ==============  ==============  =============
+
+.. object:: Base address
+
+    The base address field contains the base address of the ring buffer as well as the VF ID.  The base address must be aligned to a 4096 byte boundary and sits in bits 63:12, leaving room for the VF ID in bits 11:0.  The base address is read-only when the queue is enabled.  The VF ID field is read-only; use the set VF ID command to change the VF ID.
+
+    .. table::
+
+        =========  ======  ======  ======  ======  =============
+        Address    31..24  23..16  15..8   7..0    Reset value
+        =========  ======  ======  ======  ======  =============
+        Base+0x00  Ring base addr (lower), VF      RW -
+        ---------  ------------------------------  -------------
+        Base+0x04  Ring base addr (upper)          RW -
+        =========  ==============================  =============
+
+.. object:: Control/status
+
+    The control/status field contains control and status information for the queue.  All fields are read-only; use commands to enable/disable the queue.
+
+    .. table::
+
+        =========  ======  ======  ======  ======  =============
+        Address    31..24  23..16  15..8   7..0    Reset value
+        =========  ======  ======  ======  ======  =============
+        Base+0x08  Control/status                  RO -
+        =========  ==============================  =============
+
+    Control/status bit definitions
+
+    .. table::
+
+        =====  =========
+        Bit    Function
+        =====  =========
+        0      Enable
+        3      Active
+        =====  =========
+
+.. object:: Config
+
+    The size field contains the size of the queue, and the CQN field contains the corresponding completion queue number.  All fields are read-only; use commands to set the size and CQN.
+
+    .. table::
+
+        =========  ======  ======  ======  ======  =============
+        Address    31..24  23..16  15..8   7..0    Reset value
+        =========  ======  ======  ======  ======  =============
+        Base+0x0C  Size    CQN                     RO -
+        =========  ======  ======================  =============
+
+.. object:: Pointers
+
+    The pointers field contains the queue producer and consumer pointers.  Bits 15:0 are the producer pointer, while bits 31:16 are the consumer pointer.  Both fields are read-only; use the set prod and cons pointer commands to update the pointers.
+
+    .. table::
+
+        =========  ======  ======  ======  ======  =============
+        Address    31..24  23..16  15..8   7..0    Reset value
+        =========  ======  ======  ======  ======  =============
+        Base+0x10  Cons pointer    Prod pointer    RO -
+        =========  ==============  ==============  =============
+
+Queue manager commands
+======================
+
+Commands are used to control various aspects of queue state in an atomic manner.  Commands can be written to any of the read-only registers associated with the queue (control/status, config, and pointers).
+
+.. table::
+
+    ========================  ======  ======  ======  ======
+    Command                   31..24  23..16  15..8   7..0
+    ========================  ======  ======  ======  ======
+    Set VF ID                 0x8001          VF ID
+    ------------------------  --------------  --------------
+    Set size                  0x8002          size
+    ------------------------  --------------  --------------
+    Set CQN                   0xC0    CQN
+    ------------------------  ------  ----------------------
+    Set prod pointer          0x8080          Prod pointer
+    ------------------------  --------------  --------------
+    Set cons pointer          0x8090          Cons pointer
+    ------------------------  --------------  --------------
+    Set enable                0x400001                Enable
+    ========================  ======================  ======
+
+.. object:: Set VF ID
+
+    The set VF ID command is used to set the VF ID for the queue.  Allowed when queue is disabled and inactive.
+
+    .. table::
+
+        ======  ======  ======  ======
+        31..24  23..16  15..8   7..0
+        ======  ======  ======  ======
+        0x8001          VF ID
+        ==============  ==============
+
+.. object:: Set size
+
+    The set size command is used to set the size of the ring buffer as the log base 2 of the number of elements.  Allowed when queue is disabled and inactive.
+
+    .. table::
+
+        ======  ======  ======  ======
+        31..24  23..16  15..8   7..0
+        ======  ======  ======  ======
+        0x8002          Log size
+        ==============  ==============
+
+.. object:: Set CQN
+
+    The set CQN command is used to set the CQN for completions generated by the queue.  Allowed when queue is disabled and inactive.
+
+    .. table::
+
+        ======  ======  ======  ======
+        31..24  23..16  15..8   7..0
+        ======  ======  ======  ======
+        0xC0    CQN
+        ======  ======================
+
+.. object:: Set prod pointer
+
+    The set producer pointer command is used to set the queue producer pointer.  Allowed at any time.
+
+    .. table::
+
+        ======  ======  ======  ======
+        31..24  23..16  15..8   7..0
+        ======  ======  ======  ======
+        0x8080          Prod pointer
+        ==============  ==============
+
+.. object:: Set cons pointer
+
+    The set consumer pointer command is used to set the queue consumer pointer.  Allowed when queue is disabled and inactive.
+
+    .. table::
+
+        ======  ======  ======  ======
+        31..24  23..16  15..8   7..0
+        ======  ======  ======  ======
+        0x8090          Cons pointer
+        ==============  ==============
+
+.. object:: Set enable
+
+    The set enable command is used to enable or disable the queue.  Allowed at any time.
+
+    .. table::
+
+        ======  ======  ======  ======
+        31..24  23..16  15..8   7..0
+        ======  ======  ======  ======
+        0x400001                Enable
+        ======================  ======

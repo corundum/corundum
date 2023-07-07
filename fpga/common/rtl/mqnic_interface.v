@@ -1157,39 +1157,39 @@ always @(posedge clk) begin
             RBB+8'h2C: ctrl_reg_rd_data_reg <= rx_mtu_reg;                  // IF ctrl: RX MTU
             // Queue manager (Event)
             RBB+8'h40: ctrl_reg_rd_data_reg <= 32'h0000C010;                // Event QM: Type
-            RBB+8'h44: ctrl_reg_rd_data_reg <= 32'h00000200;                // Event QM: Version
+            RBB+8'h44: ctrl_reg_rd_data_reg <= 32'h00000300;                // Event QM: Version
             RBB+8'h48: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h60;          // Event QM: Next header
             RBB+8'h4C: ctrl_reg_rd_data_reg <= AXIL_EQM_BASE_ADDR;          // Event QM: Offset
             RBB+8'h50: ctrl_reg_rd_data_reg <= 2**EVENT_QUEUE_INDEX_WIDTH;  // Event QM: Count
-            RBB+8'h54: ctrl_reg_rd_data_reg <= 32;                          // Event QM: Stride
+            RBB+8'h54: ctrl_reg_rd_data_reg <= 16;                          // Event QM: Stride
             // Queue manager (TX)
             RBB+8'h60: ctrl_reg_rd_data_reg <= 32'h0000C020;                // TX QM: Type
-            RBB+8'h64: ctrl_reg_rd_data_reg <= 32'h00000200;                // TX QM: Version
+            RBB+8'h64: ctrl_reg_rd_data_reg <= 32'h00000300;                // TX QM: Version
             RBB+8'h68: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h80;          // TX QM: Next header
             RBB+8'h6C: ctrl_reg_rd_data_reg <= AXIL_TX_QM_BASE_ADDR;        // TX QM: Offset
             RBB+8'h70: ctrl_reg_rd_data_reg <= 2**TX_QUEUE_INDEX_WIDTH;     // TX QM: Count
             RBB+8'h74: ctrl_reg_rd_data_reg <= 32;                          // TX QM: Stride
             // Queue manager (TX CPL)
             RBB+8'h80: ctrl_reg_rd_data_reg <= 32'h0000C030;                // TX CPL QM: Type
-            RBB+8'h84: ctrl_reg_rd_data_reg <= 32'h00000200;                // TX CPL QM: Version
+            RBB+8'h84: ctrl_reg_rd_data_reg <= 32'h00000300;                // TX CPL QM: Version
             RBB+8'h88: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'hA0;          // TX CPL QM: Next header
             RBB+8'h8C: ctrl_reg_rd_data_reg <= AXIL_TX_CQM_BASE_ADDR;       // TX CPL QM: Offset
             RBB+8'h90: ctrl_reg_rd_data_reg <= 2**TX_CPL_QUEUE_INDEX_WIDTH; // TX CPL QM: Count
-            RBB+8'h94: ctrl_reg_rd_data_reg <= 32;                          // TX CPL QM: Stride
+            RBB+8'h94: ctrl_reg_rd_data_reg <= 16;                          // TX CPL QM: Stride
             // Queue manager (RX)
             RBB+8'hA0: ctrl_reg_rd_data_reg <= 32'h0000C021;                // RX QM: Type
-            RBB+8'hA4: ctrl_reg_rd_data_reg <= 32'h00000200;                // RX QM: Version
+            RBB+8'hA4: ctrl_reg_rd_data_reg <= 32'h00000300;                // RX QM: Version
             RBB+8'hA8: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'hC0;          // RX QM: Next header
             RBB+8'hAC: ctrl_reg_rd_data_reg <= AXIL_RX_QM_BASE_ADDR;        // RX QM: Offset
             RBB+8'hB0: ctrl_reg_rd_data_reg <= 2**RX_QUEUE_INDEX_WIDTH;     // RX QM: Count
             RBB+8'hB4: ctrl_reg_rd_data_reg <= 32;                          // RX QM: Stride
             // Queue manager (RX CPL)
             RBB+8'hC0: ctrl_reg_rd_data_reg <= 32'h0000C031;                // RX CPL QM: Type
-            RBB+8'hC4: ctrl_reg_rd_data_reg <= 32'h00000200;                // RX CPL QM: Version
+            RBB+8'hC4: ctrl_reg_rd_data_reg <= 32'h00000300;                // RX CPL QM: Version
             RBB+8'hC8: ctrl_reg_rd_data_reg <= RX_RB_BASE_ADDR;             // RX CPL QM: Next header
             RBB+8'hCC: ctrl_reg_rd_data_reg <= AXIL_RX_CQM_BASE_ADDR;       // RX CPL QM: Offset
             RBB+8'hD0: ctrl_reg_rd_data_reg <= 2**RX_CPL_QUEUE_INDEX_WIDTH; // RX CPL QM: Count
-            RBB+8'hD4: ctrl_reg_rd_data_reg <= 32;                          // RX CPL QM: Stride
+            RBB+8'hD4: ctrl_reg_rd_data_reg <= 16;                          // RX CPL QM: Stride
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end

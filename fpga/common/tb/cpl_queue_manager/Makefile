@@ -26,7 +26,7 @@ export PARAM_LOG_QUEUE_SIZE_WIDTH := 4
 export PARAM_CPL_SIZE := 16
 export PARAM_PIPELINE := 2
 export PARAM_AXIL_DATA_WIDTH := 32
-export PARAM_AXIL_ADDR_WIDTH := 16
+export PARAM_AXIL_ADDR_WIDTH := $(shell expr $(PARAM_QUEUE_INDEX_WIDTH) + 4 )
 export PARAM_AXIL_STRB_WIDTH := $(shell expr $(PARAM_AXIL_DATA_WIDTH) / 8 )
 
 ifeq ($(SIM), icarus)

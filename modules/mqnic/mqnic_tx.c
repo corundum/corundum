@@ -21,12 +21,9 @@ struct mqnic_ring *mqnic_create_tx_ring(struct mqnic_if *interface)
 	ring->enabled = 0;
 
 	ring->hw_addr = NULL;
-	ring->hw_ptr_mask = 0xffff;
-	ring->hw_head_ptr = NULL;
-	ring->hw_tail_ptr = NULL;
 
-	ring->head_ptr = 0;
-	ring->tail_ptr = 0;
+	ring->prod_ptr = 0;
+	ring->cons_ptr = 0;
 
 	return ring;
 }
@@ -77,25 +74,29 @@ int mqnic_open_tx_ring(struct mqnic_ring *ring, struct mqnic_priv *priv,
 	cq->handler = mqnic_tx_irq;
 
 	ring->hw_addr = mqnic_res_get_addr(ring->interface->txq_res, ring->index);
-	ring->hw_head_ptr = ring->hw_addr + MQNIC_QUEUE_HEAD_PTR_REG;
-	ring->hw_tail_ptr = ring->hw_addr + MQNIC_QUEUE_TAIL_PTR_REG;
 
-	ring->head_ptr = 0;
-	ring->tail_ptr = 0;
+	ring->prod_ptr = 0;
+	ring->cons_ptr = 0;
 
 	// deactivate queue
-	iowrite32(0, ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+	iowrite32(MQNIC_QUEUE_CMD_SET_ENABLE | 0,
+			ring->hw_addr + MQNIC_QUEUE_CTRL_STATUS_REG);
 	// set base address
-	iowrite32(ring->buf_dma_addr, ring->hw_addr + MQNIC_QUEUE_BASE_ADDR_REG + 0);
-	iowrite32(ring->buf_dma_addr >> 32, ring->hw_addr + MQNIC_QUEUE_BASE_ADDR_REG + 4);
-	// set CQN
-	iowrite32(ring->cq->cqn, ring->hw_addr + MQNIC_QUEUE_CPL_QUEUE_INDEX_REG);
-	// set pointers
-	iowrite32(ring->head_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_QUEUE_HEAD_PTR_REG);
-	iowrite32(ring->tail_ptr & ring->hw_ptr_mask, ring->hw_addr + MQNIC_QUEUE_TAIL_PTR_REG);
+	iowrite32((ring->buf_dma_addr & 0xfffff000),
+			ring->hw_addr + MQNIC_QUEUE_BASE_ADDR_VF_REG + 0);
+	iowrite32(ring->buf_dma_addr >> 32,
+			ring->hw_addr + MQNIC_QUEUE_BASE_ADDR_VF_REG + 4);
 	// set size
-	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
-			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+	iowrite32(MQNIC_QUEUE_CMD_SET_SIZE | ilog2(ring->size) | (ring->log_desc_block_size << 8),
+			ring->hw_addr + MQNIC_QUEUE_CTRL_STATUS_REG);
+	// set CQN
+	iowrite32(MQNIC_QUEUE_CMD_SET_CQN | ring->cq->cqn,
+			ring->hw_addr + MQNIC_QUEUE_CTRL_STATUS_REG);
+	// set pointers
+	iowrite32(MQNIC_QUEUE_CMD_SET_PROD_PTR | (ring->prod_ptr & MQNIC_QUEUE_PTR_MASK),
+			ring->hw_addr + MQNIC_QUEUE_CTRL_STATUS_REG);
+	iowrite32(MQNIC_QUEUE_CMD_SET_CONS_PTR | (ring->cons_ptr & MQNIC_QUEUE_PTR_MASK),
+			ring->hw_addr + MQNIC_QUEUE_CTRL_STATUS_REG);
 
 	return 0;
 
@@ -117,8 +118,6 @@ void mqnic_close_tx_ring(struct mqnic_ring *ring)
 	ring->cq = NULL;
 
 	ring->hw_addr = NULL;
-	ring->hw_head_ptr = NULL;
-	ring->hw_tail_ptr = NULL;
 
 	if (ring->buf) {
 		mqnic_free_tx_buf(ring);
@@ -143,8 +142,8 @@ int mqnic_enable_tx_ring(struct mqnic_ring *ring)
 		return -EINVAL;
 
 	// enable queue
-	iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8) | MQNIC_QUEUE_ACTIVE_MASK,
-			ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+	iowrite32(MQNIC_QUEUE_CMD_SET_ENABLE | 1,
+			ring->hw_addr + MQNIC_QUEUE_CTRL_STATUS_REG);
 
 	ring->enabled = 1;
 
@@ -155,8 +154,8 @@ void mqnic_disable_tx_ring(struct mqnic_ring *ring)
 {
 	// disable queue
 	if (ring->hw_addr) {
-		iowrite32(ilog2(ring->size) | (ring->log_desc_block_size << 8),
-				ring->hw_addr + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+		iowrite32(MQNIC_QUEUE_CMD_SET_ENABLE | 0,
+				ring->hw_addr + MQNIC_QUEUE_CTRL_STATUS_REG);
 	}
 
 	ring->enabled = 0;
@@ -164,22 +163,23 @@ void mqnic_disable_tx_ring(struct mqnic_ring *ring)
 
 bool mqnic_is_tx_ring_empty(const struct mqnic_ring *ring)
 {
-	return ring->head_ptr == ring->tail_ptr;
+	return ring->prod_ptr == ring->cons_ptr;
 }
 
 bool mqnic_is_tx_ring_full(const struct mqnic_ring *ring)
 {
-	return ring->head_ptr - ring->tail_ptr >= ring->full_size;
+	return ring->prod_ptr - ring->cons_ptr >= ring->full_size;
 }
 
-void mqnic_tx_read_tail_ptr(struct mqnic_ring *ring)
+void mqnic_tx_read_cons_ptr(struct mqnic_ring *ring)
 {
-	ring->tail_ptr += (ioread32(ring->hw_tail_ptr) - ring->tail_ptr) & ring->hw_ptr_mask;
+	ring->cons_ptr += ((ioread32(ring->hw_addr + MQNIC_QUEUE_PTR_REG) >> 16) - ring->cons_ptr) & MQNIC_QUEUE_PTR_MASK;
 }
 
-void mqnic_tx_write_head_ptr(struct mqnic_ring *ring)
+void mqnic_tx_write_prod_ptr(struct mqnic_ring *ring)
 {
-	iowrite32(ring->head_ptr & ring->hw_ptr_mask, ring->hw_head_ptr);
+	iowrite32(MQNIC_QUEUE_CMD_SET_PROD_PTR | (ring->prod_ptr & MQNIC_QUEUE_PTR_MASK),
+			ring->hw_addr + MQNIC_QUEUE_CTRL_STATUS_REG);
 }
 
 void mqnic_free_tx_desc(struct mqnic_ring *ring, int index, int napi_budget)
@@ -209,9 +209,9 @@ int mqnic_free_tx_buf(struct mqnic_ring *ring)
 	int cnt = 0;
 
 	while (!mqnic_is_tx_ring_empty(ring)) {
-		index = ring->tail_ptr & ring->size_mask;
+		index = ring->cons_ptr & ring->size_mask;
 		mqnic_free_tx_desc(ring, index, 0);
-		ring->tail_ptr++;
+		ring->cons_ptr++;
 		cnt++;
 	}
 
@@ -227,9 +227,9 @@ int mqnic_process_tx_cq(struct mqnic_cq *cq, int napi_budget)
 	struct mqnic_cpl *cpl;
 	struct skb_shared_hwtstamps hwts;
 	u32 cq_index;
-	u32 cq_tail_ptr;
+	u32 cq_cons_ptr;
 	u32 ring_index;
-	u32 ring_tail_ptr;
+	u32 ring_cons_ptr;
 	u32 packets = 0;
 	u32 bytes = 0;
 	int done = 0;
@@ -242,13 +242,13 @@ int mqnic_process_tx_cq(struct mqnic_cq *cq, int napi_budget)
 	netdev_txq_bql_complete_prefetchw(tx_ring->tx_queue);
 
 	// process completion queue
-	cq_tail_ptr = cq->tail_ptr;
-	cq_index = cq_tail_ptr & cq->size_mask;
+	cq_cons_ptr = cq->cons_ptr;
+	cq_index = cq_cons_ptr & cq->size_mask;
 
 	while (done < budget) {
 		cpl = (struct mqnic_cpl *)(cq->buf + cq_index * cq->stride);
 
-		if (!!(cpl->phase & cpu_to_le32(0x80000000)) == !!(cq_tail_ptr & cq->size))
+		if (!!(cpl->phase & cpu_to_le32(0x80000000)) == !!(cq_cons_ptr & cq->size))
 			break;
 
 		dma_rmb();
@@ -270,30 +270,30 @@ int mqnic_process_tx_cq(struct mqnic_cq *cq, int napi_budget)
 
 		done++;
 
-		cq_tail_ptr++;
-		cq_index = cq_tail_ptr & cq->size_mask;
+		cq_cons_ptr++;
+		cq_index = cq_cons_ptr & cq->size_mask;
 	}
 
-	// update CQ tail
-	cq->tail_ptr = cq_tail_ptr;
-	mqnic_cq_write_tail_ptr(cq);
+	// update CQ consumer pointer
+	cq->cons_ptr = cq_cons_ptr;
+	mqnic_cq_write_cons_ptr(cq);
 
 	// process ring
-	ring_tail_ptr = READ_ONCE(tx_ring->tail_ptr);
-	ring_index = ring_tail_ptr & tx_ring->size_mask;
+	ring_cons_ptr = READ_ONCE(tx_ring->cons_ptr);
+	ring_index = ring_cons_ptr & tx_ring->size_mask;
 
-	while (ring_tail_ptr != tx_ring->head_ptr) {
+	while (ring_cons_ptr != tx_ring->prod_ptr) {
 		tx_info = &tx_ring->tx_info[ring_index];
 
 		if (tx_info->skb)
 			break;
 
-		ring_tail_ptr++;
-		ring_index = ring_tail_ptr & tx_ring->size_mask;
+		ring_cons_ptr++;
+		ring_index = ring_cons_ptr & tx_ring->size_mask;
 	}
 
-	// update ring tail
-	WRITE_ONCE(tx_ring->tail_ptr, ring_tail_ptr);
+	// update consumer pointer
+	WRITE_ONCE(tx_ring->cons_ptr, ring_cons_ptr);
 
 	// BQL
 	//netdev_tx_completed_queue(tx_ring->tx_queue, packets, bytes);
@@ -406,7 +406,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	int ring_index;
 	u32 index;
 	bool stop_queue;
-	u32 tail_ptr;
+	u32 cons_ptr;
 
 	if (unlikely(!priv->port_up))
 		goto tx_drop;
@@ -421,12 +421,12 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 		// unknown TX queue
 		goto tx_drop;
 
-	tail_ptr = READ_ONCE(ring->tail_ptr);
+	cons_ptr = READ_ONCE(ring->cons_ptr);
 
 	// prefetch for BQL
 	netdev_txq_bql_enqueue_prefetchw(ring->tx_queue);
 
-	index = ring->head_ptr & ring->size_mask;
+	index = ring->prod_ptr & ring->size_mask;
 
 	tx_desc = (struct mqnic_desc *)(ring->buf + index * ring->stride);
 
@@ -478,7 +478,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	ring->bytes += skb->len;
 
 	// enqueue
-	ring->head_ptr++;
+	ring->prod_ptr++;
 
 	skb_tx_timestamp(skb);
 
@@ -500,14 +500,14 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	if (unlikely(!skb->xmit_more || stop_queue)) {
 #endif
 		dma_wmb();
-		mqnic_tx_write_head_ptr(ring);
+		mqnic_tx_write_prod_ptr(ring);
 	}
 
 	// check if queue restarted
 	if (unlikely(stop_queue)) {
 		smp_rmb();
 
-		tail_ptr = READ_ONCE(ring->tail_ptr);
+		cons_ptr = READ_ONCE(ring->cons_ptr);
 
 		if (unlikely(!mqnic_is_tx_ring_full(ring)))
 			netif_tx_wake_queue(ring->tx_queue);

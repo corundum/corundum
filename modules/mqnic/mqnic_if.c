@@ -210,9 +210,9 @@ struct mqnic_if *mqnic_create_interface(struct mqnic_dev *mdev, int index, u8 __
 	}
 
 	// determine desc block size
-	iowrite32(0xf << 8, mqnic_res_get_addr(interface->txq_res, 0) + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
-	interface->max_desc_block_size = 1 << ((ioread32(mqnic_res_get_addr(interface->txq_res, 0) + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG) >> 8) & 0xf);
-	iowrite32(0, mqnic_res_get_addr(interface->txq_res, 0) + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+	iowrite32(MQNIC_QUEUE_CMD_SET_SIZE | 0xff00, mqnic_res_get_addr(interface->txq_res, 0) + MQNIC_QUEUE_CTRL_STATUS_REG);
+	interface->max_desc_block_size = 1 << ((ioread32(mqnic_res_get_addr(interface->txq_res, 0) + MQNIC_QUEUE_SIZE_CQN_REG) >> 28) & 0xf);
+	iowrite32(MQNIC_QUEUE_CMD_SET_SIZE | 0x0000, mqnic_res_get_addr(interface->txq_res, 0) + MQNIC_QUEUE_CTRL_STATUS_REG);
 
 	dev_info(dev, "Max desc block size: %d", interface->max_desc_block_size);
 
@@ -222,19 +222,19 @@ struct mqnic_if *mqnic_create_interface(struct mqnic_dev *mdev, int index, u8 __
 
 	// disable queues
 	for (k = 0; k < mqnic_res_get_count(interface->eq_res); k++)
-		iowrite32(0, mqnic_res_get_addr(interface->eq_res, k) + MQNIC_EQ_ACTIVE_LOG_SIZE_REG);
+		iowrite32(MQNIC_EQ_CMD_SET_ENABLE | 0, mqnic_res_get_addr(interface->eq_res, k) + MQNIC_EQ_CTRL_STATUS_REG);
 
 	for (k = 0; k < mqnic_res_get_count(interface->txq_res); k++)
-		iowrite32(0, mqnic_res_get_addr(interface->txq_res, k) + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+		iowrite32(MQNIC_QUEUE_CMD_SET_ENABLE | 0, mqnic_res_get_addr(interface->txq_res, k) + MQNIC_QUEUE_CTRL_STATUS_REG);
 
 	for (k = 0; k < mqnic_res_get_count(interface->tx_cq_res); k++)
-		iowrite32(0, mqnic_res_get_addr(interface->tx_cq_res, k) + MQNIC_CQ_ACTIVE_LOG_SIZE_REG);
+		iowrite32(MQNIC_CQ_CMD_SET_ENABLE | 0, mqnic_res_get_addr(interface->tx_cq_res, k) + MQNIC_CQ_CTRL_STATUS_REG);
 
 	for (k = 0; k < mqnic_res_get_count(interface->rxq_res); k++)
-		iowrite32(0, mqnic_res_get_addr(interface->rxq_res, k) + MQNIC_QUEUE_ACTIVE_LOG_SIZE_REG);
+		iowrite32(MQNIC_QUEUE_CMD_SET_ENABLE | 0, mqnic_res_get_addr(interface->rxq_res, k) + MQNIC_QUEUE_CTRL_STATUS_REG);
 
 	for (k = 0; k < mqnic_res_get_count(interface->rx_cq_res); k++)
-		iowrite32(0, mqnic_res_get_addr(interface->rx_cq_res, k) + MQNIC_CQ_ACTIVE_LOG_SIZE_REG);
+		iowrite32(MQNIC_CQ_CMD_SET_ENABLE | 0, mqnic_res_get_addr(interface->rx_cq_res, k) + MQNIC_CQ_CTRL_STATUS_REG);
 
 	// create ports
 	for (k = 0; k < interface->port_count; k++) {

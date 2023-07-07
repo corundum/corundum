@@ -258,7 +258,7 @@ int mqnic_process_tx_cq(struct mqnic_cq *cq, int napi_budget)
 
 		// TX hardware timestamp
 		if (unlikely(tx_info->ts_requested)) {
-			netdev_info(priv->ndev, "%s: TX TS requested", __func__);
+			netdev_dbg(priv->ndev, "%s: TX TS requested", __func__);
 			hwts.hwtstamp = mqnic_read_cpl_ts(interface->mdev, tx_ring, cpl);
 			skb_tstamp_tx(tx_info->skb, &hwts);
 		}
@@ -435,7 +435,7 @@ netdev_tx_t mqnic_start_xmit(struct sk_buff *skb, struct net_device *ndev)
 	// TX hardware timestamp
 	tx_info->ts_requested = 0;
 	if (unlikely(priv->if_features & MQNIC_IF_FEATURE_PTP_TS && shinfo->tx_flags & SKBTX_HW_TSTAMP)) {
-		netdev_info(ndev, "%s: TX TS requested", __func__);
+		netdev_dbg(ndev, "%s: TX TS requested", __func__);
 		shinfo->tx_flags |= SKBTX_IN_PROGRESS;
 		tx_info->ts_requested = 1;
 	}

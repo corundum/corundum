@@ -33,7 +33,7 @@ static int mqnic_phc_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	bool neg = false;
 	u64 nom_per_fns, adj;
 
-	dev_info(mdev->dev, "%s: scaled_ppm: %ld", __func__, scaled_ppm);
+	dev_dbg(mdev->dev, "%s: scaled_ppm: %ld", __func__, scaled_ppm);
 
 	if (scaled_ppm < 0) {
 		neg = true;
@@ -56,7 +56,7 @@ static int mqnic_phc_adjfine(struct ptp_clock_info *ptp, long scaled_ppm)
 	iowrite32(adj & 0xffffffff, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_PERIOD_FNS);
 	iowrite32(adj >> 32, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_PERIOD_NS);
 
-	dev_info(mdev->dev, "%s adj: 0x%llx", __func__, adj);
+	dev_dbg(mdev->dev, "%s adj: 0x%llx", __func__, adj);
 
 	return 0;
 }
@@ -107,7 +107,7 @@ static int mqnic_phc_adjtime(struct ptp_clock_info *ptp, s64 delta)
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
 	struct timespec64 ts;
 
-	dev_info(mdev->dev, "%s: delta: %lld", __func__, delta);
+	dev_dbg(mdev->dev, "%s: delta: %lld", __func__, delta);
 
 	if (delta > 1000000000 || delta < -1000000000) {
 		mqnic_phc_gettime(ptp, &ts);

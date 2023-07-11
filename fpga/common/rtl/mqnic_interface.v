@@ -1189,6 +1189,136 @@ axil_crossbar_inst (
     .m_axil_rready( {axil_sched_rready,  axil_rx_qm_rready,  axil_tx_qm_rready,  axil_cqm_rready,  axil_eqm_rready,  axil_rx_indir_tbl_rready,  axil_ctrl_rready,  m_axil_csr_rready})
 );
 
+// DMA IF mux for completion and event writes
+wire [DMA_ADDR_WIDTH-1:0]   eq_dma_write_desc_dma_addr;
+wire [RAM_SEL_WIDTH-1-1:0]  eq_dma_write_desc_ram_sel = 0;
+wire [RAM_ADDR_WIDTH-1:0]   eq_dma_write_desc_ram_addr;
+wire [DMA_IMM_WIDTH-1:0]    eq_dma_write_desc_imm = 0;
+wire                        eq_dma_write_desc_imm_en = 0;
+wire [DMA_LEN_WIDTH-1:0]    eq_dma_write_desc_len;
+wire [DMA_TAG_WIDTH-1-1:0]  eq_dma_write_desc_tag;
+wire                        eq_dma_write_desc_valid;
+wire                        eq_dma_write_desc_ready;
+
+wire [DMA_TAG_WIDTH-1-1:0]  eq_dma_write_desc_status_tag;
+wire [3:0]                  eq_dma_write_desc_status_error;
+wire                        eq_dma_write_desc_status_valid;
+
+wire [DMA_ADDR_WIDTH-1:0]   cq_dma_write_desc_dma_addr;
+wire [RAM_SEL_WIDTH-1-1:0]  cq_dma_write_desc_ram_sel = 0;
+wire [RAM_ADDR_WIDTH-1:0]   cq_dma_write_desc_ram_addr;
+wire [DMA_IMM_WIDTH-1:0]    cq_dma_write_desc_imm = 0;
+wire                        cq_dma_write_desc_imm_en = 0;
+wire [DMA_LEN_WIDTH-1:0]    cq_dma_write_desc_len;
+wire [DMA_TAG_WIDTH-1-1:0]  cq_dma_write_desc_tag;
+wire                        cq_dma_write_desc_valid;
+wire                        cq_dma_write_desc_ready;
+
+wire [DMA_TAG_WIDTH-1-1:0]  cq_dma_write_desc_status_tag;
+wire [3:0]                  cq_dma_write_desc_status_error;
+wire                        cq_dma_write_desc_status_valid;
+
+wire [RAM_SEG_COUNT*(RAM_SEL_WIDTH-1)-1:0]   eq_dma_ram_rd_cmd_sel;
+wire [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  eq_dma_ram_rd_cmd_addr;
+wire [RAM_SEG_COUNT-1:0]                     eq_dma_ram_rd_cmd_valid;
+wire [RAM_SEG_COUNT-1:0]                     eq_dma_ram_rd_cmd_ready;
+wire [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  eq_dma_ram_rd_resp_data;
+wire [RAM_SEG_COUNT-1:0]                     eq_dma_ram_rd_resp_valid;
+wire [RAM_SEG_COUNT-1:0]                     eq_dma_ram_rd_resp_ready;
+
+wire [RAM_SEG_COUNT*(RAM_SEL_WIDTH-1)-1:0]   cq_dma_ram_rd_cmd_sel;
+wire [RAM_SEG_COUNT*RAM_SEG_ADDR_WIDTH-1:0]  cq_dma_ram_rd_cmd_addr;
+wire [RAM_SEG_COUNT-1:0]                     cq_dma_ram_rd_cmd_valid;
+wire [RAM_SEG_COUNT-1:0]                     cq_dma_ram_rd_cmd_ready;
+wire [RAM_SEG_COUNT*RAM_SEG_DATA_WIDTH-1:0]  cq_dma_ram_rd_resp_data;
+wire [RAM_SEG_COUNT-1:0]                     cq_dma_ram_rd_resp_valid;
+wire [RAM_SEG_COUNT-1:0]                     cq_dma_ram_rd_resp_ready;
+
+dma_if_mux_wr #(
+    .PORTS(2),
+    .SEG_COUNT(RAM_SEG_COUNT),
+    .SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
+    .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
+    .SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
+    .S_RAM_SEL_WIDTH(RAM_SEL_WIDTH-1),
+    .M_RAM_SEL_WIDTH(RAM_SEL_WIDTH),
+    .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+    .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+    .IMM_ENABLE(0),
+    .IMM_WIDTH(DMA_IMM_WIDTH),
+    .LEN_WIDTH(DMA_LEN_WIDTH),
+    .S_TAG_WIDTH(DMA_TAG_WIDTH-1),
+    .M_TAG_WIDTH(DMA_TAG_WIDTH),
+    .ARB_TYPE_ROUND_ROBIN(0),
+    .ARB_LSB_HIGH_PRIORITY(1)
+)
+cq_eq_dma_if_mux_wr_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * Descriptor output (to DMA interface)
+     */
+    .m_axis_write_desc_dma_addr(m_axis_ctrl_dma_write_desc_dma_addr),
+    .m_axis_write_desc_ram_sel(m_axis_ctrl_dma_write_desc_ram_sel),
+    .m_axis_write_desc_ram_addr(m_axis_ctrl_dma_write_desc_ram_addr),
+    .m_axis_write_desc_imm(m_axis_ctrl_dma_write_desc_imm),
+    .m_axis_write_desc_imm_en(m_axis_ctrl_dma_write_desc_imm_en),
+    .m_axis_write_desc_len(m_axis_ctrl_dma_write_desc_len),
+    .m_axis_write_desc_tag(m_axis_ctrl_dma_write_desc_tag),
+    .m_axis_write_desc_valid(m_axis_ctrl_dma_write_desc_valid),
+    .m_axis_write_desc_ready(m_axis_ctrl_dma_write_desc_ready),
+
+    /*
+     * Descriptor status input (from DMA interface)
+     */
+    .s_axis_write_desc_status_tag(s_axis_ctrl_dma_write_desc_status_tag),
+    .s_axis_write_desc_status_error(s_axis_ctrl_dma_write_desc_status_error),
+    .s_axis_write_desc_status_valid(s_axis_ctrl_dma_write_desc_status_valid),
+
+    /*
+     * Descriptor input
+     */
+    .s_axis_write_desc_dma_addr({cq_dma_write_desc_dma_addr, eq_dma_write_desc_dma_addr}),
+    .s_axis_write_desc_ram_sel({cq_dma_write_desc_ram_sel, eq_dma_write_desc_ram_sel}),
+    .s_axis_write_desc_ram_addr({cq_dma_write_desc_ram_addr, eq_dma_write_desc_ram_addr}),
+    .s_axis_write_desc_imm({cq_dma_write_desc_imm, eq_dma_write_desc_imm}),
+    .s_axis_write_desc_imm_en({cq_dma_write_desc_imm_en, eq_dma_write_desc_imm_en}),
+    .s_axis_write_desc_len({cq_dma_write_desc_len, eq_dma_write_desc_len}),
+    .s_axis_write_desc_tag({cq_dma_write_desc_tag, eq_dma_write_desc_tag}),
+    .s_axis_write_desc_valid({cq_dma_write_desc_valid, eq_dma_write_desc_valid}),
+    .s_axis_write_desc_ready({cq_dma_write_desc_ready, eq_dma_write_desc_ready}),
+
+    /*
+     * Descriptor status output
+     */
+    .m_axis_write_desc_status_tag({cq_dma_write_desc_status_tag, eq_dma_write_desc_status_tag}),
+    .m_axis_write_desc_status_error({cq_dma_write_desc_status_error, eq_dma_write_desc_status_error}),
+    .m_axis_write_desc_status_valid({cq_dma_write_desc_status_valid, eq_dma_write_desc_status_valid}),
+
+    /*
+     * RAM interface (from DMA interface)
+     */
+    .if_ram_rd_cmd_sel(ctrl_dma_ram_rd_cmd_sel),
+    .if_ram_rd_cmd_addr(ctrl_dma_ram_rd_cmd_addr),
+    .if_ram_rd_cmd_valid(ctrl_dma_ram_rd_cmd_valid),
+    .if_ram_rd_cmd_ready(ctrl_dma_ram_rd_cmd_ready),
+    .if_ram_rd_resp_data(ctrl_dma_ram_rd_resp_data),
+    .if_ram_rd_resp_valid(ctrl_dma_ram_rd_resp_valid),
+    .if_ram_rd_resp_ready(ctrl_dma_ram_rd_resp_ready),
+
+    /*
+     * RAM interface (towards RAM)
+     */
+    .ram_rd_cmd_sel({cq_dma_ram_rd_cmd_sel, eq_dma_ram_rd_cmd_sel}),
+    .ram_rd_cmd_addr({cq_dma_ram_rd_cmd_addr, eq_dma_ram_rd_cmd_addr}),
+    .ram_rd_cmd_valid({cq_dma_ram_rd_cmd_valid, eq_dma_ram_rd_cmd_valid}),
+    .ram_rd_cmd_ready({cq_dma_ram_rd_cmd_ready, eq_dma_ram_rd_cmd_ready}),
+    .ram_rd_resp_data({cq_dma_ram_rd_resp_data, eq_dma_ram_rd_resp_data}),
+    .ram_rd_resp_valid({cq_dma_ram_rd_resp_valid, eq_dma_ram_rd_resp_valid}),
+    .ram_rd_resp_ready({cq_dma_ram_rd_resp_ready, eq_dma_ram_rd_resp_ready})
+);
+
 // Event queues
 cpl_queue_manager #(
     .ADDR_WIDTH(DMA_ADDR_WIDTH),
@@ -1276,6 +1406,155 @@ event_queue_manager_inst (
     .enable(1'b1)
 );
 
+cpl_write #(
+    .PORTS(1),
+    .SELECT_WIDTH(1),
+    .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+    .SEG_COUNT(RAM_SEG_COUNT),
+    .SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
+    .SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
+    .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
+    .RAM_PIPELINE(RAM_PIPELINE),
+    .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+    .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
+    .DMA_TAG_WIDTH(DMA_TAG_WIDTH-1),
+    .REQ_TAG_WIDTH(CPL_REQ_TAG_WIDTH),
+    .QUEUE_REQ_TAG_WIDTH(CPL_QUEUE_REQ_TAG_WIDTH),
+    .QUEUE_OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
+    .QUEUE_INDEX_WIDTH(EQN_WIDTH),
+    .CPL_SIZE(EVENT_SIZE),
+    .DESC_TABLE_SIZE(32)
+)
+event_write_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * Completion read request input
+     */
+    .s_axis_req_sel(0),
+    .s_axis_req_queue(event_cpl_req_queue),
+    .s_axis_req_tag(event_cpl_req_tag),
+    .s_axis_req_data(event_cpl_req_data),
+    .s_axis_req_valid(event_cpl_req_valid),
+    .s_axis_req_ready(event_cpl_req_ready),
+
+    /*
+     * Completion read request status output
+     */
+    .m_axis_req_status_tag(event_cpl_req_status_tag),
+    .m_axis_req_status_full(event_cpl_req_status_full),
+    .m_axis_req_status_error(event_cpl_req_status_error),
+    .m_axis_req_status_valid(event_cpl_req_status_valid),
+
+    /*
+     * Completion enqueue request output
+     */
+    .m_axis_cpl_enqueue_req_queue(event_enqueue_req_queue),
+    .m_axis_cpl_enqueue_req_tag(event_enqueue_req_tag),
+    .m_axis_cpl_enqueue_req_valid(event_enqueue_req_valid),
+    .m_axis_cpl_enqueue_req_ready(event_enqueue_req_ready),
+
+    /*
+     * Completion enqueue response input
+     */
+    .s_axis_cpl_enqueue_resp_phase(event_enqueue_resp_phase),
+    .s_axis_cpl_enqueue_resp_addr(event_enqueue_resp_addr),
+    .s_axis_cpl_enqueue_resp_tag(event_enqueue_resp_tag),
+    .s_axis_cpl_enqueue_resp_op_tag(event_enqueue_resp_op_tag),
+    .s_axis_cpl_enqueue_resp_full(event_enqueue_resp_full),
+    .s_axis_cpl_enqueue_resp_error(event_enqueue_resp_error),
+    .s_axis_cpl_enqueue_resp_valid(event_enqueue_resp_valid),
+    .s_axis_cpl_enqueue_resp_ready(event_enqueue_resp_ready),
+
+    /*
+     * Completion enqueue commit output
+     */
+    .m_axis_cpl_enqueue_commit_op_tag(event_enqueue_commit_op_tag),
+    .m_axis_cpl_enqueue_commit_valid(event_enqueue_commit_valid),
+    .m_axis_cpl_enqueue_commit_ready(event_enqueue_commit_ready),
+
+    /*
+     * DMA write descriptor output
+     */
+    .m_axis_dma_write_desc_dma_addr(eq_dma_write_desc_dma_addr),
+    .m_axis_dma_write_desc_ram_addr(eq_dma_write_desc_ram_addr),
+    .m_axis_dma_write_desc_len(eq_dma_write_desc_len),
+    .m_axis_dma_write_desc_tag(eq_dma_write_desc_tag),
+    .m_axis_dma_write_desc_valid(eq_dma_write_desc_valid),
+    .m_axis_dma_write_desc_ready(eq_dma_write_desc_ready),
+
+    /*
+     * DMA write descriptor status input
+     */
+    .s_axis_dma_write_desc_status_tag(eq_dma_write_desc_status_tag),
+    .s_axis_dma_write_desc_status_error(eq_dma_write_desc_status_error),
+    .s_axis_dma_write_desc_status_valid(eq_dma_write_desc_status_valid),
+
+    /*
+     * RAM interface
+     */
+    .dma_ram_rd_cmd_addr(eq_dma_ram_rd_cmd_addr),
+    .dma_ram_rd_cmd_valid(eq_dma_ram_rd_cmd_valid),
+    .dma_ram_rd_cmd_ready(eq_dma_ram_rd_cmd_ready),
+    .dma_ram_rd_resp_data(eq_dma_ram_rd_resp_data),
+    .dma_ram_rd_resp_valid(eq_dma_ram_rd_resp_valid),
+    .dma_ram_rd_resp_ready(eq_dma_ram_rd_resp_ready),
+
+    /*
+     * Configuration
+     */
+    .enable(1'b1)
+);
+
+assign event_cpl_req_queue = fifo_event_queue;
+assign event_cpl_req_tag = 0;
+assign event_cpl_req_data[15:0] = 0;
+assign event_cpl_req_data[31:16] = fifo_event_source;
+assign event_cpl_req_data[255:32] = 0;
+assign event_cpl_req_valid = fifo_event_valid;
+assign fifo_event_ready = event_cpl_req_ready;
+
+axis_fifo #(
+    .DEPTH(1024),
+    .DATA_WIDTH(EVENT_SOURCE_WIDTH+EQN_WIDTH),
+    .KEEP_ENABLE(0),
+    .LAST_ENABLE(0),
+    .ID_ENABLE(0),
+    .DEST_ENABLE(0),
+    .USER_ENABLE(0),
+    .FRAME_FIFO(0)
+)
+event_fifo (
+    .clk(clk),
+    .rst(rst),
+
+    // AXI input
+    .s_axis_tdata({event_source, event_queue}),
+    .s_axis_tkeep(0),
+    .s_axis_tvalid(event_valid),
+    .s_axis_tready(event_ready),
+    .s_axis_tlast(0),
+    .s_axis_tid(0),
+    .s_axis_tdest(0),
+    .s_axis_tuser(0),
+
+    // AXI output
+    .m_axis_tdata({fifo_event_source, fifo_event_queue}),
+    .m_axis_tkeep(),
+    .m_axis_tvalid(fifo_event_valid),
+    .m_axis_tready(fifo_event_ready),
+    .m_axis_tlast(),
+    .m_axis_tid(),
+    .m_axis_tdest(),
+    .m_axis_tuser(),
+
+    // Status
+    .status_overflow(),
+    .status_bad_frame(),
+    .status_good_frame()
+);
+
 // Completion queues
 cpl_queue_manager #(
     .ADDR_WIDTH(DMA_ADDR_WIDTH),
@@ -1356,6 +1635,158 @@ cqm_inst (
     .s_axil_rresp(axil_cqm_rresp),
     .s_axil_rvalid(axil_cqm_rvalid),
     .s_axil_rready(axil_cqm_rready),
+
+    /*
+     * Configuration
+     */
+    .enable(1'b1)
+);
+
+cpl_op_mux #(
+    .PORTS(2),
+    .SELECT_WIDTH(1),
+    .QUEUE_INDEX_WIDTH(CQN_WIDTH),
+    .S_REQ_TAG_WIDTH(CPL_REQ_TAG_WIDTH_INT),
+    .M_REQ_TAG_WIDTH(CPL_REQ_TAG_WIDTH),
+    .CPL_SIZE(CPL_SIZE),
+    .ARB_TYPE_ROUND_ROBIN(1),
+    .ARB_LSB_HIGH_PRIORITY(1)
+)
+cpl_op_mux_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * Completion request output
+     */
+    .m_axis_req_sel(cpl_req_sel),
+    .m_axis_req_queue(cpl_req_queue),
+    .m_axis_req_tag(cpl_req_tag),
+    .m_axis_req_data(cpl_req_data),
+    .m_axis_req_valid(cpl_req_valid),
+    .m_axis_req_ready(cpl_req_ready),
+
+    /*
+     * Completion request status input
+     */
+    .s_axis_req_status_tag(cpl_req_status_tag),
+    .s_axis_req_status_full(cpl_req_status_full),
+    .s_axis_req_status_error(cpl_req_status_error),
+    .s_axis_req_status_valid(cpl_req_status_valid),
+
+    /*
+     * Completion request input
+     */
+    .s_axis_req_sel({rx_cpl_req_sel, tx_cpl_req_sel}),
+    .s_axis_req_queue({rx_cpl_req_queue, tx_cpl_req_queue}),
+    .s_axis_req_tag({rx_cpl_req_tag, tx_cpl_req_tag}),
+    .s_axis_req_data({rx_cpl_req_data, tx_cpl_req_data}),
+    .s_axis_req_valid({rx_cpl_req_valid, tx_cpl_req_valid}),
+    .s_axis_req_ready({rx_cpl_req_ready, tx_cpl_req_ready}),
+
+    /*
+     * Completion response output
+     */
+    .m_axis_req_status_tag({rx_cpl_req_status_tag, tx_cpl_req_status_tag}),
+    .m_axis_req_status_full({rx_cpl_req_status_full, tx_cpl_req_status_full}),
+    .m_axis_req_status_error({rx_cpl_req_status_error, tx_cpl_req_status_error}),
+    .m_axis_req_status_valid({rx_cpl_req_status_valid, tx_cpl_req_status_valid})
+);
+
+cpl_write #(
+    .PORTS(1),
+    .SELECT_WIDTH(1),
+    .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
+    .SEG_COUNT(RAM_SEG_COUNT),
+    .SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
+    .SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
+    .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
+    .RAM_PIPELINE(RAM_PIPELINE),
+    .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
+    .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
+    .DMA_TAG_WIDTH(DMA_TAG_WIDTH-1),
+    .REQ_TAG_WIDTH(CPL_REQ_TAG_WIDTH),
+    .QUEUE_REQ_TAG_WIDTH(CPL_QUEUE_REQ_TAG_WIDTH),
+    .QUEUE_OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
+    .QUEUE_INDEX_WIDTH(CQN_WIDTH),
+    .CPL_SIZE(CPL_SIZE),
+    .DESC_TABLE_SIZE(32)
+)
+cpl_write_inst (
+    .clk(clk),
+    .rst(rst),
+
+    /*
+     * Completion read request input
+     */
+    .s_axis_req_sel(0),
+    .s_axis_req_queue(cpl_req_queue),
+    .s_axis_req_tag(cpl_req_tag),
+    .s_axis_req_data(cpl_req_data),
+    .s_axis_req_valid(cpl_req_valid),
+    .s_axis_req_ready(cpl_req_ready),
+
+    /*
+     * Completion read request status output
+     */
+    .m_axis_req_status_tag(cpl_req_status_tag),
+    .m_axis_req_status_full(cpl_req_status_full),
+    .m_axis_req_status_error(cpl_req_status_error),
+    .m_axis_req_status_valid(cpl_req_status_valid),
+
+    /*
+     * Completion enqueue request output
+     */
+    .m_axis_cpl_enqueue_req_queue(cpl_enqueue_req_queue),
+    .m_axis_cpl_enqueue_req_tag(cpl_enqueue_req_tag),
+    .m_axis_cpl_enqueue_req_valid(cpl_enqueue_req_valid),
+    .m_axis_cpl_enqueue_req_ready(cpl_enqueue_req_ready),
+
+    /*
+     * Completion enqueue response input
+     */
+    .s_axis_cpl_enqueue_resp_phase(cpl_enqueue_resp_phase),
+    .s_axis_cpl_enqueue_resp_addr(cpl_enqueue_resp_addr),
+    .s_axis_cpl_enqueue_resp_tag(cpl_enqueue_resp_tag),
+    .s_axis_cpl_enqueue_resp_op_tag(cpl_enqueue_resp_op_tag),
+    .s_axis_cpl_enqueue_resp_full(cpl_enqueue_resp_full),
+    .s_axis_cpl_enqueue_resp_error(cpl_enqueue_resp_error),
+    .s_axis_cpl_enqueue_resp_valid(cpl_enqueue_resp_valid),
+    .s_axis_cpl_enqueue_resp_ready(cpl_enqueue_resp_ready),
+
+    /*
+     * Completion enqueue commit output
+     */
+    .m_axis_cpl_enqueue_commit_op_tag(cpl_enqueue_commit_op_tag),
+    .m_axis_cpl_enqueue_commit_valid(cpl_enqueue_commit_valid),
+    .m_axis_cpl_enqueue_commit_ready(cpl_enqueue_commit_ready),
+
+    /*
+     * DMA write descriptor output
+     */
+    .m_axis_dma_write_desc_dma_addr(cq_dma_write_desc_dma_addr),
+    .m_axis_dma_write_desc_ram_addr(cq_dma_write_desc_ram_addr),
+    .m_axis_dma_write_desc_len(cq_dma_write_desc_len),
+    .m_axis_dma_write_desc_tag(cq_dma_write_desc_tag),
+    .m_axis_dma_write_desc_valid(cq_dma_write_desc_valid),
+    .m_axis_dma_write_desc_ready(cq_dma_write_desc_ready),
+
+    /*
+     * DMA write descriptor status input
+     */
+    .s_axis_dma_write_desc_status_tag(cq_dma_write_desc_status_tag),
+    .s_axis_dma_write_desc_status_error(cq_dma_write_desc_status_error),
+    .s_axis_dma_write_desc_status_valid(cq_dma_write_desc_status_valid),
+
+    /*
+     * RAM interface
+     */
+    .dma_ram_rd_cmd_addr(cq_dma_ram_rd_cmd_addr),
+    .dma_ram_rd_cmd_valid(cq_dma_ram_rd_cmd_valid),
+    .dma_ram_rd_cmd_ready(cq_dma_ram_rd_cmd_ready),
+    .dma_ram_rd_resp_data(cq_dma_ram_rd_resp_data),
+    .dma_ram_rd_resp_valid(cq_dma_ram_rd_resp_valid),
+    .dma_ram_rd_resp_ready(cq_dma_ram_rd_resp_ready),
 
     /*
      * Configuration
@@ -1737,210 +2168,6 @@ desc_fetch_inst (
 );
 
 assign m_axis_ctrl_dma_read_desc_ram_sel = 0;
-
-cpl_op_mux #(
-    .PORTS(3),
-    .SELECT_WIDTH(1),
-    .QUEUE_INDEX_WIDTH(CQN_WIDTH),
-    .S_REQ_TAG_WIDTH(CPL_REQ_TAG_WIDTH_INT),
-    .M_REQ_TAG_WIDTH(CPL_REQ_TAG_WIDTH),
-    .CPL_SIZE(CPL_SIZE),
-    .ARB_TYPE_ROUND_ROBIN(1),
-    .ARB_LSB_HIGH_PRIORITY(1)
-)
-cpl_op_mux_inst (
-    .clk(clk),
-    .rst(rst),
-
-    /*
-     * Completion request output
-     */
-    .m_axis_req_sel(cpl_req_sel),
-    .m_axis_req_queue(cpl_req_queue),
-    .m_axis_req_tag(cpl_req_tag),
-    .m_axis_req_data(cpl_req_data),
-    .m_axis_req_valid(cpl_req_valid),
-    .m_axis_req_ready(cpl_req_ready),
-
-    /*
-     * Completion request status input
-     */
-    .s_axis_req_status_tag(cpl_req_status_tag),
-    .s_axis_req_status_full(cpl_req_status_full),
-    .s_axis_req_status_error(cpl_req_status_error),
-    .s_axis_req_status_valid(cpl_req_status_valid),
-
-    /*
-     * Completion request input
-     */
-    .s_axis_req_sel({event_cpl_req_sel, rx_cpl_req_sel, tx_cpl_req_sel}),
-    .s_axis_req_queue({event_cpl_req_queue, rx_cpl_req_queue, tx_cpl_req_queue}),
-    .s_axis_req_tag({event_cpl_req_tag, rx_cpl_req_tag, tx_cpl_req_tag}),
-    .s_axis_req_data({event_cpl_req_data, rx_cpl_req_data, tx_cpl_req_data}),
-    .s_axis_req_valid({event_cpl_req_valid, rx_cpl_req_valid, tx_cpl_req_valid}),
-    .s_axis_req_ready({event_cpl_req_ready, rx_cpl_req_ready, tx_cpl_req_ready}),
-
-    /*
-     * Completion response output
-     */
-    .m_axis_req_status_tag({event_cpl_req_status_tag, rx_cpl_req_status_tag, tx_cpl_req_status_tag}),
-    .m_axis_req_status_full({event_cpl_req_status_full, rx_cpl_req_status_full, tx_cpl_req_status_full}),
-    .m_axis_req_status_error({event_cpl_req_status_error, rx_cpl_req_status_error, tx_cpl_req_status_error}),
-    .m_axis_req_status_valid({event_cpl_req_status_valid, rx_cpl_req_status_valid, tx_cpl_req_status_valid})
-);
-
-cpl_write #(
-    .PORTS(2),
-    .SELECT_WIDTH(1),
-    .RAM_ADDR_WIDTH(RAM_ADDR_WIDTH),
-    .SEG_COUNT(RAM_SEG_COUNT),
-    .SEG_DATA_WIDTH(RAM_SEG_DATA_WIDTH),
-    .SEG_BE_WIDTH(RAM_SEG_BE_WIDTH),
-    .SEG_ADDR_WIDTH(RAM_SEG_ADDR_WIDTH),
-    .RAM_PIPELINE(RAM_PIPELINE),
-    .DMA_ADDR_WIDTH(DMA_ADDR_WIDTH),
-    .DMA_LEN_WIDTH(DMA_LEN_WIDTH),
-    .DMA_TAG_WIDTH(DMA_TAG_WIDTH),
-    .REQ_TAG_WIDTH(CPL_REQ_TAG_WIDTH),
-    .QUEUE_REQ_TAG_WIDTH(CPL_QUEUE_REQ_TAG_WIDTH),
-    .QUEUE_OP_TAG_WIDTH(QUEUE_OP_TAG_WIDTH),
-    .QUEUE_INDEX_WIDTH(CQN_WIDTH),
-    .CPL_SIZE(CPL_SIZE),
-    .DESC_TABLE_SIZE(32)
-)
-cpl_write_inst (
-    .clk(clk),
-    .rst(rst),
-
-    /*
-     * Completion read request input
-     */
-    .s_axis_req_sel(cpl_req_sel),
-    .s_axis_req_queue(cpl_req_queue),
-    .s_axis_req_tag(cpl_req_tag),
-    .s_axis_req_data(cpl_req_data),
-    .s_axis_req_valid(cpl_req_valid),
-    .s_axis_req_ready(cpl_req_ready),
-
-    /*
-     * Completion read request status output
-     */
-    .m_axis_req_status_tag(cpl_req_status_tag),
-    .m_axis_req_status_full(cpl_req_status_full),
-    .m_axis_req_status_error(cpl_req_status_error),
-    .m_axis_req_status_valid(cpl_req_status_valid),
-
-    /*
-     * Completion enqueue request output
-     */
-    .m_axis_cpl_enqueue_req_queue({event_enqueue_req_queue, cpl_enqueue_req_queue}),
-    .m_axis_cpl_enqueue_req_tag({event_enqueue_req_tag, cpl_enqueue_req_tag}),
-    .m_axis_cpl_enqueue_req_valid({event_enqueue_req_valid, cpl_enqueue_req_valid}),
-    .m_axis_cpl_enqueue_req_ready({event_enqueue_req_ready, cpl_enqueue_req_ready}),
-
-    /*
-     * Completion enqueue response input
-     */
-    .s_axis_cpl_enqueue_resp_phase({event_enqueue_resp_phase, cpl_enqueue_resp_phase}),
-    .s_axis_cpl_enqueue_resp_addr({event_enqueue_resp_addr, cpl_enqueue_resp_addr}),
-    .s_axis_cpl_enqueue_resp_tag({event_enqueue_resp_tag, cpl_enqueue_resp_tag}),
-    .s_axis_cpl_enqueue_resp_op_tag({event_enqueue_resp_op_tag, cpl_enqueue_resp_op_tag}),
-    .s_axis_cpl_enqueue_resp_full({event_enqueue_resp_full, cpl_enqueue_resp_full}),
-    .s_axis_cpl_enqueue_resp_error({event_enqueue_resp_error, cpl_enqueue_resp_error}),
-    .s_axis_cpl_enqueue_resp_valid({event_enqueue_resp_valid, cpl_enqueue_resp_valid}),
-    .s_axis_cpl_enqueue_resp_ready({event_enqueue_resp_ready, cpl_enqueue_resp_ready}),
-
-    /*
-     * Completion enqueue commit output
-     */
-    .m_axis_cpl_enqueue_commit_op_tag({event_enqueue_commit_op_tag, cpl_enqueue_commit_op_tag}),
-    .m_axis_cpl_enqueue_commit_valid({event_enqueue_commit_valid, cpl_enqueue_commit_valid}),
-    .m_axis_cpl_enqueue_commit_ready({event_enqueue_commit_ready, cpl_enqueue_commit_ready}),
-
-    /*
-     * DMA write descriptor output
-     */
-    .m_axis_dma_write_desc_dma_addr(m_axis_ctrl_dma_write_desc_dma_addr),
-    .m_axis_dma_write_desc_ram_addr(m_axis_ctrl_dma_write_desc_ram_addr),
-    .m_axis_dma_write_desc_len(m_axis_ctrl_dma_write_desc_len),
-    .m_axis_dma_write_desc_tag(m_axis_ctrl_dma_write_desc_tag),
-    .m_axis_dma_write_desc_valid(m_axis_ctrl_dma_write_desc_valid),
-    .m_axis_dma_write_desc_ready(m_axis_ctrl_dma_write_desc_ready),
-
-    /*
-     * DMA write descriptor status input
-     */
-    .s_axis_dma_write_desc_status_tag(s_axis_ctrl_dma_write_desc_status_tag),
-    .s_axis_dma_write_desc_status_error(s_axis_ctrl_dma_write_desc_status_error),
-    .s_axis_dma_write_desc_status_valid(s_axis_ctrl_dma_write_desc_status_valid),
-
-    /*
-     * RAM interface
-     */
-    .dma_ram_rd_cmd_addr(ctrl_dma_ram_rd_cmd_addr),
-    .dma_ram_rd_cmd_valid(ctrl_dma_ram_rd_cmd_valid),
-    .dma_ram_rd_cmd_ready(ctrl_dma_ram_rd_cmd_ready),
-    .dma_ram_rd_resp_data(ctrl_dma_ram_rd_resp_data),
-    .dma_ram_rd_resp_valid(ctrl_dma_ram_rd_resp_valid),
-    .dma_ram_rd_resp_ready(ctrl_dma_ram_rd_resp_ready),
-
-    /*
-     * Configuration
-     */
-    .enable(1'b1)
-);
-
-assign m_axis_ctrl_dma_write_desc_ram_sel = 0;
-assign m_axis_ctrl_dma_write_desc_imm = 0;
-assign m_axis_ctrl_dma_write_desc_imm_en = 0;
-
-assign event_cpl_req_queue = fifo_event_queue;
-assign event_cpl_req_tag = 0;
-assign event_cpl_req_data[15:0] = 0;
-assign event_cpl_req_data[31:16] = fifo_event_source;
-assign event_cpl_req_data[255:32] = 0;
-assign event_cpl_req_valid = fifo_event_valid;
-assign fifo_event_ready = event_cpl_req_ready;
-
-axis_fifo #(
-    .DEPTH(1024),
-    .DATA_WIDTH(EVENT_SOURCE_WIDTH+EQN_WIDTH),
-    .KEEP_ENABLE(0),
-    .LAST_ENABLE(0),
-    .ID_ENABLE(0),
-    .DEST_ENABLE(0),
-    .USER_ENABLE(0),
-    .FRAME_FIFO(0)
-)
-event_fifo (
-    .clk(clk),
-    .rst(rst),
-
-    // AXI input
-    .s_axis_tdata({event_source, event_queue}),
-    .s_axis_tkeep(0),
-    .s_axis_tvalid(event_valid),
-    .s_axis_tready(event_ready),
-    .s_axis_tlast(0),
-    .s_axis_tid(0),
-    .s_axis_tdest(0),
-    .s_axis_tuser(0),
-
-    // AXI output
-    .m_axis_tdata({fifo_event_source, fifo_event_queue}),
-    .m_axis_tkeep(),
-    .m_axis_tvalid(fifo_event_valid),
-    .m_axis_tready(fifo_event_ready),
-    .m_axis_tlast(),
-    .m_axis_tid(),
-    .m_axis_tdest(),
-    .m_axis_tuser(),
-
-    // Status
-    .status_overflow(),
-    .status_bad_frame(),
-    .status_good_frame()
-);
 
 // TX
 

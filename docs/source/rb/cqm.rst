@@ -1,19 +1,19 @@
-.. _rb_cqm_rx:
+.. _rb_cqm:
 
-================================================
-Receive completion queue manager register block
-================================================
+=======================================
+Completion queue manager register block
+=======================================
 
-The receive completion queue manager register block has a header with type 0x0000C031, version 0x00000300, and indicates the location of the receive completion queue manager registers and number of completion queues.
+The completion queue manager register block has a header with type 0x0000C020, version 0x00000400, and indicates the location of the completion queue manager registers and number of completion queues.
 
 .. table::
 
     ========  =============  ======  ======  ======  ======  =============
     Address   Field          31..24  23..16  15..8   7..0    Reset value
     ========  =============  ======  ======  ======  ======  =============
-    RBB+0x00  Type           Vendor ID       Type            RO 0x0000C031
+    RBB+0x00  Type           Vendor ID       Type            RO 0x0000C020
     --------  -------------  --------------  --------------  -------------
-    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000300
+    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000400
     --------  -------------  ------  ------  ------  ------  -------------
     RBB+0x08  Next pointer   Pointer to next register block  RO -
     --------  -------------  ------------------------------  -------------
@@ -28,7 +28,7 @@ See :ref:`rb_overview` for definitions of the standard register block header fie
 
 .. object:: Offset
 
-    The offset field contains the offset to the start of the receive completion queue manager region, relative to the start of the current region.
+    The offset field contains the offset to the start of the completion queue manager region, relative to the start of the current region.
 
     .. table::
 

@@ -283,7 +283,6 @@ struct mqnic_cq {
 	struct mqnic_if *interface;
 	struct napi_struct napi;
 	int cqn;
-	int is_txcq;
 	struct mqnic_eq *eq;
 	struct mqnic_ring *src_ring;
 	int enabled;
@@ -372,10 +371,9 @@ struct mqnic_if {
 	struct mqnic_reg_block *rb_list;
 	struct mqnic_reg_block *if_ctrl_rb;
 	struct mqnic_reg_block *eq_rb;
+	struct mqnic_reg_block *cq_rb;
 	struct mqnic_reg_block *txq_rb;
-	struct mqnic_reg_block *tx_cq_rb;
 	struct mqnic_reg_block *rxq_rb;
-	struct mqnic_reg_block *rx_cq_rb;
 	struct mqnic_reg_block *rx_queue_map_rb;
 
 	int index;
@@ -390,10 +388,9 @@ struct mqnic_if {
 	u32 max_rx_mtu;
 
 	struct mqnic_res *eq_res;
+	struct mqnic_res *cq_res;
 	struct mqnic_res *txq_res;
-	struct mqnic_res *tx_cq_res;
 	struct mqnic_res *rxq_res;
-	struct mqnic_res *rx_cq_res;
 
 	u32 eq_count;
 	struct mqnic_eq *eq[MQNIC_MAX_EQ];
@@ -575,7 +572,7 @@ void mqnic_process_eq(struct mqnic_eq *eq);
 // mqnic_cq.c
 struct mqnic_cq *mqnic_create_cq(struct mqnic_if *interface);
 void mqnic_destroy_cq(struct mqnic_cq *cq);
-int mqnic_open_cq(struct mqnic_cq *cq, struct mqnic_eq *eq, int size, int is_txcq);
+int mqnic_open_cq(struct mqnic_cq *cq, struct mqnic_eq *eq, int size);
 void mqnic_close_cq(struct mqnic_cq *cq);
 void mqnic_cq_read_prod_ptr(struct mqnic_cq *cq);
 void mqnic_cq_write_cons_ptr(struct mqnic_cq *cq);

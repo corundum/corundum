@@ -36,7 +36,7 @@ int mqnic_start_port(struct net_device *ndev)
 			goto fail;
 		}
 
-		ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], priv->rx_ring_size, 0);
+		ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], priv->rx_ring_size);
 		if (ret) {
 			mqnic_destroy_cq(cq);
 			goto fail;
@@ -91,7 +91,7 @@ int mqnic_start_port(struct net_device *ndev)
 			goto fail;
 		}
 
-		ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], priv->tx_ring_size, 1);
+		ret = mqnic_open_cq(cq, iface->eq[k % iface->eq_count], priv->tx_ring_size);
 		if (ret) {
 			mqnic_destroy_cq(cq);
 			goto fail;

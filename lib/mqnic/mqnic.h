@@ -77,10 +77,9 @@ struct mqnic_if {
     struct mqnic_reg_block *rb_list;
     struct mqnic_reg_block *if_ctrl_rb;
     struct mqnic_reg_block *eq_rb;
+    struct mqnic_reg_block *cq_rb;
     struct mqnic_reg_block *txq_rb;
-    struct mqnic_reg_block *tx_cq_rb;
     struct mqnic_reg_block *rxq_rb;
-    struct mqnic_reg_block *rx_cq_rb;
     struct mqnic_reg_block *rx_queue_map_rb;
 
     uint32_t if_features;
@@ -92,10 +91,9 @@ struct mqnic_if {
     volatile uint8_t *rx_queue_map_indir_table[MQNIC_MAX_PORTS];
 
     struct mqnic_res *eq_res;
+    struct mqnic_res *cq_res;
     struct mqnic_res *txq_res;
-    struct mqnic_res *tx_cq_res;
     struct mqnic_res *rxq_res;
-    struct mqnic_res *rx_cq_res;
 
     uint32_t port_count;
     struct mqnic_port *ports[MQNIC_MAX_PORTS];

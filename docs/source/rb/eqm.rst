@@ -1,4 +1,4 @@
-.. _rb_cqm_event:
+.. _rb_eqm:
 
 ==================================
 Event queue manager register block
@@ -13,7 +13,7 @@ The event queue manager register block has a header with type 0x0000C010, versio
     ========  =============  ======  ======  ======  ======  =============
     RBB+0x00  Type           Vendor ID       Type            RO 0x0000C010
     --------  -------------  --------------  --------------  -------------
-    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000300
+    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000400
     --------  -------------  ------  ------  ------  ------  -------------
     RBB+0x08  Next pointer   Pointer to next register block  RO -
     --------  -------------  ------------------------------  -------------

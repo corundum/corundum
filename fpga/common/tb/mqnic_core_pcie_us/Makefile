@@ -35,7 +35,6 @@ VERILOG_SOURCES += ../../rtl/cpl_write.v
 VERILOG_SOURCES += ../../rtl/cpl_op_mux.v
 VERILOG_SOURCES += ../../rtl/desc_fetch.v
 VERILOG_SOURCES += ../../rtl/desc_op_mux.v
-VERILOG_SOURCES += ../../rtl/event_mux.v
 VERILOG_SOURCES += ../../rtl/queue_manager.v
 VERILOG_SOURCES += ../../rtl/cpl_queue_manager.v
 VERILOG_SOURCES += ../../rtl/tx_fifo.v
@@ -132,18 +131,15 @@ export PARAM_PTP_PEROUT_COUNT := 1
 export PARAM_EVENT_QUEUE_OP_TABLE_SIZE := 32
 export PARAM_TX_QUEUE_OP_TABLE_SIZE := 32
 export PARAM_RX_QUEUE_OP_TABLE_SIZE := 32
-export PARAM_TX_CPL_QUEUE_OP_TABLE_SIZE := $(PARAM_TX_QUEUE_OP_TABLE_SIZE)
-export PARAM_RX_CPL_QUEUE_OP_TABLE_SIZE := $(PARAM_RX_QUEUE_OP_TABLE_SIZE)
-export PARAM_EVENT_QUEUE_INDEX_WIDTH := 6
+export PARAM_CQ_OP_TABLE_SIZE := 32
+export PARAM_EQN_WIDTH := 6
 export PARAM_TX_QUEUE_INDEX_WIDTH := 13
 export PARAM_RX_QUEUE_INDEX_WIDTH := 8
-export PARAM_TX_CPL_QUEUE_INDEX_WIDTH := $(PARAM_TX_QUEUE_INDEX_WIDTH)
-export PARAM_RX_CPL_QUEUE_INDEX_WIDTH := $(PARAM_RX_QUEUE_INDEX_WIDTH)
-export PARAM_EVENT_QUEUE_PIPELINE := 3
+export PARAM_CQN_WIDTH := $(shell python -c "print(max($(PARAM_TX_QUEUE_INDEX_WIDTH), $(PARAM_RX_QUEUE_INDEX_WIDTH)) + 1)")
+export PARAM_EQ_PIPELINE := 3
 export PARAM_TX_QUEUE_PIPELINE := $(shell python -c "print(3 + max($(PARAM_TX_QUEUE_INDEX_WIDTH)-12, 0))")
 export PARAM_RX_QUEUE_PIPELINE := $(shell python -c "print(3 + max($(PARAM_RX_QUEUE_INDEX_WIDTH)-12, 0))")
-export PARAM_TX_CPL_QUEUE_PIPELINE := $(PARAM_TX_QUEUE_PIPELINE)
-export PARAM_RX_CPL_QUEUE_PIPELINE := $(PARAM_RX_QUEUE_PIPELINE)
+export PARAM_CQ_PIPELINE := $(shell python -c "print(3 + max($(PARAM_CQN_WIDTH)-12, 0))")
 
 # TX and RX engine configuration
 export PARAM_TX_DESC_TABLE_SIZE := 32
@@ -210,7 +206,7 @@ export PARAM_PF_COUNT := 1
 export PARAM_VF_COUNT := 0
 
 # Interrupt configuration
-export PARAM_IRQ_INDEX_WIDTH := $(PARAM_EVENT_QUEUE_INDEX_WIDTH)
+export PARAM_IRQ_INDEX_WIDTH := $(PARAM_EQN_WIDTH)
 
 # AXI lite interface configuration (control)
 export PARAM_AXIL_CTRL_DATA_WIDTH := 32

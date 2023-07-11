@@ -148,12 +148,9 @@ void mqnic_close_eq(struct mqnic_eq *eq)
 int mqnic_eq_attach_cq(struct mqnic_eq *eq, struct mqnic_cq *cq)
 {
 	int ret;
-	int cqn = cq->cqn;
-	if (cq->is_txcq)
-		cqn |= 0x80000000;
 
 	spin_lock_irq(&eq->table_lock);
-	ret = radix_tree_insert(&eq->cq_table, cqn, cq);
+	ret = radix_tree_insert(&eq->cq_table, cq->cqn, cq);
 	spin_unlock_irq(&eq->table_lock);
 	return ret;
 }
@@ -161,12 +158,9 @@ int mqnic_eq_attach_cq(struct mqnic_eq *eq, struct mqnic_cq *cq)
 void mqnic_eq_detach_cq(struct mqnic_eq *eq, struct mqnic_cq *cq)
 {
 	struct mqnic_cq *item;
-	int cqn = cq->cqn;
-	if (cq->is_txcq)
-		cqn |= 0x80000000;
 
 	spin_lock_irq(&eq->table_lock);
-	item = radix_tree_delete(&eq->cq_table, cqn);
+	item = radix_tree_delete(&eq->cq_table, cq->cqn);
 	spin_unlock_irq(&eq->table_lock);
 
 	if (IS_ERR(item)) {
@@ -174,10 +168,10 @@ void mqnic_eq_detach_cq(struct mqnic_eq *eq, struct mqnic_cq *cq)
 				__func__, eq->interface->index, eq->eqn, PTR_ERR(item));
 	} else if (!item) {
 		dev_err(eq->dev, "%s on IF %d EQ %d: CQ %d not in table",
-				__func__, eq->interface->index, eq->eqn, cqn);
+				__func__, eq->interface->index, eq->eqn, cq->cqn);
 	} else if (item != cq) {
 		dev_err(eq->dev, "%s on IF %d EQ %d: entry mismatch when removing CQ %d",
-				__func__, eq->interface->index, eq->eqn, cqn);
+				__func__, eq->interface->index, eq->eqn, cq->cqn);
 	}
 }
 
@@ -208,7 +202,6 @@ void mqnic_process_eq(struct mqnic_eq *eq)
 	u32 eq_index;
 	u32 eq_cons_ptr;
 	int done = 0;
-	int cqn;
 
 	eq_cons_ptr = eq->cons_ptr;
 	eq_index = eq_cons_ptr & eq->size_mask;
@@ -221,30 +214,10 @@ void mqnic_process_eq(struct mqnic_eq *eq)
 
 		dma_rmb();
 
-		if (event->type == MQNIC_EVENT_TYPE_TX_CPL) {
-			// transmit completion event
-			cqn = le16_to_cpu(event->source) | 0x80000000;
-
+		if (event->type == MQNIC_EVENT_TYPE_CPL) {
+			// completion event
 			rcu_read_lock();
-			cq = radix_tree_lookup(&eq->cq_table, cqn);
-			rcu_read_unlock();
-
-			if (likely(cq)) {
-				if (likely(cq->handler))
-					cq->handler(cq);
-			} else {
-				dev_err(eq->dev, "%s on IF %d EQ %d: unknown event source %d (index %d, type %d)",
-						__func__, interface->index, eq->eqn, le16_to_cpu(event->source),
-						eq_index, le16_to_cpu(event->type));
-				print_hex_dump(KERN_ERR, "", DUMP_PREFIX_NONE, 16, 1,
-						event, MQNIC_EVENT_SIZE, true);
-			}
-		} else if (le16_to_cpu(event->type) == MQNIC_EVENT_TYPE_RX_CPL) {
-			// receive completion event
-			cqn = le16_to_cpu(event->source);
-
-			rcu_read_lock();
-			cq = radix_tree_lookup(&eq->cq_table, cqn);
+			cq = radix_tree_lookup(&eq->cq_table, le16_to_cpu(event->source));
 			rcu_read_unlock();
 
 			if (likely(cq)) {

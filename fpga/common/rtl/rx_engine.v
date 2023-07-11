@@ -39,7 +39,7 @@ module rx_engine #
     // Queue element pointer width
     parameter QUEUE_PTR_WIDTH = 16,
     // Completion queue index width
-    parameter CPL_QUEUE_INDEX_WIDTH = 4,
+    parameter CQN_WIDTH = QUEUE_INDEX_WIDTH,
     // Descriptor table size (number of in-flight operations)
     parameter DESC_TABLE_SIZE = 8,
     // Width of descriptor table field for tracking outstanding DMA operations
@@ -166,7 +166,7 @@ module rx_engine #
      */
     input  wire [QUEUE_INDEX_WIDTH-1:0]     s_axis_desc_req_status_queue,
     input  wire [QUEUE_PTR_WIDTH-1:0]       s_axis_desc_req_status_ptr,
-    input  wire [CPL_QUEUE_INDEX_WIDTH-1:0] s_axis_desc_req_status_cpl,
+    input  wire [CQN_WIDTH-1:0]             s_axis_desc_req_status_cpl,
     input  wire [DESC_REQ_TAG_WIDTH-1:0]    s_axis_desc_req_status_tag,
     input  wire                             s_axis_desc_req_status_empty,
     input  wire                             s_axis_desc_req_status_error,
@@ -186,7 +186,7 @@ module rx_engine #
     /*
      * Completion request output
      */
-    output wire [CPL_QUEUE_INDEX_WIDTH-1:0] m_axis_cpl_req_queue,
+    output wire [CQN_WIDTH-1:0]             m_axis_cpl_req_queue,
     output wire [CPL_REQ_TAG_WIDTH-1:0]     m_axis_cpl_req_tag,
     output wire [CPL_SIZE*8-1:0]            m_axis_cpl_req_data,
     output wire                             m_axis_cpl_req_valid,
@@ -310,7 +310,7 @@ reg m_axis_desc_req_valid_reg = 1'b0, m_axis_desc_req_valid_next;
 
 reg s_axis_desc_tready_reg = 1'b0, s_axis_desc_tready_next;
 
-reg [CPL_QUEUE_INDEX_WIDTH-1:0] m_axis_cpl_req_queue_reg = {CPL_QUEUE_INDEX_WIDTH{1'b0}}, m_axis_cpl_req_queue_next;
+reg [CQN_WIDTH-1:0] m_axis_cpl_req_queue_reg = {CQN_WIDTH{1'b0}}, m_axis_cpl_req_queue_next;
 reg [CPL_REQ_TAG_WIDTH-1:0] m_axis_cpl_req_tag_reg = {CPL_REQ_TAG_WIDTH{1'b0}}, m_axis_cpl_req_tag_next;
 reg [CPL_SIZE*8-1:0] m_axis_cpl_req_data_reg = {CPL_SIZE*8{1'b0}}, m_axis_cpl_req_data_next;
 reg m_axis_cpl_req_valid_reg = 1'b0, m_axis_cpl_req_valid_next;
@@ -351,7 +351,7 @@ reg [QUEUE_INDEX_WIDTH-1:0] desc_table_queue[DESC_TABLE_SIZE-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [QUEUE_PTR_WIDTH-1:0] desc_table_queue_ptr[DESC_TABLE_SIZE-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
-reg [CPL_QUEUE_INDEX_WIDTH-1:0] desc_table_cpl_queue[DESC_TABLE_SIZE-1:0];
+reg [CQN_WIDTH-1:0] desc_table_cpl_queue[DESC_TABLE_SIZE-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
 reg [DMA_CLIENT_LEN_WIDTH-1:0] desc_table_dma_len[DESC_TABLE_SIZE-1:0];
 (* ram_style = "distributed", ramstyle = "no_rw_check, mlab" *)
@@ -393,7 +393,7 @@ reg [CL_DESC_TABLE_SIZE+1-1:0] desc_table_dequeue_start_ptr_reg = 0;
 reg desc_table_dequeue_start_en;
 reg [CL_DESC_TABLE_SIZE-1:0] desc_table_dequeue_ptr;
 reg [QUEUE_PTR_WIDTH-1:0] desc_table_dequeue_queue_ptr;
-reg [CPL_QUEUE_INDEX_WIDTH-1:0] desc_table_dequeue_cpl_queue;
+reg [CQN_WIDTH-1:0] desc_table_dequeue_cpl_queue;
 reg desc_table_dequeue_invalid;
 reg desc_table_dequeue_en;
 reg [CL_DESC_TABLE_SIZE-1:0] desc_table_desc_fetched_ptr;

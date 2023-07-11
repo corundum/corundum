@@ -377,7 +377,6 @@ def test_fpga_core(request):
         os.path.join(rtl_dir, "common", "cpl_op_mux.v"),
         os.path.join(rtl_dir, "common", "desc_fetch.v"),
         os.path.join(rtl_dir, "common", "desc_op_mux.v"),
-        os.path.join(rtl_dir, "common", "event_mux.v"),
         os.path.join(rtl_dir, "common", "queue_manager.v"),
         os.path.join(rtl_dir, "common", "cpl_queue_manager.v"),
         os.path.join(rtl_dir, "common", "tx_fifo.v"),
@@ -468,18 +467,15 @@ def test_fpga_core(request):
     parameters['EVENT_QUEUE_OP_TABLE_SIZE'] = 32
     parameters['TX_QUEUE_OP_TABLE_SIZE'] = 32
     parameters['RX_QUEUE_OP_TABLE_SIZE'] = 32
-    parameters['TX_CPL_QUEUE_OP_TABLE_SIZE'] = parameters['TX_QUEUE_OP_TABLE_SIZE']
-    parameters['RX_CPL_QUEUE_OP_TABLE_SIZE'] = parameters['RX_QUEUE_OP_TABLE_SIZE']
-    parameters['EVENT_QUEUE_INDEX_WIDTH'] = 2
+    parameters['CQ_OP_TABLE_SIZE'] = 32
+    parameters['EQN_WIDTH'] = 2
     parameters['TX_QUEUE_INDEX_WIDTH'] = 5
     parameters['RX_QUEUE_INDEX_WIDTH'] = 5
-    parameters['TX_CPL_QUEUE_INDEX_WIDTH'] = parameters['TX_QUEUE_INDEX_WIDTH']
-    parameters['RX_CPL_QUEUE_INDEX_WIDTH'] = parameters['RX_QUEUE_INDEX_WIDTH']
-    parameters['EVENT_QUEUE_PIPELINE'] = 3
+    parameters['CQN_WIDTH'] = max(parameters['TX_QUEUE_INDEX_WIDTH'], parameters['RX_QUEUE_INDEX_WIDTH']) + 1
+    parameters['EQ_PIPELINE'] = 3
     parameters['TX_QUEUE_PIPELINE'] = 3 + max(parameters['TX_QUEUE_INDEX_WIDTH']-12, 0)
     parameters['RX_QUEUE_PIPELINE'] = 3 + max(parameters['RX_QUEUE_INDEX_WIDTH']-12, 0)
-    parameters['TX_CPL_QUEUE_PIPELINE'] = parameters['TX_QUEUE_PIPELINE']
-    parameters['RX_CPL_QUEUE_PIPELINE'] = parameters['RX_QUEUE_PIPELINE']
+    parameters['CQ_PIPELINE'] = 3 + max(parameters['CQN_WIDTH']-12, 0)
 
     # TX and RX engine configuration
     parameters['TX_DESC_TABLE_SIZE'] = 32

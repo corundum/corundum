@@ -78,18 +78,15 @@ dict set params PTP_PEROUT_COUNT "1"
 dict set params EVENT_QUEUE_OP_TABLE_SIZE "32"
 dict set params TX_QUEUE_OP_TABLE_SIZE "32"
 dict set params RX_QUEUE_OP_TABLE_SIZE "32"
-dict set params TX_CPL_QUEUE_OP_TABLE_SIZE [dict get $params TX_QUEUE_OP_TABLE_SIZE]
-dict set params RX_CPL_QUEUE_OP_TABLE_SIZE [dict get $params RX_QUEUE_OP_TABLE_SIZE]
-dict set params EVENT_QUEUE_INDEX_WIDTH "5"
+dict set params CQ_OP_TABLE_SIZE "32"
+dict set params EQN_WIDTH "5"
 dict set params TX_QUEUE_INDEX_WIDTH "8"
 dict set params RX_QUEUE_INDEX_WIDTH "8"
-dict set params TX_CPL_QUEUE_INDEX_WIDTH [dict get $params TX_QUEUE_INDEX_WIDTH]
-dict set params RX_CPL_QUEUE_INDEX_WIDTH [dict get $params RX_QUEUE_INDEX_WIDTH]
-dict set params EVENT_QUEUE_PIPELINE "3"
-dict set params TX_QUEUE_PIPELINE [expr 3+([dict get $params TX_QUEUE_INDEX_WIDTH] > 12 ? [dict get $params TX_QUEUE_INDEX_WIDTH]-12 : 0)]
-dict set params RX_QUEUE_PIPELINE [expr 3+([dict get $params RX_QUEUE_INDEX_WIDTH] > 12 ? [dict get $params RX_QUEUE_INDEX_WIDTH]-12 : 0)]
-dict set params TX_CPL_QUEUE_PIPELINE [dict get $params TX_QUEUE_PIPELINE]
-dict set params RX_CPL_QUEUE_PIPELINE [dict get $params RX_QUEUE_PIPELINE]
+dict set params CQN_WIDTH [expr max([dict get $params TX_QUEUE_INDEX_WIDTH], [dict get $params RX_QUEUE_INDEX_WIDTH]) + 1]
+dict set params EQ_PIPELINE "3"
+dict set params TX_QUEUE_PIPELINE [expr 3 + max([dict get $params TX_QUEUE_INDEX_WIDTH] - 12, 0)]
+dict set params RX_QUEUE_PIPELINE [expr 3 + max([dict get $params RX_QUEUE_INDEX_WIDTH] - 12, 0)]
+dict set params CQ_PIPELINE [expr 3 + max([dict get $params CQN_WIDTH] - 12, 0)]
 
 # TX and RX engine configuration
 dict set params TX_DESC_TABLE_SIZE "32"
@@ -131,7 +128,7 @@ dict set params RAM_ADDR_WIDTH [expr int(ceil(log(max([dict get $params TX_RAM_S
 dict set params RAM_PIPELINE "2"
 
 # Interrupt configuration
-dict set params IRQ_INDEX_WIDTH [dict get $params EVENT_QUEUE_INDEX_WIDTH]
+dict set params IRQ_INDEX_WIDTH [dict get $params EQN_WIDTH]
 
 # AXI lite interface configuration (control)
 dict set params AXIL_CTRL_DATA_WIDTH "32"

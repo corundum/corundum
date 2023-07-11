@@ -71,11 +71,10 @@ The NIC register space is constructed from a linked list of register blocks.  Ea
     0x0000C006  0x00000100  stats
     0x0000C007  0x00000100  IRQ config
     0x0000C008  0x00000100  :ref:`rb_clk_info`
-    0x0000C010  0x00000200  :ref:`rb_cqm_event`
-    0x0000C020  0x00000200  :ref:`rb_qm_tx`
-    0x0000C021  0x00000200  :ref:`rb_qm_rx`
-    0x0000C030  0x00000200  :ref:`rb_cqm_tx`
-    0x0000C031  0x00000200  :ref:`rb_cqm_rx`
+    0x0000C010  0x00000400  :ref:`rb_eqm`
+    0x0000C020  0x00000400  :ref:`rb_cqm`
+    0x0000C030  0x00000400  :ref:`rb_qm_tx`
+    0x0000C031  0x00000400  :ref:`rb_qm_rx`
     0x0000C040  0x00000100  :ref:`rb_sched_rr`
     0x0000C050  0x00000100  :ref:`rb_sched_ctrl_tdma`
     0x0000C060  0x00000100  :ref:`rb_tdma_sch`

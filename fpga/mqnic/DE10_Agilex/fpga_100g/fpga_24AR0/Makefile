@@ -36,7 +36,6 @@ SYN_FILES += rtl/common/cpl_write.v
 SYN_FILES += rtl/common/cpl_op_mux.v
 SYN_FILES += rtl/common/desc_fetch.v
 SYN_FILES += rtl/common/desc_op_mux.v
-SYN_FILES += rtl/common/event_mux.v
 SYN_FILES += rtl/common/queue_manager.v
 SYN_FILES += rtl/common/cpl_queue_manager.v
 SYN_FILES += rtl/common/tx_fifo.v

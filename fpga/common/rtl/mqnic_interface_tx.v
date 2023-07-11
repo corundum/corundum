@@ -23,8 +23,7 @@ module mqnic_interface_tx #
     // Queue manager configuration
     parameter TX_QUEUE_INDEX_WIDTH = 13,
     parameter QUEUE_INDEX_WIDTH = TX_QUEUE_INDEX_WIDTH,
-    parameter TX_CPL_QUEUE_INDEX_WIDTH = TX_QUEUE_INDEX_WIDTH,
-    parameter CPL_QUEUE_INDEX_WIDTH = TX_CPL_QUEUE_INDEX_WIDTH,
+    parameter CQN_WIDTH = TX_QUEUE_INDEX_WIDTH,
     parameter QUEUE_PTR_WIDTH = 16,
     parameter LOG_QUEUE_SIZE_WIDTH = 4,
     parameter LOG_BLOCK_SIZE_WIDTH = 2,
@@ -102,7 +101,7 @@ module mqnic_interface_tx #
      */
     input  wire [QUEUE_INDEX_WIDTH-1:0]                 s_axis_desc_req_status_queue,
     input  wire [QUEUE_PTR_WIDTH-1:0]                   s_axis_desc_req_status_ptr,
-    input  wire [CPL_QUEUE_INDEX_WIDTH-1:0]             s_axis_desc_req_status_cpl,
+    input  wire [CQN_WIDTH-1:0]                         s_axis_desc_req_status_cpl,
     input  wire [DESC_REQ_TAG_WIDTH-1:0]                s_axis_desc_req_status_tag,
     input  wire                                         s_axis_desc_req_status_empty,
     input  wire                                         s_axis_desc_req_status_error,
@@ -122,7 +121,7 @@ module mqnic_interface_tx #
     /*
      * Completion request output
      */
-    output wire [QUEUE_INDEX_WIDTH-1:0]                 m_axis_cpl_req_queue,
+    output wire [CQN_WIDTH-1:0]                         m_axis_cpl_req_queue,
     output wire [CPL_REQ_TAG_WIDTH-1:0]                 m_axis_cpl_req_tag,
     output wire [CPL_SIZE*8-1:0]                        m_axis_cpl_req_data,
     output wire                                         m_axis_cpl_req_valid,
@@ -273,7 +272,7 @@ tx_engine #(
     .DMA_CLIENT_TAG_WIDTH(DMA_CLIENT_TAG_WIDTH),
     .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
     .QUEUE_PTR_WIDTH(QUEUE_PTR_WIDTH),
-    .CPL_QUEUE_INDEX_WIDTH(TX_CPL_QUEUE_INDEX_WIDTH),
+    .CQN_WIDTH(CQN_WIDTH),
     .DESC_TABLE_SIZE(TX_DESC_TABLE_SIZE),
     .DESC_TABLE_DMA_OP_COUNT_WIDTH(DESC_TABLE_DMA_OP_COUNT_WIDTH),
     .MAX_TX_SIZE(MAX_TX_SIZE),

@@ -155,10 +155,9 @@ int main(int argc, char *argv[])
     printf("RX MTU: %d\n", mqnic_reg_read32(dev_interface->if_ctrl_rb->regs, MQNIC_RB_IF_CTRL_REG_RX_MTU));
 
     printf("EQ count: %d\n", mqnic_res_get_count(dev_interface->eq_res));
+    printf("CQ count: %d\n", mqnic_res_get_count(dev_interface->cq_res));
     printf("TXQ count: %d\n", mqnic_res_get_count(dev_interface->txq_res));
-    printf("TX CQ count: %d\n", mqnic_res_get_count(dev_interface->tx_cq_res));
     printf("RXQ count: %d\n", mqnic_res_get_count(dev_interface->rxq_res));
-    printf("RX CQ count: %d\n", mqnic_res_get_count(dev_interface->rx_cq_res));
 
     if (port < 0 || port >= dev_interface->port_count)
     {

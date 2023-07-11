@@ -34,20 +34,14 @@ void mqnic_destroy_cq(struct mqnic_cq *cq)
 	kfree(cq);
 }
 
-int mqnic_open_cq(struct mqnic_cq *cq, struct mqnic_eq *eq, int size, int is_txcq)
+int mqnic_open_cq(struct mqnic_cq *cq, struct mqnic_eq *eq, int size)
 {
 	int ret;
 
 	if (cq->enabled || cq->hw_addr || cq->buf || !eq)
 		return -EINVAL;
 
-	cq->is_txcq = is_txcq;
-
-	if (is_txcq) {
-		cq->cqn = mqnic_res_alloc(cq->interface->tx_cq_res);
-	} else {
-		cq->cqn = mqnic_res_alloc(cq->interface->rx_cq_res);
-	}
+	cq->cqn = mqnic_res_alloc(cq->interface->cq_res);
 	if (cq->cqn < 0)
 		return -ENOMEM;
 
@@ -64,10 +58,7 @@ int mqnic_open_cq(struct mqnic_cq *cq, struct mqnic_eq *eq, int size, int is_txc
 
 	cq->eq = eq;
 	mqnic_eq_attach_cq(eq, cq);
-	if (is_txcq)
-		cq->hw_addr = mqnic_res_get_addr(cq->interface->tx_cq_res, cq->cqn);
-	else
-		cq->hw_addr = mqnic_res_get_addr(cq->interface->rx_cq_res, cq->cqn);
+	cq->hw_addr = mqnic_res_get_addr(cq->interface->cq_res, cq->cqn);
 
 	cq->prod_ptr = 0;
 	cq->cons_ptr = 0;
@@ -124,11 +115,7 @@ void mqnic_close_cq(struct mqnic_cq *cq)
 		cq->buf_dma_addr = 0;
 	}
 
-	if (cq->is_txcq) {
-		mqnic_res_free(cq->interface->tx_cq_res, cq->cqn);
-	} else {
-		mqnic_res_free(cq->interface->rx_cq_res, cq->cqn);
-	}
+	mqnic_res_free(cq->interface->cq_res, cq->cqn);
 	cq->cqn = -1;
 
 	cq->enabled = 0;

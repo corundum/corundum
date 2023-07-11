@@ -746,7 +746,6 @@ def test_mqnic_core_pcie_ptile(request, if_count, ports_per_if, pcie_data_width,
         os.path.join(rtl_dir, "cpl_op_mux.v"),
         os.path.join(rtl_dir, "desc_fetch.v"),
         os.path.join(rtl_dir, "desc_op_mux.v"),
-        os.path.join(rtl_dir, "event_mux.v"),
         os.path.join(rtl_dir, "queue_manager.v"),
         os.path.join(rtl_dir, "cpl_queue_manager.v"),
         os.path.join(rtl_dir, "tx_fifo.v"),
@@ -845,18 +844,15 @@ def test_mqnic_core_pcie_ptile(request, if_count, ports_per_if, pcie_data_width,
     parameters['EVENT_QUEUE_OP_TABLE_SIZE'] = 32
     parameters['TX_QUEUE_OP_TABLE_SIZE'] = 32
     parameters['RX_QUEUE_OP_TABLE_SIZE'] = 32
-    parameters['TX_CPL_QUEUE_OP_TABLE_SIZE'] = parameters['TX_QUEUE_OP_TABLE_SIZE']
-    parameters['RX_CPL_QUEUE_OP_TABLE_SIZE'] = parameters['RX_QUEUE_OP_TABLE_SIZE']
-    parameters['EVENT_QUEUE_INDEX_WIDTH'] = 6
+    parameters['CQ_OP_TABLE_SIZE'] = 32
+    parameters['EQN_WIDTH'] = 6
     parameters['TX_QUEUE_INDEX_WIDTH'] = 13
     parameters['RX_QUEUE_INDEX_WIDTH'] = 8
-    parameters['TX_CPL_QUEUE_INDEX_WIDTH'] = parameters['TX_QUEUE_INDEX_WIDTH']
-    parameters['RX_CPL_QUEUE_INDEX_WIDTH'] = parameters['RX_QUEUE_INDEX_WIDTH']
-    parameters['EVENT_QUEUE_PIPELINE'] = 3
+    parameters['CQN_WIDTH'] = max(parameters['TX_QUEUE_INDEX_WIDTH'], parameters['RX_QUEUE_INDEX_WIDTH']) + 1
+    parameters['EQ_PIPELINE'] = 3
     parameters['TX_QUEUE_PIPELINE'] = 3 + max(parameters['TX_QUEUE_INDEX_WIDTH']-12, 0)
     parameters['RX_QUEUE_PIPELINE'] = 3 + max(parameters['RX_QUEUE_INDEX_WIDTH']-12, 0)
-    parameters['TX_CPL_QUEUE_PIPELINE'] = parameters['TX_QUEUE_PIPELINE']
-    parameters['RX_CPL_QUEUE_PIPELINE'] = parameters['RX_QUEUE_PIPELINE']
+    parameters['CQ_PIPELINE'] = 3 + max(parameters['CQN_WIDTH']-12, 0)
 
     # TX and RX engine configuration
     parameters['TX_DESC_TABLE_SIZE'] = 32
@@ -934,7 +930,7 @@ def test_mqnic_core_pcie_ptile(request, if_count, ports_per_if, pcie_data_width,
     parameters['PCIE_DMA_WRITE_TX_LIMIT'] = 2**parameters['TX_SEQ_NUM_WIDTH']
 
     # Interrupt configuration
-    parameters['IRQ_INDEX_WIDTH'] = parameters['EVENT_QUEUE_INDEX_WIDTH']
+    parameters['IRQ_INDEX_WIDTH'] = parameters['EQN_WIDTH']
 
     # AXI lite interface configuration (control)
     parameters['AXIL_CTRL_DATA_WIDTH'] = 32

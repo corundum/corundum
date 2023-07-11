@@ -4,16 +4,16 @@
 Transmit queue manager register block
 =====================================
 
-The transmit queue manager register block has a header with type 0x0000C020, version 0x00000300, and indicates the location of the transmit queue manager registers and number of queues.
+The transmit queue manager register block has a header with type 0x0000C030, version 0x00000400, and indicates the location of the transmit queue manager registers and number of queues.
 
 .. table::
 
     ========  =============  ======  ======  ======  ======  =============
     Address   Field          31..24  23..16  15..8   7..0    Reset value
     ========  =============  ======  ======  ======  ======  =============
-    RBB+0x00  Type           Vendor ID       Type            RO 0x0000C020
+    RBB+0x00  Type           Vendor ID       Type            RO 0x0000C030
     --------  -------------  --------------  --------------  -------------
-    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000300
+    RBB+0x04  Version        Major   Minor   Patch   Meta    RO 0x00000400
     --------  -------------  ------  ------  ------  ------  -------------
     RBB+0x08  Next pointer   Pointer to next register block  RO -
     --------  -------------  ------------------------------  -------------

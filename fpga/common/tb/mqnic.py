@@ -13,11 +13,10 @@ from cocotbext.axi import Window
 
 import struct
 
-MQNIC_MAX_EQ     = 1
-MQNIC_MAX_TXQ    = 32
-MQNIC_MAX_TX_CQ  = MQNIC_MAX_TXQ
-MQNIC_MAX_RXQ    = 8
-MQNIC_MAX_RX_CQ  = MQNIC_MAX_RXQ
+MQNIC_MAX_EQ   = 1
+MQNIC_MAX_TXQ  = 32
+MQNIC_MAX_RXQ  = 8
+MQNIC_MAX_CQ   = MQNIC_MAX_TXQ*2
 
 # Register blocks
 MQNIC_RB_REG_TYPE      = 0x00
@@ -159,34 +158,28 @@ MQNIC_RB_RX_QUEUE_MAP_CH_REG_RSS_MASK  = 0x04
 MQNIC_RB_RX_QUEUE_MAP_CH_REG_APP_MASK  = 0x08
 
 MQNIC_RB_EQM_TYPE        = 0x0000C010
-MQNIC_RB_EQM_VER         = 0x00000300
+MQNIC_RB_EQM_VER         = 0x00000400
 MQNIC_RB_EQM_REG_OFFSET  = 0x0C
 MQNIC_RB_EQM_REG_COUNT   = 0x10
 MQNIC_RB_EQM_REG_STRIDE  = 0x14
 
-MQNIC_RB_TX_QM_TYPE        = 0x0000C020
-MQNIC_RB_TX_QM_VER         = 0x00000300
+MQNIC_RB_CQM_TYPE        = 0x0000C020
+MQNIC_RB_CQM_VER         = 0x00000400
+MQNIC_RB_CQM_REG_OFFSET  = 0x0C
+MQNIC_RB_CQM_REG_COUNT   = 0x10
+MQNIC_RB_CQM_REG_STRIDE  = 0x14
+
+MQNIC_RB_TX_QM_TYPE        = 0x0000C030
+MQNIC_RB_TX_QM_VER         = 0x00000400
 MQNIC_RB_TX_QM_REG_OFFSET  = 0x0C
 MQNIC_RB_TX_QM_REG_COUNT   = 0x10
 MQNIC_RB_TX_QM_REG_STRIDE  = 0x14
 
-MQNIC_RB_TX_CQM_TYPE        = 0x0000C030
-MQNIC_RB_TX_CQM_VER         = 0x00000300
-MQNIC_RB_TX_CQM_REG_OFFSET  = 0x0C
-MQNIC_RB_TX_CQM_REG_COUNT   = 0x10
-MQNIC_RB_TX_CQM_REG_STRIDE  = 0x14
-
-MQNIC_RB_RX_QM_TYPE        = 0x0000C021
-MQNIC_RB_RX_QM_VER         = 0x00000300
+MQNIC_RB_RX_QM_TYPE        = 0x0000C031
+MQNIC_RB_RX_QM_VER         = 0x00000400
 MQNIC_RB_RX_QM_REG_OFFSET  = 0x0C
 MQNIC_RB_RX_QM_REG_COUNT   = 0x10
 MQNIC_RB_RX_QM_REG_STRIDE  = 0x14
-
-MQNIC_RB_RX_CQM_TYPE        = 0x0000C031
-MQNIC_RB_RX_CQM_VER         = 0x00000300
-MQNIC_RB_RX_CQM_REG_OFFSET  = 0x0C
-MQNIC_RB_RX_CQM_REG_COUNT   = 0x10
-MQNIC_RB_RX_CQM_REG_STRIDE  = 0x14
 
 MQNIC_RB_PORT_TYPE        = 0x0000C002
 MQNIC_RB_PORT_VER         = 0x00000200
@@ -302,8 +295,7 @@ MQNIC_EQ_CMD_SET_CONS_PTR_ARM  = 0x80910000
 MQNIC_EQ_CMD_SET_ENABLE        = 0x40000100
 MQNIC_EQ_CMD_SET_ARM           = 0x40000200
 
-MQNIC_EVENT_TYPE_TX_CPL = 0x0000
-MQNIC_EVENT_TYPE_RX_CPL = 0x0001
+MQNIC_EVENT_TYPE_CPL = 0x0000
 
 MQNIC_DESC_SIZE = 16
 MQNIC_CPL_SIZE = 32
@@ -490,16 +482,10 @@ class Eq:
         self.eqn = None
 
     def attach_cq(self, cq):
-        if cq.is_txcq:
-            self.cq_table[cq.cqn | 0x80000000] = cq
-        else:
-            self.cq_table[cq.cqn] = cq
+        self.cq_table[cq.cqn] = cq
 
     def detach_cq(self, cq):
-        if cq.is_txcq:
-            del self.cq_table[cq.cqn | 0x80000000]
-        else:
-            del self.cq_table[cq.cqn]
+        del self.cq_table[cq.cqn]
 
     async def read_prod_ptr(self):
         val = await self.hw_regs.read_dword(MQNIC_EQ_PTR_REG)
@@ -532,13 +518,8 @@ class Eq:
                 self.log.info("EQ %d empty", self.eqn)
                 break
 
-            if event_data[0] == 0:
-                # transmit completion
-                cq = self.cq_table[event_data[1] | 0x80000000]
-                await cq.handler(cq)
-                await cq.arm()
-            elif event_data[0] == 1:
-                # receive completion
+            if event_data[0] == MQNIC_EVENT_TYPE_CPL:
+                # completion
                 cq = self.cq_table[event_data[1]]
                 await cq.handler(cq)
                 await cq.arm()
@@ -577,17 +558,13 @@ class Cq:
 
         self.hw_regs = None
 
-    async def open(self, eq, size, is_txcq=True):
+    async def open(self, eq, size):
         if self.hw_regs:
             raise Exception("Already open")
 
-        self.is_txcq = is_txcq
-        if is_txcq:
-            self.cqn = self.interface.tx_cq_res.alloc()
-        else:
-            self.cqn = self.interface.rx_cq_res.alloc()
+        self.cqn = self.interface.cq_res.alloc()
 
-        self.log.info("Open %s CQ %d (interface %d)", "TX" if is_txcq else "RX", self.cqn, self.interface.index)
+        self.log.info("Open CQ %d (interface %d)", self.cqn, self.interface.index)
 
         self.log_size = size.bit_length() - 1
         self.size = 2**self.log_size
@@ -607,10 +584,7 @@ class Cq:
         eq.attach_cq(self)
         self.eq = eq
 
-        if is_txcq:
-            self.hw_regs = self.interface.tx_cq_res.get_window(self.cqn)
-        else:
-            self.hw_regs = self.interface.rx_cq_res.get_window(self.cqn)
+        self.hw_regs = self.interface.cq_res.get_window(self.cqn)
 
         await self.hw_regs.write_dword(MQNIC_CQ_CTRL_STATUS_REG, MQNIC_CQ_CMD_SET_ENABLE | 0)
         await self.hw_regs.write_dword(MQNIC_CQ_BASE_ADDR_VF_REG, self.buf_dma & 0xfffff000)
@@ -638,10 +612,7 @@ class Cq:
 
         self.hw_regs = None
 
-        if self.is_txcq:
-            self.interface.tx_cq_res.free(self.cqn)
-        else:
-            self.interface.rx_cq_res.free(self.cqn)
+        self.interface.cq_res.free(self.cqn)
         self.cqn = None
 
     async def read_prod_ptr(self):
@@ -793,7 +764,7 @@ class Txq:
     async def process_tx_cq(cq):
         interface = cq.interface
 
-        interface.log.info("Process TX CQ %d for TXQ %d (interface %d)", cq.cqn, cq.src_ring.index, interface.index)
+        interface.log.info("Process CQ %d for TXQ %d (interface %d)", cq.cqn, cq.src_ring.index, interface.index)
 
         ring = cq.src_ring
 
@@ -1001,7 +972,7 @@ class Rxq:
     async def process_rx_cq(cq):
         interface = cq.interface
 
-        interface.log.info("Process RX CQ %d for RXQ %d (interface %d)", cq.cqn, cq.src_ring.index, interface.index)
+        interface.log.info("Process CQ %d for RXQ %d (interface %d)", cq.cqn, cq.src_ring.index, interface.index)
 
         ring = cq.src_ring
 
@@ -1180,10 +1151,9 @@ class Interface:
         self.reg_blocks = RegBlockList()
         self.if_ctrl_rb = None
         self.eq_rb = None
+        self.cq_rb = None
         self.txq_rb = None
-        self.tx_cq_rb = None
         self.rxq_rb = None
-        self.rx_cq_rb = None
         self.rx_queue_map_rb = None
 
         self.if_features = None
@@ -1197,10 +1167,9 @@ class Interface:
         self.max_rx_mtu = 0
 
         self.eq_res = None
+        self.cq_res = None
         self.txq_res = None
-        self.tx_cq_res = None
         self.rxq_res = None
-        self.rx_cq_res = None
 
         self.port_count = None
         self.sched_block_count = None
@@ -1211,9 +1180,7 @@ class Interface:
         self.eq = []
 
         self.txq = []
-        self.tx_cq = []
         self.rxq = []
-        self.rx_cq = []
         self.ports = []
         self.sched_blocks = []
 
@@ -1265,6 +1232,20 @@ class Interface:
 
         self.eq_res = Resource(count, self.hw_regs.create_window(offset), stride)
 
+        self.cq_rb = self.reg_blocks.find(MQNIC_RB_CQM_TYPE, MQNIC_RB_CQM_VER)
+
+        offset = await self.cq_rb.read_dword(MQNIC_RB_CQM_REG_OFFSET)
+        count = await self.cq_rb.read_dword(MQNIC_RB_CQM_REG_COUNT)
+        stride = await self.cq_rb.read_dword(MQNIC_RB_CQM_REG_STRIDE)
+
+        self.log.info("CQ offset: 0x%08x", offset)
+        self.log.info("CQ count: %d", count)
+        self.log.info("CQ stride: 0x%08x", stride)
+
+        count = min(count, MQNIC_MAX_CQ)
+
+        self.cq_res = Resource(count, self.hw_regs.create_window(offset), stride)
+
         self.txq_rb = self.reg_blocks.find(MQNIC_RB_TX_QM_TYPE, MQNIC_RB_TX_QM_VER)
 
         offset = await self.txq_rb.read_dword(MQNIC_RB_TX_QM_REG_OFFSET)
@@ -1279,20 +1260,6 @@ class Interface:
 
         self.txq_res = Resource(count, self.hw_regs.create_window(offset), stride)
 
-        self.tx_cq_rb = self.reg_blocks.find(MQNIC_RB_TX_CQM_TYPE, MQNIC_RB_TX_CQM_VER)
-
-        offset = await self.tx_cq_rb.read_dword(MQNIC_RB_TX_CQM_REG_OFFSET)
-        count = await self.tx_cq_rb.read_dword(MQNIC_RB_TX_CQM_REG_COUNT)
-        stride = await self.tx_cq_rb.read_dword(MQNIC_RB_TX_CQM_REG_STRIDE)
-
-        self.log.info("TX CQ offset: 0x%08x", offset)
-        self.log.info("TX CQ count: %d", count)
-        self.log.info("TX CQ stride: 0x%08x", stride)
-
-        count = min(count, MQNIC_MAX_TX_CQ)
-
-        self.tx_cq_res = Resource(count, self.hw_regs.create_window(offset), stride)
-
         self.rxq_rb = self.reg_blocks.find(MQNIC_RB_RX_QM_TYPE, MQNIC_RB_RX_QM_VER)
 
         offset = await self.rxq_rb.read_dword(MQNIC_RB_RX_QM_REG_OFFSET)
@@ -1306,20 +1273,6 @@ class Interface:
         count = min(count, MQNIC_MAX_RXQ)
 
         self.rxq_res = Resource(count, self.hw_regs.create_window(offset), stride)
-
-        self.rx_cq_rb = self.reg_blocks.find(MQNIC_RB_RX_CQM_TYPE, MQNIC_RB_RX_CQM_VER)
-
-        offset = await self.rx_cq_rb.read_dword(MQNIC_RB_RX_CQM_REG_OFFSET)
-        count = await self.rx_cq_rb.read_dword(MQNIC_RB_RX_CQM_REG_COUNT)
-        stride = await self.rx_cq_rb.read_dword(MQNIC_RB_RX_CQM_REG_STRIDE)
-
-        self.log.info("RX CQ offset: 0x%08x", offset)
-        self.log.info("RX CQ count: %d", count)
-        self.log.info("RX CQ stride: 0x%08x", stride)
-
-        count = min(count, MQNIC_MAX_RX_CQ)
-
-        self.rx_cq_res = Resource(count, self.hw_regs.create_window(offset), stride)
 
         self.rx_queue_map_rb = self.reg_blocks.find(MQNIC_RB_RX_QUEUE_MAP_TYPE, MQNIC_RB_RX_QUEUE_MAP_VER)
 
@@ -1339,17 +1292,14 @@ class Interface:
         for k in range(self.eq_res.get_count()):
             await self.eq_res.get_window(k).write_dword(MQNIC_EQ_CTRL_STATUS_REG, MQNIC_QUEUE_CMD_SET_ENABLE | 0)
 
+        for k in range(self.cq_res.get_count()):
+            await self.cq_res.get_window(k).write_dword(MQNIC_CQ_CTRL_STATUS_REG, MQNIC_QUEUE_CMD_SET_ENABLE | 0)
+
         for k in range(self.txq_res.get_count()):
             await self.txq_res.get_window(k).write_dword(MQNIC_QUEUE_CTRL_STATUS_REG, MQNIC_QUEUE_CMD_SET_ENABLE | 0)
 
-        for k in range(self.tx_cq_res.get_count()):
-            await self.tx_cq_res.get_window(k).write_dword(MQNIC_CQ_CTRL_STATUS_REG, MQNIC_QUEUE_CMD_SET_ENABLE | 0)
-
         for k in range(self.rxq_res.get_count()):
             await self.rxq_res.get_window(k).write_dword(MQNIC_QUEUE_CTRL_STATUS_REG, MQNIC_QUEUE_CMD_SET_ENABLE | 0)
-
-        for k in range(self.rx_cq_res.get_count()):
-            await self.rx_cq_res.get_window(k).write_dword(MQNIC_CQ_CTRL_STATUS_REG, MQNIC_QUEUE_CMD_SET_ENABLE | 0)
 
         # create ports
         self.ports = []
@@ -1380,9 +1330,7 @@ class Interface:
             await eq.arm()
 
         self.txq = []
-        self.tx_cq = []
         self.rxq = []
-        self.rx_cq = []
 
         # wait for all writes to complete
         await self.hw_regs.read_dword(0)
@@ -1390,8 +1338,7 @@ class Interface:
     async def open(self):
         for k in range(self.rxq_res.get_count()):
             cq = Cq(self)
-            await cq.open(self.eq[k % len(self.eq)], 1024, is_txcq=False)
-            self.rx_cq.append(cq)
+            await cq.open(self.eq[k % len(self.eq)], 1024)
             await cq.arm()
             rxq = Rxq(self)
             await rxq.open(cq, 1024, 4)
@@ -1400,8 +1347,7 @@ class Interface:
 
         for k in range(self.txq_res.get_count()):
             cq = Cq(self)
-            await cq.open(self.eq[k % len(self.eq)], 1024, is_txcq=True)
-            self.tx_cq.append(cq)
+            await cq.open(self.eq[k % len(self.eq)], 1024)
             await cq.arm()
             txq = Txq(self)
             await txq.open(cq, 1024, 4)
@@ -1436,6 +1382,9 @@ class Interface:
             await q.free_buf()
             await q.close()
             await cq.close()
+
+        self.txq = []
+        self.rxq = []
 
     async def start_xmit(self, skb, tx_ring=None, csum_start=None, csum_offset=None):
         if not self.port_up:

@@ -42,8 +42,12 @@ foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == cmac_gty_ch_wrapper || 
     constrain_sync_chain $inst "gt_txprbsforceerr_drp_reg_reg" "gt_txprbsforceerr_sync_1_reg_reg" "gt_txprbsforceerr_sync_2_reg_reg"
     constrain_sync_chain $inst "gt_txpolarity_drp_reg_reg" "gt_txpolarity_sync_reg_reg"
     constrain_sync_chain $inst "gt_txinhibit_drp_reg_reg" "gt_txinhibit_sync_reg_reg"
-    set_false_path -from [get_cells "$inst/gt_tx_pd_reg_reg"]
-    set_false_path -from [get_cells "$inst/gt_txelecidle_reg_reg"]
+
+    set driver_ffs [get_cells -hier "gt_tx_pd_reg_reg gt_txelecidle_reg_reg" -filter "PARENT == $inst"]
+
+    if {[llength $driver_ffs]} {
+        set_false_path -from $driver_ffs
+    }
 
     # RX
     constrain_sync_chain $inst "gt_rxpolarity_drp_reg_reg" "gt_rxpolarity_sync_reg_reg"

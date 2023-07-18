@@ -212,6 +212,17 @@ always @(posedge drp_clk) begin
     phy_rx_status_sync_2_reg <= phy_rx_status_sync_1_reg;
 end
 
+wire common_reset_in_int;
+
+sync_reset #(
+    .N(4)
+)
+sync_reset_common_reset_inst (
+    .clk(drp_clk),
+    .rst(drp_rst || xcvr_ctrl_rst),
+    .out(common_reset_in_int)
+);
+
 // QPLL0 reset and power down
 reg qpll0_reset_drp_reg = 1'b0;
 reg qpll0_reset_reg = 1'b1;
@@ -231,6 +242,10 @@ always @(posedge drp_clk) begin
     end
 
     if (qpll0_reset_drp_reg || qpll0_pd_reg || qpll0_pd_drp_reg) begin
+        qpll0_reset_counter_reg <= 0;
+    end
+
+    if (common_reset_in_int) begin
         qpll0_reset_counter_reg <= 0;
     end
 
@@ -267,6 +282,10 @@ always @(posedge drp_clk) begin
     end
 
     if (qpll1_reset_drp_reg || qpll1_pd_reg || qpll1_pd_drp_reg) begin
+        qpll1_reset_counter_reg <= 0;
+    end
+
+    if (common_reset_in_int) begin
         qpll1_reset_counter_reg <= 0;
     end
 

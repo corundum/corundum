@@ -229,8 +229,8 @@ module fpga #
     output wire         qsfp2_tx4_n,
     input  wire         qsfp2_rx4_p,
     input  wire         qsfp2_rx4_n,
-    input  wire         qsfp2_mgt_refclk_0_p,
-    input  wire         qsfp2_mgt_refclk_0_n,
+    // input  wire         qsfp2_mgt_refclk_0_p,
+    // input  wire         qsfp2_mgt_refclk_0_n,
     // input  wire         qsfp2_mgt_refclk_1_p,
     // input  wire         qsfp2_mgt_refclk_1_n,
     // output wire         qsfp2_recclk_p,
@@ -1211,41 +1211,6 @@ wire qsfp2_rx_status_3;
 wire qsfp2_rx_block_lock_4;
 wire qsfp2_rx_status_4;
 
-wire qsfp2_gtpowergood;
-
-wire qsfp2_mgt_refclk_0;
-wire qsfp2_mgt_refclk_0_int;
-wire qsfp2_mgt_refclk_0_bufg;
-
-IBUFDS_GTE4 ibufds_gte4_qsfp2_mgt_refclk_0_inst (
-    .I     (qsfp2_mgt_refclk_0_p),
-    .IB    (qsfp2_mgt_refclk_0_n),
-    .CEB   (1'b0),
-    .O     (qsfp2_mgt_refclk_0),
-    .ODIV2 (qsfp2_mgt_refclk_0_int)
-);
-
-BUFG_GT bufg_gt_qsfp2_mgt_refclk_0_inst (
-    .CE      (qsfp2_gtpowergood),
-    .CEMASK  (1'b1),
-    .CLR     (1'b0),
-    .CLRMASK (1'b1),
-    .DIV     (3'd0),
-    .I       (qsfp2_mgt_refclk_0_int),
-    .O       (qsfp2_mgt_refclk_0_bufg)
-);
-
-wire qsfp2_rst;
-
-sync_reset #(
-    .N(4)
-)
-qsfp2_sync_reset_inst (
-    .clk(qsfp2_mgt_refclk_0_bufg),
-    .rst(rst_125mhz_int),
-    .out(qsfp2_rst)
-);
-
 eth_xcvr_phy_10g_gty_quad_wrapper #(
     .PRBS31_ENABLE(1),
     .TX_SERDES_PIPELINE(1),
@@ -1254,13 +1219,13 @@ eth_xcvr_phy_10g_gty_quad_wrapper #(
 )
 qsfp2_phy_quad_inst (
     .xcvr_ctrl_clk(clk_125mhz_int),
-    .xcvr_ctrl_rst(qsfp2_rst),
+    .xcvr_ctrl_rst(qsfp1_rst),
 
     /*
      * Common
      */
-    .xcvr_gtpowergood_out(qsfp2_gtpowergood),
-    .xcvr_ref_clk(qsfp2_mgt_refclk_0),
+    .xcvr_gtpowergood_out(),
+    .xcvr_ref_clk(qsfp1_mgt_refclk_0),
 
     /*
      * DRP

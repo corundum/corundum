@@ -250,28 +250,24 @@ class TB(object):
         cocotb.start_soon(Clock(dut.ptp_sample_clk, 8, units="ns").start())
 
         # Ethernet
-        cocotb.start_soon(Clock(dut.sfp_1_rx_clk, 6.4, units="ns").start())
-        self.sfp_1_source = XgmiiSource(dut.sfp_1_rxd, dut.sfp_1_rxc, dut.sfp_1_rx_clk, dut.sfp_1_rx_rst)
-        cocotb.start_soon(Clock(dut.sfp_1_tx_clk, 6.4, units="ns").start())
-        self.sfp_1_sink = XgmiiSink(dut.sfp_1_txd, dut.sfp_1_txc, dut.sfp_1_tx_clk, dut.sfp_1_tx_rst)
+        self.sfp_source = []
+        self.sfp_sink = []
 
-        cocotb.start_soon(Clock(dut.sfp_2_rx_clk, 6.4, units="ns").start())
-        self.sfp_2_source = XgmiiSource(dut.sfp_2_rxd, dut.sfp_2_rxc, dut.sfp_2_rx_clk, dut.sfp_2_rx_rst)
-        cocotb.start_soon(Clock(dut.sfp_2_tx_clk, 6.4, units="ns").start())
-        self.sfp_2_sink = XgmiiSink(dut.sfp_2_txd, dut.sfp_2_txc, dut.sfp_2_tx_clk, dut.sfp_2_tx_rst)
-
-        dut.sfp_1_rx_status.setimmediatevalue(1)
-        dut.sfp_2_rx_status.setimmediatevalue(1)
+        for k in range(1, 3):
+            cocotb.start_soon(Clock(getattr(dut, f"sfp_{k}_rx_clk"), 6.4, units="ns").start())
+            source = XgmiiSource(getattr(dut, f"sfp_{k}_rxd"), getattr(dut, f"sfp_{k}_rxc"), getattr(dut, f"sfp_{k}_rx_clk"), getattr(dut, f"sfp_{k}_rx_rst"))
+            self.sfp_source.append(source)
+            cocotb.start_soon(Clock(getattr(dut, f"sfp_{k}_tx_clk"), 6.4, units="ns").start())
+            sink = XgmiiSink(getattr(dut, f"sfp_{k}_txd"), getattr(dut, f"sfp_{k}_txc"), getattr(dut, f"sfp_{k}_tx_clk"), getattr(dut, f"sfp_{k}_tx_rst"))
+            self.sfp_sink.append(sink)
+            getattr(dut, f"sfp_{k}_rx_status").setimmediatevalue(1)
+            getattr(dut, f"sfp_{k}_npres").setimmediatevalue(1)
+            getattr(dut, f"sfp_{k}_los").setimmediatevalue(1)
 
         cocotb.start_soon(Clock(dut.sfp_drp_clk, 8, units="ns").start())
         dut.sfp_drp_rst.setimmediatevalue(0)
         dut.sfp_drp_do.setimmediatevalue(0)
         dut.sfp_drp_rdy.setimmediatevalue(0)
-
-        dut.sfp_1_npres.setimmediatevalue(0)
-        dut.sfp_2_npres.setimmediatevalue(0)
-        dut.sfp_1_los.setimmediatevalue(0)
-        dut.sfp_2_los.setimmediatevalue(0)
 
         dut.sma_in.setimmediatevalue(0)
 
@@ -290,19 +286,17 @@ class TB(object):
     async def init(self):
 
         self.dut.ptp_rst.setimmediatevalue(0)
-        self.dut.sfp_1_rx_rst.setimmediatevalue(0)
-        self.dut.sfp_1_tx_rst.setimmediatevalue(0)
-        self.dut.sfp_2_rx_rst.setimmediatevalue(0)
-        self.dut.sfp_2_tx_rst.setimmediatevalue(0)
+        for k in range(1, 3):
+            getattr(self.dut, f"sfp_{k}_rx_rst").setimmediatevalue(0)
+            getattr(self.dut, f"sfp_{k}_tx_rst").setimmediatevalue(0)
 
         await RisingEdge(self.dut.clk_250mhz)
         await RisingEdge(self.dut.clk_250mhz)
 
         self.dut.ptp_rst.setimmediatevalue(1)
-        self.dut.sfp_1_rx_rst.setimmediatevalue(1)
-        self.dut.sfp_1_tx_rst.setimmediatevalue(1)
-        self.dut.sfp_2_rx_rst.setimmediatevalue(1)
-        self.dut.sfp_2_tx_rst.setimmediatevalue(1)
+        for k in range(1, 3):
+            getattr(self.dut, f"sfp_{k}_rx_rst").setimmediatevalue(1)
+            getattr(self.dut, f"sfp_{k}_tx_rst").setimmediatevalue(1)
 
         await FallingEdge(self.dut.rst_250mhz)
         await Timer(100, 'ns')
@@ -311,10 +305,9 @@ class TB(object):
         await RisingEdge(self.dut.clk_250mhz)
 
         self.dut.ptp_rst.setimmediatevalue(0)
-        self.dut.sfp_1_rx_rst.setimmediatevalue(0)
-        self.dut.sfp_1_tx_rst.setimmediatevalue(0)
-        self.dut.sfp_2_rx_rst.setimmediatevalue(0)
-        self.dut.sfp_2_tx_rst.setimmediatevalue(0)
+        for k in range(1, 3):
+            getattr(self.dut, f"sfp_{k}_rx_rst").setimmediatevalue(0)
+            getattr(self.dut, f"sfp_{k}_tx_rst").setimmediatevalue(0)
 
         await self.rc.enumerate()
 
@@ -323,10 +316,9 @@ class TB(object):
             await RisingEdge(self.dut.clk_250mhz)
 
             if self.loopback_enable:
-                if not self.sfp_1_sink.empty():
-                    await self.sfp_1_source.send(await self.sfp_1_sink.recv())
-                if not self.sfp_2_sink.empty():
-                    await self.sfp_2_source.send(await self.sfp_2_sink.recv())
+                for x in range(len(self.sfp_sink)):
+                        if not self.sfp_sink[x].empty():
+                            await self.sfp_source[x].send(await self.sfp_sink[x].recv())
 
 
 @cocotb.test()
@@ -357,10 +349,10 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(data, 0)
 
-    pkt = await tb.sfp_1_sink.recv()
+    pkt = await tb.sfp_sink[0].recv()
     tb.log.info("Packet: %s", pkt)
 
-    await tb.sfp_1_source.send(pkt)
+    await tb.sfp_source[0].send(pkt)
 
     pkt = await tb.driver.interfaces[0].recv()
 
@@ -369,10 +361,10 @@ async def run_test_nic(dut):
 
     # await tb.driver.interfaces[1].start_xmit(data, 0)
 
-    # pkt = await tb.sfp_2_sink.recv()
+    # pkt = await tb.sfp_sink[1].recv()
     # tb.log.info("Packet: %s", pkt)
 
-    # await tb.sfp_2_source.send(pkt)
+    # await tb.sfp_source[1].send(pkt)
 
     # pkt = await tb.driver.interfaces[1].recv()
 
@@ -392,10 +384,10 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(test_pkt2.build(), 0, 34, 6)
 
-    pkt = await tb.sfp_1_sink.recv()
+    pkt = await tb.sfp_sink[0].recv()
     tb.log.info("Packet: %s", pkt)
 
-    await tb.sfp_1_source.send(pkt)
+    await tb.sfp_source[0].send(pkt)
 
     pkt = await tb.driver.interfaces[0].recv()
 

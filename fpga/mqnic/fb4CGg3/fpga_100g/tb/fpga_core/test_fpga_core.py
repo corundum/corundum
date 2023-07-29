@@ -276,122 +276,40 @@ class TB(object):
         cocotb.start_soon(Clock(dut.ptp_sample_clk, 8, units="ns").start())
 
         # Ethernet
-        cocotb.start_soon(Clock(dut.qsfp_0_rx_clk, 3.102, units="ns").start())
-        cocotb.start_soon(Clock(dut.qsfp_0_tx_clk, 3.102, units="ns").start())
+        self.qsfp_mac = []
 
-        self.qsfp_0_mac = EthMac(
-            tx_clk=dut.qsfp_0_tx_clk,
-            tx_rst=dut.qsfp_0_tx_rst,
-            tx_bus=AxiStreamBus.from_prefix(dut, "qsfp_0_tx_axis"),
-            tx_ptp_time=dut.qsfp_0_tx_ptp_time,
-            tx_ptp_ts=dut.qsfp_0_tx_ptp_ts,
-            tx_ptp_ts_tag=dut.qsfp_0_tx_ptp_ts_tag,
-            tx_ptp_ts_valid=dut.qsfp_0_tx_ptp_ts_valid,
-            rx_clk=dut.qsfp_0_rx_clk,
-            rx_rst=dut.qsfp_0_rx_rst,
-            rx_bus=AxiStreamBus.from_prefix(dut, "qsfp_0_rx_axis"),
-            rx_ptp_time=dut.qsfp_0_rx_ptp_time,
-            ifg=12, speed=100e9
-        )
+        for k in range(4):
+            cocotb.start_soon(Clock(getattr(dut, f"qsfp_{k}_rx_clk"), 3.102, units="ns").start())
+            cocotb.start_soon(Clock(getattr(dut, f"qsfp_{k}_tx_clk"), 3.102, units="ns").start())
 
-        cocotb.start_soon(Clock(dut.qsfp_1_rx_clk, 3.102, units="ns").start())
-        cocotb.start_soon(Clock(dut.qsfp_1_tx_clk, 3.102, units="ns").start())
+            mac = EthMac(
+                tx_clk=getattr(dut, f"qsfp_{k}_tx_clk"),
+                tx_rst=getattr(dut, f"qsfp_{k}_tx_rst"),
+                tx_bus=AxiStreamBus.from_prefix(dut, f"qsfp_{k}_tx_axis"),
+                tx_ptp_time=getattr(dut, f"qsfp_{k}_tx_ptp_time"),
+                tx_ptp_ts=getattr(dut, f"qsfp_{k}_tx_ptp_ts"),
+                tx_ptp_ts_tag=getattr(dut, f"qsfp_{k}_tx_ptp_ts_tag"),
+                tx_ptp_ts_valid=getattr(dut, f"qsfp_{k}_tx_ptp_ts_valid"),
+                rx_clk=getattr(dut, f"qsfp_{k}_rx_clk"),
+                rx_rst=getattr(dut, f"qsfp_{k}_rx_rst"),
+                rx_bus=AxiStreamBus.from_prefix(dut, f"qsfp_{k}_rx_axis"),
+                rx_ptp_time=getattr(dut, f"qsfp_{k}_rx_ptp_time"),
+                ifg=12, speed=100e9
+            )
 
-        self.qsfp_1_mac = EthMac(
-            tx_clk=dut.qsfp_1_tx_clk,
-            tx_rst=dut.qsfp_1_tx_rst,
-            tx_bus=AxiStreamBus.from_prefix(dut, "qsfp_1_tx_axis"),
-            tx_ptp_time=dut.qsfp_1_tx_ptp_time,
-            tx_ptp_ts=dut.qsfp_1_tx_ptp_ts,
-            tx_ptp_ts_tag=dut.qsfp_1_tx_ptp_ts_tag,
-            tx_ptp_ts_valid=dut.qsfp_1_tx_ptp_ts_valid,
-            rx_clk=dut.qsfp_1_rx_clk,
-            rx_rst=dut.qsfp_1_rx_rst,
-            rx_bus=AxiStreamBus.from_prefix(dut, "qsfp_1_rx_axis"),
-            rx_ptp_time=dut.qsfp_1_rx_ptp_time,
-            ifg=12, speed=100e9
-        )
+            self.qsfp_mac.append(mac)
 
-        cocotb.start_soon(Clock(dut.qsfp_2_rx_clk, 3.102, units="ns").start())
-        cocotb.start_soon(Clock(dut.qsfp_2_tx_clk, 3.102, units="ns").start())
+            getattr(dut, f"qsfp_{k}_rx_status").setimmediatevalue(1)
 
-        self.qsfp_2_mac = EthMac(
-            tx_clk=dut.qsfp_2_tx_clk,
-            tx_rst=dut.qsfp_2_tx_rst,
-            tx_bus=AxiStreamBus.from_prefix(dut, "qsfp_2_tx_axis"),
-            tx_ptp_time=dut.qsfp_2_tx_ptp_time,
-            tx_ptp_ts=dut.qsfp_2_tx_ptp_ts,
-            tx_ptp_ts_tag=dut.qsfp_2_tx_ptp_ts_tag,
-            tx_ptp_ts_valid=dut.qsfp_2_tx_ptp_ts_valid,
-            rx_clk=dut.qsfp_2_rx_clk,
-            rx_rst=dut.qsfp_2_rx_rst,
-            rx_bus=AxiStreamBus.from_prefix(dut, "qsfp_2_rx_axis"),
-            rx_ptp_time=dut.qsfp_2_rx_ptp_time,
-            ifg=12, speed=100e9
-        )
+            cocotb.start_soon(Clock(getattr(dut, f"qsfp_{k}_drp_clk"), 8, units="ns").start())
+            getattr(dut, f"qsfp_{k}_drp_rst").setimmediatevalue(0)
+            getattr(dut, f"qsfp_{k}_drp_do").setimmediatevalue(0)
+            getattr(dut, f"qsfp_{k}_drp_rdy").setimmediatevalue(0)
 
-        cocotb.start_soon(Clock(dut.qsfp_3_rx_clk, 3.102, units="ns").start())
-        cocotb.start_soon(Clock(dut.qsfp_3_tx_clk, 3.102, units="ns").start())
-
-        self.qsfp_3_mac = EthMac(
-            tx_clk=dut.qsfp_3_tx_clk,
-            tx_rst=dut.qsfp_3_tx_rst,
-            tx_bus=AxiStreamBus.from_prefix(dut, "qsfp_3_tx_axis"),
-            tx_ptp_time=dut.qsfp_3_tx_ptp_time,
-            tx_ptp_ts=dut.qsfp_3_tx_ptp_ts,
-            tx_ptp_ts_tag=dut.qsfp_3_tx_ptp_ts_tag,
-            tx_ptp_ts_valid=dut.qsfp_3_tx_ptp_ts_valid,
-            rx_clk=dut.qsfp_3_rx_clk,
-            rx_rst=dut.qsfp_3_rx_rst,
-            rx_bus=AxiStreamBus.from_prefix(dut, "qsfp_3_rx_axis"),
-            rx_ptp_time=dut.qsfp_3_rx_ptp_time,
-            ifg=12, speed=100e9
-        )
-
-        dut.qsfp_0_rx_status.setimmediatevalue(1)
-        dut.qsfp_1_rx_status.setimmediatevalue(1)
-        dut.qsfp_2_rx_status.setimmediatevalue(1)
-        dut.qsfp_3_rx_status.setimmediatevalue(1)
-
-        cocotb.start_soon(Clock(dut.qsfp_0_drp_clk, 8, units="ns").start())
-        dut.qsfp_0_drp_rst.setimmediatevalue(0)
-        dut.qsfp_0_drp_do.setimmediatevalue(0)
-        dut.qsfp_0_drp_rdy.setimmediatevalue(0)
-
-        dut.qsfp_0_i2c_scl_i.setimmediatevalue(1)
-        dut.qsfp_0_i2c_sda_i.setimmediatevalue(1)
-        dut.qsfp_0_intr_n.setimmediatevalue(1)
-        dut.qsfp_0_mod_prsnt_n.setimmediatevalue(0)
-
-        cocotb.start_soon(Clock(dut.qsfp_1_drp_clk, 8, units="ns").start())
-        dut.qsfp_1_drp_rst.setimmediatevalue(0)
-        dut.qsfp_1_drp_do.setimmediatevalue(0)
-        dut.qsfp_1_drp_rdy.setimmediatevalue(0)
-
-        dut.qsfp_1_i2c_scl_i.setimmediatevalue(1)
-        dut.qsfp_1_i2c_sda_i.setimmediatevalue(1)
-        dut.qsfp_1_intr_n.setimmediatevalue(1)
-        dut.qsfp_1_mod_prsnt_n.setimmediatevalue(0)
-
-        cocotb.start_soon(Clock(dut.qsfp_2_drp_clk, 8, units="ns").start())
-        dut.qsfp_2_drp_rst.setimmediatevalue(0)
-        dut.qsfp_2_drp_do.setimmediatevalue(0)
-        dut.qsfp_2_drp_rdy.setimmediatevalue(0)
-
-        dut.qsfp_2_i2c_scl_i.setimmediatevalue(1)
-        dut.qsfp_2_i2c_sda_i.setimmediatevalue(1)
-        dut.qsfp_2_intr_n.setimmediatevalue(1)
-        dut.qsfp_2_mod_prsnt_n.setimmediatevalue(0)
-
-        cocotb.start_soon(Clock(dut.qsfp_3_drp_clk, 8, units="ns").start())
-        dut.qsfp_3_drp_rst.setimmediatevalue(0)
-        dut.qsfp_3_drp_do.setimmediatevalue(0)
-        dut.qsfp_3_drp_rdy.setimmediatevalue(0)
-
-        dut.qsfp_3_i2c_scl_i.setimmediatevalue(1)
-        dut.qsfp_3_i2c_sda_i.setimmediatevalue(1)
-        dut.qsfp_3_intr_n.setimmediatevalue(1)
-        dut.qsfp_3_mod_prsnt_n.setimmediatevalue(0)
+            getattr(dut, f"qsfp_{k}_i2c_scl_i").setimmediatevalue(1)
+            getattr(dut, f"qsfp_{k}_i2c_sda_i").setimmediatevalue(1)
+            getattr(dut, f"qsfp_{k}_intr_n").setimmediatevalue(1)
+            getattr(dut, f"qsfp_{k}_mod_prsnt_n").setimmediatevalue(0)
 
         dut.pps_in.setimmediatevalue(0)
 
@@ -401,27 +319,17 @@ class TB(object):
     async def init(self):
 
         self.dut.ptp_rst.setimmediatevalue(0)
-        self.dut.qsfp_0_rx_rst.setimmediatevalue(0)
-        self.dut.qsfp_0_tx_rst.setimmediatevalue(0)
-        self.dut.qsfp_1_rx_rst.setimmediatevalue(0)
-        self.dut.qsfp_1_tx_rst.setimmediatevalue(0)
-        self.dut.qsfp_2_rx_rst.setimmediatevalue(0)
-        self.dut.qsfp_2_tx_rst.setimmediatevalue(0)
-        self.dut.qsfp_3_rx_rst.setimmediatevalue(0)
-        self.dut.qsfp_3_tx_rst.setimmediatevalue(0)
+        for k in range(4):
+            getattr(self.dut, f"qsfp_{k}_rx_rst").setimmediatevalue(0)
+            getattr(self.dut, f"qsfp_{k}_tx_rst").setimmediatevalue(0)
 
         await RisingEdge(self.dut.clk_250mhz)
         await RisingEdge(self.dut.clk_250mhz)
 
         self.dut.ptp_rst.setimmediatevalue(1)
-        self.dut.qsfp_0_rx_rst.setimmediatevalue(1)
-        self.dut.qsfp_0_tx_rst.setimmediatevalue(1)
-        self.dut.qsfp_1_rx_rst.setimmediatevalue(1)
-        self.dut.qsfp_1_tx_rst.setimmediatevalue(1)
-        self.dut.qsfp_2_rx_rst.setimmediatevalue(1)
-        self.dut.qsfp_2_tx_rst.setimmediatevalue(1)
-        self.dut.qsfp_3_rx_rst.setimmediatevalue(1)
-        self.dut.qsfp_3_tx_rst.setimmediatevalue(1)
+        for k in range(4):
+            getattr(self.dut, f"qsfp_{k}_rx_rst").setimmediatevalue(1)
+            getattr(self.dut, f"qsfp_{k}_tx_rst").setimmediatevalue(1)
 
         await FallingEdge(self.dut.rst_250mhz)
         await Timer(100, 'ns')
@@ -430,14 +338,9 @@ class TB(object):
         await RisingEdge(self.dut.clk_250mhz)
 
         self.dut.ptp_rst.setimmediatevalue(0)
-        self.dut.qsfp_0_rx_rst.setimmediatevalue(0)
-        self.dut.qsfp_0_tx_rst.setimmediatevalue(0)
-        self.dut.qsfp_1_rx_rst.setimmediatevalue(0)
-        self.dut.qsfp_1_tx_rst.setimmediatevalue(0)
-        self.dut.qsfp_2_rx_rst.setimmediatevalue(0)
-        self.dut.qsfp_2_tx_rst.setimmediatevalue(0)
-        self.dut.qsfp_3_rx_rst.setimmediatevalue(0)
-        self.dut.qsfp_3_tx_rst.setimmediatevalue(0)
+        for k in range(4):
+            getattr(self.dut, f"qsfp_{k}_rx_rst").setimmediatevalue(0)
+            getattr(self.dut, f"qsfp_{k}_tx_rst").setimmediatevalue(0)
 
         await self.rc.enumerate()
 
@@ -446,14 +349,9 @@ class TB(object):
             await RisingEdge(self.dut.clk_250mhz)
 
             if self.loopback_enable:
-                if not self.qsfp_0_mac.tx.empty():
-                    await self.qsfp_0_mac.rx.send(await self.qsfp_0_mac.tx.recv())
-                if not self.qsfp_1_mac.tx.empty():
-                    await self.qsfp_1_mac.rx.send(await self.qsfp_1_mac.tx.recv())
-                if not self.qsfp_2_mac.tx.empty():
-                    await self.qsfp_2_mac.rx.send(await self.qsfp_2_mac.tx.recv())
-                if not self.qsfp_3_mac.tx.empty():
-                    await self.qsfp_3_mac.rx.send(await self.qsfp_3_mac.tx.recv())
+                for mac in self.qsfp_mac:
+                    if not mac.tx.empty():
+                        await mac.rx.send(await mac.tx.recv())
 
 
 @cocotb.test()
@@ -484,10 +382,10 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(data, 0)
 
-    pkt = await tb.qsfp_0_mac.tx.recv()
+    pkt = await tb.qsfp_mac[0].tx.recv()
     tb.log.info("Packet: %s", pkt)
 
-    await tb.qsfp_0_mac.rx.send(pkt)
+    await tb.qsfp_mac[0].rx.send(pkt)
 
     pkt = await tb.driver.interfaces[0].recv()
 
@@ -496,10 +394,10 @@ async def run_test_nic(dut):
 
     # await tb.driver.interfaces[1].start_xmit(data, 0)
 
-    # pkt = await tb.qsfp_1_mac.tx.recv()
+    # pkt = await tb.qsfp_mac[1].tx.recv()
     # tb.log.info("Packet: %s", pkt)
 
-    # await tb.qsfp_1_mac.rx.send(pkt)
+    # await tb.qsfp_mac[1].rx.send(pkt)
 
     # pkt = await tb.driver.interfaces[1].recv()
 
@@ -519,10 +417,10 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(test_pkt2.build(), 0, 34, 6)
 
-    pkt = await tb.qsfp_0_mac.tx.recv()
+    pkt = await tb.qsfp_mac[0].tx.recv()
     tb.log.info("Packet: %s", pkt)
 
-    await tb.qsfp_0_mac.rx.send(pkt)
+    await tb.qsfp_mac[0].rx.send(pkt)
 
     pkt = await tb.driver.interfaces[0].recv()
 

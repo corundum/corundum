@@ -1,4 +1,4 @@
-# Copyright (c) 2020 Alex Forencich
+# Copyright (c) 2020-2023 Alex Forencich
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -32,22 +32,27 @@ MODULE   = test_$(DUT)
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 VERILOG_SOURCES += ../../rtl/axis_gmii_rx.v
 VERILOG_SOURCES += ../../rtl/axis_gmii_tx.v
+VERILOG_SOURCES += ../../rtl/mac_ctrl_rx.v
+VERILOG_SOURCES += ../../rtl/mac_ctrl_tx.v
+VERILOG_SOURCES += ../../rtl/mac_pause_ctrl_rx.v
+VERILOG_SOURCES += ../../rtl/mac_pause_ctrl_tx.v
 VERILOG_SOURCES += ../../rtl/lfsr.v
 
 # module parameters
 export PARAM_DATA_WIDTH := 8
 export PARAM_ENABLE_PADDING := 1
 export PARAM_MIN_FRAME_LENGTH := 64
-export PARAM_TX_PTP_TS_ENABLE := 0
+export PARAM_TX_PTP_TS_ENABLE := 1
 export PARAM_TX_PTP_TS_WIDTH := 96
+export PARAM_TX_PTP_TS_CTRL_IN_TUSER := $(PARAM_TX_PTP_TS_ENABLE)
 export PARAM_TX_PTP_TAG_ENABLE := $(PARAM_TX_PTP_TS_ENABLE)
 export PARAM_TX_PTP_TAG_WIDTH := 16
-export PARAM_RX_PTP_TS_ENABLE := 0
+export PARAM_RX_PTP_TS_ENABLE := $(PARAM_TX_PTP_TS_ENABLE)
 export PARAM_RX_PTP_TS_WIDTH := 96
-# export PARAM_TX_USER_WIDTH := (TX_PTP_TAG_WIDTH if TX_PTP_TAG_ENABLE else 0) + 1
-export PARAM_TX_USER_WIDTH := 1
-# export PARAM_RX_USER_WIDTH := (RX_PTP_TS_WIDTH if RX_PTP_TS_ENABLE else 0) + 1
-export PARAM_RX_USER_WIDTH := 1
+export PARAM_TX_USER_WIDTH := $(if $(filter-out 1,$(PARAM_TX_PTP_TS_ENABLE)),1,$(shell expr $(if $(filter-out 1,$(PARAM_TX_PTP_TAG_ENABLE)),0,$(PARAM_TX_PTP_TAG_WIDTH)) + $(if $(filter-out 1,$(TX_PTP_TS_CTRL_IN_TUSER)),0,1) + 1 ))
+export PARAM_RX_USER_WIDTH := $(if $(filter-out 1,$(PARAM_RX_PTP_TS_ENABLE)),1,$(shell expr $(PARAM_TX_PTP_TS_WIDTH) + 1 ))
+export PARAM_PFC_ENABLE := 1
+export PARAM_PAUSE_ENABLE := $(PARAM_PFC_ENABLE)
 
 ifeq ($(SIM), icarus)
 	PLUSARGS += -fst

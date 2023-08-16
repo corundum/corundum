@@ -2,9 +2,9 @@
 # part: xc7a200tsbg484-1
 
 # General configuration
-set_property CFGBVS VCCO [current_design]
-set_property CONFIG_VOLTAGE 3.3 [current_design]
-set_property BITSTREAM.GENERAL.COMPRESS true [current_design]
+set_property CFGBVS VCCO                               [current_design]
+set_property CONFIG_VOLTAGE 3.3                        [current_design]
+set_property BITSTREAM.GENERAL.COMPRESS true           [current_design]
 
 # 100 MHz clock
 set_property -dict {LOC R4 IOSTANDARD LVCMOS33} [get_ports clk]

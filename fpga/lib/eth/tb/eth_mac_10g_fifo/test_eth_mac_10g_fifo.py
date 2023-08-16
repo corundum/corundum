@@ -37,7 +37,7 @@ from cocotb.utils import get_time_from_sim_steps
 from cocotb.regression import TestFactory
 
 from cocotbext.eth import XgmiiFrame, XgmiiSource, XgmiiSink, PtpClockSimTime
-from cocotbext.axi import AxiStreamBus, AxiStreamSource, AxiStreamSink
+from cocotbext.axi import AxiStreamBus, AxiStreamSource, AxiStreamSink, AxiStreamFrame
 from cocotbext.axi.stream import define_stream
 
 
@@ -129,6 +129,7 @@ async def run_test_rx(dut, payload_lengths=None, payload_data=None, ifg=12):
 
         tb.log.info("RX frame PTP TS: %f ns", ptp_ts_ns)
         tb.log.info("TX frame SFD sim time: %f ns", tx_frame_sfd_ns)
+        tb.log.info("Difference: %f ns", abs(ptp_ts_ns - tx_frame_sfd_ns))
 
         assert rx_frame.tdata == test_data
         assert frame_error == 0
@@ -156,7 +157,7 @@ async def run_test_tx(dut, payload_lengths=None, payload_data=None, ifg=12):
     test_frames = [payload_data(x) for x in payload_lengths()]
 
     for test_data in test_frames:
-        await tb.axis_source.send(test_data)
+        await tb.axis_source.send(AxiStreamFrame(test_data, tuser=2))
 
     for test_data in test_frames:
         rx_frame = await tb.xgmii_sink.recv()
@@ -172,6 +173,7 @@ async def run_test_tx(dut, payload_lengths=None, payload_data=None, ifg=12):
 
         tb.log.info("TX frame PTP TS: %f ns", ptp_ts_ns)
         tb.log.info("RX frame SFD sim time: %f ns", rx_frame_sfd_ns)
+        tb.log.info("Difference: %f ns", abs(rx_frame_sfd_ns - ptp_ts_ns))
 
         assert rx_frame.get_payload() == test_data
         assert rx_frame.check_fcs()
@@ -195,22 +197,43 @@ async def run_test_tx_alignment(dut, payload_data=None, ifg=12):
     tb.xgmii_source.ifg = ifg
     tb.dut.ifg_delay.value = ifg
 
+    await tb.reset()
+
+    tb.log.info("Wait for PTP CDC lock")
+    while not dut.tx_ptp.tx_ptp_cdc.locked.value.integer:
+        await RisingEdge(dut.tx_clk)
+
     for length in range(60, 92):
 
-        await tb.reset()
+        for k in range(10):
+            await RisingEdge(dut.tx_clk)
 
         test_frames = [payload_data(length) for k in range(10)]
         start_lane = []
 
         for test_data in test_frames:
-            await tb.axis_source.send(test_data)
+            await tb.axis_source.send(AxiStreamFrame(test_data, tuser=2))
 
         for test_data in test_frames:
             rx_frame = await tb.xgmii_sink.recv()
+            ptp_ts = await tb.tx_ptp_ts_sink.recv()
+
+            ptp_ts_ns = int(ptp_ts.ts_96) / 2**16
+
+            rx_frame_sfd_ns = get_time_from_sim_steps(rx_frame.sim_time_sfd, "ns")
+
+            if rx_frame.start_lane == 4:
+                # start in lane 4 reports 1 full cycle delay, so subtract half clock period
+                rx_frame_sfd_ns -= 3.2
+
+            tb.log.info("TX frame PTP TS: %f ns", ptp_ts_ns)
+            tb.log.info("RX frame SFD sim time: %f ns", rx_frame_sfd_ns)
+            tb.log.info("Difference: %f ns", abs(rx_frame_sfd_ns - ptp_ts_ns))
 
             assert rx_frame.get_payload() == test_data
             assert rx_frame.check_fcs()
             assert rx_frame.ctrl is None
+            assert abs(rx_frame_sfd_ns - ptp_ts_ns - tb.clk_period) < tb.clk_period
 
             start_lane.append(rx_frame.start_lane)
 
@@ -337,12 +360,13 @@ def test_eth_mac_10g_fifo(request, data_width, enable_dic):
     parameters['PTP_PERIOD_FNS'] = 0x6666 if parameters['DATA_WIDTH'] == 64 else 0x3333
     parameters['PTP_USE_SAMPLE_CLOCK'] = 0
     parameters['TX_PTP_TS_ENABLE'] = 1
-    parameters['RX_PTP_TS_ENABLE'] = 1
+    parameters['RX_PTP_TS_ENABLE'] = parameters['TX_PTP_TS_ENABLE']
+    parameters['TX_PTP_TS_CTRL_IN_TUSER'] = parameters['TX_PTP_TS_ENABLE']
     parameters['TX_PTP_TS_FIFO_DEPTH'] = 64
     parameters['PTP_TS_WIDTH'] = 96
     parameters['TX_PTP_TAG_ENABLE'] = parameters['TX_PTP_TS_ENABLE']
     parameters['PTP_TAG_WIDTH'] = 16
-    parameters['TX_USER_WIDTH'] = (parameters['PTP_TAG_WIDTH'] if parameters['TX_PTP_TS_ENABLE'] and parameters['TX_PTP_TAG_ENABLE'] else 0) + 1
+    parameters['TX_USER_WIDTH'] = ((parameters['PTP_TAG_WIDTH'] if parameters['TX_PTP_TAG_ENABLE'] else 0) + (1 if parameters['TX_PTP_TS_CTRL_IN_TUSER'] else 0) if parameters['TX_PTP_TS_ENABLE'] else 0) + 1
     parameters['RX_USER_WIDTH'] = (parameters['PTP_TS_WIDTH'] if parameters['RX_PTP_TS_ENABLE'] else 0) + 1
 
     extra_env = {f'PARAM_{k}': str(v) for k, v in parameters.items()}

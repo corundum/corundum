@@ -415,7 +415,7 @@ tx_pipeline_fifo_inst (
 );
 
 axis_async_fifo_adapter #(
-    .DEPTH(MAX_TX_SIZE),
+    .DEPTH(AXIS_SYNC_KEEP_WIDTH*32),
     .S_DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
     .S_KEEP_ENABLE(AXIS_SYNC_KEEP_WIDTH > 1),
     .S_KEEP_WIDTH(AXIS_SYNC_KEEP_WIDTH),
@@ -426,11 +426,16 @@ axis_async_fifo_adapter #(
     .DEST_ENABLE(0),
     .USER_ENABLE(1),
     .USER_WIDTH(AXIS_TX_USER_WIDTH),
+    .RAM_PIPELINE(0),
     .FRAME_FIFO(1),
     .USER_BAD_FRAME_VALUE(1'b1),
     .USER_BAD_FRAME_MASK(1'b1),
-    .DROP_BAD_FRAME(1),
-    .DROP_WHEN_FULL(0)
+    .DROP_OVERSIZE_FRAME(0),
+    .DROP_BAD_FRAME(0),
+    .DROP_WHEN_FULL(0),
+    .MARK_WHEN_FULL(0),
+    .PAUSE_ENABLE(1),
+    .FRAME_PAUSE(1)
 )
 tx_async_fifo_inst (
     // AXI input
@@ -457,10 +462,20 @@ tx_async_fifo_inst (
     .m_axis_tdest(),
     .m_axis_tuser(axis_tx_out_tuser),
 
+    // Pause
+    .s_pause_req(1'b0),
+    .s_pause_ack(),
+    .m_pause_req(1'b0),
+    .m_pause_ack(),
+
     // Status
+    .s_status_depth(),
+    .s_status_depth_commit(),
     .s_status_overflow(),
     .s_status_bad_frame(),
     .s_status_good_frame(),
+    .m_status_depth(),
+    .m_status_depth_commit(),
     .m_status_overflow(),
     .m_status_bad_frame(),
     .m_status_good_frame()

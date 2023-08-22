@@ -606,6 +606,7 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		init_mac_list_from_eeprom(mqnic, mqnic->eeprom_i2c_client, 0x4B, 16);
 
 		break;
+	case MQNIC_BOARD_ID_XUSP3S:
 	case MQNIC_BOARD_ID_XUPP3R:
 
 		request_module("at24");

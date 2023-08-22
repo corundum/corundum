@@ -23,6 +23,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     Cisco         Nexus K3P-Q              XCKU3P-2FFVB676E      0x1ce4000a
     Silicom       fb2CG\@KU15P             XCKU15P-2FFVE1760E    0x1c2ca00e
     Digilent      NetFPGA SUME             XC7V690T-3FFG1761     0x10ee7028
+    BittWare      XUSP3S                   XCVU095-2FFVB2104E    0x12ba8823
     BittWare      XUP-P3R                  XCVU9P-2FLGB2104E     0x12ba9823
     BittWare      250-SoC                  XCZU19EG-2FFVD1760E   0x198a250e
     Intel         DK-DEV-1SMX-H-A          1SM21BHU2F53E1VG      0x11720001
@@ -53,6 +54,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     fb2CG\@KU15P             Gen 3 x16  2x QSFP28   16 GB DDR4 2666 (4x 512M x72)    \-
     NetFPGA SUME             Gen 3 x8   4x SFP+     8 GB DDR3 1866 (2x 512M x64)     \-
     250-SoC                  Gen 3 x16  2x QSFP28   4 GB DDR4 2666 (512M x72)        \-
+    XUSP3S                   Gen 3 x8   4x QSFP28   2x 4GB DDR4 512M x72, 2x SODIMM  \-
     XUP-P3R                  Gen 3 x16  4x QSFP28   4x DDR4 2400 DIMM (4x x72)       \-
     DK-DEV-1SMX-H-A          Gen 3 x16  2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     8 GB
     DK-DEV-1SMC-H-A          Gen 3 x16  2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     16 GB
@@ -82,6 +84,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     fb2CG\@KU15P             Y             Y             Y
     NetFPGA SUME             Y             N :sup:`7`    N :sup:`8`
     250-SoC                  Y             N             N :sup:`9`
+    XUSP3S                   Y             Y             Y
     XUP-P3R                  Y             Y             Y
     DK-DEV-1SMX-H-A          Y             N :sup:`7`    N
     DK-DEV-1SMC-H-A          Y             N :sup:`7`    N
@@ -135,6 +138,8 @@ This section details PCIe form-factor targets, which interface with a separate h
     250-SoC                  mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
     250-SoC                  mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
     250-SoC                  mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR
+    XUSP3S                   mqnic/fpga_25g/fpga              2x1   256/512  25G   Y    RR
+    XUSP3S                   mqnic/fpga_25g/fpga_10g          2x1   256/512  10G   Y    RR
     XUP-P3R                  mqnic/fpga_25g/fpga              4x1   256/8K   25G   Y    RR
     XUP-P3R                  mqnic/fpga_25g/fpga_10g          4x1   256/8K   10G   Y    RR
     XUP-P3R                  mqnic/fpga_100g/fpga             4x1   256/8K   100G  Y    RR

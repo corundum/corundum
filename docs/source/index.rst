@@ -22,6 +22,7 @@ Corundum currently supports devices from both Xilinx and Intel, on boards from s
 *  Silicom fb2CG\@KU15P (Xilinx Kintex UltraScale+ XCKU15P)
 *  NetFPGA SUME (Xilinx Virtex 7 XC7V690T)
 *  BittWare 250-SoC (Xilinx Zynq UltraScale+ XCZU19EG)
+*  BittWare XUSP3S (Xilinx Virtex UltraScale+ XCVU095)
 *  BittWare XUP-P3R (Xilinx Virtex UltraScale+ XCVU9P)
 *  Intel Stratix 10 MX dev kit (Intel Stratix 10 MX 2100)
 *  Intel Stratix 10 DX dev kit (Intel Stratix 10 DX 2800)

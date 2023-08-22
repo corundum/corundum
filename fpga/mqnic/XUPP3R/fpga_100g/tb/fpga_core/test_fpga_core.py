@@ -315,6 +315,9 @@ class TB(object):
         dut.eeprom_i2c_scl_i.setimmediatevalue(1)
         dut.eeprom_i2c_sda_i.setimmediatevalue(1)
 
+        dut.ext_pps_in.setimmediatevalue(0)
+        dut.ext_clk_in.setimmediatevalue(0)
+
         dut.qspi_dq_i.setimmediatevalue(0)
 
         self.loopback_enable = False

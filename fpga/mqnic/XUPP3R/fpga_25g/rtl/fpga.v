@@ -157,6 +157,8 @@ module fpga #
      * GPIO
      */
     output wire [3:0]   led,
+    input  wire         ext_pps_in,
+    input  wire         ext_clk_in,
 
     /*
      * I2C and related signals
@@ -2637,6 +2639,8 @@ core_inst (
      * GPIO
      */
     .led(led),
+    .ext_pps_in(ext_pps_in),
+    .ext_clk_in(ext_clk_in),
 
     /*
      * I2C

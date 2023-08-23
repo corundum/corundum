@@ -108,6 +108,12 @@ dict set params MAX_RX_SIZE "9214"
 dict set params TX_RAM_SIZE "131072"
 dict set params RX_RAM_SIZE "131072"
 
+# RAM configuration
+dict set params DDR_CH "4"
+dict set params DDR_ENABLE "0"
+dict set params AXI_DDR_ID_WIDTH "8"
+dict set params AXI_DDR_MAX_BURST_LEN "256"
+
 # Application block configuration
 dict set params APP_ID "32'h00000000"
 dict set params APP_ENABLE "0"
@@ -150,6 +156,43 @@ dict set params STAT_DMA_ENABLE "1"
 dict set params STAT_PCIE_ENABLE "1"
 dict set params STAT_INC_WIDTH "24"
 dict set params STAT_ID_WIDTH "12"
+
+# DDR4 MIG settings
+if {[dict get $params DDR_ENABLE]} {
+    # components (DDR4 A, DDR4 B)
+    set ddr4 [get_ips ddr4_0]
+
+    # performance-related configuration
+    set_property CONFIG.C0.DDR4_AxiArbitrationScheme {RD_PRI_REG} $ddr4
+    set_property CONFIG.C0.DDR4_AUTO_AP_COL_A3 {true} $ddr4
+    set_property CONFIG.C0.DDR4_Mem_Add_Map {ROW_COLUMN_BANK_INTLV} $ddr4
+
+    # set AXI ID width
+    set_property CONFIG.C0.DDR4_AxiIDWidth [dict get $params AXI_DDR_ID_WIDTH] $ddr4
+
+    # extract AXI configuration
+    dict set params AXI_DDR_DATA_WIDTH [get_property CONFIG.C0.DDR4_AxiDataWidth $ddr4]
+    dict set params AXI_DDR_ADDR_WIDTH [get_property CONFIG.C0.DDR4_AxiAddressWidth $ddr4]
+    dict set params AXI_DDR_NARROW_BURST [expr [get_property CONFIG.C0.DDR4_AxiNarrowBurst $ddr4] && 1]
+
+    if {[dict get $params DDR_CH] > 2} {
+        # SO-DIMMs (DDR4 SODMM A, DDR4 SODIMM B)
+        set ddr4 [get_ips ddr4_sodimm_0]
+
+        # performance-related configuration
+        set_property CONFIG.C0.DDR4_AxiArbitrationScheme {RD_PRI_REG} $ddr4
+        set_property CONFIG.C0.DDR4_AUTO_AP_COL_A3 {true} $ddr4
+        set_property CONFIG.C0.DDR4_Mem_Add_Map {ROW_COLUMN_BANK_INTLV} $ddr4
+
+        # set AXI ID width
+        set_property CONFIG.C0.DDR4_AxiIDWidth [dict get $params AXI_DDR_ID_WIDTH] $ddr4
+
+        # extract AXI configuration
+        dict set params AXI_DDR_DATA_WIDTH [get_property CONFIG.C0.DDR4_AxiDataWidth $ddr4]
+        dict set params AXI_DDR_ADDR_WIDTH [expr max([get_property CONFIG.C0.DDR4_AxiAddressWidth $ddr4], [dict get $params AXI_DDR_ADDR_WIDTH])]
+        dict set params AXI_DDR_NARROW_BURST [expr [get_property CONFIG.C0.DDR4_AxiNarrowBurst $ddr4] && [dict get $params AXI_DDR_NARROW_BURST]]
+    }
+}
 
 # PCIe IP core settings
 set pcie [get_ips pcie4_uscale_plus_0]

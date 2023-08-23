@@ -91,6 +91,16 @@ module fpga_core #
     parameter TX_RAM_SIZE = 32768,
     parameter RX_RAM_SIZE = 32768,
 
+    // RAM configuration
+    parameter DDR_CH = 4,
+    parameter DDR_ENABLE = 0,
+    parameter AXI_DDR_DATA_WIDTH = 512,
+    parameter AXI_DDR_ADDR_WIDTH = 32,
+    parameter AXI_DDR_STRB_WIDTH = (AXI_DDR_DATA_WIDTH/8),
+    parameter AXI_DDR_ID_WIDTH = 8,
+    parameter AXI_DDR_MAX_BURST_LEN = 256,
+    parameter AXI_DDR_NARROW_BURST = 0,
+
     // Application block configuration
     parameter APP_ID = 32'h00000000,
     parameter APP_ENABLE = 0,
@@ -182,6 +192,14 @@ module fpga_core #
 
     input  wire                               pps_in,
     output wire                               pps_out,
+
+    /*
+     * BMC interface
+     */
+    output wire                               bmc_clk,
+    output wire                               bmc_nss,
+    output wire                               bmc_mosi,
+    input  wire                               bmc_miso,
 
     /*
      * PCIe
@@ -552,7 +570,58 @@ module fpga_core #
     output wire                               qsfp_3_i2c_scl_t,
     input  wire                               qsfp_3_i2c_sda_i,
     output wire                               qsfp_3_i2c_sda_o,
-    output wire                               qsfp_3_i2c_sda_t
+    output wire                               qsfp_3_i2c_sda_t,
+
+    /*
+     * DDR
+     */
+    input  wire [DDR_CH-1:0]                     ddr_clk,
+    input  wire [DDR_CH-1:0]                     ddr_rst,
+
+    output wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]    m_axi_ddr_awid,
+    output wire [DDR_CH*AXI_DDR_ADDR_WIDTH-1:0]  m_axi_ddr_awaddr,
+    output wire [DDR_CH*8-1:0]                   m_axi_ddr_awlen,
+    output wire [DDR_CH*3-1:0]                   m_axi_ddr_awsize,
+    output wire [DDR_CH*2-1:0]                   m_axi_ddr_awburst,
+    output wire [DDR_CH-1:0]                     m_axi_ddr_awlock,
+    output wire [DDR_CH*4-1:0]                   m_axi_ddr_awcache,
+    output wire [DDR_CH*3-1:0]                   m_axi_ddr_awprot,
+    output wire [DDR_CH*4-1:0]                   m_axi_ddr_awqos,
+    output wire [DDR_CH-1:0]                     m_axi_ddr_awvalid,
+    input  wire [DDR_CH-1:0]                     m_axi_ddr_awready,
+    output wire [DDR_CH*AXI_DDR_DATA_WIDTH-1:0]  m_axi_ddr_wdata,
+    output wire [DDR_CH*AXI_DDR_STRB_WIDTH-1:0]  m_axi_ddr_wstrb,
+    output wire [DDR_CH-1:0]                     m_axi_ddr_wlast,
+    output wire [DDR_CH-1:0]                     m_axi_ddr_wvalid,
+    input  wire [DDR_CH-1:0]                     m_axi_ddr_wready,
+    input  wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]    m_axi_ddr_bid,
+    input  wire [DDR_CH*2-1:0]                   m_axi_ddr_bresp,
+    input  wire [DDR_CH-1:0]                     m_axi_ddr_bvalid,
+    output wire [DDR_CH-1:0]                     m_axi_ddr_bready,
+    output wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]    m_axi_ddr_arid,
+    output wire [DDR_CH*AXI_DDR_ADDR_WIDTH-1:0]  m_axi_ddr_araddr,
+    output wire [DDR_CH*8-1:0]                   m_axi_ddr_arlen,
+    output wire [DDR_CH*3-1:0]                   m_axi_ddr_arsize,
+    output wire [DDR_CH*2-1:0]                   m_axi_ddr_arburst,
+    output wire [DDR_CH-1:0]                     m_axi_ddr_arlock,
+    output wire [DDR_CH*4-1:0]                   m_axi_ddr_arcache,
+    output wire [DDR_CH*3-1:0]                   m_axi_ddr_arprot,
+    output wire [DDR_CH*4-1:0]                   m_axi_ddr_arqos,
+    output wire [DDR_CH-1:0]                     m_axi_ddr_arvalid,
+    input  wire [DDR_CH-1:0]                     m_axi_ddr_arready,
+    input  wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]    m_axi_ddr_rid,
+    input  wire [DDR_CH*AXI_DDR_DATA_WIDTH-1:0]  m_axi_ddr_rdata,
+    input  wire [DDR_CH*2-1:0]                   m_axi_ddr_rresp,
+    input  wire [DDR_CH-1:0]                     m_axi_ddr_rlast,
+    input  wire [DDR_CH-1:0]                     m_axi_ddr_rvalid,
+    output wire [DDR_CH-1:0]                     m_axi_ddr_rready,
+
+    input  wire [DDR_CH-1:0]                     ddr_status,
+
+    /*
+     * Reboot trigger
+     */
+    output wire                               fpga_boot
 );
 
 parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF;
@@ -566,7 +635,7 @@ parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3
 localparam RB_BASE_ADDR = 16'h1000;
 localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
 
-localparam RB_DRP_QSFP_0_BASE = RB_BASE_ADDR + 16'h50;
+localparam RB_DRP_QSFP_0_BASE = RB_BASE_ADDR + 16'h70;
 localparam RB_DRP_QSFP_1_BASE = RB_DRP_QSFP_0_BASE + 16'h20;
 localparam RB_DRP_QSFP_2_BASE = RB_DRP_QSFP_1_BASE + 16'h20;
 localparam RB_DRP_QSFP_3_BASE = RB_DRP_QSFP_2_BASE + 16'h20;
@@ -673,6 +742,17 @@ reg qsfp_3_lp_mode_reg = 1'b0;
 reg qsfp_3_i2c_scl_o_reg = 1'b1;
 reg qsfp_3_i2c_sda_o_reg = 1'b1;
 
+reg fpga_boot_reg = 1'b0;
+
+reg [15:0] bmc_ctrl_cmd_reg = 16'd0;
+reg [31:0] bmc_ctrl_data_reg = 32'd0;
+reg bmc_ctrl_valid_reg = 1'b0;
+
+wire [15:0] bmc_read_data;
+wire bmc_status_idle;
+wire bmc_status_done;
+wire bmc_status_timeout;
+
 assign ctrl_reg_wr_wait = qsfp_0_drp_reg_wr_wait | qsfp_1_drp_reg_wr_wait | qsfp_2_drp_reg_wr_wait | qsfp_3_drp_reg_wr_wait;
 assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg | qsfp_0_drp_reg_wr_ack | qsfp_1_drp_reg_wr_ack | qsfp_2_drp_reg_wr_ack | qsfp_3_drp_reg_wr_ack;
 assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg | qsfp_0_drp_reg_rd_data | qsfp_1_drp_reg_rd_data | qsfp_2_drp_reg_rd_data | qsfp_3_drp_reg_rd_data;
@@ -707,15 +787,24 @@ assign qsfp_3_i2c_scl_t = qsfp_3_i2c_scl_o_reg;
 assign qsfp_3_i2c_sda_o = qsfp_3_i2c_sda_o_reg;
 assign qsfp_3_i2c_sda_t = qsfp_3_i2c_sda_o_reg;
 
+assign fpga_boot = fpga_boot_reg;
+
 always @(posedge clk_250mhz) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
     ctrl_reg_rd_data_reg <= {AXIL_CTRL_DATA_WIDTH{1'b0}};
     ctrl_reg_rd_ack_reg <= 1'b0;
 
+    bmc_ctrl_valid_reg <= 1'b0;
+
     if (ctrl_reg_wr_en && !ctrl_reg_wr_ack_reg) begin
         // write operation
         ctrl_reg_wr_ack_reg <= 1'b0;
         case ({ctrl_reg_wr_addr >> 2, 2'b00})
+            // FW ID
+            8'h0C: begin
+                // FW ID: FPGA JTAG ID
+                fpga_boot_reg <= ctrl_reg_wr_data == 32'hFEE1DEAD;
+            end
             // I2C 0
             RBB+8'h0C: begin
                 // I2C ctrl: control
@@ -776,6 +865,13 @@ always @(posedge clk_250mhz) begin
                     qsfp_3_lp_mode_reg <= ctrl_reg_wr_data[29];
                 end
             end
+            // SF2 BMC
+            RBB+8'h60: bmc_ctrl_data_reg <= ctrl_reg_wr_data;            // BMC ctrl: data
+            RBB+8'h64: begin
+                // BMC ctrl: cmd
+                bmc_ctrl_cmd_reg <= ctrl_reg_wr_data[31:16];
+                bmc_ctrl_valid_reg <= 1'b1;
+            end
             default: ctrl_reg_wr_ack_reg <= 1'b0;
         endcase
     end
@@ -831,7 +927,7 @@ always @(posedge clk_250mhz) begin
             // XCVR GPIO
             RBB+8'h40: ctrl_reg_rd_data_reg <= 32'h0000C101;             // XCVR GPIO: Type
             RBB+8'h44: ctrl_reg_rd_data_reg <= 32'h00000100;             // XCVR GPIO: Version
-            RBB+8'h48: ctrl_reg_rd_data_reg <= RB_DRP_QSFP_0_BASE;       // XCVR GPIO: Next header
+            RBB+8'h48: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h50;       // XCVR GPIO: Next header
             RBB+8'h4C: begin
                 // XCVR GPIO: control 0123
                 ctrl_reg_rd_data_reg[0] <= !qsfp_0_mod_prsnt_n;
@@ -850,6 +946,17 @@ always @(posedge clk_250mhz) begin
                 ctrl_reg_rd_data_reg[25] <= !qsfp_3_intr_n;
                 ctrl_reg_rd_data_reg[28] <= qsfp_3_reset_reg;
                 ctrl_reg_rd_data_reg[29] <= qsfp_3_lp_mode_reg;
+            end
+            // SF2 BMC
+            RBB+8'h50: ctrl_reg_rd_data_reg <= 32'h0000C141;             // BMC ctrl: Type
+            RBB+8'h54: ctrl_reg_rd_data_reg <= 32'h00000100;             // BMC ctrl: Version
+            RBB+8'h58: ctrl_reg_rd_data_reg <= RB_DRP_QSFP_0_BASE;       // BMC ctrl: Next header
+            RBB+8'h5C: begin
+                // BMC ctrl: status
+                ctrl_reg_rd_data_reg[15:0] <= bmc_read_data;
+                ctrl_reg_rd_data_reg[16] <= bmc_status_done;
+                ctrl_reg_rd_data_reg[18] <= bmc_status_timeout;
+                ctrl_reg_rd_data_reg[19] <= bmc_status_idle;
             end
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
@@ -878,8 +985,36 @@ always @(posedge clk_250mhz) begin
         qsfp_3_lp_mode_reg <= 1'b0;
         qsfp_3_i2c_scl_o_reg <= 1'b1;
         qsfp_3_i2c_sda_o_reg <= 1'b1;
+
+        fpga_boot_reg <= 1'b0;
     end
 end
+
+bmc_spi #(
+    .PRESCALE(125),
+    .BYTE_WAIT(32),
+    .TIMEOUT(5000)
+)
+bmc_spi_inst (
+    .clk(clk_250mhz),
+    .rst(rst_250mhz),
+
+    .ctrl_cmd(bmc_ctrl_cmd_reg),
+    .ctrl_data(bmc_ctrl_data_reg),
+    .ctrl_valid(bmc_ctrl_valid_reg),
+
+    .read_data(bmc_read_data),
+
+    .status_idle(bmc_status_idle),
+    .status_done(bmc_status_done),
+    .status_timeout(bmc_status_timeout),
+
+    .bmc_clk(bmc_clk),
+    .bmc_nss(bmc_nss),
+    .bmc_mosi(bmc_mosi),
+    .bmc_miso(bmc_miso),
+    .bmc_int(1'b0)
+);
 
 rb_drp #(
     .DRP_ADDR_WIDTH(24),
@@ -1378,7 +1513,22 @@ mqnic_core_pcie_us #(
     .RX_RAM_SIZE(RX_RAM_SIZE),
 
     // RAM configuration
-    .DDR_ENABLE(0),
+    .DDR_CH(DDR_CH),
+    .DDR_ENABLE(DDR_ENABLE),
+    .DDR_GROUP_SIZE(1),
+    .AXI_DDR_DATA_WIDTH(AXI_DDR_DATA_WIDTH),
+    .AXI_DDR_ADDR_WIDTH(AXI_DDR_ADDR_WIDTH),
+    .AXI_DDR_STRB_WIDTH(AXI_DDR_STRB_WIDTH),
+    .AXI_DDR_ID_WIDTH(AXI_DDR_ID_WIDTH),
+    .AXI_DDR_AWUSER_ENABLE(0),
+    .AXI_DDR_WUSER_ENABLE(0),
+    .AXI_DDR_BUSER_ENABLE(0),
+    .AXI_DDR_ARUSER_ENABLE(0),
+    .AXI_DDR_RUSER_ENABLE(0),
+    .AXI_DDR_MAX_BURST_LEN(AXI_DDR_MAX_BURST_LEN),
+    .AXI_DDR_NARROW_BURST(AXI_DDR_NARROW_BURST),
+    .AXI_DDR_FIXED_BURST(0),
+    .AXI_DDR_WRAP_BURST(1),
     .HBM_ENABLE(0),
 
     // Application block configuration
@@ -1658,53 +1808,53 @@ core_inst (
     /*
      * DDR
      */
-    .ddr_clk(0),
-    .ddr_rst(0),
+    .ddr_clk(ddr_clk),
+    .ddr_rst(ddr_rst),
 
-    .m_axi_ddr_awid(),
-    .m_axi_ddr_awaddr(),
-    .m_axi_ddr_awlen(),
-    .m_axi_ddr_awsize(),
-    .m_axi_ddr_awburst(),
-    .m_axi_ddr_awlock(),
-    .m_axi_ddr_awcache(),
-    .m_axi_ddr_awprot(),
-    .m_axi_ddr_awqos(),
+    .m_axi_ddr_awid(m_axi_ddr_awid),
+    .m_axi_ddr_awaddr(m_axi_ddr_awaddr),
+    .m_axi_ddr_awlen(m_axi_ddr_awlen),
+    .m_axi_ddr_awsize(m_axi_ddr_awsize),
+    .m_axi_ddr_awburst(m_axi_ddr_awburst),
+    .m_axi_ddr_awlock(m_axi_ddr_awlock),
+    .m_axi_ddr_awcache(m_axi_ddr_awcache),
+    .m_axi_ddr_awprot(m_axi_ddr_awprot),
+    .m_axi_ddr_awqos(m_axi_ddr_awqos),
     .m_axi_ddr_awuser(),
-    .m_axi_ddr_awvalid(),
-    .m_axi_ddr_awready(0),
-    .m_axi_ddr_wdata(),
-    .m_axi_ddr_wstrb(),
-    .m_axi_ddr_wlast(),
+    .m_axi_ddr_awvalid(m_axi_ddr_awvalid),
+    .m_axi_ddr_awready(m_axi_ddr_awready),
+    .m_axi_ddr_wdata(m_axi_ddr_wdata),
+    .m_axi_ddr_wstrb(m_axi_ddr_wstrb),
+    .m_axi_ddr_wlast(m_axi_ddr_wlast),
     .m_axi_ddr_wuser(),
-    .m_axi_ddr_wvalid(),
-    .m_axi_ddr_wready(0),
-    .m_axi_ddr_bid(0),
-    .m_axi_ddr_bresp(0),
+    .m_axi_ddr_wvalid(m_axi_ddr_wvalid),
+    .m_axi_ddr_wready(m_axi_ddr_wready),
+    .m_axi_ddr_bid(m_axi_ddr_bid),
+    .m_axi_ddr_bresp(m_axi_ddr_bresp),
     .m_axi_ddr_buser(0),
-    .m_axi_ddr_bvalid(0),
-    .m_axi_ddr_bready(),
-    .m_axi_ddr_arid(),
-    .m_axi_ddr_araddr(),
-    .m_axi_ddr_arlen(),
-    .m_axi_ddr_arsize(),
-    .m_axi_ddr_arburst(),
-    .m_axi_ddr_arlock(),
-    .m_axi_ddr_arcache(),
-    .m_axi_ddr_arprot(),
-    .m_axi_ddr_arqos(),
+    .m_axi_ddr_bvalid(m_axi_ddr_bvalid),
+    .m_axi_ddr_bready(m_axi_ddr_bready),
+    .m_axi_ddr_arid(m_axi_ddr_arid),
+    .m_axi_ddr_araddr(m_axi_ddr_araddr),
+    .m_axi_ddr_arlen(m_axi_ddr_arlen),
+    .m_axi_ddr_arsize(m_axi_ddr_arsize),
+    .m_axi_ddr_arburst(m_axi_ddr_arburst),
+    .m_axi_ddr_arlock(m_axi_ddr_arlock),
+    .m_axi_ddr_arcache(m_axi_ddr_arcache),
+    .m_axi_ddr_arprot(m_axi_ddr_arprot),
+    .m_axi_ddr_arqos(m_axi_ddr_arqos),
     .m_axi_ddr_aruser(),
-    .m_axi_ddr_arvalid(),
-    .m_axi_ddr_arready(0),
-    .m_axi_ddr_rid(0),
-    .m_axi_ddr_rdata(0),
-    .m_axi_ddr_rresp(0),
-    .m_axi_ddr_rlast(0),
+    .m_axi_ddr_arvalid(m_axi_ddr_arvalid),
+    .m_axi_ddr_arready(m_axi_ddr_arready),
+    .m_axi_ddr_rid(m_axi_ddr_rid),
+    .m_axi_ddr_rdata(m_axi_ddr_rdata),
+    .m_axi_ddr_rresp(m_axi_ddr_rresp),
+    .m_axi_ddr_rlast(m_axi_ddr_rlast),
     .m_axi_ddr_ruser(0),
-    .m_axi_ddr_rvalid(0),
-    .m_axi_ddr_rready(),
+    .m_axi_ddr_rvalid(m_axi_ddr_rvalid),
+    .m_axi_ddr_rready(m_axi_ddr_rready),
 
-    .ddr_status(0),
+    .ddr_status(ddr_status),
 
     /*
      * HBM

@@ -326,6 +326,14 @@ int mqnic_process_rx_cq(struct mqnic_cq *cq, int napi_budget)
 		ring_index = le16_to_cpu(cpl->index) & rx_ring->size_mask;
 		rx_info = &rx_ring->rx_info[ring_index];
 		page = rx_info->page;
+		len = min_t(u32, le16_to_cpu(cpl->len), rx_info->len);
+
+		if (len < ETH_HLEN) {
+			netdev_warn(priv->ndev, "%s: ring %d dropping short frame (length %d)",
+					__func__, rx_ring->index, len);
+			rx_ring->dropped_packets++;
+			goto rx_drop;
+		}
 
 		if (unlikely(!page)) {
 			netdev_err(priv->ndev, "%s: ring %d null page at index %d",
@@ -359,8 +367,6 @@ int mqnic_process_rx_cq(struct mqnic_cq *cq, int napi_budget)
 				dma_unmap_len(rx_info, len), DMA_FROM_DEVICE);
 		rx_info->dma_addr = 0;
 
-		len = min_t(u32, le16_to_cpu(cpl->len), rx_info->len);
-
 		dma_sync_single_range_for_cpu(dev, rx_info->dma_addr, rx_info->page_offset,
 				rx_info->len, DMA_FROM_DEVICE);
 
@@ -378,6 +384,7 @@ int mqnic_process_rx_cq(struct mqnic_cq *cq, int napi_budget)
 		rx_ring->packets++;
 		rx_ring->bytes += le16_to_cpu(cpl->len);
 
+rx_drop:
 		done++;
 
 		cq_cons_ptr++;

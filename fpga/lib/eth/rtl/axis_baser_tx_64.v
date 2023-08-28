@@ -79,7 +79,8 @@ module axis_baser_tx_64 #
     /*
      * Configuration
      */
-    input  wire [7:0]                ifg_delay,
+    input  wire [7:0]                cfg_ifg,
+    input  wire                      cfg_tx_enable,
 
     /*
      * Status
@@ -397,7 +398,7 @@ always @* begin
             s_tdata_next = s_axis_tdata_masked;
             s_empty_next = keep2empty(s_axis_tkeep);
 
-            if (s_axis_tvalid) begin
+            if (s_axis_tvalid && cfg_tx_enable) begin
                 // XGMII start and preamble
                 if (swap_lanes_reg) begin
                     // lanes swapped
@@ -530,7 +531,7 @@ always @* begin
             output_data_next = fcs_output_data_0;
             output_type_next = fcs_output_type_0;
 
-            ifg_count_next = (ifg_delay > 8'd12 ? ifg_delay : 8'd12) - ifg_offset + (swap_lanes_reg ? 8'd4 : 8'd0) + deficit_idle_count_reg;
+            ifg_count_next = (cfg_ifg > 8'd12 ? cfg_ifg : 8'd12) - ifg_offset + (swap_lanes_reg ? 8'd4 : 8'd0) + deficit_idle_count_reg;
             if (s_empty_reg <= 4) begin
                 state_next = STATE_FCS_2;
             end else begin

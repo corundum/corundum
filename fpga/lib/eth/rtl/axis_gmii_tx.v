@@ -80,7 +80,8 @@ module axis_gmii_tx #
     /*
      * Configuration
      */
-    input  wire [7:0]                ifg_delay,
+    input  wire [7:0]                cfg_ifg,
+    input  wire                      cfg_tx_enable,
 
     /*
      * Status
@@ -240,7 +241,7 @@ always @* begin
 
                 frame_min_count_next = MIN_FRAME_LENGTH-4-1;
 
-                if (s_axis_tvalid) begin
+                if (s_axis_tvalid && cfg_tx_enable) begin
                     mii_odd_next = 1'b1;
                     gmii_txd_next = ETH_PRE;
                     gmii_tx_en_next = 1'b1;
@@ -386,7 +387,7 @@ always @* begin
                 if (s_axis_tvalid) begin
                     if (s_axis_tlast) begin
                         s_axis_tready_next = 1'b0;
-                        if (frame_ptr_reg < ifg_delay-1) begin
+                        if (frame_ptr_reg < cfg_ifg-1) begin
                             state_next = STATE_IFG;
                         end else begin
                             state_next = STATE_IDLE;
@@ -404,7 +405,7 @@ always @* begin
                 mii_odd_next = 1'b1;
                 frame_ptr_next = frame_ptr_reg + 1;
 
-                if (frame_ptr_reg < ifg_delay-1) begin
+                if (frame_ptr_reg < cfg_ifg-1) begin
                     state_next = STATE_IFG;
                 end else begin
                     state_next = STATE_IDLE;

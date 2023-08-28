@@ -79,7 +79,8 @@ module axis_xgmii_tx_64 #
     /*
      * Configuration
      */
-    input  wire [7:0]                ifg_delay,
+    input  wire [7:0]                cfg_ifg,
+    input  wire                      cfg_tx_enable,
 
     /*
      * Status
@@ -335,7 +336,7 @@ always @* begin
             // idle state - wait for data
             frame_min_count_next = MIN_FRAME_LENGTH-4-CTRL_WIDTH;
             reset_crc = 1'b1;
-            s_axis_tready_next = 1'b1;
+            s_axis_tready_next = cfg_tx_enable;
 
             // XGMII idle
             xgmii_txd_next = {CTRL_WIDTH{XGMII_IDLE}};
@@ -344,7 +345,7 @@ always @* begin
             s_tdata_next = s_axis_tdata_masked;
             s_empty_next = keep2empty(s_axis_tkeep);
 
-            if (s_axis_tvalid) begin
+            if (s_axis_tvalid && s_axis_tready) begin
                 // XGMII start and preamble
                 if (swap_lanes_reg) begin
                     // lanes swapped
@@ -479,7 +480,7 @@ always @* begin
             xgmii_txd_next = fcs_output_txd_0;
             xgmii_txc_next = fcs_output_txc_0;
 
-            ifg_count_next = (ifg_delay > 8'd12 ? ifg_delay : 8'd12) - ifg_offset + (swap_lanes_reg ? 8'd4 : 8'd0) + deficit_idle_count_reg;
+            ifg_count_next = (cfg_ifg > 8'd12 ? cfg_ifg : 8'd12) - ifg_offset + (swap_lanes_reg ? 8'd4 : 8'd0) + deficit_idle_count_reg;
             if (s_empty_reg <= 4) begin
                 state_next = STATE_FCS_2;
             end else begin
@@ -505,14 +506,14 @@ always @* begin
                         ifg_count_next = 8'd0;
                         swap_lanes_next = 1'b0;
                     end
-                    s_axis_tready_next = 1'b1;
+                    s_axis_tready_next = cfg_tx_enable;
                     state_next = STATE_IDLE;
                 end
             end else begin
                 if (ifg_count_next > 8'd4) begin
                     state_next = STATE_IFG;
                 end else begin
-                    s_axis_tready_next = 1'b1;
+                    s_axis_tready_next = cfg_tx_enable;
                     swap_lanes_next = ifg_count_next != 0;
                     state_next = STATE_IDLE;
                 end
@@ -538,14 +539,14 @@ always @* begin
                         ifg_count_next = 8'd0;
                         swap_lanes_next = 1'b0;
                     end
-                    s_axis_tready_next = 1'b1;
+                    s_axis_tready_next = cfg_tx_enable;
                     state_next = STATE_IDLE;
                 end
             end else begin
                 if (ifg_count_next > 8'd4) begin
                     state_next = STATE_IFG;
                 end else begin
-                    s_axis_tready_next = 1'b1;
+                    s_axis_tready_next = cfg_tx_enable;
                     swap_lanes_next = ifg_count_next != 0;
                     state_next = STATE_IDLE;
                 end
@@ -577,14 +578,14 @@ always @* begin
                                 ifg_count_next = 8'd0;
                                 swap_lanes_next = 1'b0;
                             end
-                            s_axis_tready_next = 1'b1;
+                            s_axis_tready_next = cfg_tx_enable;
                             state_next = STATE_IDLE;
                         end
                     end else begin
                         if (ifg_count_next > 8'd4) begin
                             state_next = STATE_IFG;
                         end else begin
-                            s_axis_tready_next = 1'b1;
+                            s_axis_tready_next = cfg_tx_enable;
                             swap_lanes_next = ifg_count_next != 0;
                             state_next = STATE_IDLE;
                         end

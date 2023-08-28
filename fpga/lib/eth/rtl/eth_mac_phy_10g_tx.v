@@ -89,8 +89,9 @@ module eth_mac_phy_10g_tx #
     /*
      * Configuration
      */
-    input  wire [7:0]                ifg_delay,
-    input  wire                      tx_prbs31_enable
+    input  wire [7:0]                cfg_ifg,
+    input  wire                      cfg_tx_enable,
+    input  wire                      cfg_tx_prbs31_enable
 );
 
 // bus width assertions
@@ -147,7 +148,8 @@ axis_baser_tx_inst (
     .m_axis_ptp_ts_valid(m_axis_ptp_ts_valid),
     .start_packet(tx_start_packet),
     .error_underflow(tx_error_underflow),
-    .ifg_delay(ifg_delay)
+    .cfg_ifg(cfg_ifg),
+    .cfg_tx_enable(cfg_tx_enable)
 );
 
 eth_phy_10g_tx_if #(
@@ -165,7 +167,7 @@ eth_phy_10g_tx_if_inst (
     .encoded_tx_hdr(encoded_tx_hdr),
     .serdes_tx_data(serdes_tx_data),
     .serdes_tx_hdr(serdes_tx_hdr),
-    .tx_prbs31_enable(tx_prbs31_enable)
+    .cfg_tx_prbs31_enable(cfg_tx_prbs31_enable)
 );
 
 endmodule

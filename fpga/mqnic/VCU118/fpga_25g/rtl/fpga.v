@@ -185,22 +185,10 @@ module fpga #
     /*
      * Ethernet: QSFP28
      */
-    output wire         qsfp1_tx1_p,
-    output wire         qsfp1_tx1_n,
-    input  wire         qsfp1_rx1_p,
-    input  wire         qsfp1_rx1_n,
-    output wire         qsfp1_tx2_p,
-    output wire         qsfp1_tx2_n,
-    input  wire         qsfp1_rx2_p,
-    input  wire         qsfp1_rx2_n,
-    output wire         qsfp1_tx3_p,
-    output wire         qsfp1_tx3_n,
-    input  wire         qsfp1_rx3_p,
-    input  wire         qsfp1_rx3_n,
-    output wire         qsfp1_tx4_p,
-    output wire         qsfp1_tx4_n,
-    input  wire         qsfp1_rx4_p,
-    input  wire         qsfp1_rx4_n,
+    output wire [3:0]   qsfp1_tx_p,
+    output wire [3:0]   qsfp1_tx_n,
+    input  wire [3:0]   qsfp1_rx_p,
+    input  wire [3:0]   qsfp1_rx_n,
     input  wire         qsfp1_mgt_refclk_0_p,
     input  wire         qsfp1_mgt_refclk_0_n,
     // input  wire         qsfp1_mgt_refclk_1_p,
@@ -213,22 +201,10 @@ module fpga #
     input  wire         qsfp1_intl,
     output wire         qsfp1_lpmode,
 
-    output wire         qsfp2_tx1_p,
-    output wire         qsfp2_tx1_n,
-    input  wire         qsfp2_rx1_p,
-    input  wire         qsfp2_rx1_n,
-    output wire         qsfp2_tx2_p,
-    output wire         qsfp2_tx2_n,
-    input  wire         qsfp2_rx2_p,
-    input  wire         qsfp2_rx2_n,
-    output wire         qsfp2_tx3_p,
-    output wire         qsfp2_tx3_n,
-    input  wire         qsfp2_rx3_p,
-    input  wire         qsfp2_rx3_n,
-    output wire         qsfp2_tx4_p,
-    output wire         qsfp2_tx4_n,
-    input  wire         qsfp2_rx4_p,
-    input  wire         qsfp2_rx4_n,
+    output wire [3:0]   qsfp2_tx_p,
+    output wire [3:0]   qsfp2_tx_n,
+    input  wire [3:0]   qsfp2_rx_p,
+    input  wire [3:0]   qsfp2_rx_n,
     // input  wire         qsfp2_mgt_refclk_0_p,
     // input  wire         qsfp2_mgt_refclk_0_n,
     // input  wire         qsfp2_mgt_refclk_1_p,
@@ -1066,10 +1042,10 @@ qsfp1_phy_quad_inst (
     /*
      * Serial data
      */
-    .xcvr_txp({qsfp1_tx4_p, qsfp1_tx3_p, qsfp1_tx2_p, qsfp1_tx1_p}),
-    .xcvr_txn({qsfp1_tx4_n, qsfp1_tx3_n, qsfp1_tx2_n, qsfp1_tx1_n}),
-    .xcvr_rxp({qsfp1_rx4_p, qsfp1_rx3_p, qsfp1_rx2_p, qsfp1_rx1_p}),
-    .xcvr_rxn({qsfp1_rx4_n, qsfp1_rx3_n, qsfp1_rx2_n, qsfp1_rx1_n}),
+    .xcvr_txp(qsfp1_tx_p),
+    .xcvr_txn(qsfp1_tx_n),
+    .xcvr_rxp(qsfp1_rx_p),
+    .xcvr_rxn(qsfp1_rx_n),
 
     /*
      * PHY connections
@@ -1242,10 +1218,10 @@ qsfp2_phy_quad_inst (
     /*
      * Serial data
      */
-    .xcvr_txp({qsfp2_tx4_p, qsfp2_tx3_p, qsfp2_tx2_p, qsfp2_tx1_p}),
-    .xcvr_txn({qsfp2_tx4_n, qsfp2_tx3_n, qsfp2_tx2_n, qsfp2_tx1_n}),
-    .xcvr_rxp({qsfp2_rx4_p, qsfp2_rx3_p, qsfp2_rx2_p, qsfp2_rx1_p}),
-    .xcvr_rxn({qsfp2_rx4_n, qsfp2_rx3_n, qsfp2_rx2_n, qsfp2_rx1_n}),
+    .xcvr_txp(qsfp2_tx_p),
+    .xcvr_txn(qsfp2_tx_n),
+    .xcvr_rxp(qsfp2_rx_p),
+    .xcvr_rxn(qsfp2_rx_n),
 
     /*
      * PHY connections

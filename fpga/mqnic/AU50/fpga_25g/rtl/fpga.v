@@ -174,22 +174,10 @@ module fpga #
     /*
      * Ethernet: QSFP28
      */
-    output wire         qsfp_tx1_p,
-    output wire         qsfp_tx1_n,
-    input  wire         qsfp_rx1_p,
-    input  wire         qsfp_rx1_n,
-    output wire         qsfp_tx2_p,
-    output wire         qsfp_tx2_n,
-    input  wire         qsfp_rx2_p,
-    input  wire         qsfp_rx2_n,
-    output wire         qsfp_tx3_p,
-    output wire         qsfp_tx3_n,
-    input  wire         qsfp_rx3_p,
-    input  wire         qsfp_rx3_n,
-    output wire         qsfp_tx4_p,
-    output wire         qsfp_tx4_n,
-    input  wire         qsfp_rx4_p,
-    input  wire         qsfp_rx4_n,
+    output wire [3:0]   qsfp_tx_p,
+    output wire [3:0]   qsfp_tx_n,
+    input  wire [3:0]   qsfp_rx_p,
+    input  wire [3:0]   qsfp_rx_n,
     input  wire         qsfp_mgt_refclk_0_p,
     input  wire         qsfp_mgt_refclk_0_n
     // input  wire         qsfp_mgt_refclk_1_p,
@@ -1054,10 +1042,10 @@ qsfp_phy_quad_inst (
     /*
      * Serial data
      */
-    .xcvr_txp({qsfp_tx4_p, qsfp_tx3_p, qsfp_tx2_p, qsfp_tx1_p}),
-    .xcvr_txn({qsfp_tx4_n, qsfp_tx3_n, qsfp_tx2_n, qsfp_tx1_n}),
-    .xcvr_rxp({qsfp_rx4_p, qsfp_rx3_p, qsfp_rx2_p, qsfp_rx1_p}),
-    .xcvr_rxn({qsfp_rx4_n, qsfp_rx3_n, qsfp_rx2_n, qsfp_rx1_n}),
+    .xcvr_txp(qsfp_tx_p),
+    .xcvr_txn(qsfp_tx_n),
+    .xcvr_rxp(qsfp_rx_p),
+    .xcvr_rxn(qsfp_rx_n),
 
     /*
      * PHY connections

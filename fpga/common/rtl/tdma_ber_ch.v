@@ -37,8 +37,8 @@ module tdma_ber_ch #
     input  wire                        phy_tx_clk,
     input  wire                        phy_rx_clk,
     input  wire [6:0]                  phy_rx_error_count,
-    output wire                        phy_tx_prbs31_enable,
-    output wire                        phy_rx_prbs31_enable,
+    output wire                        phy_cfg_tx_prbs31_enable,
+    output wire                        phy_cfg_rx_prbs31_enable,
 
     /*
      * AXI-Lite slave interface
@@ -93,23 +93,23 @@ initial begin
     end
 end
 
-reg tx_prbs31_enable_reg = 1'b0, tx_prbs31_enable_next;
-reg rx_prbs31_enable_reg = 1'b0, rx_prbs31_enable_next;
+reg cfg_tx_prbs31_enable_reg = 1'b0, cfg_tx_prbs31_enable_next;
+reg cfg_rx_prbs31_enable_reg = 1'b0, cfg_rx_prbs31_enable_next;
 
 // PHY TX BER interface
-reg phy_tx_prbs31_enable_reg = 1'b0;
-reg [PHY_PIPELINE-1:0] phy_tx_prbs31_enable_pipe_reg = 0;
+reg phy_cfg_tx_prbs31_enable_reg = 1'b0;
+reg [PHY_PIPELINE-1:0] phy_cfg_tx_prbs31_enable_pipe_reg = 0;
 
 always @(posedge phy_tx_clk) begin
-    phy_tx_prbs31_enable_reg <= tx_prbs31_enable_reg;
-    phy_tx_prbs31_enable_pipe_reg <= {phy_tx_prbs31_enable_pipe_reg, phy_tx_prbs31_enable_reg};
+    phy_cfg_tx_prbs31_enable_reg <= cfg_tx_prbs31_enable_reg;
+    phy_cfg_tx_prbs31_enable_pipe_reg <= {phy_cfg_tx_prbs31_enable_pipe_reg, phy_cfg_tx_prbs31_enable_reg};
 end
 
-assign phy_tx_prbs31_enable = PHY_PIPELINE ? phy_tx_prbs31_enable_pipe_reg[PHY_PIPELINE-1] : phy_tx_prbs31_enable_reg;
+assign phy_cfg_tx_prbs31_enable = PHY_PIPELINE ? phy_cfg_tx_prbs31_enable_pipe_reg[PHY_PIPELINE-1] : phy_cfg_tx_prbs31_enable_reg;
 
 // PHY RX BER interface
-reg phy_rx_prbs31_enable_reg = 1'b0;
-reg [PHY_PIPELINE-1:0] phy_rx_prbs31_enable_pipe_reg = 0;
+reg phy_cfg_rx_prbs31_enable_reg = 1'b0;
+reg [PHY_PIPELINE-1:0] phy_cfg_rx_prbs31_enable_pipe_reg = 0;
 reg [PHY_PIPELINE*7-1:0] phy_rx_error_count_pipe_reg = 0;
 
 // accumulate errors, dump every 16 cycles
@@ -119,8 +119,8 @@ reg [3:0] phy_rx_count_reg = 4'd0;
 reg phy_rx_flag_reg = 1'b0;
 
 always @(posedge phy_rx_clk) begin
-    phy_rx_prbs31_enable_reg <= rx_prbs31_enable_reg;
-    phy_rx_prbs31_enable_pipe_reg <= {phy_rx_prbs31_enable_pipe_reg, phy_rx_prbs31_enable_reg};
+    phy_cfg_rx_prbs31_enable_reg <= cfg_rx_prbs31_enable_reg;
+    phy_cfg_rx_prbs31_enable_pipe_reg <= {phy_cfg_rx_prbs31_enable_pipe_reg, phy_cfg_rx_prbs31_enable_reg};
     phy_rx_error_count_pipe_reg <= {phy_rx_error_count_pipe_reg, phy_rx_error_count};
 
     phy_rx_count_reg <= phy_rx_count_reg + 1;
@@ -134,7 +134,7 @@ always @(posedge phy_rx_clk) begin
     end
 end
 
-assign phy_rx_prbs31_enable = PHY_PIPELINE ? phy_rx_prbs31_enable_pipe_reg[PHY_PIPELINE-1] : phy_rx_prbs31_enable_reg;
+assign phy_cfg_rx_prbs31_enable = PHY_PIPELINE ? phy_cfg_rx_prbs31_enable_pipe_reg[PHY_PIPELINE-1] : phy_cfg_rx_prbs31_enable_reg;
 
 // synchronize dumped counts to control clock domain
 reg rx_flag_sync_reg_1 = 1'b0;
@@ -354,8 +354,8 @@ always @* begin
 
     slice_select_next = slice_select_reg;
 
-    tx_prbs31_enable_next = tx_prbs31_enable_reg;
-    rx_prbs31_enable_next = rx_prbs31_enable_reg;
+    cfg_tx_prbs31_enable_next = cfg_tx_prbs31_enable_reg;
+    cfg_rx_prbs31_enable_next = cfg_rx_prbs31_enable_reg;
 
     write_eligible = s_axil_awvalid && s_axil_wvalid && (!s_axil_bvalid || s_axil_bready) && (!s_axil_awready && !s_axil_wready);
     read_eligible = s_axil_arvalid && (!s_axil_rvalid || s_axil_rready) && (!s_axil_arready);
@@ -373,8 +373,8 @@ always @* begin
             case (s_axil_awaddr & ({AXIL_ADDR_WIDTH{1'b1}} << 2))
                 16'h0000: begin
                     // control
-                    tx_prbs31_enable_next = s_axil_wdata[0];
-                    rx_prbs31_enable_next = s_axil_wdata[1];
+                    cfg_tx_prbs31_enable_next = s_axil_wdata[0];
+                    cfg_rx_prbs31_enable_next = s_axil_wdata[1];
                 end
                 16'h0004: begin
                     // cycle count
@@ -432,8 +432,8 @@ always @* begin
             case (s_axil_araddr & ({AXIL_ADDR_WIDTH{1'b1}} << 2))
                 16'h0000: begin
                     // control
-                    s_axil_rdata_next[0] = tx_prbs31_enable_reg;
-                    s_axil_rdata_next[1] = rx_prbs31_enable_reg;
+                    s_axil_rdata_next[0] = cfg_tx_prbs31_enable_reg;
+                    s_axil_rdata_next[1] = cfg_rx_prbs31_enable_reg;
                 end
                 16'h0004: begin
                     // cycle count
@@ -511,8 +511,8 @@ always @(posedge clk) begin
 
         slice_select_reg <= 0;
 
-        tx_prbs31_enable_reg <= 1'b0;
-        rx_prbs31_enable_reg <= 1'b0;
+        cfg_tx_prbs31_enable_reg <= 1'b0;
+        cfg_rx_prbs31_enable_reg <= 1'b0;
     end else begin
         last_read_reg <= last_read_next;
 
@@ -539,8 +539,8 @@ always @(posedge clk) begin
 
         slice_select_reg <= slice_select_next;
 
-        tx_prbs31_enable_reg <= tx_prbs31_enable_next;
-        rx_prbs31_enable_reg <= rx_prbs31_enable_next;
+        cfg_tx_prbs31_enable_reg <= cfg_tx_prbs31_enable_next;
+        cfg_rx_prbs31_enable_reg <= cfg_rx_prbs31_enable_next;
     end
 
     s_axil_rdata_reg <= s_axil_rdata_next;

@@ -503,12 +503,12 @@ wire                         sfp_tx_clk_int;
 wire                         sfp_tx_rst_int;
 wire [XGMII_DATA_WIDTH-1:0]  sfp_txd_int;
 wire [XGMII_CTRL_WIDTH-1:0]  sfp_txc_int;
-wire                         sfp_tx_prbs31_enable_int;
+wire                         sfp_cfg_tx_prbs31_enable_int;
 wire                         sfp_rx_clk_int;
 wire                         sfp_rx_rst_int;
 wire [XGMII_DATA_WIDTH-1:0]  sfp_rxd_int;
 wire [XGMII_CTRL_WIDTH-1:0]  sfp_rxc_int;
-wire                         sfp_rx_prbs31_enable_int;
+wire                         sfp_cfg_rx_prbs31_enable_int;
 wire [6:0]                   sfp_rx_error_count_int;
 
 wire        sfp_drp_clk = clk_125mhz_int;
@@ -612,8 +612,8 @@ sfp_phy_quad_inst (
     .phy_1_rx_block_lock(sfp_rx_block_lock),
     .phy_1_rx_high_ber(),
     .phy_1_rx_status(sfp_rx_status),
-    .phy_1_tx_prbs31_enable(sfp_tx_prbs31_enable_int),
-    .phy_1_rx_prbs31_enable(sfp_rx_prbs31_enable_int)
+    .phy_1_cfg_tx_prbs31_enable(sfp_cfg_tx_prbs31_enable_int),
+    .phy_1_cfg_rx_prbs31_enable(sfp_cfg_rx_prbs31_enable_int)
 );
 
 wire ptp_clk;
@@ -875,12 +875,12 @@ core_inst (
     .sfp_tx_rst(sfp_tx_rst_int),
     .sfp_txd(sfp_txd_int),
     .sfp_txc(sfp_txc_int),
-    .sfp_tx_prbs31_enable(sfp_tx_prbs31_enable_int),
+    .sfp_cfg_tx_prbs31_enable(sfp_cfg_tx_prbs31_enable_int),
     .sfp_rx_clk(sfp_rx_clk_int),
     .sfp_rx_rst(sfp_rx_rst_int),
     .sfp_rxd(sfp_rxd_int),
     .sfp_rxc(sfp_rxc_int),
-    .sfp_rx_prbs31_enable(sfp_rx_prbs31_enable_int),
+    .sfp_cfg_rx_prbs31_enable(sfp_cfg_rx_prbs31_enable_int),
     .sfp_rx_error_count(sfp_rx_error_count_int),
     .sfp_rx_status(sfp_rx_status),
 

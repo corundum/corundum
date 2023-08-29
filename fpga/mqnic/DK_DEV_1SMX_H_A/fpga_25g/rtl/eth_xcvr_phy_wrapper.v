@@ -62,8 +62,8 @@ module eth_xcvr_phy_wrapper #
     output wire                   phy_rx_block_lock,
     output wire                   phy_rx_high_ber,
     output wire                   phy_rx_status,
-    input  wire                   phy_tx_prbs31_enable,
-    input  wire                   phy_rx_prbs31_enable
+    input  wire                   phy_cfg_tx_prbs31_enable,
+    input  wire                   phy_cfg_rx_prbs31_enable
 );
 
 wire xcvr_tx_analogreset;
@@ -293,8 +293,8 @@ phy_inst (
     .rx_block_lock(phy_rx_block_lock),
     .rx_high_ber(phy_rx_high_ber),
     .rx_status(phy_rx_status),
-    .tx_prbs31_enable(phy_tx_prbs31_enable),
-    .rx_prbs31_enable(phy_rx_prbs31_enable)
+    .cfg_tx_prbs31_enable(phy_cfg_tx_prbs31_enable),
+    .cfg_rx_prbs31_enable(phy_cfg_rx_prbs31_enable)
 );
 
 endmodule

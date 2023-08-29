@@ -272,48 +272,48 @@ module fpga_core #
     input  wire                               qsfp_tx_rst_1,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_txd_1,
     output wire [XGMII_CTRL_WIDTH-1:0]        qsfp_txc_1,
-    output wire                               qsfp_tx_prbs31_enable_1,
+    output wire                               qsfp_cfg_tx_prbs31_enable_1,
     input  wire                               qsfp_rx_clk_1,
     input  wire                               qsfp_rx_rst_1,
     input  wire [XGMII_DATA_WIDTH-1:0]        qsfp_rxd_1,
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_rxc_1,
-    output wire                               qsfp_rx_prbs31_enable_1,
+    output wire                               qsfp_cfg_rx_prbs31_enable_1,
     input  wire [6:0]                         qsfp_rx_error_count_1,
     input  wire                               qsfp_rx_status_1,
     input  wire                               qsfp_tx_clk_2,
     input  wire                               qsfp_tx_rst_2,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_txd_2,
     output wire [XGMII_CTRL_WIDTH-1:0]        qsfp_txc_2,
-    output wire                               qsfp_tx_prbs31_enable_2,
+    output wire                               qsfp_cfg_tx_prbs31_enable_2,
     input  wire                               qsfp_rx_clk_2,
     input  wire                               qsfp_rx_rst_2,
     input  wire [XGMII_DATA_WIDTH-1:0]        qsfp_rxd_2,
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_rxc_2,
-    output wire                               qsfp_rx_prbs31_enable_2,
+    output wire                               qsfp_cfg_rx_prbs31_enable_2,
     input  wire [6:0]                         qsfp_rx_error_count_2,
     input  wire                               qsfp_rx_status_2,
     input  wire                               qsfp_tx_clk_3,
     input  wire                               qsfp_tx_rst_3,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_txd_3,
     output wire [XGMII_CTRL_WIDTH-1:0]        qsfp_txc_3,
-    output wire                               qsfp_tx_prbs31_enable_3,
+    output wire                               qsfp_cfg_tx_prbs31_enable_3,
     input  wire                               qsfp_rx_clk_3,
     input  wire                               qsfp_rx_rst_3,
     input  wire [XGMII_DATA_WIDTH-1:0]        qsfp_rxd_3,
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_rxc_3,
-    output wire                               qsfp_rx_prbs31_enable_3,
+    output wire                               qsfp_cfg_rx_prbs31_enable_3,
     input  wire [6:0]                         qsfp_rx_error_count_3,
     input  wire                               qsfp_rx_status_3,
     input  wire                               qsfp_tx_clk_4,
     input  wire                               qsfp_tx_rst_4,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_txd_4,
     output wire [XGMII_CTRL_WIDTH-1:0]        qsfp_txc_4,
-    output wire                               qsfp_tx_prbs31_enable_4,
+    output wire                               qsfp_cfg_tx_prbs31_enable_4,
     input  wire                               qsfp_rx_clk_4,
     input  wire                               qsfp_rx_rst_4,
     input  wire [XGMII_DATA_WIDTH-1:0]        qsfp_rxd_4,
     input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp_rxc_4,
-    output wire                               qsfp_rx_prbs31_enable_4,
+    output wire                               qsfp_cfg_rx_prbs31_enable_4,
     input  wire [6:0]                         qsfp_rx_error_count_4,
     input  wire                               qsfp_rx_status_4,
 
@@ -702,8 +702,8 @@ if (TDMA_BER_ENABLE) begin
         .phy_tx_clk({qsfp_tx_clk_4, qsfp_tx_clk_3, qsfp_tx_clk_2, qsfp_tx_clk_1}),
         .phy_rx_clk({qsfp_rx_clk_4, qsfp_rx_clk_3, qsfp_rx_clk_2, qsfp_rx_clk_1}),
         .phy_rx_error_count({qsfp_rx_error_count_4, qsfp_rx_error_count_3, qsfp_rx_error_count_2, qsfp_rx_error_count_1}),
-        .phy_tx_prbs31_enable({qsfp_tx_prbs31_enable_4, qsfp_tx_prbs31_enable_3, qsfp_tx_prbs31_enable_2, qsfp_tx_prbs31_enable_1}),
-        .phy_rx_prbs31_enable({qsfp_rx_prbs31_enable_4, qsfp_rx_prbs31_enable_3, qsfp_rx_prbs31_enable_2, qsfp_rx_prbs31_enable_1}),
+        .phy_cfg_tx_prbs31_enable({qsfp_cfg_tx_prbs31_enable_4, qsfp_cfg_tx_prbs31_enable_3, qsfp_cfg_tx_prbs31_enable_2, qsfp_cfg_tx_prbs31_enable_1}),
+        .phy_cfg_rx_prbs31_enable({qsfp_cfg_rx_prbs31_enable_4, qsfp_cfg_rx_prbs31_enable_3, qsfp_cfg_rx_prbs31_enable_2, qsfp_cfg_rx_prbs31_enable_1}),
         .s_axil_awaddr(axil_csr_awaddr),
         .s_axil_awprot(axil_csr_awprot),
         .s_axil_awvalid(axil_csr_awvalid),
@@ -729,14 +729,14 @@ if (TDMA_BER_ENABLE) begin
 
 end else begin
 
-    assign qsfp_tx_prbs31_enable_1 = 1'b0;
-    assign qsfp_rx_prbs31_enable_1 = 1'b0;
-    assign qsfp_tx_prbs31_enable_2 = 1'b0;
-    assign qsfp_rx_prbs31_enable_2 = 1'b0;
-    assign qsfp_tx_prbs31_enable_3 = 1'b0;
-    assign qsfp_rx_prbs31_enable_3 = 1'b0;
-    assign qsfp_tx_prbs31_enable_4 = 1'b0;
-    assign qsfp_rx_prbs31_enable_4 = 1'b0;
+    assign qsfp_cfg_tx_prbs31_enable_1 = 1'b0;
+    assign qsfp_cfg_rx_prbs31_enable_1 = 1'b0;
+    assign qsfp_cfg_tx_prbs31_enable_2 = 1'b0;
+    assign qsfp_cfg_rx_prbs31_enable_2 = 1'b0;
+    assign qsfp_cfg_tx_prbs31_enable_3 = 1'b0;
+    assign qsfp_cfg_rx_prbs31_enable_3 = 1'b0;
+    assign qsfp_cfg_tx_prbs31_enable_4 = 1'b0;
+    assign qsfp_cfg_rx_prbs31_enable_4 = 1'b0;
 
 end
 
@@ -893,7 +893,9 @@ generate
             .rx_error_bad_frame(),
             .rx_error_bad_fcs(),
 
-            .ifg_delay(8'd12)
+            .cfg_ifg(8'd12),
+            .cfg_tx_enable(1'b1),
+            .cfg_rx_enable(1'b1)
         );
 
     end

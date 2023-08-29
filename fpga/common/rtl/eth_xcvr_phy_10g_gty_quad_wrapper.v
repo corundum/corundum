@@ -136,8 +136,8 @@ module eth_xcvr_phy_10g_gty_quad_wrapper #
     output wire                   phy_1_rx_block_lock,
     output wire                   phy_1_rx_high_ber,
     output wire                   phy_1_rx_status,
-    input  wire                   phy_1_tx_prbs31_enable,
-    input  wire                   phy_1_rx_prbs31_enable,
+    input  wire                   phy_1_cfg_tx_prbs31_enable,
+    input  wire                   phy_1_cfg_rx_prbs31_enable,
 
     output wire                   phy_2_tx_clk,
     output wire                   phy_2_tx_rst,
@@ -154,8 +154,8 @@ module eth_xcvr_phy_10g_gty_quad_wrapper #
     output wire                   phy_2_rx_block_lock,
     output wire                   phy_2_rx_high_ber,
     output wire                   phy_2_rx_status,
-    input  wire                   phy_2_tx_prbs31_enable,
-    input  wire                   phy_2_rx_prbs31_enable,
+    input  wire                   phy_2_cfg_tx_prbs31_enable,
+    input  wire                   phy_2_cfg_rx_prbs31_enable,
 
     output wire                   phy_3_tx_clk,
     output wire                   phy_3_tx_rst,
@@ -172,8 +172,8 @@ module eth_xcvr_phy_10g_gty_quad_wrapper #
     output wire                   phy_3_rx_block_lock,
     output wire                   phy_3_rx_high_ber,
     output wire                   phy_3_rx_status,
-    input  wire                   phy_3_tx_prbs31_enable,
-    input  wire                   phy_3_rx_prbs31_enable,
+    input  wire                   phy_3_cfg_tx_prbs31_enable,
+    input  wire                   phy_3_cfg_rx_prbs31_enable,
 
     output wire                   phy_4_tx_clk,
     output wire                   phy_4_tx_rst,
@@ -190,8 +190,8 @@ module eth_xcvr_phy_10g_gty_quad_wrapper #
     output wire                   phy_4_rx_block_lock,
     output wire                   phy_4_rx_high_ber,
     output wire                   phy_4_rx_status,
-    input  wire                   phy_4_tx_prbs31_enable,
-    input  wire                   phy_4_rx_prbs31_enable
+    input  wire                   phy_4_cfg_tx_prbs31_enable,
+    input  wire                   phy_4_cfg_rx_prbs31_enable
 );
 
 generate
@@ -366,8 +366,8 @@ if (COUNT > 0) begin : phy1
         .phy_rx_block_lock(phy_1_rx_block_lock),
         .phy_rx_high_ber(phy_1_rx_high_ber),
         .phy_rx_status(phy_1_rx_status),
-        .phy_tx_prbs31_enable(phy_1_tx_prbs31_enable),
-        .phy_rx_prbs31_enable(phy_1_rx_prbs31_enable)
+        .phy_cfg_tx_prbs31_enable(phy_1_cfg_tx_prbs31_enable),
+        .phy_cfg_rx_prbs31_enable(phy_1_cfg_rx_prbs31_enable)
     );
 
 end else begin
@@ -464,8 +464,8 @@ if (COUNT > 1) begin : phy2
         .phy_rx_block_lock(phy_2_rx_block_lock),
         .phy_rx_high_ber(phy_2_rx_high_ber),
         .phy_rx_status(phy_2_rx_status),
-        .phy_tx_prbs31_enable(phy_2_tx_prbs31_enable),
-        .phy_rx_prbs31_enable(phy_2_rx_prbs31_enable)
+        .phy_cfg_tx_prbs31_enable(phy_2_cfg_tx_prbs31_enable),
+        .phy_cfg_rx_prbs31_enable(phy_2_cfg_rx_prbs31_enable)
     );
 
 end else begin
@@ -562,8 +562,8 @@ if (COUNT > 2) begin : phy3
         .phy_rx_block_lock(phy_3_rx_block_lock),
         .phy_rx_high_ber(phy_3_rx_high_ber),
         .phy_rx_status(phy_3_rx_status),
-        .phy_tx_prbs31_enable(phy_3_tx_prbs31_enable),
-        .phy_rx_prbs31_enable(phy_3_rx_prbs31_enable)
+        .phy_cfg_tx_prbs31_enable(phy_3_cfg_tx_prbs31_enable),
+        .phy_cfg_rx_prbs31_enable(phy_3_cfg_rx_prbs31_enable)
     );
 
 end else begin
@@ -660,8 +660,8 @@ if (COUNT > 3) begin : phy4
         .phy_rx_block_lock(phy_4_rx_block_lock),
         .phy_rx_high_ber(phy_4_rx_high_ber),
         .phy_rx_status(phy_4_rx_status),
-        .phy_tx_prbs31_enable(phy_4_tx_prbs31_enable),
-        .phy_rx_prbs31_enable(phy_4_rx_prbs31_enable)
+        .phy_cfg_tx_prbs31_enable(phy_4_cfg_tx_prbs31_enable),
+        .phy_cfg_rx_prbs31_enable(phy_4_cfg_rx_prbs31_enable)
     );
 
 end else begin

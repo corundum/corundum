@@ -946,8 +946,8 @@ sfp_phy_quad_inst (
     .phy_1_rx_block_lock(sfp_1_rx_block_lock),
     .phy_1_rx_high_ber(),
     .phy_1_rx_status(sfp_1_rx_status),
-    .phy_1_tx_prbs31_enable(1'b0),
-    .phy_1_rx_prbs31_enable(1'b0),
+    .phy_1_cfg_tx_prbs31_enable(1'b0),
+    .phy_1_cfg_rx_prbs31_enable(1'b0),
 
     .phy_2_tx_clk(sfp_2_tx_clk_int),
     .phy_2_tx_rst(sfp_2_tx_rst_int),
@@ -964,8 +964,8 @@ sfp_phy_quad_inst (
     .phy_2_rx_block_lock(sfp_2_rx_block_lock),
     .phy_2_rx_high_ber(),
     .phy_2_rx_status(sfp_2_rx_status),
-    .phy_2_tx_prbs31_enable(1'b0),
-    .phy_2_rx_prbs31_enable(1'b0)
+    .phy_2_cfg_tx_prbs31_enable(1'b0),
+    .phy_2_cfg_rx_prbs31_enable(1'b0)
 );
 
 wire ptp_clk;

@@ -55,8 +55,8 @@ module tdma_ber #
     input  wire [COUNT-1:0]            phy_tx_clk,
     input  wire [COUNT-1:0]            phy_rx_clk,
     input  wire [COUNT*7-1:0]          phy_rx_error_count,
-    output wire [COUNT-1:0]            phy_tx_prbs31_enable,
-    output wire [COUNT-1:0]            phy_rx_prbs31_enable,
+    output wire [COUNT-1:0]            phy_cfg_tx_prbs31_enable,
+    output wire [COUNT-1:0]            phy_cfg_rx_prbs31_enable,
 
     /*
      * AXI-Lite slave interface
@@ -406,8 +406,8 @@ generate
             .phy_tx_clk(phy_tx_clk[n]),
             .phy_rx_clk(phy_rx_clk[n]),
             .phy_rx_error_count(phy_rx_error_count[n*7 +: 7]),
-            .phy_tx_prbs31_enable(phy_tx_prbs31_enable[n]),
-            .phy_rx_prbs31_enable(phy_rx_prbs31_enable[n]),
+            .phy_cfg_tx_prbs31_enable(phy_cfg_tx_prbs31_enable[n]),
+            .phy_cfg_rx_prbs31_enable(phy_cfg_rx_prbs31_enable[n]),
             .s_axil_awaddr(axil_ch_awaddr[n*AXIL_ADDR_WIDTH +: AXIL_ADDR_WIDTH]),
             .s_axil_awprot(axil_ch_awprot[n*3 +: 3]),
             .s_axil_awvalid(axil_ch_awvalid[n]),

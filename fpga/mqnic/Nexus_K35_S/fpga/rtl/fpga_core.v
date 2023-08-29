@@ -848,7 +848,9 @@ generate
             .rx_error_bad_frame(),
             .rx_error_bad_fcs(),
 
-            .ifg_delay(8'd12)
+            .cfg_ifg(8'd12),
+            .cfg_tx_enable(1'b1),
+            .cfg_rx_enable(1'b1)
         );
 
     end

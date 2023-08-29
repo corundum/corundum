@@ -284,12 +284,12 @@ module fpga_core #
     input  wire                                 sfp0_tx_rst,
     output wire [63:0]                          sfp0_txd,
     output wire [7:0]                           sfp0_txc,
-    output wire                                 sfp0_tx_prbs31_enable,
+    output wire                                 sfp0_cfg_tx_prbs31_enable,
     input  wire                                 sfp0_rx_clk,
     input  wire                                 sfp0_rx_rst,
     input  wire [63:0]                          sfp0_rxd,
     input  wire [7:0]                           sfp0_rxc,
-    output wire                                 sfp0_rx_prbs31_enable,
+    output wire                                 sfp0_cfg_rx_prbs31_enable,
     input  wire [6:0]                           sfp0_rx_error_count,
     input  wire                                 sfp0_rx_status,
     output wire                                 sfp0_tx_disable_b,
@@ -298,12 +298,12 @@ module fpga_core #
     input  wire                                 sfp1_tx_rst,
     output wire [63:0]                          sfp1_txd,
     output wire [7:0]                           sfp1_txc,
-    output wire                                 sfp1_tx_prbs31_enable,
+    output wire                                 sfp1_cfg_tx_prbs31_enable,
     input  wire                                 sfp1_rx_clk,
     input  wire                                 sfp1_rx_rst,
     input  wire [63:0]                          sfp1_rxd,
     input  wire [7:0]                           sfp1_rxc,
-    output wire                                 sfp1_rx_prbs31_enable,
+    output wire                                 sfp1_cfg_rx_prbs31_enable,
     input  wire [6:0]                           sfp1_rx_error_count,
     input  wire                                 sfp1_rx_status,
     output wire                                 sfp1_tx_disable_b,
@@ -312,12 +312,12 @@ module fpga_core #
     input  wire                                 sfp2_tx_rst,
     output wire [63:0]                          sfp2_txd,
     output wire [7:0]                           sfp2_txc,
-    output wire                                 sfp2_tx_prbs31_enable,
+    output wire                                 sfp2_cfg_tx_prbs31_enable,
     input  wire                                 sfp2_rx_clk,
     input  wire                                 sfp2_rx_rst,
     input  wire [63:0]                          sfp2_rxd,
     input  wire [7:0]                           sfp2_rxc,
-    output wire                                 sfp2_rx_prbs31_enable,
+    output wire                                 sfp2_cfg_rx_prbs31_enable,
     input  wire [6:0]                           sfp2_rx_error_count,
     input  wire                                 sfp2_rx_status,
     output wire                                 sfp2_tx_disable_b,
@@ -326,12 +326,12 @@ module fpga_core #
     input  wire                                 sfp3_tx_rst,
     output wire [63:0]                          sfp3_txd,
     output wire [7:0]                           sfp3_txc,
-    output wire                                 sfp3_tx_prbs31_enable,
+    output wire                                 sfp3_cfg_tx_prbs31_enable,
     input  wire                                 sfp3_rx_clk,
     input  wire                                 sfp3_rx_rst,
     input  wire [63:0]                          sfp3_rxd,
     input  wire [7:0]                           sfp3_rxc,
-    output wire                                 sfp3_rx_prbs31_enable,
+    output wire                                 sfp3_cfg_rx_prbs31_enable,
     input  wire [6:0]                           sfp3_rx_error_count,
     input  wire                                 sfp3_rx_status,
     output wire                                 sfp3_tx_disable_b,
@@ -610,8 +610,8 @@ if (TDMA_BER_ENABLE) begin
         .phy_tx_clk({sfp3_tx_clk, sfp2_tx_clk, sfp1_tx_clk, sfp0_tx_clk}),
         .phy_rx_clk({sfp3_rx_clk, sfp2_rx_clk, sfp1_rx_clk, sfp0_rx_clk}),
         .phy_rx_error_count({sfp3_rx_error_count, sfp2_rx_error_count, sfp1_rx_error_count, sfp0_rx_error_count}),
-        .phy_tx_prbs31_enable({sfp3_tx_prbs31_enable, sfp2_tx_prbs31_enable, sfp1_tx_prbs31_enable, sfp0_tx_prbs31_enable}),
-        .phy_rx_prbs31_enable({sfp3_rx_prbs31_enable, sfp2_rx_prbs31_enable, sfp1_rx_prbs31_enable, sfp0_rx_prbs31_enable}),
+        .phy_cfg_tx_prbs31_enable({sfp3_cfg_tx_prbs31_enable, sfp2_cfg_tx_prbs31_enable, sfp1_cfg_tx_prbs31_enable, sfp0_cfg_tx_prbs31_enable}),
+        .phy_cfg_rx_prbs31_enable({sfp3_cfg_rx_prbs31_enable, sfp2_cfg_rx_prbs31_enable, sfp1_cfg_rx_prbs31_enable, sfp0_cfg_rx_prbs31_enable}),
         .s_axil_awaddr(axil_csr_awaddr),
         .s_axil_awprot(axil_csr_awprot),
         .s_axil_awvalid(axil_csr_awvalid),
@@ -637,14 +637,14 @@ if (TDMA_BER_ENABLE) begin
 
 end else begin
 
-    assign sfp0_tx_prbs31_enable = 1'b0;
-    assign sfp0_rx_prbs31_enable = 1'b0;
-    assign sfp1_tx_prbs31_enable = 1'b0;
-    assign sfp1_rx_prbs31_enable = 1'b0;
-    assign sfp2_tx_prbs31_enable = 1'b0;
-    assign sfp2_rx_prbs31_enable = 1'b0;
-    assign sfp3_tx_prbs31_enable = 1'b0;
-    assign sfp3_rx_prbs31_enable = 1'b0;
+    assign sfp0_cfg_tx_prbs31_enable = 1'b0;
+    assign sfp0_cfg_rx_prbs31_enable = 1'b0;
+    assign sfp1_cfg_tx_prbs31_enable = 1'b0;
+    assign sfp1_cfg_rx_prbs31_enable = 1'b0;
+    assign sfp2_cfg_tx_prbs31_enable = 1'b0;
+    assign sfp2_cfg_rx_prbs31_enable = 1'b0;
+    assign sfp3_cfg_tx_prbs31_enable = 1'b0;
+    assign sfp3_cfg_rx_prbs31_enable = 1'b0;
 
 end
 
@@ -800,7 +800,9 @@ generate
             .rx_error_bad_frame(),
             .rx_error_bad_fcs(),
 
-            .ifg_delay(8'd12)
+            .cfg_ifg(8'd12),
+            .cfg_tx_enable(1'b1),
+            .cfg_rx_enable(1'b1)
         );
 
     end

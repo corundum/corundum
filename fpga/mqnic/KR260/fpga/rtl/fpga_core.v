@@ -268,12 +268,12 @@ module fpga_core #
     input  wire                                 sfp_tx_rst,
     output wire [63:0]                          sfp_txd,
     output wire [7:0]                           sfp_txc,
-    output wire                                 sfp_tx_prbs31_enable,
+    output wire                                 sfp_cfg_tx_prbs31_enable,
     input  wire                                 sfp_rx_clk,
     input  wire                                 sfp_rx_rst,
     input  wire [63:0]                          sfp_rxd,
     input  wire [7:0]                           sfp_rxc,
-    output wire                                 sfp_rx_prbs31_enable,
+    output wire                                 sfp_cfg_rx_prbs31_enable,
     input  wire [6:0]                           sfp_rx_error_count,
     input  wire                                 sfp_rx_status,
 
@@ -530,8 +530,8 @@ if (TDMA_BER_ENABLE) begin
         .phy_tx_clk({sfp_tx_clk}),
         .phy_rx_clk({sfp_rx_clk}),
         .phy_rx_error_count({sfp_rx_error_count}),
-        .phy_tx_prbs31_enable({sfp_tx_prbs31_enable}),
-        .phy_rx_prbs31_enable({sfp_rx_prbs31_enable}),
+        .phy_cfg_tx_prbs31_enable({sfp_cfg_tx_prbs31_enable}),
+        .phy_cfg_rx_prbs31_enable({sfp_cfg_rx_prbs31_enable}),
         .s_axil_awaddr(axil_csr_awaddr),
         .s_axil_awprot(axil_csr_awprot),
         .s_axil_awvalid(axil_csr_awvalid),
@@ -557,8 +557,8 @@ if (TDMA_BER_ENABLE) begin
 
 end else begin
 
-    assign sfp_tx_prbs31_enable = 1'b0;
-    assign sfp_rx_prbs31_enable = 1'b0;
+    assign sfp_cfg_tx_prbs31_enable = 1'b0;
+    assign sfp_cfg_rx_prbs31_enable = 1'b0;
 
 end
 
@@ -716,7 +716,9 @@ generate
             .rx_error_bad_frame(),
             .rx_error_bad_fcs(),
 
-            .ifg_delay(8'd12)
+            .cfg_ifg(8'd12),
+            .cfg_tx_enable(1'b1),
+            .cfg_rx_enable(1'b1)
         );
 
     end

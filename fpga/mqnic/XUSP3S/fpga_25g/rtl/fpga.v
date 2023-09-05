@@ -1002,7 +1002,7 @@ pcie3_ultrascale_inst (
     .cfg_ds_device_number(5'd0),
     .cfg_ds_function_number(3'd0),
 
-    .cfg_subsys_vend_id(16'h1234),
+    .cfg_subsys_vend_id(BOARD_ID >> 16),
 
     .sys_clk(pcie_sys_clk),
     .sys_clk_gt(pcie_sys_clk_gt),

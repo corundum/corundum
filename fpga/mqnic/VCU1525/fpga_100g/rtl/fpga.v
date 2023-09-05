@@ -905,9 +905,6 @@ pcie4_uscale_plus_inst (
     .cfg_ds_port_number(8'd0),
     .cfg_ds_bus_number(8'd0),
     .cfg_ds_device_number(5'd0),
-    //.cfg_ds_function_number(3'd0),
-
-    //.cfg_subsys_vend_id(16'h1234),
 
     .sys_clk(pcie_sys_clk),
     .sys_clk_gt(pcie_sys_clk_gt),

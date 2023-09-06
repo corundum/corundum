@@ -10,6 +10,7 @@ set_property -dict [list \
     CONFIG.extended_tag_field {true} \
     CONFIG.pf0_dev_cap_max_payload {1024_bytes} \
     CONFIG.axisten_freq {250} \
+    CONFIG.PF0_Use_Class_Code_Lookup_Assistant {false} \
     CONFIG.pf0_class_code_base {02} \
     CONFIG.pf0_class_code_sub {00} \
     CONFIG.pf0_class_code_interface {00} \

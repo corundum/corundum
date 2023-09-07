@@ -489,21 +489,20 @@ static const struct net_device_ops mqnic_netdev_ops = {
 static void mqnic_link_status_timeout(struct timer_list *timer)
 {
 	struct mqnic_priv *priv = from_timer(priv, timer, link_status_timer);
-	struct mqnic_if *interface = priv->interface;
 	int k;
 	unsigned int up;
 
-	// "combine" all TX/RX status signals of all ports of this interface
-	for (k = 0, up = 0; k < interface->port_count; k++) {
-		if (!(mqnic_port_get_tx_status(interface->port[k]) & 0x1))
+	// "combine" all TX/RX status signals of all ports of this netdev
+	for (k = 0, up = 0; k < priv->port_count; k++) {
+		if (!(mqnic_port_get_tx_status(priv->port[k]) & 0x1))
 			continue;
-		if (!(mqnic_port_get_rx_status(interface->port[k]) & 0x1))
+		if (!(mqnic_port_get_rx_status(priv->port[k]) & 0x1))
 			continue;
 
 		up++;
 	}
 
-	if (up < interface->port_count) {
+	if (up < priv->port_count) {
 		// report carrier off, as soon as a one port's TX/RX status is deasserted
 		if (priv->link_status) {
 			netif_carrier_off(priv->ndev);
@@ -573,6 +572,10 @@ struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, in
 	priv->sched_block_count = interface->sched_block_count;
 	for (k = 0; k < interface->sched_block_count; k++)
 		priv->sched_block[k] = interface->sched_block[k];
+
+	priv->port_count = interface->port_count;
+	for (k = 0; k < interface->port_count; k++)
+		priv->port[k] = interface->port[k];
 
 	netif_set_real_num_tx_queues(ndev, priv->txq_count);
 	netif_set_real_num_rx_queues(ndev, priv->rxq_count);

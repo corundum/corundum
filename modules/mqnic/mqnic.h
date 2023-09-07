@@ -448,6 +448,9 @@ struct mqnic_priv {
 	u32 sched_block_count;
 	struct mqnic_sched_block *sched_block[MQNIC_MAX_PORTS];
 
+	u32 port_count;
+	struct mqnic_port *port[MQNIC_MAX_PORTS];
+
 	u32 max_desc_block_size;
 
 	u32 rx_queue_map_indir_table_size;

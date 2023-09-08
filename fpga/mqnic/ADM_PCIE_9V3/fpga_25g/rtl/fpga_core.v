@@ -281,6 +281,7 @@ module fpga_core #
     output wire                               qsfp_0_cfg_rx_prbs31_enable_0,
     input  wire [6:0]                         qsfp_0_rx_error_count_0,
     input  wire                               qsfp_0_rx_status_0,
+
     input  wire                               qsfp_0_tx_clk_1,
     input  wire                               qsfp_0_tx_rst_1,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_0_txd_1,
@@ -293,6 +294,7 @@ module fpga_core #
     output wire                               qsfp_0_cfg_rx_prbs31_enable_1,
     input  wire [6:0]                         qsfp_0_rx_error_count_1,
     input  wire                               qsfp_0_rx_status_1,
+
     input  wire                               qsfp_0_tx_clk_2,
     input  wire                               qsfp_0_tx_rst_2,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_0_txd_2,
@@ -305,6 +307,7 @@ module fpga_core #
     output wire                               qsfp_0_cfg_rx_prbs31_enable_2,
     input  wire [6:0]                         qsfp_0_rx_error_count_2,
     input  wire                               qsfp_0_rx_status_2,
+
     input  wire                               qsfp_0_tx_clk_3,
     input  wire                               qsfp_0_tx_rst_3,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_0_txd_3,
@@ -342,6 +345,7 @@ module fpga_core #
     output wire                               qsfp_1_cfg_rx_prbs31_enable_0,
     input  wire [6:0]                         qsfp_1_rx_error_count_0,
     input  wire                               qsfp_1_rx_status_0,
+
     input  wire                               qsfp_1_tx_clk_1,
     input  wire                               qsfp_1_tx_rst_1,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_1_txd_1,
@@ -354,6 +358,7 @@ module fpga_core #
     output wire                               qsfp_1_cfg_rx_prbs31_enable_1,
     input  wire [6:0]                         qsfp_1_rx_error_count_1,
     input  wire                               qsfp_1_rx_status_1,
+
     input  wire                               qsfp_1_tx_clk_2,
     input  wire                               qsfp_1_tx_rst_2,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_1_txd_2,
@@ -366,6 +371,7 @@ module fpga_core #
     output wire                               qsfp_1_cfg_rx_prbs31_enable_2,
     input  wire [6:0]                         qsfp_1_rx_error_count_2,
     input  wire                               qsfp_1_rx_status_2,
+
     input  wire                               qsfp_1_tx_clk_3,
     input  wire                               qsfp_1_tx_rst_3,
     output wire [XGMII_DATA_WIDTH-1:0]        qsfp_1_txd_3,

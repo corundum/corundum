@@ -2283,6 +2283,7 @@ core_inst (
     .qsfp_0_cfg_rx_prbs31_enable_0(qsfp_0_cfg_rx_prbs31_enable_0_int),
     .qsfp_0_rx_error_count_0(qsfp_0_rx_error_count_0_int),
     .qsfp_0_rx_status_0(qsfp_0_rx_status_0),
+
     .qsfp_0_tx_clk_1(qsfp_0_tx_clk_1_int),
     .qsfp_0_tx_rst_1(qsfp_0_tx_rst_1_int),
     .qsfp_0_txd_1(qsfp_0_txd_1_int),
@@ -2295,6 +2296,7 @@ core_inst (
     .qsfp_0_cfg_rx_prbs31_enable_1(qsfp_0_cfg_rx_prbs31_enable_1_int),
     .qsfp_0_rx_error_count_1(qsfp_0_rx_error_count_1_int),
     .qsfp_0_rx_status_1(qsfp_0_rx_status_1),
+
     .qsfp_0_tx_clk_2(qsfp_0_tx_clk_2_int),
     .qsfp_0_tx_rst_2(qsfp_0_tx_rst_2_int),
     .qsfp_0_txd_2(qsfp_0_txd_2_int),
@@ -2307,6 +2309,7 @@ core_inst (
     .qsfp_0_cfg_rx_prbs31_enable_2(qsfp_0_cfg_rx_prbs31_enable_2_int),
     .qsfp_0_rx_error_count_2(qsfp_0_rx_error_count_2_int),
     .qsfp_0_rx_status_2(qsfp_0_rx_status_2),
+
     .qsfp_0_tx_clk_3(qsfp_0_tx_clk_3_int),
     .qsfp_0_tx_rst_3(qsfp_0_tx_rst_3_int),
     .qsfp_0_txd_3(qsfp_0_txd_3_int),
@@ -2319,6 +2322,7 @@ core_inst (
     .qsfp_0_cfg_rx_prbs31_enable_3(qsfp_0_cfg_rx_prbs31_enable_3_int),
     .qsfp_0_rx_error_count_3(qsfp_0_rx_error_count_3_int),
     .qsfp_0_rx_status_3(qsfp_0_rx_status_3),
+
     .qsfp_0_drp_clk(qsfp_0_drp_clk),
     .qsfp_0_drp_rst(qsfp_0_drp_rst),
     .qsfp_0_drp_addr(qsfp_0_drp_addr),
@@ -2327,16 +2331,19 @@ core_inst (
     .qsfp_0_drp_we(qsfp_0_drp_we),
     .qsfp_0_drp_do(qsfp_0_drp_do),
     .qsfp_0_drp_rdy(qsfp_0_drp_rdy),
+
     .qsfp_0_mod_prsnt_n(qsfp_0_mod_prsnt_n_int),
     .qsfp_0_reset_n(qsfp_0_reset_n),
     .qsfp_0_lp_mode(qsfp_0_lp_mode),
     .qsfp_0_intr_n(qsfp_0_intr_n_int),
+
     .qsfp_0_i2c_scl_i(qsfp_0_i2c_scl_i),
     .qsfp_0_i2c_scl_o(qsfp_0_i2c_scl_o),
     .qsfp_0_i2c_scl_t(qsfp_0_i2c_scl_t),
     .qsfp_0_i2c_sda_i(qsfp_0_i2c_sda_i),
     .qsfp_0_i2c_sda_o(qsfp_0_i2c_sda_o),
     .qsfp_0_i2c_sda_t(qsfp_0_i2c_sda_t),
+
     .qsfp_1_tx_clk_0(qsfp_1_tx_clk_0_int),
     .qsfp_1_tx_rst_0(qsfp_1_tx_rst_0_int),
     .qsfp_1_txd_0(qsfp_1_txd_0_int),
@@ -2349,6 +2356,7 @@ core_inst (
     .qsfp_1_cfg_rx_prbs31_enable_0(qsfp_1_cfg_rx_prbs31_enable_0_int),
     .qsfp_1_rx_error_count_0(qsfp_1_rx_error_count_0_int),
     .qsfp_1_rx_status_0(qsfp_1_rx_status_0),
+
     .qsfp_1_tx_clk_1(qsfp_1_tx_clk_1_int),
     .qsfp_1_tx_rst_1(qsfp_1_tx_rst_1_int),
     .qsfp_1_txd_1(qsfp_1_txd_1_int),
@@ -2361,6 +2369,7 @@ core_inst (
     .qsfp_1_cfg_rx_prbs31_enable_1(qsfp_1_cfg_rx_prbs31_enable_1_int),
     .qsfp_1_rx_error_count_1(qsfp_1_rx_error_count_1_int),
     .qsfp_1_rx_status_1(qsfp_1_rx_status_1),
+
     .qsfp_1_tx_clk_2(qsfp_1_tx_clk_2_int),
     .qsfp_1_tx_rst_2(qsfp_1_tx_rst_2_int),
     .qsfp_1_txd_2(qsfp_1_txd_2_int),
@@ -2373,6 +2382,7 @@ core_inst (
     .qsfp_1_cfg_rx_prbs31_enable_2(qsfp_1_cfg_rx_prbs31_enable_2_int),
     .qsfp_1_rx_error_count_2(qsfp_1_rx_error_count_2_int),
     .qsfp_1_rx_status_2(qsfp_1_rx_status_2),
+
     .qsfp_1_tx_clk_3(qsfp_1_tx_clk_3_int),
     .qsfp_1_tx_rst_3(qsfp_1_tx_rst_3_int),
     .qsfp_1_txd_3(qsfp_1_txd_3_int),
@@ -2385,6 +2395,7 @@ core_inst (
     .qsfp_1_cfg_rx_prbs31_enable_3(qsfp_1_cfg_rx_prbs31_enable_3_int),
     .qsfp_1_rx_error_count_3(qsfp_1_rx_error_count_3_int),
     .qsfp_1_rx_status_3(qsfp_1_rx_status_3),
+
     .qsfp_1_drp_clk(qsfp_1_drp_clk),
     .qsfp_1_drp_rst(qsfp_1_drp_rst),
     .qsfp_1_drp_addr(qsfp_1_drp_addr),
@@ -2393,10 +2404,12 @@ core_inst (
     .qsfp_1_drp_we(qsfp_1_drp_we),
     .qsfp_1_drp_do(qsfp_1_drp_do),
     .qsfp_1_drp_rdy(qsfp_1_drp_rdy),
+
     .qsfp_1_mod_prsnt_n(qsfp_1_mod_prsnt_n_int),
     .qsfp_1_reset_n(qsfp_1_reset_n),
     .qsfp_1_lp_mode(qsfp_1_lp_mode),
     .qsfp_1_intr_n(qsfp_1_intr_n_int),
+
     .qsfp_1_i2c_scl_i(qsfp_1_i2c_scl_i),
     .qsfp_1_i2c_scl_o(qsfp_1_i2c_scl_o),
     .qsfp_1_i2c_scl_t(qsfp_1_i2c_scl_t),

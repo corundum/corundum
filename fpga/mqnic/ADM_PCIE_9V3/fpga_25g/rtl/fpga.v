@@ -1940,6 +1940,7 @@ core_inst (
     .qsfp_0_cfg_rx_prbs31_enable_0(qsfp_0_cfg_rx_prbs31_enable_0_int),
     .qsfp_0_rx_error_count_0(qsfp_0_rx_error_count_0_int),
     .qsfp_0_rx_status_0(qsfp_0_rx_status_0),
+
     .qsfp_0_tx_clk_1(qsfp_0_tx_clk_1_int),
     .qsfp_0_tx_rst_1(qsfp_0_tx_rst_1_int),
     .qsfp_0_txd_1(qsfp_0_txd_1_int),
@@ -1952,6 +1953,7 @@ core_inst (
     .qsfp_0_cfg_rx_prbs31_enable_1(qsfp_0_cfg_rx_prbs31_enable_1_int),
     .qsfp_0_rx_error_count_1(qsfp_0_rx_error_count_1_int),
     .qsfp_0_rx_status_1(qsfp_0_rx_status_1),
+
     .qsfp_0_tx_clk_2(qsfp_0_tx_clk_2_int),
     .qsfp_0_tx_rst_2(qsfp_0_tx_rst_2_int),
     .qsfp_0_txd_2(qsfp_0_txd_2_int),
@@ -1964,6 +1966,7 @@ core_inst (
     .qsfp_0_cfg_rx_prbs31_enable_2(qsfp_0_cfg_rx_prbs31_enable_2_int),
     .qsfp_0_rx_error_count_2(qsfp_0_rx_error_count_2_int),
     .qsfp_0_rx_status_2(qsfp_0_rx_status_2),
+
     .qsfp_0_tx_clk_3(qsfp_0_tx_clk_3_int),
     .qsfp_0_tx_rst_3(qsfp_0_tx_rst_3_int),
     .qsfp_0_txd_3(qsfp_0_txd_3_int),
@@ -2001,6 +2004,7 @@ core_inst (
     .qsfp_1_cfg_rx_prbs31_enable_0(qsfp_1_cfg_rx_prbs31_enable_0_int),
     .qsfp_1_rx_error_count_0(qsfp_1_rx_error_count_0_int),
     .qsfp_1_rx_status_0(qsfp_1_rx_status_0),
+
     .qsfp_1_tx_clk_1(qsfp_1_tx_clk_1_int),
     .qsfp_1_tx_rst_1(qsfp_1_tx_rst_1_int),
     .qsfp_1_txd_1(qsfp_1_txd_1_int),
@@ -2013,6 +2017,7 @@ core_inst (
     .qsfp_1_cfg_rx_prbs31_enable_1(qsfp_1_cfg_rx_prbs31_enable_1_int),
     .qsfp_1_rx_error_count_1(qsfp_1_rx_error_count_1_int),
     .qsfp_1_rx_status_1(qsfp_1_rx_status_1),
+
     .qsfp_1_tx_clk_2(qsfp_1_tx_clk_2_int),
     .qsfp_1_tx_rst_2(qsfp_1_tx_rst_2_int),
     .qsfp_1_txd_2(qsfp_1_txd_2_int),
@@ -2025,6 +2030,7 @@ core_inst (
     .qsfp_1_cfg_rx_prbs31_enable_2(qsfp_1_cfg_rx_prbs31_enable_2_int),
     .qsfp_1_rx_error_count_2(qsfp_1_rx_error_count_2_int),
     .qsfp_1_rx_status_2(qsfp_1_rx_status_2),
+
     .qsfp_1_tx_clk_3(qsfp_1_tx_clk_3_int),
     .qsfp_1_tx_rst_3(qsfp_1_tx_rst_3_int),
     .qsfp_1_txd_3(qsfp_1_txd_3_int),

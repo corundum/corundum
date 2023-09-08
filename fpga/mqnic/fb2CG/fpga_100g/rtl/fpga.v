@@ -199,7 +199,6 @@ module fpga #
     inout  wire         qsfp_0_i2c_scl,
     inout  wire         qsfp_0_i2c_sda,
 
-
     output wire [3:0]   qsfp_1_tx_p,
     output wire [3:0]   qsfp_1_tx_n,
     input  wire [3:0]   qsfp_1_rx_p,

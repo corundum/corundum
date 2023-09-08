@@ -110,7 +110,7 @@ dict set params MAX_TX_SIZE "9214"
 dict set params MAX_RX_SIZE "9214"
 dict set params TX_RAM_SIZE "32768"
 dict set params RX_RAM_SIZE "32768"
- 
+
 # Application block configuration
 dict set params APP_ID "32'h00000000"
 dict set params APP_ENABLE "0"

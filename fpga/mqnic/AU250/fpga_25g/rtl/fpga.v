@@ -2331,7 +2331,7 @@ core_inst (
     .status_error_uncor(status_error_uncor),
 
     /*
-     * Ethernet: QSFP18
+     * Ethernet: QSFP28
      */
     .qsfp0_tx_clk_1(qsfp0_tx_clk_1_int),
     .qsfp0_tx_rst_1(qsfp0_tx_rst_1_int),

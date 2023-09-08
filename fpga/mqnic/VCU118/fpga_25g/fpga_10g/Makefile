@@ -167,6 +167,7 @@ include ../common/vivado.mk
 	EXT=bit; COUNT=100; \
 	while [ -e rev/$*_rev$$COUNT.$$EXT ]; \
 	do COUNT=$$((COUNT+1)); done; \
+	COUNT=$$((COUNT-1)); \
 	cp $@ rev/$*_fallback_rev$$COUNT.$$EXT; \
 	echo "Output: rev/$*_fallback_rev$$COUNT.$$EXT";
 
@@ -267,4 +268,3 @@ flash%: $(FPGA_TOP)%_primary.mcs $(FPGA_TOP)%_secondary.mcs $(FPGA_TOP)%_primary
 	echo "boot_hw_device [current_hw_device]" >> flash$*.tcl
 	echo "exit" >> flash$*.tcl
 	vivado -nojournal -nolog -mode batch -source flash$*.tcl
-

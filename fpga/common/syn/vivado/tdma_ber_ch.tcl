@@ -16,7 +16,7 @@ foreach inst [get_cells -hier -filter {(ORIG_REF_NAME == tdma_ber_ch || REF_NAME
     set rx_clk_period [if {[llength $rx_clk]} {get_property -min PERIOD $rx_clk} {expr 1.0}]
 
     # control synchronization
-    set_property ASYNC_REG TRUE [get_cells -hier -regexp ".*/phy_(rx|tcfg_x)_prbs31_enable_reg_reg" -filter "PARENT == $inst"]
+    set_property ASYNC_REG TRUE [get_cells -hier -regexp ".*/phy_cfg_(rx|tx)_prbs31_enable_reg_reg" -filter "PARENT == $inst"]
 
     set_max_delay -from [get_cells "$inst/cfg_tx_prbs31_enable_reg_reg"] -to [get_cells "$inst/phy_cfg_tx_prbs31_enable_reg_reg"] -datapath_only $clk_period
     set_max_delay -from [get_cells "$inst/cfg_rx_prbs31_enable_reg_reg"] -to [get_cells "$inst/phy_cfg_rx_prbs31_enable_reg_reg"] -datapath_only $clk_period

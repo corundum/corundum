@@ -279,6 +279,8 @@ class TB(object):
                 macs.append(mac)
 
                 getattr(dut, f"qsfpdd{x}_mac_{y}_rx_status").setimmediatevalue(1)
+                getattr(dut, f"qsfpdd{x}_mac_{y}_rx_lfc_req").setimmediatevalue(0)
+                getattr(dut, f"qsfpdd{x}_mac_{y}_rx_pfc_req").setimmediatevalue(0)
 
             self.qsfpdd_mac.append(macs)
 
@@ -703,6 +705,8 @@ def test_fpga_core(request):
     parameters['TX_CHECKSUM_ENABLE'] = 1
     parameters['RX_HASH_ENABLE'] = 1
     parameters['RX_CHECKSUM_ENABLE'] = 1
+    parameters['LFC_ENABLE'] = 1
+    parameters['PFC_ENABLE'] = parameters['LFC_ENABLE']
     parameters['TX_FIFO_DEPTH'] = 32768
     parameters['RX_FIFO_DEPTH'] = 131072
     parameters['MAX_TX_SIZE'] = 9214

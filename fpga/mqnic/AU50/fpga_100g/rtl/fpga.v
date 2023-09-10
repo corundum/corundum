@@ -71,6 +71,8 @@ module fpga #
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
+    parameter PFC_ENABLE = 1,
+    parameter LFC_ENABLE = PFC_ENABLE,
     parameter TX_FIFO_DEPTH = 32768,
     parameter RX_FIFO_DEPTH = 131072,
     parameter MAX_TX_SIZE = 9214,
@@ -938,7 +940,20 @@ wire        qsfp_drp_we;
 wire [15:0] qsfp_drp_do;
 wire        qsfp_drp_rdy;
 
-wire qsfp_rx_status;
+wire       qsfp_tx_enable;
+wire       qsfp_tx_lfc_en;
+wire       qsfp_tx_lfc_req;
+wire [7:0] qsfp_tx_pfc_en;
+wire [7:0] qsfp_tx_pfc_req;
+
+wire       qsfp_rx_enable;
+wire       qsfp_rx_status;
+wire       qsfp_rx_lfc_en;
+wire       qsfp_rx_lfc_req;
+wire       qsfp_rx_lfc_ack;
+wire [7:0] qsfp_rx_pfc_en;
+wire [7:0] qsfp_rx_pfc_req;
+wire [7:0] qsfp_rx_pfc_ack;
 
 wire qsfp_gtpowergood;
 
@@ -1033,6 +1048,12 @@ qsfp_cmac_inst (
     .tx_ptp_ts_tag(qsfp_tx_ptp_ts_tag_int),
     .tx_ptp_ts_valid(qsfp_tx_ptp_ts_valid_int),
 
+    .tx_enable(qsfp_tx_enable),
+    .tx_lfc_en(qsfp_tx_lfc_en),
+    .tx_lfc_req(qsfp_tx_lfc_req),
+    .tx_pfc_en(qsfp_tx_pfc_en),
+    .tx_pfc_req(qsfp_tx_pfc_req),
+
     .rx_clk(qsfp_rx_clk_int),
     .rx_rst(qsfp_rx_rst_int),
 
@@ -1046,7 +1067,14 @@ qsfp_cmac_inst (
     .rx_ptp_rst(qsfp_rx_ptp_rst_int),
     .rx_ptp_time(qsfp_rx_ptp_time_int),
 
-    .rx_status(qsfp_rx_status)
+    .rx_enable(qsfp_rx_enable),
+    .rx_status(qsfp_rx_status),
+    .rx_lfc_en(qsfp_rx_lfc_en),
+    .rx_lfc_req(qsfp_rx_lfc_req),
+    .rx_lfc_ack(qsfp_rx_lfc_ack),
+    .rx_pfc_en(qsfp_rx_pfc_en),
+    .rx_pfc_req(qsfp_rx_pfc_req),
+    .rx_pfc_ack(qsfp_rx_pfc_ack)
 );
 
 wire ptp_clk;
@@ -2605,6 +2633,8 @@ fpga_core #(
     .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
     .RX_HASH_ENABLE(RX_HASH_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
+    .PFC_ENABLE(PFC_ENABLE),
+    .LFC_ENABLE(LFC_ENABLE),
     .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
     .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
     .MAX_TX_SIZE(MAX_TX_SIZE),
@@ -2800,6 +2830,12 @@ core_inst (
     .qsfp_tx_ptp_ts_tag(qsfp_tx_ptp_ts_tag_int),
     .qsfp_tx_ptp_ts_valid(qsfp_tx_ptp_ts_valid_int),
 
+    .qsfp_tx_enable(qsfp_tx_enable),
+    .qsfp_tx_lfc_en(qsfp_tx_lfc_en),
+    .qsfp_tx_lfc_req(qsfp_tx_lfc_req),
+    .qsfp_tx_pfc_en(qsfp_tx_pfc_en),
+    .qsfp_tx_pfc_req(qsfp_tx_pfc_req),
+
     .qsfp_rx_clk(qsfp_rx_clk_int),
     .qsfp_rx_rst(qsfp_rx_rst_int),
     .qsfp_rx_axis_tdata(qsfp_rx_axis_tdata_int),
@@ -2811,7 +2847,14 @@ core_inst (
     .qsfp_rx_ptp_rst(qsfp_rx_ptp_rst_int),
     .qsfp_rx_ptp_time(qsfp_rx_ptp_time_int),
 
+    .qsfp_rx_enable(qsfp_rx_enable),
     .qsfp_rx_status(qsfp_rx_status),
+    .qsfp_rx_lfc_en(qsfp_rx_lfc_en),
+    .qsfp_rx_lfc_req(qsfp_rx_lfc_req),
+    .qsfp_rx_lfc_ack(qsfp_rx_lfc_ack),
+    .qsfp_rx_pfc_en(qsfp_rx_pfc_en),
+    .qsfp_rx_pfc_req(qsfp_rx_pfc_req),
+    .qsfp_rx_pfc_ack(qsfp_rx_pfc_ack),
 
     .qsfp_drp_clk(qsfp_drp_clk),
     .qsfp_drp_rst(qsfp_drp_rst),

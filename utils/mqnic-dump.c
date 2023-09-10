@@ -281,8 +281,12 @@ int main(int argc, char *argv[])
                 (rb->version >> 16) & 0xff, (rb->version >> 8) & 0xff, rb->version & 0xff);
 
     printf("Port features: 0x%08x\n", dev_port->port_features);
-    printf("Port TX status: 0x%08x\n", mqnic_port_get_tx_status(dev_port));
-    printf("Port RX status: 0x%08x\n", mqnic_port_get_rx_status(dev_port));
+    printf("Port TX ctrl: 0x%08x\n", mqnic_port_get_tx_ctrl(dev_port));
+    printf("Port RX ctrl: 0x%08x\n", mqnic_port_get_rx_ctrl(dev_port));
+    printf("Port FC ctrl: 0x%08x\n", mqnic_port_get_fc_ctrl(dev_port));
+    printf("Port LFC ctrl: 0x%08x\n", mqnic_port_get_lfc_ctrl(dev_port));
+    for (int k = 0; k < 8; k++)
+        printf("Port PFC ctrl %d: 0x%08x\n", k, mqnic_port_get_pfc_ctrl(dev_port, k));
 
     sched_block = port;
 

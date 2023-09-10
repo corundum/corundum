@@ -71,6 +71,8 @@ module fpga #
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
+    parameter PFC_ENABLE = 1,
+    parameter LFC_ENABLE = PFC_ENABLE,
     parameter TX_FIFO_DEPTH = 32768,
     parameter RX_FIFO_DEPTH = 131072,
     parameter MAX_TX_SIZE = 9214,
@@ -955,7 +957,20 @@ wire        qsfp_0_drp_we;
 wire [15:0] qsfp_0_drp_do;
 wire        qsfp_0_drp_rdy;
 
-wire qsfp_0_rx_status;
+wire       qsfp_0_tx_enable;
+wire       qsfp_0_tx_lfc_en;
+wire       qsfp_0_tx_lfc_req;
+wire [7:0] qsfp_0_tx_pfc_en;
+wire [7:0] qsfp_0_tx_pfc_req;
+
+wire       qsfp_0_rx_enable;
+wire       qsfp_0_rx_status;
+wire       qsfp_0_rx_lfc_en;
+wire       qsfp_0_rx_lfc_req;
+wire       qsfp_0_rx_lfc_ack;
+wire [7:0] qsfp_0_rx_pfc_en;
+wire [7:0] qsfp_0_rx_pfc_req;
+wire [7:0] qsfp_0_rx_pfc_ack;
 
 wire qsfp_0_gtpowergood;
 
@@ -1048,6 +1063,12 @@ qsfp_0_cmac_inst (
     .tx_ptp_ts_tag(qsfp_0_tx_ptp_ts_tag_int),
     .tx_ptp_ts_valid(qsfp_0_tx_ptp_ts_valid_int),
 
+    .tx_enable(qsfp_0_tx_enable),
+    .tx_lfc_en(qsfp_0_tx_lfc_en),
+    .tx_lfc_req(qsfp_0_tx_lfc_req),
+    .tx_pfc_en(qsfp_0_tx_pfc_en),
+    .tx_pfc_req(qsfp_0_tx_pfc_req),
+
     .rx_clk(qsfp_0_rx_clk_int),
     .rx_rst(qsfp_0_rx_rst_int),
 
@@ -1061,7 +1082,14 @@ qsfp_0_cmac_inst (
     .rx_ptp_rst(qsfp_0_rx_ptp_rst_int),
     .rx_ptp_time(qsfp_0_rx_ptp_time_int),
 
-    .rx_status(qsfp_0_rx_status)
+    .rx_enable(qsfp_0_rx_enable),
+    .rx_status(qsfp_0_rx_status),
+    .rx_lfc_en(qsfp_0_rx_lfc_en),
+    .rx_lfc_req(qsfp_0_rx_lfc_req),
+    .rx_lfc_ack(qsfp_0_rx_lfc_ack),
+    .rx_pfc_en(qsfp_0_rx_pfc_en),
+    .rx_pfc_req(qsfp_0_rx_pfc_req),
+    .rx_pfc_ack(qsfp_0_rx_pfc_ack)
 );
 
 // QSFP1 CMAC
@@ -1102,7 +1130,20 @@ wire        qsfp_1_drp_we;
 wire [15:0] qsfp_1_drp_do;
 wire        qsfp_1_drp_rdy;
 
-wire qsfp_1_rx_status;
+wire       qsfp_1_tx_enable;
+wire       qsfp_1_tx_lfc_en;
+wire       qsfp_1_tx_lfc_req;
+wire [7:0] qsfp_1_tx_pfc_en;
+wire [7:0] qsfp_1_tx_pfc_req;
+
+wire       qsfp_1_rx_enable;
+wire       qsfp_1_rx_status;
+wire       qsfp_1_rx_lfc_en;
+wire       qsfp_1_rx_lfc_req;
+wire       qsfp_1_rx_lfc_ack;
+wire [7:0] qsfp_1_rx_pfc_en;
+wire [7:0] qsfp_1_rx_pfc_req;
+wire [7:0] qsfp_1_rx_pfc_ack;
 
 wire qsfp_1_gtpowergood;
 
@@ -1195,6 +1236,12 @@ qsfp_1_cmac_inst (
     .tx_ptp_ts_tag(qsfp_1_tx_ptp_ts_tag_int),
     .tx_ptp_ts_valid(qsfp_1_tx_ptp_ts_valid_int),
 
+    .tx_enable(qsfp_1_tx_enable),
+    .tx_lfc_en(qsfp_1_tx_lfc_en),
+    .tx_lfc_req(qsfp_1_tx_lfc_req),
+    .tx_pfc_en(qsfp_1_tx_pfc_en),
+    .tx_pfc_req(qsfp_1_tx_pfc_req),
+
     .rx_clk(qsfp_1_rx_clk_int),
     .rx_rst(qsfp_1_rx_rst_int),
 
@@ -1208,7 +1255,14 @@ qsfp_1_cmac_inst (
     .rx_ptp_rst(qsfp_1_rx_ptp_rst_int),
     .rx_ptp_time(qsfp_1_rx_ptp_time_int),
 
-    .rx_status(qsfp_1_rx_status)
+    .rx_enable(qsfp_1_rx_enable),
+    .rx_status(qsfp_1_rx_status),
+    .rx_lfc_en(qsfp_1_rx_lfc_en),
+    .rx_lfc_req(qsfp_1_rx_lfc_req),
+    .rx_lfc_ack(qsfp_1_rx_lfc_ack),
+    .rx_pfc_en(qsfp_1_rx_pfc_en),
+    .rx_pfc_req(qsfp_1_rx_pfc_req),
+    .rx_pfc_ack(qsfp_1_rx_pfc_ack)
 );
 
 wire ptp_clk;
@@ -1601,6 +1655,8 @@ fpga_core #(
     .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
     .RX_HASH_ENABLE(RX_HASH_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
+    .PFC_ENABLE(PFC_ENABLE),
+    .LFC_ENABLE(LFC_ENABLE),
     .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
     .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
     .MAX_TX_SIZE(MAX_TX_SIZE),
@@ -1797,6 +1853,12 @@ core_inst (
     .qsfp_0_tx_ptp_ts_tag(qsfp_0_tx_ptp_ts_tag_int),
     .qsfp_0_tx_ptp_ts_valid(qsfp_0_tx_ptp_ts_valid_int),
 
+    .qsfp_0_tx_enable(qsfp_0_tx_enable),
+    .qsfp_0_tx_lfc_en(qsfp_0_tx_lfc_en),
+    .qsfp_0_tx_lfc_req(qsfp_0_tx_lfc_req),
+    .qsfp_0_tx_pfc_en(qsfp_0_tx_pfc_en),
+    .qsfp_0_tx_pfc_req(qsfp_0_tx_pfc_req),
+
     .qsfp_0_rx_clk(qsfp_0_rx_clk_int),
     .qsfp_0_rx_rst(qsfp_0_rx_rst_int),
     .qsfp_0_rx_axis_tdata(qsfp_0_rx_axis_tdata_int),
@@ -1808,7 +1870,14 @@ core_inst (
     .qsfp_0_rx_ptp_rst(qsfp_0_rx_ptp_rst_int),
     .qsfp_0_rx_ptp_time(qsfp_0_rx_ptp_time_int),
 
+    .qsfp_0_rx_enable(qsfp_0_rx_enable),
     .qsfp_0_rx_status(qsfp_0_rx_status),
+    .qsfp_0_rx_lfc_en(qsfp_0_rx_lfc_en),
+    .qsfp_0_rx_lfc_req(qsfp_0_rx_lfc_req),
+    .qsfp_0_rx_lfc_ack(qsfp_0_rx_lfc_ack),
+    .qsfp_0_rx_pfc_en(qsfp_0_rx_pfc_en),
+    .qsfp_0_rx_pfc_req(qsfp_0_rx_pfc_req),
+    .qsfp_0_rx_pfc_ack(qsfp_0_rx_pfc_ack),
 
     .qsfp_0_drp_clk(qsfp_0_drp_clk),
     .qsfp_0_drp_rst(qsfp_0_drp_rst),
@@ -1835,6 +1904,12 @@ core_inst (
     .qsfp_1_tx_ptp_ts_tag(qsfp_1_tx_ptp_ts_tag_int),
     .qsfp_1_tx_ptp_ts_valid(qsfp_1_tx_ptp_ts_valid_int),
 
+    .qsfp_1_tx_enable(qsfp_1_tx_enable),
+    .qsfp_1_tx_lfc_en(qsfp_1_tx_lfc_en),
+    .qsfp_1_tx_lfc_req(qsfp_1_tx_lfc_req),
+    .qsfp_1_tx_pfc_en(qsfp_1_tx_pfc_en),
+    .qsfp_1_tx_pfc_req(qsfp_1_tx_pfc_req),
+
     .qsfp_1_rx_clk(qsfp_1_rx_clk_int),
     .qsfp_1_rx_rst(qsfp_1_rx_rst_int),
     .qsfp_1_rx_axis_tdata(qsfp_1_rx_axis_tdata_int),
@@ -1846,7 +1921,14 @@ core_inst (
     .qsfp_1_rx_ptp_rst(qsfp_1_rx_ptp_rst_int),
     .qsfp_1_rx_ptp_time(qsfp_1_rx_ptp_time_int),
 
+    .qsfp_1_rx_enable(qsfp_1_rx_enable),
     .qsfp_1_rx_status(qsfp_1_rx_status),
+    .qsfp_1_rx_lfc_en(qsfp_1_rx_lfc_en),
+    .qsfp_1_rx_lfc_req(qsfp_1_rx_lfc_req),
+    .qsfp_1_rx_lfc_ack(qsfp_1_rx_lfc_ack),
+    .qsfp_1_rx_pfc_en(qsfp_1_rx_pfc_en),
+    .qsfp_1_rx_pfc_req(qsfp_1_rx_pfc_req),
+    .qsfp_1_rx_pfc_ack(qsfp_1_rx_pfc_ack),
 
     .qsfp_1_drp_clk(qsfp_1_drp_clk),
     .qsfp_1_drp_rst(qsfp_1_drp_rst),

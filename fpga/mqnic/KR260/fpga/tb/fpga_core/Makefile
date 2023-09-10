@@ -1,7 +1,6 @@
 # SPDX-License-Identifier: BSD-2-Clause-Views
 # Copyright (c) 2020-2023 The Regents of the University of California
 
-
 TOPLEVEL_LANG = verilog
 
 SIM ?= icarus
@@ -60,6 +59,10 @@ VERILOG_SOURCES += ../../rtl/common/tdma_ber_ch.v
 VERILOG_SOURCES += ../../lib/eth/rtl/eth_mac_10g.v
 VERILOG_SOURCES += ../../lib/eth/rtl/axis_xgmii_rx_64.v
 VERILOG_SOURCES += ../../lib/eth/rtl/axis_xgmii_tx_64.v
+VERILOG_SOURCES += ../../lib/eth/rtl/mac_ctrl_rx.v
+VERILOG_SOURCES += ../../lib/eth/rtl/mac_ctrl_tx.v
+VERILOG_SOURCES += ../../lib/eth/rtl/mac_pause_ctrl_rx.v
+VERILOG_SOURCES += ../../lib/eth/rtl/mac_pause_ctrl_tx.v
 VERILOG_SOURCES += ../../lib/eth/rtl/lfsr.v
 VERILOG_SOURCES += ../../lib/eth/rtl/ptp_clock.v
 VERILOG_SOURCES += ../../lib/eth/rtl/ptp_clock_cdc.v
@@ -152,6 +155,8 @@ export PARAM_TX_CPL_FIFO_DEPTH := 32
 export PARAM_TX_CHECKSUM_ENABLE := 1
 export PARAM_RX_HASH_ENABLE := 1
 export PARAM_RX_CHECKSUM_ENABLE := 1
+export PARAM_LFC_ENABLE := 1
+export PARAM_PFC_ENABLE := $(PARAM_LFC_ENABLE)
 export PARAM_TX_FIFO_DEPTH := 32768
 export PARAM_RX_FIFO_DEPTH := 32768
 export PARAM_MAX_TX_SIZE := 9214
@@ -197,7 +202,7 @@ export PARAM_AXIS_ETH_TX_FIFO_PIPELINE := 2
 export PARAM_AXIS_ETH_TX_TS_PIPELINE := 0
 export PARAM_AXIS_ETH_RX_PIPELINE := 0
 export PARAM_AXIS_ETH_RX_FIFO_PIPELINE := 2
- 
+
 # Statistics counter subsystem
 export PARAM_STAT_ENABLE := 1
 export PARAM_STAT_DMA_ENABLE := 1

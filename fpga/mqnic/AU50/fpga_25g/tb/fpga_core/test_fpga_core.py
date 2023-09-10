@@ -3,6 +3,7 @@
 
 import logging
 import os
+import struct
 import sys
 
 import scapy.utils
@@ -17,7 +18,7 @@ from cocotb.clock import Clock
 from cocotb.triggers import RisingEdge, FallingEdge, Timer
 
 from cocotbext.axi import AxiStreamBus, AxiLiteBus, AxiLiteRam
-from cocotbext.eth import XgmiiSource, XgmiiSink
+from cocotbext.eth import XgmiiSource, XgmiiSink, XgmiiFrame
 from cocotbext.pcie.core import RootComplex
 from cocotbext.pcie.xilinx.us import UltraScalePlusPcieDevice
 
@@ -498,6 +499,35 @@ async def run_test_nic(dut):
 
     tb.loopback_enable = False
 
+    if tb.driver.interfaces[0].if_feature_lfc:
+        tb.log.info("Test LFC pause frame RX")
+
+        await tb.driver.interfaces[0].ports[0].set_lfc_ctrl(mqnic.MQNIC_PORT_LFC_CTRL_TX_LFC_EN | mqnic.MQNIC_PORT_LFC_CTRL_RX_LFC_EN)
+        await tb.driver.hw_regs.read_dword(0)
+
+        lfc_xoff = Ether(src='DA:D1:D2:D3:D4:D5', dst='01:80:C2:00:00:01', type=0x8808) / struct.pack('!HH', 0x0001, 2000)
+
+        await tb.qsfp_source[0].send(XgmiiFrame.from_payload(bytes(lfc_xoff)))
+
+        count = 16
+
+        pkts = [bytearray([(x+k) % 256 for x in range(1514)]) for k in range(count)]
+
+        tb.loopback_enable = True
+
+        for p in pkts:
+            await tb.driver.interfaces[0].start_xmit(p, 0)
+
+        for k in range(count):
+            pkt = await tb.driver.interfaces[0].recv()
+
+            tb.log.info("Packet: %s", pkt)
+            assert pkt.data == pkts[k]
+            if tb.driver.interfaces[0].if_feature_rx_csum:
+                assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
+
+        tb.loopback_enable = False
+
     await RisingEdge(dut.clk_250mhz)
     await RisingEdge(dut.clk_250mhz)
 
@@ -570,6 +600,10 @@ def test_fpga_core(request):
         os.path.join(eth_rtl_dir, "eth_mac_10g.v"),
         os.path.join(eth_rtl_dir, "axis_xgmii_rx_64.v"),
         os.path.join(eth_rtl_dir, "axis_xgmii_tx_64.v"),
+        os.path.join(eth_rtl_dir, "mac_ctrl_rx.v"),
+        os.path.join(eth_rtl_dir, "mac_ctrl_tx.v"),
+        os.path.join(eth_rtl_dir, "mac_pause_ctrl_rx.v"),
+        os.path.join(eth_rtl_dir, "mac_pause_ctrl_tx.v"),
         os.path.join(eth_rtl_dir, "lfsr.v"),
         os.path.join(eth_rtl_dir, "ptp_clock.v"),
         os.path.join(eth_rtl_dir, "ptp_clock_cdc.v"),
@@ -676,6 +710,8 @@ def test_fpga_core(request):
     parameters['TX_CHECKSUM_ENABLE'] = 1
     parameters['RX_HASH_ENABLE'] = 1
     parameters['RX_CHECKSUM_ENABLE'] = 1
+    parameters['LFC_ENABLE'] = 1
+    parameters['PFC_ENABLE'] = parameters['LFC_ENABLE']
     parameters['TX_FIFO_DEPTH'] = 32768
     parameters['RX_FIFO_DEPTH'] = 32768
     parameters['MAX_TX_SIZE'] = 9214

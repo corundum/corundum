@@ -71,6 +71,8 @@ module fpga #
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
+    parameter PFC_ENABLE = 1,
+    parameter LFC_ENABLE = PFC_ENABLE,
     parameter TX_FIFO_DEPTH = 32768,
     parameter RX_FIFO_DEPTH = 131072,
     parameter MAX_TX_SIZE = 9214,
@@ -464,6 +466,10 @@ wire                               qsfpdda_mac_1_tx_axis_tready_int;
 wire                               qsfpdda_mac_1_tx_axis_tlast_int;
 wire [AXIS_ETH_TX_USER_WIDTH-1:0]  qsfpdda_mac_1_tx_axis_tuser_int;
 
+wire                               qsfpdda_mac_1_tx_status_int;
+wire                               qsfpdda_mac_1_tx_lfc_req_int;
+wire [7:0]                         qsfpdda_mac_1_tx_pfc_req_int;
+
 wire [AXIS_ETH_DATA_WIDTH-1:0]     qsfpdda_mac_1_rx_axis_tdata_int;
 wire [AXIS_ETH_KEEP_WIDTH-1:0]     qsfpdda_mac_1_rx_axis_tkeep_int;
 wire                               qsfpdda_mac_1_rx_axis_tvalid_int;
@@ -471,6 +477,8 @@ wire                               qsfpdda_mac_1_rx_axis_tlast_int;
 wire [AXIS_ETH_RX_USER_WIDTH-1:0]  qsfpdda_mac_1_rx_axis_tuser_int;
 
 wire                               qsfpdda_mac_1_rx_status_int;
+wire                               qsfpdda_mac_1_rx_lfc_req_int;
+wire [7:0]                         qsfpdda_mac_1_rx_pfc_req_int;
 
 wire                               qsfpdda_mac_2_clk_int;
 wire                               qsfpdda_mac_2_rst_int;
@@ -488,6 +496,10 @@ wire                               qsfpdda_mac_2_tx_axis_tready_int;
 wire                               qsfpdda_mac_2_tx_axis_tlast_int;
 wire [AXIS_ETH_TX_USER_WIDTH-1:0]  qsfpdda_mac_2_tx_axis_tuser_int;
 
+wire                               qsfpdda_mac_2_tx_status_int;
+wire                               qsfpdda_mac_2_tx_lfc_req_int;
+wire [7:0]                         qsfpdda_mac_2_tx_pfc_req_int;
+
 wire [AXIS_ETH_DATA_WIDTH-1:0]     qsfpdda_mac_2_rx_axis_tdata_int;
 wire [AXIS_ETH_KEEP_WIDTH-1:0]     qsfpdda_mac_2_rx_axis_tkeep_int;
 wire                               qsfpdda_mac_2_rx_axis_tvalid_int;
@@ -495,6 +507,8 @@ wire                               qsfpdda_mac_2_rx_axis_tlast_int;
 wire [AXIS_ETH_RX_USER_WIDTH-1:0]  qsfpdda_mac_2_rx_axis_tuser_int;
 
 wire                               qsfpdda_mac_2_rx_status_int;
+wire                               qsfpdda_mac_2_rx_lfc_req_int;
+wire [7:0]                         qsfpdda_mac_2_rx_pfc_req_int;
 
 eth_mac_dual_wrapper #(
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
@@ -530,6 +544,10 @@ qsfpdda_mac_inst (
     .mac_1_tx_axis_tlast(qsfpdda_mac_1_tx_axis_tlast_int),
     .mac_1_tx_axis_tuser(qsfpdda_mac_1_tx_axis_tuser_int),
 
+    .mac_1_tx_status(qsfpdda_mac_1_tx_status_int),
+    .mac_1_tx_lfc_req(qsfpdda_mac_1_tx_lfc_req_int),
+    .mac_1_tx_pfc_req(qsfpdda_mac_1_tx_pfc_req_int),
+
     .mac_1_rx_axis_tdata(qsfpdda_mac_1_rx_axis_tdata_int),
     .mac_1_rx_axis_tkeep(qsfpdda_mac_1_rx_axis_tkeep_int),
     .mac_1_rx_axis_tvalid(qsfpdda_mac_1_rx_axis_tvalid_int),
@@ -537,6 +555,8 @@ qsfpdda_mac_inst (
     .mac_1_rx_axis_tuser(qsfpdda_mac_1_rx_axis_tuser_int),
 
     .mac_1_rx_status(qsfpdda_mac_1_rx_status_int),
+    .mac_1_rx_lfc_req(qsfpdda_mac_1_rx_lfc_req_int),
+    .mac_1_rx_pfc_req(qsfpdda_mac_1_rx_pfc_req_int),
 
     .mac_2_clk(qsfpdda_mac_2_clk_int),
     .mac_2_rst(qsfpdda_mac_2_rst_int),
@@ -554,13 +574,19 @@ qsfpdda_mac_inst (
     .mac_2_tx_axis_tlast(qsfpdda_mac_2_tx_axis_tlast_int),
     .mac_2_tx_axis_tuser(qsfpdda_mac_2_tx_axis_tuser_int),
 
+    .mac_2_tx_status(qsfpdda_mac_2_tx_status_int),
+    .mac_2_tx_lfc_req(qsfpdda_mac_2_tx_lfc_req_int),
+    .mac_2_tx_pfc_req(qsfpdda_mac_2_tx_pfc_req_int),
+
     .mac_2_rx_axis_tdata(qsfpdda_mac_2_rx_axis_tdata_int),
     .mac_2_rx_axis_tkeep(qsfpdda_mac_2_rx_axis_tkeep_int),
     .mac_2_rx_axis_tvalid(qsfpdda_mac_2_rx_axis_tvalid_int),
     .mac_2_rx_axis_tlast(qsfpdda_mac_2_rx_axis_tlast_int),
     .mac_2_rx_axis_tuser(qsfpdda_mac_2_rx_axis_tuser_int),
 
-    .mac_2_rx_status(qsfpdda_mac_2_rx_status_int)
+    .mac_2_rx_status(qsfpdda_mac_2_rx_status_int),
+    .mac_2_rx_lfc_req(qsfpdda_mac_2_rx_lfc_req_int),
+    .mac_2_rx_pfc_req(qsfpdda_mac_2_rx_pfc_req_int)
 );
 
 // QSFP-DD B
@@ -580,6 +606,10 @@ wire                               qsfpddb_mac_1_tx_axis_tready_int;
 wire                               qsfpddb_mac_1_tx_axis_tlast_int;
 wire [AXIS_ETH_TX_USER_WIDTH-1:0]  qsfpddb_mac_1_tx_axis_tuser_int;
 
+wire                               qsfpddb_mac_1_tx_status_int;
+wire                               qsfpddb_mac_1_tx_lfc_req_int;
+wire [7:0]                         qsfpddb_mac_1_tx_pfc_req_int;
+
 wire [AXIS_ETH_DATA_WIDTH-1:0]     qsfpddb_mac_1_rx_axis_tdata_int;
 wire [AXIS_ETH_KEEP_WIDTH-1:0]     qsfpddb_mac_1_rx_axis_tkeep_int;
 wire                               qsfpddb_mac_1_rx_axis_tvalid_int;
@@ -587,6 +617,8 @@ wire                               qsfpddb_mac_1_rx_axis_tlast_int;
 wire [AXIS_ETH_RX_USER_WIDTH-1:0]  qsfpddb_mac_1_rx_axis_tuser_int;
 
 wire                               qsfpddb_mac_1_rx_status_int;
+wire                               qsfpddb_mac_1_rx_lfc_req_int;
+wire [7:0]                         qsfpddb_mac_1_rx_pfc_req_int;
 
 wire                               qsfpddb_mac_2_clk_int;
 wire                               qsfpddb_mac_2_rst_int;
@@ -604,6 +636,10 @@ wire                               qsfpddb_mac_2_tx_axis_tready_int;
 wire                               qsfpddb_mac_2_tx_axis_tlast_int;
 wire [AXIS_ETH_TX_USER_WIDTH-1:0]  qsfpddb_mac_2_tx_axis_tuser_int;
 
+wire                               qsfpddb_mac_2_tx_status_int;
+wire                               qsfpddb_mac_2_tx_lfc_req_int;
+wire [7:0]                         qsfpddb_mac_2_tx_pfc_req_int;
+
 wire [AXIS_ETH_DATA_WIDTH-1:0]     qsfpddb_mac_2_rx_axis_tdata_int;
 wire [AXIS_ETH_KEEP_WIDTH-1:0]     qsfpddb_mac_2_rx_axis_tkeep_int;
 wire                               qsfpddb_mac_2_rx_axis_tvalid_int;
@@ -611,6 +647,8 @@ wire                               qsfpddb_mac_2_rx_axis_tlast_int;
 wire [AXIS_ETH_RX_USER_WIDTH-1:0]  qsfpddb_mac_2_rx_axis_tuser_int;
 
 wire                               qsfpddb_mac_2_rx_status_int;
+wire                               qsfpddb_mac_2_rx_lfc_req_int;
+wire [7:0]                         qsfpddb_mac_2_rx_pfc_req_int;
 
 eth_mac_dual_wrapper #(
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
@@ -646,6 +684,10 @@ qsfpddb_mac_inst (
     .mac_1_tx_axis_tlast(qsfpddb_mac_1_tx_axis_tlast_int),
     .mac_1_tx_axis_tuser(qsfpddb_mac_1_tx_axis_tuser_int),
 
+    .mac_1_tx_status(qsfpddb_mac_1_tx_status_int),
+    .mac_1_tx_lfc_req(qsfpddb_mac_1_tx_lfc_req_int),
+    .mac_1_tx_pfc_req(qsfpddb_mac_1_tx_pfc_req_int),
+
     .mac_1_rx_axis_tdata(qsfpddb_mac_1_rx_axis_tdata_int),
     .mac_1_rx_axis_tkeep(qsfpddb_mac_1_rx_axis_tkeep_int),
     .mac_1_rx_axis_tvalid(qsfpddb_mac_1_rx_axis_tvalid_int),
@@ -653,6 +695,8 @@ qsfpddb_mac_inst (
     .mac_1_rx_axis_tuser(qsfpddb_mac_1_rx_axis_tuser_int),
 
     .mac_1_rx_status(qsfpddb_mac_1_rx_status_int),
+    .mac_1_rx_lfc_req(qsfpddb_mac_1_rx_lfc_req_int),
+    .mac_1_rx_pfc_req(qsfpddb_mac_1_rx_pfc_req_int),
 
     .mac_2_clk(qsfpddb_mac_2_clk_int),
     .mac_2_rst(qsfpddb_mac_2_rst_int),
@@ -670,13 +714,19 @@ qsfpddb_mac_inst (
     .mac_2_tx_axis_tlast(qsfpddb_mac_2_tx_axis_tlast_int),
     .mac_2_tx_axis_tuser(qsfpddb_mac_2_tx_axis_tuser_int),
 
+    .mac_2_tx_status(qsfpddb_mac_2_tx_status_int),
+    .mac_2_tx_lfc_req(qsfpddb_mac_2_tx_lfc_req_int),
+    .mac_2_tx_pfc_req(qsfpddb_mac_2_tx_pfc_req_int),
+
     .mac_2_rx_axis_tdata(qsfpddb_mac_2_rx_axis_tdata_int),
     .mac_2_rx_axis_tkeep(qsfpddb_mac_2_rx_axis_tkeep_int),
     .mac_2_rx_axis_tvalid(qsfpddb_mac_2_rx_axis_tvalid_int),
     .mac_2_rx_axis_tlast(qsfpddb_mac_2_rx_axis_tlast_int),
     .mac_2_rx_axis_tuser(qsfpddb_mac_2_rx_axis_tuser_int),
 
-    .mac_2_rx_status(qsfpddb_mac_2_rx_status_int)
+    .mac_2_rx_status(qsfpddb_mac_2_rx_status_int),
+    .mac_2_rx_lfc_req(qsfpddb_mac_2_rx_lfc_req_int),
+    .mac_2_rx_pfc_req(qsfpddb_mac_2_rx_pfc_req_int)
 );
 
 wire ptp_clk;
@@ -751,6 +801,8 @@ fpga_core #(
     .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
     .RX_HASH_ENABLE(RX_HASH_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
+    .PFC_ENABLE(PFC_ENABLE),
+    .LFC_ENABLE(LFC_ENABLE),
     .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
     .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
     .MAX_TX_SIZE(MAX_TX_SIZE),
@@ -895,6 +947,10 @@ core_inst (
     .qsfpdda_mac_1_tx_axis_tlast(qsfpdda_mac_1_tx_axis_tlast_int),
     .qsfpdda_mac_1_tx_axis_tuser(qsfpdda_mac_1_tx_axis_tuser_int),
 
+    .qsfpdda_mac_1_tx_status(qsfpdda_mac_1_tx_status_int),
+    .qsfpdda_mac_1_tx_lfc_req(qsfpdda_mac_1_tx_lfc_req_int),
+    .qsfpdda_mac_1_tx_pfc_req(qsfpdda_mac_1_tx_pfc_req_int),
+
     .qsfpdda_mac_1_rx_axis_tdata(qsfpdda_mac_1_rx_axis_tdata_int),
     .qsfpdda_mac_1_rx_axis_tkeep(qsfpdda_mac_1_rx_axis_tkeep_int),
     .qsfpdda_mac_1_rx_axis_tvalid(qsfpdda_mac_1_rx_axis_tvalid_int),
@@ -902,6 +958,8 @@ core_inst (
     .qsfpdda_mac_1_rx_axis_tuser(qsfpdda_mac_1_rx_axis_tuser_int),
 
     .qsfpdda_mac_1_rx_status(qsfpdda_mac_1_rx_status_int),
+    .qsfpdda_mac_1_rx_lfc_req(qsfpdda_mac_1_rx_lfc_req_int),
+    .qsfpdda_mac_1_rx_pfc_req(qsfpdda_mac_1_rx_pfc_req_int),
 
     .qsfpdda_mac_2_clk(qsfpdda_mac_2_clk_int),
     .qsfpdda_mac_2_rst(qsfpdda_mac_2_rst_int),
@@ -919,6 +977,10 @@ core_inst (
     .qsfpdda_mac_2_tx_axis_tlast(qsfpdda_mac_2_tx_axis_tlast_int),
     .qsfpdda_mac_2_tx_axis_tuser(qsfpdda_mac_2_tx_axis_tuser_int),
 
+    .qsfpdda_mac_2_tx_status(qsfpdda_mac_2_tx_status_int),
+    .qsfpdda_mac_2_tx_lfc_req(qsfpdda_mac_2_tx_lfc_req_int),
+    .qsfpdda_mac_2_tx_pfc_req(qsfpdda_mac_2_tx_pfc_req_int),
+
     .qsfpdda_mac_2_rx_axis_tdata(qsfpdda_mac_2_rx_axis_tdata_int),
     .qsfpdda_mac_2_rx_axis_tkeep(qsfpdda_mac_2_rx_axis_tkeep_int),
     .qsfpdda_mac_2_rx_axis_tvalid(qsfpdda_mac_2_rx_axis_tvalid_int),
@@ -926,6 +988,8 @@ core_inst (
     .qsfpdda_mac_2_rx_axis_tuser(qsfpdda_mac_2_rx_axis_tuser_int),
 
     .qsfpdda_mac_2_rx_status(qsfpdda_mac_2_rx_status_int),
+    .qsfpdda_mac_2_rx_lfc_req(qsfpdda_mac_2_rx_lfc_req_int),
+    .qsfpdda_mac_2_rx_pfc_req(qsfpdda_mac_2_rx_pfc_req_int),
 
     .qsfpdda_initmode(qsfpdda_initmode),
     .qsfpdda_interrupt_n(qsfpdda_interrupt_n_int),
@@ -955,6 +1019,10 @@ core_inst (
     .qsfpddb_mac_1_tx_axis_tlast(qsfpddb_mac_1_tx_axis_tlast_int),
     .qsfpddb_mac_1_tx_axis_tuser(qsfpddb_mac_1_tx_axis_tuser_int),
 
+    .qsfpddb_mac_1_tx_status(qsfpddb_mac_1_tx_status_int),
+    .qsfpddb_mac_1_tx_lfc_req(qsfpddb_mac_1_tx_lfc_req_int),
+    .qsfpddb_mac_1_tx_pfc_req(qsfpddb_mac_1_tx_pfc_req_int),
+
     .qsfpddb_mac_1_rx_axis_tdata(qsfpddb_mac_1_rx_axis_tdata_int),
     .qsfpddb_mac_1_rx_axis_tkeep(qsfpddb_mac_1_rx_axis_tkeep_int),
     .qsfpddb_mac_1_rx_axis_tvalid(qsfpddb_mac_1_rx_axis_tvalid_int),
@@ -962,6 +1030,8 @@ core_inst (
     .qsfpddb_mac_1_rx_axis_tuser(qsfpddb_mac_1_rx_axis_tuser_int),
 
     .qsfpddb_mac_1_rx_status(qsfpddb_mac_1_rx_status_int),
+    .qsfpddb_mac_1_rx_lfc_req(qsfpddb_mac_1_rx_lfc_req_int),
+    .qsfpddb_mac_1_rx_pfc_req(qsfpddb_mac_1_rx_pfc_req_int),
 
     .qsfpddb_mac_2_clk(qsfpddb_mac_2_clk_int),
     .qsfpddb_mac_2_rst(qsfpddb_mac_2_rst_int),
@@ -979,6 +1049,10 @@ core_inst (
     .qsfpddb_mac_2_tx_axis_tlast(qsfpddb_mac_2_tx_axis_tlast_int),
     .qsfpddb_mac_2_tx_axis_tuser(qsfpddb_mac_2_tx_axis_tuser_int),
 
+    .qsfpddb_mac_2_tx_status(qsfpddb_mac_2_tx_status_int),
+    .qsfpddb_mac_2_tx_lfc_req(qsfpddb_mac_2_tx_lfc_req_int),
+    .qsfpddb_mac_2_tx_pfc_req(qsfpddb_mac_2_tx_pfc_req_int),
+
     .qsfpddb_mac_2_rx_axis_tdata(qsfpddb_mac_2_rx_axis_tdata_int),
     .qsfpddb_mac_2_rx_axis_tkeep(qsfpddb_mac_2_rx_axis_tkeep_int),
     .qsfpddb_mac_2_rx_axis_tvalid(qsfpddb_mac_2_rx_axis_tvalid_int),
@@ -986,6 +1060,8 @@ core_inst (
     .qsfpddb_mac_2_rx_axis_tuser(qsfpddb_mac_2_rx_axis_tuser_int),
 
     .qsfpddb_mac_2_rx_status(qsfpddb_mac_2_rx_status_int),
+    .qsfpddb_mac_2_rx_lfc_req(qsfpddb_mac_2_rx_lfc_req_int),
+    .qsfpddb_mac_2_rx_pfc_req(qsfpddb_mac_2_rx_pfc_req_int),
 
     .qsfpddb_initmode(qsfpddb_initmode),
     .qsfpddb_interrupt_n(qsfpddb_interrupt_n_int),

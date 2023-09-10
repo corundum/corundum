@@ -62,6 +62,9 @@ module mqnic_interface #
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
+    parameter PFC_ENABLE = 0,
+    parameter LFC_ENABLE = PFC_ENABLE,
+    parameter MAC_CTRL_ENABLE = 0,
     parameter TX_FIFO_DEPTH = 32768,
     parameter RX_FIFO_DEPTH = 32768,
     parameter MAX_TX_SIZE = 9214,
@@ -435,7 +438,13 @@ module mqnic_interface #
     input  wire [PORTS-1:0]                             s_axis_tx_cpl_valid,
     output wire [PORTS-1:0]                             s_axis_tx_cpl_ready,
 
+    output wire [PORTS-1:0]                             tx_enable,
     input  wire [PORTS-1:0]                             tx_status,
+    output wire [PORTS-1:0]                             tx_lfc_en,
+    output wire [PORTS-1:0]                             tx_lfc_req,
+    output wire [PORTS*8-1:0]                           tx_pfc_en,
+    output wire [PORTS*8-1:0]                           tx_pfc_req,
+    input  wire [PORTS-1:0]                             tx_fc_quanta_clk_en,
 
     /*
      * Receive data input
@@ -450,7 +459,15 @@ module mqnic_interface #
     input  wire [PORTS-1:0]                             s_axis_rx_tlast,
     input  wire [PORTS*AXIS_RX_USER_WIDTH-1:0]          s_axis_rx_tuser,
 
+    output wire [PORTS-1:0]                             rx_enable,
     input  wire [PORTS-1:0]                             rx_status,
+    output wire [PORTS-1:0]                             rx_lfc_en,
+    input  wire [PORTS-1:0]                             rx_lfc_req,
+    output wire [PORTS-1:0]                             rx_lfc_ack,
+    output wire [PORTS*8-1:0]                           rx_pfc_en,
+    input  wire [PORTS*8-1:0]                           rx_pfc_req,
+    output wire [PORTS*8-1:0]                           rx_pfc_ack,
+    input  wire [PORTS-1:0]                             rx_fc_quanta_clk_en,
 
     /*
      * PTP clock
@@ -1084,6 +1101,8 @@ always @(posedge clk) begin
                 ctrl_reg_rd_data_reg[8] <= TX_CHECKSUM_ENABLE;
                 ctrl_reg_rd_data_reg[9] <= RX_CHECKSUM_ENABLE;
                 ctrl_reg_rd_data_reg[10] <= RX_HASH_ENABLE;
+                ctrl_reg_rd_data_reg[11] <= LFC_ENABLE;
+                ctrl_reg_rd_data_reg[12] <= PFC_ENABLE;
             end
             RBB+8'h10: ctrl_reg_rd_data_reg <= PORTS;                       // IF ctrl: Port count
             RBB+8'h14: ctrl_reg_rd_data_reg <= SCHEDULERS;                  // IF ctrl: Scheduler count
@@ -3101,6 +3120,9 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .TX_CPL_ENABLE(TX_CPL_ENABLE),
         .TX_CPL_FIFO_DEPTH(TX_CPL_FIFO_DEPTH),
         .TX_TAG_WIDTH(TX_TAG_WIDTH),
+        .PFC_ENABLE(PFC_ENABLE),
+        .LFC_ENABLE(LFC_ENABLE),
+        .MAC_CTRL_ENABLE(MAC_CTRL_ENABLE),
         .MAX_TX_SIZE(MAX_TX_SIZE),
         .MAX_RX_SIZE(MAX_RX_SIZE),
 
@@ -3275,7 +3297,13 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .s_axis_tx_cpl_valid(s_axis_tx_cpl_valid[n +: 1]),
         .s_axis_tx_cpl_ready(s_axis_tx_cpl_ready[n +: 1]),
 
+        .tx_enable(tx_enable[n +: 1]),
         .tx_status(tx_status[n +: 1]),
+        .tx_lfc_en(tx_lfc_en[n +: 1]),
+        .tx_lfc_req(tx_lfc_req[n +: 1]),
+        .tx_pfc_en(tx_pfc_en[n*8 +: 8]),
+        .tx_pfc_req(tx_pfc_req[n*8 +: 8]),
+        .tx_fc_quanta_clk_en(tx_fc_quanta_clk_en[n +: 1]),
 
         /*
          * Receive data input
@@ -3290,7 +3318,15 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .s_axis_rx_tlast(s_axis_rx_tlast[n +: 1]),
         .s_axis_rx_tuser(s_axis_rx_tuser[n*AXIS_RX_USER_WIDTH +: AXIS_RX_USER_WIDTH]),
 
-        .rx_status(rx_status[n +: 1])
+        .rx_enable(rx_enable[n +: 1]),
+        .rx_status(rx_status[n +: 1]),
+        .rx_lfc_en(rx_lfc_en[n +: 1]),
+        .rx_lfc_req(rx_lfc_req[n +: 1]),
+        .rx_lfc_ack(rx_lfc_ack[n +: 1]),
+        .rx_pfc_en(rx_pfc_en[n*8 +: 8]),
+        .rx_pfc_req(rx_pfc_req[n*8 +: 8]),
+        .rx_pfc_ack(rx_pfc_ack[n*8 +: 8]),
+        .rx_fc_quanta_clk_en(rx_fc_quanta_clk_en[n +: 1])
     );
 
 end

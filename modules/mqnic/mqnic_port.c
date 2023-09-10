@@ -13,6 +13,7 @@ struct mqnic_port *mqnic_create_port(struct mqnic_if *interface, int index,
 	struct mqnic_reg_block *rb;
 	u32 offset;
 	int ret = 0;
+	int k;
 
 	port = kzalloc(sizeof(*port), GFP_KERNEL);
 	if (!port)
@@ -52,8 +53,15 @@ struct mqnic_port *mqnic_create_port(struct mqnic_if *interface, int index,
 
 	dev_info(dev, "Port features: 0x%08x", port->port_features);
 
-	dev_info(dev, "Port TX status: 0x%08x", mqnic_port_get_tx_status(port));
-	dev_info(dev, "Port RX status: 0x%08x", mqnic_port_get_rx_status(port));
+	mqnic_port_set_tx_ctrl(port, 0);
+	mqnic_port_set_rx_ctrl(port, 0);
+	mqnic_port_set_lfc_ctrl(port, 0);
+
+	for (k = 0; k < 8; k++)
+		mqnic_port_set_pfc_ctrl(port, k, 0);
+
+	dev_info(dev, "Port RX ctrl: 0x%08x", mqnic_port_get_rx_ctrl(port));
+	dev_info(dev, "Port TX ctrl: 0x%08x", mqnic_port_get_tx_ctrl(port));
 
 	return port;
 
@@ -70,14 +78,62 @@ void mqnic_destroy_port(struct mqnic_port *port)
 	kfree(port);
 }
 
-u32 mqnic_port_get_tx_status(struct mqnic_port *port)
+u32 mqnic_port_get_tx_ctrl(struct mqnic_port *port)
 {
-	return ioread32(port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_TX_STATUS);
+	return ioread32(port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_TX_CTRL);
 }
-EXPORT_SYMBOL(mqnic_port_get_tx_status);
+EXPORT_SYMBOL(mqnic_port_get_tx_ctrl);
 
-u32 mqnic_port_get_rx_status(struct mqnic_port *port)
+void mqnic_port_set_tx_ctrl(struct mqnic_port *port, u32 val)
 {
-	return ioread32(port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_RX_STATUS);
+	iowrite32(val, port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_TX_CTRL);
 }
-EXPORT_SYMBOL(mqnic_port_get_rx_status);
+EXPORT_SYMBOL(mqnic_port_set_tx_ctrl);
+
+u32 mqnic_port_get_rx_ctrl(struct mqnic_port *port)
+{
+	return ioread32(port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_RX_CTRL);
+}
+EXPORT_SYMBOL(mqnic_port_get_rx_ctrl);
+
+void mqnic_port_set_rx_ctrl(struct mqnic_port *port, u32 val)
+{
+	iowrite32(val, port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_RX_CTRL);
+}
+EXPORT_SYMBOL(mqnic_port_set_rx_ctrl);
+
+u32 mqnic_port_get_fc_ctrl(struct mqnic_port *port)
+{
+	return ioread32(port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_FC_CTRL);
+}
+EXPORT_SYMBOL(mqnic_port_get_fc_ctrl);
+
+void mqnic_port_set_fc_ctrl(struct mqnic_port *port, u32 val)
+{
+	iowrite32(val, port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_FC_CTRL);
+}
+EXPORT_SYMBOL(mqnic_port_set_fc_ctrl);
+
+u32 mqnic_port_get_lfc_ctrl(struct mqnic_port *port)
+{
+	return ioread32(port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_LFC_CTRL);
+}
+EXPORT_SYMBOL(mqnic_port_get_lfc_ctrl);
+
+void mqnic_port_set_lfc_ctrl(struct mqnic_port *port, u32 val)
+{
+	iowrite32(val, port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_LFC_CTRL);
+}
+EXPORT_SYMBOL(mqnic_port_set_lfc_ctrl);
+
+u32 mqnic_port_get_pfc_ctrl(struct mqnic_port *port, int index)
+{
+	return ioread32(port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_PFC_CTRL0 + index*4);
+}
+EXPORT_SYMBOL(mqnic_port_get_pfc_ctrl);
+
+void mqnic_port_set_pfc_ctrl(struct mqnic_port *port, int index, u32 val)
+{
+	iowrite32(val, port->port_ctrl_rb->regs + MQNIC_RB_PORT_CTRL_REG_PFC_CTRL0 + index*4);
+}
+EXPORT_SYMBOL(mqnic_port_set_pfc_ctrl);

@@ -162,6 +162,9 @@ int mqnic_start_port(struct net_device *ndev)
 	// enable first scheduler
 	mqnic_activate_sched_block(priv->sched_block[0]);
 
+	// enable first port
+	mqnic_port_set_tx_ctrl(priv->port[0], MQNIC_PORT_TX_CTRL_EN);
+
 	netif_tx_start_all_queues(ndev);
 	netif_device_attach(ndev);
 
@@ -172,6 +175,8 @@ int mqnic_start_port(struct net_device *ndev)
 	} else {
 		netif_carrier_on(ndev);
 	}
+
+	mqnic_port_set_rx_ctrl(priv->port[0], MQNIC_PORT_RX_CTRL_EN);
 
 	return 0;
 
@@ -193,6 +198,8 @@ void mqnic_stop_port(struct net_device *ndev)
 
 	if (mqnic_link_status_poll)
 		del_timer_sync(&priv->link_status_timer);
+
+	mqnic_port_set_rx_ctrl(priv->port[0], 0);
 
 	netif_tx_lock_bh(ndev);
 //	if (detach)
@@ -229,6 +236,8 @@ void mqnic_stop_port(struct net_device *ndev)
 	up_read(&priv->rxq_table_sem);
 
 	msleep(20);
+
+	mqnic_port_set_tx_ctrl(priv->port[0], 0);
 
 	priv->port_up = false;
 
@@ -494,9 +503,9 @@ static void mqnic_link_status_timeout(struct timer_list *timer)
 
 	// "combine" all TX/RX status signals of all ports of this netdev
 	for (k = 0, up = 0; k < priv->port_count; k++) {
-		if (!(mqnic_port_get_tx_status(priv->port[k]) & 0x1))
+		if (!(mqnic_port_get_tx_ctrl(priv->port[k]) & MQNIC_PORT_TX_CTRL_STATUS))
 			continue;
-		if (!(mqnic_port_get_rx_status(priv->port[k]) & 0x1))
+		if (!(mqnic_port_get_rx_ctrl(priv->port[k]) & MQNIC_PORT_RX_CTRL_STATUS))
 			continue;
 
 		up++;

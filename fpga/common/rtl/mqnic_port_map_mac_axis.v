@@ -52,7 +52,12 @@ module mqnic_port_map_mac_axis #
     input  wire [MAC_COUNT-1:0]                      s_axis_mac_tx_ptp_ts_valid,
     output wire [MAC_COUNT-1:0]                      s_axis_mac_tx_ptp_ts_ready,
 
+    output wire [MAC_COUNT-1:0]                      mac_tx_enable,
     input  wire [MAC_COUNT-1:0]                      mac_tx_status,
+    output wire [MAC_COUNT-1:0]                      mac_tx_lfc_en,
+    output wire [MAC_COUNT-1:0]                      mac_tx_lfc_req,
+    output wire [MAC_COUNT*8-1:0]                    mac_tx_pfc_en,
+    output wire [MAC_COUNT*8-1:0]                    mac_tx_pfc_req,
 
     input  wire [MAC_COUNT-1:0]                      mac_rx_clk,
     input  wire [MAC_COUNT-1:0]                      mac_rx_rst,
@@ -69,7 +74,14 @@ module mqnic_port_map_mac_axis #
     input  wire [MAC_COUNT-1:0]                      s_axis_mac_rx_tlast,
     input  wire [MAC_COUNT*AXIS_RX_USER_WIDTH-1:0]   s_axis_mac_rx_tuser,
 
+    output wire [MAC_COUNT-1:0]                      mac_rx_enable,
     input  wire [MAC_COUNT-1:0]                      mac_rx_status,
+    output wire [MAC_COUNT-1:0]                      mac_rx_lfc_en,
+    input  wire [MAC_COUNT-1:0]                      mac_rx_lfc_req,
+    output wire [MAC_COUNT-1:0]                      mac_rx_lfc_ack,
+    output wire [MAC_COUNT*8-1:0]                    mac_rx_pfc_en,
+    input  wire [MAC_COUNT*8-1:0]                    mac_rx_pfc_req,
+    output wire [MAC_COUNT*8-1:0]                    mac_rx_pfc_ack,
 
     // towards datapath
     output wire [PORT_COUNT-1:0]                     tx_clk,
@@ -92,7 +104,12 @@ module mqnic_port_map_mac_axis #
     output wire [PORT_COUNT-1:0]                     m_axis_tx_ptp_ts_valid,
     input  wire [PORT_COUNT-1:0]                     m_axis_tx_ptp_ts_ready,
 
+    input  wire [PORT_COUNT-1:0]                     tx_enable,
     output wire [PORT_COUNT-1:0]                     tx_status,
+    input  wire [PORT_COUNT-1:0]                     tx_lfc_en,
+    input  wire [PORT_COUNT-1:0]                     tx_lfc_req,
+    input  wire [PORT_COUNT*8-1:0]                   tx_pfc_en,
+    input  wire [PORT_COUNT*8-1:0]                   tx_pfc_req,
 
     output wire [PORT_COUNT-1:0]                     rx_clk,
     output wire [PORT_COUNT-1:0]                     rx_rst,
@@ -109,7 +126,14 @@ module mqnic_port_map_mac_axis #
     output wire [PORT_COUNT-1:0]                     m_axis_rx_tlast,
     output wire [PORT_COUNT*AXIS_RX_USER_WIDTH-1:0]  m_axis_rx_tuser,
 
-    output wire [PORT_COUNT-1:0]                     rx_status
+    input  wire [PORT_COUNT-1:0]                     rx_enable,
+    output wire [PORT_COUNT-1:0]                     rx_status,
+    input  wire [PORT_COUNT-1:0]                     rx_lfc_en,
+    output wire [PORT_COUNT-1:0]                     rx_lfc_req,
+    input  wire [PORT_COUNT-1:0]                     rx_lfc_ack,
+    input  wire [PORT_COUNT*8-1:0]                   rx_pfc_en,
+    output wire [PORT_COUNT*8-1:0]                   rx_pfc_req,
+    input  wire [PORT_COUNT*8-1:0]                   rx_pfc_ack
 );
 
 initial begin
@@ -205,7 +229,12 @@ generate
             assign mac_tx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH] = tx_ptp_ts_96[IND[n*8 +: 8]*PTP_TS_WIDTH +: PTP_TS_WIDTH];
             assign mac_tx_ptp_ts_step[n] = tx_ptp_ts_step[IND[n*8 +: 8]];
 
+            assign mac_tx_enable[n] = tx_enable[IND[n*8 +: 8]];
             assign tx_status[IND[n*8 +: 8]] = mac_tx_status[n];
+            assign mac_tx_lfc_en[n] = tx_lfc_en[IND[n*8 +: 8]];
+            assign mac_tx_lfc_req[n] = tx_lfc_req[IND[n*8 +: 8]];
+            assign mac_tx_pfc_en[n*8 +: 8] = tx_pfc_en[IND[n*8 +: 8]*8 +: 8];
+            assign mac_tx_pfc_req[n*8 +: 8] = tx_pfc_req[IND[n*8 +: 8]*8 +: 8];
 
             assign rx_clk[IND[n*8 +: 8]] = mac_rx_clk[n];
             assign rx_rst[IND[n*8 +: 8]] = mac_rx_rst[n];
@@ -223,7 +252,14 @@ generate
             assign mac_rx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH] = rx_ptp_ts_96[IND[n*8 +: 8]*PTP_TS_WIDTH +: PTP_TS_WIDTH];
             assign mac_rx_ptp_ts_step[n] = rx_ptp_ts_step[IND[n*8 +: 8]];
 
+            assign mac_rx_enable[n] = rx_enable[IND[n*8 +: 8]];
             assign rx_status[IND[n*8 +: 8]] = mac_rx_status[n];
+            assign mac_rx_lfc_en[n] = rx_lfc_en[IND[n*8 +: 8]];
+            assign rx_lfc_req[IND[n*8 +: 8]] = mac_rx_lfc_req[n];
+            assign mac_rx_lfc_ack[n] = rx_lfc_ack[IND[n*8 +: 8]];
+            assign mac_rx_pfc_en[n*8 +: 8] = rx_pfc_en[IND[n*8 +: 8]*8 +: 8];
+            assign rx_pfc_req[IND[n*8 +: 8]*8 +: 8] = mac_rx_pfc_req[n*8 +: 8];
+            assign mac_rx_pfc_ack[n*8 +: 8] = rx_pfc_ack[IND[n*8 +: 8]*8 +: 8];
         end else begin
             assign m_axis_mac_tx_tdata[n*AXIS_DATA_WIDTH +: AXIS_DATA_WIDTH] = {AXIS_DATA_WIDTH{1'b0}};
             assign m_axis_mac_tx_tkeep[n*AXIS_KEEP_WIDTH +: AXIS_KEEP_WIDTH] = {AXIS_KEEP_WIDTH{1'b0}};
@@ -234,8 +270,20 @@ generate
             assign mac_tx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {PTP_TS_WIDTH{1'b0}};
             assign mac_tx_ptp_ts_step[n] = 1'b0;
 
+            assign mac_tx_enable[n] = 1'b0;
+            assign mac_tx_lfc_en[n] = 1'b0;
+            assign mac_tx_lfc_req[n] = 1'b0;
+            assign mac_tx_pfc_en[n*8 +: 8] = 8'd0;
+            assign mac_tx_pfc_req[n*8 +: 8] = 8'd0;
+
             assign mac_rx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH] = {PTP_TS_WIDTH{1'b0}};
             assign mac_rx_ptp_ts_step[n] = 1'b0;
+
+            assign mac_rx_enable[n] = 1'b0;
+            assign mac_rx_lfc_en[n] = 1'b0;
+            assign mac_rx_lfc_ack[n] = 1'b0;
+            assign mac_rx_pfc_en[n*8 +: 8] = 8'd0;
+            assign mac_rx_pfc_ack[n*8 +: 8] = 8'd0;
         end
     end
 endgenerate

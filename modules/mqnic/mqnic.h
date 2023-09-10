@@ -502,8 +502,16 @@ void mqnic_interface_set_rx_queue_map_indir_table(struct mqnic_if *interface, in
 struct mqnic_port *mqnic_create_port(struct mqnic_if *interface, int index,
 		struct mqnic_reg_block *port_rb);
 void mqnic_destroy_port(struct mqnic_port *port);
-u32 mqnic_port_get_tx_status(struct mqnic_port *port);
-u32 mqnic_port_get_rx_status(struct mqnic_port *port);
+u32 mqnic_port_get_tx_ctrl(struct mqnic_port *port);
+void mqnic_port_set_tx_ctrl(struct mqnic_port *port, u32 val);
+u32 mqnic_port_get_rx_ctrl(struct mqnic_port *port);
+void mqnic_port_set_rx_ctrl(struct mqnic_port *port, u32 val);
+u32 mqnic_port_get_fc_ctrl(struct mqnic_port *port);
+void mqnic_port_set_fc_ctrl(struct mqnic_port *port, u32 val);
+u32 mqnic_port_get_lfc_ctrl(struct mqnic_port *port);
+void mqnic_port_set_lfc_ctrl(struct mqnic_port *port, u32 val);
+u32 mqnic_port_get_pfc_ctrl(struct mqnic_port *port, int index);
+void mqnic_port_set_pfc_ctrl(struct mqnic_port *port, int index, u32 val);
 
 // mqnic_netdev.c
 int mqnic_start_port(struct net_device *ndev);

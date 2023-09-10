@@ -113,6 +113,8 @@ dict set params TX_CPL_FIFO_DEPTH "32"
 dict set params TX_CHECKSUM_ENABLE "1"
 dict set params RX_HASH_ENABLE "1"
 dict set params RX_CHECKSUM_ENABLE "1"
+dict set params PFC_ENABLE "1"
+dict set params LFC_ENABLE [dict get $params PFC_ENABLE]
 dict set params ENABLE_PADDING "1"
 dict set params ENABLE_DIC "1"
 dict set params MIN_FRAME_LENGTH "64"

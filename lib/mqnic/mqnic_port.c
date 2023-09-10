@@ -57,12 +57,27 @@ void mqnic_port_close(struct mqnic_port *port)
     free(port);
 }
 
-uint32_t mqnic_port_get_tx_status(struct mqnic_port *port)
+uint32_t mqnic_port_get_tx_ctrl(struct mqnic_port *port)
 {
-    return mqnic_reg_read32(port->port_ctrl_rb->regs, MQNIC_RB_PORT_CTRL_REG_TX_STATUS);
+    return mqnic_reg_read32(port->port_ctrl_rb->regs, MQNIC_RB_PORT_CTRL_REG_TX_CTRL);
 }
 
-uint32_t mqnic_port_get_rx_status(struct mqnic_port *port)
+uint32_t mqnic_port_get_rx_ctrl(struct mqnic_port *port)
 {
-    return mqnic_reg_read32(port->port_ctrl_rb->regs, MQNIC_RB_PORT_CTRL_REG_RX_STATUS);
+    return mqnic_reg_read32(port->port_ctrl_rb->regs, MQNIC_RB_PORT_CTRL_REG_RX_CTRL);
+}
+
+uint32_t mqnic_port_get_fc_ctrl(struct mqnic_port *port)
+{
+    return mqnic_reg_read32(port->port_ctrl_rb->regs, MQNIC_RB_PORT_CTRL_REG_FC_CTRL);
+}
+
+uint32_t mqnic_port_get_lfc_ctrl(struct mqnic_port *port)
+{
+    return mqnic_reg_read32(port->port_ctrl_rb->regs, MQNIC_RB_PORT_CTRL_REG_LFC_CTRL);
+}
+
+uint32_t mqnic_port_get_pfc_ctrl(struct mqnic_port *port, int index)
+{
+    return mqnic_reg_read32(port->port_ctrl_rb->regs, MQNIC_RB_PORT_CTRL_REG_PFC_CTRL0 + index*4);
 }

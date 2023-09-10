@@ -80,6 +80,9 @@ module mqnic_core #
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
+    parameter PFC_ENABLE = 1,
+    parameter LFC_ENABLE = PFC_ENABLE,
+    parameter MAC_CTRL_ENABLE = 0,
     parameter TX_FIFO_DEPTH = 32768,
     parameter RX_FIFO_DEPTH = 32768,
     parameter MAX_TX_SIZE = 9214,
@@ -410,7 +413,13 @@ module mqnic_core #
     input  wire [PORT_COUNT-1:0]                        s_axis_tx_cpl_valid,
     output wire [PORT_COUNT-1:0]                        s_axis_tx_cpl_ready,
 
+    output wire [PORT_COUNT-1:0]                        tx_enable,
     input  wire [PORT_COUNT-1:0]                        tx_status,
+    output wire [PORT_COUNT-1:0]                        tx_lfc_en,
+    output wire [PORT_COUNT-1:0]                        tx_lfc_req,
+    output wire [PORT_COUNT*8-1:0]                      tx_pfc_en,
+    output wire [PORT_COUNT*8-1:0]                      tx_pfc_req,
+    input  wire [PORT_COUNT-1:0]                        tx_fc_quanta_clk_en,
 
     input  wire [PORT_COUNT-1:0]                        rx_clk,
     input  wire [PORT_COUNT-1:0]                        rx_rst,
@@ -427,7 +436,15 @@ module mqnic_core #
     input  wire [PORT_COUNT-1:0]                        s_axis_rx_tlast,
     input  wire [PORT_COUNT*AXIS_RX_USER_WIDTH-1:0]     s_axis_rx_tuser,
 
+    output wire [PORT_COUNT-1:0]                        rx_enable,
     input  wire [PORT_COUNT-1:0]                        rx_status,
+    output wire [PORT_COUNT-1:0]                        rx_lfc_en,
+    input  wire [PORT_COUNT-1:0]                        rx_lfc_req,
+    output wire [PORT_COUNT-1:0]                        rx_lfc_ack,
+    output wire [PORT_COUNT*8-1:0]                      rx_pfc_en,
+    input  wire [PORT_COUNT*8-1:0]                      rx_pfc_req,
+    output wire [PORT_COUNT*8-1:0]                      rx_pfc_ack,
+    input  wire [PORT_COUNT-1:0]                        rx_fc_quanta_clk_en,
 
     /*
      * DDR
@@ -3060,6 +3077,9 @@ generate
             .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
             .RX_HASH_ENABLE(RX_HASH_ENABLE),
             .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
+            .PFC_ENABLE(PFC_ENABLE),
+            .LFC_ENABLE(LFC_ENABLE),
+            .MAC_CTRL_ENABLE(MAC_CTRL_ENABLE),
             .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
             .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
             .MAX_TX_SIZE(MAX_TX_SIZE),
@@ -3433,7 +3453,13 @@ generate
             .s_axis_tx_cpl_valid(s_axis_tx_cpl_valid[n*PORTS_PER_IF +: PORTS_PER_IF]),
             .s_axis_tx_cpl_ready(s_axis_tx_cpl_ready[n*PORTS_PER_IF +: PORTS_PER_IF]),
 
+            .tx_enable(tx_enable[n*PORTS_PER_IF +: PORTS_PER_IF]),
             .tx_status(tx_status[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .tx_lfc_en(tx_lfc_en[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .tx_lfc_req(tx_lfc_req[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .tx_pfc_en(tx_pfc_en[n*PORTS_PER_IF*8 +: PORTS_PER_IF*8]),
+            .tx_pfc_req(tx_pfc_req[n*PORTS_PER_IF*8 +: PORTS_PER_IF*8]),
+            .tx_fc_quanta_clk_en(tx_fc_quanta_clk_en[n*PORTS_PER_IF +: PORTS_PER_IF]),
 
             /*
              * Receive data input
@@ -3448,7 +3474,15 @@ generate
             .s_axis_rx_tlast(s_axis_rx_tlast[n*PORTS_PER_IF +: PORTS_PER_IF]),
             .s_axis_rx_tuser(s_axis_rx_tuser[n*PORTS_PER_IF*AXIS_RX_USER_WIDTH +: PORTS_PER_IF*AXIS_RX_USER_WIDTH]),
 
+            .rx_enable(rx_enable[n*PORTS_PER_IF +: PORTS_PER_IF]),
             .rx_status(rx_status[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .rx_lfc_en(rx_lfc_en[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .rx_lfc_req(rx_lfc_req[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .rx_lfc_ack(rx_lfc_ack[n*PORTS_PER_IF +: PORTS_PER_IF]),
+            .rx_pfc_en(rx_pfc_en[n*PORTS_PER_IF*8 +: PORTS_PER_IF*8]),
+            .rx_pfc_req(rx_pfc_req[n*PORTS_PER_IF*8 +: PORTS_PER_IF*8]),
+            .rx_pfc_ack(rx_pfc_ack[n*PORTS_PER_IF*8 +: PORTS_PER_IF*8]),
+            .rx_fc_quanta_clk_en(rx_fc_quanta_clk_en[n*PORTS_PER_IF +: PORTS_PER_IF]),
 
             /*
              * PTP clock

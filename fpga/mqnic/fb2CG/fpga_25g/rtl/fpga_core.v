@@ -81,6 +81,8 @@ module fpga_core #
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
+    parameter PFC_ENABLE = 1,
+    parameter LFC_ENABLE = PFC_ENABLE,
     parameter ENABLE_PADDING = 1,
     parameter ENABLE_DIC = 1,
     parameter MIN_FRAME_LENGTH = 64,
@@ -1011,7 +1013,12 @@ wire [PORT_COUNT*TX_TAG_WIDTH-1:0]            axis_eth_tx_ptp_ts_tag;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_valid;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_ready;
 
+wire [PORT_COUNT-1:0]                         eth_tx_enable;
 wire [PORT_COUNT-1:0]                         eth_tx_status;
+wire [PORT_COUNT-1:0]                         eth_tx_lfc_en;
+wire [PORT_COUNT-1:0]                         eth_tx_lfc_req;
+wire [PORT_COUNT*8-1:0]                       eth_tx_pfc_en;
+wire [PORT_COUNT*8-1:0]                       eth_tx_pfc_req;
 
 wire [PORT_COUNT-1:0]                         eth_rx_clk;
 wire [PORT_COUNT-1:0]                         eth_rx_rst;
@@ -1026,7 +1033,14 @@ wire [PORT_COUNT-1:0]                         axis_eth_rx_tready;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tlast;
 wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  axis_eth_rx_tuser;
 
+wire [PORT_COUNT-1:0]                         eth_rx_enable;
 wire [PORT_COUNT-1:0]                         eth_rx_status;
+wire [PORT_COUNT-1:0]                         eth_rx_lfc_en;
+wire [PORT_COUNT-1:0]                         eth_rx_lfc_req;
+wire [PORT_COUNT-1:0]                         eth_rx_lfc_ack;
+wire [PORT_COUNT*8-1:0]                       eth_rx_pfc_en;
+wire [PORT_COUNT*8-1:0]                       eth_rx_pfc_req;
+wire [PORT_COUNT*8-1:0]                       eth_rx_pfc_ack;
 
 wire [PORT_COUNT-1:0]                   port_xgmii_tx_clk;
 wire [PORT_COUNT-1:0]                   port_xgmii_tx_rst;
@@ -1099,12 +1113,15 @@ generate
             .PTP_PERIOD_FNS(IF_PTP_PERIOD_FNS),
             .TX_PTP_TS_ENABLE(PTP_TS_ENABLE),
             .TX_PTP_TS_WIDTH(PTP_TS_WIDTH),
+            .TX_PTP_TS_CTRL_IN_TUSER(0),
             .TX_PTP_TAG_ENABLE(PTP_TS_ENABLE),
             .TX_PTP_TAG_WIDTH(TX_TAG_WIDTH),
             .RX_PTP_TS_ENABLE(PTP_TS_ENABLE),
             .RX_PTP_TS_WIDTH(PTP_TS_WIDTH),
             .TX_USER_WIDTH(AXIS_ETH_TX_USER_WIDTH),
-            .RX_USER_WIDTH(AXIS_ETH_RX_USER_WIDTH)
+            .RX_USER_WIDTH(AXIS_ETH_RX_USER_WIDTH),
+            .PFC_ENABLE(PFC_ENABLE),
+            .PAUSE_ENABLE(LFC_ENABLE)
         )
         eth_mac_inst (
             .tx_clk(port_xgmii_tx_clk[n]),
@@ -1112,6 +1129,9 @@ generate
             .rx_clk(port_xgmii_rx_clk[n]),
             .rx_rst(port_xgmii_rx_rst[n]),
 
+            /*
+             * AXI input
+             */
             .tx_axis_tdata(axis_eth_tx_tdata[n*AXIS_ETH_DATA_WIDTH +: AXIS_ETH_DATA_WIDTH]),
             .tx_axis_tkeep(axis_eth_tx_tkeep[n*AXIS_ETH_KEEP_WIDTH +: AXIS_ETH_KEEP_WIDTH]),
             .tx_axis_tvalid(axis_eth_tx_tvalid[n +: 1]),
@@ -1119,30 +1139,121 @@ generate
             .tx_axis_tlast(axis_eth_tx_tlast[n +: 1]),
             .tx_axis_tuser(axis_eth_tx_tuser[n*AXIS_ETH_TX_USER_WIDTH +: AXIS_ETH_TX_USER_WIDTH]),
 
+            /*
+             * AXI output
+             */
             .rx_axis_tdata(axis_eth_rx_tdata[n*AXIS_ETH_DATA_WIDTH +: AXIS_ETH_DATA_WIDTH]),
             .rx_axis_tkeep(axis_eth_rx_tkeep[n*AXIS_ETH_KEEP_WIDTH +: AXIS_ETH_KEEP_WIDTH]),
             .rx_axis_tvalid(axis_eth_rx_tvalid[n +: 1]),
             .rx_axis_tlast(axis_eth_rx_tlast[n +: 1]),
             .rx_axis_tuser(axis_eth_rx_tuser[n*AXIS_ETH_RX_USER_WIDTH +: AXIS_ETH_RX_USER_WIDTH]),
 
+            /*
+             * XGMII interface
+             */
             .xgmii_rxd(port_xgmii_rxd[n*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
             .xgmii_rxc(port_xgmii_rxc[n*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
             .xgmii_txd(port_xgmii_txd[n*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
             .xgmii_txc(port_xgmii_txc[n*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
 
+            /*
+             * PTP
+             */
             .tx_ptp_ts(eth_tx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
             .rx_ptp_ts(eth_rx_ptp_ts_96[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
             .tx_axis_ptp_ts(axis_eth_tx_ptp_ts[n*PTP_TS_WIDTH +: PTP_TS_WIDTH]),
             .tx_axis_ptp_ts_tag(axis_eth_tx_ptp_ts_tag[n*TX_TAG_WIDTH +: TX_TAG_WIDTH]),
             .tx_axis_ptp_ts_valid(axis_eth_tx_ptp_ts_valid[n +: 1]),
 
+            /*
+             * Link-level Flow Control (LFC) (IEEE 802.3 annex 31B PAUSE)
+             */
+            .tx_lfc_req(eth_tx_lfc_req[n +: 1]),
+            .tx_lfc_resend(1'b0),
+            .rx_lfc_en(eth_rx_lfc_en[n +: 1]),
+            .rx_lfc_req(eth_rx_lfc_req[n +: 1]),
+            .rx_lfc_ack(eth_rx_lfc_ack[n +: 1]),
+
+            /*
+             * Priority Flow Control (PFC) (IEEE 802.3 annex 31D PFC)
+             */
+            .tx_pfc_req(eth_tx_pfc_req[n*8 +: 8]),
+            .tx_pfc_resend(1'b0),
+            .rx_pfc_en(eth_rx_pfc_en[n*8 +: 8]),
+            .rx_pfc_req(eth_rx_pfc_req[n*8 +: 8]),
+            .rx_pfc_ack(eth_rx_pfc_ack[n*8 +: 8]),
+
+            /*
+             * Pause interface
+             */
+            .tx_lfc_pause_en(1'b1),
+            .tx_pause_req(1'b0),
+            .tx_pause_ack(),
+
+            /*
+             * Status
+             */
+            .tx_start_packet(),
             .tx_error_underflow(),
+            .rx_start_packet(),
             .rx_error_bad_frame(),
             .rx_error_bad_fcs(),
+            .stat_tx_mcf(),
+            .stat_rx_mcf(),
+            .stat_tx_lfc_pkt(),
+            .stat_tx_lfc_xon(),
+            .stat_tx_lfc_xoff(),
+            .stat_tx_lfc_paused(),
+            .stat_tx_pfc_pkt(),
+            .stat_tx_pfc_xon(),
+            .stat_tx_pfc_xoff(),
+            .stat_tx_pfc_paused(),
+            .stat_rx_lfc_pkt(),
+            .stat_rx_lfc_xon(),
+            .stat_rx_lfc_xoff(),
+            .stat_rx_lfc_paused(),
+            .stat_rx_pfc_pkt(),
+            .stat_rx_pfc_xon(),
+            .stat_rx_pfc_xoff(),
+            .stat_rx_pfc_paused(),
 
+            /*
+             * Configuration
+             */
             .cfg_ifg(8'd12),
-            .cfg_tx_enable(1'b1),
-            .cfg_rx_enable(1'b1)
+            .cfg_tx_enable(eth_tx_enable[n +: 1]),
+            .cfg_rx_enable(eth_rx_enable[n +: 1]),
+            .cfg_mcf_rx_eth_dst_mcast(48'h01_80_C2_00_00_01),
+            .cfg_mcf_rx_check_eth_dst_mcast(1'b1),
+            .cfg_mcf_rx_eth_dst_ucast(48'd0),
+            .cfg_mcf_rx_check_eth_dst_ucast(1'b0),
+            .cfg_mcf_rx_eth_src(48'd0),
+            .cfg_mcf_rx_check_eth_src(1'b0),
+            .cfg_mcf_rx_eth_type(16'h8808),
+            .cfg_mcf_rx_opcode_lfc(16'h0001),
+            .cfg_mcf_rx_check_opcode_lfc(eth_rx_lfc_en[n +: 1]),
+            .cfg_mcf_rx_opcode_pfc(16'h0101),
+            .cfg_mcf_rx_check_opcode_pfc(eth_rx_pfc_en[n*8 +: 8] != 0),
+            .cfg_mcf_rx_forward(1'b0),
+            .cfg_mcf_rx_enable(eth_rx_lfc_en[n +: 1] || eth_rx_pfc_en[n*8 +: 8]),
+            .cfg_tx_lfc_eth_dst(48'h01_80_C2_00_00_01),
+            .cfg_tx_lfc_eth_src(48'h80_23_31_43_54_4C),
+            .cfg_tx_lfc_eth_type(16'h8808),
+            .cfg_tx_lfc_opcode(16'h0001),
+            .cfg_tx_lfc_en(eth_tx_lfc_en[n +: 1]),
+            .cfg_tx_lfc_quanta(16'hffff),
+            .cfg_tx_lfc_refresh(16'h7fff),
+            .cfg_tx_pfc_eth_dst(48'h01_80_C2_00_00_01),
+            .cfg_tx_pfc_eth_src(48'h80_23_31_43_54_4C),
+            .cfg_tx_pfc_eth_type(16'h8808),
+            .cfg_tx_pfc_opcode(16'h0101),
+            .cfg_tx_pfc_en(eth_tx_pfc_en[n*8 +: 8] != 0),
+            .cfg_tx_pfc_quanta({8{16'hffff}}),
+            .cfg_tx_pfc_refresh({8{16'h7fff}}),
+            .cfg_rx_lfc_opcode(16'h0001),
+            .cfg_rx_lfc_en(eth_rx_lfc_en[n +: 1]),
+            .cfg_rx_pfc_opcode(16'h0101),
+            .cfg_rx_pfc_en(eth_rx_pfc_en[n*8 +: 8] != 0)
         );
 
     end
@@ -1216,6 +1327,9 @@ mqnic_core_pcie_us #(
     .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
     .RX_HASH_ENABLE(RX_HASH_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
+    .PFC_ENABLE(PFC_ENABLE),
+    .LFC_ENABLE(LFC_ENABLE),
+    .MAC_CTRL_ENABLE(0),
     .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
     .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
     .MAX_TX_SIZE(MAX_TX_SIZE),
@@ -1497,7 +1611,13 @@ core_inst (
     .s_axis_eth_tx_cpl_valid(axis_eth_tx_ptp_ts_valid),
     .s_axis_eth_tx_cpl_ready(axis_eth_tx_ptp_ts_ready),
 
+    .eth_tx_enable(eth_tx_enable),
     .eth_tx_status(eth_tx_status),
+    .eth_tx_lfc_en(eth_tx_lfc_en),
+    .eth_tx_lfc_req(eth_tx_lfc_req),
+    .eth_tx_pfc_en(eth_tx_pfc_en),
+    .eth_tx_pfc_req(eth_tx_pfc_req),
+    .eth_tx_fc_quanta_clk_en(0),
 
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),
@@ -1514,7 +1634,15 @@ core_inst (
     .s_axis_eth_rx_tlast(axis_eth_rx_tlast),
     .s_axis_eth_rx_tuser(axis_eth_rx_tuser),
 
+    .eth_rx_enable(eth_rx_enable),
     .eth_rx_status(eth_rx_status),
+    .eth_rx_lfc_en(eth_rx_lfc_en),
+    .eth_rx_lfc_req(eth_rx_lfc_req),
+    .eth_rx_lfc_ack(eth_rx_lfc_ack),
+    .eth_rx_pfc_en(eth_rx_pfc_en),
+    .eth_rx_pfc_req(eth_rx_pfc_req),
+    .eth_rx_pfc_ack(eth_rx_pfc_ack),
+    .eth_rx_fc_quanta_clk_en(0),
 
     /*
      * DDR

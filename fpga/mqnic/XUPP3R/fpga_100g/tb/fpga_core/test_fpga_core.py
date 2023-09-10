@@ -307,7 +307,7 @@ class TB(object):
             getattr(dut, f"qsfp{k}_drp_rdy").setimmediatevalue(0)
 
             getattr(dut, f"qsfp{k}_modprsl").setimmediatevalue(0)
-            getattr(dut, f"qsfp{k}_intl").setimmediatevalue(0)
+            getattr(dut, f"qsfp{k}_intl").setimmediatevalue(1)
 
             getattr(dut, f"qsfp{k}_i2c_scl_i").setimmediatevalue(1)
             getattr(dut, f"qsfp{k}_i2c_sda_i").setimmediatevalue(1)
@@ -725,6 +725,8 @@ def test_fpga_core(request):
     parameters['TX_CHECKSUM_ENABLE'] = 1
     parameters['RX_HASH_ENABLE'] = 1
     parameters['RX_CHECKSUM_ENABLE'] = 1
+    parameters['LFC_ENABLE'] = 1
+    parameters['PFC_ENABLE'] = parameters['LFC_ENABLE']
     parameters['TX_FIFO_DEPTH'] = 32768
     parameters['RX_FIFO_DEPTH'] = 131072
     parameters['MAX_TX_SIZE'] = 9214

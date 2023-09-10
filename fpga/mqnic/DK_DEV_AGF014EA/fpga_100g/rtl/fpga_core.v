@@ -76,9 +76,8 @@ module fpga_core #
     parameter TX_CHECKSUM_ENABLE = 1,
     parameter RX_HASH_ENABLE = 1,
     parameter RX_CHECKSUM_ENABLE = 1,
-    parameter ENABLE_PADDING = 1,
-    parameter ENABLE_DIC = 1,
-    parameter MIN_FRAME_LENGTH = 64,
+    parameter PFC_ENABLE = 1,
+    parameter LFC_ENABLE = PFC_ENABLE,
     parameter TX_FIFO_DEPTH = 32768,
     parameter RX_FIFO_DEPTH = 131072,
     parameter MAX_TX_SIZE = 9214,
@@ -236,6 +235,10 @@ module fpga_core #
     output wire                                  qsfpdd0_mac_1_tx_axis_tlast,
     output wire [AXIS_ETH_TX_USER_WIDTH-1:0]     qsfpdd0_mac_1_tx_axis_tuser,
 
+    input  wire                                  qsfpdd0_mac_1_tx_status,
+    output wire                                  qsfpdd0_mac_1_tx_lfc_req,
+    output wire [7:0]                            qsfpdd0_mac_1_tx_pfc_req,
+
     input  wire [AXIS_ETH_DATA_WIDTH-1:0]        qsfpdd0_mac_1_rx_axis_tdata,
     input  wire [AXIS_ETH_KEEP_WIDTH-1:0]        qsfpdd0_mac_1_rx_axis_tkeep,
     input  wire                                  qsfpdd0_mac_1_rx_axis_tvalid,
@@ -243,6 +246,8 @@ module fpga_core #
     input  wire [AXIS_ETH_RX_USER_WIDTH-1:0]     qsfpdd0_mac_1_rx_axis_tuser,
 
     input  wire                                  qsfpdd0_mac_1_rx_status,
+    input  wire                                  qsfpdd0_mac_1_rx_lfc_req,
+    input  wire [7:0]                            qsfpdd0_mac_1_rx_pfc_req,
 
     input  wire                                  qsfpdd0_mac_2_clk,
     input  wire                                  qsfpdd0_mac_2_rst,
@@ -260,6 +265,10 @@ module fpga_core #
     output wire                                  qsfpdd0_mac_2_tx_axis_tlast,
     output wire [AXIS_ETH_TX_USER_WIDTH-1:0]     qsfpdd0_mac_2_tx_axis_tuser,
 
+    input  wire                                  qsfpdd0_mac_2_tx_status,
+    output wire                                  qsfpdd0_mac_2_tx_lfc_req,
+    output wire [7:0]                            qsfpdd0_mac_2_tx_pfc_req,
+
     input  wire [AXIS_ETH_DATA_WIDTH-1:0]        qsfpdd0_mac_2_rx_axis_tdata,
     input  wire [AXIS_ETH_KEEP_WIDTH-1:0]        qsfpdd0_mac_2_rx_axis_tkeep,
     input  wire                                  qsfpdd0_mac_2_rx_axis_tvalid,
@@ -267,6 +276,8 @@ module fpga_core #
     input  wire [AXIS_ETH_RX_USER_WIDTH-1:0]     qsfpdd0_mac_2_rx_axis_tuser,
 
     input  wire                                  qsfpdd0_mac_2_rx_status,
+    input  wire                                  qsfpdd0_mac_2_rx_lfc_req,
+    input  wire [7:0]                            qsfpdd0_mac_2_rx_pfc_req,
 
     input  wire                                  qsfpdd1_mac_1_clk,
     input  wire                                  qsfpdd1_mac_1_rst,
@@ -284,6 +295,10 @@ module fpga_core #
     output wire                                  qsfpdd1_mac_1_tx_axis_tlast,
     output wire [AXIS_ETH_TX_USER_WIDTH-1:0]     qsfpdd1_mac_1_tx_axis_tuser,
 
+    input  wire                                  qsfpdd1_mac_1_tx_status,
+    output wire                                  qsfpdd1_mac_1_tx_lfc_req,
+    output wire [7:0]                            qsfpdd1_mac_1_tx_pfc_req,
+
     input  wire [AXIS_ETH_DATA_WIDTH-1:0]        qsfpdd1_mac_1_rx_axis_tdata,
     input  wire [AXIS_ETH_KEEP_WIDTH-1:0]        qsfpdd1_mac_1_rx_axis_tkeep,
     input  wire                                  qsfpdd1_mac_1_rx_axis_tvalid,
@@ -291,6 +306,8 @@ module fpga_core #
     input  wire [AXIS_ETH_RX_USER_WIDTH-1:0]     qsfpdd1_mac_1_rx_axis_tuser,
 
     input  wire                                  qsfpdd1_mac_1_rx_status,
+    input  wire                                  qsfpdd1_mac_1_rx_lfc_req,
+    input  wire [7:0]                            qsfpdd1_mac_1_rx_pfc_req,
 
     input  wire                                  qsfpdd1_mac_2_clk,
     input  wire                                  qsfpdd1_mac_2_rst,
@@ -308,6 +325,10 @@ module fpga_core #
     output wire                                  qsfpdd1_mac_2_tx_axis_tlast,
     output wire [AXIS_ETH_TX_USER_WIDTH-1:0]     qsfpdd1_mac_2_tx_axis_tuser,
 
+    input  wire                                  qsfpdd1_mac_2_tx_status,
+    output wire                                  qsfpdd1_mac_2_tx_lfc_req,
+    output wire [7:0]                            qsfpdd1_mac_2_tx_pfc_req,
+
     input  wire [AXIS_ETH_DATA_WIDTH-1:0]        qsfpdd1_mac_2_rx_axis_tdata,
     input  wire [AXIS_ETH_KEEP_WIDTH-1:0]        qsfpdd1_mac_2_rx_axis_tkeep,
     input  wire                                  qsfpdd1_mac_2_rx_axis_tvalid,
@@ -315,6 +336,8 @@ module fpga_core #
     input  wire [AXIS_ETH_RX_USER_WIDTH-1:0]     qsfpdd1_mac_2_rx_axis_tuser,
 
     input  wire                                  qsfpdd1_mac_2_rx_status,
+    input  wire                                  qsfpdd1_mac_2_rx_lfc_req,
+    input  wire [7:0]                            qsfpdd1_mac_2_rx_pfc_req,
 
     output wire                                  qsfpdd0_modsel_l,
     output wire                                  qsfpdd0_reset_l,
@@ -613,7 +636,12 @@ wire [PORT_COUNT*TX_TAG_WIDTH-1:0]            axis_eth_tx_ptp_ts_tag;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_valid;
 wire [PORT_COUNT-1:0]                         axis_eth_tx_ptp_ts_ready;
 
+wire [PORT_COUNT-1:0]                         eth_tx_enable;
 wire [PORT_COUNT-1:0]                         eth_tx_status;
+wire [PORT_COUNT-1:0]                         eth_tx_lfc_en;
+wire [PORT_COUNT-1:0]                         eth_tx_lfc_req;
+wire [PORT_COUNT*8-1:0]                       eth_tx_pfc_en;
+wire [PORT_COUNT*8-1:0]                       eth_tx_pfc_req;
 
 wire [PORT_COUNT-1:0]                         eth_rx_clk;
 wire [PORT_COUNT-1:0]                         eth_rx_rst;
@@ -630,7 +658,14 @@ wire [PORT_COUNT-1:0]                         axis_eth_rx_tready;
 wire [PORT_COUNT-1:0]                         axis_eth_rx_tlast;
 wire [PORT_COUNT*AXIS_ETH_RX_USER_WIDTH-1:0]  axis_eth_rx_tuser;
 
+wire [PORT_COUNT-1:0]                         eth_rx_enable;
 wire [PORT_COUNT-1:0]                         eth_rx_status;
+wire [PORT_COUNT-1:0]                         eth_rx_lfc_en;
+wire [PORT_COUNT-1:0]                         eth_rx_lfc_req;
+wire [PORT_COUNT-1:0]                         eth_rx_lfc_ack;
+wire [PORT_COUNT*8-1:0]                       eth_rx_pfc_en;
+wire [PORT_COUNT*8-1:0]                       eth_rx_pfc_req;
+wire [PORT_COUNT*8-1:0]                       eth_rx_pfc_ack;
 
 mqnic_port_map_mac_axis #(
     .MAC_COUNT(4),
@@ -671,7 +706,12 @@ mqnic_port_map_mac_axis_inst (
     .s_axis_mac_tx_ptp_ts_valid({qsfpdd1_mac_2_tx_ptp_ts_valid, qsfpdd1_mac_1_tx_ptp_ts_valid, qsfpdd0_mac_2_tx_ptp_ts_valid, qsfpdd0_mac_1_tx_ptp_ts_valid}),
     .s_axis_mac_tx_ptp_ts_ready(),
 
-    .mac_tx_status(4'hf),
+    .mac_tx_enable(),
+    .mac_tx_status({qsfpdd1_mac_2_tx_status, qsfpdd1_mac_1_tx_status, qsfpdd0_mac_2_tx_status, qsfpdd0_mac_1_tx_status}),
+    .mac_tx_lfc_en(),
+    .mac_tx_lfc_req({qsfpdd1_mac_2_tx_lfc_req, qsfpdd1_mac_1_tx_lfc_req, qsfpdd0_mac_2_tx_lfc_req, qsfpdd0_mac_1_tx_lfc_req}),
+    .mac_tx_pfc_en(),
+    .mac_tx_pfc_req({qsfpdd1_mac_2_tx_pfc_req, qsfpdd1_mac_1_tx_pfc_req, qsfpdd0_mac_2_tx_pfc_req, qsfpdd0_mac_1_tx_pfc_req}),
 
     .mac_rx_clk({qsfpdd1_mac_2_clk, qsfpdd1_mac_1_clk, qsfpdd0_mac_2_clk, qsfpdd0_mac_1_clk}),
     .mac_rx_rst({qsfpdd1_mac_2_rst, qsfpdd1_mac_1_rst, qsfpdd0_mac_2_rst, qsfpdd0_mac_1_rst}),
@@ -688,7 +728,14 @@ mqnic_port_map_mac_axis_inst (
     .s_axis_mac_rx_tlast({qsfpdd1_mac_2_rx_axis_tlast, qsfpdd1_mac_1_rx_axis_tlast, qsfpdd0_mac_2_rx_axis_tlast, qsfpdd0_mac_1_rx_axis_tlast}),
     .s_axis_mac_rx_tuser({qsfpdd1_mac_2_rx_axis_tuser, qsfpdd1_mac_1_rx_axis_tuser, qsfpdd0_mac_2_rx_axis_tuser, qsfpdd0_mac_1_rx_axis_tuser}),
 
+    .mac_rx_enable(),
     .mac_rx_status({qsfpdd1_mac_2_rx_status, qsfpdd1_mac_1_rx_status, qsfpdd0_mac_2_rx_status, qsfpdd0_mac_1_rx_status}),
+    .mac_rx_lfc_en(),
+    .mac_rx_lfc_req({qsfpdd1_mac_2_rx_lfc_req, qsfpdd1_mac_1_rx_lfc_req, qsfpdd0_mac_2_rx_lfc_req, qsfpdd0_mac_1_rx_lfc_req}),
+    .mac_rx_lfc_ack(),
+    .mac_rx_pfc_en(),
+    .mac_rx_pfc_req({qsfpdd1_mac_2_rx_pfc_req, qsfpdd1_mac_1_rx_pfc_req, qsfpdd0_mac_2_rx_pfc_req, qsfpdd0_mac_1_rx_pfc_req}),
+    .mac_rx_pfc_ack(),
 
     // towards datapath
     .tx_clk(eth_tx_clk),
@@ -711,7 +758,12 @@ mqnic_port_map_mac_axis_inst (
     .m_axis_tx_ptp_ts_valid(axis_eth_tx_ptp_ts_valid),
     .m_axis_tx_ptp_ts_ready(axis_eth_tx_ptp_ts_ready),
 
+    .tx_enable(eth_tx_enable),
     .tx_status(eth_tx_status),
+    .tx_lfc_en(eth_tx_lfc_en),
+    .tx_lfc_req(eth_tx_lfc_req),
+    .tx_pfc_en(eth_tx_pfc_en),
+    .tx_pfc_req(eth_tx_pfc_req),
 
     .rx_clk(eth_rx_clk),
     .rx_rst(eth_rx_rst),
@@ -728,7 +780,14 @@ mqnic_port_map_mac_axis_inst (
     .m_axis_rx_tlast(axis_eth_rx_tlast),
     .m_axis_rx_tuser(axis_eth_rx_tuser),
 
-    .rx_status(eth_rx_status)
+    .rx_enable(eth_rx_enable),
+    .rx_status(eth_rx_status),
+    .rx_lfc_en(eth_rx_lfc_en),
+    .rx_lfc_req(eth_rx_lfc_req),
+    .rx_lfc_ack(eth_rx_lfc_ack),
+    .rx_pfc_en(eth_rx_pfc_en),
+    .rx_pfc_req(eth_rx_pfc_req),
+    .rx_pfc_ack(eth_rx_pfc_ack)
 );
 
 mqnic_core_pcie_ptile #(
@@ -798,6 +857,9 @@ mqnic_core_pcie_ptile #(
     .TX_CHECKSUM_ENABLE(TX_CHECKSUM_ENABLE),
     .RX_HASH_ENABLE(RX_HASH_ENABLE),
     .RX_CHECKSUM_ENABLE(RX_CHECKSUM_ENABLE),
+    .PFC_ENABLE(PFC_ENABLE),
+    .LFC_ENABLE(LFC_ENABLE),
+    .MAC_CTRL_ENABLE(0),
     .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
     .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
     .MAX_TX_SIZE(MAX_TX_SIZE),
@@ -1007,7 +1069,13 @@ core_inst (
     .s_axis_eth_tx_cpl_valid(axis_eth_tx_ptp_ts_valid),
     .s_axis_eth_tx_cpl_ready(axis_eth_tx_ptp_ts_ready),
 
+    .eth_tx_enable(eth_tx_enable),
     .eth_tx_status(eth_tx_status),
+    .eth_tx_lfc_en(eth_tx_lfc_en),
+    .eth_tx_lfc_req(eth_tx_lfc_req),
+    .eth_tx_pfc_en(eth_tx_pfc_en),
+    .eth_tx_pfc_req(eth_tx_pfc_req),
+    .eth_tx_fc_quanta_clk_en(0),
 
     .eth_rx_clk(eth_rx_clk),
     .eth_rx_rst(eth_rx_rst),
@@ -1024,7 +1092,15 @@ core_inst (
     .s_axis_eth_rx_tlast(axis_eth_rx_tlast),
     .s_axis_eth_rx_tuser(axis_eth_rx_tuser),
 
+    .eth_rx_enable(eth_rx_enable),
     .eth_rx_status(eth_rx_status),
+    .eth_rx_lfc_en(eth_rx_lfc_en),
+    .eth_rx_lfc_req(eth_rx_lfc_req),
+    .eth_rx_lfc_ack(eth_rx_lfc_ack),
+    .eth_rx_pfc_en(eth_rx_pfc_en),
+    .eth_rx_pfc_req(eth_rx_pfc_req),
+    .eth_rx_pfc_ack(eth_rx_pfc_ack),
+    .eth_rx_fc_quanta_clk_en(0),
 
     /*
      * DDR

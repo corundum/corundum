@@ -66,13 +66,19 @@ module eth_mac_wrapper #
     input  wire                      mac_tx_axis_tlast,
     input  wire [TX_USER_WIDTH-1:0]  mac_tx_axis_tuser,
 
+    output wire                      mac_tx_status,
+    input  wire                      mac_tx_lfc_req,
+    input  wire [7:0]                mac_tx_pfc_req,
+
     output wire [DATA_WIDTH-1:0]     mac_rx_axis_tdata,
     output wire [KEEP_WIDTH-1:0]     mac_rx_axis_tkeep,
     output wire                      mac_rx_axis_tvalid,
     output wire                      mac_rx_axis_tlast,
     output wire [RX_USER_WIDTH-1:0]  mac_rx_axis_tuser,
 
-    output wire                      mac_rx_status
+    output wire                      mac_rx_status,
+    output wire                      mac_rx_lfc_req,
+    output wire [7:0]                mac_rx_pfc_req
 );
 
 parameter XCVR_CH = 4;
@@ -234,13 +240,15 @@ mac mac_inst (
     .o_rx_error                     (mac_rx_error),
     .o_rxstatus_data                (),
     .o_rxstatus_valid               (),
-    .i_tx_pfc                       (8'd0),
-    .o_rx_pfc                       (),
-    .i_tx_pause                     (1'b0),
-    .o_rx_pause                     ()
+    .i_tx_pfc                       (mac_tx_pfc_req),
+    .o_rx_pfc                       (mac_rx_pfc_req),
+    .i_tx_pause                     (mac_tx_lfc_req),
+    .o_rx_pause                     (mac_rx_lfc_req)
 );
 
 assign mac_clk = mac_pll_clk_d64[4];
+
+assign mac_tx_status = mac_tx_lanes_stable;
 
 assign mac_rx_status = mac_rx_pcs_ready;
 

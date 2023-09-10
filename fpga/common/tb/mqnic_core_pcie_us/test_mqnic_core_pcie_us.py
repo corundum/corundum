@@ -3,6 +3,7 @@
 
 import logging
 import os
+import struct
 import sys
 
 import scapy.utils
@@ -321,7 +322,11 @@ class TB(object):
                 self.port_mac.append(mac)
 
         dut.eth_tx_status.setimmediatevalue(2**len(core_inst.m_axis_tx_tvalid)-1)
+        dut.eth_tx_fc_quanta_clk_en.setimmediatevalue(2**len(core_inst.m_axis_tx_tvalid)-1)
         dut.eth_rx_status.setimmediatevalue(2**len(core_inst.m_axis_tx_tvalid)-1)
+        dut.eth_rx_lfc_req.setimmediatevalue(0)
+        dut.eth_rx_pfc_req.setimmediatevalue(0)
+        dut.eth_rx_fc_quanta_clk_en.setimmediatevalue(2**len(core_inst.m_axis_tx_tvalid)-1)
 
         # DDR
         self.ddr_group_size = core_inst.DDR_GROUP_SIZE.value
@@ -665,12 +670,15 @@ async def run_test_nic(dut):
 
         for block in tb.driver.interfaces[0].sched_blocks:
             await block.schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000001)
-            await tb.driver.interfaces[0].set_rx_queue_map_indir_table(block.index, 0, block.index)
+            await block.interface.set_rx_queue_map_indir_table(block.index, 0, block.index)
             for k in range(len(block.interface.txq)):
-                if k % len(tb.driver.interfaces[0].sched_blocks) == block.index:
+                if k % len(block.interface.sched_blocks) == block.index:
                     await block.schedulers[0].hw_regs.write_dword(4*k, 0x00000003)
                 else:
                     await block.schedulers[0].hw_regs.write_dword(4*k, 0x00000000)
+
+            await block.interface.ports[block.index].set_tx_ctrl(mqnic.MQNIC_PORT_TX_CTRL_EN)
+            await block.interface.ports[block.index].set_rx_ctrl(mqnic.MQNIC_PORT_RX_CTRL_EN)
 
         count = 64
 
@@ -700,6 +708,35 @@ async def run_test_nic(dut):
         for block in tb.driver.interfaces[0].sched_blocks[1:]:
             await block.schedulers[0].rb.write_dword(mqnic.MQNIC_RB_SCHED_RR_REG_CTRL, 0x00000000)
             await tb.driver.interfaces[0].set_rx_queue_map_indir_table(block.index, 0, 0)
+
+    if tb.driver.interfaces[0].if_feature_lfc:
+        tb.log.info("Test LFC pause frame RX")
+
+        await tb.driver.interfaces[0].ports[0].set_lfc_ctrl(mqnic.MQNIC_PORT_LFC_CTRL_TX_LFC_EN | mqnic.MQNIC_PORT_LFC_CTRL_RX_LFC_EN)
+        await tb.driver.hw_regs.read_dword(0)
+
+        lfc_xoff = Ether(src='DA:D1:D2:D3:D4:D5', dst='01:80:C2:00:00:01', type=0x8808) / struct.pack('!HH', 0x0001, 2000)
+
+        await tb.port_mac[0].rx.send(bytes(lfc_xoff))
+
+        count = 16
+
+        pkts = [bytearray([(x+k) % 256 for x in range(1514)]) for k in range(count)]
+
+        tb.loopback_enable = True
+
+        for p in pkts:
+            await tb.driver.interfaces[0].start_xmit(p, 0)
+
+        for k in range(count):
+            pkt = await tb.driver.interfaces[0].recv()
+
+            tb.log.info("Packet: %s", pkt)
+            assert pkt.data == pkts[k]
+            if tb.driver.interfaces[0].if_feature_rx_csum:
+                assert pkt.rx_checksum == ~scapy.utils.checksum(bytes(pkt.data[14:])) & 0xffff
+
+        tb.loopback_enable = False
 
     tb.log.info("Read statistics counters")
 
@@ -786,6 +823,10 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
         os.path.join(rtl_dir, "stats_dma_latency.v"),
         os.path.join(rtl_dir, "mqnic_tx_scheduler_block_rr.v"),
         os.path.join(rtl_dir, "tx_scheduler_rr.v"),
+        os.path.join(eth_rtl_dir, "mac_ctrl_rx.v"),
+        os.path.join(eth_rtl_dir, "mac_ctrl_tx.v"),
+        os.path.join(eth_rtl_dir, "mac_pause_ctrl_rx.v"),
+        os.path.join(eth_rtl_dir, "mac_pause_ctrl_tx.v"),
         os.path.join(eth_rtl_dir, "ptp_clock.v"),
         os.path.join(eth_rtl_dir, "ptp_clock_cdc.v"),
         os.path.join(eth_rtl_dir, "ptp_perout.v"),
@@ -893,6 +934,9 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
     parameters['TX_CHECKSUM_ENABLE'] = 1
     parameters['RX_HASH_ENABLE'] = 1
     parameters['RX_CHECKSUM_ENABLE'] = 1
+    parameters['LFC_ENABLE'] = 1
+    parameters['PFC_ENABLE'] = parameters['LFC_ENABLE']
+    parameters['MAC_CTRL_ENABLE'] = 1
     parameters['TX_FIFO_DEPTH'] = 32768
     parameters['RX_FIFO_DEPTH'] = 131072
     parameters['MAX_TX_SIZE'] = 9214

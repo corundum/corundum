@@ -130,6 +130,54 @@ static int mqnic_set_ringparam(struct net_device *ndev,
 	return ret;
 }
 
+static void mqnic_get_pauseparam(struct net_device *ndev,
+		struct ethtool_pauseparam *param)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	u32 val;
+
+	param->autoneg = 0;
+	param->rx_pause = 0;
+	param->tx_pause = 0;
+
+	if (!(priv->if_features & MQNIC_IF_FEATURE_LFC))
+		return;
+
+	val = mqnic_port_get_lfc_ctrl(priv->port[0]);
+
+	param->rx_pause = !!(val & MQNIC_PORT_LFC_CTRL_RX_LFC_EN);
+	param->tx_pause = !!(val & MQNIC_PORT_LFC_CTRL_TX_LFC_EN);
+}
+
+static int mqnic_set_pauseparam(struct net_device *ndev,
+		struct ethtool_pauseparam *param)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	u32 val;
+
+	if (!(priv->if_features & MQNIC_IF_FEATURE_LFC))
+		return -EOPNOTSUPP;
+
+	if (param->autoneg)
+		return -EINVAL;
+
+	val = mqnic_port_get_lfc_ctrl(priv->port[0]);
+
+	if (param->rx_pause)
+		val |= MQNIC_PORT_LFC_CTRL_RX_LFC_EN;
+	else
+		val &= ~MQNIC_PORT_LFC_CTRL_RX_LFC_EN;
+
+	if (param->tx_pause)
+		val |= MQNIC_PORT_LFC_CTRL_TX_LFC_EN;
+	else
+		val &= ~MQNIC_PORT_LFC_CTRL_TX_LFC_EN;
+
+	mqnic_port_set_lfc_ctrl(priv->port[0], val);
+
+	return 0;
+}
+
 static int mqnic_get_rxnfc(struct net_device *ndev,
 		struct ethtool_rxnfc *rxnfc, u32 *rule_locs)
 {
@@ -560,6 +608,8 @@ const struct ethtool_ops mqnic_ethtool_ops = {
 	.get_link = ethtool_op_get_link,
 	.get_ringparam = mqnic_get_ringparam,
 	.set_ringparam = mqnic_set_ringparam,
+	.get_pauseparam = mqnic_get_pauseparam,
+	.set_pauseparam = mqnic_set_pauseparam,
 	.get_rxnfc = mqnic_get_rxnfc,
 	.get_rxfh_indir_size = mqnic_get_rxfh_indir_size,
 	.get_rxfh = mqnic_get_rxfh,

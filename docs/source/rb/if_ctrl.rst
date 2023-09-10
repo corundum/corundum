@@ -62,6 +62,8 @@ See :ref:`rb_overview` for definitions of the standard register block header fie
         8    TX checksum offloading
         9    RX checksum offloading
         10   RX flow hash offloading
+        11   LFC (IEEE 802.3 annex 31B)
+        12   PFC (IEEE 802.3 annex 31D)
         ===  =======================
 
 .. object:: Port count

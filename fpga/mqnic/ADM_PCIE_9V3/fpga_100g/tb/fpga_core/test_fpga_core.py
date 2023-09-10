@@ -300,6 +300,8 @@ class TB(object):
             self.qsfp_mac.append(mac)
 
             getattr(dut, f"qsfp_{k}_rx_status").setimmediatevalue(1)
+            getattr(dut, f"qsfp_{k}_rx_lfc_req").setimmediatevalue(0)
+            getattr(dut, f"qsfp_{k}_rx_pfc_req").setimmediatevalue(0)
 
             cocotb.start_soon(Clock(getattr(dut, f"qsfp_{k}_drp_clk"), 8, units="ns").start())
             getattr(dut, f"qsfp_{k}_drp_rst").setimmediatevalue(0)
@@ -726,6 +728,8 @@ def test_fpga_core(request):
     parameters['TX_CHECKSUM_ENABLE'] = 1
     parameters['RX_HASH_ENABLE'] = 1
     parameters['RX_CHECKSUM_ENABLE'] = 1
+    parameters['LFC_ENABLE'] = 1
+    parameters['PFC_ENABLE'] = parameters['LFC_ENABLE']
     parameters['TX_FIFO_DEPTH'] = 32768
     parameters['RX_FIFO_DEPTH'] = 131072
     parameters['MAX_TX_SIZE'] = 9214

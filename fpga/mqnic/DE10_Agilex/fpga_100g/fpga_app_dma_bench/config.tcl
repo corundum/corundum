@@ -100,6 +100,8 @@ dict set params TX_CPL_FIFO_DEPTH "32"
 dict set params TX_CHECKSUM_ENABLE "1"
 dict set params RX_HASH_ENABLE "1"
 dict set params RX_CHECKSUM_ENABLE "1"
+dict set params PFC_ENABLE "1"
+dict set params LFC_ENABLE [dict get $params PFC_ENABLE]
 dict set params TX_FIFO_DEPTH "32768"
 dict set params RX_FIFO_DEPTH "131072"
 dict set params MAX_TX_SIZE "9214"

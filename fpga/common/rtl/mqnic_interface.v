@@ -545,6 +545,9 @@ localparam PORT_RB_STRIDE = 16'h1000;
 localparam SCHED_RB_BASE_ADDR = (PORT_RB_BASE_ADDR + PORT_RB_STRIDE*PORTS);
 localparam SCHED_RB_STRIDE = 16'h1000;
 
+localparam TX_FIFO_DEPTH_WIDTH = $clog2(TX_FIFO_DEPTH)+1;
+localparam RX_FIFO_DEPTH_WIDTH = $clog2(RX_FIFO_DEPTH)+1;
+
 // parameter sizing helpers
 function [31:0] w_32(input [31:0] val);
     w_32 = val;
@@ -1110,6 +1113,8 @@ always @(posedge clk) begin
             RBB+8'h24: ctrl_reg_rd_data_reg <= MAX_RX_SIZE;                 // IF ctrl: Max RX MTU
             RBB+8'h28: ctrl_reg_rd_data_reg <= tx_mtu_reg;                  // IF ctrl: TX MTU
             RBB+8'h2C: ctrl_reg_rd_data_reg <= rx_mtu_reg;                  // IF ctrl: RX MTU
+            RBB+8'h30: ctrl_reg_rd_data_reg <= TX_FIFO_DEPTH;               // IF ctrl: TX FIFO depth
+            RBB+8'h34: ctrl_reg_rd_data_reg <= RX_FIFO_DEPTH;               // IF ctrl: RX FIFO depth
             // Event queue manager
             RBB+8'h40: ctrl_reg_rd_data_reg <= 32'h0000C010;                // Event QM: Type
             RBB+8'h44: ctrl_reg_rd_data_reg <= 32'h00000400;                // Event QM: Version
@@ -2899,6 +2904,8 @@ wire [PORTS-1:0] axis_if_tx_fifo_tlast;
 wire [PORTS*AXIS_IF_TX_ID_WIDTH-1:0] axis_if_tx_fifo_tid;
 wire [PORTS*AXIS_IF_TX_USER_WIDTH-1:0] axis_if_tx_fifo_tuser;
 
+wire [RX_FIFO_DEPTH_WIDTH*PORTS-1:0]  tx_fifo_status_depth;
+
 if (APP_AXIS_IF_ENABLE) begin
 
     assign m_axis_app_if_tx_tdata = if_tx_axis_tdata;
@@ -2944,6 +2951,7 @@ end
 
 tx_fifo #(
     .FIFO_DEPTH(TX_FIFO_DEPTH),
+    .FIFO_DEPTH_WIDTH(TX_FIFO_DEPTH_WIDTH),
     .PORTS(PORTS),
     .S_DATA_WIDTH(AXIS_IF_DATA_WIDTH),
     .S_KEEP_ENABLE(AXIS_IF_KEEP_WIDTH > 1),
@@ -2990,6 +2998,8 @@ tx_fifo_inst (
     /*
      * Status
      */
+    .status_depth(tx_fifo_status_depth),
+    .status_depth_commit(),
     .status_overflow(),
     .status_bad_frame(),
     .status_good_frame()
@@ -3014,8 +3024,11 @@ wire [AXIS_IF_RX_ID_WIDTH-1:0] axis_if_rx_tid;
 wire [AXIS_IF_RX_DEST_WIDTH-1:0] axis_if_rx_tdest;
 wire [AXIS_IF_RX_USER_WIDTH-1:0] axis_if_rx_tuser;
 
+wire [RX_FIFO_DEPTH_WIDTH*PORTS-1:0]  rx_fifo_status_depth;
+
 rx_fifo #(
     .FIFO_DEPTH(RX_FIFO_DEPTH),
+    .FIFO_DEPTH_WIDTH(RX_FIFO_DEPTH_WIDTH),
     .PORTS(PORTS),
     .S_DATA_WIDTH(AXIS_SYNC_DATA_WIDTH),
     .S_KEEP_ENABLE(AXIS_SYNC_KEEP_WIDTH > 1),
@@ -3061,6 +3074,8 @@ rx_fifo_inst (
     /*
      * Status
      */
+    .status_depth(rx_fifo_status_depth),
+    .status_depth_commit(),
     .status_overflow(),
     .status_bad_frame(),
     .status_good_frame()
@@ -3123,6 +3138,10 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .PFC_ENABLE(PFC_ENABLE),
         .LFC_ENABLE(LFC_ENABLE),
         .MAC_CTRL_ENABLE(MAC_CTRL_ENABLE),
+        .TX_FIFO_DEPTH(TX_FIFO_DEPTH),
+        .RX_FIFO_DEPTH(RX_FIFO_DEPTH),
+        .TX_FIFO_DEPTH_WIDTH(TX_FIFO_DEPTH_WIDTH),
+        .RX_FIFO_DEPTH_WIDTH(RX_FIFO_DEPTH_WIDTH),
         .MAX_TX_SIZE(MAX_TX_SIZE),
         .MAX_RX_SIZE(MAX_RX_SIZE),
 
@@ -3305,6 +3324,8 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .tx_pfc_req(tx_pfc_req[n*8 +: 8]),
         .tx_fc_quanta_clk_en(tx_fc_quanta_clk_en[n +: 1]),
 
+        .tx_fifo_status_depth(tx_fifo_status_depth[n*TX_FIFO_DEPTH_WIDTH +: TX_FIFO_DEPTH_WIDTH]),
+
         /*
          * Receive data input
          */
@@ -3326,7 +3347,9 @@ for (n = 0; n < PORTS; n = n + 1) begin : port
         .rx_pfc_en(rx_pfc_en[n*8 +: 8]),
         .rx_pfc_req(rx_pfc_req[n*8 +: 8]),
         .rx_pfc_ack(rx_pfc_ack[n*8 +: 8]),
-        .rx_fc_quanta_clk_en(rx_fc_quanta_clk_en[n +: 1])
+        .rx_fc_quanta_clk_en(rx_fc_quanta_clk_en[n +: 1]),
+
+        .rx_fifo_status_depth(rx_fifo_status_depth[n*RX_FIFO_DEPTH_WIDTH +: RX_FIFO_DEPTH_WIDTH])
     );
 
 end

@@ -55,7 +55,7 @@ struct mqnic_port *mqnic_create_port(struct mqnic_if *interface, int index,
 
 	mqnic_port_set_tx_ctrl(port, 0);
 	mqnic_port_set_rx_ctrl(port, 0);
-	mqnic_port_set_lfc_ctrl(port, 0);
+	mqnic_port_set_lfc_ctrl(port, max_t(u32, interface->rx_fifo_depth / 2, interface->max_rx_mtu * 2));
 
 	for (k = 0; k < 8; k++)
 		mqnic_port_set_pfc_ctrl(port, k, 0);

@@ -34,6 +34,10 @@ The interface control register block has a header with type 0x0000C001, version 
     RBB+0x28  TX MTU         TX MTU                          RW -
     --------  -------------  ------------------------------  -------------
     RBB+0x2C  RX MTU         RX MTU                          RW -
+    --------  -------------  ------------------------------  -------------
+    RBB+0x30  TX FIFO depth  TX FIFO depth                   RO -
+    --------  -------------  ------------------------------  -------------
+    RBB+0x34  RX FIFO depth  RX FIFO depth                   RO -
     ========  =============  ==============================  =============
 
 See :ref:`rb_overview` for definitions of the standard register block header fields.
@@ -136,4 +140,28 @@ See :ref:`rb_overview` for definitions of the standard register block header fie
         Address   31..24  23..16  15..8   7..0    Reset value
         ========  ======  ======  ======  ======  =============
         RBB+0x2C  RX MTU                          RW -
+        ========  ==============================  =============
+
+.. object:: TX FIFO depth
+
+    The TX FIFO depth field contains the size of the transmit FIFO in bytes, as configured via Verilog parameters during synthesis.
+
+    .. table::
+
+        ========  ======  ======  ======  ======  =============
+        Address   31..24  23..16  15..8   7..0    Reset value
+        ========  ======  ======  ======  ======  =============
+        RBB+0x30  TX FIFO depth                   RO -
+        ========  ==============================  =============
+
+.. object:: RX FIFO depth
+
+    The RX FIFO depth field contains the size of the receive FIFO in bytes, as configured via Verilog parameters during synthesis.
+
+    .. table::
+
+        ========  ======  ======  ======  ======  =============
+        Address   31..24  23..16  15..8   7..0    Reset value
+        ========  ======  ======  ======  ======  =============
+        RBB+0x34  RX FIFO depth                   RO -
         ========  ==============================  =============

@@ -132,15 +132,17 @@ MQNIC_RB_IF_REG_COUNT       = 0x10
 MQNIC_RB_IF_REG_STRIDE      = 0x14
 MQNIC_RB_IF_REG_CSR_OFFSET  = 0x18
 
-MQNIC_RB_IF_CTRL_TYPE            = 0x0000C001
-MQNIC_RB_IF_CTRL_VER             = 0x00000400
-MQNIC_RB_IF_CTRL_REG_FEATURES    = 0x0C
-MQNIC_RB_IF_CTRL_REG_PORT_COUNT  = 0x10
-MQNIC_RB_IF_CTRL_REG_SCHED_COUNT = 0x14
-MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU  = 0x20
-MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU  = 0x24
-MQNIC_RB_IF_CTRL_REG_TX_MTU      = 0x28
-MQNIC_RB_IF_CTRL_REG_RX_MTU      = 0x2C
+MQNIC_RB_IF_CTRL_TYPE               = 0x0000C001
+MQNIC_RB_IF_CTRL_VER                = 0x00000400
+MQNIC_RB_IF_CTRL_REG_FEATURES       = 0x0C
+MQNIC_RB_IF_CTRL_REG_PORT_COUNT     = 0x10
+MQNIC_RB_IF_CTRL_REG_SCHED_COUNT    = 0x14
+MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU     = 0x20
+MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU     = 0x24
+MQNIC_RB_IF_CTRL_REG_TX_MTU         = 0x28
+MQNIC_RB_IF_CTRL_REG_RX_MTU         = 0x2C
+MQNIC_RB_IF_CTRL_REG_TX_FIFO_DEPTH  = 0x20
+MQNIC_RB_IF_CTRL_REG_RX_FIFO_DEPTH  = 0x24
 
 MQNIC_IF_FEATURE_RSS      = (1 << 0)
 MQNIC_IF_FEATURE_PTP_TS   = (1 << 4)
@@ -1235,6 +1237,8 @@ class Interface:
 
         self.max_tx_mtu = 0
         self.max_rx_mtu = 0
+        self.tx_fifo_depth = 0
+        self.rx_fifo_depth = 0
 
         self.eq_res = None
         self.cq_res = None
@@ -1273,6 +1277,8 @@ class Interface:
         self.sched_block_count = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_SCHED_COUNT)
         self.max_tx_mtu = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU)
         self.max_rx_mtu = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU)
+        self.tx_fifo_depth = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_TX_FIFO_DEPTH)
+        self.rx_fifo_depth = await self.if_ctrl_rb.read_dword(MQNIC_RB_IF_CTRL_REG_RX_FIFO_DEPTH)
 
         self.if_feature_rss = bool(self.if_features & MQNIC_IF_FEATURE_RSS)
         self.if_feature_ptp_ts = bool(self.if_features & MQNIC_IF_FEATURE_PTP_TS)

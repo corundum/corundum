@@ -18,6 +18,8 @@ module tx_fifo #
     // KEEP_WIDTH words per cycle if KEEP_ENABLE set
     // Rounded up to nearest power of 2 cycles
     parameter FIFO_DEPTH = 4096,
+    // Width of FIFO depth status signals
+    parameter FIFO_DEPTH_WIDTH = $clog2(FIFO_DEPTH)+1,
     // Number of AXI stream outputs
     parameter PORTS = 4,
     // Width of input AXI stream interfaces in bits
@@ -49,39 +51,41 @@ module tx_fifo #
     parameter RAM_PIPELINE = 1
 )
 (
-    input  wire                           clk,
-    input  wire                           rst,
+    input  wire                               clk,
+    input  wire                               rst,
 
     /*
      * AXI Stream input
      */
-    input  wire [S_DATA_WIDTH-1:0]        s_axis_tdata,
-    input  wire [S_KEEP_WIDTH-1:0]        s_axis_tkeep,
-    input  wire                           s_axis_tvalid,
-    output wire                           s_axis_tready,
-    input  wire                           s_axis_tlast,
-    input  wire [ID_WIDTH-1:0]            s_axis_tid,
-    input  wire [S_DEST_WIDTH-1:0]        s_axis_tdest,
-    input  wire [USER_WIDTH-1:0]          s_axis_tuser,
+    input  wire [S_DATA_WIDTH-1:0]            s_axis_tdata,
+    input  wire [S_KEEP_WIDTH-1:0]            s_axis_tkeep,
+    input  wire                               s_axis_tvalid,
+    output wire                               s_axis_tready,
+    input  wire                               s_axis_tlast,
+    input  wire [ID_WIDTH-1:0]                s_axis_tid,
+    input  wire [S_DEST_WIDTH-1:0]            s_axis_tdest,
+    input  wire [USER_WIDTH-1:0]              s_axis_tuser,
 
     /*
      * AXI Stream outputs
      */
-    output wire [PORTS*M_DATA_WIDTH-1:0]  m_axis_tdata,
-    output wire [PORTS*M_KEEP_WIDTH-1:0]  m_axis_tkeep,
-    output wire [PORTS-1:0]               m_axis_tvalid,
-    input  wire [PORTS-1:0]               m_axis_tready,
-    output wire [PORTS-1:0]               m_axis_tlast,
-    output wire [PORTS*ID_WIDTH-1:0]      m_axis_tid,
-    output wire [PORTS*M_DEST_WIDTH-1:0]  m_axis_tdest,
-    output wire [PORTS*USER_WIDTH-1:0]    m_axis_tuser,
+    output wire [PORTS*M_DATA_WIDTH-1:0]      m_axis_tdata,
+    output wire [PORTS*M_KEEP_WIDTH-1:0]      m_axis_tkeep,
+    output wire [PORTS-1:0]                   m_axis_tvalid,
+    input  wire [PORTS-1:0]                   m_axis_tready,
+    output wire [PORTS-1:0]                   m_axis_tlast,
+    output wire [PORTS*ID_WIDTH-1:0]          m_axis_tid,
+    output wire [PORTS*M_DEST_WIDTH-1:0]      m_axis_tdest,
+    output wire [PORTS*USER_WIDTH-1:0]        m_axis_tuser,
 
     /*
      * Status
      */
-    output wire [PORTS-1:0]               status_overflow,
-    output wire [PORTS-1:0]               status_bad_frame,
-    output wire [PORTS-1:0]               status_good_frame
+    output wire [FIFO_DEPTH_WIDTH*PORTS-1:0]  status_depth,
+    output wire [FIFO_DEPTH_WIDTH*PORTS-1:0]  status_depth_commit,
+    output wire [PORTS-1:0]                   status_overflow,
+    output wire [PORTS-1:0]                   status_bad_frame,
+    output wire [PORTS-1:0]                   status_good_frame
 );
 
 wire [PORTS*S_DATA_WIDTH-1:0]  axis_fifo_tdata;
@@ -176,8 +180,12 @@ for (n = 0; n < PORTS; n = n + 1) begin : fifo
         .FRAME_FIFO(1),
         .USER_BAD_FRAME_VALUE(1'b1),
         .USER_BAD_FRAME_MASK(1'b1),
+        .DROP_OVERSIZE_FRAME(1),
         .DROP_BAD_FRAME(USER_ENABLE),
-        .DROP_WHEN_FULL(0)
+        .DROP_WHEN_FULL(0),
+        .MARK_WHEN_FULL(0),
+        .PAUSE_ENABLE(0),
+        .FRAME_PAUSE(1)
     )
     fifo_inst (
         .clk(clk),
@@ -203,7 +211,13 @@ for (n = 0; n < PORTS; n = n + 1) begin : fifo
         .m_axis_tdest(m_axis_tdest[n*M_DEST_WIDTH +: M_DEST_WIDTH]),
         .m_axis_tuser(m_axis_tuser[n*USER_WIDTH +: USER_WIDTH]),
 
+        // Pause
+        .pause_req(1'b0),
+        .pause_ack(),
+
         // Status
+        .status_depth(status_depth[n*FIFO_DEPTH_WIDTH +: FIFO_DEPTH_WIDTH]),
+        .status_depth_commit(status_depth_commit[n*FIFO_DEPTH_WIDTH +: FIFO_DEPTH_WIDTH]),
         .status_overflow(status_overflow[n]),
         .status_bad_frame(status_bad_frame[n]),
         .status_good_frame(status_good_frame[n])

@@ -25,6 +25,10 @@ module mqnic_port #
     parameter PFC_ENABLE = 1,
     parameter LFC_ENABLE = PFC_ENABLE,
     parameter MAC_CTRL_ENABLE = 0,
+    parameter TX_FIFO_DEPTH = 32768,
+    parameter RX_FIFO_DEPTH = 32768,
+    parameter TX_FIFO_DEPTH_WIDTH = $clog2(TX_FIFO_DEPTH)+1,
+    parameter RX_FIFO_DEPTH_WIDTH = $clog2(RX_FIFO_DEPTH)+1,
     parameter MAX_TX_SIZE = 9214,
     parameter MAX_RX_SIZE = 9214,
 
@@ -207,6 +211,8 @@ module mqnic_port #
     output wire [7:0]                          tx_pfc_req,
     input  wire                                tx_fc_quanta_clk_en,
 
+    input  wire [TX_FIFO_DEPTH_WIDTH-1:0]      tx_fifo_status_depth,
+
     /*
      * Receive data input
      */
@@ -228,7 +234,9 @@ module mqnic_port #
     output wire [7:0]                          rx_pfc_en,
     input  wire [7:0]                          rx_pfc_req,
     output wire [7:0]                          rx_pfc_ack,
-    input  wire                                rx_fc_quanta_clk_en
+    input  wire                                rx_fc_quanta_clk_en,
+
+    input  wire [RX_FIFO_DEPTH_WIDTH-1:0]      rx_fifo_status_depth
 );
 
 localparam RBB = RB_BASE_ADDR & {REG_ADDR_WIDTH{1'b1}};
@@ -414,8 +422,7 @@ reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [REG_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {REG_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
-wire tx_pause_status;
-wire rx_pause_status;
+reg [RX_FIFO_DEPTH_WIDTH-1:0] rx_lfc_watermark_reg = RX_FIFO_DEPTH/2;
 
 wire tx_fifo_pause_req = !tx_enable_reg || tx_pause_reg || (LFC_ENABLE && rx_lfc_en_reg && rx_lfc_req_sync_3_reg);
 wire tx_fifo_pause_ack;
@@ -435,7 +442,16 @@ always @(posedge clk) begin
     ctrl_reg_rd_data_reg <= {REG_DATA_WIDTH{1'b0}};
     ctrl_reg_rd_ack_reg <= 1'b0;
 
-    tx_lfc_req_reg <= 1'b0;
+    if (tx_lfc_req_reg) begin
+        if (rx_fifo_status_depth == 0) begin
+            tx_lfc_req_reg <= 1'b0;
+        end
+    end else begin
+        if (rx_fifo_status_depth > rx_lfc_watermark_reg) begin
+            tx_lfc_req_reg <= 1'b1;
+        end
+    end
+
     tx_pfc_req_reg <= 8'd0;
 
     rx_lfc_ack_reg <= tx_fifo_pause_ack;
@@ -469,6 +485,7 @@ always @(posedge clk) begin
         if (LFC_ENABLE) begin
             if ({ctrl_reg_wr_addr >> 2, 2'b00} == RBB+8'h2C) begin
                 // Port ctrl: LFC control
+                rx_lfc_watermark_reg <= ctrl_reg_wr_data[23:0];
                 tx_lfc_en_reg <= ctrl_reg_wr_data[24];
                 rx_lfc_en_reg <= ctrl_reg_wr_data[25];
                 ctrl_reg_wr_ack_reg <= 1'b1;
@@ -536,6 +553,7 @@ always @(posedge clk) begin
         if (LFC_ENABLE) begin
             if ({ctrl_reg_rd_addr >> 2, 2'b00} == RBB+8'h2C) begin
                 // Port ctrl: LFC control
+                ctrl_reg_rd_data_reg[23:0] <= rx_lfc_watermark_reg;
                 ctrl_reg_rd_data_reg[24] <= tx_lfc_en_reg;
                 ctrl_reg_rd_data_reg[25] <= rx_lfc_en_reg;
                 ctrl_reg_rd_data_reg[28] <= tx_lfc_req_reg;
@@ -576,6 +594,8 @@ always @(posedge clk) begin
         rx_pfc_en_reg <= 8'd0;
         rx_pfc_ack_reg <= 8'd0;
         rx_fc_quanta_step_reg <= (AXIS_DATA_WIDTH*256)/512;
+
+        rx_lfc_watermark_reg <= RX_FIFO_DEPTH/2;
     end
 end
 

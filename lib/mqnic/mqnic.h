@@ -86,6 +86,8 @@ struct mqnic_if {
 
     uint32_t max_tx_mtu;
     uint32_t max_rx_mtu;
+    uint32_t tx_fifo_depth;
+    uint32_t rx_fifo_depth;
 
     uint32_t rx_queue_map_indir_table_size;
     volatile uint8_t *rx_queue_map_indir_table[MQNIC_MAX_PORTS];

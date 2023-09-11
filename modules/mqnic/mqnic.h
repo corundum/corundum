@@ -386,6 +386,8 @@ struct mqnic_if {
 
 	u32 max_tx_mtu;
 	u32 max_rx_mtu;
+	u32 tx_fifo_depth;
+	u32 rx_fifo_depth;
 
 	struct mqnic_res *eq_res;
 	struct mqnic_res *cq_res;

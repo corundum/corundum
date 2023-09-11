@@ -221,10 +221,12 @@ int main(int argc, char *argv[])
     printf("IF features: 0x%08x\n", dev_interface->if_features);
     printf("Port count: %d\n", dev_interface->port_count);
     printf("Scheduler block count: %d\n", dev_interface->sched_block_count);
-    printf("Max TX MTU: %d\n", dev_interface->max_tx_mtu);
-    printf("Max RX MTU: %d\n", dev_interface->max_rx_mtu);
-    printf("TX MTU: %d\n", mqnic_interface_get_tx_mtu(dev_interface));
-    printf("RX MTU: %d\n", mqnic_interface_get_rx_mtu(dev_interface));
+    printf("Max TX MTU: %d B\n", dev_interface->max_tx_mtu);
+    printf("Max RX MTU: %d B\n", dev_interface->max_rx_mtu);
+    printf("TX MTU: %d B\n", mqnic_interface_get_tx_mtu(dev_interface));
+    printf("RX MTU: %d B\n", mqnic_interface_get_rx_mtu(dev_interface));
+    printf("TX FIFO depth: %d B\n", dev_interface->tx_fifo_depth);
+    printf("RX FIFO depth: %d B\n", dev_interface->rx_fifo_depth);
 
     printf("EQ offset: 0x%08lx\n", dev_interface->eq_res->base - dev_interface->regs);
     printf("EQ count: %d\n", mqnic_res_get_count(dev_interface->eq_res));

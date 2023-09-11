@@ -55,6 +55,8 @@ struct mqnic_if *mqnic_create_interface(struct mqnic_dev *mdev, int index, u8 __
 	interface->sched_block_count = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_SCHED_COUNT);
 	interface->max_tx_mtu = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_MAX_TX_MTU);
 	interface->max_rx_mtu = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_MAX_RX_MTU);
+	interface->tx_fifo_depth = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_TX_FIFO_DEPTH);
+	interface->rx_fifo_depth = ioread32(interface->if_ctrl_rb->regs + MQNIC_RB_IF_CTRL_REG_RX_FIFO_DEPTH);
 
 	dev_info(dev, "IF features: 0x%08x", interface->if_features);
 	dev_info(dev, "Port count: %d", interface->port_count);

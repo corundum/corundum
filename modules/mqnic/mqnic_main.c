@@ -288,12 +288,12 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 			(mqnic->board_ver >> 8) & 0xff,
 			mqnic->board_ver & 0xff);
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 0, 0)
-	dev_info(dev, "Build date: %ptRd %ptRt UTC (raw: 0x%08x)", &tm, &tm, mqnic->build_date);
+	snprintf(mqnic->build_date_str, sizeof(mqnic->build_date_str), "%ptRd %ptRt", &tm, &tm);
 #else
-	dev_info(dev, "Build date: %04d-%02d-%02d %02d:%02d:%02d UTC (raw: 0x%08x)",
-			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
-			tm.tm_hour, tm.tm_min, tm.tm_sec, mqnic->build_date);
+	snprintf(mqnic->build_date_str, sizeof(mqnic->build_date_str), "%04d-%02d-%02d %02d:%02d:%02d",
+			tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
 #endif
+	dev_info(dev, "Build date: %s UTC (raw: 0x%08x)", mqnic->build_date_str, mqnic->build_date);
 	dev_info(dev, "Git hash: %08x", mqnic->git_hash);
 	dev_info(dev, "Release info: %08x", mqnic->rel_info);
 

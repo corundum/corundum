@@ -183,6 +183,8 @@ struct mqnic_dev {
 	u32 if_stride;
 	u32 if_csr_offset;
 
+	char build_date_str[32];
+
 	struct mqnic_if *interface[MQNIC_MAX_IF];
 
 	struct ptp_clock *ptp_clock;

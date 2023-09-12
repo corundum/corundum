@@ -467,6 +467,10 @@ struct mqnic_priv {
 
 // mqnic_main.c
 
+// mqnic_devlink.c
+struct devlink *mqnic_devlink_alloc(struct device *dev);
+void mqnic_devlink_free(struct devlink *devlink);
+
 // mqnic_res.c
 struct mqnic_res *mqnic_create_res(unsigned int count, u8 __iomem *base, unsigned int stride);
 void mqnic_destroy_res(struct mqnic_res *res);

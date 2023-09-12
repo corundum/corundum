@@ -9,6 +9,7 @@
 #include <linux/delay.h>
 #include <linux/reset.h>
 #include <linux/rtc.h>
+#include <net/devlink.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
 #include <linux/pci-aspm.h>
@@ -238,6 +239,7 @@ static void mqnic_adev_release(struct device *dev)
 static int mqnic_common_probe(struct mqnic_dev *mqnic)
 {
 	int ret = 0;
+	struct devlink *devlink = priv_to_devlink(mqnic);
 	struct device *dev = mqnic->dev;
 	struct mqnic_reg_block *rb;
 	struct rtc_time tm;
@@ -442,6 +444,7 @@ fail_create_if:
 #endif
 
 	// probe complete
+	devlink_register(devlink);
 	return 0;
 
 	// error handling
@@ -458,7 +461,10 @@ fail_rb_init:
 
 static void mqnic_common_remove(struct mqnic_dev *mqnic)
 {
+	struct devlink *devlink = priv_to_devlink(mqnic);
 	int k = 0;
+
+	devlink_unregister(devlink);
 
 #ifdef CONFIG_AUXILIARY_BUS
 	if (mqnic->app_adev) {
@@ -494,6 +500,7 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 {
 	int ret = 0;
 	struct mqnic_dev *mqnic;
+	struct devlink *devlink;
 	struct device *dev = &pdev->dev;
 	struct pci_dev *bridge = pci_upstream_bridge(pdev);
 
@@ -563,10 +570,11 @@ static int mqnic_pci_probe(struct pci_dev *pdev, const struct pci_device_id *ent
 	pcie_print_link_status(pdev);
 #endif
 
-	mqnic = devm_kzalloc(dev, sizeof(*mqnic), GFP_KERNEL);
-	if (!mqnic)
+	devlink = mqnic_devlink_alloc(dev);
+	if (!devlink)
 		return -ENOMEM;
 
+	mqnic = devlink_priv(devlink);
 	mqnic->dev = dev;
 	mqnic->pdev = pdev;
 	pci_set_drvdata(pdev, mqnic);
@@ -676,12 +684,14 @@ fail_regions:
 	pci_disable_device(pdev);
 fail_enable_device:
 	mqnic_free_id(mqnic);
+	mqnic_devlink_free(devlink);
 	return ret;
 }
 
 static void mqnic_pci_remove(struct pci_dev *pdev)
 {
 	struct mqnic_dev *mqnic = pci_get_drvdata(pdev);
+	struct devlink *devlink = priv_to_devlink(mqnic);
 
 	dev_info(&pdev->dev, DRIVER_NAME " PCI remove");
 
@@ -698,6 +708,7 @@ static void mqnic_pci_remove(struct pci_dev *pdev)
 	pci_release_regions(pdev);
 	pci_disable_device(pdev);
 	mqnic_free_id(mqnic);
+	mqnic_devlink_free(devlink);
 }
 
 static void mqnic_pci_shutdown(struct pci_dev *pdev)
@@ -720,6 +731,7 @@ static int mqnic_platform_probe(struct platform_device *pdev)
 {
 	int ret;
 	struct mqnic_dev *mqnic;
+	struct devlink *devlink;
 	struct device *dev = &pdev->dev;
 	struct resource *res;
 	struct reset_control *rst;
@@ -730,10 +742,11 @@ static int mqnic_platform_probe(struct platform_device *pdev)
 	dev_info(dev, " NUMA node: %d", pdev->dev.numa_node);
 #endif
 
-	mqnic = devm_kzalloc(dev, sizeof(*mqnic), GFP_KERNEL);
-	if (!mqnic)
+	devlink = mqnic_devlink_alloc(dev);
+	if (!devlink)
 		return -ENOMEM;
 
+	mqnic = devlink_priv(devlink);
 	mqnic->dev = dev;
 	mqnic->pfdev = pdev;
 	platform_set_drvdata(pdev, mqnic);
@@ -822,18 +835,21 @@ static int mqnic_platform_probe(struct platform_device *pdev)
 	// error handling
 fail:
 	mqnic_free_id(mqnic);
+	mqnic_devlink_free(devlink);
 	return ret;
 }
 
 static int mqnic_platform_remove(struct platform_device *pdev)
 {
 	struct mqnic_dev *mqnic = platform_get_drvdata(pdev);
+	struct devlink *devlink = priv_to_devlink(mqnic);
 
 	dev_info(&pdev->dev, DRIVER_NAME " platform remove");
 
 	mqnic_common_remove(mqnic);
 
 	mqnic_free_id(mqnic);
+	mqnic_devlink_free(devlink);
 	return 0;
 }
 

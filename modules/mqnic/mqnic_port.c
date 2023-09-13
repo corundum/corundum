@@ -6,9 +6,11 @@
 #include "mqnic.h"
 
 struct mqnic_port *mqnic_create_port(struct mqnic_if *interface, int index,
-		struct mqnic_reg_block *port_rb)
+		int phys_index, struct mqnic_reg_block *port_rb)
 {
 	struct device *dev = interface->dev;
+	struct devlink *devlink = priv_to_devlink(interface->mdev);
+	struct devlink_port_attrs attrs = {};
 	struct mqnic_port *port;
 	struct mqnic_reg_block *rb;
 	u32 offset;
@@ -18,6 +20,16 @@ struct mqnic_port *mqnic_create_port(struct mqnic_if *interface, int index,
 	port = kzalloc(sizeof(*port), GFP_KERNEL);
 	if (!port)
 		return ERR_PTR(-ENOMEM);
+
+	attrs.flavour = DEVLINK_PORT_FLAVOUR_PHYSICAL;
+	attrs.phys.port_number = phys_index;
+	devlink_port_attrs_set(&port->dl_port, &attrs);
+
+	ret = devlink_port_register(devlink, &port->dl_port, phys_index);
+	if (ret) {
+		kfree(port);
+		return ERR_PTR(ret);
+	}
 
 	port->dev = dev;
 	port->interface = interface;
@@ -74,6 +86,8 @@ void mqnic_destroy_port(struct mqnic_port *port)
 {
 	if (port->rb_list)
 		mqnic_free_reg_block_list(port->rb_list);
+
+	devlink_port_unregister(&port->dl_port);
 
 	kfree(port);
 }

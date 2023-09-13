@@ -143,7 +143,7 @@ static void mqnic_get_pauseparam(struct net_device *ndev,
 	if (!(priv->if_features & MQNIC_IF_FEATURE_LFC))
 		return;
 
-	val = mqnic_port_get_lfc_ctrl(priv->port[0]);
+	val = mqnic_port_get_lfc_ctrl(priv->port);
 
 	param->rx_pause = !!(val & MQNIC_PORT_LFC_CTRL_RX_LFC_EN);
 	param->tx_pause = !!(val & MQNIC_PORT_LFC_CTRL_TX_LFC_EN);
@@ -161,7 +161,7 @@ static int mqnic_set_pauseparam(struct net_device *ndev,
 	if (param->autoneg)
 		return -EINVAL;
 
-	val = mqnic_port_get_lfc_ctrl(priv->port[0]);
+	val = mqnic_port_get_lfc_ctrl(priv->port);
 
 	if (param->rx_pause)
 		val |= MQNIC_PORT_LFC_CTRL_RX_LFC_EN;
@@ -173,7 +173,7 @@ static int mqnic_set_pauseparam(struct net_device *ndev,
 	else
 		val &= ~MQNIC_PORT_LFC_CTRL_TX_LFC_EN;
 
-	mqnic_port_set_lfc_ctrl(priv->port[0], val);
+	mqnic_port_set_lfc_ctrl(priv->port, val);
 
 	return 0;
 }

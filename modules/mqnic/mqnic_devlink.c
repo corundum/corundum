@@ -6,7 +6,6 @@
 #include "mqnic.h"
 
 #include <linux/version.h>
-#include <net/devlink.h>
 
 static int mqnic_devlink_info_get(struct devlink *devlink,
 		struct devlink_info_req *req, struct netlink_ext_ack *extack)

@@ -221,7 +221,7 @@ struct mqnic_if *mqnic_create_interface(struct mqnic_dev *mdev, int index, u8 __
 			goto fail;
 		}
 
-		port = mqnic_create_port(interface, k, port_rb);
+		port = mqnic_create_port(interface, k, mdev->phys_port_max++, port_rb);
 		if (IS_ERR_OR_NULL(port)) {
 			ret = PTR_ERR(port);
 			goto fail;
@@ -267,12 +267,10 @@ struct mqnic_if *mqnic_create_interface(struct mqnic_dev *mdev, int index, u8 __
 	}
 
 	// create net_devices
-	interface->dev_port_base = mdev->dev_port_max;
-	interface->dev_port_max = mdev->dev_port_max;
-
 	interface->ndev_count = 1;
 	for (k = 0; k < interface->ndev_count; k++) {
-		struct net_device *ndev = mqnic_create_netdev(interface, k, interface->dev_port_max++);
+		struct net_device *ndev = mqnic_create_netdev(interface, k,
+				interface->port[k], interface->sched_block[k]);
 		if (IS_ERR_OR_NULL(ndev)) {
 			ret = PTR_ERR(ndev);
 			goto fail;

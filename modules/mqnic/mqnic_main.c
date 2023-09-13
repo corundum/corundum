@@ -9,7 +9,6 @@
 #include <linux/delay.h>
 #include <linux/reset.h>
 #include <linux/rtc.h>
-#include <net/devlink.h>
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(5, 4, 0)
 #include <linux/pci-aspm.h>
@@ -364,8 +363,7 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 	mutex_init(&mqnic->state_lock);
 
 	// Set up interfaces
-	mqnic->dev_port_max = 0;
-	mqnic->dev_port_limit = MQNIC_MAX_IF;
+	mqnic->phys_port_max = 0;
 
 	mqnic->if_count = min_t(u32, mqnic->if_count, MQNIC_MAX_IF);
 
@@ -378,7 +376,6 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 			goto fail_create_if;
 		}
 		mqnic->interface[k] = interface;
-		mqnic->dev_port_max = mqnic->interface[k]->dev_port_max;
 	}
 
 	// pass module I2C clients to interface instances

@@ -159,11 +159,10 @@ int mqnic_start_port(struct net_device *ndev)
 	}
 	up_read(&priv->rxq_table_sem);
 
-	// enable first scheduler
-	mqnic_activate_sched_block(priv->sched_block[0]);
+	mqnic_port_set_tx_ctrl(priv->port, MQNIC_PORT_TX_CTRL_EN);
 
-	// enable first port
-	mqnic_port_set_tx_ctrl(priv->port[0], MQNIC_PORT_TX_CTRL_EN);
+	// enable scheduler
+	mqnic_activate_sched_block(priv->sched_block);
 
 	netif_tx_start_all_queues(ndev);
 	netif_device_attach(ndev);
@@ -176,7 +175,7 @@ int mqnic_start_port(struct net_device *ndev)
 		netif_carrier_on(ndev);
 	}
 
-	mqnic_port_set_rx_ctrl(priv->port[0], MQNIC_PORT_RX_CTRL_EN);
+	mqnic_port_set_rx_ctrl(priv->port, MQNIC_PORT_RX_CTRL_EN);
 
 	return 0;
 
@@ -191,7 +190,6 @@ void mqnic_stop_port(struct net_device *ndev)
 	struct mqnic_cq *cq;
 	struct radix_tree_iter iter;
 	void **slot;
-	int k;
 
 	netdev_info(ndev, "%s on interface %d netdev %d", __func__,
 			priv->interface->index, priv->index);
@@ -199,7 +197,7 @@ void mqnic_stop_port(struct net_device *ndev)
 	if (mqnic_link_status_poll)
 		del_timer_sync(&priv->link_status_timer);
 
-	mqnic_port_set_rx_ctrl(priv->port[0], 0);
+	mqnic_port_set_rx_ctrl(priv->port, 0);
 
 	netif_tx_lock_bh(ndev);
 //	if (detach)
@@ -214,9 +212,8 @@ void mqnic_stop_port(struct net_device *ndev)
 	mqnic_update_stats(ndev);
 	spin_unlock_bh(&priv->stats_lock);
 
-	// disable schedulers
-	for (k = 0; k < priv->sched_block_count; k++)
-		mqnic_deactivate_sched_block(priv->sched_block[k]);
+	// disable scheduler
+	mqnic_deactivate_sched_block(priv->sched_block);
 
 	// disable TX and RX queues
 	down_read(&priv->txq_table_sem);
@@ -237,7 +234,7 @@ void mqnic_stop_port(struct net_device *ndev)
 
 	msleep(20);
 
-	mqnic_port_set_tx_ctrl(priv->port[0], 0);
+	mqnic_port_set_tx_ctrl(priv->port, 0);
 
 	priv->port_up = false;
 
@@ -481,6 +478,14 @@ static int mqnic_ioctl(struct net_device *ndev, struct ifreq *ifr, int cmd)
 	}
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+static struct devlink_port *mqnic_get_devlink_port(struct net_device *ndev)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	return priv->dl_port;
+}
+#endif
+
 static const struct net_device_ops mqnic_netdev_ops = {
 	.ndo_open = mqnic_open,
 	.ndo_stop = mqnic_close,
@@ -493,34 +498,29 @@ static const struct net_device_ops mqnic_netdev_ops = {
 #else
 	.ndo_do_ioctl = mqnic_ioctl,
 #endif
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 2, 0) && LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+	.ndo_get_devlink_port = mqnic_get_devlink_port,
+#endif
 };
 
 static void mqnic_link_status_timeout(struct timer_list *timer)
 {
 	struct mqnic_priv *priv = from_timer(priv, timer, link_status_timer);
-	int k;
-	unsigned int up;
+	unsigned int up = 1;
 
-	// "combine" all TX/RX status signals of all ports of this netdev
-	for (k = 0, up = 0; k < priv->port_count; k++) {
-		if (!(mqnic_port_get_tx_ctrl(priv->port[k]) & MQNIC_PORT_TX_CTRL_STATUS))
-			continue;
-		if (!(mqnic_port_get_rx_ctrl(priv->port[k]) & MQNIC_PORT_RX_CTRL_STATUS))
-			continue;
+	if (!(mqnic_port_get_tx_ctrl(priv->port) & MQNIC_PORT_TX_CTRL_STATUS))
+		up = 0;
+	if (!(mqnic_port_get_rx_ctrl(priv->port) & MQNIC_PORT_RX_CTRL_STATUS))
+		up = 0;
 
-		up++;
-	}
-
-	if (up < priv->port_count) {
-		// report carrier off, as soon as a one port's TX/RX status is deasserted
-		if (priv->link_status) {
-			netif_carrier_off(priv->ndev);
+	if (up) {
+		if (!priv->link_status) {
+			netif_carrier_on(priv->ndev);
 			priv->link_status = !priv->link_status;
 		}
 	} else {
-		// report carrier on, as soon as all ports' TX/RX status is asserted
-		if (!priv->link_status) {
-			netif_carrier_on(priv->ndev);
+		if (priv->link_status) {
+			netif_carrier_off(priv->ndev);
 			priv->link_status = !priv->link_status;
 		}
 	}
@@ -528,7 +528,8 @@ static void mqnic_link_status_timeout(struct timer_list *timer)
 	mod_timer(&priv->link_status_timer, jiffies + msecs_to_jiffies(mqnic_link_status_poll));
 }
 
-struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, int dev_port)
+struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index,
+		struct mqnic_port *port, struct mqnic_sched_block *sched_block)
 {
 	struct mqnic_dev *mdev = interface->mdev;
 	struct device *dev = interface->dev;
@@ -546,7 +547,10 @@ struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, in
 	}
 
 	SET_NETDEV_DEV(ndev, dev);
-	ndev->dev_port = dev_port;
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 2, 0)
+	SET_NETDEV_DEVLINK_PORT(ndev, &port->dl_port);
+#endif
+	ndev->dev_port = port->phys_index;
 
 	// init private data
 	priv = netdev_priv(ndev);
@@ -556,10 +560,13 @@ struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, in
 
 	priv->ndev = ndev;
 	priv->mdev = interface->mdev;
+	priv->dl_port = &port->dl_port;
 	priv->interface = interface;
 	priv->dev = dev;
 	priv->index = index;
+	priv->port = port;
 	priv->port_up = false;
+	priv->sched_block = sched_block;
 
 	// associate interface resources
 	priv->if_features = interface->if_features;
@@ -578,28 +585,20 @@ struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, in
 	init_rwsem(&priv->rxq_table_sem);
 	INIT_RADIX_TREE(&priv->rxq_table, GFP_KERNEL);
 
-	priv->sched_block_count = interface->sched_block_count;
-	for (k = 0; k < interface->sched_block_count; k++)
-		priv->sched_block[k] = interface->sched_block[k];
-
-	priv->port_count = interface->port_count;
-	for (k = 0; k < interface->port_count; k++)
-		priv->port[k] = interface->port[k];
-
 	netif_set_real_num_tx_queues(ndev, priv->txq_count);
 	netif_set_real_num_rx_queues(ndev, priv->rxq_count);
 
 	// set MAC
 	ndev->addr_len = ETH_ALEN;
 
-	if (dev_port >= mdev->mac_count) {
+	if (ndev->dev_port >= mdev->mac_count) {
 		dev_warn(dev, "Exhausted permanent MAC addresses; using random MAC");
 		eth_hw_addr_random(ndev);
 	} else {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
-		eth_hw_addr_set(ndev, mdev->mac_list[dev_port]);
+		eth_hw_addr_set(ndev, mdev->mac_list[ndev->dev_port]);
 #else
-		memcpy(ndev->dev_addr, mdev->mac_list[dev_port], ETH_ALEN);
+		memcpy(ndev->dev_addr, mdev->mac_list[ndev->dev_port], ETH_ALEN);
 #endif
 
 		if (!is_valid_ether_addr(ndev->dev_addr)) {
@@ -657,6 +656,10 @@ struct net_device *mqnic_create_netdev(struct mqnic_if *interface, int index, in
 		goto fail;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+	devlink_port_type_eth_set(&port->dl_port, ndev);
+#endif
+
 	priv->registered = 1;
 
 	return ndev;
@@ -674,6 +677,10 @@ void mqnic_destroy_netdev(struct net_device *ndev)
 		unregister_netdev(ndev);
 
 	kfree(priv->rx_queue_map_indir_table);
+
+	#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 2, 0)
+		devlink_port_type_clear(priv->dl_port);
+	#endif
 
 	free_netdev(ndev);
 }

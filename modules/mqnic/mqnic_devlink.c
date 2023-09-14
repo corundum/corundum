@@ -90,7 +90,11 @@ static const struct devlink_ops mqnic_devlink_ops = {
 
 struct devlink *mqnic_devlink_alloc(struct device *dev)
 {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
 	return devlink_alloc(&mqnic_devlink_ops, sizeof(struct mqnic_dev), dev);
+#else
+	return devlink_alloc(&mqnic_devlink_ops, sizeof(struct mqnic_dev));
+#endif
 }
 
 void mqnic_devlink_free(struct devlink *devlink)

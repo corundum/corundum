@@ -441,7 +441,11 @@ fail_create_if:
 #endif
 
 	// probe complete
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
 	devlink_register(devlink);
+#else
+	devlink_register(devlink, dev);
+#endif
 	return 0;
 
 	// error handling

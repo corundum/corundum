@@ -245,6 +245,12 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 
 	int k = 0, l = 0;
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
+	devlink_register(devlink);
+#else
+	devlink_register(devlink, dev);
+#endif
+
 	// Enumerate registers
 	mqnic->rb_list = mqnic_enumerate_reg_block_list(mqnic->hw_addr, 0, mqnic->hw_regs_size);
 	if (!mqnic->rb_list) {
@@ -441,11 +447,6 @@ fail_create_if:
 #endif
 
 	// probe complete
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(5, 15, 0)
-	devlink_register(devlink);
-#else
-	devlink_register(devlink, dev);
-#endif
 	return 0;
 
 	// error handling
@@ -464,8 +465,6 @@ static void mqnic_common_remove(struct mqnic_dev *mqnic)
 {
 	struct devlink *devlink = priv_to_devlink(mqnic);
 	int k = 0;
-
-	devlink_unregister(devlink);
 
 #ifdef CONFIG_AUXILIARY_BUS
 	if (mqnic->app_adev) {
@@ -494,6 +493,8 @@ static void mqnic_common_remove(struct mqnic_dev *mqnic)
 	}
 	if (mqnic->rb_list)
 		mqnic_free_reg_block_list(mqnic->rb_list);
+
+	devlink_unregister(devlink);
 }
 
 #ifdef CONFIG_PCI

@@ -4,6 +4,7 @@
 CONFIG_gpio-demo
 CONFIG_peekpoke
 
+CONFIG_iproute2-devlink
 CONFIG_iputils-ping
 CONFIG_iperf2
 CONFIG_linuxptp

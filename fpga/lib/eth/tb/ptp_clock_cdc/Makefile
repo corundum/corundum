@@ -24,7 +24,7 @@ SIM ?= icarus
 WAVES ?= 0
 
 COCOTB_HDL_TIMEUNIT = 1ns
-COCOTB_HDL_TIMEPRECISION = 1ps
+COCOTB_HDL_TIMEPRECISION = 1fs
 
 DUT      = ptp_clock_cdc
 TOPLEVEL = $(DUT)
@@ -34,8 +34,6 @@ VERILOG_SOURCES += ../../rtl/$(DUT).v
 # module parameters
 export PARAM_TS_WIDTH := 96
 export PARAM_NS_WIDTH := 4
-export PARAM_FNS_WIDTH := 16
-export PARAM_USE_SAMPLE_CLOCK := 1
 export PARAM_LOG_RATE := 3
 export PARAM_PIPELINE_OUTPUT := 0
 

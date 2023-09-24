@@ -654,7 +654,6 @@ def test_fpga_core(request):
     parameters['PTP_CLK_PERIOD_NS_DENOM'] = 825
     parameters['PTP_CLOCK_PIPELINE'] = 0
     parameters['PTP_CLOCK_CDC_PIPELINE'] = 0
-    parameters['PTP_USE_SAMPLE_CLOCK'] = 1
     parameters['PTP_SEPARATE_TX_CLOCK'] = 0
     parameters['PTP_SEPARATE_RX_CLOCK'] = 0
     parameters['PTP_PORT_CDC_PIPELINE'] = 0

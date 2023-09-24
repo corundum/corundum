@@ -29,7 +29,6 @@ module mqnic_app_block #
     parameter PTP_CLK_PERIOD_NS_NUM = 4,
     parameter PTP_CLK_PERIOD_NS_DENOM = 1,
     parameter PTP_TS_WIDTH = 96,
-    parameter PTP_USE_SAMPLE_CLOCK = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,

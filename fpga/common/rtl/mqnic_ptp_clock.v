@@ -18,7 +18,6 @@ module mqnic_ptp_clock #
     parameter PTP_CLK_PERIOD_NS_DENOM = 1,
     parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_CLOCK_CDC_PIPELINE = 0,
-    parameter PTP_USE_SAMPLE_CLOCK = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
     parameter REG_ADDR_WIDTH = 7,

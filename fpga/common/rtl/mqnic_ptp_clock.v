@@ -327,8 +327,6 @@ assign ptp_pps_str = pps_str_reg;
 ptp_clock_cdc #(
     .TS_WIDTH(96),
     .NS_WIDTH(PTP_PERIOD_NS_WIDTH),
-    .FNS_WIDTH(16),
-    .USE_SAMPLE_CLOCK(PTP_USE_SAMPLE_CLOCK),
     .PIPELINE_OUTPUT(PTP_CLOCK_CDC_PIPELINE)
 )
 ptp_cdc_inst (

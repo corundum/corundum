@@ -311,7 +311,7 @@ for (n = 0; n < SEG_COUNT; n = n + 1) begin
             select_resp_valid_reg <= 1'b0;
             if (!fifo_empty) begin
                 select_resp_reg <= fifo_sel[fifo_rd_ptr_reg[FIFO_ADDR_WIDTH-1:0]];
-                fifo_rd_ptr_reg = fifo_rd_ptr_reg + 1;
+                fifo_rd_ptr_reg <= fifo_rd_ptr_reg + 1;
                 select_resp_valid_reg <= 1'b1;
             end
         end

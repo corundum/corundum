@@ -24,6 +24,9 @@ module fpga #
     parameter GIT_HASH = 32'hdce357bf,
     parameter RELEASE_INFO = 32'h00000000,
 
+    // Board configuration
+    parameter CMS_ENABLE = 1,
+
     // Structural configuration
     parameter IF_COUNT = 2,
     parameter PORTS_PER_IF = 1,
@@ -674,113 +677,136 @@ wire [1:0]  axil_cms_rresp;
 wire        axil_cms_rvalid;
 wire        axil_cms_rready;
 
-wire [17:0] axil_cms_awaddr_int;
-wire [2:0]  axil_cms_awprot_int;
-wire        axil_cms_awvalid_int;
-wire        axil_cms_awready_int;
-wire [31:0] axil_cms_wdata_int;
-wire [3:0]  axil_cms_wstrb_int;
-wire        axil_cms_wvalid_int;
-wire        axil_cms_wready_int;
-wire [1:0]  axil_cms_bresp_int;
-wire        axil_cms_bvalid_int;
-wire        axil_cms_bready_int;
-wire [17:0] axil_cms_araddr_int;
-wire [2:0]  axil_cms_arprot_int;
-wire        axil_cms_arvalid_int;
-wire        axil_cms_arready_int;
-wire [31:0] axil_cms_rdata_int;
-wire [1:0]  axil_cms_rresp_int;
-wire        axil_cms_rvalid_int;
-wire        axil_cms_rready_int;
+generate
 
-axil_cdc #(
-    .DATA_WIDTH(32),
-    .ADDR_WIDTH(18)
-)
-cms_axil_cdc_inst (
-    .s_clk(axil_cms_clk),
-    .s_rst(axil_cms_rst),
-    .s_axil_awaddr(axil_cms_awaddr),
-    .s_axil_awprot(axil_cms_awprot),
-    .s_axil_awvalid(axil_cms_awvalid),
-    .s_axil_awready(axil_cms_awready),
-    .s_axil_wdata(axil_cms_wdata),
-    .s_axil_wstrb(axil_cms_wstrb),
-    .s_axil_wvalid(axil_cms_wvalid),
-    .s_axil_wready(axil_cms_wready),
-    .s_axil_bresp(axil_cms_bresp),
-    .s_axil_bvalid(axil_cms_bvalid),
-    .s_axil_bready(axil_cms_bready),
-    .s_axil_araddr(axil_cms_araddr),
-    .s_axil_arprot(axil_cms_arprot),
-    .s_axil_arvalid(axil_cms_arvalid),
-    .s_axil_arready(axil_cms_arready),
-    .s_axil_rdata(axil_cms_rdata),
-    .s_axil_rresp(axil_cms_rresp),
-    .s_axil_rvalid(axil_cms_rvalid),
-    .s_axil_rready(axil_cms_rready),
-    .m_clk(clk_50mhz_int),
-    .m_rst(rst_50mhz_int),
-    .m_axil_awaddr(axil_cms_awaddr_int),
-    .m_axil_awprot(axil_cms_awprot_int),
-    .m_axil_awvalid(axil_cms_awvalid_int),
-    .m_axil_awready(axil_cms_awready_int),
-    .m_axil_wdata(axil_cms_wdata_int),
-    .m_axil_wstrb(axil_cms_wstrb_int),
-    .m_axil_wvalid(axil_cms_wvalid_int),
-    .m_axil_wready(axil_cms_wready_int),
-    .m_axil_bresp(axil_cms_bresp_int),
-    .m_axil_bvalid(axil_cms_bvalid_int),
-    .m_axil_bready(axil_cms_bready_int),
-    .m_axil_araddr(axil_cms_araddr_int),
-    .m_axil_arprot(axil_cms_arprot_int),
-    .m_axil_arvalid(axil_cms_arvalid_int),
-    .m_axil_arready(axil_cms_arready_int),
-    .m_axil_rdata(axil_cms_rdata_int),
-    .m_axil_rresp(axil_cms_rresp_int),
-    .m_axil_rvalid(axil_cms_rvalid_int),
-    .m_axil_rready(axil_cms_rready_int)
-);
+if (CMS_ENABLE) begin : cms
 
-cms_wrapper
-cms_inst (
-    .aclk_ctrl_0(clk_50mhz_int),
-    .aresetn_ctrl_0(~rst_50mhz_int),
-    .interrupt_host_0(),
-    .qsfp0_int_l_0(qsfp0_intl),
-    .qsfp0_lpmode_0(),
-    .qsfp0_modprs_l_0(qsfp0_modprsl),
-    .qsfp0_modsel_l_0(),
-    .qsfp0_reset_l_0(),
-    .qsfp1_int_l_0(qsfp1_intl),
-    .qsfp1_lpmode_0(),
-    .qsfp1_modprs_l_0(qsfp1_modprsl),
-    .qsfp1_modsel_l_0(),
-    .qsfp1_reset_l_0(),
-    .s_axi_ctrl_0_araddr(axil_cms_araddr_int),
-    .s_axi_ctrl_0_arprot(axil_cms_arprot_int),
-    .s_axi_ctrl_0_arready(axil_cms_arready_int),
-    .s_axi_ctrl_0_arvalid(axil_cms_arvalid_int),
-    .s_axi_ctrl_0_awaddr(axil_cms_awaddr_int),
-    .s_axi_ctrl_0_awprot(axil_cms_awprot_int),
-    .s_axi_ctrl_0_awready(axil_cms_awready_int),
-    .s_axi_ctrl_0_awvalid(axil_cms_awvalid_int),
-    .s_axi_ctrl_0_bready(axil_cms_bready_int),
-    .s_axi_ctrl_0_bresp(axil_cms_bresp_int),
-    .s_axi_ctrl_0_bvalid(axil_cms_bvalid_int),
-    .s_axi_ctrl_0_rdata(axil_cms_rdata_int),
-    .s_axi_ctrl_0_rready(axil_cms_rready_int),
-    .s_axi_ctrl_0_rresp(axil_cms_rresp_int),
-    .s_axi_ctrl_0_rvalid(axil_cms_rvalid_int),
-    .s_axi_ctrl_0_wdata(axil_cms_wdata_int),
-    .s_axi_ctrl_0_wready(axil_cms_wready_int),
-    .s_axi_ctrl_0_wstrb(axil_cms_wstrb_int),
-    .s_axi_ctrl_0_wvalid(axil_cms_wvalid_int),
-    .satellite_gpio_0(msp_gpio),
-    .satellite_uart_0_rxd(msp_uart_rxd),
-    .satellite_uart_0_txd(msp_uart_txd)
-);
+    wire [17:0] axil_cms_awaddr_int;
+    wire [2:0]  axil_cms_awprot_int;
+    wire        axil_cms_awvalid_int;
+    wire        axil_cms_awready_int;
+    wire [31:0] axil_cms_wdata_int;
+    wire [3:0]  axil_cms_wstrb_int;
+    wire        axil_cms_wvalid_int;
+    wire        axil_cms_wready_int;
+    wire [1:0]  axil_cms_bresp_int;
+    wire        axil_cms_bvalid_int;
+    wire        axil_cms_bready_int;
+    wire [17:0] axil_cms_araddr_int;
+    wire [2:0]  axil_cms_arprot_int;
+    wire        axil_cms_arvalid_int;
+    wire        axil_cms_arready_int;
+    wire [31:0] axil_cms_rdata_int;
+    wire [1:0]  axil_cms_rresp_int;
+    wire        axil_cms_rvalid_int;
+    wire        axil_cms_rready_int;
+
+    axil_cdc #(
+        .DATA_WIDTH(32),
+        .ADDR_WIDTH(18)
+    )
+    cms_axil_cdc_inst (
+        .s_clk(axil_cms_clk),
+        .s_rst(axil_cms_rst),
+        .s_axil_awaddr(axil_cms_awaddr),
+        .s_axil_awprot(axil_cms_awprot),
+        .s_axil_awvalid(axil_cms_awvalid),
+        .s_axil_awready(axil_cms_awready),
+        .s_axil_wdata(axil_cms_wdata),
+        .s_axil_wstrb(axil_cms_wstrb),
+        .s_axil_wvalid(axil_cms_wvalid),
+        .s_axil_wready(axil_cms_wready),
+        .s_axil_bresp(axil_cms_bresp),
+        .s_axil_bvalid(axil_cms_bvalid),
+        .s_axil_bready(axil_cms_bready),
+        .s_axil_araddr(axil_cms_araddr),
+        .s_axil_arprot(axil_cms_arprot),
+        .s_axil_arvalid(axil_cms_arvalid),
+        .s_axil_arready(axil_cms_arready),
+        .s_axil_rdata(axil_cms_rdata),
+        .s_axil_rresp(axil_cms_rresp),
+        .s_axil_rvalid(axil_cms_rvalid),
+        .s_axil_rready(axil_cms_rready),
+        .m_clk(clk_50mhz_int),
+        .m_rst(rst_50mhz_int),
+        .m_axil_awaddr(axil_cms_awaddr_int),
+        .m_axil_awprot(axil_cms_awprot_int),
+        .m_axil_awvalid(axil_cms_awvalid_int),
+        .m_axil_awready(axil_cms_awready_int),
+        .m_axil_wdata(axil_cms_wdata_int),
+        .m_axil_wstrb(axil_cms_wstrb_int),
+        .m_axil_wvalid(axil_cms_wvalid_int),
+        .m_axil_wready(axil_cms_wready_int),
+        .m_axil_bresp(axil_cms_bresp_int),
+        .m_axil_bvalid(axil_cms_bvalid_int),
+        .m_axil_bready(axil_cms_bready_int),
+        .m_axil_araddr(axil_cms_araddr_int),
+        .m_axil_arprot(axil_cms_arprot_int),
+        .m_axil_arvalid(axil_cms_arvalid_int),
+        .m_axil_arready(axil_cms_arready_int),
+        .m_axil_rdata(axil_cms_rdata_int),
+        .m_axil_rresp(axil_cms_rresp_int),
+        .m_axil_rvalid(axil_cms_rvalid_int),
+        .m_axil_rready(axil_cms_rready_int)
+    );
+
+    cms_wrapper
+    cms_inst (
+        .aclk_ctrl_0(clk_50mhz_int),
+        .aresetn_ctrl_0(~rst_50mhz_int),
+        .interrupt_host_0(),
+        .qsfp0_int_l_0(qsfp0_intl),
+        .qsfp0_lpmode_0(),
+        .qsfp0_modprs_l_0(qsfp0_modprsl),
+        .qsfp0_modsel_l_0(),
+        .qsfp0_reset_l_0(),
+        .qsfp1_int_l_0(qsfp1_intl),
+        .qsfp1_lpmode_0(),
+        .qsfp1_modprs_l_0(qsfp1_modprsl),
+        .qsfp1_modsel_l_0(),
+        .qsfp1_reset_l_0(),
+        .s_axi_ctrl_0_araddr(axil_cms_araddr_int),
+        .s_axi_ctrl_0_arprot(axil_cms_arprot_int),
+        .s_axi_ctrl_0_arready(axil_cms_arready_int),
+        .s_axi_ctrl_0_arvalid(axil_cms_arvalid_int),
+        .s_axi_ctrl_0_awaddr(axil_cms_awaddr_int),
+        .s_axi_ctrl_0_awprot(axil_cms_awprot_int),
+        .s_axi_ctrl_0_awready(axil_cms_awready_int),
+        .s_axi_ctrl_0_awvalid(axil_cms_awvalid_int),
+        .s_axi_ctrl_0_bready(axil_cms_bready_int),
+        .s_axi_ctrl_0_bresp(axil_cms_bresp_int),
+        .s_axi_ctrl_0_bvalid(axil_cms_bvalid_int),
+        .s_axi_ctrl_0_rdata(axil_cms_rdata_int),
+        .s_axi_ctrl_0_rready(axil_cms_rready_int),
+        .s_axi_ctrl_0_rresp(axil_cms_rresp_int),
+        .s_axi_ctrl_0_rvalid(axil_cms_rvalid_int),
+        .s_axi_ctrl_0_wdata(axil_cms_wdata_int),
+        .s_axi_ctrl_0_wready(axil_cms_wready_int),
+        .s_axi_ctrl_0_wstrb(axil_cms_wstrb_int),
+        .s_axi_ctrl_0_wvalid(axil_cms_wvalid_int),
+        .satellite_gpio_0(msp_gpio),
+        .satellite_uart_0_rxd(msp_uart_rxd),
+        .satellite_uart_0_txd(msp_uart_txd)
+    );
+
+end else begin
+
+    assign axil_cms_awready = 0;
+    assign axil_cms_wdata = 0;
+    assign axil_cms_wstrb = 0;
+    assign axil_cms_wvalid = 0;
+    assign axil_cms_bresp = 0;
+    assign axil_cms_bvalid = 0;
+    assign axil_cms_arready = 0;
+    assign axil_cms_rdata = 0;
+    assign axil_cms_rresp = 0;
+    assign axil_cms_rvalid = 0;
+
+    assign msp_uart_txd = 1'bz;
+
+end
+
+endgenerate
 
 // configure SI5335 clock generators
 reg qsfp_refclk_reset_reg = 1'b1;
@@ -2000,6 +2026,9 @@ fpga_core #(
     .BUILD_DATE(BUILD_DATE),
     .GIT_HASH(GIT_HASH),
     .RELEASE_INFO(RELEASE_INFO),
+
+    // Board configuration
+    .CMS_ENABLE(CMS_ENABLE),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),

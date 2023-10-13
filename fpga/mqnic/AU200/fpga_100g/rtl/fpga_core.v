@@ -24,6 +24,9 @@ module fpga_core #
     parameter GIT_HASH = 32'hdce357bf,
     parameter RELEASE_INFO = 32'h00000000,
 
+    // Board configuration
+    parameter CMS_ENABLE = 1,
+
     // Structural configuration
     parameter IF_COUNT = 2,
     parameter PORTS_PER_IF = 1,
@@ -655,14 +658,14 @@ always @(posedge clk_250mhz) begin
             // Alveo BMC
             RBB+8'h4C: begin
                 // BMC ctrl: Addr
-                if (!m_axil_cms_arvalid && !m_axil_cms_awvalid) begin
+                if (CMS_ENABLE && !m_axil_cms_arvalid && !m_axil_cms_awvalid) begin
                     m_axil_cms_addr_reg <= ctrl_reg_wr_data;
                     m_axil_cms_arvalid_reg <= 1'b1;
                 end
             end
             RBB+8'h50: begin
                 // BMC ctrl: Data
-                if (!m_axil_cms_wvalid) begin
+                if (CMS_ENABLE && !m_axil_cms_wvalid) begin
                     m_axil_cms_awvalid_reg <= 1'b1;
                     m_axil_cms_wdata_reg <= ctrl_reg_wr_data;
                     m_axil_cms_wstrb_reg <= ctrl_reg_wr_strb;
@@ -722,11 +725,11 @@ always @(posedge clk_250mhz) begin
                 ctrl_reg_rd_data_reg[17] <= qspi_cs;
             end
             // Alveo BMC
-            RBB+8'h40: ctrl_reg_rd_data_reg <= 32'h0000C140;             // BMC ctrl: Type
-            RBB+8'h44: ctrl_reg_rd_data_reg <= 32'h00000100;             // BMC ctrl: Version
-            RBB+8'h48: ctrl_reg_rd_data_reg <= RB_DRP_QSFP0_BASE;        // BMC ctrl: Next header
-            RBB+8'h4C: ctrl_reg_rd_data_reg <= m_axil_cms_addr_reg;      // BMC ctrl: Addr
-            RBB+8'h50: ctrl_reg_rd_data_reg <= m_axil_cms_rdata;         // BMC ctrl: Data
+            RBB+8'h40: ctrl_reg_rd_data_reg <= CMS_ENABLE ? 32'h0000C140 : 0;         // BMC ctrl: Type
+            RBB+8'h44: ctrl_reg_rd_data_reg <= CMS_ENABLE ? 32'h00000100 : 0;         // BMC ctrl: Version
+            RBB+8'h48: ctrl_reg_rd_data_reg <= RB_DRP_QSFP0_BASE;                     // BMC ctrl: Next header
+            RBB+8'h4C: ctrl_reg_rd_data_reg <= CMS_ENABLE ? m_axil_cms_addr_reg : 0;  // BMC ctrl: Addr
+            RBB+8'h50: ctrl_reg_rd_data_reg <= CMS_ENABLE ? m_axil_cms_rdata : 0;     // BMC ctrl: Data
             default: ctrl_reg_rd_ack_reg <= 1'b0;
         endcase
     end

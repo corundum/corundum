@@ -9,6 +9,8 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
+`include "mqnic_app_custom_intf.vh"
+
 /*
  * mqnic core logic - AXI DMA wrapper
  */
@@ -142,6 +144,11 @@ module mqnic_core_axi #
     parameter APP_STAT_ENABLE = 1,
     parameter APP_GPIO_IN_WIDTH = 32,
     parameter APP_GPIO_OUT_WIDTH = 32,
+
+    // User-defined app parameters
+    `ifdef APP_CUSTOM_INTF_PARAMS
+        `APP_CUSTOM_INTF_PARAMS
+    `endif
 
     // AXI interface configuration (DMA)
     parameter AXI_DATA_WIDTH = 128,
@@ -507,6 +514,13 @@ module mqnic_core_axi #
      */
     input  wire [APP_GPIO_IN_WIDTH-1:0]               app_gpio_in,
     output wire [APP_GPIO_OUT_WIDTH-1:0]              app_gpio_out,
+
+    /*
+     * User-defined custom interface
+     */
+    `ifdef APP_CUSTOM_INTF_PORT_DECL
+        `APP_CUSTOM_INTF_PORT_DECL
+    `endif
 
     /*
      * JTAG
@@ -1432,6 +1446,13 @@ core_inst (
      */
     .app_gpio_in(app_gpio_in),
     .app_gpio_out(app_gpio_out),
+
+    /*
+     * User-defined app interface
+     */
+    `ifdef APP_CUSTOM_INTF_PORT_MAP
+        `APP_CUSTOM_INTF_PORT_MAP
+    `endif
 
     /*
      * JTAG

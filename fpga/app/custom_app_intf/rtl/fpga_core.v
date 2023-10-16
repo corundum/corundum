@@ -10,6 +10,8 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
+`include "mqnic_app_custom_intf.vh"
+
 /*
  * FPGA core logic
  */
@@ -111,6 +113,11 @@ module fpga_core #
     parameter APP_AXIS_SYNC_ENABLE = 1,
     parameter APP_AXIS_IF_ENABLE = 1,
     parameter APP_STAT_ENABLE = 1,
+
+    // User-defined app parameters
+    `ifdef APP_CUSTOM_INTF_PARAMS
+        `APP_CUSTOM_INTF_PARAMS
+    `endif
 
     // AXI interface configuration (DMA)
     parameter AXI_DATA_WIDTH = 128,
@@ -408,6 +415,11 @@ initial begin
         $finish;
     end
 end
+
+// Wires connected to user-defined app interface
+`ifdef APP_CUSTOM_INTF_WIRE_DECL
+    `APP_CUSTOM_INTF_WIRE_DECL
+`endif
 
 // AXI lite connections
 wire [AXIL_CSR_ADDR_WIDTH-1:0]   axil_csr_awaddr;
@@ -1269,6 +1281,13 @@ core_inst (
      */
     .app_gpio_in(0),
     .app_gpio_out(),
+
+    /*
+     * User-defined app interface
+     */
+    `ifdef APP_CUSTOM_INTF_PORT_MAP
+        `APP_CUSTOM_INTF_PORT_MAP
+    `endif
 
     /*
      * JTAG

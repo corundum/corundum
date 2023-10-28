@@ -145,8 +145,6 @@ module cmac_gty_wrapper #
     output wire                        rx_axis_tlast,
     output wire [80+1-1:0]             rx_axis_tuser,
 
-    output wire                        rx_ptp_clk,
-    output wire                        rx_ptp_rst,
     input  wire [79:0]                 rx_ptp_time,
 
     input  wire                        rx_enable,
@@ -902,17 +900,6 @@ always @(posedge rx_clk) begin
 end
 
 assign rx_rst = rx_rst_reg_2;
-
-assign rx_ptp_clk = gt_rxusrclk2[0];
-
-sync_reset #(
-    .N(4)
-)
-sync_reset_rx_ptp_rst_inst (
-    .clk(rx_ptp_clk),
-    .rst(gt_rx_reset_out[0] || rx_rst),
-    .out(rx_ptp_rst)
-);
 
 // serdes data
 // 80 bit mode - 64 bits in data, 8 bits each in ctrl0 and ctrl1 (per serdes)

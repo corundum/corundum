@@ -40,7 +40,6 @@ module fpga_core #
     parameter PTP_TS_WIDTH = 96,
     parameter PTP_CLOCK_PIPELINE = 1,
     parameter PTP_CLOCK_CDC_PIPELINE = 0,
-    parameter PTP_SEPARATE_RX_CLOCK = 0,
     parameter PTP_PORT_CDC_PIPELINE = 1,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
@@ -291,8 +290,6 @@ module fpga_core #
     input  wire                               qsfp0_rx_axis_tlast,
     input  wire [80+1-1:0]                    qsfp0_rx_axis_tuser,
 
-    input  wire                               qsfp0_rx_ptp_clk,
-    input  wire                               qsfp0_rx_ptp_rst,
     output wire [79:0]                        qsfp0_rx_ptp_time,
 
     output wire                               qsfp0_rx_enable,
@@ -343,8 +340,6 @@ module fpga_core #
     input  wire                               qsfp1_rx_axis_tlast,
     input  wire [80+1-1:0]                    qsfp1_rx_axis_tuser,
 
-    input  wire                               qsfp1_rx_ptp_clk,
-    input  wire                               qsfp1_rx_ptp_rst,
     output wire [79:0]                        qsfp1_rx_ptp_time,
 
     output wire                               qsfp1_rx_enable,
@@ -897,8 +892,8 @@ mqnic_port_map_mac_axis_inst (
     .mac_rx_clk({qsfp1_rx_clk, qsfp0_rx_clk}),
     .mac_rx_rst({qsfp1_rx_rst, qsfp0_rx_rst}),
 
-    .mac_rx_ptp_clk({qsfp1_rx_ptp_clk, qsfp0_rx_ptp_clk}),
-    .mac_rx_ptp_rst({qsfp1_rx_ptp_rst, qsfp0_rx_ptp_rst}),
+    .mac_rx_ptp_clk(2'b00),
+    .mac_rx_ptp_rst(2'b00),
     .mac_rx_ptp_ts_96({qsfp1_rx_ptp_time_int, qsfp0_rx_ptp_time_int}),
     .mac_rx_ptp_ts_step(),
 
@@ -1000,7 +995,7 @@ mqnic_core_pcie_us #(
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
     .PTP_SEPARATE_TX_CLOCK(0),
-    .PTP_SEPARATE_RX_CLOCK(PTP_SEPARATE_RX_CLOCK),
+    .PTP_SEPARATE_RX_CLOCK(0),
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),

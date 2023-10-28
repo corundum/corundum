@@ -40,7 +40,6 @@ module fpga_core #
     parameter PTP_TS_WIDTH = 96,
     parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_CLOCK_CDC_PIPELINE = 0,
-    parameter PTP_SEPARATE_RX_CLOCK = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 1,
     parameter PTP_PEROUT_COUNT = 1,
@@ -302,8 +301,6 @@ module fpga_core #
     input  wire                               qsfp_0_rx_axis_tlast,
     input  wire [80+1-1:0]                    qsfp_0_rx_axis_tuser,
 
-    input  wire                               qsfp_0_rx_ptp_clk,
-    input  wire                               qsfp_0_rx_ptp_rst,
     output wire [79:0]                        qsfp_0_rx_ptp_time,
 
     output wire                               qsfp_0_rx_enable,
@@ -365,8 +362,6 @@ module fpga_core #
     input  wire                               qsfp_1_rx_axis_tlast,
     input  wire [80+1-1:0]                    qsfp_1_rx_axis_tuser,
 
-    input  wire                               qsfp_1_rx_ptp_clk,
-    input  wire                               qsfp_1_rx_ptp_rst,
     output wire [79:0]                        qsfp_1_rx_ptp_time,
 
     output wire                               qsfp_1_rx_enable,
@@ -428,8 +423,6 @@ module fpga_core #
     input  wire                               qsfp_2_rx_axis_tlast,
     input  wire [80+1-1:0]                    qsfp_2_rx_axis_tuser,
 
-    input  wire                               qsfp_2_rx_ptp_clk,
-    input  wire                               qsfp_2_rx_ptp_rst,
     output wire [79:0]                        qsfp_2_rx_ptp_time,
 
     output wire                               qsfp_2_rx_enable,
@@ -491,8 +484,6 @@ module fpga_core #
     input  wire                               qsfp_3_rx_axis_tlast,
     input  wire [80+1-1:0]                    qsfp_3_rx_axis_tuser,
 
-    input  wire                               qsfp_3_rx_ptp_clk,
-    input  wire                               qsfp_3_rx_ptp_rst,
     output wire [79:0]                        qsfp_3_rx_ptp_time,
 
     output wire                               qsfp_3_rx_enable,
@@ -1244,8 +1235,8 @@ mqnic_port_map_mac_axis_inst (
     .mac_rx_clk({qsfp_3_rx_clk, qsfp_2_rx_clk, qsfp_1_rx_clk, qsfp_0_rx_clk}),
     .mac_rx_rst({qsfp_3_rx_rst, qsfp_2_rx_rst, qsfp_1_rx_rst, qsfp_0_rx_rst}),
 
-    .mac_rx_ptp_clk({qsfp_3_rx_ptp_clk, qsfp_2_rx_ptp_clk, qsfp_1_rx_ptp_clk, qsfp_0_rx_ptp_clk}),
-    .mac_rx_ptp_rst({qsfp_3_rx_ptp_rst, qsfp_2_rx_ptp_rst, qsfp_1_rx_ptp_rst, qsfp_0_rx_ptp_rst}),
+    .mac_rx_ptp_clk(4'b0000),
+    .mac_rx_ptp_rst(4'b0000),
     .mac_rx_ptp_ts_96({qsfp_3_rx_ptp_time_int, qsfp_2_rx_ptp_time_int, qsfp_1_rx_ptp_time_int, qsfp_0_rx_ptp_time_int}),
     .mac_rx_ptp_ts_step(),
 
@@ -1347,7 +1338,7 @@ mqnic_core_pcie_us #(
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
     .PTP_SEPARATE_TX_CLOCK(0),
-    .PTP_SEPARATE_RX_CLOCK(PTP_SEPARATE_RX_CLOCK),
+    .PTP_SEPARATE_RX_CLOCK(0),
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),

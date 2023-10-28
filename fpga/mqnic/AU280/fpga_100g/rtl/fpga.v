@@ -235,7 +235,6 @@ module fpga #
 parameter PTP_CLK_PERIOD_NS_NUM = 1024;
 parameter PTP_CLK_PERIOD_NS_DENOM = 165;
 parameter PTP_TS_WIDTH = 96;
-parameter PTP_SEPARATE_RX_CLOCK = 1;
 
 // Interface configuration
 parameter TX_TAG_WIDTH = 16;
@@ -982,8 +981,6 @@ wire                           qsfp0_rx_axis_tvalid_int;
 wire                           qsfp0_rx_axis_tlast_int;
 wire [80+1-1:0]                qsfp0_rx_axis_tuser_int;
 
-wire                           qsfp0_rx_ptp_clk_int;
-wire                           qsfp0_rx_ptp_rst_int;
 wire [79:0]                    qsfp0_rx_ptp_time_int;
 
 wire        qsfp0_drp_clk = clk_125mhz_int;
@@ -1118,8 +1115,6 @@ qsfp0_cmac_inst (
     .rx_axis_tlast(qsfp0_rx_axis_tlast_int),
     .rx_axis_tuser(qsfp0_rx_axis_tuser_int),
 
-    .rx_ptp_clk(qsfp0_rx_ptp_clk_int),
-    .rx_ptp_rst(qsfp0_rx_ptp_rst_int),
     .rx_ptp_time(qsfp0_rx_ptp_time_int),
 
     .rx_enable(qsfp0_rx_enable),
@@ -1160,8 +1155,6 @@ wire                           qsfp1_rx_axis_tvalid_int;
 wire                           qsfp1_rx_axis_tlast_int;
 wire [80+1-1:0]                qsfp1_rx_axis_tuser_int;
 
-wire                           qsfp1_rx_ptp_clk_int;
-wire                           qsfp1_rx_ptp_rst_int;
 wire [79:0]                    qsfp1_rx_ptp_time_int;
 
 wire        qsfp1_drp_clk = clk_125mhz_int;
@@ -1294,8 +1287,6 @@ qsfp1_cmac_inst (
     .rx_axis_tlast(qsfp1_rx_axis_tlast_int),
     .rx_axis_tuser(qsfp1_rx_axis_tuser_int),
 
-    .rx_ptp_clk(qsfp1_rx_ptp_clk_int),
-    .rx_ptp_rst(qsfp1_rx_ptp_rst_int),
     .rx_ptp_time(qsfp1_rx_ptp_time_int),
 
     .rx_enable(qsfp1_rx_enable),
@@ -3144,7 +3135,6 @@ fpga_core #(
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
-    .PTP_SEPARATE_RX_CLOCK(PTP_SEPARATE_RX_CLOCK),
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
@@ -3391,8 +3381,6 @@ core_inst (
     .qsfp0_rx_axis_tvalid(qsfp0_rx_axis_tvalid_int),
     .qsfp0_rx_axis_tlast(qsfp0_rx_axis_tlast_int),
     .qsfp0_rx_axis_tuser(qsfp0_rx_axis_tuser_int),
-    .qsfp0_rx_ptp_clk(qsfp0_rx_ptp_clk_int),
-    .qsfp0_rx_ptp_rst(qsfp0_rx_ptp_rst_int),
     .qsfp0_rx_ptp_time(qsfp0_rx_ptp_time_int),
 
     .qsfp0_rx_enable(qsfp0_rx_enable),
@@ -3439,8 +3427,6 @@ core_inst (
     .qsfp1_rx_axis_tvalid(qsfp1_rx_axis_tvalid_int),
     .qsfp1_rx_axis_tlast(qsfp1_rx_axis_tlast_int),
     .qsfp1_rx_axis_tuser(qsfp1_rx_axis_tuser_int),
-    .qsfp1_rx_ptp_clk(qsfp1_rx_ptp_clk_int),
-    .qsfp1_rx_ptp_rst(qsfp1_rx_ptp_rst_int),
     .qsfp1_rx_ptp_time(qsfp1_rx_ptp_time_int),
 
     .qsfp1_rx_enable(qsfp1_rx_enable),

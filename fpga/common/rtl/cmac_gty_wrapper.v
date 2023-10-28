@@ -877,7 +877,7 @@ end
 
 assign tx_rst = tx_rst_reg_2;
 
-assign rx_clk = gt_txusrclk2;
+assign rx_clk = gt_rxusrclk2[0];
 
 wire rx_rst_int;
 

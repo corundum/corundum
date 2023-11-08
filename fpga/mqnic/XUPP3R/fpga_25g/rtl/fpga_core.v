@@ -26,6 +26,8 @@ module fpga_core #
 
     // Board configuration
     parameter TDMA_BER_ENABLE = 0,
+    parameter XCVR_DRP_INFO = {8'h09, 8'h03, 8'd0, 8'd4},
+    parameter FLASH_SEG_SIZE = 32'h0C000000,
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -994,7 +996,7 @@ always @(posedge clk_250mhz) begin
                 ctrl_reg_rd_data_reg[3:0]   <= 2;                   // configuration (two segments)
                 ctrl_reg_rd_data_reg[7:4]   <= 0;                   // default segment
                 ctrl_reg_rd_data_reg[11:8]  <= 1;                   // fallback segment
-                ctrl_reg_rd_data_reg[31:12] <= 32'h0C000000 >> 12;  // first segment size (192 M)
+                ctrl_reg_rd_data_reg[31:12] <= FLASH_SEG_SIZE >> 12;  // first segment size
             end
             RBB+8'h70: begin
                 // SPI flash ctrl: control 0
@@ -1048,7 +1050,7 @@ end
 rb_drp #(
     .DRP_ADDR_WIDTH(24),
     .DRP_DATA_WIDTH(16),
-    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
+    .DRP_INFO(XCVR_DRP_INFO),
     .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
@@ -1090,7 +1092,7 @@ qsfp0_rb_drp_inst (
 rb_drp #(
     .DRP_ADDR_WIDTH(24),
     .DRP_DATA_WIDTH(16),
-    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
+    .DRP_INFO(XCVR_DRP_INFO),
     .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
@@ -1132,7 +1134,7 @@ qsfp1_rb_drp_inst (
 rb_drp #(
     .DRP_ADDR_WIDTH(24),
     .DRP_DATA_WIDTH(16),
-    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
+    .DRP_INFO(XCVR_DRP_INFO),
     .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
@@ -1174,7 +1176,7 @@ qsfp2_rb_drp_inst (
 rb_drp #(
     .DRP_ADDR_WIDTH(24),
     .DRP_DATA_WIDTH(16),
-    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
+    .DRP_INFO(XCVR_DRP_INFO),
     .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),

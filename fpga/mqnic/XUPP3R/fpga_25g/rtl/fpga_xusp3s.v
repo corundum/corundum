@@ -2458,6 +2458,8 @@ fpga_core #(
 
     // Board configuration
     .TDMA_BER_ENABLE(TDMA_BER_ENABLE),
+    .XCVR_DRP_INFO({8'h08, 8'h03, 8'd0, 8'd4}),
+    .FLASH_SEG_SIZE(32'h03000000),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),
@@ -2661,8 +2663,10 @@ core_inst (
     .m_axis_cc_tuser(axis_cc_tuser),
     .m_axis_cc_tvalid(axis_cc_tvalid),
 
-    .s_axis_rq_seq_num(pcie_rq_seq_num),
-    .s_axis_rq_seq_num_valid(pcie_rq_seq_num_vld),
+    .s_axis_rq_seq_num_0(pcie_rq_seq_num),
+    .s_axis_rq_seq_num_valid_0(pcie_rq_seq_num_vld),
+    .s_axis_rq_seq_num_1(4'd0),
+    .s_axis_rq_seq_num_valid_1(1'b0),
 
     .pcie_tfc_nph_av(pcie_tfc_nph_av),
     .pcie_tfc_npd_av(pcie_tfc_npd_av),
@@ -2671,7 +2675,8 @@ core_inst (
     .cfg_max_read_req(cfg_max_read_req),
     .cfg_rcb_status(cfg_rcb_status),
 
-    .cfg_mgmt_addr(cfg_mgmt_addr),
+    .cfg_mgmt_addr(cfg_mgmt_addr[9:0]),
+    .cfg_mgmt_function_number(cfg_mgmt_addr[17:10]),
     .cfg_mgmt_write(cfg_mgmt_write),
     .cfg_mgmt_write_data(cfg_mgmt_write_data),
     .cfg_mgmt_byte_enable(cfg_mgmt_byte_enable),
@@ -2694,6 +2699,8 @@ core_inst (
     .cfg_interrupt_msix_address(cfg_interrupt_msix_address),
     .cfg_interrupt_msix_data(cfg_interrupt_msix_data),
     .cfg_interrupt_msix_int(cfg_interrupt_msix_int),
+    .cfg_interrupt_msix_vec_pending(),
+    .cfg_interrupt_msix_vec_pending_status(1'b0),
     .cfg_interrupt_msix_sent(cfg_interrupt_msix_sent),
     .cfg_interrupt_msix_fail(cfg_interrupt_msix_fail),
     .cfg_interrupt_msi_function_number(cfg_interrupt_msi_function_number),
@@ -3031,7 +3038,7 @@ core_inst (
     .ddr_status(ddr_status),
 
     /*
-     * BPI flash
+     * QSPI flash
      */
     .fpga_boot(fpga_boot),
     .qspi_clk(qspi_clk_int),
@@ -3040,6 +3047,8 @@ core_inst (
     .qspi_dq_oe(qspi_dq_oe_int),
     .qspi_cs(qspi_cs_int)
 );
+
+assign cfg_mgmt_addr[18] = 1'b0;
 
 endmodule
 

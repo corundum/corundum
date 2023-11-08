@@ -2439,6 +2439,8 @@ fpga_core #(
 
     // Board configuration
     .TDMA_BER_ENABLE(TDMA_BER_ENABLE),
+    .XCVR_DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
+    .FLASH_SEG_SIZE(32'h0C000000),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),

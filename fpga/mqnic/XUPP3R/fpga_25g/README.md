@@ -1,12 +1,16 @@
-# Corundum mqnic for XUP-P3R
+# Corundum mqnic for XUP-P3R/XUSP3S
 
 ## Introduction
 
-This design targets the BittWare XUP-P3R FPGA board.
+This design targets the BittWare XUP-P3R/XUSP3S FPGA board.
 
-* FPGA: xcvu9p-flgb2104-2-e
+* FPGA
+  * XUP-P3R: xcvu9p-flgb2104-2-e
+  * XUSP3S: xcvu095-ffvb2104-2-e
 * PHY: 10G BASE-R PHY IP core and internal GTY transceiver
-* RAM: 4x DDR4 DIMM
+* RAM
+  * XUP-P3R: 4x DDR4 DIMM
+  * XUSP3S: 8 GB DDR4 2400 (2x 512M x72) + 2x SODIMM
 
 ## Quick start
 

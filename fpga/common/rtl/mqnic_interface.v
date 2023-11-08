@@ -472,8 +472,8 @@ module mqnic_interface #
     /*
      * PTP clock
      */
-    input  wire [95:0]                                  ptp_ts_96,
-    input  wire                                         ptp_ts_step,
+    input  wire [95:0]                                  ptp_ts_tod,
+    input  wire                                         ptp_ts_tod_step,
 
     /*
      * Interrupt request output
@@ -2310,8 +2310,8 @@ for (n = 0; n < SCHEDULERS; n = n + 1) begin : sched
         /*
          * PTP clock
          */
-        .ptp_ts_96(ptp_ts_96),
-        .ptp_ts_step(ptp_ts_step),
+        .ptp_ts_96(ptp_ts_tod),
+        .ptp_ts_step(ptp_ts_tod_step),
 
         /*
          * Configuration

@@ -378,13 +378,16 @@ module mqnic_core #
     input  wire                                         ptp_clk,
     input  wire                                         ptp_rst,
     input  wire                                         ptp_sample_clk,
+    output wire                                         ptp_td_sd,
     output wire                                         ptp_pps,
     output wire                                         ptp_pps_str,
-    output wire [PTP_TS_WIDTH-1:0]                      ptp_ts_96,
-    output wire                                         ptp_ts_step,
+    output wire                                         ptp_sync_locked,
+    output wire [63:0]                                  ptp_sync_ts_rel,
+    output wire                                         ptp_sync_ts_rel_step,
+    output wire [96:0]                                  ptp_sync_ts_tod,
+    output wire                                         ptp_sync_ts_tod_step,
     output wire                                         ptp_sync_pps,
-    output wire [PTP_TS_WIDTH-1:0]                      ptp_sync_ts_96,
-    output wire                                         ptp_sync_ts_step,
+    output wire                                         ptp_sync_pps_str,
     output wire [PTP_PEROUT_COUNT-1:0]                  ptp_perout_locked,
     output wire [PTP_PEROUT_COUNT-1:0]                  ptp_perout_error,
     output wire [PTP_PEROUT_COUNT-1:0]                  ptp_perout_pulse,
@@ -397,8 +400,8 @@ module mqnic_core #
 
     input  wire [PORT_COUNT-1:0]                        tx_ptp_clk,
     input  wire [PORT_COUNT-1:0]                        tx_ptp_rst,
-    output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           tx_ptp_ts_96,
-    output wire [PORT_COUNT-1:0]                        tx_ptp_ts_step,
+    output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           tx_ptp_ts_tod,
+    output wire [PORT_COUNT-1:0]                        tx_ptp_ts_tod_step,
 
     output wire [PORT_COUNT*AXIS_DATA_WIDTH-1:0]        m_axis_tx_tdata,
     output wire [PORT_COUNT*AXIS_KEEP_WIDTH-1:0]        m_axis_tx_tkeep,
@@ -425,8 +428,8 @@ module mqnic_core #
 
     input  wire [PORT_COUNT-1:0]                        rx_ptp_clk,
     input  wire [PORT_COUNT-1:0]                        rx_ptp_rst,
-    output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           rx_ptp_ts_96,
-    output wire [PORT_COUNT-1:0]                        rx_ptp_ts_step,
+    output wire [PORT_COUNT*PTP_TS_WIDTH-1:0]           rx_ptp_ts_tod,
+    output wire [PORT_COUNT-1:0]                        rx_ptp_ts_tod_step,
 
     input  wire [PORT_COUNT*AXIS_DATA_WIDTH-1:0]        s_axis_rx_tdata,
     input  wire [PORT_COUNT*AXIS_KEEP_WIDTH-1:0]        s_axis_rx_tkeep,
@@ -822,7 +825,6 @@ end
 mqnic_ptp #(
     .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
     .PTP_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
-    .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
@@ -857,13 +859,16 @@ mqnic_ptp_inst (
     .ptp_clk(ptp_clk),
     .ptp_rst(ptp_rst),
     .ptp_sample_clk(ptp_sample_clk),
+    .ptp_td_sd(ptp_td_sd),
     .ptp_pps(ptp_pps),
     .ptp_pps_str(ptp_pps_str),
-    .ptp_ts_96(ptp_ts_96),
-    .ptp_ts_step(ptp_ts_step),
+    .ptp_sync_locked(ptp_sync_locked),
+    .ptp_sync_ts_rel(ptp_sync_ts_rel),
+    .ptp_sync_ts_rel_step(ptp_sync_ts_rel_step),
+    .ptp_sync_ts_tod(ptp_sync_ts_tod),
+    .ptp_sync_ts_tod_step(ptp_sync_ts_tod_step),
     .ptp_sync_pps(ptp_sync_pps),
-    .ptp_sync_ts_96(ptp_sync_ts_96),
-    .ptp_sync_ts_step(ptp_sync_ts_step),
+    .ptp_sync_pps_str(ptp_sync_pps_str),
     .ptp_perout_locked(ptp_perout_locked),
     .ptp_perout_error(ptp_perout_error),
     .ptp_perout_pulse(ptp_perout_pulse)
@@ -3485,8 +3490,8 @@ generate
             /*
              * PTP clock
              */
-            .ptp_ts_96(ptp_sync_ts_96),
-            .ptp_ts_step(ptp_sync_ts_step),
+            .ptp_ts_tod(ptp_sync_ts_tod),
+            .ptp_ts_tod_step(ptp_sync_ts_tod_step),
 
             /*
              * Interrupt request output
@@ -3525,68 +3530,114 @@ generate
             assign all_clocks[(n*PORTS_PER_IF+m)*2+0] = port_tx_clk;
             assign all_clocks[(n*PORTS_PER_IF+m)*2+1] = port_rx_clk;
 
-            wire [PTP_TS_WIDTH-1:0] port_rx_ptp_ts_96;
-            wire port_rx_ptp_ts_step;
+            wire [PTP_TS_WIDTH-1:0] port_rx_ptp_ts_tod;
+            wire port_rx_ptp_ts_tod_step;
 
-            wire [PTP_TS_WIDTH-1:0] port_tx_ptp_ts_96;
-            wire port_tx_ptp_ts_step;
+            wire [PTP_TS_WIDTH-1:0] port_tx_ptp_ts_tod;
+            wire port_tx_ptp_ts_tod_step;
 
             if (PTP_TS_ENABLE) begin: ptp
 
                 // PTP CDC logic
-                ptp_clock_cdc #(
-                    .TS_WIDTH(PTP_TS_WIDTH),
-                    .NS_WIDTH(6),
-                    .PIPELINE_OUTPUT(PTP_PORT_CDC_PIPELINE)
+                ptp_td_leaf #(
+                    .TS_REL_EN(0),
+                    .TS_TOD_EN(1),
+                    .TS_FNS_W(16),
+                    .TS_REL_NS_W(48),
+                    .TS_TOD_S_W(48),
+                    .TS_REL_W(64),
+                    .TS_TOD_W(96),
+                    .TD_SDI_PIPELINE(PTP_PORT_CDC_PIPELINE)
                 )
-                tx_ptp_cdc_inst (
-                    .input_clk(ptp_clk),
-                    .input_rst(ptp_rst),
-                    .output_clk(PTP_SEPARATE_TX_CLOCK ? port_tx_ptp_clk : port_tx_clk),
-                    .output_rst(PTP_SEPARATE_TX_CLOCK ? port_tx_ptp_rst : port_tx_rst),
+                tx_ptp_td_leaf_inst (
+                    .clk(PTP_SEPARATE_TX_CLOCK ? port_tx_ptp_clk : port_tx_clk),
+                    .rst(PTP_SEPARATE_TX_CLOCK ? port_tx_ptp_rst : port_tx_rst),
                     .sample_clk(ptp_sample_clk),
-                    .input_ts(ptp_ts_96),
-                    .input_ts_step(ptp_ts_step),
-                    .output_ts(port_tx_ptp_ts_96),
-                    .output_ts_step(port_tx_ptp_ts_step),
+
+                    /*
+                     * PTP clock interface
+                     */
+                    .ptp_clk(ptp_clk),
+                    .ptp_rst(ptp_rst),
+                    .ptp_td_sdi(ptp_td_sd),
+
+                    /*
+                     * Timestamp output
+                     */
+                    .output_ts_rel(),
+                    .output_ts_rel_step(),
+                    .output_ts_tod(port_tx_ptp_ts_tod),
+                    .output_ts_tod_step(port_tx_ptp_ts_tod_step),
+
+                    /*
+                     * PPS output (ToD format only)
+                     */
                     .output_pps(),
+                    .output_pps_str(),
+
+                    /*
+                     * Status
+                     */
                     .locked()
                 );
 
-                ptp_clock_cdc #(
-                    .TS_WIDTH(PTP_TS_WIDTH),
-                    .NS_WIDTH(6),
-                    .PIPELINE_OUTPUT(PTP_PORT_CDC_PIPELINE)
+                ptp_td_leaf #(
+                    .TS_REL_EN(0),
+                    .TS_TOD_EN(1),
+                    .TS_FNS_W(16),
+                    .TS_REL_NS_W(48),
+                    .TS_TOD_S_W(48),
+                    .TS_REL_W(64),
+                    .TS_TOD_W(96),
+                    .TD_SDI_PIPELINE(PTP_PORT_CDC_PIPELINE)
                 )
-                rx_ptp_cdc_inst (
-                    .input_clk(ptp_clk),
-                    .input_rst(ptp_rst),
-                    .output_clk(PTP_SEPARATE_RX_CLOCK ? port_rx_ptp_clk : port_rx_clk),
-                    .output_rst(PTP_SEPARATE_RX_CLOCK ? port_rx_ptp_rst : port_rx_rst),
+                rx_ptp_td_leaf_inst (
+                    .clk(PTP_SEPARATE_RX_CLOCK ? port_rx_ptp_clk : port_rx_clk),
+                    .rst(PTP_SEPARATE_RX_CLOCK ? port_rx_ptp_rst : port_rx_rst),
                     .sample_clk(ptp_sample_clk),
-                    .input_ts(ptp_ts_96),
-                    .input_ts_step(ptp_ts_step),
-                    .output_ts(port_rx_ptp_ts_96),
-                    .output_ts_step(port_rx_ptp_ts_step),
+
+                    /*
+                     * PTP clock interface
+                     */
+                    .ptp_clk(ptp_clk),
+                    .ptp_rst(ptp_rst),
+                    .ptp_td_sdi(ptp_td_sd),
+
+                    /*
+                     * Timestamp output
+                     */
+                    .output_ts_rel(),
+                    .output_ts_rel_step(),
+                    .output_ts_tod(port_rx_ptp_ts_tod),
+                    .output_ts_tod_step(port_rx_ptp_ts_tod_step),
+
+                    /*
+                     * PPS output (ToD format only)
+                     */
                     .output_pps(),
+                    .output_pps_str(),
+
+                    /*
+                     * Status
+                     */
                     .locked()
                 );
 
             end else begin
 
-                assign port_tx_ptp_ts_96 = 0;
-                assign port_tx_ptp_ts_step = 1'b0;
+                assign port_tx_ptp_ts_tod = 0;
+                assign port_tx_ptp_ts_tod_step = 1'b0;
 
-                assign port_rx_ptp_ts_96 = 0;
-                assign port_rx_ptp_ts_step = 1'b0;
+                assign port_rx_ptp_ts_tod = 0;
+                assign port_rx_ptp_ts_tod_step = 1'b0;
 
             end
 
-            assign tx_ptp_ts_96[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = port_tx_ptp_ts_96;
-            assign tx_ptp_ts_step[n*PORTS_PER_IF+m] = port_tx_ptp_ts_step;
+            assign tx_ptp_ts_tod[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = port_tx_ptp_ts_tod;
+            assign tx_ptp_ts_tod_step[n*PORTS_PER_IF+m] = port_tx_ptp_ts_tod_step;
 
-            assign rx_ptp_ts_96[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = port_rx_ptp_ts_96;
-            assign rx_ptp_ts_step[n*PORTS_PER_IF+m] = port_rx_ptp_ts_step;
+            assign rx_ptp_ts_tod[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = port_rx_ptp_ts_tod;
+            assign rx_ptp_ts_tod_step[n*PORTS_PER_IF+m] = port_rx_ptp_ts_tod_step;
 
         end
 
@@ -3897,13 +3948,16 @@ if (APP_ENABLE) begin : app
         .ptp_clk(ptp_clk),
         .ptp_rst(ptp_rst),
         .ptp_sample_clk(ptp_sample_clk),
+        .ptp_td_sd(ptp_td_sd),
         .ptp_pps(ptp_pps),
         .ptp_pps_str(ptp_pps_str),
-        .ptp_ts_96(ptp_ts_96),
-        .ptp_ts_step(ptp_ts_step),
+        .ptp_sync_locked(ptp_sync_locked),
+        .ptp_sync_ts_rel(ptp_sync_ts_rel),
+        .ptp_sync_ts_rel_step(ptp_sync_ts_rel_step),
+        .ptp_sync_ts_tod(ptp_sync_ts_tod),
+        .ptp_sync_ts_tod_step(ptp_sync_ts_tod_step),
         .ptp_sync_pps(ptp_sync_pps),
-        .ptp_sync_ts_96(ptp_sync_ts_96),
-        .ptp_sync_ts_step(ptp_sync_ts_step),
+        .ptp_sync_pps_str(ptp_sync_pps_str),
         .ptp_perout_locked(ptp_perout_locked),
         .ptp_perout_error(ptp_perout_error),
         .ptp_perout_pulse(ptp_perout_pulse),

@@ -308,14 +308,14 @@ class TB(object):
                     tx_clk=iface.port[k].port_tx_clk,
                     tx_rst=iface.port[k].port_tx_rst,
                     tx_bus=AxiStreamBus.from_prefix(iface.interface_inst.port[k].port_inst.port_tx_inst, "m_axis_tx"),
-                    tx_ptp_time=iface.port[k].port_tx_ptp_ts_96,
+                    tx_ptp_time=iface.port[k].port_tx_ptp_ts_tod,
                     tx_ptp_ts=iface.interface_inst.port[k].port_inst.port_tx_inst.s_axis_tx_cpl_ts,
                     tx_ptp_ts_tag=iface.interface_inst.port[k].port_inst.port_tx_inst.s_axis_tx_cpl_tag,
                     tx_ptp_ts_valid=iface.interface_inst.port[k].port_inst.port_tx_inst.s_axis_tx_cpl_valid,
                     rx_clk=iface.port[k].port_rx_clk,
                     rx_rst=iface.port[k].port_rx_rst,
                     rx_bus=AxiStreamBus.from_prefix(iface.interface_inst.port[k].port_inst.port_rx_inst, "s_axis_rx"),
-                    rx_ptp_time=iface.port[k].port_rx_ptp_ts_96,
+                    rx_ptp_time=iface.port[k].port_rx_ptp_ts_tod,
                     ifg=12, speed=eth_speed
                 )
 
@@ -882,8 +882,8 @@ def test_mqnic_core_pcie_us(request, if_count, ports_per_if, axis_pcie_data_widt
         os.path.join(eth_rtl_dir, "mac_ctrl_tx.v"),
         os.path.join(eth_rtl_dir, "mac_pause_ctrl_rx.v"),
         os.path.join(eth_rtl_dir, "mac_pause_ctrl_tx.v"),
-        os.path.join(eth_rtl_dir, "ptp_clock.v"),
-        os.path.join(eth_rtl_dir, "ptp_clock_cdc.v"),
+        os.path.join(eth_rtl_dir, "ptp_td_phc.v"),
+        os.path.join(eth_rtl_dir, "ptp_td_leaf.v"),
         os.path.join(eth_rtl_dir, "ptp_perout.v"),
         os.path.join(axi_rtl_dir, "axil_crossbar.v"),
         os.path.join(axi_rtl_dir, "axil_crossbar_addr.v"),

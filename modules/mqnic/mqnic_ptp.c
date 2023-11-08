@@ -15,8 +15,8 @@ ktime_t mqnic_read_cpl_ts(struct mqnic_dev *mdev, struct mqnic_ring *ring,
 	if (unlikely(!ring->ts_valid || (ring->ts_s ^ ts_s) & 0xff00)) {
 		// seconds MSBs do not match, update cached timestamp
 		if (mdev->phc_rb) {
-			ring->ts_s = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_CUR_SEC_L);
-			ring->ts_s |= (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_CUR_SEC_H) << 32;
+			ring->ts_s = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_CUR_TOD_SEC_L);
+			ring->ts_s |= (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_CUR_TOD_SEC_H) << 32;
 			ring->ts_valid = 1;
 		}
 	}
@@ -65,10 +65,10 @@ static int mqnic_phc_gettime(struct ptp_clock_info *ptp, struct timespec64 *ts)
 {
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
 
-	ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_FNS);
-	ts->tv_nsec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_NS);
-	ts->tv_sec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_SEC_L);
-	ts->tv_sec |= (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_SEC_H) << 32;
+	ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SNAP_FNS);
+	ts->tv_nsec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SNAP_TOD_NS);
+	ts->tv_sec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SNAP_TOD_SEC_L);
+	ts->tv_sec |= (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SNAP_TOD_SEC_H) << 32;
 
 	return 0;
 }
@@ -80,11 +80,11 @@ static int mqnic_phc_gettimex(struct ptp_clock_info *ptp, struct timespec64 *ts,
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
 
 	ptp_read_system_prets(sts);
-	ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_FNS);
+	ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SNAP_FNS);
 	ptp_read_system_postts(sts);
-	ts->tv_nsec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_NS);
-	ts->tv_sec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_SEC_L);
-	ts->tv_sec |= (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_GET_SEC_H) << 32;
+	ts->tv_nsec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SNAP_TOD_NS);
+	ts->tv_sec = ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SNAP_TOD_SEC_L);
+	ts->tv_sec |= (u64) ioread32(mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SNAP_TOD_SEC_H) << 32;
 
 	return 0;
 }
@@ -94,10 +94,9 @@ static int mqnic_phc_settime(struct ptp_clock_info *ptp, const struct timespec64
 {
 	struct mqnic_dev *mdev = container_of(ptp, struct mqnic_dev, ptp_clock_info);
 
-	iowrite32(0, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_FNS);
-	iowrite32(ts->tv_nsec, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_NS);
-	iowrite32(ts->tv_sec & 0xffffffff, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_SEC_L);
-	iowrite32(ts->tv_sec >> 32, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_SEC_H);
+	iowrite32(ts->tv_nsec, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_TOD_NS);
+	iowrite32(ts->tv_sec & 0xffffffff, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_TOD_SEC_L);
+	iowrite32(ts->tv_sec >> 32, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_SET_TOD_SEC_H);
 
 	return 0;
 }
@@ -109,14 +108,12 @@ static int mqnic_phc_adjtime(struct ptp_clock_info *ptp, s64 delta)
 
 	dev_dbg(mdev->dev, "%s: delta: %lld", __func__, delta);
 
-	if (delta > 1000000000 || delta < -1000000000) {
+	if (delta > 536000000 || delta < -536000000) {
 		mqnic_phc_gettime(ptp, &ts);
 		ts = timespec64_add(ts, ns_to_timespec64(delta));
 		mqnic_phc_settime(ptp, &ts);
 	} else {
-		iowrite32(0, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_ADJ_FNS);
-		iowrite32(delta & 0xffffffff, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_ADJ_NS);
-		iowrite32(1, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_ADJ_COUNT);
+		iowrite32(delta & 0xffffffff, mdev->phc_rb->regs + MQNIC_RB_PHC_REG_OFFSET_TOD_NS);
 	}
 
 	return 0;

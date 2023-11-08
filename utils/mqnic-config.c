@@ -208,9 +208,9 @@ int main(int argc, char *argv[])
         {
             printf("Configure port TDMA schedule\n");
 
-            ts_now.tv_nsec = mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_NS);
-            ts_now.tv_sec = mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_SEC_L) +
-                    (((int64_t)mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_SEC_H)) << 32);
+            ts_now.tv_nsec = mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_TOD_NS);
+            ts_now.tv_sec = mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_TOD_SEC_L) +
+                    (((int64_t)mqnic_reg_read32(dev->phc_rb->regs, MQNIC_RB_PHC_REG_CUR_TOD_SEC_H)) << 32);
 
             // normalize start
             ts_start.tv_sec = start_nsec / NSEC_PER_SEC;

@@ -474,13 +474,16 @@ initial begin
 end
 
 // PTP
-wire [PTP_TS_WIDTH-1:0]     ptp_ts_96;
-wire                        ptp_ts_step;
-wire                        ptp_pps;
-wire                        ptp_pps_str;
-wire [PTP_TS_WIDTH-1:0]     ptp_sync_ts_96;
-wire                        ptp_sync_ts_step;
-wire                        ptp_sync_pps;
+wire         ptp_td_sd;
+wire         ptp_pps;
+wire         ptp_pps_str;
+wire         ptp_sync_locked;
+wire [63:0]  ptp_sync_ts_rel;
+wire         ptp_sync_ts_rel_step;
+wire [95:0]  ptp_sync_ts_tod;
+wire         ptp_sync_ts_tod_step;
+wire         ptp_sync_pps;
+wire         ptp_sync_pps_str;
 
 wire [PTP_PEROUT_COUNT-1:0] ptp_perout_locked;
 wire [PTP_PEROUT_COUNT-1:0] ptp_perout_error;
@@ -869,8 +872,8 @@ wire [PORT_COUNT-1:0]                         eth_tx_rst;
 
 wire [PORT_COUNT-1:0]                         eth_tx_ptp_clk;
 wire [PORT_COUNT-1:0]                         eth_tx_ptp_rst;
-wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            eth_tx_ptp_ts_96;
-wire [PORT_COUNT-1:0]                         eth_tx_ptp_ts_step;
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            eth_tx_ptp_ts_tod;
+wire [PORT_COUNT-1:0]                         eth_tx_ptp_ts_tod_step;
 
 wire [PORT_COUNT*AXIS_ETH_DATA_WIDTH-1:0]     axis_eth_tx_tdata;
 wire [PORT_COUNT*AXIS_ETH_KEEP_WIDTH-1:0]     axis_eth_tx_tkeep;
@@ -896,8 +899,8 @@ wire [PORT_COUNT-1:0]                         eth_rx_rst;
 
 wire [PORT_COUNT-1:0]                         eth_rx_ptp_clk;
 wire [PORT_COUNT-1:0]                         eth_rx_ptp_rst;
-wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            eth_rx_ptp_ts_96;
-wire [PORT_COUNT-1:0]                         eth_rx_ptp_ts_step;
+wire [PORT_COUNT*PTP_TS_WIDTH-1:0]            eth_rx_ptp_ts_tod;
+wire [PORT_COUNT-1:0]                         eth_rx_ptp_ts_tod_step;
 
 wire [PORT_COUNT*AXIS_ETH_DATA_WIDTH-1:0]     axis_eth_rx_tdata;
 wire [PORT_COUNT*AXIS_ETH_KEEP_WIDTH-1:0]     axis_eth_rx_tkeep;
@@ -1001,8 +1004,8 @@ mqnic_port_map_mac_axis_inst (
 
     .tx_ptp_clk(eth_tx_ptp_clk),
     .tx_ptp_rst(eth_tx_ptp_rst),
-    .tx_ptp_ts_96(eth_tx_ptp_ts_96),
-    .tx_ptp_ts_step(eth_tx_ptp_ts_step),
+    .tx_ptp_ts_96(eth_tx_ptp_ts_tod),
+    .tx_ptp_ts_step(eth_tx_ptp_ts_tod_step),
 
     .s_axis_tx_tdata(axis_eth_tx_tdata),
     .s_axis_tx_tkeep(axis_eth_tx_tkeep),
@@ -1028,8 +1031,8 @@ mqnic_port_map_mac_axis_inst (
 
     .rx_ptp_clk(eth_rx_ptp_clk),
     .rx_ptp_rst(eth_rx_ptp_rst),
-    .rx_ptp_ts_96(eth_rx_ptp_ts_96),
-    .rx_ptp_ts_step(eth_rx_ptp_ts_step),
+    .rx_ptp_ts_96(eth_rx_ptp_ts_tod),
+    .rx_ptp_ts_step(eth_rx_ptp_ts_tod_step),
 
     .m_axis_rx_tdata(axis_eth_rx_tdata),
     .m_axis_rx_tkeep(axis_eth_rx_tkeep),
@@ -1364,13 +1367,16 @@ core_inst (
     .ptp_clk(ptp_clk),
     .ptp_rst(ptp_rst),
     .ptp_sample_clk(ptp_sample_clk),
+    .ptp_td_sd(ptp_td_sd),
     .ptp_pps(ptp_pps),
     .ptp_pps_str(ptp_pps_str),
-    .ptp_ts_96(ptp_ts_96),
-    .ptp_ts_step(ptp_ts_step),
+    .ptp_sync_locked(ptp_sync_locked),
+    .ptp_sync_ts_rel(ptp_sync_ts_rel),
+    .ptp_sync_ts_rel_step(ptp_sync_ts_rel_step),
+    .ptp_sync_ts_tod(ptp_sync_ts_tod),
+    .ptp_sync_ts_tod_step(ptp_sync_ts_tod_step),
     .ptp_sync_pps(ptp_sync_pps),
-    .ptp_sync_ts_96(ptp_sync_ts_96),
-    .ptp_sync_ts_step(ptp_sync_ts_step),
+    .ptp_sync_pps_str(ptp_sync_pps_str),
     .ptp_perout_locked(ptp_perout_locked),
     .ptp_perout_error(ptp_perout_error),
     .ptp_perout_pulse(ptp_perout_pulse),
@@ -1383,8 +1389,8 @@ core_inst (
 
     .eth_tx_ptp_clk(eth_tx_ptp_clk),
     .eth_tx_ptp_rst(eth_tx_ptp_rst),
-    .eth_tx_ptp_ts_96(eth_tx_ptp_ts_96),
-    .eth_tx_ptp_ts_step(eth_tx_ptp_ts_step),
+    .eth_tx_ptp_ts_tod(eth_tx_ptp_ts_tod),
+    .eth_tx_ptp_ts_tod_step(eth_tx_ptp_ts_tod_step),
 
     .m_axis_eth_tx_tdata(axis_eth_tx_tdata),
     .m_axis_eth_tx_tkeep(axis_eth_tx_tkeep),
@@ -1411,8 +1417,8 @@ core_inst (
 
     .eth_rx_ptp_clk(eth_rx_ptp_clk),
     .eth_rx_ptp_rst(eth_rx_ptp_rst),
-    .eth_rx_ptp_ts_96(eth_rx_ptp_ts_96),
-    .eth_rx_ptp_ts_step(eth_rx_ptp_ts_step),
+    .eth_rx_ptp_ts_tod(eth_rx_ptp_ts_tod),
+    .eth_rx_ptp_ts_tod_step(eth_rx_ptp_ts_tod_step),
 
     .s_axis_eth_rx_tdata(axis_eth_rx_tdata),
     .s_axis_eth_rx_tkeep(axis_eth_rx_tkeep),

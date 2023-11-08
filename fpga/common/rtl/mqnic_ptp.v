@@ -16,7 +16,6 @@ module mqnic_ptp #
 (
     parameter PTP_CLK_PERIOD_NS_NUM = 4,
     parameter PTP_CLK_PERIOD_NS_DENOM = 1,
-    parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_CLOCK_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 0,
     parameter PTP_PEROUT_COUNT = 1,
@@ -51,13 +50,16 @@ module mqnic_ptp #
     input  wire                         ptp_clk,
     input  wire                         ptp_rst,
     input  wire                         ptp_sample_clk,
+    output wire                         ptp_td_sd,
     output wire                         ptp_pps,
     output wire                         ptp_pps_str,
-    output wire [95:0]                  ptp_ts_96,
-    output wire                         ptp_ts_step,
+    output wire                         ptp_sync_locked,
+    output wire [63:0]                  ptp_sync_ts_rel,
+    output wire                         ptp_sync_ts_rel_step,
+    output wire [95:0]                  ptp_sync_ts_tod,
+    output wire                         ptp_sync_ts_tod_step,
     output wire                         ptp_sync_pps,
-    output wire [95:0]                  ptp_sync_ts_96,
-    output wire                         ptp_sync_ts_step,
+    output wire                         ptp_sync_pps_str,
     output wire [PTP_PEROUT_COUNT-1:0]  ptp_perout_locked,
     output wire [PTP_PEROUT_COUNT-1:0]  ptp_perout_error,
     output wire [PTP_PEROUT_COUNT-1:0]  ptp_perout_pulse
@@ -128,10 +130,7 @@ end
 mqnic_ptp_clock #(
     .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
     .PTP_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
-    .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
-    .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
-    .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
     .REG_ADDR_WIDTH(REG_ADDR_WIDTH),
     .REG_DATA_WIDTH(REG_DATA_WIDTH),
     .REG_STRB_WIDTH(REG_STRB_WIDTH),
@@ -163,13 +162,16 @@ ptp_clock_inst (
     .ptp_clk(ptp_clk),
     .ptp_rst(ptp_rst),
     .ptp_sample_clk(ptp_sample_clk),
+    .ptp_td_sd(ptp_td_sd),
     .ptp_pps(ptp_pps),
     .ptp_pps_str(ptp_pps_str),
-    .ptp_ts_96(ptp_ts_96),
-    .ptp_ts_step(ptp_ts_step),
+    .ptp_sync_locked(ptp_sync_locked),
+    .ptp_sync_ts_rel(ptp_sync_ts_rel),
+    .ptp_sync_ts_rel_step(ptp_sync_ts_rel_step),
+    .ptp_sync_ts_tod(ptp_sync_ts_tod),
+    .ptp_sync_ts_tod_step(ptp_sync_ts_tod_step),
     .ptp_sync_pps(ptp_sync_pps),
-    .ptp_sync_ts_96(ptp_sync_ts_96),
-    .ptp_sync_ts_step(ptp_sync_ts_step)
+    .ptp_sync_pps_str(ptp_sync_pps_str)
 );
 
 generate
@@ -209,8 +211,8 @@ if (PTP_PEROUT_ENABLE) begin
             /*
              * PTP clock
              */
-            .ptp_ts_96(ptp_sync_ts_96),
-            .ptp_ts_step(ptp_sync_ts_step),
+            .ptp_ts_96(ptp_sync_ts_tod),
+            .ptp_ts_step(ptp_sync_ts_tod_step),
             .ptp_perout_locked(ptp_perout_locked[n]),
             .ptp_perout_error(ptp_perout_error[n]),
             .ptp_perout_pulse(ptp_perout_pulse[n])

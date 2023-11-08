@@ -46,6 +46,8 @@ The PTP period output register block has a header with type 0x0000C081, version 
 
 See :ref:`rb_overview` for definitions of the standard register block header fields.
 
+The period output module keeps track of the times for the next rising edge and next falling edge.  Initially, it starts with the specified start time for the rising edge, and start time plus width for the falling edge.  If the computed next rising edge time is in the past, the period will be added and it will be checked again, repeating this process until the next rising edge is in the future.  Note that the period is added once per clock cycle, so it is recommended to compute a start time that is close to the current time, particularly when using a small period setting, so that the period output module can lock quickly.
+
 .. object:: Control
 
     The control register contains several control and status bits relating to the operation of the period output module.
@@ -76,8 +78,6 @@ See :ref:`rb_overview` for definitions of the standard register block header fie
     The locked bit indicates that the period output module has locked on to the current PTP time and is ready to generate pulses.  The output is disabled while the period output module is unlocked, so it is not necessary to wait for the module to lock before enabling the output.  The module will unlock whenever the start time, period, or width setting is changed.
 
     The error bit indicates that the period output module came out of lock due to the PTP clock being stepped.  The error bit is self-clearing on either reacquisition of lock or a setting change.
-
-    The period output module keeps track of the times for the next rising edge and next falling edge.  Initially, it starts with the specified start time for the rising edge, and start time plus width for the falling edge.  If the computed next rising edge time is in the past, the period will be added and it will be checked again, repeating this process until the next rising edge is in the future.  Note that the period is added once per clock cycle, so it is recommended to compute a start time that is close to the current time, particularly when using a small period setting, so that the period output module can lock quickly.
 
 .. object:: Start time
 

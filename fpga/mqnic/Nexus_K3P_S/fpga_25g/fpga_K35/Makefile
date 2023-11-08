@@ -2,18 +2,17 @@
 # Copyright (c) 2019-2023 The Regents of the University of California
 
 # FPGA settings
-FPGA_PART = xcku3p-ffvb676-2-e
+FPGA_PART = xcku035-fbva676-2-e
 FPGA_TOP = fpga
-FPGA_ARCH = kintexuplus
+FPGA_ARCH = kintexu
 
 # Files for synthesis
-SYN_FILES = rtl/fpga.v
+SYN_FILES = rtl/fpga_k35.v
 SYN_FILES += rtl/fpga_core.v
 SYN_FILES += rtl/sync_signal.v
 SYN_FILES += rtl/common/mqnic_core_pcie_us.v
 SYN_FILES += rtl/common/mqnic_core_pcie.v
 SYN_FILES += rtl/common/mqnic_core.v
-SYN_FILES += rtl/common/mqnic_dram_if.v
 SYN_FILES += rtl/common/mqnic_interface.v
 SYN_FILES += rtl/common/mqnic_interface_tx.v
 SYN_FILES += rtl/common/mqnic_interface_rx.v
@@ -131,7 +130,7 @@ SYN_FILES += lib/pcie/rtl/pcie_us_cfg.v
 SYN_FILES += lib/pcie/rtl/pulse_merge.v
 
 # XDC files
-XDC_FILES = fpga.xdc
+XDC_FILES = fpga_k35.xdc
 XDC_FILES += boot.xdc
 XDC_FILES += lib/axis/syn/vivado/axis_async_fifo.tcl
 XDC_FILES += lib/axis/syn/vivado/sync_reset.tcl
@@ -144,8 +143,8 @@ XDC_FILES += ../../../common/syn/vivado/eth_xcvr_phy_10g_gty_wrapper.tcl
 XDC_FILES += ../../../common/syn/vivado/tdma_ber_ch.tcl
 
 # IP
-IP_TCL_FILES = ip/pcie4_uscale_plus_0.tcl
-IP_TCL_FILES += ip/eth_xcvr_gty.tcl
+IP_TCL_FILES = ip/pcie3_ultrascale_0.tcl
+IP_TCL_FILES += ip/eth_xcvr_gth.tcl
 
 # Configuration
 CONFIG_TCL_FILES = ./config.tcl
@@ -182,7 +181,7 @@ flash: $(FPGA_TOP).mcs $(FPGA_TOP).prm
 	echo "open_hw_target" >> flash.tcl
 	echo "current_hw_device [lindex [get_hw_devices] 0]" >> flash.tcl
 	echo "refresh_hw_device -update_hw_probes false [current_hw_device]" >> flash.tcl
-	echo "create_hw_cfgmem -hw_device [current_hw_device] [lindex [get_cfgmem_parts {s29gl256p-bpi-x16}] 0]" >> flash.tcl
+	echo "create_hw_cfgmem -hw_device [current_hw_device] [lindex [get_cfgmem_parts {28f256p30t-bpi-x16}] 0]" >> flash.tcl
 	echo "current_hw_cfgmem -hw_device [current_hw_device] [get_property PROGRAM.HW_CFGMEM [current_hw_device]]" >> flash.tcl
 	echo "set_property PROGRAM.FILES [list \"$(FPGA_TOP).mcs\"] [current_hw_cfgmem]" >> flash.tcl
 	echo "set_property PROGRAM.PRM_FILES [list \"$(FPGA_TOP).prm\"] [current_hw_cfgmem]" >> flash.tcl

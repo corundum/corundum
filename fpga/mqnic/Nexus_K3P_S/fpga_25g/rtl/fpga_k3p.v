@@ -15,14 +15,17 @@
 module fpga #
 (
     // FW and board IDs
-    parameter FPGA_ID = 32'h3823093,
+    parameter FPGA_ID = 32'h4A63093,
     parameter FW_ID = 32'h00000000,
     parameter FW_VER = 32'h00_00_01_00,
-    parameter BOARD_ID = 32'h1ce4_0003,
+    parameter BOARD_ID = 32'h1ce4_0009,
     parameter BOARD_VER = 32'h01_00_00_00,
     parameter BUILD_DATE = 32'd602976000,
     parameter GIT_HASH = 32'hdce357bf,
     parameter RELEASE_INFO = 32'h00000000,
+
+    // Board configuration
+    parameter TDMA_BER_ENABLE = 0,
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -47,7 +50,7 @@ module fpga #
     parameter RX_QUEUE_OP_TABLE_SIZE = 32,
     parameter CQ_OP_TABLE_SIZE = 32,
     parameter EQN_WIDTH = 5,
-    parameter TX_QUEUE_INDEX_WIDTH = 11,
+    parameter TX_QUEUE_INDEX_WIDTH = 13,
     parameter RX_QUEUE_INDEX_WIDTH = 8,
     parameter CQN_WIDTH = (TX_QUEUE_INDEX_WIDTH > RX_QUEUE_INDEX_WIDTH ? TX_QUEUE_INDEX_WIDTH : RX_QUEUE_INDEX_WIDTH) + 1,
     parameter EQ_PIPELINE = 3,
@@ -118,6 +121,7 @@ module fpga #
     parameter AXIL_APP_CTRL_ADDR_WIDTH = 24,
 
     // Ethernet interface configuration
+    parameter AXIS_ETH_SYNC_DATA_WIDTH_DOUBLE = 1,
     parameter AXIS_ETH_TX_PIPELINE = 0,
     parameter AXIS_ETH_TX_FIFO_PIPELINE = 2,
     parameter AXIS_ETH_TX_TS_PIPELINE = 0,
@@ -133,11 +137,9 @@ module fpga #
 )
 (
     /*
-     * Clock: 100MHz LVDS
-     * Reset: Push button, active low
+     * Clock
      */
-    input  wire         clk_100mhz_p,
-    input  wire         clk_100mhz_n,
+    input  wire         clk_10mhz,
 
     /*
      * GPIO
@@ -158,12 +160,12 @@ module fpga #
     input  wire [7:0]   pcie_rx_n,
     output wire [7:0]   pcie_tx_p,
     output wire [7:0]   pcie_tx_n,
-    input  wire         pcie_mgt_refclk_p,
-    input  wire         pcie_mgt_refclk_n,
+    input  wire         pcie_refclk_p,
+    input  wire         pcie_refclk_n,
     input  wire         pcie_reset_n,
 
     /*
-     * Ethernet: SFP+
+     * Ethernet: SFP28
      */
     input  wire         sfp_1_rx_p,
     input  wire         sfp_1_rx_n,
@@ -204,34 +206,34 @@ module fpga #
 );
 
 // PTP configuration
-parameter PTP_CLK_PERIOD_NS_NUM = 1024;
-parameter PTP_CLK_PERIOD_NS_DENOM = 165;
+parameter PTP_CLK_PERIOD_NS_NUM = 4;
+parameter PTP_CLK_PERIOD_NS_DENOM = 1;
 parameter PTP_TS_WIDTH = 96;
-parameter IF_PTP_PERIOD_NS = 6'h6;
-parameter IF_PTP_PERIOD_FNS = 16'h6666;
+parameter IF_PTP_PERIOD_NS = 6'h2;
+parameter IF_PTP_PERIOD_FNS = 16'h8F5C;
 
 // Interface configuration
 parameter TX_TAG_WIDTH = 16;
 
 // PCIe interface configuration
 parameter AXIS_PCIE_KEEP_WIDTH = (AXIS_PCIE_DATA_WIDTH/32);
-parameter AXIS_PCIE_RC_USER_WIDTH = 75;
-parameter AXIS_PCIE_RQ_USER_WIDTH = 60;
-parameter AXIS_PCIE_CQ_USER_WIDTH = 85;
-parameter AXIS_PCIE_CC_USER_WIDTH = 33;
+parameter AXIS_PCIE_RC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 75 : 161;
+parameter AXIS_PCIE_RQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 62 : 137;
+parameter AXIS_PCIE_CQ_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 85 : 183;
+parameter AXIS_PCIE_CC_USER_WIDTH = AXIS_PCIE_DATA_WIDTH < 512 ? 33 : 81;
 parameter RC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 256;
 parameter RQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512;
 parameter CQ_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512;
 parameter CC_STRADDLE = AXIS_PCIE_DATA_WIDTH >= 512;
-parameter RQ_SEQ_NUM_WIDTH = 4;
-parameter PCIE_TAG_COUNT = 64;
+parameter RQ_SEQ_NUM_WIDTH = 6;
+parameter PCIE_TAG_COUNT = 256;
 
 // Ethernet interface configuration
 parameter XGMII_DATA_WIDTH = 64;
 parameter XGMII_CTRL_WIDTH = XGMII_DATA_WIDTH/8;
 parameter AXIS_ETH_DATA_WIDTH = XGMII_DATA_WIDTH;
 parameter AXIS_ETH_KEEP_WIDTH = AXIS_ETH_DATA_WIDTH/8;
-parameter AXIS_ETH_SYNC_DATA_WIDTH = AXIS_ETH_DATA_WIDTH;
+parameter AXIS_ETH_SYNC_DATA_WIDTH = AXIS_ETH_DATA_WIDTH*(AXIS_ETH_SYNC_DATA_WIDTH_DOUBLE ? 2 : 1);
 parameter AXIS_ETH_TX_USER_WIDTH = TX_TAG_WIDTH + 1;
 parameter AXIS_ETH_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1;
 
@@ -239,7 +241,8 @@ parameter AXIS_ETH_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1;
 wire pcie_user_clk;
 wire pcie_user_reset;
 
-wire clk_100mhz_ibufg;
+wire clk_161mhz_int;
+
 wire clk_125mhz_mmcm_out;
 
 // Internal 125 MHz clock
@@ -250,25 +253,15 @@ wire mmcm_rst = pcie_user_reset;
 wire mmcm_locked;
 wire mmcm_clkfb;
 
-IBUFGDS #(
-   .DIFF_TERM("FALSE"),
-   .IBUF_LOW_PWR("FALSE")   
-)
-clk_100mhz_ibufg_inst (
-   .O   (clk_100mhz_ibufg),
-   .I   (clk_100mhz_p),
-   .IB  (clk_100mhz_n) 
-);
-
 // MMCM instance
-// 100 MHz in, 125 MHz out
+// 161.13 MHz in, 125 MHz out
 // PFD range: 10 MHz to 500 MHz
-// VCO range: 600 MHz to 1440 MHz
-// M = 10, D = 1 sets Fvco = 1000 MHz (in range)
-// Divide by 8 to get output frequency of 125 MHz
-MMCME3_BASE #(
+// VCO range: 800 MHz to 1600 MHz
+// M = 64, D = 11 sets Fvco = 937.5 MHz (in range)
+// Divide by 7.5 to get output frequency of 125 MHz
+MMCME4_BASE #(
     .BANDWIDTH("OPTIMIZED"),
-    .CLKOUT0_DIVIDE_F(8),
+    .CLKOUT0_DIVIDE_F(7.5),
     .CLKOUT0_DUTY_CYCLE(0.5),
     .CLKOUT0_PHASE(0),
     .CLKOUT1_DIVIDE(1),
@@ -289,16 +282,16 @@ MMCME3_BASE #(
     .CLKOUT6_DIVIDE(1),
     .CLKOUT6_DUTY_CYCLE(0.5),
     .CLKOUT6_PHASE(0),
-    .CLKFBOUT_MULT_F(10),
+    .CLKFBOUT_MULT_F(64),
     .CLKFBOUT_PHASE(0),
-    .DIVCLK_DIVIDE(1),
+    .DIVCLK_DIVIDE(11),
     .REF_JITTER1(0.010),
-    .CLKIN1_PERIOD(10.0),
+    .CLKIN1_PERIOD(6.206),
     .STARTUP_WAIT("FALSE"),
     .CLKOUT4_CASCADE("FALSE")
 )
 clk_mmcm_inst (
-    .CLKIN1(clk_100mhz_ibufg),
+    .CLKIN1(clk_161mhz_int),
     .CLKFBIN(mmcm_clkfb),
     .RST(mmcm_rst),
     .PWRDWN(1'b0),
@@ -331,6 +324,97 @@ sync_reset_125mhz_inst (
     .clk(clk_125mhz_int),
     .rst(~mmcm_locked),
     .out(rst_125mhz_int)
+);
+
+// Internal 250 MHz high-stability clock
+wire clk_10mhz_bufg;
+
+BUFG
+init_clk_bufg_inst (
+    .I(clk_10mhz),
+    .O(clk_10mhz_bufg)
+);
+
+wire clk_250mhz_mmcm_out;
+
+wire clk_250mhz_int;
+wire rst_250mhz_int;
+
+wire mmcm_250mhz_rst = rst_125mhz_int;
+wire mmcm_250mhz_locked;
+wire mmcm_250mhz_clkfb;
+
+// MMCM instance
+// 10 MHz in, 250 MHz out
+// PFD range: 10 MHz to 500 MHz
+// VCO range: 800 MHz to 1600 MHz
+// M = 100, D = 1 sets Fvco = 1000 MHz
+// Divide by 4 to get output frequency of 250 MHz
+MMCME4_BASE #(
+    .BANDWIDTH("OPTIMIZED"),
+    .CLKOUT0_DIVIDE_F(4),
+    .CLKOUT0_DUTY_CYCLE(0.5),
+    .CLKOUT0_PHASE(0),
+    .CLKOUT1_DIVIDE(1),
+    .CLKOUT1_DUTY_CYCLE(0.5),
+    .CLKOUT1_PHASE(0),
+    .CLKOUT2_DIVIDE(1),
+    .CLKOUT2_DUTY_CYCLE(0.5),
+    .CLKOUT2_PHASE(0),
+    .CLKOUT3_DIVIDE(1),
+    .CLKOUT3_DUTY_CYCLE(0.5),
+    .CLKOUT3_PHASE(0),
+    .CLKOUT4_DIVIDE(1),
+    .CLKOUT4_DUTY_CYCLE(0.5),
+    .CLKOUT4_PHASE(0),
+    .CLKOUT5_DIVIDE(1),
+    .CLKOUT5_DUTY_CYCLE(0.5),
+    .CLKOUT5_PHASE(0),
+    .CLKOUT6_DIVIDE(1),
+    .CLKOUT6_DUTY_CYCLE(0.5),
+    .CLKOUT6_PHASE(0),
+    .CLKFBOUT_MULT_F(100),
+    .CLKFBOUT_PHASE(0),
+    .DIVCLK_DIVIDE(1),
+    .REF_JITTER1(0.010),
+    .CLKIN1_PERIOD(100.000),
+    .STARTUP_WAIT("FALSE"),
+    .CLKOUT4_CASCADE("FALSE")
+)
+clk_250mhz_mmcm_inst (
+    .CLKIN1(clk_10mhz_bufg),
+    .CLKFBIN(mmcm_250mhz_clkfb),
+    .RST(mmcm_250mhz_rst),
+    .PWRDWN(1'b0),
+    .CLKOUT0(clk_250mhz_mmcm_out),
+    .CLKOUT0B(),
+    .CLKOUT1(),
+    .CLKOUT1B(),
+    .CLKOUT2(),
+    .CLKOUT2B(),
+    .CLKOUT3(),
+    .CLKOUT3B(),
+    .CLKOUT4(),
+    .CLKOUT5(),
+    .CLKOUT6(),
+    .CLKFBOUT(mmcm_250mhz_clkfb),
+    .CLKFBOUTB(),
+    .LOCKED(mmcm_250mhz_locked)
+);
+
+BUFG
+clk_250mhz_bufg_inst (
+    .I(clk_250mhz_mmcm_out),
+    .O(clk_250mhz_int)
+);
+
+sync_reset #(
+    .N(4)
+)
+sync_reset_250mhz_inst (
+    .clk(clk_250mhz_int),
+    .rst(~mmcm_250mhz_locked),
+    .out(rst_250mhz_int)
 );
 
 // GPIO
@@ -569,12 +653,12 @@ icape3_inst (
 wire pcie_sys_clk;
 wire pcie_sys_clk_gt;
 
-IBUFDS_GTE3 #(
+IBUFDS_GTE4 #(
     .REFCLK_HROW_CK_SEL(2'b00)
 )
-ibufds_gte3_pcie_mgt_refclk_inst (
-    .I             (pcie_mgt_refclk_p),
-    .IB            (pcie_mgt_refclk_n),
+ibufds_gte4_pcie_mgt_refclk_inst (
+    .I             (pcie_refclk_p),
+    .IB            (pcie_refclk_n),
     .CEB           (1'b0),
     .O             (pcie_sys_clk_gt),
     .ODIV2         (pcie_sys_clk)
@@ -608,17 +692,20 @@ wire                               axis_cc_tready;
 wire [AXIS_PCIE_CC_USER_WIDTH-1:0] axis_cc_tuser;
 wire                               axis_cc_tvalid;
 
-wire [RQ_SEQ_NUM_WIDTH-1:0]        pcie_rq_seq_num;
-wire                               pcie_rq_seq_num_vld;
+wire [RQ_SEQ_NUM_WIDTH-1:0]        pcie_rq_seq_num0;
+wire                               pcie_rq_seq_num_vld0;
+wire [RQ_SEQ_NUM_WIDTH-1:0]        pcie_rq_seq_num1;
+wire                               pcie_rq_seq_num_vld1;
 
-wire [1:0] pcie_tfc_nph_av;
-wire [1:0] pcie_tfc_npd_av;
+wire [3:0] pcie_tfc_nph_av;
+wire [3:0] pcie_tfc_npd_av;
 
 wire [2:0] cfg_max_payload;
 wire [2:0] cfg_max_read_req;
 wire [3:0] cfg_rcb_status;
 
-wire [18:0] cfg_mgmt_addr;
+wire [9:0]  cfg_mgmt_addr;
+wire [7:0]  cfg_mgmt_function_number;
 wire        cfg_mgmt_write;
 wire [31:0] cfg_mgmt_write_data;
 wire [3:0]  cfg_mgmt_byte_enable;
@@ -634,16 +721,18 @@ wire [7:0]  cfg_fc_cplh;
 wire [11:0] cfg_fc_cpld;
 wire [2:0]  cfg_fc_sel;
 
-wire [1:0]  cfg_interrupt_msix_enable;
-wire [1:0]  cfg_interrupt_msix_mask;
-wire [7:0]  cfg_interrupt_msix_vf_enable;
-wire [7:0]  cfg_interrupt_msix_vf_mask;
-wire [63:0] cfg_interrupt_msix_address;
-wire [31:0] cfg_interrupt_msix_data;
-wire        cfg_interrupt_msix_int;
-wire        cfg_interrupt_msix_sent;
-wire        cfg_interrupt_msix_fail;
-wire [3:0]  cfg_interrupt_msi_function_number;
+wire [3:0]   cfg_interrupt_msix_enable;
+wire [3:0]   cfg_interrupt_msix_mask;
+wire [251:0] cfg_interrupt_msix_vf_enable;
+wire [251:0] cfg_interrupt_msix_vf_mask;
+wire [63:0]  cfg_interrupt_msix_address;
+wire [31:0]  cfg_interrupt_msix_data;
+wire         cfg_interrupt_msix_int;
+wire [1:0]   cfg_interrupt_msix_vec_pending;
+wire         cfg_interrupt_msix_vec_pending_status;
+wire         cfg_interrupt_msix_sent;
+wire         cfg_interrupt_msix_fail;
+wire [7:0]   cfg_interrupt_msi_function_number;
 
 wire status_error_cor;
 wire status_error_uncor;
@@ -666,8 +755,36 @@ pcie_user_reset_bufg_inst (
     .O(pcie_user_reset)
 );
 
-pcie3_ultrascale_0
-pcie3_ultrascale_inst (
+// ila_0 ila_rq (
+//     .clk(pcie_user_clk),
+//     .trig_out(),
+//     .trig_out_ack(1'b0),
+//     .trig_in(1'b0),
+//     .trig_in_ack(),
+//     .probe0(axis_rq_tdata),
+//     .probe1(axis_rq_tkeep),
+//     .probe2(axis_rq_tvalid),
+//     .probe3(axis_rq_tready),
+//     .probe4({pcie_tfc_npd_av, pcie_tfc_nph_av, axis_rq_tuser}),
+//     .probe5(axis_rq_tlast)
+// );
+
+// ila_0 ila_rc (
+//     .clk(pcie_user_clk),
+//     .trig_out(),
+//     .trig_out_ack(1'b0),
+//     .trig_in(1'b0),
+//     .trig_in_ack(),
+//     .probe0(axis_rc_tdata),
+//     .probe1(axis_rc_tkeep),
+//     .probe2(axis_rc_tvalid),
+//     .probe3(axis_rc_tready),
+//     .probe4(axis_rc_tuser),
+//     .probe5(axis_rc_tlast)
+// );
+
+pcie4_uscale_plus_0
+pcie4_uscale_plus_inst (
     .pci_exp_txn(pcie_tx_n),
     .pci_exp_txp(pcie_tx_p),
     .pci_exp_rxn(pcie_rx_n),
@@ -704,11 +821,15 @@ pcie3_ultrascale_inst (
     .s_axis_cc_tuser(axis_cc_tuser),
     .s_axis_cc_tvalid(axis_cc_tvalid),
 
-    .pcie_rq_seq_num(pcie_rq_seq_num),
-    .pcie_rq_seq_num_vld(pcie_rq_seq_num_vld),
-    .pcie_rq_tag(),
+    .pcie_rq_seq_num0(pcie_rq_seq_num0),
+    .pcie_rq_seq_num_vld0(pcie_rq_seq_num_vld0),
+    .pcie_rq_seq_num1(pcie_rq_seq_num1),
+    .pcie_rq_seq_num_vld1(pcie_rq_seq_num_vld1),
+    .pcie_rq_tag0(),
+    .pcie_rq_tag1(),
     .pcie_rq_tag_av(),
-    .pcie_rq_tag_vld(),
+    .pcie_rq_tag_vld0(),
+    .pcie_rq_tag_vld1(),
 
     .pcie_tfc_nph_av(pcie_tfc_nph_av),
     .pcie_tfc_npd_av(pcie_tfc_npd_av),
@@ -729,22 +850,24 @@ pcie3_ultrascale_inst (
     .cfg_link_power_state(),
 
     .cfg_mgmt_addr(cfg_mgmt_addr),
+    .cfg_mgmt_function_number(cfg_mgmt_function_number),
     .cfg_mgmt_write(cfg_mgmt_write),
     .cfg_mgmt_write_data(cfg_mgmt_write_data),
     .cfg_mgmt_byte_enable(cfg_mgmt_byte_enable),
     .cfg_mgmt_read(cfg_mgmt_read),
     .cfg_mgmt_read_data(cfg_mgmt_read_data),
     .cfg_mgmt_read_write_done(cfg_mgmt_read_write_done),
-    .cfg_mgmt_type1_cfg_reg_access(1'b0),
+    .cfg_mgmt_debug_access(1'b0),
 
     .cfg_err_cor_out(),
     .cfg_err_nonfatal_out(),
     .cfg_err_fatal_out(),
-    .cfg_local_error(),
-    .cfg_ltr_enable(),
+    .cfg_local_error_valid(),
+    .cfg_local_error_out(),
     .cfg_ltssm_state(),
+    .cfg_rx_pm_state(),
+    .cfg_tx_pm_state(),
     .cfg_rcb_status(cfg_rcb_status),
-    .cfg_dpa_substate_change(),
     .cfg_obff_enable(),
     .cfg_pl_status_change(),
     .cfg_tph_requester_enable(),
@@ -768,12 +891,6 @@ pcie3_ultrascale_inst (
     .cfg_fc_cpld(cfg_fc_cpld),
     .cfg_fc_sel(cfg_fc_sel),
 
-    .cfg_per_func_status_control(3'd0),
-    .cfg_per_func_status_data(),
-    .cfg_per_function_number(4'd0),
-    .cfg_per_function_output_request(1'b0),
-    .cfg_per_function_update_done(),
-
     .cfg_dsn(64'd0),
 
     .cfg_power_state_change_ack(1'b1),
@@ -784,6 +901,7 @@ pcie3_ultrascale_inst (
     .cfg_flr_in_process(),
     .cfg_flr_done(4'd0),
     .cfg_vf_flr_in_process(),
+    .cfg_vf_flr_func_num(8'd0),
     .cfg_vf_flr_done(8'd0),
 
     .cfg_link_training_enable(1'b1),
@@ -798,9 +916,14 @@ pcie3_ultrascale_inst (
     .cfg_interrupt_msix_address(cfg_interrupt_msix_address),
     .cfg_interrupt_msix_data(cfg_interrupt_msix_data),
     .cfg_interrupt_msix_int(cfg_interrupt_msix_int),
-    .cfg_interrupt_msix_sent(cfg_interrupt_msix_sent),
-    .cfg_interrupt_msix_fail(cfg_interrupt_msix_fail),
+    .cfg_interrupt_msix_vec_pending(cfg_interrupt_msix_vec_pending),
+    .cfg_interrupt_msix_vec_pending_status(cfg_interrupt_msix_vec_pending_status),
+    .cfg_interrupt_msi_sent(cfg_interrupt_msix_sent),
+    .cfg_interrupt_msi_fail(cfg_interrupt_msix_fail),
     .cfg_interrupt_msi_function_number(cfg_interrupt_msi_function_number),
+
+    .cfg_pm_aspm_l1_entry_reject(1'b0),
+    .cfg_pm_aspm_tx_l0s_entry_disable(1'b0),
 
     .cfg_hot_reset_out(),
 
@@ -811,20 +934,11 @@ pcie3_ultrascale_inst (
     .cfg_ds_port_number(8'd0),
     .cfg_ds_bus_number(8'd0),
     .cfg_ds_device_number(5'd0),
-    .cfg_ds_function_number(3'd0),
-
-    .cfg_subsys_vend_id(BOARD_ID >> 16),
 
     .sys_clk(pcie_sys_clk),
     .sys_clk_gt(pcie_sys_clk_gt),
     .sys_reset(pcie_reset_n),
-    .pcie_perstn1_in(1'b0),
-    .pcie_perstn0_out(),
-    .pcie_perstn1_out(),
 
-    .int_qpll1lock_out(),
-    .int_qpll1outrefclk_out(),
-    .int_qpll1outclk_out(),
     .phy_rdy_out()
 );
 
@@ -833,19 +947,25 @@ wire                         sfp_1_tx_clk_int;
 wire                         sfp_1_tx_rst_int;
 wire [XGMII_DATA_WIDTH-1:0]  sfp_1_txd_int;
 wire [XGMII_CTRL_WIDTH-1:0]  sfp_1_txc_int;
+wire                         sfp_1_cfg_tx_prbs31_enable_int;
 wire                         sfp_1_rx_clk_int;
 wire                         sfp_1_rx_rst_int;
 wire [XGMII_DATA_WIDTH-1:0]  sfp_1_rxd_int;
 wire [XGMII_CTRL_WIDTH-1:0]  sfp_1_rxc_int;
+wire                         sfp_1_cfg_rx_prbs31_enable_int;
+wire [6:0]                   sfp_1_rx_error_count_int;
 
 wire                         sfp_2_tx_clk_int;
 wire                         sfp_2_tx_rst_int;
 wire [XGMII_DATA_WIDTH-1:0]  sfp_2_txd_int;
 wire [XGMII_CTRL_WIDTH-1:0]  sfp_2_txc_int;
+wire                         sfp_2_cfg_tx_prbs31_enable_int;
 wire                         sfp_2_rx_clk_int;
 wire                         sfp_2_rx_rst_int;
 wire [XGMII_DATA_WIDTH-1:0]  sfp_2_rxd_int;
 wire [XGMII_CTRL_WIDTH-1:0]  sfp_2_rxc_int;
+wire                         sfp_2_cfg_rx_prbs31_enable_int;
+wire [6:0]                   sfp_2_rx_error_count_int;
 
 wire        sfp_drp_clk = clk_125mhz_int;
 wire        sfp_drp_rst = rst_125mhz_int;
@@ -867,7 +987,9 @@ wire sfp_mgt_refclk;
 wire sfp_mgt_refclk_int;
 wire sfp_mgt_refclk_bufg;
 
-IBUFDS_GTE3 ibufds_gte3_sfp_mgt_refclk_inst (
+assign clk_161mhz_int = sfp_mgt_refclk_bufg;
+
+IBUFDS_GTE4 ibufds_gte4_sfp_mgt_refclk_inst (
     .I     (sfp_mgt_refclk_p),
     .IB    (sfp_mgt_refclk_n),
     .CEB   (1'b0),
@@ -898,9 +1020,12 @@ sfp_sync_reset_inst (
 
 eth_xcvr_phy_10g_gty_quad_wrapper #(
     .COUNT(2),
-    .GT_GTH(1),
     .GT_1_TX_POLARITY(1'b1),
-    .GT_2_TX_POLARITY(1'b1)
+    .GT_2_TX_POLARITY(1'b1),
+    .PRBS31_ENABLE(1),
+    .TX_SERDES_PIPELINE(1),
+    .RX_SERDES_PIPELINE(1),
+    .COUNT_125US(125000/2.56)
 )
 sfp_phy_quad_inst (
     .xcvr_ctrl_clk(clk_125mhz_int),
@@ -944,14 +1069,14 @@ sfp_phy_quad_inst (
     .phy_1_xgmii_rxd(sfp_1_rxd_int),
     .phy_1_xgmii_rxc(sfp_1_rxc_int),
     .phy_1_tx_bad_block(),
-    .phy_1_rx_error_count(),
+    .phy_1_rx_error_count(sfp_1_rx_error_count_int),
     .phy_1_rx_bad_block(),
     .phy_1_rx_sequence_error(),
     .phy_1_rx_block_lock(sfp_1_rx_block_lock),
     .phy_1_rx_high_ber(),
     .phy_1_rx_status(sfp_1_rx_status),
-    .phy_1_cfg_tx_prbs31_enable(1'b0),
-    .phy_1_cfg_rx_prbs31_enable(1'b0),
+    .phy_1_cfg_tx_prbs31_enable(sfp_1_cfg_tx_prbs31_enable_int),
+    .phy_1_cfg_rx_prbs31_enable(sfp_1_cfg_rx_prbs31_enable_int),
 
     .phy_2_tx_clk(sfp_2_tx_clk_int),
     .phy_2_tx_rst(sfp_2_tx_rst_int),
@@ -962,22 +1087,22 @@ sfp_phy_quad_inst (
     .phy_2_xgmii_rxd(sfp_2_rxd_int),
     .phy_2_xgmii_rxc(sfp_2_rxc_int),
     .phy_2_tx_bad_block(),
-    .phy_2_rx_error_count(),
+    .phy_2_rx_error_count(sfp_2_rx_error_count_int),
     .phy_2_rx_bad_block(),
     .phy_2_rx_sequence_error(),
     .phy_2_rx_block_lock(sfp_2_rx_block_lock),
     .phy_2_rx_high_ber(),
     .phy_2_rx_status(sfp_2_rx_status),
-    .phy_2_cfg_tx_prbs31_enable(1'b0),
-    .phy_2_cfg_rx_prbs31_enable(1'b0)
+    .phy_2_cfg_tx_prbs31_enable(sfp_2_cfg_tx_prbs31_enable_int),
+    .phy_2_cfg_rx_prbs31_enable(sfp_2_cfg_rx_prbs31_enable_int)
 );
 
 wire ptp_clk;
 wire ptp_rst;
 wire ptp_sample_clk;
 
-assign ptp_clk = sfp_mgt_refclk_bufg;
-assign ptp_rst = sfp_rst;
+assign ptp_clk = clk_250mhz_int;
+assign ptp_rst = rst_250mhz_int;
 assign ptp_sample_clk = clk_125mhz_int;
 
 assign sfp_1_led[0] = sfp_1_rx_status;
@@ -995,6 +1120,10 @@ fpga_core #(
     .BUILD_DATE(BUILD_DATE),
     .GIT_HASH(GIT_HASH),
     .RELEASE_INFO(RELEASE_INFO),
+
+    // Board configuration
+    .TDMA_BER_ENABLE(TDMA_BER_ENABLE),
+    .XCVR_DRP_INFO({8'h09, 8'h03, 8'd0, 8'd2}),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),
@@ -1183,8 +1312,10 @@ core_inst (
     .m_axis_cc_tuser(axis_cc_tuser),
     .m_axis_cc_tvalid(axis_cc_tvalid),
 
-    .s_axis_rq_seq_num(pcie_rq_seq_num),
-    .s_axis_rq_seq_num_valid(pcie_rq_seq_num_vld),
+    .s_axis_rq_seq_num_0(pcie_rq_seq_num0),
+    .s_axis_rq_seq_num_valid_0(pcie_rq_seq_num_vld0),
+    .s_axis_rq_seq_num_1(pcie_rq_seq_num1),
+    .s_axis_rq_seq_num_valid_1(pcie_rq_seq_num_vld1),
 
     .pcie_tfc_nph_av(pcie_tfc_nph_av),
     .pcie_tfc_npd_av(pcie_tfc_npd_av),
@@ -1194,6 +1325,7 @@ core_inst (
     .cfg_rcb_status(cfg_rcb_status),
 
     .cfg_mgmt_addr(cfg_mgmt_addr),
+    .cfg_mgmt_function_number(cfg_mgmt_function_number),
     .cfg_mgmt_write(cfg_mgmt_write),
     .cfg_mgmt_write_data(cfg_mgmt_write_data),
     .cfg_mgmt_byte_enable(cfg_mgmt_byte_enable),
@@ -1216,6 +1348,8 @@ core_inst (
     .cfg_interrupt_msix_address(cfg_interrupt_msix_address),
     .cfg_interrupt_msix_data(cfg_interrupt_msix_data),
     .cfg_interrupt_msix_int(cfg_interrupt_msix_int),
+    .cfg_interrupt_msix_vec_pending(cfg_interrupt_msix_vec_pending),
+    .cfg_interrupt_msix_vec_pending_status(cfg_interrupt_msix_vec_pending_status),
     .cfg_interrupt_msix_sent(cfg_interrupt_msix_sent),
     .cfg_interrupt_msix_fail(cfg_interrupt_msix_fail),
     .cfg_interrupt_msi_function_number(cfg_interrupt_msi_function_number),
@@ -1230,10 +1364,13 @@ core_inst (
     .sfp_1_tx_rst(sfp_1_tx_rst_int),
     .sfp_1_txd(sfp_1_txd_int),
     .sfp_1_txc(sfp_1_txc_int),
+    .sfp_1_cfg_tx_prbs31_enable(sfp_1_cfg_tx_prbs31_enable_int),
     .sfp_1_rx_clk(sfp_1_rx_clk_int),
     .sfp_1_rx_rst(sfp_1_rx_rst_int),
     .sfp_1_rxd(sfp_1_rxd_int),
     .sfp_1_rxc(sfp_1_rxc_int),
+    .sfp_1_cfg_rx_prbs31_enable(sfp_1_cfg_rx_prbs31_enable_int),
+    .sfp_1_rx_error_count(sfp_1_rx_error_count_int),
 
     .sfp_1_rx_status(sfp_1_rx_status),
 
@@ -1241,10 +1378,13 @@ core_inst (
     .sfp_2_tx_rst(sfp_2_tx_rst_int),
     .sfp_2_txd(sfp_2_txd_int),
     .sfp_2_txc(sfp_2_txc_int),
+    .sfp_2_cfg_tx_prbs31_enable(sfp_2_cfg_tx_prbs31_enable_int),
     .sfp_2_rx_clk(sfp_2_rx_clk_int),
     .sfp_2_rx_rst(sfp_2_rx_rst_int),
     .sfp_2_rxd(sfp_2_rxd_int),
     .sfp_2_rxc(sfp_2_rxc_int),
+    .sfp_2_cfg_rx_prbs31_enable(sfp_2_cfg_rx_prbs31_enable_int),
+    .sfp_2_rx_error_count(sfp_2_rx_error_count_int),
 
     .sfp_2_rx_status(sfp_2_rx_status),
 

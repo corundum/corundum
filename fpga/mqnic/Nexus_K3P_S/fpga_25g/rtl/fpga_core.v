@@ -26,6 +26,7 @@ module fpga_core #
 
     // Board configuration
     parameter TDMA_BER_ENABLE = 0,
+    parameter XCVR_DRP_INFO = {8'h09, 8'h03, 8'd0, 8'd2},
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -692,7 +693,7 @@ end
 rb_drp #(
     .DRP_ADDR_WIDTH(24),
     .DRP_DATA_WIDTH(16),
-    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd2}),
+    .DRP_INFO(XCVR_DRP_INFO),
     .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
     .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
     .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),

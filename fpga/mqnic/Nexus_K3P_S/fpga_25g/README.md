@@ -1,10 +1,12 @@
-# Corundum mqnic for Cisco Nexus K3P-S
+# Corundum mqnic for Cisco Nexus K3P-S/K35-S
 
 ## Introduction
 
-This design targets the Cisco Nexus K3P-S FPGA board.
+This design targets the Cisco Nexus K3P-S/K35-S FPGA board.
 
-* FPGA: xcku3p-ffvb676-2-e
+* FPGA
+  * K3P-S: xcku3p-ffvb676-2-e
+  * K35-S: xcku035-fbva676-2-e
 * PHY: 25G BASE-R PHY IP core and internal GTY transceiver
 
 ## Quick start

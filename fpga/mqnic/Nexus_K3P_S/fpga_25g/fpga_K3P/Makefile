@@ -7,7 +7,7 @@ FPGA_TOP = fpga
 FPGA_ARCH = kintexuplus
 
 # Files for synthesis
-SYN_FILES = rtl/fpga.v
+SYN_FILES = rtl/fpga_k3p.v
 SYN_FILES += rtl/fpga_core.v
 SYN_FILES += rtl/sync_signal.v
 SYN_FILES += rtl/common/mqnic_core_pcie_us.v
@@ -59,8 +59,6 @@ SYN_FILES += rtl/common/tdma_scheduler.v
 SYN_FILES += rtl/common/tdma_ber.v
 SYN_FILES += rtl/common/tdma_ber_ch.v
 SYN_FILES += rtl/common/i2c_single_reg.v
-SYN_FILES += app/dma_bench/rtl/mqnic_app_block_dma_bench.v
-SYN_FILES += app/dma_bench/rtl/dma_bench.v
 SYN_FILES += lib/eth/rtl/eth_mac_10g.v
 SYN_FILES += lib/eth/rtl/axis_xgmii_rx_64.v
 SYN_FILES += lib/eth/rtl/axis_xgmii_tx_64.v
@@ -133,7 +131,7 @@ SYN_FILES += lib/pcie/rtl/pcie_us_cfg.v
 SYN_FILES += lib/pcie/rtl/pulse_merge.v
 
 # XDC files
-XDC_FILES = fpga.xdc
+XDC_FILES = fpga_k3p.xdc
 XDC_FILES += boot.xdc
 XDC_FILES += lib/axis/syn/vivado/axis_async_fifo.tcl
 XDC_FILES += lib/axis/syn/vivado/sync_reset.tcl

@@ -2,12 +2,12 @@
 # Copyright (c) 2019-2023 The Regents of the University of California
 
 # FPGA settings
-FPGA_PART = xcu200-fsgd2104-2-e
+FPGA_PART = xcu250-figd2104-2-e
 FPGA_TOP = fpga
 FPGA_ARCH = virtexuplus
 
 # Files for synthesis
-SYN_FILES = rtl/fpga.v
+SYN_FILES = rtl/fpga_au200.v
 SYN_FILES += rtl/fpga_core.v
 SYN_FILES += rtl/debounce_switch.v
 SYN_FILES += rtl/sync_signal.v
@@ -134,8 +134,8 @@ SYN_FILES += lib/pcie/rtl/pcie_us_cfg.v
 SYN_FILES += lib/pcie/rtl/pulse_merge.v
 
 # XDC files
-XDC_FILES = fpga.xdc
-XDC_FILES += placement_au200.xdc
+XDC_FILES = fpga_au200.xdc
+XDC_FILES += placement_au250.xdc
 XDC_FILES += cfgmclk.xdc
 XDC_FILES += boot.xdc
 XDC_FILES += lib/axi/syn/vivado/axil_cdc.tcl

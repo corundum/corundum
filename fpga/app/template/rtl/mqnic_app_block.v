@@ -9,6 +9,14 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
+`ifdef APP_CUSTOM_PARAMS_ENABLE
+    `include "mqnic_app_custom_params.vh"
+`endif
+
+`ifdef APP_CUSTOM_PORTS_ENABLE
+    `include "mqnic_app_custom_ports.vh"
+`endif
+
 /*
  * Application block
  */
@@ -93,6 +101,11 @@ module mqnic_app_block #
     parameter APP_STAT_ENABLE = 1,
     parameter APP_GPIO_IN_WIDTH = 32,
     parameter APP_GPIO_OUT_WIDTH = 32,
+
+    // Custom application block parameters
+    `ifdef APP_CUSTOM_PARAMS_ENABLE
+        `APP_CUSTOM_PARAMS_DECL
+    `endif
 
     // DMA interface configuration
     parameter DMA_ADDR_WIDTH = 64,
@@ -580,6 +593,13 @@ module mqnic_app_block #
      */
     input  wire [APP_GPIO_IN_WIDTH-1:0]                   gpio_in,
     output wire [APP_GPIO_OUT_WIDTH-1:0]                  gpio_out,
+
+    /*
+     * Custom application block ports
+     */
+    `ifdef APP_CUSTOM_PORTS_ENABLE
+        `APP_CUSTOM_PORTS_DECL
+    `endif
 
     /*
      * JTAG

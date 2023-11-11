@@ -30,7 +30,7 @@ class TB(object):
         self.axil_master = AxiLiteMaster(AxiLiteBus.from_prefix(dut, "s_axil"), dut.clk, dut.rst)
 
         self.ptp_clock = PtpClock(
-            ts_96=dut.ptp_ts_96,
+            ts_tod=dut.ptp_ts_96,
             ts_step=dut.ptp_ts_step,
             clock=dut.clk,
             reset=dut.rst,

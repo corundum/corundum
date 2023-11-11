@@ -10,8 +10,9 @@ COCOTB_HDL_TIMEUNIT = 1ns
 COCOTB_HDL_TIMEPRECISION = 1ps
 
 DUT      = fpga_core
-TOPLEVEL = $(DUT)
+TOPLEVEL = test_$(DUT)
 MODULE   = test_$(DUT)
+VERILOG_SOURCES += $(TOPLEVEL).v
 VERILOG_SOURCES += ../../rtl/$(DUT).v
 VERILOG_SOURCES += ../../rtl/common/mqnic_core_pcie_us.v
 VERILOG_SOURCES += ../../rtl/common/mqnic_core_pcie.v

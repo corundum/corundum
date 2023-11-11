@@ -52,11 +52,11 @@ class TB(object):
             pcie_link_width=16,
             user_clk_frequency=250e6,
             alignment="dword",
-            cq_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_cq_inst.rx_req_tlp_valid_reg) > 1,
-            cc_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_cc_inst.out_tlp_valid) > 1,
-            rq_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_rq_inst.out_tlp_valid) > 1,
-            rc_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 1,
-            rc_4tlp_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 2,
+            cq_straddle=len(dut.uut.core_inst.pcie_if_inst.pcie_us_if_cq_inst.rx_req_tlp_valid_reg) > 1,
+            cc_straddle=len(dut.uut.core_inst.pcie_if_inst.pcie_us_if_cc_inst.out_tlp_valid) > 1,
+            rq_straddle=len(dut.uut.core_inst.pcie_if_inst.pcie_us_if_rq_inst.out_tlp_valid) > 1,
+            rc_straddle=len(dut.uut.core_inst.pcie_if_inst.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 1,
+            rc_4tlp_straddle=len(dut.uut.core_inst.pcie_if_inst.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 2,
             pf_count=1,
             max_payload_size=1024,
             enable_client_tag=True,
@@ -268,9 +268,9 @@ class TB(object):
 
         self.driver = mqnic.Driver()
 
-        self.dev.functions[0].configure_bar(0, 2**len(dut.core_inst.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
-        if hasattr(dut.core_inst.core_pcie_inst, 'pcie_app_ctrl'):
-            self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
+        self.dev.functions[0].configure_bar(0, 2**len(dut.uut.core_inst.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
+        if hasattr(dut.uut.core_inst.core_pcie_inst, 'pcie_app_ctrl'):
+            self.dev.functions[0].configure_bar(2, 2**len(dut.uut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
         cocotb.start_soon(Clock(dut.ptp_clk, 6.206, units="ns").start())
         dut.ptp_rst.setimmediatevalue(0)
@@ -280,28 +280,23 @@ class TB(object):
         self.qsfp_source = []
         self.qsfp_sink = []
 
-        for x in range(2):
-            sources = []
-            sinks = []
-            for y in range(1, 5):
-                cocotb.start_soon(Clock(getattr(dut, f"qsfp{x}_rx_clk_{y}"), 2.56, units="ns").start())
-                source = XgmiiSource(getattr(dut, f"qsfp{x}_rxd_{y}"), getattr(dut, f"qsfp{x}_rxc_{y}"), getattr(dut, f"qsfp{x}_rx_clk_{y}"), getattr(dut, f"qsfp{x}_rx_rst_{y}"))
-                sources.append(source)
-                cocotb.start_soon(Clock(getattr(dut, f"qsfp{x}_tx_clk_{y}"), 2.56, units="ns").start())
-                sink = XgmiiSink(getattr(dut, f"qsfp{x}_txd_{y}"), getattr(dut, f"qsfp{x}_txc_{y}"), getattr(dut, f"qsfp{x}_tx_clk_{y}"), getattr(dut, f"qsfp{x}_tx_rst_{y}"))
-                sinks.append(sink)
-                getattr(dut, f"qsfp{x}_rx_status_{y}").setimmediatevalue(1)
-                getattr(dut, f"qsfp{x}_rx_error_count_{y}").setimmediatevalue(0)
-            self.qsfp_source.append(sources)
-            self.qsfp_sink.append(sinks)
+        for ch in self.dut.ch:
+            cocotb.start_soon(Clock(ch.ch_rx_clk, 2.56, units="ns").start())
+            source = XgmiiSource(ch.ch_rxd, ch.ch_rxc, ch.ch_rx_clk, ch.ch_rx_rst)
+            self.qsfp_source.append(source)
+            cocotb.start_soon(Clock(ch.ch_tx_clk, 2.56, units="ns").start())
+            sink = XgmiiSink(ch.ch_txd, ch.ch_txc, ch.ch_tx_clk, ch.ch_tx_rst)
+            self.qsfp_sink.append(sink)
+            ch.ch_rx_status.setimmediatevalue(1)
+            ch.ch_rx_error_count.setimmediatevalue(0)
 
-            cocotb.start_soon(Clock(getattr(dut, f"qsfp{x}_drp_clk"), 8, units="ns").start())
-            getattr(dut, f"qsfp{x}_drp_rst").setimmediatevalue(0)
-            getattr(dut, f"qsfp{x}_drp_do").setimmediatevalue(0)
-            getattr(dut, f"qsfp{x}_drp_rdy").setimmediatevalue(0)
+        cocotb.start_soon(Clock(dut.qsfp_drp_clk, 8, units="ns").start())
+        dut.qsfp_drp_rst.setimmediatevalue(0)
+        dut.qsfp_drp_do.setimmediatevalue(0)
+        dut.qsfp_drp_rdy.setimmediatevalue(0)
 
-            getattr(dut, f"qsfp{x}_modprsl").setimmediatevalue(0)
-            getattr(dut, f"qsfp{x}_intl").setimmediatevalue(1)
+        dut.qsfp_modprsl.setimmediatevalue(0)
+        dut.qsfp_intl.setimmediatevalue(1)
 
         dut.sw.setimmediatevalue(0)
 
@@ -310,7 +305,7 @@ class TB(object):
 
         dut.qspi_dq_i.setimmediatevalue(0)
 
-        self.cms_ram = AxiLiteRam(AxiLiteBus.from_prefix(dut, "m_axil_cms"), dut.m_axil_cms_clk, dut.m_axil_cms_rst, size=256*1024)
+        self.cms_ram = AxiLiteRam(AxiLiteBus.from_prefix(dut.uut, "m_axil_cms"), dut.m_axil_cms_clk, dut.m_axil_cms_rst, size=256*1024)
 
         self.loopback_enable = False
         cocotb.start_soon(self._run_loopback())
@@ -318,19 +313,17 @@ class TB(object):
     async def init(self):
 
         self.dut.ptp_rst.setimmediatevalue(0)
-        for x in range(2):
-            for y in range(1, 5):
-                getattr(self.dut, f"qsfp{x}_rx_rst_{y}").setimmediatevalue(0)
-                getattr(self.dut, f"qsfp{x}_tx_rst_{y}").setimmediatevalue(0)
+        for ch in self.dut.ch:
+            ch.ch_rx_rst.setimmediatevalue(0)
+            ch.ch_tx_rst.setimmediatevalue(0)
 
         await RisingEdge(self.dut.clk_250mhz)
         await RisingEdge(self.dut.clk_250mhz)
 
         self.dut.ptp_rst.setimmediatevalue(1)
-        for x in range(2):
-            for y in range(1, 5):
-                getattr(self.dut, f"qsfp{x}_rx_rst_{y}").setimmediatevalue(1)
-                getattr(self.dut, f"qsfp{x}_tx_rst_{y}").setimmediatevalue(1)
+        for ch in self.dut.ch:
+            ch.ch_rx_rst.setimmediatevalue(1)
+            ch.ch_tx_rst.setimmediatevalue(1)
 
         await FallingEdge(self.dut.rst_250mhz)
         await Timer(100, 'ns')
@@ -339,10 +332,9 @@ class TB(object):
         await RisingEdge(self.dut.clk_250mhz)
 
         self.dut.ptp_rst.setimmediatevalue(0)
-        for x in range(2):
-            for y in range(1, 5):
-                getattr(self.dut, f"qsfp{x}_rx_rst_{y}").setimmediatevalue(0)
-                getattr(self.dut, f"qsfp{x}_tx_rst_{y}").setimmediatevalue(0)
+        for ch in self.dut.ch:
+            ch.ch_rx_rst.setimmediatevalue(0)
+            ch.ch_tx_rst.setimmediatevalue(0)
 
         await self.rc.enumerate()
 
@@ -352,15 +344,14 @@ class TB(object):
 
             if self.loopback_enable:
                 for x in range(len(self.qsfp_sink)):
-                    for y in range(len(self.qsfp_sink[x])):
-                        if not self.qsfp_sink[x][y].empty():
-                            await self.qsfp_source[x][y].send(await self.qsfp_sink[x][y].recv())
+                        if not self.qsfp_sink[x].empty():
+                            await self.qsfp_source[x].send(await self.qsfp_sink[x].recv())
 
 
 @cocotb.test()
 async def run_test_nic(dut):
 
-    tb = TB(dut, msix_count=2**len(dut.core_inst.core_pcie_inst.irq_index))
+    tb = TB(dut, msix_count=2**len(dut.uut.core_inst.core_pcie_inst.irq_index))
 
     await tb.init()
 
@@ -385,10 +376,10 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(data, 0)
 
-    pkt = await tb.qsfp_sink[0][0].recv()
+    pkt = await tb.qsfp_sink[0].recv()
     tb.log.info("Packet: %s", pkt)
 
-    await tb.qsfp_source[0][0].send(pkt)
+    await tb.qsfp_source[0].send(pkt)
 
     pkt = await tb.driver.interfaces[0].recv()
 
@@ -397,10 +388,10 @@ async def run_test_nic(dut):
 
     # await tb.driver.interfaces[1].start_xmit(data, 0)
 
-    # pkt = await tb.qsfp_sink[1][0].recv()
+    # pkt = await tb.qsfp_sink[4].recv()
     # tb.log.info("Packet: %s", pkt)
 
-    # await tb.qsfp_source[1][0].send(pkt)
+    # await tb.qsfp_source[4].send(pkt)
 
     # pkt = await tb.driver.interfaces[1].recv()
 
@@ -420,10 +411,10 @@ async def run_test_nic(dut):
 
     await tb.driver.interfaces[0].start_xmit(test_pkt2.build(), 0, 34, 6)
 
-    pkt = await tb.qsfp_sink[0][0].recv()
+    pkt = await tb.qsfp_sink[0].recv()
     tb.log.info("Packet: %s", pkt)
 
-    await tb.qsfp_source[0][0].send(pkt)
+    await tb.qsfp_source[0].send(pkt)
 
     pkt = await tb.driver.interfaces[0].recv()
 
@@ -537,7 +528,7 @@ async def run_test_nic(dut):
 
         lfc_xoff = Ether(src='DA:D1:D2:D3:D4:D5', dst='01:80:C2:00:00:01', type=0x8808) / struct.pack('!HH', 0x0001, 2000)
 
-        await tb.qsfp_source[0][0].send(XgmiiFrame.from_payload(bytes(lfc_xoff)))
+        await tb.qsfp_source[0].send(XgmiiFrame.from_payload(bytes(lfc_xoff)))
 
         count = 16
 
@@ -577,9 +568,10 @@ pcie_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'pcie', 'rtl'))
 def test_fpga_core(request):
     dut = "fpga_core"
     module = os.path.splitext(os.path.basename(__file__))[0]
-    toplevel = dut
+    toplevel = f"test_{dut}"
 
     verilog_sources = [
+        os.path.join(tests_dir, f"{toplevel}.v"),
         os.path.join(rtl_dir, f"{dut}.v"),
         os.path.join(rtl_dir, "common", "mqnic_core_pcie_us.v"),
         os.path.join(rtl_dir, "common", "mqnic_core_pcie.v"),

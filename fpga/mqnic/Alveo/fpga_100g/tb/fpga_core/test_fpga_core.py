@@ -51,11 +51,11 @@ class TB(object):
             pcie_link_width=16,
             user_clk_frequency=250e6,
             alignment="dword",
-            cq_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_cq_inst.rx_req_tlp_valid_reg) > 1,
-            cc_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_cc_inst.out_tlp_valid) > 1,
-            rq_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_rq_inst.out_tlp_valid) > 1,
-            rc_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 1,
-            rc_4tlp_straddle=len(dut.core_inst.pcie_if_inst.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 2,
+            cq_straddle=len(dut.uut.core_inst.pcie_if_inst.pcie_us_if_cq_inst.rx_req_tlp_valid_reg) > 1,
+            cc_straddle=len(dut.uut.core_inst.pcie_if_inst.pcie_us_if_cc_inst.out_tlp_valid) > 1,
+            rq_straddle=len(dut.uut.core_inst.pcie_if_inst.pcie_us_if_rq_inst.out_tlp_valid) > 1,
+            rc_straddle=len(dut.uut.core_inst.pcie_if_inst.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 1,
+            rc_4tlp_straddle=len(dut.uut.core_inst.pcie_if_inst.pcie_us_if_rc_inst.rx_cpl_tlp_valid_reg) > 2,
             pf_count=1,
             max_payload_size=1024,
             enable_client_tag=True,
@@ -267,9 +267,9 @@ class TB(object):
 
         self.driver = mqnic.Driver()
 
-        self.dev.functions[0].configure_bar(0, 2**len(dut.core_inst.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
-        if hasattr(dut.core_inst.core_pcie_inst, 'pcie_app_ctrl'):
-            self.dev.functions[0].configure_bar(2, 2**len(dut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
+        self.dev.functions[0].configure_bar(0, 2**len(dut.uut.core_inst.core_pcie_inst.axil_ctrl_araddr), ext=True, prefetch=True)
+        if hasattr(dut.uut.core_inst.core_pcie_inst, 'pcie_app_ctrl'):
+            self.dev.functions[0].configure_bar(2, 2**len(dut.uut.core_inst.core_pcie_inst.axil_app_ctrl_araddr), ext=True, prefetch=True)
 
         cocotb.start_soon(Clock(dut.ptp_clk, 6.206, units="ns").start())
         dut.ptp_rst.setimmediatevalue(0)
@@ -278,38 +278,38 @@ class TB(object):
         # Ethernet
         self.qsfp_mac = []
 
-        for k in range(2):
-            cocotb.start_soon(Clock(getattr(dut, f"qsfp{k}_rx_clk"), 3.102, units="ns").start())
-            cocotb.start_soon(Clock(getattr(dut, f"qsfp{k}_tx_clk"), 3.102, units="ns").start())
+        for ch in self.dut.ch:
+            cocotb.start_soon(Clock(ch.ch_rx_clk, 3.102, units="ns").start())
+            cocotb.start_soon(Clock(ch.ch_tx_clk, 3.102, units="ns").start())
 
             mac = EthMac(
-                tx_clk=getattr(dut, f"qsfp{k}_tx_clk"),
-                tx_rst=getattr(dut, f"qsfp{k}_tx_rst"),
-                tx_bus=AxiStreamBus.from_prefix(dut, f"qsfp{k}_tx_axis"),
-                tx_ptp_time=getattr(dut, f"qsfp{k}_tx_ptp_time"),
-                tx_ptp_ts=getattr(dut, f"qsfp{k}_tx_ptp_ts"),
-                tx_ptp_ts_tag=getattr(dut, f"qsfp{k}_tx_ptp_ts_tag"),
-                tx_ptp_ts_valid=getattr(dut, f"qsfp{k}_tx_ptp_ts_valid"),
-                rx_clk=getattr(dut, f"qsfp{k}_rx_clk"),
-                rx_rst=getattr(dut, f"qsfp{k}_rx_rst"),
-                rx_bus=AxiStreamBus.from_prefix(dut, f"qsfp{k}_rx_axis"),
-                rx_ptp_time=getattr(dut, f"qsfp{k}_rx_ptp_time"),
+                tx_clk=ch.ch_tx_clk,
+                tx_rst=ch.ch_tx_rst,
+                tx_bus=AxiStreamBus.from_prefix(ch, "ch_tx_axis"),
+                tx_ptp_time=ch.ch_tx_ptp_time,
+                tx_ptp_ts=ch.ch_tx_ptp_ts,
+                tx_ptp_ts_tag=ch.ch_tx_ptp_ts_tag,
+                tx_ptp_ts_valid=ch.ch_tx_ptp_ts_valid,
+                rx_clk=ch.ch_rx_clk,
+                rx_rst=ch.ch_rx_rst,
+                rx_bus=AxiStreamBus.from_prefix(ch, "ch_rx_axis"),
+                rx_ptp_time=ch.ch_rx_ptp_time,
                 ifg=12, speed=100e9
             )
 
             self.qsfp_mac.append(mac)
 
-            getattr(dut, f"qsfp{k}_rx_status").setimmediatevalue(1)
-            getattr(dut, f"qsfp{k}_rx_lfc_req").setimmediatevalue(0)
-            getattr(dut, f"qsfp{k}_rx_pfc_req").setimmediatevalue(0)
+            ch.ch_rx_status.setimmediatevalue(1)
+            ch.ch_rx_lfc_req.setimmediatevalue(0)
+            ch.ch_rx_pfc_req.setimmediatevalue(0)
 
-            cocotb.start_soon(Clock(getattr(dut, f"qsfp{k}_drp_clk"), 8, units="ns").start())
-            getattr(dut, f"qsfp{k}_drp_rst").setimmediatevalue(0)
-            getattr(dut, f"qsfp{k}_drp_do").setimmediatevalue(0)
-            getattr(dut, f"qsfp{k}_drp_rdy").setimmediatevalue(0)
+        cocotb.start_soon(Clock(dut.qsfp_drp_clk, 8, units="ns").start())
+        dut.qsfp_drp_rst.setimmediatevalue(0)
+        dut.qsfp_drp_do.setimmediatevalue(0)
+        dut.qsfp_drp_rdy.setimmediatevalue(0)
 
-            getattr(dut, f"qsfp{k}_modprsl").setimmediatevalue(0)
-            getattr(dut, f"qsfp{k}_intl").setimmediatevalue(1)
+        dut.qsfp_modprsl.setimmediatevalue(0)
+        dut.qsfp_intl.setimmediatevalue(1)
 
         dut.sw.setimmediatevalue(0)
 
@@ -326,17 +326,17 @@ class TB(object):
     async def init(self):
 
         self.dut.ptp_rst.setimmediatevalue(0)
-        for k in range(2):
-            getattr(self.dut, f"qsfp{k}_rx_rst").setimmediatevalue(0)
-            getattr(self.dut, f"qsfp{k}_tx_rst").setimmediatevalue(0)
+        for ch in self.dut.ch:
+            ch.ch_rx_rst.setimmediatevalue(0)
+            ch.ch_tx_rst.setimmediatevalue(0)
 
         await RisingEdge(self.dut.clk_250mhz)
         await RisingEdge(self.dut.clk_250mhz)
 
         self.dut.ptp_rst.setimmediatevalue(1)
-        for k in range(2):
-            getattr(self.dut, f"qsfp{k}_rx_rst").setimmediatevalue(1)
-            getattr(self.dut, f"qsfp{k}_tx_rst").setimmediatevalue(1)
+        for ch in self.dut.ch:
+            ch.ch_rx_rst.setimmediatevalue(1)
+            ch.ch_tx_rst.setimmediatevalue(1)
 
         await FallingEdge(self.dut.rst_250mhz)
         await Timer(100, 'ns')
@@ -345,9 +345,9 @@ class TB(object):
         await RisingEdge(self.dut.clk_250mhz)
 
         self.dut.ptp_rst.setimmediatevalue(0)
-        for k in range(2):
-            getattr(self.dut, f"qsfp{k}_rx_rst").setimmediatevalue(0)
-            getattr(self.dut, f"qsfp{k}_tx_rst").setimmediatevalue(0)
+        for ch in self.dut.ch:
+            ch.ch_rx_rst.setimmediatevalue(0)
+            ch.ch_tx_rst.setimmediatevalue(0)
 
         await self.rc.enumerate()
 
@@ -364,7 +364,7 @@ class TB(object):
 @cocotb.test()
 async def run_test_nic(dut):
 
-    tb = TB(dut, msix_count=2**len(dut.core_inst.core_pcie_inst.irq_index))
+    tb = TB(dut, msix_count=2**len(dut.uut.core_inst.core_pcie_inst.irq_index))
 
     await tb.init()
 
@@ -572,9 +572,10 @@ pcie_rtl_dir = os.path.abspath(os.path.join(lib_dir, 'pcie', 'rtl'))
 def test_fpga_core(request):
     dut = "fpga_core"
     module = os.path.splitext(os.path.basename(__file__))[0]
-    toplevel = dut
+    toplevel = f"test_{dut}"
 
     verilog_sources = [
+        os.path.join(tests_dir, f"{toplevel}.v"),
         os.path.join(rtl_dir, f"{dut}.v"),
         os.path.join(rtl_dir, "common", "mqnic_core_pcie_us.v"),
         os.path.join(rtl_dir, "common", "mqnic_core_pcie.v"),

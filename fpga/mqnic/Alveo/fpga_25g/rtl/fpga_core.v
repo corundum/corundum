@@ -25,6 +25,8 @@ module fpga_core #
     parameter RELEASE_INFO = 32'h00000000,
 
     // Board configuration
+    parameter QSFP_CNT = 2,
+    parameter CH_CNT = QSFP_CNT*4,
     parameter CMS_ENABLE = 1,
     parameter TDMA_BER_ENABLE = 0,
 
@@ -279,133 +281,33 @@ module fpga_core #
     /*
      * Ethernet: QSFP28
      */
-    input  wire                               qsfp0_tx_clk_1,
-    input  wire                               qsfp0_tx_rst_1,
-    output wire [XGMII_DATA_WIDTH-1:0]        qsfp0_txd_1,
-    output wire [XGMII_CTRL_WIDTH-1:0]        qsfp0_txc_1,
-    output wire                               qsfp0_cfg_tx_prbs31_enable_1,
-    input  wire                               qsfp0_rx_clk_1,
-    input  wire                               qsfp0_rx_rst_1,
-    input  wire [XGMII_DATA_WIDTH-1:0]        qsfp0_rxd_1,
-    input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp0_rxc_1,
-    output wire                               qsfp0_cfg_rx_prbs31_enable_1,
-    input  wire [6:0]                         qsfp0_rx_error_count_1,
-    input  wire                               qsfp0_rx_status_1,
-    input  wire                               qsfp0_tx_clk_2,
-    input  wire                               qsfp0_tx_rst_2,
-    output wire [XGMII_DATA_WIDTH-1:0]        qsfp0_txd_2,
-    output wire [XGMII_CTRL_WIDTH-1:0]        qsfp0_txc_2,
-    output wire                               qsfp0_cfg_tx_prbs31_enable_2,
-    input  wire                               qsfp0_rx_clk_2,
-    input  wire                               qsfp0_rx_rst_2,
-    input  wire [XGMII_DATA_WIDTH-1:0]        qsfp0_rxd_2,
-    input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp0_rxc_2,
-    output wire                               qsfp0_cfg_rx_prbs31_enable_2,
-    input  wire [6:0]                         qsfp0_rx_error_count_2,
-    input  wire                               qsfp0_rx_status_2,
-    input  wire                               qsfp0_tx_clk_3,
-    input  wire                               qsfp0_tx_rst_3,
-    output wire [XGMII_DATA_WIDTH-1:0]        qsfp0_txd_3,
-    output wire [XGMII_CTRL_WIDTH-1:0]        qsfp0_txc_3,
-    output wire                               qsfp0_cfg_tx_prbs31_enable_3,
-    input  wire                               qsfp0_rx_clk_3,
-    input  wire                               qsfp0_rx_rst_3,
-    input  wire [XGMII_DATA_WIDTH-1:0]        qsfp0_rxd_3,
-    input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp0_rxc_3,
-    output wire                               qsfp0_cfg_rx_prbs31_enable_3,
-    input  wire [6:0]                         qsfp0_rx_error_count_3,
-    input  wire                               qsfp0_rx_status_3,
-    input  wire                               qsfp0_tx_clk_4,
-    input  wire                               qsfp0_tx_rst_4,
-    output wire [XGMII_DATA_WIDTH-1:0]        qsfp0_txd_4,
-    output wire [XGMII_CTRL_WIDTH-1:0]        qsfp0_txc_4,
-    output wire                               qsfp0_cfg_tx_prbs31_enable_4,
-    input  wire                               qsfp0_rx_clk_4,
-    input  wire                               qsfp0_rx_rst_4,
-    input  wire [XGMII_DATA_WIDTH-1:0]        qsfp0_rxd_4,
-    input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp0_rxc_4,
-    output wire                               qsfp0_cfg_rx_prbs31_enable_4,
-    input  wire [6:0]                         qsfp0_rx_error_count_4,
-    input  wire                               qsfp0_rx_status_4,
+    input  wire [CH_CNT-1:0]                     qsfp_tx_clk,
+    input  wire [CH_CNT-1:0]                     qsfp_tx_rst,
+    output wire [CH_CNT*XGMII_DATA_WIDTH-1:0]    qsfp_txd,
+    output wire [CH_CNT*XGMII_CTRL_WIDTH-1:0]    qsfp_txc,
+    output wire [CH_CNT-1:0]                     qsfp_cfg_tx_prbs31_enable,
+    input  wire [CH_CNT-1:0]                     qsfp_rx_clk,
+    input  wire [CH_CNT-1:0]                     qsfp_rx_rst,
+    input  wire [CH_CNT*XGMII_DATA_WIDTH-1:0]    qsfp_rxd,
+    input  wire [CH_CNT*XGMII_CTRL_WIDTH-1:0]    qsfp_rxc,
+    output wire [CH_CNT-1:0]                     qsfp_cfg_rx_prbs31_enable,
+    input  wire [CH_CNT*7-1:0]                   qsfp_rx_error_count,
+    input  wire [CH_CNT-1:0]                     qsfp_rx_status,
 
-    input  wire                               qsfp0_drp_clk,
-    input  wire                               qsfp0_drp_rst,
-    output wire [23:0]                        qsfp0_drp_addr,
-    output wire [15:0]                        qsfp0_drp_di,
-    output wire                               qsfp0_drp_en,
-    output wire                               qsfp0_drp_we,
-    input  wire [15:0]                        qsfp0_drp_do,
-    input  wire                               qsfp0_drp_rdy,
+    input  wire [QSFP_CNT-1:0]                   qsfp_drp_clk,
+    input  wire [QSFP_CNT-1:0]                   qsfp_drp_rst,
+    output wire [QSFP_CNT*24-1:0]                qsfp_drp_addr,
+    output wire [QSFP_CNT*16-1:0]                qsfp_drp_di,
+    output wire [QSFP_CNT-1:0]                   qsfp_drp_en,
+    output wire [QSFP_CNT-1:0]                   qsfp_drp_we,
+    input  wire [QSFP_CNT*16-1:0]                qsfp_drp_do,
+    input  wire [QSFP_CNT-1:0]                   qsfp_drp_rdy,
 
-    output wire                               qsfp0_modsell,
-    output wire                               qsfp0_resetl,
-    input  wire                               qsfp0_modprsl,
-    input  wire                               qsfp0_intl,
-    output wire                               qsfp0_lpmode,
-
-    input  wire                               qsfp1_tx_clk_1,
-    input  wire                               qsfp1_tx_rst_1,
-    output wire [XGMII_DATA_WIDTH-1:0]        qsfp1_txd_1,
-    output wire [XGMII_CTRL_WIDTH-1:0]        qsfp1_txc_1,
-    output wire                               qsfp1_cfg_tx_prbs31_enable_1,
-    input  wire                               qsfp1_rx_clk_1,
-    input  wire                               qsfp1_rx_rst_1,
-    input  wire [XGMII_DATA_WIDTH-1:0]        qsfp1_rxd_1,
-    input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp1_rxc_1,
-    output wire                               qsfp1_cfg_rx_prbs31_enable_1,
-    input  wire [6:0]                         qsfp1_rx_error_count_1,
-    input  wire                               qsfp1_rx_status_1,
-    input  wire                               qsfp1_tx_clk_2,
-    input  wire                               qsfp1_tx_rst_2,
-    output wire [XGMII_DATA_WIDTH-1:0]        qsfp1_txd_2,
-    output wire [XGMII_CTRL_WIDTH-1:0]        qsfp1_txc_2,
-    output wire                               qsfp1_cfg_tx_prbs31_enable_2,
-    input  wire                               qsfp1_rx_clk_2,
-    input  wire                               qsfp1_rx_rst_2,
-    input  wire [XGMII_DATA_WIDTH-1:0]        qsfp1_rxd_2,
-    input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp1_rxc_2,
-    output wire                               qsfp1_cfg_rx_prbs31_enable_2,
-    input  wire [6:0]                         qsfp1_rx_error_count_2,
-    input  wire                               qsfp1_rx_status_2,
-    input  wire                               qsfp1_tx_clk_3,
-    input  wire                               qsfp1_tx_rst_3,
-    output wire [XGMII_DATA_WIDTH-1:0]        qsfp1_txd_3,
-    output wire [XGMII_CTRL_WIDTH-1:0]        qsfp1_txc_3,
-    output wire                               qsfp1_cfg_tx_prbs31_enable_3,
-    input  wire                               qsfp1_rx_clk_3,
-    input  wire                               qsfp1_rx_rst_3,
-    input  wire [XGMII_DATA_WIDTH-1:0]        qsfp1_rxd_3,
-    input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp1_rxc_3,
-    output wire                               qsfp1_cfg_rx_prbs31_enable_3,
-    input  wire [6:0]                         qsfp1_rx_error_count_3,
-    input  wire                               qsfp1_rx_status_3,
-    input  wire                               qsfp1_tx_clk_4,
-    input  wire                               qsfp1_tx_rst_4,
-    output wire [XGMII_DATA_WIDTH-1:0]        qsfp1_txd_4,
-    output wire [XGMII_CTRL_WIDTH-1:0]        qsfp1_txc_4,
-    output wire                               qsfp1_cfg_tx_prbs31_enable_4,
-    input  wire                               qsfp1_rx_clk_4,
-    input  wire                               qsfp1_rx_rst_4,
-    input  wire [XGMII_DATA_WIDTH-1:0]        qsfp1_rxd_4,
-    input  wire [XGMII_CTRL_WIDTH-1:0]        qsfp1_rxc_4,
-    output wire                               qsfp1_cfg_rx_prbs31_enable_4,
-    input  wire [6:0]                         qsfp1_rx_error_count_4,
-    input  wire                               qsfp1_rx_status_4,
-
-    input  wire                               qsfp1_drp_clk,
-    input  wire                               qsfp1_drp_rst,
-    output wire [23:0]                        qsfp1_drp_addr,
-    output wire [15:0]                        qsfp1_drp_di,
-    output wire                               qsfp1_drp_en,
-    output wire                               qsfp1_drp_we,
-    input  wire [15:0]                        qsfp1_drp_do,
-    input  wire                               qsfp1_drp_rdy,
-
-    output wire                               qsfp1_modsell,
-    output wire                               qsfp1_resetl,
-    input  wire                               qsfp1_modprsl,
-    input  wire                               qsfp1_intl,
-    output wire                               qsfp1_lpmode,
+    output wire [QSFP_CNT-1:0]                   qsfp_modsell,
+    output wire [QSFP_CNT-1:0]                   qsfp_resetl,
+    input  wire [QSFP_CNT-1:0]                   qsfp_modprsl,
+    input  wire [QSFP_CNT-1:0]                   qsfp_intl,
+    output wire [QSFP_CNT-1:0]                   qsfp_lpmode,
 
     /*
      * DDR
@@ -500,15 +402,16 @@ parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3
 localparam RB_BASE_ADDR = 16'h1000;
 localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
 
-localparam RB_DRP_QSFP0_BASE = RB_BASE_ADDR + 16'h60;
-localparam RB_DRP_QSFP1_BASE = RB_DRP_QSFP0_BASE + 16'h20;
+localparam RB_DRP_QSFP_BASE = RB_BASE_ADDR + 16'h60;
 
 initial begin
-    if (PORT_COUNT > 8) begin
+    if (PORT_COUNT > CH_CNT) begin
         $error("Error: Max port count exceeded (instance %m)");
         $finish;
     end
 end
+
+genvar n;
 
 // AXI lite connections
 wire [AXIL_CSR_ADDR_WIDTH-1:0]   axil_csr_awaddr;
@@ -560,27 +463,18 @@ wire [AXIL_CTRL_DATA_WIDTH-1:0]  ctrl_reg_rd_data;
 wire                             ctrl_reg_rd_wait;
 wire                             ctrl_reg_rd_ack;
 
-wire qsfp0_drp_reg_wr_wait;
-wire qsfp0_drp_reg_wr_ack;
-wire [AXIL_CTRL_DATA_WIDTH-1:0] qsfp0_drp_reg_rd_data;
-wire qsfp0_drp_reg_rd_wait;
-wire qsfp0_drp_reg_rd_ack;
-
-wire qsfp1_drp_reg_wr_wait;
-wire qsfp1_drp_reg_wr_ack;
-wire [AXIL_CTRL_DATA_WIDTH-1:0] qsfp1_drp_reg_rd_data;
-wire qsfp1_drp_reg_rd_wait;
-wire qsfp1_drp_reg_rd_ack;
+wire qsfp_drp_reg_wr_wait[0:QSFP_CNT-1];
+wire qsfp_drp_reg_wr_ack[0:QSFP_CNT-1];
+wire [AXIL_CTRL_DATA_WIDTH-1:0] qsfp_drp_reg_rd_data[0:QSFP_CNT-1];
+wire qsfp_drp_reg_rd_wait[0:QSFP_CNT-1];
+wire qsfp_drp_reg_rd_ack[0:QSFP_CNT-1];
 
 reg ctrl_reg_wr_ack_reg = 1'b0;
 reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_reg = {AXIL_CTRL_DATA_WIDTH{1'b0}};
 reg ctrl_reg_rd_ack_reg = 1'b0;
 
-reg qsfp0_reset_reg = 1'b0;
-reg qsfp1_reset_reg = 1'b0;
-
-reg qsfp0_lpmode_reg = 1'b0;
-reg qsfp1_lpmode_reg = 1'b0;
+reg [QSFP_CNT-1:0] qsfp_reset_reg = {QSFP_CNT{1'b0}};
+reg [QSFP_CNT-1:0] qsfp_lpmode_reg = {QSFP_CNT{1'b0}};
 
 reg i2c_scl_o_reg = 1'b1;
 reg i2c_sda_o_reg = 1'b1;
@@ -599,20 +493,39 @@ reg [3:0] m_axil_cms_wstrb_reg = 4'b0000;
 reg m_axil_cms_wvalid_reg = 1'b0;
 reg m_axil_cms_arvalid_reg = 1'b0;
 
-assign ctrl_reg_wr_wait = qsfp0_drp_reg_wr_wait | qsfp1_drp_reg_wr_wait;
-assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_reg | qsfp0_drp_reg_wr_ack | qsfp1_drp_reg_wr_ack;
-assign ctrl_reg_rd_data = ctrl_reg_rd_data_reg | qsfp0_drp_reg_rd_data | qsfp1_drp_reg_rd_data;
-assign ctrl_reg_rd_wait = qsfp0_drp_reg_rd_wait | qsfp1_drp_reg_rd_wait;
-assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_reg | qsfp0_drp_reg_rd_ack | qsfp1_drp_reg_rd_ack;
+reg ctrl_reg_wr_wait_cmb;
+reg ctrl_reg_wr_ack_cmb;
+reg [AXIL_CTRL_DATA_WIDTH-1:0] ctrl_reg_rd_data_cmb;
+reg ctrl_reg_rd_wait_cmb;
+reg ctrl_reg_rd_ack_cmb;
 
-assign qsfp0_modsell = 1'b0;
-assign qsfp1_modsell = 1'b0;
+assign ctrl_reg_wr_wait = ctrl_reg_wr_wait_cmb;
+assign ctrl_reg_wr_ack = ctrl_reg_wr_ack_cmb;
+assign ctrl_reg_rd_data = ctrl_reg_rd_data_cmb;
+assign ctrl_reg_rd_wait = ctrl_reg_rd_wait_cmb;
+assign ctrl_reg_rd_ack = ctrl_reg_rd_ack_cmb;
 
-assign qsfp0_resetl = !qsfp0_reset_reg;
-assign qsfp1_resetl = !qsfp1_reset_reg;
+integer k;
 
-assign qsfp0_lpmode = qsfp0_lpmode_reg;
-assign qsfp1_lpmode = qsfp1_lpmode_reg;
+always @* begin
+    ctrl_reg_wr_wait_cmb = 1'b0;
+    ctrl_reg_wr_ack_cmb = ctrl_reg_wr_ack_reg;
+    ctrl_reg_rd_data_cmb = ctrl_reg_rd_data_reg;
+    ctrl_reg_rd_wait_cmb = 1'b0;
+    ctrl_reg_rd_ack_cmb = ctrl_reg_rd_ack_reg;
+
+    for (k = 0; k < QSFP_CNT; k = k + 1) begin
+        ctrl_reg_wr_wait_cmb = ctrl_reg_wr_wait_cmb | qsfp_drp_reg_wr_wait[k];
+        ctrl_reg_wr_ack_cmb = ctrl_reg_wr_ack_cmb | qsfp_drp_reg_wr_ack[k];
+        ctrl_reg_rd_data_cmb = ctrl_reg_rd_data_cmb | qsfp_drp_reg_rd_data[k];
+        ctrl_reg_rd_wait_cmb = ctrl_reg_rd_wait_cmb | qsfp_drp_reg_rd_wait[k];
+        ctrl_reg_rd_ack_cmb = ctrl_reg_rd_ack_cmb | qsfp_drp_reg_rd_ack[k];
+    end
+end
+
+assign qsfp_modsell = {QSFP_CNT{1'b0}};
+assign qsfp_resetl = ~qsfp_reset_reg;
+assign qsfp_lpmode = qsfp_lpmode_reg;
 
 assign i2c_scl_o = i2c_scl_o_reg;
 assign i2c_scl_t = i2c_scl_o_reg;
@@ -639,6 +552,8 @@ assign m_axil_cms_araddr = m_axil_cms_addr_reg;
 assign m_axil_cms_arprot = 3'b000;
 assign m_axil_cms_arvalid = m_axil_cms_arvalid_reg;
 assign m_axil_cms_rready = 1'b1;
+
+integer i;
 
 always @(posedge clk_250mhz) begin
     ctrl_reg_wr_ack_reg <= 1'b0;
@@ -671,13 +586,11 @@ always @(posedge clk_250mhz) begin
             // XCVR GPIO
             RBB+8'h1C: begin
                 // XCVR GPIO: control 0123
-                if (ctrl_reg_wr_strb[0]) begin
-                    qsfp0_reset_reg <= ctrl_reg_wr_data[4];
-                    qsfp0_lpmode_reg <= ctrl_reg_wr_data[5];
-                end
-                if (ctrl_reg_wr_strb[1]) begin
-                    qsfp1_reset_reg <= ctrl_reg_wr_data[12];
-                    qsfp1_lpmode_reg <= ctrl_reg_wr_data[13];
+                for (i = 0; i < QSFP_CNT; i = i + 1) begin
+                    if (ctrl_reg_wr_strb[i]) begin
+                        qsfp_reset_reg[i] <= ctrl_reg_wr_data[i*8+4];
+                        qsfp_lpmode_reg[i] <= ctrl_reg_wr_data[i*8+5];
+                    end
                 end
             end
             // QSPI flash
@@ -740,14 +653,12 @@ always @(posedge clk_250mhz) begin
             RBB+8'h18: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h20;       // XCVR GPIO: Next header
             RBB+8'h1C: begin
                 // XCVR GPIO: control 0123
-                ctrl_reg_rd_data_reg[0] <= !qsfp0_modprsl;
-                ctrl_reg_rd_data_reg[1] <= !qsfp0_intl;
-                ctrl_reg_rd_data_reg[4] <= qsfp0_reset_reg;
-                ctrl_reg_rd_data_reg[5] <= qsfp0_lpmode_reg;
-                ctrl_reg_rd_data_reg[8] <= !qsfp1_modprsl;
-                ctrl_reg_rd_data_reg[9] <= !qsfp1_intl;
-                ctrl_reg_rd_data_reg[12] <= qsfp1_reset_reg;
-                ctrl_reg_rd_data_reg[13] <= qsfp1_lpmode_reg;
+                for (i = 0; i < QSFP_CNT; i = i + 1) begin
+                    ctrl_reg_rd_data_reg[i*8+0] <= !qsfp_modprsl[i];
+                    ctrl_reg_rd_data_reg[i*8+1] <= !qsfp_intl[i];
+                    ctrl_reg_rd_data_reg[i*8+4] <= qsfp_reset_reg[i];
+                    ctrl_reg_rd_data_reg[i*8+5] <= qsfp_lpmode_reg[i];
+                end
             end
             // QSPI flash
             RBB+8'h20: ctrl_reg_rd_data_reg <= 32'h0000C120;             // SPI flash ctrl: Type
@@ -770,7 +681,7 @@ always @(posedge clk_250mhz) begin
             // Alveo BMC
             RBB+8'h40: ctrl_reg_rd_data_reg <= CMS_ENABLE ? 32'h0000C140 : 0;         // BMC ctrl: Type
             RBB+8'h44: ctrl_reg_rd_data_reg <= CMS_ENABLE ? 32'h00000100 : 0;         // BMC ctrl: Version
-            RBB+8'h48: ctrl_reg_rd_data_reg <= RB_DRP_QSFP0_BASE;                     // BMC ctrl: Next header
+            RBB+8'h48: ctrl_reg_rd_data_reg <= RB_DRP_QSFP_BASE;                      // BMC ctrl: Next header
             RBB+8'h4C: ctrl_reg_rd_data_reg <= CMS_ENABLE ? m_axil_cms_addr_reg : 0;  // BMC ctrl: Addr
             RBB+8'h50: ctrl_reg_rd_data_reg <= CMS_ENABLE ? m_axil_cms_rdata : 0;     // BMC ctrl: Data
             default: ctrl_reg_rd_ack_reg <= 1'b0;
@@ -781,11 +692,8 @@ always @(posedge clk_250mhz) begin
         ctrl_reg_wr_ack_reg <= 1'b0;
         ctrl_reg_rd_ack_reg <= 1'b0;
 
-        qsfp0_reset_reg <= 1'b0;
-        qsfp1_reset_reg <= 1'b0;
-
-        qsfp0_lpmode_reg <= 1'b0;
-        qsfp1_lpmode_reg <= 1'b0;
+        qsfp_reset_reg <= {QSFP_CNT{1'b0}};
+        qsfp_lpmode_reg <= {QSFP_CNT{1'b0}};
 
         i2c_scl_o_reg <= 1'b1;
         i2c_sda_o_reg <= 1'b1;
@@ -803,91 +711,53 @@ always @(posedge clk_250mhz) begin
     end
 end
 
-rb_drp #(
-    .DRP_ADDR_WIDTH(24),
-    .DRP_DATA_WIDTH(16),
-    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
-    .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
-    .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
-    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
-    .RB_BASE_ADDR(RB_DRP_QSFP0_BASE),
-    .RB_NEXT_PTR(RB_DRP_QSFP1_BASE)
-)
-qsfp0_rb_drp_inst (
-    .clk(clk_250mhz),
-    .rst(rst_250mhz),
-
-    /*
-     * Register interface
-     */
-    .reg_wr_addr(ctrl_reg_wr_addr),
-    .reg_wr_data(ctrl_reg_wr_data),
-    .reg_wr_strb(ctrl_reg_wr_strb),
-    .reg_wr_en(ctrl_reg_wr_en),
-    .reg_wr_wait(qsfp0_drp_reg_wr_wait),
-    .reg_wr_ack(qsfp0_drp_reg_wr_ack),
-    .reg_rd_addr(ctrl_reg_rd_addr),
-    .reg_rd_en(ctrl_reg_rd_en),
-    .reg_rd_data(qsfp0_drp_reg_rd_data),
-    .reg_rd_wait(qsfp0_drp_reg_rd_wait),
-    .reg_rd_ack(qsfp0_drp_reg_rd_ack),
-
-    /*
-     * DRP
-     */
-    .drp_clk(qsfp0_drp_clk),
-    .drp_rst(qsfp0_drp_rst),
-    .drp_addr(qsfp0_drp_addr),
-    .drp_di(qsfp0_drp_di),
-    .drp_en(qsfp0_drp_en),
-    .drp_we(qsfp0_drp_we),
-    .drp_do(qsfp0_drp_do),
-    .drp_rdy(qsfp0_drp_rdy)
-);
-
-rb_drp #(
-    .DRP_ADDR_WIDTH(24),
-    .DRP_DATA_WIDTH(16),
-    .DRP_INFO({8'h09, 8'h03, 8'd0, 8'd4}),
-    .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
-    .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
-    .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
-    .RB_BASE_ADDR(RB_DRP_QSFP1_BASE),
-    .RB_NEXT_PTR(0)
-)
-qsfp1_rb_drp_inst (
-    .clk(clk_250mhz),
-    .rst(rst_250mhz),
-
-    /*
-     * Register interface
-     */
-    .reg_wr_addr(ctrl_reg_wr_addr),
-    .reg_wr_data(ctrl_reg_wr_data),
-    .reg_wr_strb(ctrl_reg_wr_strb),
-    .reg_wr_en(ctrl_reg_wr_en),
-    .reg_wr_wait(qsfp1_drp_reg_wr_wait),
-    .reg_wr_ack(qsfp1_drp_reg_wr_ack),
-    .reg_rd_addr(ctrl_reg_rd_addr),
-    .reg_rd_en(ctrl_reg_rd_en),
-    .reg_rd_data(qsfp1_drp_reg_rd_data),
-    .reg_rd_wait(qsfp1_drp_reg_rd_wait),
-    .reg_rd_ack(qsfp1_drp_reg_rd_ack),
-
-    /*
-     * DRP
-     */
-    .drp_clk(qsfp1_drp_clk),
-    .drp_rst(qsfp1_drp_rst),
-    .drp_addr(qsfp1_drp_addr),
-    .drp_di(qsfp1_drp_di),
-    .drp_en(qsfp1_drp_en),
-    .drp_we(qsfp1_drp_we),
-    .drp_do(qsfp1_drp_do),
-    .drp_rdy(qsfp1_drp_rdy)
-);
-
 generate
+
+for (n = 0; n < QSFP_CNT; n = n + 1) begin : qsfp
+
+    rb_drp #(
+        .DRP_ADDR_WIDTH(24),
+        .DRP_DATA_WIDTH(16),
+        .DRP_INFO({8'h09, 8'h03, 8'd2, 8'd4}),
+        .REG_ADDR_WIDTH(AXIL_CSR_ADDR_WIDTH),
+        .REG_DATA_WIDTH(AXIL_CTRL_DATA_WIDTH),
+        .REG_STRB_WIDTH(AXIL_CTRL_STRB_WIDTH),
+        .RB_BASE_ADDR(RB_DRP_QSFP_BASE + n*16'h20),
+        .RB_NEXT_PTR(RB_DRP_QSFP_BASE + (n+1)*16'h20)
+    )
+    qsfp0_rb_drp_inst (
+        .clk(clk_250mhz),
+        .rst(rst_250mhz),
+
+        /*
+         * Register interface
+         */
+        .reg_wr_addr(ctrl_reg_wr_addr),
+        .reg_wr_data(ctrl_reg_wr_data),
+        .reg_wr_strb(ctrl_reg_wr_strb),
+        .reg_wr_en(ctrl_reg_wr_en),
+        .reg_wr_wait(qsfp_drp_reg_wr_wait[n]),
+        .reg_wr_ack(qsfp_drp_reg_wr_ack[n]),
+        .reg_rd_addr(ctrl_reg_rd_addr),
+        .reg_rd_en(ctrl_reg_rd_en),
+        .reg_rd_data(qsfp_drp_reg_rd_data[n]),
+        .reg_rd_wait(qsfp_drp_reg_rd_wait[n]),
+        .reg_rd_ack(qsfp_drp_reg_rd_ack[n]),
+
+        /*
+         * DRP
+         */
+        .drp_clk(qsfp_drp_clk[n +: 1]),
+        .drp_rst(qsfp_drp_rst[n +: 1]),
+        .drp_addr(qsfp_drp_addr[n*24 +: 24]),
+        .drp_di(qsfp_drp_di[n*16 +: 16]),
+        .drp_en(qsfp_drp_en[n +: 1]),
+        .drp_we(qsfp_drp_we[n +: 1]),
+        .drp_do(qsfp_drp_do[n*16 +: 16]),
+        .drp_rdy(qsfp_drp_rdy[n +: 1])
+    );
+
+end
 
 if (TDMA_BER_ENABLE) begin
 
@@ -912,11 +782,11 @@ if (TDMA_BER_ENABLE) begin
     tdma_ber_inst (
         .clk(clk_250mhz),
         .rst(rst_250mhz),
-        .phy_tx_clk({qsfp1_tx_clk_4, qsfp1_tx_clk_3, qsfp1_tx_clk_2, qsfp1_tx_clk_1, qsfp0_tx_clk_4, qsfp0_tx_clk_3, qsfp0_tx_clk_2, qsfp0_tx_clk_1}),
-        .phy_rx_clk({qsfp1_rx_clk_4, qsfp1_rx_clk_3, qsfp1_rx_clk_2, qsfp1_rx_clk_1, qsfp0_rx_clk_4, qsfp0_rx_clk_3, qsfp0_rx_clk_2, qsfp0_rx_clk_1}),
-        .phy_rx_error_count({qsfp1_rx_error_count_4, qsfp1_rx_error_count_3, qsfp1_rx_error_count_2, qsfp1_rx_error_count_1, qsfp0_rx_error_count_4, qsfp0_rx_error_count_3, qsfp0_rx_error_count_2, qsfp0_rx_error_count_1}),
-        .phy_cfg_tx_prbs31_enable({qsfp1_cfg_tx_prbs31_enable_4, qsfp1_cfg_tx_prbs31_enable_3, qsfp1_cfg_tx_prbs31_enable_2, qsfp1_cfg_tx_prbs31_enable_1, qsfp0_cfg_tx_prbs31_enable_4, qsfp0_cfg_tx_prbs31_enable_3, qsfp0_cfg_tx_prbs31_enable_2, qsfp0_cfg_tx_prbs31_enable_1}),
-        .phy_cfg_rx_prbs31_enable({qsfp1_cfg_rx_prbs31_enable_4, qsfp1_cfg_rx_prbs31_enable_3, qsfp1_cfg_rx_prbs31_enable_2, qsfp1_cfg_rx_prbs31_enable_1, qsfp0_cfg_rx_prbs31_enable_4, qsfp0_cfg_rx_prbs31_enable_3, qsfp0_cfg_rx_prbs31_enable_2, qsfp0_cfg_rx_prbs31_enable_1}),
+        .phy_tx_clk(qsfp_tx_clk),
+        .phy_rx_clk(qsfp_rx_clk),
+        .phy_rx_error_count(qsfp_rx_error_count),
+        .phy_cfg_tx_prbs31_enable(qsfp_cfg_tx_prbs31_enable),
+        .phy_cfg_rx_prbs31_enable(qsfp_cfg_rx_prbs31_enable),
         .s_axil_awaddr(axil_csr_awaddr),
         .s_axil_awprot(axil_csr_awprot),
         .s_axil_awvalid(axil_csr_awvalid),
@@ -942,22 +812,8 @@ if (TDMA_BER_ENABLE) begin
 
 end else begin
 
-    assign qsfp0_cfg_tx_prbs31_enable_1 = 1'b0;
-    assign qsfp0_cfg_rx_prbs31_enable_1 = 1'b0;
-    assign qsfp0_cfg_tx_prbs31_enable_2 = 1'b0;
-    assign qsfp0_cfg_rx_prbs31_enable_2 = 1'b0;
-    assign qsfp0_cfg_tx_prbs31_enable_3 = 1'b0;
-    assign qsfp0_cfg_rx_prbs31_enable_3 = 1'b0;
-    assign qsfp0_cfg_tx_prbs31_enable_4 = 1'b0;
-    assign qsfp0_cfg_rx_prbs31_enable_4 = 1'b0;
-    assign qsfp1_cfg_tx_prbs31_enable_1 = 1'b0;
-    assign qsfp1_cfg_rx_prbs31_enable_1 = 1'b0;
-    assign qsfp1_cfg_tx_prbs31_enable_2 = 1'b0;
-    assign qsfp1_cfg_rx_prbs31_enable_2 = 1'b0;
-    assign qsfp1_cfg_tx_prbs31_enable_3 = 1'b0;
-    assign qsfp1_cfg_rx_prbs31_enable_3 = 1'b0;
-    assign qsfp1_cfg_tx_prbs31_enable_4 = 1'b0;
-    assign qsfp1_cfg_rx_prbs31_enable_4 = 1'b0;
+    assign qsfp_cfg_tx_prbs31_enable = {CH_CNT{1'b0}};
+    assign qsfp_cfg_rx_prbs31_enable = {CH_CNT{1'b0}};
 
 end
 
@@ -1024,7 +880,7 @@ wire [PORT_COUNT*XGMII_DATA_WIDTH-1:0]  port_xgmii_rxd;
 wire [PORT_COUNT*XGMII_CTRL_WIDTH-1:0]  port_xgmii_rxc;
 
 mqnic_port_map_phy_xgmii #(
-    .PHY_COUNT(8),
+    .PHY_COUNT(CH_CNT),
     .PORT_MASK(PORT_MASK),
     .PORT_GROUP_SIZE(4),
 
@@ -1038,17 +894,17 @@ mqnic_port_map_phy_xgmii #(
 )
 mqnic_port_map_phy_xgmii_inst (
     // towards PHY
-    .phy_xgmii_tx_clk({qsfp1_tx_clk_4, qsfp1_tx_clk_3, qsfp1_tx_clk_2, qsfp1_tx_clk_1, qsfp0_tx_clk_4, qsfp0_tx_clk_3, qsfp0_tx_clk_2, qsfp0_tx_clk_1}),
-    .phy_xgmii_tx_rst({qsfp1_tx_rst_4, qsfp1_tx_rst_3, qsfp1_tx_rst_2, qsfp1_tx_rst_1, qsfp0_tx_rst_4, qsfp0_tx_rst_3, qsfp0_tx_rst_2, qsfp0_tx_rst_1}),
-    .phy_xgmii_txd({qsfp1_txd_4, qsfp1_txd_3, qsfp1_txd_2, qsfp1_txd_1, qsfp0_txd_4, qsfp0_txd_3, qsfp0_txd_2, qsfp0_txd_1}),
-    .phy_xgmii_txc({qsfp1_txc_4, qsfp1_txc_3, qsfp1_txc_2, qsfp1_txc_1, qsfp0_txc_4, qsfp0_txc_3, qsfp0_txc_2, qsfp0_txc_1}),
-    .phy_tx_status(8'hff),
+    .phy_xgmii_tx_clk(qsfp_tx_clk),
+    .phy_xgmii_tx_rst(qsfp_tx_rst),
+    .phy_xgmii_txd(qsfp_txd),
+    .phy_xgmii_txc(qsfp_txc),
+    .phy_tx_status({CH_CNT{1'b1}}),
 
-    .phy_xgmii_rx_clk({qsfp1_rx_clk_4, qsfp1_rx_clk_3, qsfp1_rx_clk_2, qsfp1_rx_clk_1, qsfp0_rx_clk_4, qsfp0_rx_clk_3, qsfp0_rx_clk_2, qsfp0_rx_clk_1}),
-    .phy_xgmii_rx_rst({qsfp1_rx_rst_4, qsfp1_rx_rst_3, qsfp1_rx_rst_2, qsfp1_rx_rst_1, qsfp0_rx_rst_4, qsfp0_rx_rst_3, qsfp0_rx_rst_2, qsfp0_rx_rst_1}),
-    .phy_xgmii_rxd({qsfp1_rxd_4, qsfp1_rxd_3, qsfp1_rxd_2, qsfp1_rxd_1, qsfp0_rxd_4, qsfp0_rxd_3, qsfp0_rxd_2, qsfp0_rxd_1}),
-    .phy_xgmii_rxc({qsfp1_rxc_4, qsfp1_rxc_3, qsfp1_rxc_2, qsfp1_rxc_1, qsfp0_rxc_4, qsfp0_rxc_3, qsfp0_rxc_2, qsfp0_rxc_1}),
-    .phy_rx_status({qsfp1_rx_status_4, qsfp1_rx_status_3, qsfp1_rx_status_2, qsfp1_rx_status_1, qsfp0_rx_status_4, qsfp0_rx_status_3, qsfp0_rx_status_2, qsfp0_rx_status_1}),
+    .phy_xgmii_rx_clk(qsfp_rx_clk),
+    .phy_xgmii_rx_rst(qsfp_rx_rst),
+    .phy_xgmii_rxd(qsfp_rxd),
+    .phy_xgmii_rxc(qsfp_rxc),
+    .phy_rx_status(qsfp_rx_status),
 
     // towards MAC
     .port_xgmii_tx_clk(port_xgmii_tx_clk),
@@ -1065,7 +921,6 @@ mqnic_port_map_phy_xgmii_inst (
 );
 
 generate
-    genvar n;
 
     for (n = 0; n < PORT_COUNT; n = n + 1) begin : mac
 

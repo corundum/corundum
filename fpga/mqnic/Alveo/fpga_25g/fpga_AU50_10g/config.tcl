@@ -54,6 +54,19 @@ dict set params BUILD_DATE  "32'd${build_date}"
 dict set params GIT_HASH  "32'h${git_hash}"
 dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
 
+# Board configuration
+dict set params CMS_ENABLE "1"
+dict set params TDMA_BER_ENABLE "0"
+
+# Transceiver configuration
+set eth_xcvr_freerun_freq {125}
+set eth_xcvr_line_rate {10.3125}
+set eth_xcvr_sec_line_rate {0}
+set eth_xcvr_refclk_freq {161.1328125}
+set eth_xcvr_qpll_fracn [expr {int(fmod($eth_xcvr_line_rate*1000/2 / $eth_xcvr_refclk_freq, 1)*pow(2, 24))}]
+set eth_xcvr_sec_qpll_fracn [expr {int(fmod($eth_xcvr_sec_line_rate*1000/2 / $eth_xcvr_refclk_freq, 1)*pow(2, 24))}]
+set eth_xcvr_rx_eq_mode {DFE}
+
 # Structural configuration
 dict set params IF_COUNT "1"
 dict set params PORTS_PER_IF "1"
@@ -103,12 +116,15 @@ dict set params RX_HASH_ENABLE "1"
 dict set params RX_CHECKSUM_ENABLE "1"
 dict set params PFC_ENABLE "1"
 dict set params LFC_ENABLE [dict get $params PFC_ENABLE]
+dict set params ENABLE_PADDING "1"
+dict set params ENABLE_DIC "1"
+dict set params MIN_FRAME_LENGTH "64"
 dict set params TX_FIFO_DEPTH "32768"
-dict set params RX_FIFO_DEPTH "131072"
+dict set params RX_FIFO_DEPTH "65536"
 dict set params MAX_TX_SIZE "9214"
 dict set params MAX_RX_SIZE "9214"
-dict set params TX_RAM_SIZE "131072"
-dict set params RX_RAM_SIZE "131072"
+dict set params TX_RAM_SIZE "32768"
+dict set params RX_RAM_SIZE "32768"
 
 # RAM configuration
 dict set params HBM_CH "32"
@@ -146,6 +162,7 @@ dict set params AXIL_APP_CTRL_DATA_WIDTH [dict get $params AXIL_CTRL_DATA_WIDTH]
 dict set params AXIL_APP_CTRL_ADDR_WIDTH "24"
 
 # Ethernet interface configuration
+dict set params AXIS_ETH_SYNC_DATA_WIDTH_DOUBLE [expr max($eth_xcvr_line_rate, $eth_xcvr_sec_line_rate) > 16]
 dict set params AXIS_ETH_TX_PIPELINE "4"
 dict set params AXIS_ETH_TX_FIFO_PIPELINE "4"
 dict set params AXIS_ETH_TX_TS_PIPELINE "4"
@@ -240,6 +257,29 @@ dict set pcie_config "CONFIG.PF0_MSIX_CAP_PBA_OFFSET" {00018000}
 dict set pcie_config "CONFIG.MSI_X_OPTIONS" {MSI-X_External}
 
 set_property -dict $pcie_config $pcie
+
+# Transceiver configuration
+set xcvr_config [dict create]
+
+dict set xcvr_config CONFIG.TX_LINE_RATE $eth_xcvr_line_rate
+dict set xcvr_config CONFIG.TX_QPLL_FRACN_NUMERATOR $eth_xcvr_qpll_fracn
+dict set xcvr_config CONFIG.TX_REFCLK_FREQUENCY $eth_xcvr_refclk_freq
+dict set xcvr_config CONFIG.RX_LINE_RATE $eth_xcvr_line_rate
+dict set xcvr_config CONFIG.RX_QPLL_FRACN_NUMERATOR $eth_xcvr_qpll_fracn
+dict set xcvr_config CONFIG.RX_REFCLK_FREQUENCY $eth_xcvr_refclk_freq
+dict set xcvr_config CONFIG.RX_EQ_MODE $eth_xcvr_rx_eq_mode
+if {$eth_xcvr_sec_line_rate != 0} {
+    dict set xcvr_config CONFIG.SECONDARY_QPLL_ENABLE true
+    dict set xcvr_config CONFIG.SECONDARY_QPLL_FRACN_NUMERATOR $eth_xcvr_sec_qpll_fracn
+    dict set xcvr_config CONFIG.SECONDARY_QPLL_LINE_RATE $eth_xcvr_sec_line_rate
+    dict set xcvr_config CONFIG.SECONDARY_QPLL_REFCLK_FREQUENCY $eth_xcvr_refclk_freq
+} else {
+    dict set xcvr_config CONFIG.SECONDARY_QPLL_ENABLE false
+}
+dict set xcvr_config CONFIG.FREERUN_FREQUENCY $eth_xcvr_freerun_freq
+
+set_property -dict $xcvr_config [get_ips eth_xcvr_gty_full]
+set_property -dict $xcvr_config [get_ips eth_xcvr_gty_channel]
 
 # apply parameters to top-level
 set param_list {}

@@ -199,6 +199,9 @@ module fpga_core #
      */
     input  wire [3:0]                         sw,
     output wire [2:0]                         led,
+    output wire [QSFP_CNT-1:0]                qsfp_led_act,
+    output wire [QSFP_CNT-1:0]                qsfp_led_stat_g,
+    output wire [QSFP_CNT-1:0]                qsfp_led_stat_y,
 
     /*
      * I2C
@@ -875,6 +878,10 @@ endgenerate
 
 assign led[0] = ptp_pps_str;
 assign led[2:1] = 0;
+
+assign qsfp_led_act = ptp_pps_str;
+assign qsfp_led_stat_g = 0;
+assign qsfp_led_stat_y = 0;
 
 wire [PORT_COUNT-1:0]                         eth_tx_clk;
 wire [PORT_COUNT-1:0]                         eth_tx_rst;

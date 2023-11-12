@@ -218,6 +218,9 @@ module test_fpga_core #
      */
     input  wire [3:0]                         sw,
     output wire [2:0]                         led,
+    output wire [QSFP_CNT-1:0]                qsfp_led_act,
+    output wire [QSFP_CNT-1:0]                qsfp_led_stat_g,
+    output wire [QSFP_CNT-1:0]                qsfp_led_stat_y,
 
     /*
      * I2C
@@ -699,6 +702,9 @@ uut (
      */
     .sw(sw),
     .led(led),
+    .qsfp_led_act(qsfp_led_act),
+    .qsfp_led_stat_g(qsfp_led_stat_g),
+    .qsfp_led_stat_y(qsfp_led_stat_y),
 
     /*
      * I2C

@@ -15,10 +15,10 @@
 module fpga #
 (
     // FW and board IDs
-    parameter FPGA_ID = 32'h4B7D093,
+    parameter FPGA_ID = 32'h4B77093,
     parameter FW_ID = 32'h00000000,
     parameter FW_VER = 32'h00_00_01_00,
-    parameter BOARD_ID = 32'h10ee_9118,
+    parameter BOARD_ID = 32'h10ee_9032,
     parameter BOARD_VER = 32'h01_00_00_00,
     parameter BUILD_DATE = 32'd602976000,
     parameter GIT_HASH = 32'hdce357bf,
@@ -29,7 +29,7 @@ module fpga #
     parameter TDMA_BER_ENABLE = 0,
 
     // Structural configuration
-    parameter IF_COUNT = 2,
+    parameter IF_COUNT = 1,
     parameter PORTS_PER_IF = 1,
     parameter SCHED_PER_IF = PORTS_PER_IF,
     parameter PORT_MASK = 0,
@@ -88,13 +88,6 @@ module fpga #
     parameter RX_RAM_SIZE = 32768,
 
     // RAM configuration
-    parameter DDR_CH = 2,
-    parameter DDR_ENABLE = 0,
-    parameter AXI_DDR_DATA_WIDTH = 512,
-    parameter AXI_DDR_ADDR_WIDTH = 34,
-    parameter AXI_DDR_ID_WIDTH = 8,
-    parameter AXI_DDR_MAX_BURST_LEN = 256,
-    parameter AXI_DDR_NARROW_BURST = 0,
     parameter HBM_CH = 32,
     parameter HBM_ENABLE = 0,
     parameter HBM_GROUP_SIZE = HBM_CH,
@@ -154,18 +147,19 @@ module fpga #
     /*
      * Clock and reset
      */
-    input  wire         clk_100mhz_0_p,
-    input  wire         clk_100mhz_0_n,
+    // input  wire         clk_100mhz_0_p,
+    // input  wire         clk_100mhz_0_n,
     input  wire         clk_100mhz_1_p,
     input  wire         clk_100mhz_1_n,
-    input  wire         clk_100mhz_2_p,
-    input  wire         clk_100mhz_2_n,
 
     /*
      * GPIO
      */
+    output wire         qsfp_led_act,
+    output wire         qsfp_led_stat_g,
+    output wire         qsfp_led_stat_y,
     output wire         hbm_cattrip,
-    input  wire [3:0]   msp_gpio,
+    input  wire [1:0]   msp_gpio,
     output wire         msp_uart_txd,
     input  wire         msp_uart_rxd,
 
@@ -183,60 +177,14 @@ module fpga #
     /*
      * Ethernet: QSFP28
      */
-    output wire [3:0]   qsfp0_tx_p,
-    output wire [3:0]   qsfp0_tx_n,
-    input  wire [3:0]   qsfp0_rx_p,
-    input  wire [3:0]   qsfp0_rx_n,
-    // input  wire         qsfp0_mgt_refclk_0_p,
-    // input  wire         qsfp0_mgt_refclk_0_n,
-    input  wire         qsfp0_mgt_refclk_1_p,
-    input  wire         qsfp0_mgt_refclk_1_n,
-    output wire         qsfp0_refclk_oe_b,
-    output wire         qsfp0_refclk_fs,
-
-    output wire [3:0]   qsfp1_tx_p,
-    output wire [3:0]   qsfp1_tx_n,
-    input  wire [3:0]   qsfp1_rx_p,
-    input  wire [3:0]   qsfp1_rx_n,
-    // input  wire         qsfp1_mgt_refclk_0_p,
-    // input  wire         qsfp1_mgt_refclk_0_n,
-    input  wire         qsfp1_mgt_refclk_1_p,
-    input  wire         qsfp1_mgt_refclk_1_n,
-    output wire         qsfp1_refclk_oe_b,
-    output wire         qsfp1_refclk_fs,
-
-    /*
-     * DDR4
-     */
-    output wire [16:0]  ddr4_c0_adr,
-    output wire [1:0]   ddr4_c0_ba,
-    output wire [1:0]   ddr4_c0_bg,
-    output wire         ddr4_c0_ck_t,
-    output wire         ddr4_c0_ck_c,
-    output wire         ddr4_c0_cke,
-    output wire         ddr4_c0_cs_n,
-    output wire         ddr4_c0_act_n,
-    output wire         ddr4_c0_odt,
-    output wire         ddr4_c0_par,
-    output wire         ddr4_c0_reset_n,
-    inout  wire [71:0]  ddr4_c0_dq,
-    inout  wire [17:0]  ddr4_c0_dqs_t,
-    inout  wire [17:0]  ddr4_c0_dqs_c,
-
-    output wire [16:0]  ddr4_c1_adr,
-    output wire [1:0]   ddr4_c1_ba,
-    output wire [1:0]   ddr4_c1_bg,
-    output wire         ddr4_c1_ck_t,
-    output wire         ddr4_c1_ck_c,
-    output wire         ddr4_c1_cke,
-    output wire         ddr4_c1_cs_n,
-    output wire         ddr4_c1_act_n,
-    output wire         ddr4_c1_odt,
-    output wire         ddr4_c1_par,
-    output wire         ddr4_c1_reset_n,
-    inout  wire [71:0]  ddr4_c1_dq,
-    inout  wire [17:0]  ddr4_c1_dqs_t,
-    inout  wire [17:0]  ddr4_c1_dqs_c
+    output wire [3:0]   qsfp_tx_p,
+    output wire [3:0]   qsfp_tx_n,
+    input  wire [3:0]   qsfp_rx_p,
+    input  wire [3:0]   qsfp_rx_n,
+    input  wire         qsfp_mgt_refclk_0_p,
+    input  wire         qsfp_mgt_refclk_0_n
+    // input  wire         qsfp_mgt_refclk_1_p,
+    // input  wire         qsfp_mgt_refclk_1_n
 );
 
 // PTP configuration
@@ -250,7 +198,6 @@ parameter IF_PTP_PERIOD_FNS = 16'h6666;
 parameter TX_TAG_WIDTH = 16;
 
 // RAM configuration
-parameter AXI_DDR_STRB_WIDTH = (AXI_DDR_DATA_WIDTH/8);
 parameter AXI_HBM_DATA_WIDTH = 256;
 parameter AXI_HBM_STRB_WIDTH = (AXI_HBM_DATA_WIDTH/8);
 parameter AXI_HBM_ID_WIDTH = 6;
@@ -985,8 +932,8 @@ always @(posedge pcie_user_clk) begin
     end
 end
 
-// XGMII 10G PHY
-localparam QSFP_CNT = 2;
+// XGMII 25G PHY
+localparam QSFP_CNT = 1;
 localparam CH_CNT = QSFP_CNT*4;
 
 wire [CH_CNT-1:0]                     qsfp_tx_clk;
@@ -1011,48 +958,44 @@ wire [QSFP_CNT-1:0]                   qsfp_drp_we;
 wire [QSFP_CNT*16-1:0]                qsfp_drp_do;
 wire [QSFP_CNT-1:0]                   qsfp_drp_rdy;
 
-// QSFP0
-assign qsfp0_refclk_oe_b = 1'b0;
-assign qsfp0_refclk_fs = 1'b1;
-
 assign qsfp_drp_clk[0 +: 1] = clk_125mhz_int;
 assign qsfp_drp_rst[0 +: 1] = rst_125mhz_int;
 
-wire qsfp0_gtpowergood;
+wire qsfp_gtpowergood;
 
-wire qsfp0_mgt_refclk_1;
-wire qsfp0_mgt_refclk_1_int;
-wire qsfp0_mgt_refclk_1_bufg;
+wire qsfp_mgt_refclk_0;
+wire qsfp_mgt_refclk_0_int;
+wire qsfp_mgt_refclk_0_bufg;
 
-assign clk_161mhz_ref_int = qsfp0_mgt_refclk_1_bufg;
+assign clk_161mhz_ref_int = qsfp_mgt_refclk_0_bufg;
 
-IBUFDS_GTE4 ibufds_gte4_qsfp0_mgt_refclk_1_inst (
-    .I     (qsfp0_mgt_refclk_1_p),
-    .IB    (qsfp0_mgt_refclk_1_n),
+IBUFDS_GTE4 ibufds_gte4_qsfp_mgt_refclk_0_inst (
+    .I     (qsfp_mgt_refclk_0_p),
+    .IB    (qsfp_mgt_refclk_0_n),
     .CEB   (1'b0),
-    .O     (qsfp0_mgt_refclk_1),
-    .ODIV2 (qsfp0_mgt_refclk_1_int)
+    .O     (qsfp_mgt_refclk_0),
+    .ODIV2 (qsfp_mgt_refclk_0_int)
 );
 
-BUFG_GT bufg_gt_qsfp0_mgt_refclk_1_inst (
-    .CE      (qsfp0_gtpowergood),
+BUFG_GT bufg_gt_qsfp_mgt_refclk_0_inst (
+    .CE      (qsfp_gtpowergood),
     .CEMASK  (1'b1),
     .CLR     (1'b0),
     .CLRMASK (1'b1),
     .DIV     (3'd0),
-    .I       (qsfp0_mgt_refclk_1_int),
-    .O       (qsfp0_mgt_refclk_1_bufg)
+    .I       (qsfp_mgt_refclk_0_int),
+    .O       (qsfp_mgt_refclk_0_bufg)
 );
 
-wire qsfp0_rst;
+wire qsfp_rst;
 
 sync_reset #(
     .N(4)
 )
-qsfp0_sync_reset_inst (
-    .clk(qsfp0_mgt_refclk_1_bufg),
+qsfp_sync_reset_inst (
+    .clk(qsfp_mgt_refclk_0_bufg),
     .rst(rst_125mhz_int),
-    .out(qsfp0_rst)
+    .out(qsfp_rst)
 );
 
 eth_xcvr_phy_10g_gty_quad_wrapper #(
@@ -1061,15 +1004,15 @@ eth_xcvr_phy_10g_gty_quad_wrapper #(
     .RX_SERDES_PIPELINE(1),
     .COUNT_125US(125000/2.56)
 )
-qsfp0_phy_quad_inst (
+qsfp_phy_quad_inst (
     .xcvr_ctrl_clk(clk_125mhz_int),
-    .xcvr_ctrl_rst(qsfp0_rst),
+    .xcvr_ctrl_rst(qsfp_rst),
 
     /*
      * Common
      */
-    .xcvr_gtpowergood_out(qsfp0_gtpowergood),
-    .xcvr_ref_clk(qsfp0_mgt_refclk_1),
+    .xcvr_gtpowergood_out(qsfp_gtpowergood),
+    .xcvr_ref_clk(qsfp_mgt_refclk_0),
 
     /*
      * DRP
@@ -1086,10 +1029,10 @@ qsfp0_phy_quad_inst (
     /*
      * Serial data
      */
-    .xcvr_txp(qsfp0_tx_p),
-    .xcvr_txn(qsfp0_tx_n),
-    .xcvr_rxp(qsfp0_rx_p),
-    .xcvr_rxn(qsfp0_rx_n),
+    .xcvr_txp(qsfp_tx_p),
+    .xcvr_txn(qsfp_tx_n),
+    .xcvr_rxp(qsfp_rx_p),
+    .xcvr_rxn(qsfp_rx_n),
 
     /*
      * PHY connections
@@ -1167,498 +1110,13 @@ qsfp0_phy_quad_inst (
     .phy_4_cfg_rx_prbs31_enable(qsfp_cfg_rx_prbs31_enable[0*4+3 +: 1])
 );
 
-// QSFP1
-assign qsfp1_refclk_oe_b = 1'b0;
-assign qsfp1_refclk_fs = 1'b1;
-
-assign qsfp_drp_clk[1 +: 1] = clk_125mhz_int;
-assign qsfp_drp_rst[1 +: 1] = rst_125mhz_int;
-
-wire qsfp1_gtpowergood;
-
-wire qsfp1_mgt_refclk_1;
-wire qsfp1_mgt_refclk_1_int;
-wire qsfp1_mgt_refclk_1_bufg;
-
-IBUFDS_GTE4 ibufds_gte4_qsfp1_mgt_refclk_1_inst (
-    .I     (qsfp1_mgt_refclk_1_p),
-    .IB    (qsfp1_mgt_refclk_1_n),
-    .CEB   (1'b0),
-    .O     (qsfp1_mgt_refclk_1),
-    .ODIV2 (qsfp1_mgt_refclk_1_int)
-);
-
-BUFG_GT bufg_gt_qsfp1_mgt_refclk_1_inst (
-    .CE      (qsfp1_gtpowergood),
-    .CEMASK  (1'b1),
-    .CLR     (1'b0),
-    .CLRMASK (1'b1),
-    .DIV     (3'd0),
-    .I       (qsfp1_mgt_refclk_1_int),
-    .O       (qsfp1_mgt_refclk_1_bufg)
-);
-
-wire qsfp1_rst;
-
-sync_reset #(
-    .N(4)
-)
-qsfp1_sync_reset_inst (
-    .clk(qsfp1_mgt_refclk_1_bufg),
-    .rst(rst_125mhz_int),
-    .out(qsfp1_rst)
-);
-
-eth_xcvr_phy_10g_gty_quad_wrapper #(
-    .PRBS31_ENABLE(1),
-    .TX_SERDES_PIPELINE(1),
-    .RX_SERDES_PIPELINE(1),
-    .COUNT_125US(125000/2.56)
-)
-qsfp1_phy_quad_inst (
-    .xcvr_ctrl_clk(clk_125mhz_int),
-    .xcvr_ctrl_rst(qsfp1_rst),
-
-    /*
-     * Common
-     */
-    .xcvr_gtpowergood_out(qsfp1_gtpowergood),
-    .xcvr_ref_clk(qsfp1_mgt_refclk_1),
-
-    /*
-     * DRP
-     */
-    .drp_clk(qsfp_drp_clk[1 +: 1]),
-    .drp_rst(qsfp_drp_rst[1 +: 1]),
-    .drp_addr(qsfp_drp_addr[1*24 +: 24]),
-    .drp_di(qsfp_drp_di[1*16 +: 16]),
-    .drp_en(qsfp_drp_en[1 +: 1]),
-    .drp_we(qsfp_drp_we[1 +: 1]),
-    .drp_do(qsfp_drp_do[1*16 +: 16]),
-    .drp_rdy(qsfp_drp_rdy[1 +: 1]),
-
-    /*
-     * Serial data
-     */
-    .xcvr_txp(qsfp1_tx_p),
-    .xcvr_txn(qsfp1_tx_n),
-    .xcvr_rxp(qsfp1_rx_p),
-    .xcvr_rxn(qsfp1_rx_n),
-
-    /*
-     * PHY connections
-     */
-    .phy_1_tx_clk(qsfp_tx_clk[1*4+0 +: 1]),
-    .phy_1_tx_rst(qsfp_tx_rst[1*4+0 +: 1]),
-    .phy_1_xgmii_txd(qsfp_txd[(1*4+0)*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
-    .phy_1_xgmii_txc(qsfp_txc[(1*4+0)*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
-    .phy_1_rx_clk(qsfp_rx_clk[1*4+0 +: 1]),
-    .phy_1_rx_rst(qsfp_rx_rst[1*4+0 +: 1]),
-    .phy_1_xgmii_rxd(qsfp_rxd[(1*4+0)*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
-    .phy_1_xgmii_rxc(qsfp_rxc[(1*4+0)*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
-    .phy_1_tx_bad_block(),
-    .phy_1_rx_error_count(qsfp_rx_error_count[(1*4+0)*7 +: 7]),
-    .phy_1_rx_bad_block(),
-    .phy_1_rx_sequence_error(),
-    .phy_1_rx_block_lock(),
-    .phy_1_rx_high_ber(),
-    .phy_1_rx_status(qsfp_rx_status[1*4+0 +: 1]),
-    .phy_1_cfg_tx_prbs31_enable(qsfp_cfg_tx_prbs31_enable[1*4+0 +: 1]),
-    .phy_1_cfg_rx_prbs31_enable(qsfp_cfg_rx_prbs31_enable[1*4+0 +: 1]),
-
-    .phy_2_tx_clk(qsfp_tx_clk[1*4+1 +: 1]),
-    .phy_2_tx_rst(qsfp_tx_rst[1*4+1 +: 1]),
-    .phy_2_xgmii_txd(qsfp_txd[(1*4+1)*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
-    .phy_2_xgmii_txc(qsfp_txc[(1*4+1)*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
-    .phy_2_rx_clk(qsfp_rx_clk[1*4+1 +: 1]),
-    .phy_2_rx_rst(qsfp_rx_rst[1*4+1 +: 1]),
-    .phy_2_xgmii_rxd(qsfp_rxd[(1*4+1)*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
-    .phy_2_xgmii_rxc(qsfp_rxc[(1*4+1)*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
-    .phy_2_tx_bad_block(),
-    .phy_2_rx_error_count(qsfp_rx_error_count[(1*4+1)*7 +: 7]),
-    .phy_2_rx_bad_block(),
-    .phy_2_rx_sequence_error(),
-    .phy_2_rx_block_lock(),
-    .phy_2_rx_high_ber(),
-    .phy_2_rx_status(qsfp_rx_status[1*4+1 +: 1]),
-    .phy_2_cfg_tx_prbs31_enable(qsfp_cfg_tx_prbs31_enable[1*4+1 +: 1]),
-    .phy_2_cfg_rx_prbs31_enable(qsfp_cfg_rx_prbs31_enable[1*4+1 +: 1]),
-
-    .phy_3_tx_clk(qsfp_tx_clk[1*4+2 +: 1]),
-    .phy_3_tx_rst(qsfp_tx_rst[1*4+2 +: 1]),
-    .phy_3_xgmii_txd(qsfp_txd[(1*4+2)*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
-    .phy_3_xgmii_txc(qsfp_txc[(1*4+2)*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
-    .phy_3_rx_clk(qsfp_rx_clk[1*4+2 +: 1]),
-    .phy_3_rx_rst(qsfp_rx_rst[1*4+2 +: 1]),
-    .phy_3_xgmii_rxd(qsfp_rxd[(1*4+2)*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
-    .phy_3_xgmii_rxc(qsfp_rxc[(1*4+2)*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
-    .phy_3_tx_bad_block(),
-    .phy_3_rx_error_count(qsfp_rx_error_count[(1*4+2)*7 +: 7]),
-    .phy_3_rx_bad_block(),
-    .phy_3_rx_sequence_error(),
-    .phy_3_rx_block_lock(),
-    .phy_3_rx_high_ber(),
-    .phy_3_rx_status(qsfp_rx_status[1*4+2 +: 1]),
-    .phy_3_cfg_tx_prbs31_enable(qsfp_cfg_tx_prbs31_enable[1*4+2 +: 1]),
-    .phy_3_cfg_rx_prbs31_enable(qsfp_cfg_rx_prbs31_enable[1*4+2 +: 1]),
-
-    .phy_4_tx_clk(qsfp_tx_clk[1*4+3 +: 1]),
-    .phy_4_tx_rst(qsfp_tx_rst[1*4+3 +: 1]),
-    .phy_4_xgmii_txd(qsfp_txd[(1*4+3)*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
-    .phy_4_xgmii_txc(qsfp_txc[(1*4+3)*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
-    .phy_4_rx_clk(qsfp_rx_clk[1*4+3 +: 1]),
-    .phy_4_rx_rst(qsfp_rx_rst[1*4+3 +: 1]),
-    .phy_4_xgmii_rxd(qsfp_rxd[(1*4+3)*XGMII_DATA_WIDTH +: XGMII_DATA_WIDTH]),
-    .phy_4_xgmii_rxc(qsfp_rxc[(1*4+3)*XGMII_CTRL_WIDTH +: XGMII_CTRL_WIDTH]),
-    .phy_4_tx_bad_block(),
-    .phy_4_rx_error_count(qsfp_rx_error_count[(1*4+3)*7 +: 7]),
-    .phy_4_rx_bad_block(),
-    .phy_4_rx_sequence_error(),
-    .phy_4_rx_block_lock(),
-    .phy_4_rx_high_ber(),
-    .phy_4_rx_status(qsfp_rx_status[1*4+3 +: 1]),
-    .phy_4_cfg_tx_prbs31_enable(qsfp_cfg_tx_prbs31_enable[1*4+3 +: 1]),
-    .phy_4_cfg_rx_prbs31_enable(qsfp_cfg_rx_prbs31_enable[1*4+3 +: 1])
-);
-
 wire ptp_clk;
 wire ptp_rst;
 wire ptp_sample_clk;
 
-assign ptp_clk = qsfp0_mgt_refclk_1_bufg;
-assign ptp_rst = qsfp0_rst;
+assign ptp_clk = qsfp_mgt_refclk_0_bufg;
+assign ptp_rst = qsfp_rst;
 assign ptp_sample_clk = clk_125mhz_int;
-
-// DDR4
-wire [DDR_CH-1:0]                     ddr_clk;
-wire [DDR_CH-1:0]                     ddr_rst;
-
-wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]    m_axi_ddr_awid;
-wire [DDR_CH*AXI_DDR_ADDR_WIDTH-1:0]  m_axi_ddr_awaddr;
-wire [DDR_CH*8-1:0]                   m_axi_ddr_awlen;
-wire [DDR_CH*3-1:0]                   m_axi_ddr_awsize;
-wire [DDR_CH*2-1:0]                   m_axi_ddr_awburst;
-wire [DDR_CH-1:0]                     m_axi_ddr_awlock;
-wire [DDR_CH*4-1:0]                   m_axi_ddr_awcache;
-wire [DDR_CH*3-1:0]                   m_axi_ddr_awprot;
-wire [DDR_CH*4-1:0]                   m_axi_ddr_awqos;
-wire [DDR_CH-1:0]                     m_axi_ddr_awvalid;
-wire [DDR_CH-1:0]                     m_axi_ddr_awready;
-wire [DDR_CH*AXI_DDR_DATA_WIDTH-1:0]  m_axi_ddr_wdata;
-wire [DDR_CH*AXI_DDR_STRB_WIDTH-1:0]  m_axi_ddr_wstrb;
-wire [DDR_CH-1:0]                     m_axi_ddr_wlast;
-wire [DDR_CH-1:0]                     m_axi_ddr_wvalid;
-wire [DDR_CH-1:0]                     m_axi_ddr_wready;
-wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]    m_axi_ddr_bid;
-wire [DDR_CH*2-1:0]                   m_axi_ddr_bresp;
-wire [DDR_CH-1:0]                     m_axi_ddr_bvalid;
-wire [DDR_CH-1:0]                     m_axi_ddr_bready;
-wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]    m_axi_ddr_arid;
-wire [DDR_CH*AXI_DDR_ADDR_WIDTH-1:0]  m_axi_ddr_araddr;
-wire [DDR_CH*8-1:0]                   m_axi_ddr_arlen;
-wire [DDR_CH*3-1:0]                   m_axi_ddr_arsize;
-wire [DDR_CH*2-1:0]                   m_axi_ddr_arburst;
-wire [DDR_CH-1:0]                     m_axi_ddr_arlock;
-wire [DDR_CH*4-1:0]                   m_axi_ddr_arcache;
-wire [DDR_CH*3-1:0]                   m_axi_ddr_arprot;
-wire [DDR_CH*4-1:0]                   m_axi_ddr_arqos;
-wire [DDR_CH-1:0]                     m_axi_ddr_arvalid;
-wire [DDR_CH-1:0]                     m_axi_ddr_arready;
-wire [DDR_CH*AXI_DDR_ID_WIDTH-1:0]    m_axi_ddr_rid;
-wire [DDR_CH*AXI_DDR_DATA_WIDTH-1:0]  m_axi_ddr_rdata;
-wire [DDR_CH*2-1:0]                   m_axi_ddr_rresp;
-wire [DDR_CH-1:0]                     m_axi_ddr_rlast;
-wire [DDR_CH-1:0]                     m_axi_ddr_rvalid;
-wire [DDR_CH-1:0]                     m_axi_ddr_rready;
-
-wire [DDR_CH-1:0]                     ddr_status;
-
-generate
-
-wire clk_100mhz_0_ibufg;
-
-IBUFGDS #(
-   .DIFF_TERM("FALSE"),
-   .IBUF_LOW_PWR("FALSE")
-)
-clk_100mhz_0_ibufg_inst (
-   .O   (clk_100mhz_0_ibufg),
-   .I   (clk_100mhz_0_p),
-   .IB  (clk_100mhz_0_n)
-);
-
-if (DDR_ENABLE && DDR_CH > 0) begin
-
-reg ddr4_rst_reg = 1'b1;
-
-always @(posedge pcie_user_clk or posedge pcie_user_reset) begin
-    if (pcie_user_reset) begin
-        ddr4_rst_reg <= 1'b1;
-    end else begin
-        ddr4_rst_reg <= 1'b0;
-    end
-end
-
-ddr4_0 ddr4_c0_inst (
-    .c0_sys_clk_i(clk_100mhz_0_ibufg),
-    .sys_rst(ddr4_rst_reg),
-
-    .c0_init_calib_complete(ddr_status[0 +: 1]),
-    .c0_ddr4_interrupt(),
-    .dbg_clk(),
-    .dbg_bus(),
-
-    .c0_ddr4_adr(ddr4_c0_adr),
-    .c0_ddr4_ba(ddr4_c0_ba),
-    .c0_ddr4_cke(ddr4_c0_cke),
-    .c0_ddr4_cs_n(ddr4_c0_cs_n),
-    .c0_ddr4_dq(ddr4_c0_dq),
-    .c0_ddr4_dqs_t(ddr4_c0_dqs_t),
-    .c0_ddr4_dqs_c(ddr4_c0_dqs_c),
-    .c0_ddr4_odt(ddr4_c0_odt),
-    .c0_ddr4_parity(ddr4_c0_par),
-    .c0_ddr4_bg(ddr4_c0_bg),
-    .c0_ddr4_reset_n(ddr4_c0_reset_n),
-    .c0_ddr4_act_n(ddr4_c0_act_n),
-    .c0_ddr4_ck_t(ddr4_c0_ck_t),
-    .c0_ddr4_ck_c(ddr4_c0_ck_c),
-
-    .c0_ddr4_ui_clk(ddr_clk[0 +: 1]),
-    .c0_ddr4_ui_clk_sync_rst(ddr_rst[0 +: 1]),
-
-    .c0_ddr4_aresetn(!ddr_rst[0 +: 1]),
-
-    .c0_ddr4_s_axi_ctrl_awvalid(1'b0),
-    .c0_ddr4_s_axi_ctrl_awready(),
-    .c0_ddr4_s_axi_ctrl_awaddr(32'd0),
-    .c0_ddr4_s_axi_ctrl_wvalid(1'b0),
-    .c0_ddr4_s_axi_ctrl_wready(),
-    .c0_ddr4_s_axi_ctrl_wdata(32'd0),
-    .c0_ddr4_s_axi_ctrl_bvalid(),
-    .c0_ddr4_s_axi_ctrl_bready(1'b1),
-    .c0_ddr4_s_axi_ctrl_bresp(),
-    .c0_ddr4_s_axi_ctrl_arvalid(1'b0),
-    .c0_ddr4_s_axi_ctrl_arready(),
-    .c0_ddr4_s_axi_ctrl_araddr(31'd0),
-    .c0_ddr4_s_axi_ctrl_rvalid(),
-    .c0_ddr4_s_axi_ctrl_rready(1'b1),
-    .c0_ddr4_s_axi_ctrl_rdata(),
-    .c0_ddr4_s_axi_ctrl_rresp(),
-
-    .c0_ddr4_s_axi_awid(m_axi_ddr_awid[0*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
-    .c0_ddr4_s_axi_awaddr(m_axi_ddr_awaddr[0*AXI_DDR_ADDR_WIDTH +: AXI_DDR_ADDR_WIDTH]),
-    .c0_ddr4_s_axi_awlen(m_axi_ddr_awlen[0*8 +: 8]),
-    .c0_ddr4_s_axi_awsize(m_axi_ddr_awsize[0*3 +: 3]),
-    .c0_ddr4_s_axi_awburst(m_axi_ddr_awburst[0*2 +: 2]),
-    .c0_ddr4_s_axi_awlock(m_axi_ddr_awlock[0 +: 1]),
-    .c0_ddr4_s_axi_awcache(m_axi_ddr_awcache[0*4 +: 4]),
-    .c0_ddr4_s_axi_awprot(m_axi_ddr_awprot[0*3 +: 3]),
-    .c0_ddr4_s_axi_awqos(m_axi_ddr_awqos[0*4 +: 4]),
-    .c0_ddr4_s_axi_awvalid(m_axi_ddr_awvalid[0 +: 1]),
-    .c0_ddr4_s_axi_awready(m_axi_ddr_awready[0 +: 1]),
-    .c0_ddr4_s_axi_wdata(m_axi_ddr_wdata[0*AXI_DDR_DATA_WIDTH +: AXI_DDR_DATA_WIDTH]),
-    .c0_ddr4_s_axi_wstrb(m_axi_ddr_wstrb[0*AXI_DDR_STRB_WIDTH +: AXI_DDR_STRB_WIDTH]),
-    .c0_ddr4_s_axi_wlast(m_axi_ddr_wlast[0 +: 1]),
-    .c0_ddr4_s_axi_wvalid(m_axi_ddr_wvalid[0 +: 1]),
-    .c0_ddr4_s_axi_wready(m_axi_ddr_wready[0 +: 1]),
-    .c0_ddr4_s_axi_bready(m_axi_ddr_bready[0 +: 1]),
-    .c0_ddr4_s_axi_bid(m_axi_ddr_bid[0*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
-    .c0_ddr4_s_axi_bresp(m_axi_ddr_bresp[0*2 +: 2]),
-    .c0_ddr4_s_axi_bvalid(m_axi_ddr_bvalid[0 +: 1]),
-    .c0_ddr4_s_axi_arid(m_axi_ddr_arid[0*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
-    .c0_ddr4_s_axi_araddr(m_axi_ddr_araddr[0*AXI_DDR_ADDR_WIDTH +: AXI_DDR_ADDR_WIDTH]),
-    .c0_ddr4_s_axi_arlen(m_axi_ddr_arlen[0*8 +: 8]),
-    .c0_ddr4_s_axi_arsize(m_axi_ddr_arsize[0*3 +: 3]),
-    .c0_ddr4_s_axi_arburst(m_axi_ddr_arburst[0*2 +: 2]),
-    .c0_ddr4_s_axi_arlock(m_axi_ddr_arlock[0 +: 1]),
-    .c0_ddr4_s_axi_arcache(m_axi_ddr_arcache[0*4 +: 4]),
-    .c0_ddr4_s_axi_arprot(m_axi_ddr_arprot[0*3 +: 3]),
-    .c0_ddr4_s_axi_arqos(m_axi_ddr_arqos[0*4 +: 4]),
-    .c0_ddr4_s_axi_arvalid(m_axi_ddr_arvalid[0 +: 1]),
-    .c0_ddr4_s_axi_arready(m_axi_ddr_arready[0 +: 1]),
-    .c0_ddr4_s_axi_rready(m_axi_ddr_rready[0 +: 1]),
-    .c0_ddr4_s_axi_rlast(m_axi_ddr_rlast[0 +: 1]),
-    .c0_ddr4_s_axi_rvalid(m_axi_ddr_rvalid[0 +: 1]),
-    .c0_ddr4_s_axi_rresp(m_axi_ddr_rresp[0*2 +: 2]),
-    .c0_ddr4_s_axi_rid(m_axi_ddr_rid[0*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
-    .c0_ddr4_s_axi_rdata(m_axi_ddr_rdata[0*AXI_DDR_DATA_WIDTH +: AXI_DDR_DATA_WIDTH])
-);
-
-end else begin
-
-assign ddr4_c0_adr = {17{1'bz}};
-assign ddr4_c0_ba = {2{1'bz}};
-assign ddr4_c0_bg = {2{1'bz}};
-assign ddr4_c0_cke = 1'bz;
-assign ddr4_c0_cs_n = 1'bz;
-assign ddr4_c0_act_n = 1'bz;
-assign ddr4_c0_odt = 1'bz;
-assign ddr4_c0_par = 1'bz;
-assign ddr4_c0_reset_n = 1'b0;
-assign ddr4_c0_dq = {72{1'bz}};
-assign ddr4_c0_dqs_t = {18{1'bz}};
-assign ddr4_c0_dqs_c = {18{1'bz}};
-
-OBUFTDS ddr4_c0_ck_obuftds_inst (
-    .I(1'b0),
-    .T(1'b1),
-    .O(ddr4_c0_ck_t),
-    .OB(ddr4_c0_ck_c)
-);
-
-assign ddr_clk = 0;
-assign ddr_rst = 0;
-
-assign m_axi_ddr_awready = 0;
-assign m_axi_ddr_wready = 0;
-assign m_axi_ddr_bid = 0;
-assign m_axi_ddr_bresp = 0;
-assign m_axi_ddr_bvalid = 0;
-assign m_axi_ddr_arready = 0;
-assign m_axi_ddr_rid = 0;
-assign m_axi_ddr_rdata = 0;
-assign m_axi_ddr_rresp = 0;
-assign m_axi_ddr_rlast = 0;
-assign m_axi_ddr_rvalid = 0;
-
-assign ddr_status = 0;
-
-end
-
-wire clk_100mhz_1_ibufg;
-
-IBUFGDS #(
-   .DIFF_TERM("FALSE"),
-   .IBUF_LOW_PWR("FALSE")
-)
-clk_100mhz_1_ibufg_inst (
-   .O   (clk_100mhz_1_ibufg),
-   .I   (clk_100mhz_1_p),
-   .IB  (clk_100mhz_1_n)
-);
-
-if (DDR_ENABLE && DDR_CH > 1) begin
-
-reg ddr4_rst_reg = 1'b1;
-
-always @(posedge pcie_user_clk or posedge pcie_user_reset) begin
-    if (pcie_user_reset) begin
-        ddr4_rst_reg <= 1'b1;
-    end else begin
-        ddr4_rst_reg <= 1'b0;
-    end
-end
-
-ddr4_0 ddr4_c1_inst (
-    .c0_sys_clk_i(clk_100mhz_1_ibufg),
-    .sys_rst(ddr4_rst_reg),
-
-    .c0_init_calib_complete(ddr_status[1 +: 1]),
-    .c0_ddr4_interrupt(),
-    .dbg_clk(),
-    .dbg_bus(),
-
-    .c0_ddr4_adr(ddr4_c1_adr),
-    .c0_ddr4_ba(ddr4_c1_ba),
-    .c0_ddr4_cke(ddr4_c1_cke),
-    .c0_ddr4_cs_n(ddr4_c1_cs_n),
-    .c0_ddr4_dq(ddr4_c1_dq),
-    .c0_ddr4_dqs_t(ddr4_c1_dqs_t),
-    .c0_ddr4_dqs_c(ddr4_c1_dqs_c),
-    .c0_ddr4_odt(ddr4_c1_odt),
-    .c0_ddr4_parity(ddr4_c1_par),
-    .c0_ddr4_bg(ddr4_c1_bg),
-    .c0_ddr4_reset_n(ddr4_c1_reset_n),
-    .c0_ddr4_act_n(ddr4_c1_act_n),
-    .c0_ddr4_ck_t(ddr4_c1_ck_t),
-    .c0_ddr4_ck_c(ddr4_c1_ck_c),
-
-    .c0_ddr4_ui_clk(ddr_clk[1 +: 1]),
-    .c0_ddr4_ui_clk_sync_rst(ddr_rst[1 +: 1]),
-
-    .c0_ddr4_aresetn(!ddr_rst[1 +: 1]),
-
-    .c0_ddr4_s_axi_ctrl_awvalid(1'b0),
-    .c0_ddr4_s_axi_ctrl_awready(),
-    .c0_ddr4_s_axi_ctrl_awaddr(32'd0),
-    .c0_ddr4_s_axi_ctrl_wvalid(1'b0),
-    .c0_ddr4_s_axi_ctrl_wready(),
-    .c0_ddr4_s_axi_ctrl_wdata(32'd0),
-    .c0_ddr4_s_axi_ctrl_bvalid(),
-    .c0_ddr4_s_axi_ctrl_bready(1'b1),
-    .c0_ddr4_s_axi_ctrl_bresp(),
-    .c0_ddr4_s_axi_ctrl_arvalid(1'b0),
-    .c0_ddr4_s_axi_ctrl_arready(),
-    .c0_ddr4_s_axi_ctrl_araddr(31'd0),
-    .c0_ddr4_s_axi_ctrl_rvalid(),
-    .c0_ddr4_s_axi_ctrl_rready(1'b1),
-    .c0_ddr4_s_axi_ctrl_rdata(),
-    .c0_ddr4_s_axi_ctrl_rresp(),
-
-    .c0_ddr4_s_axi_awid(m_axi_ddr_awid[1*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
-    .c0_ddr4_s_axi_awaddr(m_axi_ddr_awaddr[1*AXI_DDR_ADDR_WIDTH +: AXI_DDR_ADDR_WIDTH]),
-    .c0_ddr4_s_axi_awlen(m_axi_ddr_awlen[1*8 +: 8]),
-    .c0_ddr4_s_axi_awsize(m_axi_ddr_awsize[1*3 +: 3]),
-    .c0_ddr4_s_axi_awburst(m_axi_ddr_awburst[1*2 +: 2]),
-    .c0_ddr4_s_axi_awlock(m_axi_ddr_awlock[1 +: 1]),
-    .c0_ddr4_s_axi_awcache(m_axi_ddr_awcache[1*4 +: 4]),
-    .c0_ddr4_s_axi_awprot(m_axi_ddr_awprot[1*3 +: 3]),
-    .c0_ddr4_s_axi_awqos(m_axi_ddr_awqos[1*4 +: 4]),
-    .c0_ddr4_s_axi_awvalid(m_axi_ddr_awvalid[1 +: 1]),
-    .c0_ddr4_s_axi_awready(m_axi_ddr_awready[1 +: 1]),
-    .c0_ddr4_s_axi_wdata(m_axi_ddr_wdata[1*AXI_DDR_DATA_WIDTH +: AXI_DDR_DATA_WIDTH]),
-    .c0_ddr4_s_axi_wstrb(m_axi_ddr_wstrb[1*AXI_DDR_STRB_WIDTH +: AXI_DDR_STRB_WIDTH]),
-    .c0_ddr4_s_axi_wlast(m_axi_ddr_wlast[1 +: 1]),
-    .c0_ddr4_s_axi_wvalid(m_axi_ddr_wvalid[1 +: 1]),
-    .c0_ddr4_s_axi_wready(m_axi_ddr_wready[1 +: 1]),
-    .c0_ddr4_s_axi_bready(m_axi_ddr_bready[1 +: 1]),
-    .c0_ddr4_s_axi_bid(m_axi_ddr_bid[1*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
-    .c0_ddr4_s_axi_bresp(m_axi_ddr_bresp[1*2 +: 2]),
-    .c0_ddr4_s_axi_bvalid(m_axi_ddr_bvalid[1 +: 1]),
-    .c0_ddr4_s_axi_arid(m_axi_ddr_arid[1*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
-    .c0_ddr4_s_axi_araddr(m_axi_ddr_araddr[1*AXI_DDR_ADDR_WIDTH +: AXI_DDR_ADDR_WIDTH]),
-    .c0_ddr4_s_axi_arlen(m_axi_ddr_arlen[1*8 +: 8]),
-    .c0_ddr4_s_axi_arsize(m_axi_ddr_arsize[1*3 +: 3]),
-    .c0_ddr4_s_axi_arburst(m_axi_ddr_arburst[1*2 +: 2]),
-    .c0_ddr4_s_axi_arlock(m_axi_ddr_arlock[1 +: 1]),
-    .c0_ddr4_s_axi_arcache(m_axi_ddr_arcache[1*4 +: 4]),
-    .c0_ddr4_s_axi_arprot(m_axi_ddr_arprot[1*3 +: 3]),
-    .c0_ddr4_s_axi_arqos(m_axi_ddr_arqos[1*4 +: 4]),
-    .c0_ddr4_s_axi_arvalid(m_axi_ddr_arvalid[1 +: 1]),
-    .c0_ddr4_s_axi_arready(m_axi_ddr_arready[1 +: 1]),
-    .c0_ddr4_s_axi_rready(m_axi_ddr_rready[1 +: 1]),
-    .c0_ddr4_s_axi_rlast(m_axi_ddr_rlast[1 +: 1]),
-    .c0_ddr4_s_axi_rvalid(m_axi_ddr_rvalid[1 +: 1]),
-    .c0_ddr4_s_axi_rresp(m_axi_ddr_rresp[1*2 +: 2]),
-    .c0_ddr4_s_axi_rid(m_axi_ddr_rid[1*AXI_DDR_ID_WIDTH +: AXI_DDR_ID_WIDTH]),
-    .c0_ddr4_s_axi_rdata(m_axi_ddr_rdata[1*AXI_DDR_DATA_WIDTH +: AXI_DDR_DATA_WIDTH])
-);
-
-end else begin
-
-assign ddr4_c1_adr = {17{1'bz}};
-assign ddr4_c1_ba = {2{1'bz}};
-assign ddr4_c1_bg = {2{1'bz}};
-assign ddr4_c1_cke = 1'bz;
-assign ddr4_c1_cs_n = 1'bz;
-assign ddr4_c1_act_n = 1'bz;
-assign ddr4_c1_odt = 1'bz;
-assign ddr4_c1_par = 1'bz;
-assign ddr4_c1_reset_n = 1'b0;
-assign ddr4_c1_dq = {72{1'bz}};
-assign ddr4_c1_dqs_t = {18{1'bz}};
-assign ddr4_c1_dqs_c = {18{1'bz}};
-
-OBUFTDS ddr4_c1_ck_obuftds_inst (
-    .I(1'b0),
-    .T(1'b1),
-    .O(ddr4_c1_ck_t),
-    .OB(ddr4_c1_ck_c)
-);
-
-end
-
-endgenerate
 
 // HBM
 wire [HBM_CH-1:0]                     hbm_clk;
@@ -1704,6 +1162,18 @@ wire [HBM_CH-1:0]                     m_axi_hbm_rready;
 
 wire [HBM_CH-1:0]                     hbm_status;
 
+wire clk_100mhz_1_ibufg;
+
+IBUFGDS #(
+   .DIFF_TERM("FALSE"),
+   .IBUF_LOW_PWR("FALSE")
+)
+clk_100mhz_1_ibufg_inst (
+   .O   (clk_100mhz_1_ibufg),
+   .I   (clk_100mhz_1_p),
+   .IB  (clk_100mhz_1_n)
+);
+
 generate
 
 if (HBM_ENABLE) begin
@@ -1712,7 +1182,7 @@ if (HBM_ENABLE) begin
 
     BUFG
     hbm_ref_clk_bufg_inst (
-        .I(clk_100mhz_0_ibufg),
+        .I(clk_100mhz_1_ibufg),
         .O(hbm_ref_clk)
     );
 
@@ -1846,8 +1316,6 @@ fpga_core #(
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
-    .IF_PTP_PERIOD_NS(IF_PTP_PERIOD_NS),
-    .IF_PTP_PERIOD_FNS(IF_PTP_PERIOD_FNS),
 
     // Queue manager configuration
     .EVENT_QUEUE_OP_TABLE_SIZE(EVENT_QUEUE_OP_TABLE_SIZE),
@@ -1893,14 +1361,7 @@ fpga_core #(
     .RX_RAM_SIZE(RX_RAM_SIZE),
 
     // RAM configuration
-    .DDR_CH(DDR_CH),
-    .DDR_ENABLE(DDR_ENABLE),
-    .AXI_DDR_DATA_WIDTH(AXI_DDR_DATA_WIDTH),
-    .AXI_DDR_ADDR_WIDTH(AXI_DDR_ADDR_WIDTH),
-    .AXI_DDR_STRB_WIDTH(AXI_DDR_STRB_WIDTH),
-    .AXI_DDR_ID_WIDTH(AXI_DDR_ID_WIDTH),
-    .AXI_DDR_MAX_BURST_LEN(AXI_DDR_MAX_BURST_LEN),
-    .AXI_DDR_NARROW_BURST(AXI_DDR_NARROW_BURST),
+    .DDR_ENABLE(0),
     .HBM_CH(HBM_CH),
     .HBM_ENABLE(HBM_ENABLE),
     .HBM_GROUP_SIZE(HBM_GROUP_SIZE),
@@ -1996,9 +1457,9 @@ core_inst (
      */
     .sw(0),
     .led(),
-    .qsfp_led_act(),
-    .qsfp_led_stat_g(),
-    .qsfp_led_stat_y(),
+    .qsfp_led_act(qsfp_led_act),
+    //.qsfp_led_stat_g(qsfp_led_stat_g),
+    .qsfp_led_stat_y(qsfp_led_stat_y),
 
     /*
      * I2C
@@ -2111,57 +1572,57 @@ core_inst (
     .qsfp_drp_do(qsfp_drp_do),
     .qsfp_drp_rdy(qsfp_drp_rdy),
 
-    .qsfp_modprsl(2'b00),
+    .qsfp_modprsl(1'b0),
     .qsfp_modsell(),
     .qsfp_resetl(),
-    .qsfp_intl(2'b11),
+    .qsfp_intl(1'b1),
     .qsfp_lpmode(),
 
     /*
      * DDR
      */
-    .ddr_clk(ddr_clk),
-    .ddr_rst(ddr_rst),
+    .ddr_clk(0),
+    .ddr_rst(0),
 
-    .m_axi_ddr_awid(m_axi_ddr_awid),
-    .m_axi_ddr_awaddr(m_axi_ddr_awaddr),
-    .m_axi_ddr_awlen(m_axi_ddr_awlen),
-    .m_axi_ddr_awsize(m_axi_ddr_awsize),
-    .m_axi_ddr_awburst(m_axi_ddr_awburst),
-    .m_axi_ddr_awlock(m_axi_ddr_awlock),
-    .m_axi_ddr_awcache(m_axi_ddr_awcache),
-    .m_axi_ddr_awprot(m_axi_ddr_awprot),
-    .m_axi_ddr_awqos(m_axi_ddr_awqos),
-    .m_axi_ddr_awvalid(m_axi_ddr_awvalid),
-    .m_axi_ddr_awready(m_axi_ddr_awready),
-    .m_axi_ddr_wdata(m_axi_ddr_wdata),
-    .m_axi_ddr_wstrb(m_axi_ddr_wstrb),
-    .m_axi_ddr_wlast(m_axi_ddr_wlast),
-    .m_axi_ddr_wvalid(m_axi_ddr_wvalid),
-    .m_axi_ddr_wready(m_axi_ddr_wready),
-    .m_axi_ddr_bid(m_axi_ddr_bid),
-    .m_axi_ddr_bresp(m_axi_ddr_bresp),
-    .m_axi_ddr_bvalid(m_axi_ddr_bvalid),
-    .m_axi_ddr_bready(m_axi_ddr_bready),
-    .m_axi_ddr_arid(m_axi_ddr_arid),
-    .m_axi_ddr_araddr(m_axi_ddr_araddr),
-    .m_axi_ddr_arlen(m_axi_ddr_arlen),
-    .m_axi_ddr_arsize(m_axi_ddr_arsize),
-    .m_axi_ddr_arburst(m_axi_ddr_arburst),
-    .m_axi_ddr_arlock(m_axi_ddr_arlock),
-    .m_axi_ddr_arcache(m_axi_ddr_arcache),
-    .m_axi_ddr_arprot(m_axi_ddr_arprot),
-    .m_axi_ddr_arqos(m_axi_ddr_arqos),
-    .m_axi_ddr_arvalid(m_axi_ddr_arvalid),
-    .m_axi_ddr_arready(m_axi_ddr_arready),
-    .m_axi_ddr_rid(m_axi_ddr_rid),
-    .m_axi_ddr_rdata(m_axi_ddr_rdata),
-    .m_axi_ddr_rresp(m_axi_ddr_rresp),
-    .m_axi_ddr_rlast(m_axi_ddr_rlast),
-    .m_axi_ddr_rvalid(m_axi_ddr_rvalid),
-    .m_axi_ddr_rready(m_axi_ddr_rready),
+    .m_axi_ddr_awid(),
+    .m_axi_ddr_awaddr(),
+    .m_axi_ddr_awlen(),
+    .m_axi_ddr_awsize(),
+    .m_axi_ddr_awburst(),
+    .m_axi_ddr_awlock(),
+    .m_axi_ddr_awcache(),
+    .m_axi_ddr_awprot(),
+    .m_axi_ddr_awqos(),
+    .m_axi_ddr_awvalid(),
+    .m_axi_ddr_awready(0),
+    .m_axi_ddr_wdata(),
+    .m_axi_ddr_wstrb(),
+    .m_axi_ddr_wlast(),
+    .m_axi_ddr_wvalid(),
+    .m_axi_ddr_wready(0),
+    .m_axi_ddr_bid(0),
+    .m_axi_ddr_bresp(0),
+    .m_axi_ddr_bvalid(0),
+    .m_axi_ddr_bready(),
+    .m_axi_ddr_arid(),
+    .m_axi_ddr_araddr(),
+    .m_axi_ddr_arlen(),
+    .m_axi_ddr_arsize(),
+    .m_axi_ddr_arburst(),
+    .m_axi_ddr_arlock(),
+    .m_axi_ddr_arcache(),
+    .m_axi_ddr_arprot(),
+    .m_axi_ddr_arqos(),
+    .m_axi_ddr_arvalid(),
+    .m_axi_ddr_arready(0),
+    .m_axi_ddr_rid(0),
+    .m_axi_ddr_rdata(0),
+    .m_axi_ddr_rresp(0),
+    .m_axi_ddr_rlast(0),
+    .m_axi_ddr_rvalid(0),
+    .m_axi_ddr_rready(),
 
-    .ddr_status(ddr_status),
+    .ddr_status(0),
 
     /*
      * HBM

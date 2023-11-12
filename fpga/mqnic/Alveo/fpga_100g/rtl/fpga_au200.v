@@ -2147,6 +2147,9 @@ core_inst (
      */
     .sw(sw_int),
     .led(led_int),
+    .qsfp_led_act(),
+    .qsfp_led_stat_g(),
+    .qsfp_led_stat_y(),
 
     /*
      * I2C

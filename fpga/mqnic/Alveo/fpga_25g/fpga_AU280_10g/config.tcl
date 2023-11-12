@@ -55,6 +55,7 @@ dict set params GIT_HASH  "32'h${git_hash}"
 dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
 
 # Board configuration
+dict set params CMS_ENABLE "1"
 dict set params TDMA_BER_ENABLE "0"
 
 # Transceiver configuration

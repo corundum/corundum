@@ -7,7 +7,8 @@ FPGA_TOP = fpga
 FPGA_ARCH = virtexuplus
 
 # Files for synthesis
-SYN_FILES = rtl/fpga.v
+SYN_FILES = rtl/fpga_au280.v
+SYN_FILES += rtl/fpga_hbm.v
 SYN_FILES += rtl/fpga_core.v
 SYN_FILES += rtl/sync_signal.v
 SYN_FILES += rtl/common/mqnic_core_pcie_us.v
@@ -133,8 +134,8 @@ SYN_FILES += lib/pcie/rtl/pcie_us_cfg.v
 SYN_FILES += lib/pcie/rtl/pulse_merge.v
 
 # XDC files
-XDC_FILES = fpga.xdc
-XDC_FILES += placement.xdc
+XDC_FILES = fpga_au280.xdc
+XDC_FILES += placement_au280.xdc
 XDC_FILES += boot.xdc
 XDC_FILES += lib/axi/syn/vivado/axil_cdc.tcl
 XDC_FILES += lib/axis/syn/vivado/axis_async_fifo.tcl
@@ -153,7 +154,7 @@ IP_TCL_FILES = ip/pcie4c_uscale_plus_0.tcl
 IP_TCL_FILES += ip/eth_xcvr_gty.tcl
 IP_TCL_FILES += ip/cms.tcl
 #IP_TCL_FILES += ip/hbm_0.tcl
-#IP_TCL_FILES += ip/ddr4_0.tcl
+#IP_TCL_FILES += ip/ddr4_0_au280.tcl
 
 # Configuration
 CONFIG_TCL_FILES = ./config.tcl

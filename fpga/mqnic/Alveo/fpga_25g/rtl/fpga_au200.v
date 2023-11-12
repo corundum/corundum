@@ -2099,6 +2099,7 @@ fpga_core #(
     .AXI_DDR_ID_WIDTH(AXI_DDR_ID_WIDTH),
     .AXI_DDR_MAX_BURST_LEN(AXI_DDR_MAX_BURST_LEN),
     .AXI_DDR_NARROW_BURST(AXI_DDR_NARROW_BURST),
+    .HBM_ENABLE(0),
 
     // Application block configuration
     .APP_ID(APP_ID),
@@ -2349,6 +2350,52 @@ core_inst (
     .m_axi_ddr_rready(m_axi_ddr_rready),
 
     .ddr_status(ddr_status),
+
+    /*
+     * HBM
+     */
+    .hbm_clk(0),
+    .hbm_rst(0),
+
+    .m_axi_hbm_awid(),
+    .m_axi_hbm_awaddr(),
+    .m_axi_hbm_awlen(),
+    .m_axi_hbm_awsize(),
+    .m_axi_hbm_awburst(),
+    .m_axi_hbm_awlock(),
+    .m_axi_hbm_awcache(),
+    .m_axi_hbm_awprot(),
+    .m_axi_hbm_awqos(),
+    .m_axi_hbm_awvalid(),
+    .m_axi_hbm_awready(0),
+    .m_axi_hbm_wdata(),
+    .m_axi_hbm_wstrb(),
+    .m_axi_hbm_wlast(),
+    .m_axi_hbm_wvalid(),
+    .m_axi_hbm_wready(0),
+    .m_axi_hbm_bid(0),
+    .m_axi_hbm_bresp(0),
+    .m_axi_hbm_bvalid(0),
+    .m_axi_hbm_bready(),
+    .m_axi_hbm_arid(),
+    .m_axi_hbm_araddr(),
+    .m_axi_hbm_arlen(),
+    .m_axi_hbm_arsize(),
+    .m_axi_hbm_arburst(),
+    .m_axi_hbm_arlock(),
+    .m_axi_hbm_arcache(),
+    .m_axi_hbm_arprot(),
+    .m_axi_hbm_arqos(),
+    .m_axi_hbm_arvalid(),
+    .m_axi_hbm_arready(0),
+    .m_axi_hbm_rid(0),
+    .m_axi_hbm_rdata(0),
+    .m_axi_hbm_rresp(0),
+    .m_axi_hbm_rlast(0),
+    .m_axi_hbm_rvalid(0),
+    .m_axi_hbm_rready(),
+
+    .hbm_status(0),
 
     /*
      * QSPI flash

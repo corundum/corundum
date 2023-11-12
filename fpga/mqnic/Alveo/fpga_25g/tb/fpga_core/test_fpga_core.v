@@ -123,6 +123,14 @@ module test_fpga_core #
     parameter AXI_DDR_ID_WIDTH = 8,
     parameter AXI_DDR_MAX_BURST_LEN = 256,
     parameter AXI_DDR_NARROW_BURST = 0,
+    parameter HBM_CH = 32,
+    parameter HBM_ENABLE = 0,
+    parameter HBM_GROUP_SIZE = HBM_CH,
+    parameter AXI_HBM_DATA_WIDTH = 256,
+    parameter AXI_HBM_ADDR_WIDTH = 33,
+    parameter AXI_HBM_STRB_WIDTH = (AXI_HBM_DATA_WIDTH/8),
+    parameter AXI_HBM_ID_WIDTH = 6,
+    parameter AXI_HBM_MAX_BURST_LEN = 16,
 
     // Application block configuration
     parameter APP_ID = 32'h00000000,
@@ -375,6 +383,52 @@ module test_fpga_core #
     input  wire [DDR_CH-1:0]                     ddr_status,
 
     /*
+     * HBM
+     */
+    input  wire [HBM_CH-1:0]                     hbm_clk,
+    input  wire [HBM_CH-1:0]                     hbm_rst,
+
+    output wire [HBM_CH*AXI_HBM_ID_WIDTH-1:0]    m_axi_hbm_awid,
+    output wire [HBM_CH*AXI_HBM_ADDR_WIDTH-1:0]  m_axi_hbm_awaddr,
+    output wire [HBM_CH*8-1:0]                   m_axi_hbm_awlen,
+    output wire [HBM_CH*3-1:0]                   m_axi_hbm_awsize,
+    output wire [HBM_CH*2-1:0]                   m_axi_hbm_awburst,
+    output wire [HBM_CH-1:0]                     m_axi_hbm_awlock,
+    output wire [HBM_CH*4-1:0]                   m_axi_hbm_awcache,
+    output wire [HBM_CH*3-1:0]                   m_axi_hbm_awprot,
+    output wire [HBM_CH*4-1:0]                   m_axi_hbm_awqos,
+    output wire [HBM_CH-1:0]                     m_axi_hbm_awvalid,
+    input  wire [HBM_CH-1:0]                     m_axi_hbm_awready,
+    output wire [HBM_CH*AXI_HBM_DATA_WIDTH-1:0]  m_axi_hbm_wdata,
+    output wire [HBM_CH*AXI_HBM_STRB_WIDTH-1:0]  m_axi_hbm_wstrb,
+    output wire [HBM_CH-1:0]                     m_axi_hbm_wlast,
+    output wire [HBM_CH-1:0]                     m_axi_hbm_wvalid,
+    input  wire [HBM_CH-1:0]                     m_axi_hbm_wready,
+    input  wire [HBM_CH*AXI_HBM_ID_WIDTH-1:0]    m_axi_hbm_bid,
+    input  wire [HBM_CH*2-1:0]                   m_axi_hbm_bresp,
+    input  wire [HBM_CH-1:0]                     m_axi_hbm_bvalid,
+    output wire [HBM_CH-1:0]                     m_axi_hbm_bready,
+    output wire [HBM_CH*AXI_HBM_ID_WIDTH-1:0]    m_axi_hbm_arid,
+    output wire [HBM_CH*AXI_HBM_ADDR_WIDTH-1:0]  m_axi_hbm_araddr,
+    output wire [HBM_CH*8-1:0]                   m_axi_hbm_arlen,
+    output wire [HBM_CH*3-1:0]                   m_axi_hbm_arsize,
+    output wire [HBM_CH*2-1:0]                   m_axi_hbm_arburst,
+    output wire [HBM_CH-1:0]                     m_axi_hbm_arlock,
+    output wire [HBM_CH*4-1:0]                   m_axi_hbm_arcache,
+    output wire [HBM_CH*3-1:0]                   m_axi_hbm_arprot,
+    output wire [HBM_CH*4-1:0]                   m_axi_hbm_arqos,
+    output wire [HBM_CH-1:0]                     m_axi_hbm_arvalid,
+    input  wire [HBM_CH-1:0]                     m_axi_hbm_arready,
+    input  wire [HBM_CH*AXI_HBM_ID_WIDTH-1:0]    m_axi_hbm_rid,
+    input  wire [HBM_CH*AXI_HBM_DATA_WIDTH-1:0]  m_axi_hbm_rdata,
+    input  wire [HBM_CH*2-1:0]                   m_axi_hbm_rresp,
+    input  wire [HBM_CH-1:0]                     m_axi_hbm_rlast,
+    input  wire [HBM_CH-1:0]                     m_axi_hbm_rvalid,
+    output wire [HBM_CH-1:0]                     m_axi_hbm_rready,
+
+    input  wire [HBM_CH-1:0]                     hbm_status,
+
+    /*
      * QSPI flash
      */
     output wire                               fpga_boot,
@@ -550,6 +604,14 @@ fpga_core #(
     .AXI_DDR_ID_WIDTH(AXI_DDR_ID_WIDTH),
     .AXI_DDR_MAX_BURST_LEN(AXI_DDR_MAX_BURST_LEN),
     .AXI_DDR_NARROW_BURST(AXI_DDR_NARROW_BURST),
+    .HBM_CH(HBM_CH),
+    .HBM_ENABLE(HBM_ENABLE),
+    .HBM_GROUP_SIZE(HBM_GROUP_SIZE),
+    .AXI_HBM_DATA_WIDTH(AXI_HBM_DATA_WIDTH),
+    .AXI_HBM_ADDR_WIDTH(AXI_HBM_ADDR_WIDTH),
+    .AXI_HBM_STRB_WIDTH(AXI_HBM_STRB_WIDTH),
+    .AXI_HBM_ID_WIDTH(AXI_HBM_ID_WIDTH),
+    .AXI_HBM_MAX_BURST_LEN(AXI_HBM_MAX_BURST_LEN),
 
     // Application block configuration
     .APP_ID(APP_ID),
@@ -800,6 +862,52 @@ uut (
     .m_axi_ddr_rready(m_axi_ddr_rready),
 
     .ddr_status(ddr_status),
+
+    /*
+     * HBM
+     */
+    .hbm_clk(hbm_clk),
+    .hbm_rst(hbm_rst),
+
+    .m_axi_hbm_awid(m_axi_hbm_awid),
+    .m_axi_hbm_awaddr(m_axi_hbm_awaddr),
+    .m_axi_hbm_awlen(m_axi_hbm_awlen),
+    .m_axi_hbm_awsize(m_axi_hbm_awsize),
+    .m_axi_hbm_awburst(m_axi_hbm_awburst),
+    .m_axi_hbm_awlock(m_axi_hbm_awlock),
+    .m_axi_hbm_awcache(m_axi_hbm_awcache),
+    .m_axi_hbm_awprot(m_axi_hbm_awprot),
+    .m_axi_hbm_awqos(m_axi_hbm_awqos),
+    .m_axi_hbm_awvalid(m_axi_hbm_awvalid),
+    .m_axi_hbm_awready(m_axi_hbm_awready),
+    .m_axi_hbm_wdata(m_axi_hbm_wdata),
+    .m_axi_hbm_wstrb(m_axi_hbm_wstrb),
+    .m_axi_hbm_wlast(m_axi_hbm_wlast),
+    .m_axi_hbm_wvalid(m_axi_hbm_wvalid),
+    .m_axi_hbm_wready(m_axi_hbm_wready),
+    .m_axi_hbm_bid(m_axi_hbm_bid),
+    .m_axi_hbm_bresp(m_axi_hbm_bresp),
+    .m_axi_hbm_bvalid(m_axi_hbm_bvalid),
+    .m_axi_hbm_bready(m_axi_hbm_bready),
+    .m_axi_hbm_arid(m_axi_hbm_arid),
+    .m_axi_hbm_araddr(m_axi_hbm_araddr),
+    .m_axi_hbm_arlen(m_axi_hbm_arlen),
+    .m_axi_hbm_arsize(m_axi_hbm_arsize),
+    .m_axi_hbm_arburst(m_axi_hbm_arburst),
+    .m_axi_hbm_arlock(m_axi_hbm_arlock),
+    .m_axi_hbm_arcache(m_axi_hbm_arcache),
+    .m_axi_hbm_arprot(m_axi_hbm_arprot),
+    .m_axi_hbm_arqos(m_axi_hbm_arqos),
+    .m_axi_hbm_arvalid(m_axi_hbm_arvalid),
+    .m_axi_hbm_arready(m_axi_hbm_arready),
+    .m_axi_hbm_rid(m_axi_hbm_rid),
+    .m_axi_hbm_rdata(m_axi_hbm_rdata),
+    .m_axi_hbm_rresp(m_axi_hbm_rresp),
+    .m_axi_hbm_rlast(m_axi_hbm_rlast),
+    .m_axi_hbm_rvalid(m_axi_hbm_rvalid),
+    .m_axi_hbm_rready(m_axi_hbm_rready),
+
+    .hbm_status(hbm_status),
 
     /*
      * QSPI flash

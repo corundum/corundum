@@ -998,7 +998,11 @@ int main(int argc, char *argv[])
         {
             // read bit file
             struct bitfile *bf;
+            char fpga_part[128];
+            char *ptr1, *ptr2;
+            int match = 0;
 
+            printf("Reading bit file \"%s\"...\n", write_file_name);
             bf = bitfile_create_from_file(write_file_name);
 
             if (!bf)
@@ -1009,7 +1013,29 @@ int main(int argc, char *argv[])
                 goto err;
             }
 
-            if (stristr(bf->part, dev->fpga_part) != bf->part)
+            printf("Part: %s\n", bf->part);
+            printf("Date: %s %s\n", bf->date, bf->time);
+
+            // check device type
+            // dev->fpga_part may contain multiple possible device types, separated by underscores
+            strcpy(fpga_part, dev->fpga_part);
+            ptr1 = ptr2 = fpga_part;
+
+            while (ptr2)
+            {
+                ptr2 = strchr(ptr1, '_');
+
+                if (ptr2)
+                    *ptr2 = 0;
+
+                if (stristr(bf->part, ptr1) == bf->part)
+                    match = 1;
+
+                if (ptr2)
+                    ptr1 = ptr2+1;
+            }
+
+            if (!match)
             {
                 fprintf(stderr, "Device mismatch (target is %s, file is %s)\n", dev->fpga_part, bf->part);
                 bitfile_close(bf);
@@ -1018,6 +1044,7 @@ int main(int argc, char *argv[])
                 goto err;
             }
 
+            // check for available space
             if (bf->data_len > segment_size)
             {
                 fprintf(stderr, "File larger than segment (%ld > %ld)\n", bf->data_len, segment_size);

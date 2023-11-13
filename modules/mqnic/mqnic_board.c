@@ -905,6 +905,7 @@ static int mqnic_alveo_board_init(struct mqnic_dev *mqnic)
 
 		break;
 	case MQNIC_BOARD_ID_AU50:
+	case MQNIC_BOARD_ID_AU55:
 	case MQNIC_BOARD_ID_AU280:
 		// no I2C interfaces
 
@@ -1114,6 +1115,7 @@ int mqnic_board_init(struct mqnic_dev *mqnic)
 {
 	switch (mqnic->board_id) {
 	case MQNIC_BOARD_ID_AU50:
+	case MQNIC_BOARD_ID_AU55:
 	case MQNIC_BOARD_ID_AU200:
 	case MQNIC_BOARD_ID_AU250:
 	case MQNIC_BOARD_ID_AU280:

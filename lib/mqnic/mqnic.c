@@ -405,6 +405,10 @@ open:
 
     if (rb) {
         dev->app_id = mqnic_reg_read32(rb->regs, MQNIC_RB_APP_INFO_REG_ID);
+
+        if (!dev->app_regs) {
+            fprintf(stderr, "Warning: application section present, but application BAR not mapped\n");
+        }
     }
 
     mqnic_stats_init(dev);

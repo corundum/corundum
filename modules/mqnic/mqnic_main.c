@@ -309,6 +309,10 @@ static int mqnic_common_probe(struct mqnic_dev *mqnic)
 	if (rb) {
 		mqnic->app_id = ioread32(rb->regs + MQNIC_RB_APP_INFO_REG_ID);
 		dev_info(dev, "Application ID: 0x%08x", mqnic->app_id);
+
+		if (!mqnic->app_hw_addr) {
+			dev_warn(dev, "Warning: application section present, but application BAR not mapped");
+		}
 	}
 
 	mqnic_clk_info_init(mqnic);

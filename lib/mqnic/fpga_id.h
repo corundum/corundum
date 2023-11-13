@@ -134,6 +134,7 @@
 // Kria SoM (Zynq UltraScale+)
 #define FPGA_ID_XCK26       0x4A49093
 // Alveo (Virtex UltraScale+)
+#define FPGA_ID_XCU26          0x4AD5093
 #define FPGA_ID_XCU50_XCU55N   0x4B77093
 #define FPGA_ID_XCU200         0x4B37093
 #define FPGA_ID_XCU250         0x4B57093

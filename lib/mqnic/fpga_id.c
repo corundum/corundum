@@ -134,6 +134,7 @@ const struct fpga_id fpga_id_list[] =
     // Kria SoM (Zynq UltraScale+)
     {FPGA_ID_XCK26,       FPGA_ID_MASK_NOVER, "XCK26"},
     // Alveo (Virtex UltraScale+)
+    {FPGA_ID_XCU26,          FPGA_ID_MASK_NOVER, "XCU26"},
     {FPGA_ID_XCU50_XCU55N,   FPGA_ID_MASK_NOVER, "XCU50_XCU55N"},
     {FPGA_ID_XCU200,         FPGA_ID_MASK_NOVER, "XCU200"},
     {FPGA_ID_XCU250,         FPGA_ID_MASK_NOVER, "XCU250"},

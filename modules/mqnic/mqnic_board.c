@@ -904,6 +904,7 @@ static int mqnic_alveo_board_init(struct mqnic_dev *mqnic)
 		mqnic->mod_i2c_client_count = 2;
 
 		break;
+	case MQNIC_BOARD_ID_AU45:
 	case MQNIC_BOARD_ID_AU50:
 	case MQNIC_BOARD_ID_AU55:
 	case MQNIC_BOARD_ID_AU280:
@@ -1114,6 +1115,7 @@ static struct mqnic_board_ops gecko_board_ops = {
 int mqnic_board_init(struct mqnic_dev *mqnic)
 {
 	switch (mqnic->board_id) {
+	case MQNIC_BOARD_ID_AU45:
 	case MQNIC_BOARD_ID_AU50:
 	case MQNIC_BOARD_ID_AU55:
 	case MQNIC_BOARD_ID_AU200:

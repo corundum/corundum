@@ -48,6 +48,10 @@ module test_fpga_core #
     parameter CH_CNT = QSFP_CNT*4,
     parameter CMS_ENABLE = 1,
     parameter TDMA_BER_ENABLE = 0,
+    parameter FLASH_SEG_COUNT = 2,
+    parameter FLASH_SEG_DEFAULT = 1,
+    parameter FLASH_SEG_FALLBACK = 0,
+    parameter FLASH_SEG0_SIZE = 32'h01002000,
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -532,6 +536,10 @@ fpga_core #(
     .CH_CNT(CH_CNT),
     .CMS_ENABLE(CMS_ENABLE),
     .TDMA_BER_ENABLE(TDMA_BER_ENABLE),
+    .FLASH_SEG_COUNT(2),
+    .FLASH_SEG_DEFAULT(1),
+    .FLASH_SEG_FALLBACK(0),
+    .FLASH_SEG0_SIZE(32'h01002000),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),

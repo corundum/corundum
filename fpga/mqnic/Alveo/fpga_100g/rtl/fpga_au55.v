@@ -1415,6 +1415,10 @@ fpga_core #(
     .QSFP_CNT(QSFP_CNT),
     .CH_CNT(QSFP_CNT*4),
     .CMS_ENABLE(CMS_ENABLE),
+    .FLASH_SEG_COUNT(2),
+    .FLASH_SEG_DEFAULT(1),
+    .FLASH_SEG_FALLBACK(0),
+    .FLASH_SEG0_SIZE(32'h01002000),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),

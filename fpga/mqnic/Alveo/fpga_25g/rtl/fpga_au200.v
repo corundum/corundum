@@ -2026,6 +2026,10 @@ fpga_core #(
     .CH_CNT(CH_CNT),
     .CMS_ENABLE(CMS_ENABLE),
     .TDMA_BER_ENABLE(TDMA_BER_ENABLE),
+    .FLASH_SEG_COUNT(2),
+    .FLASH_SEG_DEFAULT(1),
+    .FLASH_SEG_FALLBACK(0),
+    .FLASH_SEG0_SIZE(32'h01002000),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),

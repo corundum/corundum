@@ -29,6 +29,10 @@ module fpga_core #
     parameter CH_CNT = QSFP_CNT*4,
     parameter CMS_ENABLE = 1,
     parameter TDMA_BER_ENABLE = 0,
+    parameter FLASH_SEG_COUNT = 2,
+    parameter FLASH_SEG_DEFAULT = 1,
+    parameter FLASH_SEG_FALLBACK = 0,
+    parameter FLASH_SEG0_SIZE = 32'h01002000,
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -723,10 +727,10 @@ always @(posedge clk_250mhz) begin
             RBB+8'h28: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h40;       // SPI flash ctrl: Next header
             RBB+8'h2C: begin
                 // SPI flash ctrl: format
-                ctrl_reg_rd_data_reg[3:0]   <= 2;                   // configuration (two segments)
-                ctrl_reg_rd_data_reg[7:4]   <= 1;                   // default segment
-                ctrl_reg_rd_data_reg[11:8]  <= 0;                   // fallback segment
-                ctrl_reg_rd_data_reg[31:12] <= 32'h01002000 >> 12;  // first segment size (Alveo default)
+                ctrl_reg_rd_data_reg[3:0]   <= FLASH_SEG_COUNT;     // configuration
+                ctrl_reg_rd_data_reg[7:4]   <= FLASH_SEG_DEFAULT;   // default segment
+                ctrl_reg_rd_data_reg[11:8]  <= FLASH_SEG_FALLBACK;  // fallback segment
+                ctrl_reg_rd_data_reg[31:12] <= FLASH_SEG0_SIZE;     // first segment size
             end
             RBB+8'h30: begin
                 // SPI flash ctrl: control 0

@@ -28,7 +28,7 @@ if { ! [regsub {^.*(\d+\.\d+\.\d+([\.-]\d+)?).*$} $git_tag {\1} tag_ver ] } {
 puts "Tag version: ${tag_ver}"
 
 # FW and board IDs
-set fpga_id [expr 0x0341A0DD]
+set fpga_id [expr 0xC341A0DD]
 set fw_id [expr 0x00000000]
 set fw_ver $tag_ver
 set board_vendor_id [expr 0x1172]
@@ -52,6 +52,10 @@ dict set params BOARD_VER [format "32'h%02x%02x%02x%02x" {*}[split $board_ver .-
 dict set params BUILD_DATE  "32'd${build_date}"
 dict set params GIT_HASH  "32'h${git_hash}"
 dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
+
+# Board configuration
+dict set params MAC_100G "0"
+dict set params MAC_RSFEC "0"
 
 # Structural configuration
 dict set params IF_COUNT "2"
@@ -95,7 +99,7 @@ dict set params TX_SCHEDULER_PIPELINE [dict get $params TX_QUEUE_PIPELINE]
 dict set params TDMA_INDEX_WIDTH "6"
 
 # Interface configuration
-dict set params PTP_TS_ENABLE "0"
+dict set params PTP_TS_ENABLE "1"
 dict set params TX_CPL_FIFO_DEPTH "32"
 dict set params TX_CHECKSUM_ENABLE "1"
 dict set params RX_HASH_ENABLE "1"
@@ -103,11 +107,11 @@ dict set params RX_CHECKSUM_ENABLE "1"
 dict set params PFC_ENABLE "1"
 dict set params LFC_ENABLE [dict get $params PFC_ENABLE]
 dict set params TX_FIFO_DEPTH "32768"
-dict set params RX_FIFO_DEPTH "131072"
+dict set params RX_FIFO_DEPTH "65536"
 dict set params MAX_TX_SIZE "9214"
 dict set params MAX_RX_SIZE "9214"
-dict set params TX_RAM_SIZE "131072"
-dict set params RX_RAM_SIZE "131072"
+dict set params TX_RAM_SIZE "32768"
+dict set params RX_RAM_SIZE "32768"
 
 # Application block configuration
 dict set params APP_ID "32'h00000000"
@@ -139,6 +143,7 @@ dict set params AXIL_APP_CTRL_DATA_WIDTH [dict get $params AXIL_CTRL_DATA_WIDTH]
 dict set params AXIL_APP_CTRL_ADDR_WIDTH "24"
 
 # Ethernet interface configuration
+dict set params AXIS_ETH_SYNC_DATA_WIDTH_DOUBLE "0"
 dict set params AXIS_ETH_TX_PIPELINE "0"
 dict set params AXIS_ETH_TX_FIFO_PIPELINE "2"
 dict set params AXIS_ETH_TX_TS_PIPELINE "0"

@@ -53,6 +53,9 @@ dict set params BUILD_DATE  "32'd${build_date}"
 dict set params GIT_HASH  "32'h${git_hash}"
 dict set params RELEASE_INFO  [format "32'h%08x" $release_info]
 
+# Board configuration
+dict set params MAC_100G "1"
+
 # Structural configuration
 dict set params IF_COUNT "2"
 dict set params PORTS_PER_IF "1"
@@ -110,8 +113,8 @@ dict set params TX_RAM_SIZE "131072"
 dict set params RX_RAM_SIZE "131072"
 
 # Application block configuration
-dict set params APP_ID "32'h12348001"
-dict set params APP_ENABLE "1"
+dict set params APP_ID "32'h00000000"
+dict set params APP_ENABLE "0"
 dict set params APP_CTRL_ENABLE "1"
 dict set params APP_DMA_ENABLE "1"
 dict set params APP_AXIS_DIRECT_ENABLE "1"

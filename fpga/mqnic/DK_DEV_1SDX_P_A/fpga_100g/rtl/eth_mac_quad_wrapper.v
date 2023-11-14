@@ -33,6 +33,7 @@ THE SOFTWARE.
  */
 module eth_mac_quad_wrapper #
 (
+    parameter N_CH = 4,
     parameter PTP_TS_WIDTH = 96,
     parameter PTP_TAG_WIDTH = 8,
     parameter DATA_WIDTH = 64,
@@ -42,174 +43,55 @@ module eth_mac_quad_wrapper #
     parameter MAC_RSFEC = 0
 )
 (
-    input  wire                      ctrl_clk,
-    input  wire                      ctrl_rst,
+    input  wire                           ctrl_clk,
+    input  wire                           ctrl_rst,
 
-    output wire [3:0]                tx_serial_data_p,
-    output wire [3:0]                tx_serial_data_n,
-    input  wire [3:0]                rx_serial_data_p,
-    input  wire [3:0]                rx_serial_data_n,
-    input  wire                      ref_clk,
-    input  wire                      ptp_sample_clk,
+    output wire [3:0]                     tx_serial_data_p,
+    output wire [3:0]                     tx_serial_data_n,
+    input  wire [3:0]                     rx_serial_data_p,
+    input  wire [3:0]                     rx_serial_data_n,
+    input  wire                           ref_clk,
+    input  wire                           ptp_sample_clk,
 
-    output wire                      mac_1_tx_clk,
-    output wire                      mac_1_tx_rst,
+    output wire [N_CH-1:0]                mac_tx_clk,
+    output wire [N_CH-1:0]                mac_tx_rst,
 
-    output wire                      mac_1_tx_ptp_clk,
-    output wire                      mac_1_tx_ptp_rst,
-    input  wire [PTP_TS_WIDTH-1:0]   mac_1_tx_ptp_time,
+    output wire [N_CH-1:0]                mac_tx_ptp_clk,
+    output wire [N_CH-1:0]                mac_tx_ptp_rst,
+    input  wire [N_CH*PTP_TS_WIDTH-1:0]   mac_tx_ptp_time,
 
-    output wire [PTP_TS_WIDTH-1:0]   mac_1_tx_ptp_ts,
-    output wire [PTP_TAG_WIDTH-1:0]  mac_1_tx_ptp_ts_tag,
-    output wire                      mac_1_tx_ptp_ts_valid,
+    output wire [N_CH*PTP_TS_WIDTH-1:0]   mac_tx_ptp_ts,
+    output wire [N_CH*PTP_TAG_WIDTH-1:0]  mac_tx_ptp_ts_tag,
+    output wire [N_CH-1:0]                mac_tx_ptp_ts_valid,
 
-    input  wire [DATA_WIDTH-1:0]     mac_1_tx_axis_tdata,
-    input  wire [KEEP_WIDTH-1:0]     mac_1_tx_axis_tkeep,
-    input  wire                      mac_1_tx_axis_tvalid,
-    output wire                      mac_1_tx_axis_tready,
-    input  wire                      mac_1_tx_axis_tlast,
-    input  wire [TX_USER_WIDTH-1:0]  mac_1_tx_axis_tuser,
+    input  wire [N_CH*DATA_WIDTH-1:0]     mac_tx_axis_tdata,
+    input  wire [N_CH*KEEP_WIDTH-1:0]     mac_tx_axis_tkeep,
+    input  wire [N_CH-1:0]                mac_tx_axis_tvalid,
+    output wire [N_CH-1:0]                mac_tx_axis_tready,
+    input  wire [N_CH-1:0]                mac_tx_axis_tlast,
+    input  wire [N_CH*TX_USER_WIDTH-1:0]  mac_tx_axis_tuser,
 
-    output wire                      mac_1_tx_status,
-    input  wire                      mac_1_tx_lfc_req,
-    input  wire [7:0]                mac_1_tx_pfc_req,
+    output wire [N_CH*1-1:0]              mac_tx_status,
+    input  wire [N_CH*1-1:0]              mac_tx_lfc_req,
+    input  wire [N_CH*8-1:0]              mac_tx_pfc_req,
 
-    output wire                      mac_1_rx_clk,
-    output wire                      mac_1_rx_rst,
+    output wire [N_CH-1:0]                mac_rx_clk,
+    output wire [N_CH-1:0]                mac_rx_rst,
 
-    output wire                      mac_1_rx_ptp_clk,
-    output wire                      mac_1_rx_ptp_rst,
-    input  wire [PTP_TS_WIDTH-1:0]   mac_1_rx_ptp_time,
+    output wire [N_CH-1:0]                mac_rx_ptp_clk,
+    output wire [N_CH-1:0]                mac_rx_ptp_rst,
+    input  wire [N_CH*PTP_TS_WIDTH-1:0]   mac_rx_ptp_time,
 
-    output wire [DATA_WIDTH-1:0]     mac_1_rx_axis_tdata,
-    output wire [KEEP_WIDTH-1:0]     mac_1_rx_axis_tkeep,
-    output wire                      mac_1_rx_axis_tvalid,
-    output wire                      mac_1_rx_axis_tlast,
-    output wire [RX_USER_WIDTH-1:0]  mac_1_rx_axis_tuser,
+    output wire [N_CH*DATA_WIDTH-1:0]     mac_rx_axis_tdata,
+    output wire [N_CH*KEEP_WIDTH-1:0]     mac_rx_axis_tkeep,
+    output wire [N_CH-1:0]                mac_rx_axis_tvalid,
+    output wire [N_CH-1:0]                mac_rx_axis_tlast,
+    output wire [N_CH*RX_USER_WIDTH-1:0]  mac_rx_axis_tuser,
 
-    output wire                      mac_1_rx_status,
-    output wire                      mac_1_rx_lfc_req,
-    output wire [7:0]                mac_1_rx_pfc_req,
-
-    output wire                      mac_2_tx_clk,
-    output wire                      mac_2_tx_rst,
-
-    output wire                      mac_2_tx_ptp_clk,
-    output wire                      mac_2_tx_ptp_rst,
-    input  wire [PTP_TS_WIDTH-1:0]   mac_2_tx_ptp_time,
-
-    output wire [PTP_TS_WIDTH-1:0]   mac_2_tx_ptp_ts,
-    output wire [PTP_TAG_WIDTH-1:0]  mac_2_tx_ptp_ts_tag,
-    output wire                      mac_2_tx_ptp_ts_valid,
-
-    input  wire [DATA_WIDTH-1:0]     mac_2_tx_axis_tdata,
-    input  wire [KEEP_WIDTH-1:0]     mac_2_tx_axis_tkeep,
-    input  wire                      mac_2_tx_axis_tvalid,
-    output wire                      mac_2_tx_axis_tready,
-    input  wire                      mac_2_tx_axis_tlast,
-    input  wire [TX_USER_WIDTH-1:0]  mac_2_tx_axis_tuser,
-
-    output wire                      mac_2_tx_status,
-    input  wire                      mac_2_tx_lfc_req,
-    input  wire [7:0]                mac_2_tx_pfc_req,
-
-    output wire                      mac_2_rx_clk,
-    output wire                      mac_2_rx_rst,
-
-    output wire                      mac_2_rx_ptp_clk,
-    output wire                      mac_2_rx_ptp_rst,
-    input  wire [PTP_TS_WIDTH-1:0]   mac_2_rx_ptp_time,
-
-    output wire [DATA_WIDTH-1:0]     mac_2_rx_axis_tdata,
-    output wire [KEEP_WIDTH-1:0]     mac_2_rx_axis_tkeep,
-    output wire                      mac_2_rx_axis_tvalid,
-    output wire                      mac_2_rx_axis_tlast,
-    output wire [RX_USER_WIDTH-1:0]  mac_2_rx_axis_tuser,
-
-    output wire                      mac_2_rx_status,
-    output wire                      mac_2_rx_lfc_req,
-    output wire [7:0]                mac_2_rx_pfc_req,
-
-    output wire                      mac_3_tx_clk,
-    output wire                      mac_3_tx_rst,
-
-    output wire                      mac_3_tx_ptp_clk,
-    output wire                      mac_3_tx_ptp_rst,
-    input  wire [PTP_TS_WIDTH-1:0]   mac_3_tx_ptp_time,
-
-    output wire [PTP_TS_WIDTH-1:0]   mac_3_tx_ptp_ts,
-    output wire [PTP_TAG_WIDTH-1:0]  mac_3_tx_ptp_ts_tag,
-    output wire                      mac_3_tx_ptp_ts_valid,
-
-    input  wire [DATA_WIDTH-1:0]     mac_3_tx_axis_tdata,
-    input  wire [KEEP_WIDTH-1:0]     mac_3_tx_axis_tkeep,
-    input  wire                      mac_3_tx_axis_tvalid,
-    output wire                      mac_3_tx_axis_tready,
-    input  wire                      mac_3_tx_axis_tlast,
-    input  wire [TX_USER_WIDTH-1:0]  mac_3_tx_axis_tuser,
-
-    output wire                      mac_3_tx_status,
-    input  wire                      mac_3_tx_lfc_req,
-    input  wire [7:0]                mac_3_tx_pfc_req,
-
-    output wire                      mac_3_rx_clk,
-    output wire                      mac_3_rx_rst,
-
-    output wire                      mac_3_rx_ptp_clk,
-    output wire                      mac_3_rx_ptp_rst,
-    input  wire [PTP_TS_WIDTH-1:0]   mac_3_rx_ptp_time,
-
-    output wire [DATA_WIDTH-1:0]     mac_3_rx_axis_tdata,
-    output wire [KEEP_WIDTH-1:0]     mac_3_rx_axis_tkeep,
-    output wire                      mac_3_rx_axis_tvalid,
-    output wire                      mac_3_rx_axis_tlast,
-    output wire [RX_USER_WIDTH-1:0]  mac_3_rx_axis_tuser,
-
-    output wire                      mac_3_rx_status,
-    output wire                      mac_3_rx_lfc_req,
-    output wire [7:0]                mac_3_rx_pfc_req,
-
-    output wire                      mac_4_tx_clk,
-    output wire                      mac_4_tx_rst,
-
-    output wire                      mac_4_tx_ptp_clk,
-    output wire                      mac_4_tx_ptp_rst,
-    input  wire [PTP_TS_WIDTH-1:0]   mac_4_tx_ptp_time,
-
-    output wire [PTP_TS_WIDTH-1:0]   mac_4_tx_ptp_ts,
-    output wire [PTP_TAG_WIDTH-1:0]  mac_4_tx_ptp_ts_tag,
-    output wire                      mac_4_tx_ptp_ts_valid,
-
-    input  wire [DATA_WIDTH-1:0]     mac_4_tx_axis_tdata,
-    input  wire [KEEP_WIDTH-1:0]     mac_4_tx_axis_tkeep,
-    input  wire                      mac_4_tx_axis_tvalid,
-    output wire                      mac_4_tx_axis_tready,
-    input  wire                      mac_4_tx_axis_tlast,
-    input  wire [TX_USER_WIDTH-1:0]  mac_4_tx_axis_tuser,
-
-    output wire                      mac_4_tx_status,
-    input  wire                      mac_4_tx_lfc_req,
-    input  wire [7:0]                mac_4_tx_pfc_req,
-
-    output wire                      mac_4_rx_clk,
-    output wire                      mac_4_rx_rst,
-
-    output wire                      mac_4_rx_ptp_clk,
-    output wire                      mac_4_rx_ptp_rst,
-    output wire [PTP_TS_WIDTH-1:0]   mac_4_rx_ptp_time,
-
-    output wire [DATA_WIDTH-1:0]     mac_4_rx_axis_tdata,
-    output wire [KEEP_WIDTH-1:0]     mac_4_rx_axis_tkeep,
-    output wire                      mac_4_rx_axis_tvalid,
-    output wire                      mac_4_rx_axis_tlast,
-    output wire [RX_USER_WIDTH-1:0]  mac_4_rx_axis_tuser,
-
-    output wire                      mac_4_rx_status,
-    output wire                      mac_4_rx_lfc_req,
-    output wire [7:0]                mac_4_rx_pfc_req
+    output wire [N_CH*1-1:0]              mac_rx_status,
+    output wire [N_CH*1-1:0]              mac_rx_lfc_req,
+    output wire [N_CH*8-1:0]              mac_rx_pfc_req
 );
-
-parameter N_CH = 4;
 
 wire [5:0]  mac_pll_clk_d64;
 wire [5:0]  mac_pll_clk_d66;
@@ -217,16 +99,6 @@ wire [5:0]  mac_rec_clk_d64;
 wire [5:0]  mac_rec_clk_d66;
 
 wire [N_CH-1:0]  mac_tx_pll_locked;
-
-wire [N_CH-1:0]  mac_rx_clk;
-wire [N_CH-1:0]  mac_rx_rst;
-wire [N_CH-1:0]  mac_tx_clk;
-wire [N_CH-1:0]  mac_tx_rst;
-
-wire [N_CH-1:0]  mac_rx_ptp_clk;
-wire [N_CH-1:0]  mac_rx_ptp_rst;
-wire [N_CH-1:0]  mac_tx_ptp_clk;
-wire [N_CH-1:0]  mac_tx_ptp_rst;
 
 wire [N_CH*19-1:0]  xcvr_reconfig_address;
 wire [N_CH-1:0]     xcvr_reconfig_read;
@@ -489,180 +361,26 @@ end
 
 endgenerate
 
-wire [N_CH*DATA_WIDTH-1:0]     mac_rx_axis_tdata;
-wire [N_CH*KEEP_WIDTH-1:0]     mac_rx_axis_tkeep;
-wire [N_CH-1:0]                mac_rx_axis_tvalid;
-wire [N_CH-1:0]                mac_rx_axis_tlast;
-wire [N_CH*RX_USER_WIDTH-1:0]  mac_rx_axis_tuser;
-
-wire [N_CH*DATA_WIDTH-1:0]     mac_tx_axis_tdata;
-wire [N_CH*KEEP_WIDTH-1:0]     mac_tx_axis_tkeep;
-wire [N_CH-1:0]                mac_tx_axis_tvalid;
-wire [N_CH-1:0]                mac_tx_axis_tready;
-wire [N_CH-1:0]                mac_tx_axis_tlast;
-wire [N_CH*TX_USER_WIDTH-1:0]  mac_tx_axis_tuser;
-
 assign mac_tx_clk[3:0] = {4{mac_pll_clk_d64[4]}};
 assign mac_rx_clk[3:0] = mac_tx_clk[3:0];
 
 assign mac_tx_ptp_clk[3:0] = mac_pll_clk_d66[3:0];
 assign mac_rx_ptp_clk[3:0] = mac_rec_clk_d66[3:0];
 
-assign mac_1_tx_clk = mac_tx_clk[0];
-assign mac_1_tx_rst = mac_tx_rst[0];
+assign mac_ptp_tx_tod = mac_tx_ptp_time;
+assign mac_ptp_rx_tod = mac_rx_ptp_time;
 
-assign mac_1_tx_ptp_clk = mac_tx_ptp_clk[0];
-assign mac_1_tx_ptp_rst = mac_tx_ptp_rst[0];
-assign mac_ptp_tx_tod[0*PTP_TS_WIDTH +: PTP_TS_WIDTH] = mac_1_tx_ptp_time;
+assign mac_tx_ptp_ts = mac_ptp_ets;
+assign mac_tx_ptp_ts_tag = mac_ptp_ets_fp;
+assign mac_tx_ptp_ts_valid = mac_ptp_ets_valid;
 
-assign mac_1_tx_ptp_ts = mac_ptp_ets[0*PTP_TS_WIDTH +: PTP_TS_WIDTH];
-assign mac_1_tx_ptp_ts_tag = mac_ptp_ets_fp[0*PTP_TAG_WIDTH +: PTP_TAG_WIDTH];
-assign mac_1_tx_ptp_ts_valid = mac_ptp_ets_valid[0];
+assign mac_tx_status = mac_tx_lanes_stable;
+assign mac_tx_pause = mac_tx_lfc_req;
+assign mac_tx_pfc = mac_tx_pfc_req;
 
-assign mac_tx_axis_tdata[0*DATA_WIDTH +: DATA_WIDTH] = mac_1_tx_axis_tdata;
-assign mac_tx_axis_tkeep[0*KEEP_WIDTH +: KEEP_WIDTH] = mac_1_tx_axis_tkeep;
-assign mac_tx_axis_tvalid[0] = mac_1_tx_axis_tvalid;
-assign mac_1_tx_axis_tready = mac_tx_axis_tready[0];
-assign mac_tx_axis_tlast[0] = mac_1_tx_axis_tlast;
-assign mac_tx_axis_tuser[0*TX_USER_WIDTH +: TX_USER_WIDTH] = mac_1_tx_axis_tuser;
-
-assign mac_1_tx_status = mac_tx_lanes_stable[0*1 +: 1];
-assign mac_tx_pause[0*1 +: 1] = mac_1_tx_lfc_req;
-assign mac_tx_pfc[0*8 +: 8] = mac_1_tx_pfc_req;
-
-assign mac_1_rx_clk = mac_rx_clk[0];
-assign mac_1_rx_rst = mac_rx_rst[0];
-
-assign mac_1_rx_ptp_clk = mac_rx_ptp_clk[0];
-assign mac_1_rx_ptp_rst = mac_rx_ptp_rst[0];
-assign mac_ptp_rx_tod[0*PTP_TS_WIDTH +: PTP_TS_WIDTH] = mac_1_rx_ptp_time;
-
-assign mac_1_rx_axis_tdata = mac_rx_axis_tdata[0*DATA_WIDTH +: DATA_WIDTH];
-assign mac_1_rx_axis_tkeep = mac_rx_axis_tkeep[0*KEEP_WIDTH +: KEEP_WIDTH];
-assign mac_1_rx_axis_tvalid = mac_rx_axis_tvalid[0];
-assign mac_1_rx_axis_tlast = mac_rx_axis_tlast[0];
-assign mac_1_rx_axis_tuser = mac_rx_axis_tuser[0*RX_USER_WIDTH +: RX_USER_WIDTH];
-
-assign mac_1_rx_status = mac_rx_pcs_ready[0*1 +: 1];
-assign mac_1_rx_lfc_req = mac_rx_pause[0*1 +: 1];
-assign mac_1_rx_pfc_req = mac_rx_pfc[0*8 +: 8];
-
-assign mac_2_tx_clk = mac_tx_clk[1];
-assign mac_2_tx_rst = mac_tx_rst[1];
-
-assign mac_2_tx_ptp_clk = mac_tx_ptp_clk[1];
-assign mac_2_tx_ptp_rst = mac_tx_ptp_rst[1];
-assign mac_ptp_tx_tod[1*PTP_TS_WIDTH +: PTP_TS_WIDTH] = mac_2_tx_ptp_time;
-
-assign mac_2_tx_ptp_ts = mac_ptp_ets[1*PTP_TS_WIDTH +: PTP_TS_WIDTH];
-assign mac_2_tx_ptp_ts_tag = mac_ptp_ets_fp[1*PTP_TAG_WIDTH +: PTP_TAG_WIDTH];
-assign mac_2_tx_ptp_ts_valid = mac_ptp_ets_valid[1];
-
-assign mac_tx_axis_tdata[1*DATA_WIDTH +: DATA_WIDTH] = mac_2_tx_axis_tdata;
-assign mac_tx_axis_tkeep[1*KEEP_WIDTH +: KEEP_WIDTH] = mac_2_tx_axis_tkeep;
-assign mac_tx_axis_tvalid[1] = mac_2_tx_axis_tvalid;
-assign mac_2_tx_axis_tready = mac_tx_axis_tready[1];
-assign mac_tx_axis_tlast[1] = mac_2_tx_axis_tlast;
-assign mac_tx_axis_tuser[1*TX_USER_WIDTH +: TX_USER_WIDTH] = mac_2_tx_axis_tuser;
-
-assign mac_2_tx_status = mac_tx_lanes_stable[1*1 +: 1];
-assign mac_tx_pause[1*1 +: 1] = mac_2_tx_lfc_req;
-assign mac_tx_pfc[1*8 +: 8] = mac_2_tx_pfc_req;
-
-assign mac_2_rx_clk = mac_rx_clk[1];
-assign mac_2_rx_rst = mac_rx_rst[1];
-
-assign mac_2_rx_ptp_clk = mac_rx_ptp_clk[1];
-assign mac_2_rx_ptp_rst = mac_rx_ptp_rst[1];
-assign mac_ptp_rx_tod[1*PTP_TS_WIDTH +: PTP_TS_WIDTH] = mac_2_rx_ptp_time;
-
-assign mac_2_rx_axis_tdata = mac_rx_axis_tdata[1*DATA_WIDTH +: DATA_WIDTH];
-assign mac_2_rx_axis_tkeep = mac_rx_axis_tkeep[1*KEEP_WIDTH +: KEEP_WIDTH];
-assign mac_2_rx_axis_tvalid = mac_rx_axis_tvalid[1];
-assign mac_2_rx_axis_tlast = mac_rx_axis_tlast[1];
-assign mac_2_rx_axis_tuser = mac_rx_axis_tuser[1*RX_USER_WIDTH +: RX_USER_WIDTH];
-
-assign mac_2_rx_status = mac_rx_pcs_ready[1*1 +: 1];
-assign mac_2_rx_lfc_req = mac_rx_pause[1*1 +: 1];
-assign mac_2_rx_pfc_req = mac_rx_pfc[1*8 +: 8];
-
-assign mac_3_tx_clk = mac_tx_clk[2];
-assign mac_3_tx_rst = mac_tx_rst[2];
-
-assign mac_3_tx_ptp_clk = mac_tx_ptp_clk[2];
-assign mac_3_tx_ptp_rst = mac_tx_ptp_rst[2];
-assign mac_ptp_tx_tod[2*PTP_TS_WIDTH +: PTP_TS_WIDTH] = mac_3_tx_ptp_time;
-
-assign mac_3_tx_ptp_ts = mac_ptp_ets[2*PTP_TS_WIDTH +: PTP_TS_WIDTH];
-assign mac_3_tx_ptp_ts_tag = mac_ptp_ets_fp[2*PTP_TAG_WIDTH +: PTP_TAG_WIDTH];
-assign mac_3_tx_ptp_ts_valid = mac_ptp_ets_valid[2];
-
-assign mac_tx_axis_tdata[2*DATA_WIDTH +: DATA_WIDTH] = mac_3_tx_axis_tdata;
-assign mac_tx_axis_tkeep[2*KEEP_WIDTH +: KEEP_WIDTH] = mac_3_tx_axis_tkeep;
-assign mac_tx_axis_tvalid[2] = mac_3_tx_axis_tvalid;
-assign mac_3_tx_axis_tready = mac_tx_axis_tready[2];
-assign mac_tx_axis_tlast[2] = mac_3_tx_axis_tlast;
-assign mac_tx_axis_tuser[2*TX_USER_WIDTH +: TX_USER_WIDTH] = mac_3_tx_axis_tuser;
-
-assign mac_3_tx_status = mac_tx_lanes_stable[2*1 +: 1];
-assign mac_tx_pause[2*1 +: 1] = mac_3_tx_lfc_req;
-assign mac_tx_pfc[2*8 +: 8] = mac_3_tx_pfc_req;
-
-assign mac_3_rx_clk = mac_rx_clk[2];
-assign mac_3_rx_rst = mac_rx_rst[2];
-
-assign mac_3_rx_ptp_clk = mac_rx_ptp_clk[2];
-assign mac_3_rx_ptp_rst = mac_rx_ptp_rst[2];
-assign mac_ptp_rx_tod[2*PTP_TS_WIDTH +: PTP_TS_WIDTH] = mac_3_rx_ptp_time;
-
-assign mac_3_rx_axis_tdata = mac_rx_axis_tdata[2*DATA_WIDTH +: DATA_WIDTH];
-assign mac_3_rx_axis_tkeep = mac_rx_axis_tkeep[2*KEEP_WIDTH +: KEEP_WIDTH];
-assign mac_3_rx_axis_tvalid = mac_rx_axis_tvalid[2];
-assign mac_3_rx_axis_tlast = mac_rx_axis_tlast[2];
-assign mac_3_rx_axis_tuser = mac_rx_axis_tuser[2*RX_USER_WIDTH +: RX_USER_WIDTH];
-
-assign mac_3_rx_status = mac_rx_pcs_ready[2*1 +: 1];
-assign mac_3_rx_lfc_req = mac_rx_pause[2*1 +: 1];
-assign mac_3_rx_pfc_req = mac_rx_pfc[2*8 +: 8];
-
-assign mac_4_tx_clk = mac_tx_clk[3];
-assign mac_4_tx_rst = mac_tx_rst[3];
-
-assign mac_4_tx_ptp_clk = mac_tx_ptp_clk[3];
-assign mac_4_tx_ptp_rst = mac_tx_ptp_rst[3];
-assign mac_ptp_tx_tod[3*PTP_TS_WIDTH +: PTP_TS_WIDTH] = mac_4_tx_ptp_time;
-
-assign mac_4_tx_ptp_ts = mac_ptp_ets[3*PTP_TS_WIDTH +: PTP_TS_WIDTH];
-assign mac_4_tx_ptp_ts_tag = mac_ptp_ets_fp[3*PTP_TAG_WIDTH +: PTP_TAG_WIDTH];
-assign mac_4_tx_ptp_ts_valid = mac_ptp_ets_valid[3];
-
-assign mac_tx_axis_tdata[3*DATA_WIDTH +: DATA_WIDTH] = mac_4_tx_axis_tdata;
-assign mac_tx_axis_tkeep[3*KEEP_WIDTH +: KEEP_WIDTH] = mac_4_tx_axis_tkeep;
-assign mac_tx_axis_tvalid[3] = mac_4_tx_axis_tvalid;
-assign mac_4_tx_axis_tready = mac_tx_axis_tready[3];
-assign mac_tx_axis_tlast[3] = mac_4_tx_axis_tlast;
-assign mac_tx_axis_tuser[3*TX_USER_WIDTH +: TX_USER_WIDTH] = mac_4_tx_axis_tuser;
-
-assign mac_4_tx_status = mac_tx_lanes_stable[3*1 +: 1];
-assign mac_tx_pause[3*1 +: 1] = mac_4_tx_lfc_req;
-assign mac_tx_pfc[3*8 +: 8] = mac_4_tx_pfc_req;
-
-assign mac_4_rx_clk = mac_rx_clk[3];
-assign mac_4_rx_rst = mac_rx_rst[3];
-
-assign mac_4_rx_ptp_clk = mac_rx_ptp_clk[3];
-assign mac_4_rx_ptp_rst = mac_rx_ptp_rst[3];
-assign mac_ptp_rx_tod[3*PTP_TS_WIDTH +: PTP_TS_WIDTH] = mac_4_rx_ptp_time;
-
-assign mac_4_rx_axis_tdata = mac_rx_axis_tdata[3*DATA_WIDTH +: DATA_WIDTH];
-assign mac_4_rx_axis_tkeep = mac_rx_axis_tkeep[3*KEEP_WIDTH +: KEEP_WIDTH];
-assign mac_4_rx_axis_tvalid = mac_rx_axis_tvalid[3];
-assign mac_4_rx_axis_tlast = mac_rx_axis_tlast[3];
-assign mac_4_rx_axis_tuser = mac_rx_axis_tuser[3*RX_USER_WIDTH +: RX_USER_WIDTH];
-
-assign mac_4_rx_status = mac_rx_pcs_ready[3*1 +: 1];
-assign mac_4_rx_lfc_req = mac_rx_pause[3*1 +: 1];
-assign mac_4_rx_pfc_req = mac_rx_pfc[3*8 +: 8];
+assign mac_rx_status = mac_rx_pcs_ready;
+assign mac_rx_lfc_req = mac_rx_pause;
+assign mac_rx_pfc_req = mac_rx_pfc;
 
 generate
 

@@ -538,46 +538,46 @@ generate
 
 for (n = 0; n < QSFP_CNT; n = n + 1) begin : ch
 
-    input  wire                            ch_tx_clk;
-    input  wire                            ch_tx_rst;
+    wire                            ch_tx_clk;
+    wire                            ch_tx_rst;
 
-    output wire [AXIS_ETH_DATA_WIDTH-1:0]  ch_tx_axis_tdata;
-    output wire [AXIS_ETH_KEEP_WIDTH-1:0]  ch_tx_axis_tkeep;
-    output wire                            ch_tx_axis_tvalid;
-    input  wire                            ch_tx_axis_tready;
-    output wire                            ch_tx_axis_tlast;
-    output wire [(16+1)-1:0]               ch_tx_axis_tuser;
+    wire [AXIS_ETH_DATA_WIDTH-1:0]  ch_tx_axis_tdata;
+    wire [AXIS_ETH_KEEP_WIDTH-1:0]  ch_tx_axis_tkeep;
+    wire                            ch_tx_axis_tvalid;
+    wire                            ch_tx_axis_tready;
+    wire                            ch_tx_axis_tlast;
+    wire [(16+1)-1:0]               ch_tx_axis_tuser;
 
-    output wire [79:0]                     ch_tx_ptp_time;
-    input  wire [79:0]                     ch_tx_ptp_ts;
-    input  wire [15:0]                     ch_tx_ptp_ts_tag;
-    input  wire                            ch_tx_ptp_ts_valid;
+    wire [79:0]                     ch_tx_ptp_time;
+    wire [79:0]                     ch_tx_ptp_ts;
+    wire [15:0]                     ch_tx_ptp_ts_tag;
+    wire                            ch_tx_ptp_ts_valid;
 
-    output wire                            ch_tx_enable;
-    output wire                            ch_tx_lfc_en;
-    output wire                            ch_tx_lfc_req;
-    output wire [7:0]                      ch_tx_pfc_en;
-    output wire [7:0]                      ch_tx_pfc_req;
+    wire                            ch_tx_enable;
+    wire                            ch_tx_lfc_en;
+    wire                            ch_tx_lfc_req;
+    wire [7:0]                      ch_tx_pfc_en;
+    wire [7:0]                      ch_tx_pfc_req;
 
-    input  wire                            ch_rx_clk;
-    input  wire                            ch_rx_rst;
+    wire                            ch_rx_clk;
+    wire                            ch_rx_rst;
 
-    input  wire [AXIS_ETH_DATA_WIDTH-1:0]  ch_rx_axis_tdata;
-    input  wire [AXIS_ETH_KEEP_WIDTH-1:0]  ch_rx_axis_tkeep;
-    input  wire                            ch_rx_axis_tvalid;
-    input  wire                            ch_rx_axis_tlast;
-    input  wire [(80+1)-1:0]               ch_rx_axis_tuser;
+    wire [AXIS_ETH_DATA_WIDTH-1:0]  ch_rx_axis_tdata;
+    wire [AXIS_ETH_KEEP_WIDTH-1:0]  ch_rx_axis_tkeep;
+    wire                            ch_rx_axis_tvalid;
+    wire                            ch_rx_axis_tlast;
+    wire [(80+1)-1:0]               ch_rx_axis_tuser;
 
-    output wire [79:0]                     ch_rx_ptp_time;
+    wire [79:0]                     ch_rx_ptp_time;
 
-    output wire                            ch_rx_enable;
-    input  wire                            ch_rx_status;
-    output wire                            ch_rx_lfc_en;
-    input  wire                            ch_rx_lfc_req;
-    output wire                            ch_rx_lfc_ack;
-    output wire [7:0]                      ch_rx_pfc_en;
-    input  wire [7:0]                      ch_rx_pfc_req;
-    output wire [7:0]                      ch_rx_pfc_ack;
+    wire                            ch_rx_enable;
+    wire                            ch_rx_status;
+    wire                            ch_rx_lfc_en;
+    wire                            ch_rx_lfc_req;
+    wire                            ch_rx_lfc_ack;
+    wire [7:0]                      ch_rx_pfc_en;
+    wire [7:0]                      ch_rx_pfc_req;
+    wire [7:0]                      ch_rx_pfc_ack;
 
     assign qsfp_tx_clk[n +: 1] = ch_tx_clk;
     assign qsfp_tx_rst[n +: 1] = ch_tx_rst;

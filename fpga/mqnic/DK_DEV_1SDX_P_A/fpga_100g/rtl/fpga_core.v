@@ -24,6 +24,10 @@ module fpga_core #
     parameter GIT_HASH = 32'hdce357bf,
     parameter RELEASE_INFO = 32'h00000000,
 
+    // Board configuration
+    parameter QSFP_CNT = 2,
+    parameter CH_CNT = QSFP_CNT,
+
     // Structural configuration
     parameter IF_COUNT = 2,
     parameter PORTS_PER_IF = 1,
@@ -148,131 +152,105 @@ module fpga_core #
      * Clock: 250 MHz
      * Synchronous reset
      */
-    input  wire                                  clk_250mhz,
-    input  wire                                  rst_250mhz,
+    input  wire                                      clk_250mhz,
+    input  wire                                      rst_250mhz,
 
     /*
      * PTP clock
      */
-    input  wire                                  ptp_clk,
-    input  wire                                  ptp_rst,
-    input  wire                                  ptp_sample_clk,
+    input  wire                                      ptp_clk,
+    input  wire                                      ptp_rst,
+    input  wire                                      ptp_sample_clk,
 
     /*
      * GPIO
      */
-    input  wire                                  user_pb,
-    output wire [3:0]                            user_led_g,
+    input  wire                                      user_pb,
+    output wire [3:0]                                user_led_g,
 
     /*
      * I2C
      */
-    input  wire                                  i2c2_scl_i,
-    output wire                                  i2c2_scl_o,
-    output wire                                  i2c2_scl_t,
-    input  wire                                  i2c2_sda_i,
-    output wire                                  i2c2_sda_o,
-    output wire                                  i2c2_sda_t,
-    output wire                                  bmc_i2c2_disable,
+    input  wire                                      i2c2_scl_i,
+    output wire                                      i2c2_scl_o,
+    output wire                                      i2c2_scl_t,
+    input  wire                                      i2c2_sda_i,
+    output wire                                      i2c2_sda_o,
+    output wire                                      i2c2_sda_t,
+    output wire                                      bmc_i2c2_disable,
 
     /*
      * P-Tile interface
      */
-    input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]   rx_st_data,
-    input  wire [SEG_COUNT*SEG_EMPTY_WIDTH-1:0]  rx_st_empty,
-    input  wire [SEG_COUNT-1:0]                  rx_st_sop,
-    input  wire [SEG_COUNT-1:0]                  rx_st_eop,
-    input  wire [SEG_COUNT-1:0]                  rx_st_valid,
-    output wire                                  rx_st_ready,
-    input  wire [SEG_COUNT*SEG_HDR_WIDTH-1:0]    rx_st_hdr,
-    input  wire [SEG_COUNT*SEG_PRFX_WIDTH-1:0]   rx_st_tlp_prfx,
-    input  wire [SEG_COUNT-1:0]                  rx_st_vf_active,
-    input  wire [SEG_COUNT*3-1:0]                rx_st_func_num,
-    input  wire [SEG_COUNT*11-1:0]               rx_st_vf_num,
-    input  wire [SEG_COUNT*3-1:0]                rx_st_bar_range,
-    input  wire [SEG_COUNT-1:0]                  rx_st_tlp_abort,
+    input  wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]       rx_st_data,
+    input  wire [SEG_COUNT*SEG_EMPTY_WIDTH-1:0]      rx_st_empty,
+    input  wire [SEG_COUNT-1:0]                      rx_st_sop,
+    input  wire [SEG_COUNT-1:0]                      rx_st_eop,
+    input  wire [SEG_COUNT-1:0]                      rx_st_valid,
+    output wire                                      rx_st_ready,
+    input  wire [SEG_COUNT*SEG_HDR_WIDTH-1:0]        rx_st_hdr,
+    input  wire [SEG_COUNT*SEG_PRFX_WIDTH-1:0]       rx_st_tlp_prfx,
+    input  wire [SEG_COUNT-1:0]                      rx_st_vf_active,
+    input  wire [SEG_COUNT*3-1:0]                    rx_st_func_num,
+    input  wire [SEG_COUNT*11-1:0]                   rx_st_vf_num,
+    input  wire [SEG_COUNT*3-1:0]                    rx_st_bar_range,
+    input  wire [SEG_COUNT-1:0]                      rx_st_tlp_abort,
 
-    output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]   tx_st_data,
-    output wire [SEG_COUNT-1:0]                  tx_st_sop,
-    output wire [SEG_COUNT-1:0]                  tx_st_eop,
-    output wire [SEG_COUNT-1:0]                  tx_st_valid,
-    input  wire                                  tx_st_ready,
-    output wire [SEG_COUNT-1:0]                  tx_st_err,
-    output wire [SEG_COUNT*SEG_HDR_WIDTH-1:0]    tx_st_hdr,
-    output wire [SEG_COUNT*SEG_PRFX_WIDTH-1:0]   tx_st_tlp_prfx,
+    output wire [SEG_COUNT*SEG_DATA_WIDTH-1:0]       tx_st_data,
+    output wire [SEG_COUNT-1:0]                      tx_st_sop,
+    output wire [SEG_COUNT-1:0]                      tx_st_eop,
+    output wire [SEG_COUNT-1:0]                      tx_st_valid,
+    input  wire                                      tx_st_ready,
+    output wire [SEG_COUNT-1:0]                      tx_st_err,
+    output wire [SEG_COUNT*SEG_HDR_WIDTH-1:0]        tx_st_hdr,
+    output wire [SEG_COUNT*SEG_PRFX_WIDTH-1:0]       tx_st_tlp_prfx,
 
-    output wire [11:0]                           rx_buffer_limit,
-    output wire [1:0]                            rx_buffer_limit_tdm_idx,
+    output wire [11:0]                               rx_buffer_limit,
+    output wire [1:0]                                rx_buffer_limit_tdm_idx,
 
-    input  wire [15:0]                           tx_cdts_limit,
-    input  wire [2:0]                            tx_cdts_limit_tdm_idx,
+    input  wire [15:0]                               tx_cdts_limit,
+    input  wire [2:0]                                tx_cdts_limit_tdm_idx,
 
-    input  wire [15:0]                           tl_cfg_ctl,
-    input  wire [4:0]                            tl_cfg_add,
-    input  wire [2:0]                            tl_cfg_func,
+    input  wire [15:0]                               tl_cfg_ctl,
+    input  wire [4:0]                                tl_cfg_add,
+    input  wire [2:0]                                tl_cfg_func,
 
     /*
      * Ethernet: QSFP28
      */
-    input  wire                                  qsfp1_mac_clk,
-    input  wire                                  qsfp1_mac_rst,
+    input  wire [CH_CNT-1:0]                         qsfp_mac_tx_clk,
+    input  wire [CH_CNT-1:0]                         qsfp_mac_tx_rst,
 
-    output wire [PTP_TS_WIDTH-1:0]               qsfp1_mac_ptp_time,
+    output wire [CH_CNT*AXIS_ETH_DATA_WIDTH-1:0]     qsfp_mac_tx_axis_tdata,
+    output wire [CH_CNT*AXIS_ETH_KEEP_WIDTH-1:0]     qsfp_mac_tx_axis_tkeep,
+    output wire [CH_CNT-1:0]                         qsfp_mac_tx_axis_tvalid,
+    input  wire [CH_CNT-1:0]                         qsfp_mac_tx_axis_tready,
+    output wire [CH_CNT-1:0]                         qsfp_mac_tx_axis_tlast,
+    output wire [CH_CNT*AXIS_ETH_TX_USER_WIDTH-1:0]  qsfp_mac_tx_axis_tuser,
 
-    input  wire [PTP_TS_WIDTH-1:0]               qsfp1_mac_tx_ptp_ts,
-    input  wire [TX_TAG_WIDTH-1:0]               qsfp1_mac_tx_ptp_ts_tag,
-    input  wire                                  qsfp1_mac_tx_ptp_ts_valid,
+    output wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfp_mac_tx_ptp_time,
+    input  wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfp_mac_tx_ptp_ts,
+    input  wire [CH_CNT*TX_TAG_WIDTH-1:0]            qsfp_mac_tx_ptp_ts_tag,
+    input  wire [CH_CNT-1:0]                         qsfp_mac_tx_ptp_ts_valid,
 
-    output wire [AXIS_ETH_DATA_WIDTH-1:0]        qsfp1_mac_tx_axis_tdata,
-    output wire [AXIS_ETH_KEEP_WIDTH-1:0]        qsfp1_mac_tx_axis_tkeep,
-    output wire                                  qsfp1_mac_tx_axis_tvalid,
-    input  wire                                  qsfp1_mac_tx_axis_tready,
-    output wire                                  qsfp1_mac_tx_axis_tlast,
-    output wire [AXIS_ETH_TX_USER_WIDTH-1:0]     qsfp1_mac_tx_axis_tuser,
+    input  wire [CH_CNT-1:0]                         qsfp_mac_tx_status,
+    output wire [CH_CNT-1:0]                         qsfp_mac_tx_lfc_req,
+    output wire [CH_CNT*8-1:0]                       qsfp_mac_tx_pfc_req,
 
-    input  wire                                  qsfp1_mac_tx_status,
-    output wire                                  qsfp1_mac_tx_lfc_req,
-    output wire [7:0]                            qsfp1_mac_tx_pfc_req,
+    input  wire [CH_CNT-1:0]                         qsfp_mac_rx_clk,
+    input  wire [CH_CNT-1:0]                         qsfp_mac_rx_rst,
 
-    input  wire [AXIS_ETH_DATA_WIDTH-1:0]        qsfp1_mac_rx_axis_tdata,
-    input  wire [AXIS_ETH_KEEP_WIDTH-1:0]        qsfp1_mac_rx_axis_tkeep,
-    input  wire                                  qsfp1_mac_rx_axis_tvalid,
-    input  wire                                  qsfp1_mac_rx_axis_tlast,
-    input  wire [AXIS_ETH_RX_USER_WIDTH-1:0]     qsfp1_mac_rx_axis_tuser,
+    input  wire [CH_CNT*AXIS_ETH_DATA_WIDTH-1:0]     qsfp_mac_rx_axis_tdata,
+    input  wire [CH_CNT*AXIS_ETH_KEEP_WIDTH-1:0]     qsfp_mac_rx_axis_tkeep,
+    input  wire [CH_CNT-1:0]                         qsfp_mac_rx_axis_tvalid,
+    input  wire [CH_CNT-1:0]                         qsfp_mac_rx_axis_tlast,
+    input  wire [CH_CNT*AXIS_ETH_RX_USER_WIDTH-1:0]  qsfp_mac_rx_axis_tuser,
 
-    input  wire                                  qsfp1_mac_rx_status,
-    input  wire                                  qsfp1_mac_rx_lfc_req,
-    input  wire [7:0]                            qsfp1_mac_rx_pfc_req,
+    output wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfp_mac_rx_ptp_time,
 
-    input  wire                                  qsfp2_mac_clk,
-    input  wire                                  qsfp2_mac_rst,
-
-    output wire [PTP_TS_WIDTH-1:0]               qsfp2_mac_ptp_time,
-
-    input  wire [PTP_TS_WIDTH-1:0]               qsfp2_mac_tx_ptp_ts,
-    input  wire [TX_TAG_WIDTH-1:0]               qsfp2_mac_tx_ptp_ts_tag,
-    input  wire                                  qsfp2_mac_tx_ptp_ts_valid,
-
-    output wire [AXIS_ETH_DATA_WIDTH-1:0]        qsfp2_mac_tx_axis_tdata,
-    output wire [AXIS_ETH_KEEP_WIDTH-1:0]        qsfp2_mac_tx_axis_tkeep,
-    output wire                                  qsfp2_mac_tx_axis_tvalid,
-    input  wire                                  qsfp2_mac_tx_axis_tready,
-    output wire                                  qsfp2_mac_tx_axis_tlast,
-    output wire [AXIS_ETH_TX_USER_WIDTH-1:0]     qsfp2_mac_tx_axis_tuser,
-
-    input  wire                                  qsfp2_mac_tx_status,
-    output wire                                  qsfp2_mac_tx_lfc_req,
-    output wire [7:0]                            qsfp2_mac_tx_pfc_req,
-
-    input  wire [AXIS_ETH_DATA_WIDTH-1:0]        qsfp2_mac_rx_axis_tdata,
-    input  wire [AXIS_ETH_KEEP_WIDTH-1:0]        qsfp2_mac_rx_axis_tkeep,
-    input  wire                                  qsfp2_mac_rx_axis_tvalid,
-    input  wire                                  qsfp2_mac_rx_axis_tlast,
-    input  wire [AXIS_ETH_RX_USER_WIDTH-1:0]     qsfp2_mac_rx_axis_tuser,
-
-    input  wire                                  qsfp2_mac_rx_status,
-    input  wire                                  qsfp2_mac_rx_lfc_req,
-    input  wire [7:0]                            qsfp2_mac_rx_pfc_req
+    input  wire [CH_CNT-1:0]                         qsfp_mac_rx_status,
+    input  wire [CH_CNT-1:0]                         qsfp_mac_rx_lfc_req,
+    input  wire [CH_CNT*8-1:0]                       qsfp_mac_rx_pfc_req
 );
 
 parameter PORT_COUNT = IF_COUNT*PORTS_PER_IF;
@@ -287,7 +265,7 @@ localparam RB_BASE_ADDR = 16'h1000;
 localparam RBB = RB_BASE_ADDR & {AXIL_CTRL_ADDR_WIDTH{1'b1}};
 
 initial begin
-    if (PORT_COUNT > 2) begin
+    if (PORT_COUNT > CH_CNT) begin
         $error("Error: Max port count exceeded (instance %m)");
         $finish;
     end
@@ -413,8 +391,8 @@ always @(posedge clk_250mhz) begin
     end
 end
 
-assign user_led_g[0] = qsfp1_mac_rx_status;
-assign user_led_g[1] = qsfp2_mac_rx_status;
+assign user_led_g[0] = 1'b0;
+assign user_led_g[1] = 1'b0;
 assign user_led_g[2] = 1'b0;
 assign user_led_g[3] = ptp_pps_str;
 
@@ -470,7 +448,7 @@ wire [PORT_COUNT*8-1:0]                       eth_rx_pfc_req;
 wire [PORT_COUNT*8-1:0]                       eth_rx_pfc_ack;
 
 mqnic_port_map_mac_axis #(
-    .MAC_COUNT(2),
+    .MAC_COUNT(CH_CNT),
     .PORT_MASK(PORT_MASK),
     .PORT_GROUP_SIZE(1),
 
@@ -488,55 +466,55 @@ mqnic_port_map_mac_axis #(
 )
 mqnic_port_map_mac_axis_inst (
     // towards MAC
-    .mac_tx_clk({qsfp2_mac_clk, qsfp1_mac_clk}),
-    .mac_tx_rst({qsfp2_mac_rst, qsfp1_mac_rst}),
+    .mac_tx_clk(qsfp_mac_tx_clk),
+    .mac_tx_rst(qsfp_mac_tx_rst),
 
-    .mac_tx_ptp_clk({qsfp2_mac_clk, qsfp1_mac_clk}),
-    .mac_tx_ptp_rst({qsfp2_mac_rst, qsfp1_mac_rst}),
-    .mac_tx_ptp_ts_96({qsfp2_mac_ptp_time, qsfp1_mac_ptp_time}),
+    .mac_tx_ptp_clk(qsfp_mac_tx_clk),
+    .mac_tx_ptp_rst(qsfp_mac_tx_rst),
+    .mac_tx_ptp_ts_96(qsfp_mac_tx_ptp_time),
     .mac_tx_ptp_ts_step(),
 
-    .m_axis_mac_tx_tdata({qsfp2_mac_tx_axis_tdata, qsfp1_mac_tx_axis_tdata}),
-    .m_axis_mac_tx_tkeep({qsfp2_mac_tx_axis_tkeep, qsfp1_mac_tx_axis_tkeep}),
-    .m_axis_mac_tx_tvalid({qsfp2_mac_tx_axis_tvalid, qsfp1_mac_tx_axis_tvalid}),
-    .m_axis_mac_tx_tready({qsfp2_mac_tx_axis_tready, qsfp1_mac_tx_axis_tready}),
-    .m_axis_mac_tx_tlast({qsfp2_mac_tx_axis_tlast, qsfp1_mac_tx_axis_tlast}),
-    .m_axis_mac_tx_tuser({qsfp2_mac_tx_axis_tuser, qsfp1_mac_tx_axis_tuser}),
+    .m_axis_mac_tx_tdata(qsfp_mac_tx_axis_tdata),
+    .m_axis_mac_tx_tkeep(qsfp_mac_tx_axis_tkeep),
+    .m_axis_mac_tx_tvalid(qsfp_mac_tx_axis_tvalid),
+    .m_axis_mac_tx_tready(qsfp_mac_tx_axis_tready),
+    .m_axis_mac_tx_tlast(qsfp_mac_tx_axis_tlast),
+    .m_axis_mac_tx_tuser(qsfp_mac_tx_axis_tuser),
 
-    .s_axis_mac_tx_ptp_ts({qsfp2_mac_tx_ptp_ts, qsfp1_mac_tx_ptp_ts}),
-    .s_axis_mac_tx_ptp_ts_tag({qsfp2_mac_tx_ptp_ts_tag, qsfp1_mac_tx_ptp_ts_tag}),
-    .s_axis_mac_tx_ptp_ts_valid({qsfp2_mac_tx_ptp_ts_valid, qsfp1_mac_tx_ptp_ts_valid}),
+    .s_axis_mac_tx_ptp_ts(qsfp_mac_tx_ptp_ts),
+    .s_axis_mac_tx_ptp_ts_tag(qsfp_mac_tx_ptp_ts_tag),
+    .s_axis_mac_tx_ptp_ts_valid(qsfp_mac_tx_ptp_ts_valid),
     .s_axis_mac_tx_ptp_ts_ready(),
 
     .mac_tx_enable(),
-    .mac_tx_status({qsfp2_mac_tx_status, qsfp1_mac_tx_status}),
+    .mac_tx_status(qsfp_mac_tx_status),
     .mac_tx_lfc_en(),
-    .mac_tx_lfc_req({qsfp2_mac_tx_lfc_req, qsfp1_mac_tx_lfc_req}),
+    .mac_tx_lfc_req(qsfp_mac_tx_lfc_req),
     .mac_tx_pfc_en(),
-    .mac_tx_pfc_req({qsfp2_mac_tx_pfc_req, qsfp1_mac_tx_pfc_req}),
+    .mac_tx_pfc_req(qsfp_mac_tx_pfc_req),
 
-    .mac_rx_clk({qsfp2_mac_clk, qsfp1_mac_clk}),
-    .mac_rx_rst({qsfp2_mac_rst, qsfp1_mac_rst}),
+    .mac_rx_clk(qsfp_mac_rx_clk),
+    .mac_rx_rst(qsfp_mac_rx_rst),
 
-    .mac_rx_ptp_clk({qsfp2_mac_clk, qsfp1_mac_clk}),
-    .mac_rx_ptp_rst({qsfp2_mac_rst, qsfp1_mac_rst}),
-    .mac_rx_ptp_ts_96(),
+    .mac_rx_ptp_clk(qsfp_mac_rx_clk),
+    .mac_rx_ptp_rst(qsfp_mac_rx_rst),
+    .mac_rx_ptp_ts_96(qsfp_mac_rx_ptp_time),
     .mac_rx_ptp_ts_step(),
 
-    .s_axis_mac_rx_tdata({qsfp2_mac_rx_axis_tdata, qsfp1_mac_rx_axis_tdata}),
-    .s_axis_mac_rx_tkeep({qsfp2_mac_rx_axis_tkeep, qsfp1_mac_rx_axis_tkeep}),
-    .s_axis_mac_rx_tvalid({qsfp2_mac_rx_axis_tvalid, qsfp1_mac_rx_axis_tvalid}),
+    .s_axis_mac_rx_tdata(qsfp_mac_rx_axis_tdata),
+    .s_axis_mac_rx_tkeep(qsfp_mac_rx_axis_tkeep),
+    .s_axis_mac_rx_tvalid(qsfp_mac_rx_axis_tvalid),
     .s_axis_mac_rx_tready(),
-    .s_axis_mac_rx_tlast({qsfp2_mac_rx_axis_tlast, qsfp1_mac_rx_axis_tlast}),
-    .s_axis_mac_rx_tuser({qsfp2_mac_rx_axis_tuser, qsfp1_mac_rx_axis_tuser}),
+    .s_axis_mac_rx_tlast(qsfp_mac_rx_axis_tlast),
+    .s_axis_mac_rx_tuser(qsfp_mac_rx_axis_tuser),
 
     .mac_rx_enable(),
-    .mac_rx_status({qsfp2_mac_rx_status, qsfp1_mac_rx_status}),
+    .mac_rx_status(qsfp_mac_rx_status),
     .mac_rx_lfc_en(),
-    .mac_rx_lfc_req({qsfp2_mac_rx_lfc_req, qsfp1_mac_rx_lfc_req}),
+    .mac_rx_lfc_req(qsfp_mac_rx_lfc_req),
     .mac_rx_lfc_ack(),
     .mac_rx_pfc_en(),
-    .mac_rx_pfc_req({qsfp2_mac_rx_pfc_req, qsfp1_mac_rx_pfc_req}),
+    .mac_rx_pfc_req(qsfp_mac_rx_pfc_req),
     .mac_rx_pfc_ack(),
 
     // towards datapath

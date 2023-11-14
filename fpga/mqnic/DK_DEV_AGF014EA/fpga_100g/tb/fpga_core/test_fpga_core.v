@@ -46,6 +46,7 @@ module test_fpga_core #
     // Board configuration
     parameter QSFPDD_CNT = 2,
     parameter CH_CNT = QSFPDD_CNT*2,
+    parameter PORT_GROUP_SIZE = 2,
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -63,6 +64,8 @@ module test_fpga_core #
     parameter PTP_TS_WIDTH = 96,
     parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_CLOCK_CDC_PIPELINE = 0,
+    parameter PTP_SEPARATE_TX_CLOCK = 0,
+    parameter PTP_SEPARATE_RX_CLOCK = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 1,
     parameter PTP_PEROUT_COUNT = 1,
@@ -251,7 +254,10 @@ module test_fpga_core #
     // output wire [CH_CNT-1:0]                         qsfpdd_mac_tx_axis_tlast,
     // output wire [CH_CNT*AXIS_ETH_TX_USER_WIDTH-1:0]  qsfpdd_mac_tx_axis_tuser,
 
+    // input  wire [CH_CNT-1:0]                         qsfpdd_mac_tx_ptp_clk,
+    // input  wire [CH_CNT-1:0]                         qsfpdd_mac_tx_ptp_rst,
     // output wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfpdd_mac_tx_ptp_time,
+
     // input  wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfpdd_mac_tx_ptp_ts,
     // input  wire [CH_CNT*TX_TAG_WIDTH-1:0]            qsfpdd_mac_tx_ptp_ts_tag,
     // input  wire [CH_CNT-1:0]                         qsfpdd_mac_tx_ptp_ts_valid,
@@ -269,6 +275,8 @@ module test_fpga_core #
     // input  wire [CH_CNT-1:0]                         qsfpdd_mac_rx_axis_tlast,
     // input  wire [CH_CNT*AXIS_ETH_RX_USER_WIDTH-1:0]  qsfpdd_mac_rx_axis_tuser,
 
+    // input  wire [CH_CNT-1:0]                         qsfpdd_mac_rx_ptp_clk,
+    // input  wire [CH_CNT-1:0]                         qsfpdd_mac_rx_ptp_rst,
     // output wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfpdd_mac_rx_ptp_time,
 
     // input  wire [CH_CNT-1:0]                         qsfpdd_mac_rx_status,
@@ -310,7 +318,10 @@ wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfpdd_mac_tx_ptp_ts;
 wire [CH_CNT*TX_TAG_WIDTH-1:0]            qsfpdd_mac_tx_ptp_ts_tag;
 wire [CH_CNT-1:0]                         qsfpdd_mac_tx_ptp_ts_valid;
 
+wire [CH_CNT-1:0]                         qsfpdd_mac_tx_ptp_clk;
+wire [CH_CNT-1:0]                         qsfpdd_mac_tx_ptp_rst;
 wire [CH_CNT-1:0]                         qsfpdd_mac_tx_status;
+
 wire [CH_CNT-1:0]                         qsfpdd_mac_tx_lfc_req;
 wire [CH_CNT*8-1:0]                       qsfpdd_mac_tx_pfc_req;
 
@@ -323,6 +334,8 @@ wire [CH_CNT-1:0]                         qsfpdd_mac_rx_axis_tvalid;
 wire [CH_CNT-1:0]                         qsfpdd_mac_rx_axis_tlast;
 wire [CH_CNT*AXIS_ETH_RX_USER_WIDTH-1:0]  qsfpdd_mac_rx_axis_tuser;
 
+wire [CH_CNT-1:0]                         qsfpdd_mac_rx_ptp_clk;
+wire [CH_CNT-1:0]                         qsfpdd_mac_rx_ptp_rst;
 wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfpdd_mac_rx_ptp_time;
 
 wire [CH_CNT-1:0]                         qsfpdd_mac_rx_status;
@@ -343,9 +356,12 @@ for (n = 0; n < QSFPDD_CNT; n = n + 1) begin : ch
     wire                               ch_mac_tx_axis_tlast;
     wire [AXIS_ETH_TX_USER_WIDTH-1:0]  ch_mac_tx_axis_tuser;
 
+    wire                               ch_mac_tx_ptp_clk;
+    wire                               ch_mac_tx_ptp_rst;
     wire [PTP_TS_WIDTH-1:0]            ch_mac_tx_ptp_time;
+
     wire [PTP_TS_WIDTH-1:0]            ch_mac_tx_ptp_ts;
-    wire [TX_TAG_WIDTH-1:0]            ch_mac_tx_ptp_ts_tag;
+    wire [15:0]                        ch_mac_tx_ptp_ts_tag;
     wire                               ch_mac_tx_ptp_ts_valid;
 
     wire                               ch_mac_tx_status;
@@ -361,6 +377,8 @@ for (n = 0; n < QSFPDD_CNT; n = n + 1) begin : ch
     wire                               ch_mac_rx_axis_tlast;
     wire [AXIS_ETH_RX_USER_WIDTH-1:0]  ch_mac_rx_axis_tuser;
 
+    wire                               ch_mac_rx_ptp_clk;
+    wire                               ch_mac_rx_ptp_rst;
     wire [PTP_TS_WIDTH-1:0]            ch_mac_rx_ptp_time;
 
     wire                               ch_mac_rx_status;
@@ -377,7 +395,10 @@ for (n = 0; n < QSFPDD_CNT; n = n + 1) begin : ch
     assign ch_mac_tx_axis_tlast = qsfpdd_mac_tx_axis_tlast[n +: 1];
     assign ch_mac_tx_axis_tuser = qsfpdd_mac_tx_axis_tuser[n*AXIS_ETH_TX_USER_WIDTH +: AXIS_ETH_TX_USER_WIDTH];
 
+    assign qsfpdd_mac_tx_ptp_clk[n +: 1] = ch_mac_tx_ptp_clk;
+    assign qsfpdd_mac_tx_ptp_rst[n +: 1] = ch_mac_tx_ptp_rst;
     assign ch_mac_tx_ptp_time = qsfpdd_mac_tx_ptp_time[n*PTP_TS_WIDTH +: PTP_TS_WIDTH];
+
     assign qsfpdd_mac_tx_ptp_ts[n*PTP_TS_WIDTH +: PTP_TS_WIDTH] = ch_mac_tx_ptp_ts;
     assign qsfpdd_mac_tx_ptp_ts_tag[n*TX_TAG_WIDTH +: TX_TAG_WIDTH] = ch_mac_tx_ptp_ts_tag;
     assign qsfpdd_mac_tx_ptp_ts_valid[n +: 1] = ch_mac_tx_ptp_ts_valid;
@@ -395,6 +416,8 @@ for (n = 0; n < QSFPDD_CNT; n = n + 1) begin : ch
     assign qsfpdd_mac_rx_axis_tlast[n +: 1] = ch_mac_rx_axis_tlast;
     assign qsfpdd_mac_rx_axis_tuser[n*AXIS_ETH_RX_USER_WIDTH +: AXIS_ETH_RX_USER_WIDTH] = ch_mac_rx_axis_tuser;
 
+    assign qsfpdd_mac_rx_ptp_clk[n +: 1] = ch_mac_rx_ptp_clk;
+    assign qsfpdd_mac_rx_ptp_rst[n +: 1] = ch_mac_rx_ptp_rst;
     assign ch_mac_rx_ptp_time = qsfpdd_mac_rx_ptp_time[n*PTP_TS_WIDTH +: PTP_TS_WIDTH];
 
     assign qsfpdd_mac_rx_status[n +: 1] = ch_mac_rx_status;
@@ -419,6 +442,7 @@ fpga_core #(
     // Board configuration
     .QSFPDD_CNT(QSFPDD_CNT),
     .CH_CNT(CH_CNT),
+    .PORT_GROUP_SIZE(PORT_GROUP_SIZE),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),
@@ -436,6 +460,8 @@ fpga_core #(
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
+    .PTP_SEPARATE_TX_CLOCK(PTP_SEPARATE_TX_CLOCK),
+    .PTP_SEPARATE_RX_CLOCK(PTP_SEPARATE_RX_CLOCK),
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
@@ -624,7 +650,10 @@ uut (
     .qsfpdd_mac_tx_axis_tlast(qsfpdd_mac_tx_axis_tlast),
     .qsfpdd_mac_tx_axis_tuser(qsfpdd_mac_tx_axis_tuser),
 
+    .qsfpdd_mac_tx_ptp_clk(qsfpdd_mac_tx_ptp_clk),
+    .qsfpdd_mac_tx_ptp_rst(qsfpdd_mac_tx_ptp_rst),
     .qsfpdd_mac_tx_ptp_time(qsfpdd_mac_tx_ptp_time),
+
     .qsfpdd_mac_tx_ptp_ts(qsfpdd_mac_tx_ptp_ts),
     .qsfpdd_mac_tx_ptp_ts_tag(qsfpdd_mac_tx_ptp_ts_tag),
     .qsfpdd_mac_tx_ptp_ts_valid(qsfpdd_mac_tx_ptp_ts_valid),
@@ -642,6 +671,8 @@ uut (
     .qsfpdd_mac_rx_axis_tlast(qsfpdd_mac_rx_axis_tlast),
     .qsfpdd_mac_rx_axis_tuser(qsfpdd_mac_rx_axis_tuser),
 
+    .qsfpdd_mac_rx_ptp_clk(qsfpdd_mac_rx_ptp_clk),
+    .qsfpdd_mac_rx_ptp_rst(qsfpdd_mac_rx_ptp_rst),
     .qsfpdd_mac_rx_ptp_time(qsfpdd_mac_rx_ptp_time),
 
     .qsfpdd_mac_rx_status(qsfpdd_mac_rx_status),

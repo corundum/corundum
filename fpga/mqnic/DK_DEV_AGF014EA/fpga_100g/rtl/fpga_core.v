@@ -27,6 +27,7 @@ module fpga_core #
     // Board configuration
     parameter QSFPDD_CNT = 2,
     parameter CH_CNT = QSFPDD_CNT*2,
+    parameter PORT_GROUP_SIZE = 2,
 
     // Structural configuration
     parameter IF_COUNT = 2,
@@ -44,6 +45,8 @@ module fpga_core #
     parameter PTP_TS_WIDTH = 96,
     parameter PTP_CLOCK_PIPELINE = 0,
     parameter PTP_CLOCK_CDC_PIPELINE = 0,
+    parameter PTP_SEPARATE_TX_CLOCK = 0,
+    parameter PTP_SEPARATE_RX_CLOCK = 0,
     parameter PTP_PORT_CDC_PIPELINE = 0,
     parameter PTP_PEROUT_ENABLE = 1,
     parameter PTP_PEROUT_COUNT = 1,
@@ -232,7 +235,10 @@ module fpga_core #
     output wire [CH_CNT-1:0]                         qsfpdd_mac_tx_axis_tlast,
     output wire [CH_CNT*AXIS_ETH_TX_USER_WIDTH-1:0]  qsfpdd_mac_tx_axis_tuser,
 
+    input  wire [CH_CNT-1:0]                         qsfpdd_mac_tx_ptp_clk,
+    input  wire [CH_CNT-1:0]                         qsfpdd_mac_tx_ptp_rst,
     output wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfpdd_mac_tx_ptp_time,
+
     input  wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfpdd_mac_tx_ptp_ts,
     input  wire [CH_CNT*TX_TAG_WIDTH-1:0]            qsfpdd_mac_tx_ptp_ts_tag,
     input  wire [CH_CNT-1:0]                         qsfpdd_mac_tx_ptp_ts_valid,
@@ -250,6 +256,8 @@ module fpga_core #
     input  wire [CH_CNT-1:0]                         qsfpdd_mac_rx_axis_tlast,
     input  wire [CH_CNT*AXIS_ETH_RX_USER_WIDTH-1:0]  qsfpdd_mac_rx_axis_tuser,
 
+    input  wire [CH_CNT-1:0]                         qsfpdd_mac_rx_ptp_clk,
+    input  wire [CH_CNT-1:0]                         qsfpdd_mac_rx_ptp_rst,
     output wire [CH_CNT*PTP_TS_WIDTH-1:0]            qsfpdd_mac_rx_ptp_time,
 
     input  wire [CH_CNT-1:0]                         qsfpdd_mac_rx_status,
@@ -590,7 +598,7 @@ wire [PORT_COUNT*8-1:0]                       eth_rx_pfc_ack;
 mqnic_port_map_mac_axis #(
     .MAC_COUNT(CH_CNT),
     .PORT_MASK(PORT_MASK),
-    .PORT_GROUP_SIZE(2),
+    .PORT_GROUP_SIZE(PORT_GROUP_SIZE),
 
     .IF_COUNT(IF_COUNT),
     .PORTS_PER_IF(PORTS_PER_IF),
@@ -609,8 +617,8 @@ mqnic_port_map_mac_axis_inst (
     .mac_tx_clk(qsfpdd_mac_tx_clk),
     .mac_tx_rst(qsfpdd_mac_tx_rst),
 
-    .mac_tx_ptp_clk(qsfpdd_mac_tx_clk),
-    .mac_tx_ptp_rst(qsfpdd_mac_tx_rst),
+    .mac_tx_ptp_clk(qsfpdd_mac_tx_ptp_clk),
+    .mac_tx_ptp_rst(qsfpdd_mac_tx_ptp_rst),
     .mac_tx_ptp_ts_96(qsfpdd_mac_tx_ptp_time),
     .mac_tx_ptp_ts_step(),
 
@@ -636,8 +644,8 @@ mqnic_port_map_mac_axis_inst (
     .mac_rx_clk(qsfpdd_mac_rx_clk),
     .mac_rx_rst(qsfpdd_mac_rx_rst),
 
-    .mac_rx_ptp_clk(qsfpdd_mac_rx_clk),
-    .mac_rx_ptp_rst(qsfpdd_mac_rx_rst),
+    .mac_rx_ptp_clk(qsfpdd_mac_rx_ptp_clk),
+    .mac_rx_ptp_rst(qsfpdd_mac_rx_ptp_rst),
     .mac_rx_ptp_ts_96(qsfpdd_mac_rx_ptp_time),
     .mac_rx_ptp_ts_step(),
 
@@ -738,8 +746,8 @@ mqnic_core_pcie_ptile #(
     .PTP_TS_WIDTH(PTP_TS_WIDTH),
     .PTP_CLOCK_PIPELINE(PTP_CLOCK_PIPELINE),
     .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
-    .PTP_SEPARATE_TX_CLOCK(0),
-    .PTP_SEPARATE_RX_CLOCK(0),
+    .PTP_SEPARATE_TX_CLOCK(PTP_SEPARATE_TX_CLOCK),
+    .PTP_SEPARATE_RX_CLOCK(PTP_SEPARATE_RX_CLOCK),
     .PTP_PORT_CDC_PIPELINE(PTP_PORT_CDC_PIPELINE),
     .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
     .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),

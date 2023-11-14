@@ -37,6 +37,7 @@ Corundum currently supports devices from both Xilinx and Intel, on boards from s
 *  Intel Agilex F dev kit (Intel Agilex F 014)
 *  Terasic DE10-Agilex (Intel Agilex F 014)
 *  Xilinx Alveo U50 (Xilinx Virtex UltraScale+ XCU50)
+*  Xilinx Alveo U55N/Varium C1100 (Xilinx Virtex UltraScale+ XCU55N)
 *  Xilinx Alveo U200 (Xilinx Virtex UltraScale+ XCU200)
 *  Xilinx Alveo U250 (Xilinx Virtex UltraScale+ XCU250)
 *  Xilinx Alveo U280 (Xilinx Virtex UltraScale+ XCU280)

@@ -32,6 +32,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     Intel         DK-DEV-AGF014EA          AGFB014R24B2E2V       0x1172b00e
     Terasic       DE10-Agilex              AGFB014R24B2E2V       0x1172b00a
     Xilinx        Alveo U50                XCU50-2FSVH2104E      0x10ee9032
+    Xilinx        Alveo U55N/Varium C1100  XCU55N-L2FSVH2892E    0x10ee9037
     Xilinx        Alveo U200               XCU200-2FSGD2104E     0x10ee90c8
     Xilinx        Alveo U250               XCU250-2FIGD2104E     0x10ee90fa
     Xilinx        Alveo U280               XCU280-L2FSVH2892E    0x10ee9118
@@ -62,6 +63,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     DK-DEV-AGF014EA          Gen 4 x16  2x QSFP-DD  4x 8GB DDR4 3200 DIMM (4x 72)    \-
     DE10-Agilex              Gen 4 x16  2x QSFP-DD  4x 8GB DDR4 3200 DIMM (4x 72)    \-
     Alveo U50                Gen 3 x16  1x QSFP28   \-                               8 GB
+    Alveo U55N/Varium C1100  Gen 3 x16  2x QSFP28   \-                               8 GB
     Alveo U200               Gen 3 x16  2x QSFP28   64 GB DDR4 2400 (4x 2G x72)      \-
     Alveo U250               Gen 3 x16  2x QSFP28   64 GB DDR4 2400 (4x 2G x72)      \-
     Alveo U280               Gen 3 x16  2x QSFP28   32 GB DDR4 2400 (2x 2G x72)      8 GB
@@ -92,6 +94,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     DK-DEV-AGF014EA          Y             N :sup:`3`    N
     DE10-Agilex              Y             N :sup:`7`    N :sup:`10`
     Alveo U50                N :sup:`4`    Y             Y
+    Alveo U55N/Varium C1100  N :sup:`4`    Y             Y
     Alveo U200               Y             Y             Y
     Alveo U250               Y             Y             Y
     Alveo U280               N :sup:`4`    Y             Y
@@ -159,6 +162,9 @@ This section details PCIe form-factor targets, which interface with a separate h
     Alveo U50                mqnic/fpga_25g/fpga              1x1   256/8K   25G   Y    RR
     Alveo U50                mqnic/fpga_25g/fpga_10g          1x1   256/8K   10G   Y    RR
     Alveo U50                mqnic/fpga_100g/fpga             1x1   256/8K   100G  Y    RR
+    Alveo U55N               mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
+    Alveo U55N               mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
+    Alveo U55N               mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR
     Alveo U200               mqnic/fpga_25g/fpga              2x1   256/8K   25G   Y    RR
     Alveo U200               mqnic/fpga_25g/fpga_10g          2x1   256/8K   10G   Y    RR
     Alveo U200               mqnic/fpga_100g/fpga             2x1   256/8K   100G  Y    RR

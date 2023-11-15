@@ -126,7 +126,8 @@ IP_TCL_FILES += ip/mac_13.tcl
 QSF_FILES = fpga.qsf
 
 # SDC files
-SDC_FILES = fpga.sdc
+SDC_FILES += fpga.sdc
+SDC_FILES += mac_100g.sdc
 
 # Configuration
 CONFIG_TCL_FILES = ./config.tcl

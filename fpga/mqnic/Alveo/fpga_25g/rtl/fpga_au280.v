@@ -281,7 +281,8 @@ parameter AXIS_ETH_RX_USER_WIDTH = (PTP_TS_ENABLE ? PTP_TS_WIDTH : 0) + 1;
 wire pcie_user_clk;
 wire pcie_user_reset;
 
-wire clk_161mhz_ref_int;
+wire clk_100mhz_0_ibufg;
+wire clk_100mhz_0_int;
 
 wire clk_50mhz_mmcm_out;
 wire clk_125mhz_mmcm_out;
@@ -298,19 +299,35 @@ wire mmcm_rst = pcie_user_reset;
 wire mmcm_locked;
 wire mmcm_clkfb;
 
+IBUFGDS #(
+   .DIFF_TERM("FALSE"),
+   .IBUF_LOW_PWR("FALSE")
+)
+clk_100mhz_0_ibufg_inst (
+   .O   (clk_100mhz_0_ibufg),
+   .I   (clk_100mhz_0_p),
+   .IB  (clk_100mhz_0_n)
+);
+
+BUFG
+clk_100mhz_0_bufg_inst (
+    .I(clk_100mhz_0_ibufg),
+    .O(clk_100mhz_0_int)
+);
+
 // MMCM instance
-// 161.13 MHz in, 50 MHz + 125 MHz out
+// 100 MHz in, 125 MHz + 50 MHz out
 // PFD range: 10 MHz to 500 MHz
 // VCO range: 800 MHz to 1600 MHz
-// M = 128, D = 15 sets Fvco = 1375 MHz (in range)
-// Divide by 27.5 to get output frequency of 50 MHz
-// Divide by 11 to get output frequency of 125 MHz
+// M = 10, D = 1 sets Fvco = 1000 MHz
+// Divide by 8 to get output frequency of 125 MHz
+// Divide by 20 to get output frequency of 50 MHz
 MMCME4_BASE #(
     .BANDWIDTH("OPTIMIZED"),
-    .CLKOUT0_DIVIDE_F(27.5),
+    .CLKOUT0_DIVIDE_F(8),
     .CLKOUT0_DUTY_CYCLE(0.5),
     .CLKOUT0_PHASE(0),
-    .CLKOUT1_DIVIDE(11),
+    .CLKOUT1_DIVIDE(20),
     .CLKOUT1_DUTY_CYCLE(0.5),
     .CLKOUT1_PHASE(0),
     .CLKOUT2_DIVIDE(1),
@@ -328,22 +345,22 @@ MMCME4_BASE #(
     .CLKOUT6_DIVIDE(1),
     .CLKOUT6_DUTY_CYCLE(0.5),
     .CLKOUT6_PHASE(0),
-    .CLKFBOUT_MULT_F(128),
+    .CLKFBOUT_MULT_F(10),
     .CLKFBOUT_PHASE(0),
-    .DIVCLK_DIVIDE(15),
+    .DIVCLK_DIVIDE(1),
     .REF_JITTER1(0.010),
-    .CLKIN1_PERIOD(6.206),
+    .CLKIN1_PERIOD(10.000),
     .STARTUP_WAIT("FALSE"),
     .CLKOUT4_CASCADE("FALSE")
 )
 clk_mmcm_inst (
-    .CLKIN1(clk_161mhz_ref_int),
+    .CLKIN1(clk_100mhz_0_int),
     .CLKFBIN(mmcm_clkfb),
     .RST(mmcm_rst),
     .PWRDWN(1'b0),
-    .CLKOUT0(clk_50mhz_mmcm_out),
+    .CLKOUT0(clk_125mhz_mmcm_out),
     .CLKOUT0B(),
-    .CLKOUT1(clk_125mhz_mmcm_out),
+    .CLKOUT1(clk_50mhz_mmcm_out),
     .CLKOUT1B(),
     .CLKOUT2(),
     .CLKOUT2B(),
@@ -1024,8 +1041,6 @@ wire qsfp0_mgt_refclk_1;
 wire qsfp0_mgt_refclk_1_int;
 wire qsfp0_mgt_refclk_1_bufg;
 
-assign clk_161mhz_ref_int = qsfp0_mgt_refclk_1_bufg;
-
 IBUFDS_GTE4 ibufds_gte4_qsfp0_mgt_refclk_1_inst (
     .I     (qsfp0_mgt_refclk_1_p),
     .IB    (qsfp0_mgt_refclk_1_n),
@@ -1375,18 +1390,6 @@ wire [DDR_CH-1:0]                     ddr_status;
 
 generate
 
-wire clk_100mhz_0_ibufg;
-
-IBUFGDS #(
-   .DIFF_TERM("FALSE"),
-   .IBUF_LOW_PWR("FALSE")
-)
-clk_100mhz_0_ibufg_inst (
-   .O   (clk_100mhz_0_ibufg),
-   .I   (clk_100mhz_0_p),
-   .IB  (clk_100mhz_0_n)
-);
-
 if (DDR_ENABLE && DDR_CH > 0) begin
 
 reg ddr4_rst_reg = 1'b1;
@@ -1400,7 +1403,7 @@ always @(posedge pcie_user_clk or posedge pcie_user_reset) begin
 end
 
 ddr4_0 ddr4_c0_inst (
-    .c0_sys_clk_i(clk_100mhz_0_ibufg),
+    .c0_sys_clk_i(clk_100mhz_0_int),
     .sys_rst(ddr4_rst_reg),
 
     .c0_init_calib_complete(ddr_status[0 +: 1]),
@@ -1526,6 +1529,7 @@ assign ddr_status = 0;
 end
 
 wire clk_100mhz_1_ibufg;
+wire clk_100mhz_1_int;
 
 IBUFGDS #(
    .DIFF_TERM("FALSE"),
@@ -1535,6 +1539,12 @@ clk_100mhz_1_ibufg_inst (
    .O   (clk_100mhz_1_ibufg),
    .I   (clk_100mhz_1_p),
    .IB  (clk_100mhz_1_n)
+);
+
+BUFG
+clk_100mhz_1_bufg_inst (
+    .I(clk_100mhz_1_ibufg),
+    .O(clk_100mhz_1_int)
 );
 
 if (DDR_ENABLE && DDR_CH > 1) begin
@@ -1550,7 +1560,7 @@ always @(posedge pcie_user_clk or posedge pcie_user_reset) begin
 end
 
 ddr4_0 ddr4_c1_inst (
-    .c0_sys_clk_i(clk_100mhz_1_ibufg),
+    .c0_sys_clk_i(clk_100mhz_1_int),
     .sys_rst(ddr4_rst_reg),
 
     .c0_init_calib_complete(ddr_status[1 +: 1]),
@@ -1708,13 +1718,7 @@ generate
 
 if (HBM_ENABLE) begin
 
-    wire hbm_ref_clk;
-
-    BUFG
-    hbm_ref_clk_bufg_inst (
-        .I(clk_100mhz_0_ibufg),
-        .O(hbm_ref_clk)
-    );
+    wire hbm_ref_clk = clk_100mhz_0_int;
 
     wire hbm_cattrip_1;
     wire hbm_cattrip_2;

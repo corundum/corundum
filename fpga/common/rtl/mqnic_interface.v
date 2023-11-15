@@ -18,8 +18,17 @@ module mqnic_interface #
     parameter PORTS = 1,
     parameter SCHEDULERS = 1,
 
+    // Clock configuration
+    parameter CLK_PERIOD_NS_NUM = 4,
+    parameter CLK_PERIOD_NS_DENOM = 1,
+
     // PTP configuration
+    parameter PTP_CLK_PERIOD_NS_NUM = 4,
+    parameter PTP_CLK_PERIOD_NS_DENOM = 1,
     parameter PTP_TS_WIDTH = 96,
+    parameter PTP_CLOCK_CDC_PIPELINE = 0,
+    parameter PTP_PEROUT_ENABLE = 0,
+    parameter PTP_PEROUT_COUNT = 1,
 
     // Queue manager configuration (interface)
     parameter EVENT_QUEUE_OP_TABLE_SIZE = 32,
@@ -472,8 +481,22 @@ module mqnic_interface #
     /*
      * PTP clock
      */
-    input  wire [95:0]                                  ptp_ts_tod,
-    input  wire                                         ptp_ts_tod_step,
+    input  wire                                         ptp_clk,
+    input  wire                                         ptp_rst,
+    input  wire                                         ptp_sample_clk,
+    input  wire                                         ptp_td_sd,
+    input  wire                                         ptp_pps,
+    input  wire                                         ptp_pps_str,
+    input  wire                                         ptp_sync_locked,
+    input  wire [63:0]                                  ptp_sync_ts_rel,
+    input  wire                                         ptp_sync_ts_rel_step,
+    input  wire [96:0]                                  ptp_sync_ts_tod,
+    input  wire                                         ptp_sync_ts_tod_step,
+    input  wire                                         ptp_sync_pps,
+    input  wire                                         ptp_sync_pps_str,
+    input  wire [PTP_PEROUT_COUNT-1:0]                  ptp_perout_locked,
+    input  wire [PTP_PEROUT_COUNT-1:0]                  ptp_perout_error,
+    input  wire [PTP_PEROUT_COUNT-1:0]                  ptp_perout_pulse,
 
     /*
      * Interrupt request output
@@ -2222,26 +2245,49 @@ genvar n;
 for (n = 0; n < SCHEDULERS; n = n + 1) begin : sched
 
     mqnic_tx_scheduler_block #(
+        // Structural configuration
         .PORTS(PORTS),
         .INDEX(n),
+
+        // Clock configuration
+        .CLK_PERIOD_NS_NUM(CLK_PERIOD_NS_NUM),
+        .CLK_PERIOD_NS_DENOM(CLK_PERIOD_NS_DENOM),
+
+        // PTP configuration
+        .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
+        .PTP_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
+        .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
+        .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
+        .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
+
+        // Queue manager configuration
+        .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
+
+        // Scheduler configuration
+        .TX_SCHEDULER_OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
+        .TX_SCHEDULER_PIPELINE(TX_SCHEDULER_PIPELINE),
+        .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
+
+        // Interface configuration
+        .DMA_LEN_WIDTH(DMA_CLIENT_LEN_WIDTH),
+        .TX_REQ_TAG_WIDTH(REQ_TAG_WIDTH_INT),
+        .MAX_TX_SIZE(MAX_TX_SIZE),
+
+        // Register interface configuration
         .REG_ADDR_WIDTH(AXIL_CTRL_ADDR_WIDTH),
         .REG_DATA_WIDTH(AXIL_DATA_WIDTH),
         .REG_STRB_WIDTH(AXIL_STRB_WIDTH),
         .RB_BASE_ADDR(SCHED_RB_BASE_ADDR + SCHED_RB_STRIDE*n),
         .RB_NEXT_PTR(n < SCHEDULERS-1 ? SCHED_RB_BASE_ADDR + SCHED_RB_STRIDE*(n+1) : 0),
+
+        // AXI lite interface configuration
         .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
         .AXIL_ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
         .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
         .AXIL_OFFSET(AXIL_SCHED_BASE_ADDR + (2**AXIL_SCHED_ADDR_WIDTH)*n),
-        .LEN_WIDTH(DMA_CLIENT_LEN_WIDTH),
-        .REQ_TAG_WIDTH(REQ_TAG_WIDTH_INT),
-        .OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
-        .QUEUE_INDEX_WIDTH(TX_QUEUE_INDEX_WIDTH),
-        .PIPELINE(TX_SCHEDULER_PIPELINE),
-        .TDMA_INDEX_WIDTH(TDMA_INDEX_WIDTH),
-        .PTP_TS_WIDTH(PTP_TS_WIDTH),
-        .AXIS_TX_DEST_WIDTH(AXIS_IF_TX_DEST_WIDTH),
-        .MAX_TX_SIZE(MAX_TX_SIZE)
+
+        // Streaming interface configuration
+        .AXIS_TX_DEST_WIDTH(AXIS_IF_TX_DEST_WIDTH)
     )
     scheduler_block (
         .clk(clk),
@@ -2310,8 +2356,22 @@ for (n = 0; n < SCHEDULERS; n = n + 1) begin : sched
         /*
          * PTP clock
          */
-        .ptp_ts_96(ptp_ts_tod),
-        .ptp_ts_step(ptp_ts_tod_step),
+        .ptp_clk(ptp_clk),
+        .ptp_rst(ptp_rst),
+        .ptp_sample_clk(ptp_sample_clk),
+        .ptp_td_sd(ptp_td_sd),
+        .ptp_pps(ptp_pps),
+        .ptp_pps_str(ptp_pps_str),
+        .ptp_sync_locked(ptp_sync_locked),
+        .ptp_sync_ts_rel(ptp_sync_ts_rel),
+        .ptp_sync_ts_rel_step(ptp_sync_ts_rel_step),
+        .ptp_sync_ts_tod(ptp_sync_ts_tod),
+        .ptp_sync_ts_tod_step(ptp_sync_ts_tod_step),
+        .ptp_sync_pps(ptp_sync_pps),
+        .ptp_sync_pps_str(ptp_sync_pps_str),
+        .ptp_perout_locked(ptp_perout_locked),
+        .ptp_perout_error(ptp_perout_error),
+        .ptp_perout_pulse(ptp_perout_pulse),
 
         /*
          * Configuration

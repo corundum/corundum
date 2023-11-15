@@ -3036,8 +3036,17 @@ generate
             .PORTS(PORTS_PER_IF),
             .SCHEDULERS(SCHED_PER_IF),
 
+            // Clock configuration
+            .CLK_PERIOD_NS_NUM(CLK_PERIOD_NS_NUM),
+            .CLK_PERIOD_NS_DENOM(CLK_PERIOD_NS_DENOM),
+
             // PTP configuration
+            .PTP_CLK_PERIOD_NS_NUM(PTP_CLK_PERIOD_NS_NUM),
+            .PTP_CLK_PERIOD_NS_DENOM(PTP_CLK_PERIOD_NS_DENOM),
             .PTP_TS_WIDTH(PTP_TS_WIDTH),
+            .PTP_CLOCK_CDC_PIPELINE(PTP_CLOCK_CDC_PIPELINE),
+            .PTP_PEROUT_ENABLE(PTP_PEROUT_ENABLE),
+            .PTP_PEROUT_COUNT(PTP_PEROUT_COUNT),
 
             // Queue manager configuration
             .EVENT_QUEUE_OP_TABLE_SIZE(EVENT_QUEUE_OP_TABLE_SIZE),
@@ -3490,8 +3499,22 @@ generate
             /*
              * PTP clock
              */
-            .ptp_ts_tod(ptp_sync_ts_tod),
-            .ptp_ts_tod_step(ptp_sync_ts_tod_step),
+            .ptp_clk(ptp_clk),
+            .ptp_rst(ptp_rst),
+            .ptp_sample_clk(ptp_sample_clk),
+            .ptp_td_sd(ptp_td_sd),
+            .ptp_pps(ptp_pps),
+            .ptp_pps_str(ptp_pps_str),
+            .ptp_sync_locked(ptp_sync_locked),
+            .ptp_sync_ts_rel(ptp_sync_ts_rel),
+            .ptp_sync_ts_rel_step(ptp_sync_ts_rel_step),
+            .ptp_sync_ts_tod(ptp_sync_ts_tod),
+            .ptp_sync_ts_tod_step(ptp_sync_ts_tod_step),
+            .ptp_sync_pps(ptp_sync_pps),
+            .ptp_sync_pps_str(ptp_sync_pps_str),
+            .ptp_perout_locked(ptp_perout_locked),
+            .ptp_perout_error(ptp_perout_error),
+            .ptp_perout_pulse(ptp_perout_pulse),
 
             /*
              * Interrupt request output
@@ -3530,10 +3553,10 @@ generate
             assign all_clocks[(n*PORTS_PER_IF+m)*2+0] = port_tx_clk;
             assign all_clocks[(n*PORTS_PER_IF+m)*2+1] = port_rx_clk;
 
-            wire [PTP_TS_WIDTH-1:0] port_rx_ptp_ts_tod;
+            wire [95:0] port_rx_ptp_ts_tod;
             wire port_rx_ptp_ts_tod_step;
 
-            wire [PTP_TS_WIDTH-1:0] port_tx_ptp_ts_tod;
+            wire [95:0] port_tx_ptp_ts_tod;
             wire port_tx_ptp_ts_tod_step;
 
             if (PTP_TS_ENABLE) begin: ptp
@@ -3633,10 +3656,10 @@ generate
 
             end
 
-            assign tx_ptp_ts_tod[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = port_tx_ptp_ts_tod;
+            assign tx_ptp_ts_tod[(n*PORTS_PER_IF+m)*96 +: 96] = port_tx_ptp_ts_tod;
             assign tx_ptp_ts_tod_step[n*PORTS_PER_IF+m] = port_tx_ptp_ts_tod_step;
 
-            assign rx_ptp_ts_tod[(n*PORTS_PER_IF+m)*PTP_TS_WIDTH +: PTP_TS_WIDTH] = port_rx_ptp_ts_tod;
+            assign rx_ptp_ts_tod[(n*PORTS_PER_IF+m)*96 +: 96] = port_rx_ptp_ts_tod;
             assign rx_ptp_ts_tod_step[n*PORTS_PER_IF+m] = port_rx_ptp_ts_tod_step;
 
         end

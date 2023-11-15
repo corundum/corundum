@@ -14,46 +14,49 @@
  */
 module mqnic_tx_scheduler_block #
 (
-    // Number of ports
+    // Structural configuration
     parameter PORTS = 1,
-    // Scheduler index
     parameter INDEX = 0,
-    // Width of control register interface address in bits
+
+    // Clock configuration
+    parameter CLK_PERIOD_NS_NUM = 4,
+    parameter CLK_PERIOD_NS_DENOM = 1,
+
+    // PTP configuration
+    parameter PTP_CLK_PERIOD_NS_NUM = 4,
+    parameter PTP_CLK_PERIOD_NS_DENOM = 1,
+    parameter PTP_CLOCK_CDC_PIPELINE = 0,
+    parameter PTP_PEROUT_ENABLE = 0,
+    parameter PTP_PEROUT_COUNT = 1,
+
+    // Queue manager configuration
+    parameter QUEUE_INDEX_WIDTH = 13,
+
+    // Scheduler configuration
+    parameter TX_SCHEDULER_OP_TABLE_SIZE = 8,
+    parameter TX_SCHEDULER_PIPELINE = 3,
+    parameter TDMA_INDEX_WIDTH = 6,
+
+    // Interface configuration
+    parameter DMA_LEN_WIDTH = 16,
+    parameter TX_REQ_TAG_WIDTH = 8,
+    parameter MAX_TX_SIZE = 9214,
+
+    // Register interface configuration
     parameter REG_ADDR_WIDTH = 16,
-    // Width of control register interface data in bits
     parameter REG_DATA_WIDTH = 32,
-    // Width of control register interface strb
     parameter REG_STRB_WIDTH = (REG_DATA_WIDTH/8),
-    // Register block base address
     parameter RB_BASE_ADDR = 0,
-    // Register block next pointer
     parameter RB_NEXT_PTR = 0,
-    // Width of AXI lite data bus in bits
+
+    // AXI lite interface configuration
     parameter AXIL_DATA_WIDTH = 32,
-    // Width of AXI lite address bus in bits
     parameter AXIL_ADDR_WIDTH = 16,
-    // Width of AXI lite wstrb (width of data bus in words)
     parameter AXIL_STRB_WIDTH = (AXIL_DATA_WIDTH/8),
-    // Offset to AXI lite interface
     parameter AXIL_OFFSET = 0,
-    // Length field width
-    parameter LEN_WIDTH = 16,
-    // Transmit request tag field width
-    parameter REQ_TAG_WIDTH = 8,
-    // Number of outstanding operations
-    parameter OP_TABLE_SIZE = 16,
-    // Queue index width
-    parameter QUEUE_INDEX_WIDTH = 6,
-    // Pipeline setting
-    parameter PIPELINE = 3,
-    // Scheduler TDMA index width
-    parameter TDMA_INDEX_WIDTH = 8,
-    // PTP timestamp width
-    parameter PTP_TS_WIDTH = 96,
-    // AXI stream tdest signal width
-    parameter AXIS_TX_DEST_WIDTH = $clog2(PORTS)+4,
-    // Max transmit packet size
-    parameter MAX_TX_SIZE = 2048
+
+    // Streaming interface configuration
+    parameter AXIS_TX_DEST_WIDTH = $clog2(PORTS)+4
 )
 (
     input  wire                          clk,
@@ -101,7 +104,7 @@ module mqnic_tx_scheduler_block #
      * Transmit request output (queue index)
      */
     output wire [QUEUE_INDEX_WIDTH-1:0]  m_axis_tx_req_queue,
-    output wire [REQ_TAG_WIDTH-1:0]      m_axis_tx_req_tag,
+    output wire [TX_REQ_TAG_WIDTH-1:0]   m_axis_tx_req_tag,
     output wire [AXIS_TX_DEST_WIDTH-1:0] m_axis_tx_req_dest,
     output wire                          m_axis_tx_req_valid,
     input  wire                          m_axis_tx_req_ready,
@@ -109,8 +112,8 @@ module mqnic_tx_scheduler_block #
     /*
      * Transmit request status input
      */
-    input  wire [LEN_WIDTH-1:0]          s_axis_tx_req_status_len,
-    input  wire [REQ_TAG_WIDTH-1:0]      s_axis_tx_req_status_tag,
+    input  wire [DMA_LEN_WIDTH-1:0]      s_axis_tx_req_status_len,
+    input  wire [TX_REQ_TAG_WIDTH-1:0]   s_axis_tx_req_status_tag,
     input  wire                          s_axis_tx_req_status_valid,
 
     /*
@@ -122,13 +125,27 @@ module mqnic_tx_scheduler_block #
     /*
      * PTP clock
      */
-    input  wire [PTP_TS_WIDTH-1:0]       ptp_ts_96,
-    input  wire                          ptp_ts_step,
+    input  wire                          ptp_clk,
+    input  wire                          ptp_rst,
+    input  wire                          ptp_sample_clk,
+    input  wire                          ptp_td_sd,
+    input  wire                          ptp_pps,
+    input  wire                          ptp_pps_str,
+    input  wire                          ptp_sync_locked,
+    input  wire [63:0]                   ptp_sync_ts_rel,
+    input  wire                          ptp_sync_ts_rel_step,
+    input  wire [96:0]                   ptp_sync_ts_tod,
+    input  wire                          ptp_sync_ts_tod_step,
+    input  wire                          ptp_sync_pps,
+    input  wire                          ptp_sync_pps_str,
+    input  wire [PTP_PEROUT_COUNT-1:0]   ptp_perout_locked,
+    input  wire [PTP_PEROUT_COUNT-1:0]   ptp_perout_error,
+    input  wire [PTP_PEROUT_COUNT-1:0]   ptp_perout_pulse,
 
     /*
      * Configuration
      */
-    input  wire [LEN_WIDTH-1:0]          mtu
+    input  wire [DMA_LEN_WIDTH-1:0]      mtu
 );
 
 parameter SCHED_COUNT = 1;
@@ -216,11 +233,11 @@ tx_scheduler_rr #(
     .AXIL_DATA_WIDTH(AXIL_DATA_WIDTH),
     .AXIL_ADDR_WIDTH(AXIL_SCHED_ADDR_WIDTH),
     .AXIL_STRB_WIDTH(AXIL_STRB_WIDTH),
-    .LEN_WIDTH(LEN_WIDTH),
-    .REQ_TAG_WIDTH(REQ_TAG_WIDTH),
-    .OP_TABLE_SIZE(OP_TABLE_SIZE),
+    .LEN_WIDTH(DMA_LEN_WIDTH),
+    .REQ_TAG_WIDTH(TX_REQ_TAG_WIDTH),
+    .OP_TABLE_SIZE(TX_SCHEDULER_OP_TABLE_SIZE),
     .QUEUE_INDEX_WIDTH(QUEUE_INDEX_WIDTH),
-    .PIPELINE(PIPELINE),
+    .PIPELINE(TX_SCHEDULER_PIPELINE),
     .SCHED_CTRL_ENABLE(0)
 )
 tx_scheduler_inst (

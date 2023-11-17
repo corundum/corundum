@@ -2,15 +2,18 @@
 /*
  * Copyright (c) 2023 Missing Link Electronics, Inc.
  *
- * Template verilog header containing definitions for custom app parameters.
+ * Verilog header containing parameter definitions for custom app port demo.
  *
- * See mqnic_app_custom_ports.vh for detailed explanation.
+ * AXIL_APP_CUSTOM_DATA_WIDTH has been assigned a nonsensical value to demonstrate
+ * parameter value override via config.tcl.
+ *
+ * See template header files in fpga/app/template/rtl/ for feature documentation.
  */
 
 // Custom parameter list (name, default value)
 `define APP_CUSTOM_PARAMS(X_PARAM) \
-    X_PARAM(TEMPLATE_PARAM_1, 42) \
-    X_PARAM(TEMPLATE_PARAM_2, 32'hDEADBEEF)
+    X_PARAM(AXIL_APP_CUSTOM_DATA_WIDTH, 1) \
+    X_PARAM(AXIL_APP_CUSTOM_STRB_WIDTH, (AXIL_APP_CUSTOM_DATA_WIDTH/8))
 
 // parameter declaration expression
 `define X_PARAM_DECL(NAME, DEFAULT) \

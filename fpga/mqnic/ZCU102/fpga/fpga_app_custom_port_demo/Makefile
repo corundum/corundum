@@ -7,8 +7,8 @@ FPGA_TOP = fpga
 FPGA_ARCH = zynquplus
 
 # Files for synthesis
-SYN_FILES = rtl/fpga.v
-SYN_FILES += rtl/fpga_core.v
+SYN_FILES = rtl/fpga_custom_port_demo.v
+SYN_FILES += rtl/fpga_core_custom_port_demo.v
 SYN_FILES += rtl/debounce_switch.v
 SYN_FILES += rtl/common/mqnic_core_axi.v
 SYN_FILES += rtl/common/mqnic_core.v
@@ -55,6 +55,9 @@ SYN_FILES += rtl/common/tx_scheduler_rr.v
 SYN_FILES += rtl/common/tdma_scheduler.v
 SYN_FILES += rtl/common/tdma_ber.v
 SYN_FILES += rtl/common/tdma_ber_ch.v
+SYN_FILES += app/custom_port_demo/rtl/mqnic_app_block_custom_port_demo.v
+SYN_FILES += app/custom_port_demo/rtl/mqnic_app_custom_params.vh
+SYN_FILES += app/custom_port_demo/rtl/mqnic_app_custom_ports.vh
 SYN_FILES += lib/eth/rtl/eth_mac_10g.v
 SYN_FILES += lib/eth/rtl/axis_xgmii_rx_64.v
 SYN_FILES += lib/eth/rtl/axis_xgmii_tx_64.v

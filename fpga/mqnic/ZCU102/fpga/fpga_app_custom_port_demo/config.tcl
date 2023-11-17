@@ -115,8 +115,8 @@ dict set params AXI_DDR_ID_WIDTH "8"
 dict set params AXI_DDR_MAX_BURST_LEN "256"
 
 # Application block configuration
-dict set params APP_ID "32'h00000000"
-dict set params APP_ENABLE "0"
+dict set params APP_ID "32'h12349001"
+dict set params APP_ENABLE "1"
 dict set params APP_CTRL_ENABLE "1"
 dict set params APP_DMA_ENABLE "1"
 dict set params APP_AXIS_DIRECT_ENABLE "1"
@@ -154,6 +154,9 @@ dict set params AXIL_CTRL_ADDR_WIDTH 24
 set m_axil_app_ctrl [get_bd_intf_ports m_axil_app_ctrl]
 dict set params AXIL_APP_CTRL_DATA_WIDTH [get_property CONFIG.DATA_WIDTH $m_axil_app_ctrl]
 dict set params AXIL_APP_CTRL_ADDR_WIDTH 24
+
+# Custom application block parameters
+dict set params AXIL_APP_CUSTOM_DATA_WIDTH [get_property CONFIG.DATA_WIDTH $m_axil_app_ctrl]
 
 # Interrupt configuration
 set irq [get_bd_ports pl_ps_irq0]
@@ -201,3 +204,6 @@ dict for {name value} $params {
 
 # set_property generic $param_list [current_fileset]
 set_property generic $param_list [get_filesets sources_1]
+
+# enable custom ports and parameters
+set_property verilog_define {APP_CUSTOM_PORTS_ENABLE APP_CUSTOM_PARAMS_ENABLE} [get_filesets sources_1]

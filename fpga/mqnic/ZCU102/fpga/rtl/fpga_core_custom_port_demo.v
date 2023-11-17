@@ -10,6 +10,14 @@
 `timescale 1ns / 1ps
 `default_nettype none
 
+`ifdef APP_CUSTOM_PARAMS_ENABLE
+    `include "mqnic_app_custom_params.vh"
+`endif
+
+`ifdef APP_CUSTOM_PORTS_ENABLE
+    `include "mqnic_app_custom_ports.vh"
+`endif
+
 /*
  * FPGA core logic
  */
@@ -112,6 +120,11 @@ module fpga_core #
     parameter APP_AXIS_SYNC_ENABLE = 1,
     parameter APP_AXIS_IF_ENABLE = 1,
     parameter APP_STAT_ENABLE = 1,
+
+    // Custom application block parameters
+    `ifdef APP_CUSTOM_PARAMS_ENABLE
+        `APP_CUSTOM_PARAMS_DECL
+    `endif
 
     // AXI interface configuration (DMA)
     parameter AXI_DATA_WIDTH = 128,
@@ -410,6 +423,11 @@ initial begin
     end
 end
 
+// Wires connected to custom app interface
+`ifdef APP_CUSTOM_PORTS_ENABLE
+    `APP_CUSTOM_PORTS_WIRE
+`endif
+
 // AXI lite connections
 wire [AXIL_CSR_ADDR_WIDTH-1:0]   axil_csr_awaddr;
 wire [2:0]                       axil_csr_awprot;
@@ -654,7 +672,127 @@ end
 
 endgenerate
 
-assign led[6:0] = 0;
+// App-controlled GPIO register block to control board LEDs, accessed via custom
+// AXI-L master port of app (mirrors AXI-L slave port of app)
+localparam APP_REG_ADDR_WIDTH = AXIL_APP_CTRL_ADDR_WIDTH;
+localparam APP_REG_DATA_WIDTH = AXIL_APP_CUSTOM_DATA_WIDTH;
+localparam APP_REG_STRB_WIDTH = AXIL_APP_CUSTOM_STRB_WIDTH;
+
+localparam APP_RB_BASE_ADDR = 0;
+localparam APP_RBB = APP_RB_BASE_ADDR & {APP_REG_ADDR_WIDTH{1'b1}};
+
+wire [APP_REG_ADDR_WIDTH-1:0]  app_ctrl_reg_wr_addr;
+wire [APP_REG_DATA_WIDTH-1:0]  app_ctrl_reg_wr_data;
+wire [APP_REG_STRB_WIDTH-1:0]  app_ctrl_reg_wr_strb;
+wire                           app_ctrl_reg_wr_en;
+wire                           app_ctrl_reg_wr_ack;
+wire [APP_REG_ADDR_WIDTH-1:0]  app_ctrl_reg_rd_addr;
+wire                           app_ctrl_reg_rd_en;
+wire [APP_REG_DATA_WIDTH-1:0]  app_ctrl_reg_rd_data;
+wire                           app_ctrl_reg_rd_ack;
+
+reg app_ctrl_reg_wr_ack_reg = 1'b0;
+reg [APP_REG_DATA_WIDTH-1:0] app_ctrl_reg_rd_data_reg = {APP_REG_DATA_WIDTH{1'b0}};
+reg app_ctrl_reg_rd_ack_reg = 1'b0;
+
+assign app_ctrl_reg_wr_ack = app_ctrl_reg_wr_ack_reg;
+assign app_ctrl_reg_rd_ack = app_ctrl_reg_rd_ack_reg;
+assign app_ctrl_reg_rd_data = app_ctrl_reg_rd_data_reg;
+
+reg [6:0] gpio_out_reg = 7'd0;
+assign led[6:0] = gpio_out_reg;
+
+axil_reg_if #(
+    .DATA_WIDTH(APP_REG_DATA_WIDTH),
+    .ADDR_WIDTH(APP_REG_ADDR_WIDTH),
+    .STRB_WIDTH(APP_REG_STRB_WIDTH),
+    .TIMEOUT(8)
+)
+axil_reg_if_inst (
+    .clk(clk_300mhz),
+    .rst(rst_300mhz),
+
+    /*
+     * AXI-Lite slave interface
+     */
+    .s_axil_awaddr(m_axil_app_ctrl_awaddr),
+    .s_axil_awprot(m_axil_app_ctrl_awprot),
+    .s_axil_awvalid(m_axil_app_ctrl_awvalid),
+    .s_axil_awready(m_axil_app_ctrl_awready),
+    .s_axil_wdata(m_axil_app_ctrl_wdata),
+    .s_axil_wstrb(m_axil_app_ctrl_wstrb),
+    .s_axil_wvalid(m_axil_app_ctrl_wvalid),
+    .s_axil_wready(m_axil_app_ctrl_wready),
+    .s_axil_bresp(m_axil_app_ctrl_bresp),
+    .s_axil_bvalid(m_axil_app_ctrl_bvalid),
+    .s_axil_bready(m_axil_app_ctrl_bready),
+    .s_axil_araddr(m_axil_app_ctrl_araddr),
+    .s_axil_arprot(m_axil_app_ctrl_arprot),
+    .s_axil_arvalid(m_axil_app_ctrl_arvalid),
+    .s_axil_arready(m_axil_app_ctrl_arready),
+    .s_axil_rdata(m_axil_app_ctrl_rdata),
+    .s_axil_rresp(m_axil_app_ctrl_rresp),
+    .s_axil_rvalid(m_axil_app_ctrl_rvalid),
+    .s_axil_rready(m_axil_app_ctrl_rready),
+
+    /*
+     * Register interface
+     */
+    .reg_wr_addr(app_ctrl_reg_wr_addr),
+    .reg_wr_data(app_ctrl_reg_wr_data),
+    .reg_wr_strb(app_ctrl_reg_wr_strb),
+    .reg_wr_en(app_ctrl_reg_wr_en),
+    .reg_wr_wait(1'b0),
+    .reg_wr_ack(app_ctrl_reg_wr_ack),
+    .reg_rd_addr(app_ctrl_reg_rd_addr),
+    .reg_rd_en(app_ctrl_reg_rd_en),
+    .reg_rd_data(app_ctrl_reg_rd_data),
+    .reg_rd_wait(1'b0),
+    .reg_rd_ack(app_ctrl_reg_rd_ack)
+);
+
+always @(posedge clk_300mhz) begin
+    app_ctrl_reg_wr_ack_reg <= 1'b0;
+    app_ctrl_reg_rd_data_reg <= {APP_REG_DATA_WIDTH{1'b0}};
+    app_ctrl_reg_rd_ack_reg <= 1'b0;
+
+    if (app_ctrl_reg_wr_en && !app_ctrl_reg_wr_ack_reg) begin
+        // write operation
+        app_ctrl_reg_wr_ack_reg <= 1'b1;
+        case ({app_ctrl_reg_wr_addr >> 2, 2'b00})
+            // GPIO
+            APP_RBB+8'h10: begin
+                // GPIO: GPIO out
+                if (app_ctrl_reg_wr_strb[0]) begin
+                    gpio_out_reg[6:0] <= app_ctrl_reg_wr_data[6:0];
+                end
+            end
+            default: app_ctrl_reg_wr_ack_reg <= 1'b0;
+        endcase
+    end
+
+    if (app_ctrl_reg_rd_en && !app_ctrl_reg_rd_ack_reg) begin
+        // read operation
+        app_ctrl_reg_rd_ack_reg <= 1'b1;
+        case ({app_ctrl_reg_rd_addr >> 2, 2'b00})
+            // GPIO block
+            APP_RBB+8'h00: app_ctrl_reg_rd_data_reg <= 32'h0000C100;          // GPIO block: Type
+            APP_RBB+8'h04: app_ctrl_reg_rd_data_reg <= 32'h00000100;          // GPIO block: Version
+            APP_RBB+8'h08: app_ctrl_reg_rd_data_reg <= 32'h00000000;          // GPIO block: Next header
+            APP_RBB+8'h0C: app_ctrl_reg_rd_data_reg <= 32'h00000000;          // GPIO block: GPIO in
+            APP_RBB+8'h10: app_ctrl_reg_rd_data_reg <= {25'd0, gpio_out_reg}; // GPIO block: GPIO out
+            default: app_ctrl_reg_rd_ack_reg <= 1'b0;
+        endcase
+    end
+
+    if (rst_300mhz) begin
+        app_ctrl_reg_wr_ack_reg <= 1'b0;
+        app_ctrl_reg_rd_ack_reg <= 1'b0;
+
+        gpio_out_reg <= 7'd0;
+    end
+end
+
 assign led[7] = ptp_pps_str;
 
 wire [PORT_COUNT-1:0]                         eth_tx_clk;
@@ -1028,6 +1166,11 @@ mqnic_core_axi #(
     .APP_STAT_ENABLE(APP_STAT_ENABLE),
     .APP_GPIO_IN_WIDTH(32),
     .APP_GPIO_OUT_WIDTH(32),
+
+    // Custom application block parameters
+    `ifdef APP_CUSTOM_PARAMS_ENABLE
+        `APP_CUSTOM_PARAMS_MAP
+    `endif
 
     // AXI interface configuration (DMA)
     .AXI_DATA_WIDTH(AXI_DATA_WIDTH),
@@ -1403,6 +1546,13 @@ core_inst (
      */
     .app_gpio_in(0),
     .app_gpio_out(),
+
+    /*
+     * Custom application block ports
+     */
+    `ifdef APP_CUSTOM_PORTS_ENABLE
+        `APP_CUSTOM_PORTS_MAP
+    `endif
 
     /*
      * JTAG

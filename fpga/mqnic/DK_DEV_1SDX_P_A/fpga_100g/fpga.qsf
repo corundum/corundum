@@ -95,10 +95,7 @@ set_instance_assignment -name IO_STANDARD "1.8 V" -to user_pb
 set_instance_assignment -name IO_STANDARD "1.8 V" -to usb_fpga_clk
 set_instance_assignment -name IO_STANDARD "1.8 V" -to tsense_alertn_1v8
 
-set_instance_assignment -name IO_STANDARD "1.8 V" -to user_led_g[0]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to user_led_g[1]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to user_led_g[2]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to user_led_g[3]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to user_led_g
 
 # I2C
 set_location_assignment PIN_R31  -to bmc_i2c1_disable
@@ -200,38 +197,10 @@ set_location_assignment PIN_AP44 -to clk_100m_pcie_1_n  ;# REFCLK_GXPL10A_CH2P
 
 set_location_assignment PIN_BB39 -to pcie_rst_n
 
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[3]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[4]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[5]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[6]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[7]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[8]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[9]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[10]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[11]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[12]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[13]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[14]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p[15]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[3]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[4]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[5]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[6]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[7]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[8]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[9]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[10]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[11]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[12]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[13]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[14]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p[15]
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_tx_n
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to pcie_rx_n
 
 set_instance_assignment -name IO_STANDARD "HCSL" -to clk_100m_pcie_0_p
 set_instance_assignment -name IO_STANDARD "HCSL" -to clk_100m_pcie_1_p
@@ -349,62 +318,23 @@ set_location_assignment PIN_E29  -to s10_upi0_nid_1v8[1]
 set_location_assignment PIN_P26  -to s10_upi0_perstn_sel
 set_location_assignment PIN_R26  -to s10_upi0_prnstn_1v8
 
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[3]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[4]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[5]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[6]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[7]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[8]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[9]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[10]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[11]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[12]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[13]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[14]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p[15]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[3]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[4]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[5]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[6]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[7]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[8]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[9]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[10]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[11]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[12]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[13]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[14]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p[15]
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_tx_n
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi0_rx_n
 
 set_instance_assignment -name IO_STANDARD "HCSL" -to clk_100m_upi0_0_p
 set_instance_assignment -name IO_STANDARD "HCSL" -to clk_100m_upi0_1_p
 
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx[1]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx[2]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx[3]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx[4]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx[5]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx[6]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_tx[1]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_tx[2]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_tx[3]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_tx[4]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_tx[5]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_tx[6]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx
+set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_tx
 
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx1_pcie_1v8
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx2_pcie_1v8
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx5_pcie_1v8
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi0_lsio_rx6_pcie_1v8
 
-set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi0_nid_1v8[0]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi0_nid_1v8[1]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi0_nid_1v8
 
 set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi0_perstn_sel
 set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi0_prnstn_1v8
@@ -498,86 +428,46 @@ set_location_assignment PIN_AF11 -to clk_100m_upi1_1_n  ;# REFCLK_GXPR11B_CH2N
 
 set_location_assignment PIN_AL11 -to upi1_rst_n
 
-set_location_assignment PIN_D38  -to upi1_lsio_tx[6]
-set_location_assignment PIN_E38  -to upi1_lsio_tx[5]
-set_location_assignment PIN_D40  -to upi1_lsio_tx[2]
 set_location_assignment PIN_C40  -to upi1_lsio_tx[1]
-set_location_assignment PIN_G39  -to upi1_lsio_rx[6]
-set_location_assignment PIN_F39  -to upi1_lsio_rx[5]
-set_location_assignment PIN_K37  -to upi1_lsio_rx[4]
-set_location_assignment PIN_L37  -to upi1_lsio_rx[3]
-set_location_assignment PIN_K39  -to upi1_lsio_rx[2]
-set_location_assignment PIN_J39  -to upi1_lsio_rx[1]
-set_location_assignment PIN_E42  -to upi1_lsio_tx[4]
+set_location_assignment PIN_D40  -to upi1_lsio_tx[2]
 set_location_assignment PIN_F42  -to upi1_lsio_tx[3]
+set_location_assignment PIN_E42  -to upi1_lsio_tx[4]
+set_location_assignment PIN_E38  -to upi1_lsio_tx[5]
+set_location_assignment PIN_D38  -to upi1_lsio_tx[6]
+set_location_assignment PIN_J39  -to upi1_lsio_rx[1]
+set_location_assignment PIN_K39  -to upi1_lsio_rx[2]
+set_location_assignment PIN_L37  -to upi1_lsio_rx[3]
+set_location_assignment PIN_K37  -to upi1_lsio_rx[4]
+set_location_assignment PIN_F39  -to upi1_lsio_rx[5]
+set_location_assignment PIN_G39  -to upi1_lsio_rx[6]
 
 set_location_assignment PIN_H35  -to upi1_lsio_rx1_pcie_1v8
 set_location_assignment PIN_J35  -to upi1_lsio_rx2_pcie_1v8
 set_location_assignment PIN_L35  -to upi1_lsio_rx5_pcie_1v8
 set_location_assignment PIN_M35  -to upi1_lsio_rx6_pcie_1v8
 
-set_location_assignment PIN_F29  -to s10_upi1_nid_1v8[0]
-set_location_assignment PIN_G29  -to s10_upi1_nid_1v8[1]
+set_location_assignment PIN_F29  -to s10_upi1_nid_1v8
 
 set_location_assignment PIN_N26  -to s10_upi1_perstn_sel
 set_location_assignment PIN_R27  -to s10_upi1_prnstn_1v8
 
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[3]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[4]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[5]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[6]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[7]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[8]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[9]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[10]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[11]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[12]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[13]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[14]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p[15]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[3]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[4]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[5]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[6]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[7]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[8]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[9]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[10]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[11]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[12]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[13]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[14]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p[15]
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_tx_n
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi1_rx_n
 
 set_instance_assignment -name IO_STANDARD "HCSL" -to clk_100m_upi1_0_p
 set_instance_assignment -name IO_STANDARD "HCSL" -to clk_100m_upi1_1_p
 
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx[1]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx[2]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx[3]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx[4]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx[5]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx[6]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_tx[1]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_tx[2]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_tx[3]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_tx[4]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_tx[5]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_tx[6]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx
+set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_tx
 
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx1_pcie_1v8
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx2_pcie_1v8
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx5_pcie_1v8
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi1_lsio_rx6_pcie_1v8
 
-set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi1_nid_1v8[0]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi1_nid_1v8[1]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi1_nid_1v8
 
 set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi1_perstn_sel
 set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi1_prnstn_1v8
@@ -695,62 +585,23 @@ set_location_assignment PIN_D28  -to s10_upi2_nid_1v8[1]
 set_location_assignment PIN_P28  -to s10_upi2_perstn_sel
 set_location_assignment PIN_N27  -to s10_upi2_prnstn_1v8
 
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[3]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[4]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[5]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[6]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[7]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[8]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[9]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[10]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[11]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[12]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[13]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[14]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p[15]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[3]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[4]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[5]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[6]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[7]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[8]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[9]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[10]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[11]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[12]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[13]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[14]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p[15]
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_tx_n
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to upi2_rx_n
 
 set_instance_assignment -name IO_STANDARD "HCSL" -to clk_100m_upi2_0_p
 set_instance_assignment -name IO_STANDARD "HCSL" -to clk_100m_upi2_1_p
 
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx[1]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx[2]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx[3]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx[4]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx[5]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx[6]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_tx[1]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_tx[2]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_tx[3]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_tx[4]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_tx[5]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_tx[6]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx
+set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_tx
 
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx1_pcie_1v8
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx2_pcie_1v8
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx5_pcie_1v8
 set_instance_assignment -name IO_STANDARD "1.8 V" -to upi2_lsio_rx6_pcie_1v8
 
-set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi2_nid_1v8[0]
-set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi2_nid_1v8[1]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi2_nid_1v8
 
 set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi2_perstn_sel
 set_instance_assignment -name IO_STANDARD "1.8 V" -to s10_upi2_prnstn_1v8
@@ -806,23 +657,15 @@ set_location_assignment PIN_BC10 -to clk_312p5m_qsfp2_n   ;# REFCLK_GXER9A_CH8N
 set_location_assignment PIN_D33  -to zqsfp_1v8_port_en
 set_location_assignment PIN_H32  -to zqsfp_1v8_port_int_n
 
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_tx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_tx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_tx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_tx_p[3]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_rx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_rx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_rx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_rx_p[3]
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_tx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_tx_n
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_rx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp1_rx_n
 
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_tx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_tx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_tx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_tx_p[3]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_rx_p[0]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_rx_p[1]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_rx_p[2]
-set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_rx_p[3]
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_tx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_tx_n
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_rx_p
+set_instance_assignment -name IO_STANDARD "HSSI DIFFERENTIAL I/O" -to qsfp2_rx_n
 
 set_instance_assignment -name IO_STANDARD "1.8 V" -to zqsfp_1v8_port_en
 set_instance_assignment -name IO_STANDARD "1.8 V" -to zqsfp_1v8_port_int_n

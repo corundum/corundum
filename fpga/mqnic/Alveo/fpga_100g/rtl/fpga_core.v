@@ -726,10 +726,10 @@ always @(posedge clk_250mhz) begin
             RBB+8'h28: ctrl_reg_rd_data_reg <= RB_BASE_ADDR+8'h40;       // SPI flash ctrl: Next header
             RBB+8'h2C: begin
                 // SPI flash ctrl: format
-                ctrl_reg_rd_data_reg[3:0]   <= FLASH_SEG_COUNT;     // configuration
-                ctrl_reg_rd_data_reg[7:4]   <= FLASH_SEG_DEFAULT;   // default segment
-                ctrl_reg_rd_data_reg[11:8]  <= FLASH_SEG_FALLBACK;  // fallback segment
-                ctrl_reg_rd_data_reg[31:12] <= FLASH_SEG0_SIZE;     // first segment size
+                ctrl_reg_rd_data_reg[3:0]   <= FLASH_SEG_COUNT;        // configuration
+                ctrl_reg_rd_data_reg[7:4]   <= FLASH_SEG_DEFAULT;      // default segment
+                ctrl_reg_rd_data_reg[11:8]  <= FLASH_SEG_FALLBACK;     // fallback segment
+                ctrl_reg_rd_data_reg[31:12] <= FLASH_SEG0_SIZE >> 12;  // first segment size
             end
             RBB+8'h30: begin
                 // SPI flash ctrl: control 0

@@ -216,7 +216,7 @@ parameter TX_SEQ_NUM_WIDTH = 6;
 parameter PCIE_TAG_COUNT = 256;
 
 // Ethernet interface configuration
-parameter AXIS_ETH_DATA_WIDTH = 512;
+parameter AXIS_ETH_DATA_WIDTH = MAC_100G ? 512 : 64;
 parameter AXIS_ETH_KEEP_WIDTH = AXIS_ETH_DATA_WIDTH/8;
 parameter AXIS_ETH_SYNC_DATA_WIDTH = AXIS_ETH_DATA_WIDTH*(AXIS_ETH_SYNC_DATA_WIDTH_DOUBLE && !MAC_100G ? 2 : 1);
 parameter AXIS_ETH_TX_USER_WIDTH = TX_TAG_WIDTH + 1;

@@ -35,6 +35,7 @@ struct mqnic_port *mqnic_create_port(struct mqnic_if *interface, int index,
 	port->interface = interface;
 
 	port->index = index;
+	port->phys_index = phys_index;
 
 	port->port_rb = port_rb;
 

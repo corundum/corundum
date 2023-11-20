@@ -2,6 +2,7 @@
 create_ip -name ddr4 -vendor xilinx.com -library ip -module_name ddr4_0
 
 set_property -dict [list \
+    CONFIG.System_Clock {No_Buffer} \
     CONFIG.C0.DDR4_AxiSelection {true} \
     CONFIG.C0.DDR4_AxiDataWidth {512} \
     CONFIG.C0.DDR4_AxiIDWidth {8} \

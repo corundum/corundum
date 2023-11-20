@@ -22,22 +22,30 @@ set_operating_conditions -design_power_budget 160
 # 300 MHz (DDR 0)
 set_property -dict {LOC AY37 IOSTANDARD LVDS} [get_ports clk_300mhz_0_p]
 set_property -dict {LOC AY38 IOSTANDARD LVDS} [get_ports clk_300mhz_0_n]
-#create_clock -period 3.333 -name clk_300mhz_0 [get_ports clk_300mhz_0_p]
+create_clock -period 3.333 -name clk_300mhz_0 [get_ports clk_300mhz_0_p]
+
+set_property -quiet CLOCK_DEDICATED_ROUTE BACKBONE [get_nets -quiet clk_300mhz_0_int]
 
 # 300 MHz (DDR 1)
 set_property -dict {LOC AW20 IOSTANDARD LVDS} [get_ports clk_300mhz_1_p]
 set_property -dict {LOC AW19 IOSTANDARD LVDS} [get_ports clk_300mhz_1_n]
-#create_clock -period 3.333 -name clk_300mhz_1 [get_ports clk_300mhz_1_p]
+create_clock -period 3.333 -name clk_300mhz_1 [get_ports clk_300mhz_1_p]
+
+set_property -quiet CLOCK_DEDICATED_ROUTE BACKBONE [get_nets -quiet clk_300mhz_1_int]
 
 # 300 MHz (DDR 2)
 set_property -dict {LOC F32  IOSTANDARD LVDS} [get_ports clk_300mhz_2_p]
 set_property -dict {LOC E32  IOSTANDARD LVDS} [get_ports clk_300mhz_2_n]
-#create_clock -period 3.333 -name clk_300mhz_2 [get_ports clk_300mhz_2_p]
+create_clock -period 3.333 -name clk_300mhz_2 [get_ports clk_300mhz_2_p]
+
+set_property -quiet CLOCK_DEDICATED_ROUTE BACKBONE [get_nets -quiet clk_300mhz_2_int]
 
 # 300 MHz (DDR 3)
 set_property -dict {LOC J16  IOSTANDARD LVDS} [get_ports clk_300mhz_3_p]
 set_property -dict {LOC H16  IOSTANDARD LVDS} [get_ports clk_300mhz_3_n]
-#create_clock -period 3.333 -name clk_300mhz_3 [get_ports clk_300mhz_3_p]
+create_clock -period 3.333 -name clk_300mhz_3 [get_ports clk_300mhz_3_p]
+
+set_property -quiet CLOCK_DEDICATED_ROUTE BACKBONE [get_nets -quiet clk_300mhz_3_int]
 
 # SI570 user clock
 #set_property -dict {LOC AU19 IOSTANDARD LVDS} [get_ports clk_user_p]

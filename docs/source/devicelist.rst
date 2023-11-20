@@ -26,6 +26,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     BittWare      XUSP3S                   XCVU095-2FFVB2104E    0x12ba8823
     BittWare      XUP-P3R                  XCVU9P-2FLGB2104E     0x12ba9823
     BittWare      250-SoC                  XCZU19EG-2FFVD1760E   0x198a250e
+    BittWare      IA-420F                  AGFB014R24B2E2V       0x12bab5d4
     Intel         DK-DEV-1SMX-H-A          1SM21BHU2F53E1VG      0x11720001
     Intel         DK-DEV-1SMC-H-A          1SM21CHU1F53E1VG      0x11720001
     Intel         DK-DEV-1SDX-P-A          1SD280PT2F55E1VG      0x1172a00d
@@ -57,6 +58,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     250-SoC                  Gen 3 x16  2x QSFP28   4 GB DDR4 2666 (512M x72)        \-
     XUSP3S                   Gen 3 x8   4x QSFP28   2x 4GB DDR4 512M x72, 2x SODIMM  \-
     XUP-P3R                  Gen 3 x16  4x QSFP28   4x DDR4 2400 DIMM (4x x72)       \-
+    IA-420F                  Gen 3 x16  1x QSFP-DD  16 GB DDR4 3200 (2x 1G x72)      \-
     DK-DEV-1SMX-H-A          Gen 3 x16  2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     8 GB
     DK-DEV-1SMC-H-A          Gen 3 x16  2x QSFP28   8 GB DDR4 2666 (2x 512M x72)     16 GB
     DK-DEV-1SDX-P-A          Gen 4 x16  2x QSFP28   2x 4GB DDR4 512M x72, 2x DIMM    \-
@@ -88,6 +90,7 @@ This section details PCIe form-factor targets, which interface with a separate h
     250-SoC                  Y             N             N :sup:`9`
     XUSP3S                   Y             Y             Y
     XUP-P3R                  Y             Y             Y
+    IA-420F                  Y             N             N
     DK-DEV-1SMX-H-A          Y             N :sup:`7`    N
     DK-DEV-1SMC-H-A          Y             N :sup:`7`    N
     DK-DEV-1SDX-P-A          Y             N :sup:`3`    N :sup:`10`
@@ -146,19 +149,22 @@ This section details PCIe form-factor targets, which interface with a separate h
     XUP-P3R                  mqnic/fpga_25g/fpga              4x1   256/8K   25G   Y    RR
     XUP-P3R                  mqnic/fpga_25g/fpga_10g          4x1   256/8K   10G   Y    RR
     XUP-P3R                  mqnic/fpga_100g/fpga             4x1   256/8K   100G  Y    RR
+    IA-420F                  mqnic/fpga_100g/fpga_10g         1x1   256/1K   10G   Y    RR
+    IA-420F                  mqnic/fpga_100g/fpga_25g         1x1   256/1K   25G   Y    RR
+    IA-420F                  mqnic/fpga_100g/fpga_100g        1x1   256/1K   100G  N    RR
     DK-DEV-1SMX-H-A          mqnic/fpga_25g/fpga_1sm21b       2x1   256/1K   25G   Y    RR
     DK-DEV-1SMC-H-A          mqnic/fpga_25g/fpga_1sm21c       2x1   256/1K   25G   Y    RR
     DK-DEV-1SMX-H-A          mqnic/fpga_25g/fpga_10g_1sm21b   2x1   256/1K   10G   Y    RR
     DK-DEV-1SMC-H-A          mqnic/fpga_25g/fpga_10g_1sm21c   2x1   256/1K   10G   Y    RR
-    DK-DEV-1SDX-P-A          mqnic/fpga_25g/fpga              2x1   256/1K   25G   Y    RR
-    DK-DEV-1SDX-P-A          mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   Y    RR
-    DK-DEV-1SDX-P-A          mqnic/fpga_100g/fpga             2x1   256/1K   100G  N    RR
-    DK-DEV-AGF014EA          mqnic/fpga_25g/fpga              2x1   256/1K   25G   Y    RR
-    DK-DEV-AGF014EA          mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   Y    RR
-    DK-DEV-AGF014EA          mqnic/fpga_100g/fpga             2x1   256/1K   100G  N    RR
-    DE10-Agilex              mqnic/fpga_25g/fpga              2x1   256/1K   25G   Y    RR
-    DE10-Agilex              mqnic/fpga_25g/fpga_10g          2x1   256/1K   10G   Y    RR
-    DE10-Agilex              mqnic/fpga_100g/fpga             2x1   256/1K   100G  N    RR
+    DK-DEV-1SDX-P-A          mqnic/fpga_100g/fpga_10g         2x1   256/1K   10G   Y    RR
+    DK-DEV-1SDX-P-A          mqnic/fpga_100g/fpga_25g         2x1   256/1K   25G   Y    RR
+    DK-DEV-1SDX-P-A          mqnic/fpga_100g/fpga_100g        2x1   256/1K   100G  N    RR
+    DK-DEV-AGF014EA          mqnic/fpga_100g/fpga_10g         2x1   256/1K   10G   Y    RR
+    DK-DEV-AGF014EA          mqnic/fpga_100g/fpga_25g         2x1   256/1K   25G   Y    RR
+    DK-DEV-AGF014EA          mqnic/fpga_100g/fpga_100g        2x1   256/1K   100G  N    RR
+    DE10-Agilex              mqnic/fpga_100g/fpga_10g         2x1   256/1K   10G   Y    RR
+    DE10-Agilex              mqnic/fpga_100g/fpga_25g         2x1   256/1K   25G   Y    RR
+    DE10-Agilex              mqnic/fpga_100g/fpga_100g        2x1   256/1K   100G  N    RR
     Alveo U50                mqnic/fpga_25g/fpga              1x1   256/8K   25G   Y    RR
     Alveo U50                mqnic/fpga_25g/fpga_10g          1x1   256/8K   10G   Y    RR
     Alveo U50                mqnic/fpga_100g/fpga             1x1   256/8K   100G  Y    RR

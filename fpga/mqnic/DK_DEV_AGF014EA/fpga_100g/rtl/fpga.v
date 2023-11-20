@@ -978,7 +978,10 @@ core_inst (
     .qsfpdd_mac_tx_axis_tlast(qsfpdd_mac_tx_axis_tlast),
     .qsfpdd_mac_tx_axis_tuser(qsfpdd_mac_tx_axis_tuser),
 
+    .qsfpdd_mac_tx_ptp_clk(qsfpdd_mac_tx_ptp_clk),
+    .qsfpdd_mac_tx_ptp_rst(qsfpdd_mac_tx_ptp_rst),
     .qsfpdd_mac_tx_ptp_time(qsfpdd_mac_tx_ptp_time),
+
     .qsfpdd_mac_tx_ptp_ts(qsfpdd_mac_tx_ptp_ts),
     .qsfpdd_mac_tx_ptp_ts_tag(qsfpdd_mac_tx_ptp_ts_tag),
     .qsfpdd_mac_tx_ptp_ts_valid(qsfpdd_mac_tx_ptp_ts_valid),
@@ -996,6 +999,8 @@ core_inst (
     .qsfpdd_mac_rx_axis_tlast(qsfpdd_mac_rx_axis_tlast),
     .qsfpdd_mac_rx_axis_tuser(qsfpdd_mac_rx_axis_tuser),
 
+    .qsfpdd_mac_rx_ptp_clk(qsfpdd_mac_rx_ptp_clk),
+    .qsfpdd_mac_rx_ptp_rst(qsfpdd_mac_rx_ptp_rst),
     .qsfpdd_mac_rx_ptp_time(qsfpdd_mac_rx_ptp_time),
 
     .qsfpdd_mac_rx_status(qsfpdd_mac_rx_status),

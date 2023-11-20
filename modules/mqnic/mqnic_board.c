@@ -647,6 +647,25 @@ static int mqnic_generic_board_init(struct mqnic_dev *mqnic)
 		init_mac_list_from_eeprom_base_hex(mqnic, mqnic->eeprom_i2c_client, 4, MQNIC_MAX_IF);
 
 		break;
+	case MQNIC_BOARD_ID_IA_420F:
+
+		request_module("at24");
+
+		// I2C adapter
+		adapter = mqnic_i2c_adapter_create(mqnic, 0);
+
+		// QSFP-DD
+		mqnic->mod_i2c_client[0] = create_i2c_client(adapter, "24c02", 0x50);
+
+		mqnic->mod_i2c_client_count = 1;
+
+		// I2C EEPROM
+		mqnic->eeprom_i2c_client = create_i2c_client(adapter, "24c02", 0x57);
+
+		// read MACs from EEPROM
+		init_mac_list_from_eeprom(mqnic, mqnic->eeprom_i2c_client, 0x56, 1);
+
+		break;
 	case MQNIC_BOARD_ID_NEXUS_K35_S:
 	case MQNIC_BOARD_ID_NEXUS_K3P_S:
 	case MQNIC_BOARD_ID_ADM_PCIE_9V3:

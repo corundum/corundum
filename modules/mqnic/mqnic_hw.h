@@ -45,6 +45,7 @@
 #define MQNIC_BOARD_ID_DE10_AGILEX      0x1172b00a
 #define MQNIC_BOARD_ID_XUSP3S           0x12ba8823
 #define MQNIC_BOARD_ID_XUPP3R           0x12ba9823
+#define MQNIC_BOARD_ID_IA_420F          0x12bab5d4
 #define MQNIC_BOARD_ID_520NMX           0x198a0521
 #define MQNIC_BOARD_ID_250SOC           0x198a250e
 #define MQNIC_BOARD_ID_FB4CGG3_VU9P     0x1c2c9403

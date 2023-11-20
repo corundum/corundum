@@ -1,0 +1,251 @@
+# I/O constraints for the BittWare IA-420F FPGA board
+# part: AGFB014R24B2E2V
+
+set_global_assignment -name USE_CONF_DONE SDM_IO16
+# set_global_assignment -name USE_CVP_CONFDONE SDM_IO10
+set_global_assignment -name USE_INIT_DONE SDM_IO0
+set_global_assignment -name USE_HPS_COLD_RESET SDM_IO13
+set_global_assignment -name SDM_DIRECT_TO_FACTORY_IMAGE SDM_IO10
+
+set_global_assignment -name VID_OPERATION_MODE "PMBUS SLAVE"
+set_global_assignment -name PWRMGT_DEVICE_ADDRESS_IN_PMBUS_SLAVE_MODE 01
+set_global_assignment -name PWRMGT_TRANSLATED_VOLTAGE_VALUE_UNIT VOLTS
+set_global_assignment -name PWRMGT_VOLTAGE_OUTPUT_FORMAT "LINEAR FORMAT"
+set_global_assignment -name PWRMGT_LINEAR_FORMAT_N "-12"
+set_global_assignment -name USE_PWRMGT_SCL SDM_IO14
+set_global_assignment -name USE_PWRMGT_SDA SDM_IO11
+set_global_assignment -name USE_PWRMGT_ALERT SDM_IO12
+
+set_global_assignment -name STRATIXV_CONFIGURATION_SCHEME "ACTIVE SERIAL X4"
+set_global_assignment -name ACTIVE_SERIAL_CLOCK AS_FREQ_100MHZ
+set_global_assignment -name DEVICE_INITIALIZATION_CLOCK OSC_CLK_1_125MHZ
+set_global_assignment -name ON_CHIP_BITSTREAM_DECOMPRESSION ON
+set_global_assignment -name GENERATE_COMPRESSED_SOF ON
+set_global_assignment -name AUTO_RESTART_CONFIGURATION OFF
+set_global_assignment -name GENERATE_PR_RBF_FILE ON
+set_global_assignment -name ENABLE_ED_CRC_CHECK ON
+
+set_global_assignment -name PRESERVE_UNUSED_XCVR_CHANNEL ON
+
+set_global_assignment -name verilog_allow_ram_inferred_in_generate_loop on
+
+# Clock and reset
+set_location_assignment PIN_CU50 -to usr_clk_33m_p
+set_location_assignment PIN_DC52 -to sys_clk_50m
+
+set_instance_assignment -name IO_STANDARD "True Differential Signaling" -to usr_clk_33m_p
+set_instance_assignment -name IO_STANDARD "1.2 V" -to sys_clk_50m
+
+# Switches, buttons, LEDs
+set_location_assignment PIN_CU48 -to user_led_g
+set_location_assignment PIN_CT49 -to user_led_r
+
+set_instance_assignment -name IO_STANDARD "1.2 V" -to user_led_g
+set_instance_assignment -name IO_STANDARD "1.2 V" -to user_led_r
+
+# I2C
+set_location_assignment PIN_CE52 -to fpga_i2c_scl
+set_location_assignment PIN_CM57 -to fpga_i2c_sda
+set_location_assignment PIN_CN56 -to fpga_i2c_req_l
+set_location_assignment PIN_CK57 -to fpga_i2c_mux_gnt
+
+set_instance_assignment -name IO_STANDARD "1.2 V" -to fpga_i2c_scl
+set_instance_assignment -name IO_STANDARD "1.2 V" -to fpga_i2c_sda
+set_instance_assignment -name IO_STANDARD "1.2 V" -to fpga_i2c_req_l
+set_instance_assignment -name IO_STANDARD "1.2 V" -to fpga_i2c_mux_gnt
+
+# PCIe
+set_location_assignment PIN_BP55 -to pcie_tx_p[0]      ;# GXPL10A_TX_CH0P
+set_location_assignment PIN_BN52 -to pcie_tx_p[1]      ;# GXPL10A_TX_CH1P
+set_location_assignment PIN_BK55 -to pcie_tx_p[2]      ;# GXPL10A_TX_CH2P
+set_location_assignment PIN_BJ52 -to pcie_tx_p[3]      ;# GXPL10A_TX_CH3P
+set_location_assignment PIN_BF55 -to pcie_tx_p[4]      ;# GXPL10A_TX_CH4P
+set_location_assignment PIN_BE52 -to pcie_tx_p[5]      ;# GXPL10A_TX_CH5P
+set_location_assignment PIN_BB55 -to pcie_tx_p[6]      ;# GXPL10A_TX_CH6P
+set_location_assignment PIN_BA52 -to pcie_tx_p[7]      ;# GXPL10A_TX_CH7P
+set_location_assignment PIN_AV55 -to pcie_tx_p[8]      ;# GXPL10A_TX_CH8P
+set_location_assignment PIN_AU52 -to pcie_tx_p[9]      ;# GXPL10A_TX_CH9P
+set_location_assignment PIN_AP55 -to pcie_tx_p[10]     ;# GXPL10A_TX_CH10P
+set_location_assignment PIN_AN52 -to pcie_tx_p[11]     ;# GXPL10A_TX_CH11P
+set_location_assignment PIN_AK55 -to pcie_tx_p[12]     ;# GXPL10A_TX_CH12P
+set_location_assignment PIN_AJ52 -to pcie_tx_p[13]     ;# GXPL10A_TX_CH13P
+set_location_assignment PIN_AF55 -to pcie_tx_p[14]     ;# GXPL10A_TX_CH14P
+set_location_assignment PIN_AE52 -to pcie_tx_p[15]     ;# GXPL10A_TX_CH15P
+set_location_assignment PIN_BR56 -to pcie_tx_n[0]      ;# GXPL10A_TX_CH0N
+set_location_assignment PIN_BM53 -to pcie_tx_n[1]      ;# GXPL10A_TX_CH1N
+set_location_assignment PIN_BL56 -to pcie_tx_n[2]      ;# GXPL10A_TX_CH2N
+set_location_assignment PIN_BH53 -to pcie_tx_n[3]      ;# GXPL10A_TX_CH3N
+set_location_assignment PIN_BG56 -to pcie_tx_n[4]      ;# GXPL10A_TX_CH4N
+set_location_assignment PIN_BD53 -to pcie_tx_n[5]      ;# GXPL10A_TX_CH5N
+set_location_assignment PIN_BC56 -to pcie_tx_n[6]      ;# GXPL10A_TX_CH6N
+set_location_assignment PIN_AY53 -to pcie_tx_n[7]      ;# GXPL10A_TX_CH7N
+set_location_assignment PIN_AW56 -to pcie_tx_n[8]      ;# GXPL10A_TX_CH8N
+set_location_assignment PIN_AT53 -to pcie_tx_n[9]      ;# GXPL10A_TX_CH9N
+set_location_assignment PIN_AR56 -to pcie_tx_n[10]     ;# GXPL10A_TX_CH10N
+set_location_assignment PIN_AM53 -to pcie_tx_n[11]     ;# GXPL10A_TX_CH11N
+set_location_assignment PIN_AL56 -to pcie_tx_n[12]     ;# GXPL10A_TX_CH12N
+set_location_assignment PIN_AH53 -to pcie_tx_n[13]     ;# GXPL10A_TX_CH13N
+set_location_assignment PIN_AG56 -to pcie_tx_n[14]     ;# GXPL10A_TX_CH14N
+set_location_assignment PIN_AD53 -to pcie_tx_n[15]     ;# GXPL10A_TX_CH15N
+set_location_assignment PIN_BP61 -to pcie_rx_p[0]      ;# GXPL10A_RX_CH0P
+set_location_assignment PIN_BN58 -to pcie_rx_p[1]      ;# GXPL10A_RX_CH1P
+set_location_assignment PIN_BK61 -to pcie_rx_p[2]      ;# GXPL10A_RX_CH2P
+set_location_assignment PIN_BJ58 -to pcie_rx_p[3]      ;# GXPL10A_RX_CH3P
+set_location_assignment PIN_BF61 -to pcie_rx_p[4]      ;# GXPL10A_RX_CH4P
+set_location_assignment PIN_BE58 -to pcie_rx_p[5]      ;# GXPL10A_RX_CH5P
+set_location_assignment PIN_BB61 -to pcie_rx_p[6]      ;# GXPL10A_RX_CH6P
+set_location_assignment PIN_BA58 -to pcie_rx_p[7]      ;# GXPL10A_RX_CH7P
+set_location_assignment PIN_AV61 -to pcie_rx_p[8]      ;# GXPL10A_RX_CH8P
+set_location_assignment PIN_AU58 -to pcie_rx_p[9]      ;# GXPL10A_RX_CH9P
+set_location_assignment PIN_AP61 -to pcie_rx_p[10]     ;# GXPL10A_RX_CH10P
+set_location_assignment PIN_AN58 -to pcie_rx_p[11]     ;# GXPL10A_RX_CH11P
+set_location_assignment PIN_AK61 -to pcie_rx_p[12]     ;# GXPL10A_RX_CH12P
+set_location_assignment PIN_AJ58 -to pcie_rx_p[13]     ;# GXPL10A_RX_CH13P
+set_location_assignment PIN_AF61 -to pcie_rx_p[14]     ;# GXPL10A_RX_CH14P
+set_location_assignment PIN_AE58 -to pcie_rx_p[15]     ;# GXPL10A_RX_CH15P
+set_location_assignment PIN_BR62 -to pcie_rx_n[0]      ;# GXPL10A_RX_CH0N
+set_location_assignment PIN_BM59 -to pcie_rx_n[1]      ;# GXPL10A_RX_CH1N
+set_location_assignment PIN_BL62 -to pcie_rx_n[2]      ;# GXPL10A_RX_CH2N
+set_location_assignment PIN_BH59 -to pcie_rx_n[3]      ;# GXPL10A_RX_CH3N
+set_location_assignment PIN_BG62 -to pcie_rx_n[4]      ;# GXPL10A_RX_CH4N
+set_location_assignment PIN_BD59 -to pcie_rx_n[5]      ;# GXPL10A_RX_CH5N
+set_location_assignment PIN_BC62 -to pcie_rx_n[6]      ;# GXPL10A_RX_CH6N
+set_location_assignment PIN_AY59 -to pcie_rx_n[7]      ;# GXPL10A_RX_CH7N
+set_location_assignment PIN_AW62 -to pcie_rx_n[8]      ;# GXPL10A_RX_CH8N
+set_location_assignment PIN_AT59 -to pcie_rx_n[9]      ;# GXPL10A_RX_CH9N
+set_location_assignment PIN_AR62 -to pcie_rx_n[10]     ;# GXPL10A_RX_CH10N
+set_location_assignment PIN_AM59 -to pcie_rx_n[11]     ;# GXPL10A_RX_CH11N
+set_location_assignment PIN_AL62 -to pcie_rx_n[12]     ;# GXPL10A_RX_CH12N
+set_location_assignment PIN_AH59 -to pcie_rx_n[13]     ;# GXPL10A_RX_CH13N
+set_location_assignment PIN_AG62 -to pcie_rx_n[14]     ;# GXPL10A_RX_CH14N
+set_location_assignment PIN_AD59 -to pcie_rx_n[15]     ;# GXPL10A_RX_CH15N
+set_location_assignment PIN_AJ48 -to pcie_refclk_p[0]  ;# REFCLK_GXPL10A_CH0P
+set_location_assignment PIN_AE48 -to pcie_refclk_p[1]  ;# REFCLK_GXPL10A_CH2P
+set_location_assignment PIN_BU58 -to pcie_perst_n      ;# I_PIN_PERST_N_U10_P
+
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[0]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[1]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[2]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[3]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[4]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[5]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[6]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[7]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[8]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[9]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[10]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[11]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[12]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[13]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[14]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_p[15]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[0]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[1]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[2]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[3]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[4]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[5]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[6]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[7]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[8]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[9]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[10]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[11]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[12]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[13]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[14]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_tx_n[15]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[0]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[1]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[2]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[3]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[4]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[5]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[6]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[7]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[8]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[9]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[10]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[11]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[12]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[13]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[14]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_p[15]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[0]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[1]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[2]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[3]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[4]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[5]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[6]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[7]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[8]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[9]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[10]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[11]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[12]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[13]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[14]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to pcie_rx_n[15]
+set_instance_assignment -name IO_STANDARD "HCSL" -to pcie_refclk_p[0]
+set_instance_assignment -name IO_STANDARD "HCSL" -to pcie_refclk_p[1]
+set_instance_assignment -name IO_STANDARD "1.8 V" -to pcie_perst_n
+
+# QSFP-DD
+set_location_assignment PIN_AV1  -to qsfp_tx_p[0]       ;# GXER9A_TX_CH8P
+set_location_assignment PIN_BB1  -to qsfp_tx_p[1]       ;# GXER9A_TX_CH10P
+set_location_assignment PIN_AW4  -to qsfp_tx_p[2]       ;# GXER9A_TX_CH9P
+set_location_assignment PIN_BC4  -to qsfp_tx_p[3]       ;# GXER9A_TX_CH11P
+set_location_assignment PIN_AU2  -to qsfp_tx_n[0]       ;# GXER9A_TX_CH8N
+set_location_assignment PIN_BA2  -to qsfp_tx_n[1]       ;# GXER9A_TX_CH10N
+set_location_assignment PIN_AY5  -to qsfp_tx_n[2]       ;# GXER9A_TX_CH9N
+set_location_assignment PIN_BD5  -to qsfp_tx_n[3]       ;# GXER9A_TX_CH11N
+set_location_assignment PIN_AV7  -to qsfp_rx_p[0]       ;# GXER9A_RX_CH8P
+set_location_assignment PIN_BB7  -to qsfp_rx_p[1]       ;# GXER9A_RX_CH10P
+set_location_assignment PIN_AW10 -to qsfp_rx_p[2]       ;# GXER9A_RX_CH9P
+set_location_assignment PIN_BC10 -to qsfp_rx_p[3]       ;# GXER9A_RX_CH11P
+set_location_assignment PIN_AU8  -to qsfp_rx_n[0]       ;# GXER9A_RX_CH8N
+set_location_assignment PIN_BA8  -to qsfp_rx_n[1]       ;# GXER9A_RX_CH10N
+set_location_assignment PIN_AY11 -to qsfp_rx_n[2]       ;# GXER9A_RX_CH9N
+set_location_assignment PIN_BD11 -to qsfp_rx_n[3]       ;# GXER9A_RX_CH11N
+
+set_location_assignment PIN_BF1  -to qsfp_tx_p[4]       ;# GXER9A_TX_CH12P
+set_location_assignment PIN_BK1  -to qsfp_tx_p[5]       ;# GXER9A_TX_CH14P
+set_location_assignment PIN_BG4  -to qsfp_tx_p[6]       ;# GXER9A_TX_CH13P
+set_location_assignment PIN_BL4  -to qsfp_tx_p[7]       ;# GXER9A_TX_CH15P
+set_location_assignment PIN_BE2  -to qsfp_tx_n[4]       ;# GXER9A_TX_CH12N
+set_location_assignment PIN_BJ2  -to qsfp_tx_n[5]       ;# GXER9A_TX_CH14N
+set_location_assignment PIN_BH5  -to qsfp_tx_n[6]       ;# GXER9A_TX_CH13N
+set_location_assignment PIN_BM5  -to qsfp_tx_n[7]       ;# GXER9A_TX_CH15N
+set_location_assignment PIN_BF7  -to qsfp_rx_p[4]       ;# GXER9A_RX_CH12P
+set_location_assignment PIN_BK7  -to qsfp_rx_p[5]       ;# GXER9A_RX_CH14P
+set_location_assignment PIN_BG10 -to qsfp_rx_p[6]       ;# GXER9A_RX_CH13P
+set_location_assignment PIN_BL10 -to qsfp_rx_p[7]       ;# GXER9A_RX_CH15P
+set_location_assignment PIN_BE8  -to qsfp_rx_n[4]       ;# GXER9A_RX_CH12N
+set_location_assignment PIN_BJ8  -to qsfp_rx_n[5]       ;# GXER9A_RX_CH14N
+set_location_assignment PIN_BH11 -to qsfp_rx_n[6]       ;# GXER9A_RX_CH13N
+set_location_assignment PIN_BM11 -to qsfp_rx_n[7]       ;# GXER9A_RX_CH15N
+
+set_location_assignment PIN_AT13 -to qsfp_refclk_156m_p ;# REFCLK_GXER9A_CH0P
+
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_tx_p[0]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_tx_p[1]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_tx_p[2]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_tx_p[3]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_tx_p[4]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_tx_p[5]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_tx_p[6]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_tx_p[7]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_rx_p[0]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_rx_p[1]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_rx_p[2]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_rx_p[3]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_rx_p[4]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_rx_p[5]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_rx_p[6]
+set_instance_assignment -name IO_STANDARD "HIGH SPEED DIFFERENTIAL I/O" -to qsfp_rx_p[7]
+
+set_instance_assignment -name IO_STANDARD "DIFFERENTIAL LVPECL" -to qsfp_refclk_156m_p
+
+set_instance_assignment -name HSSI_PARAMETER "refclk_divider_use_as_BTI_clock=TRUE" -to qsfp_refclk_156m_p
+set_instance_assignment -name HSSI_PARAMETER "refclk_divider_input_freq=156250000" -to qsfp_refclk_156m_p

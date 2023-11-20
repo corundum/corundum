@@ -770,6 +770,7 @@ fpga_core #(
     // Board configuration
     .QSFPDD_CNT(QSFPDD_CNT),
     .CH_CNT(CH_CNT),
+    .PORT_GROUP_SIZE(MAC_100G ? 2 : 8),
 
     // Structural configuration
     .IF_COUNT(IF_COUNT),

@@ -1064,7 +1064,20 @@ qsfp_0_phy_quad_inst (
      * Common
      */
     .xcvr_gtpowergood_out(qsfp_0_gtpowergood),
-    .xcvr_ref_clk(qsfp_0_mgt_refclk),
+    .xcvr_gtrefclk00_in(qsfp_0_mgt_refclk),
+    .xcvr_qpll0pd_in(1'b0),
+    .xcvr_qpll0reset_in(1'b0),
+    .xcvr_qpll0pcierate_in(3'd0),
+    .xcvr_qpll0lock_out(),
+    .xcvr_qpll0clk_out(),
+    .xcvr_qpll0refclk_out(),
+    .xcvr_gtrefclk01_in(qsfp_0_mgt_refclk),
+    .xcvr_qpll1pd_in(1'b0),
+    .xcvr_qpll1reset_in(1'b0),
+    .xcvr_qpll1pcierate_in(3'd0),
+    .xcvr_qpll1lock_out(),
+    .xcvr_qpll1clk_out(),
+    .xcvr_qpll1refclk_out(),
 
     /*
      * DRP
@@ -1283,7 +1296,20 @@ qsfp_1_phy_quad_inst (
      * Common
      */
     .xcvr_gtpowergood_out(qsfp_1_gtpowergood),
-    .xcvr_ref_clk(qsfp_1_mgt_refclk),
+    .xcvr_gtrefclk00_in(qsfp_1_mgt_refclk),
+    .xcvr_qpll0pd_in(1'b0),
+    .xcvr_qpll0reset_in(1'b0),
+    .xcvr_qpll0pcierate_in(3'd0),
+    .xcvr_qpll0lock_out(),
+    .xcvr_qpll0clk_out(),
+    .xcvr_qpll0refclk_out(),
+    .xcvr_gtrefclk01_in(qsfp_1_mgt_refclk),
+    .xcvr_qpll1pd_in(1'b0),
+    .xcvr_qpll1reset_in(1'b0),
+    .xcvr_qpll1pcierate_in(3'd0),
+    .xcvr_qpll1lock_out(),
+    .xcvr_qpll1clk_out(),
+    .xcvr_qpll1refclk_out(),
 
     /*
      * DRP
@@ -1502,7 +1528,20 @@ qsfp_2_phy_quad_inst (
      * Common
      */
     .xcvr_gtpowergood_out(qsfp_2_gtpowergood),
-    .xcvr_ref_clk(qsfp_2_mgt_refclk),
+    .xcvr_gtrefclk00_in(qsfp_2_mgt_refclk),
+    .xcvr_qpll0pd_in(1'b0),
+    .xcvr_qpll0reset_in(1'b0),
+    .xcvr_qpll0pcierate_in(3'd0),
+    .xcvr_qpll0lock_out(),
+    .xcvr_qpll0clk_out(),
+    .xcvr_qpll0refclk_out(),
+    .xcvr_gtrefclk01_in(qsfp_2_mgt_refclk),
+    .xcvr_qpll1pd_in(1'b0),
+    .xcvr_qpll1reset_in(1'b0),
+    .xcvr_qpll1pcierate_in(3'd0),
+    .xcvr_qpll1lock_out(),
+    .xcvr_qpll1clk_out(),
+    .xcvr_qpll1refclk_out(),
 
     /*
      * DRP
@@ -1721,7 +1760,20 @@ qsfp_3_phy_quad_inst (
      * Common
      */
     .xcvr_gtpowergood_out(qsfp_3_gtpowergood),
-    .xcvr_ref_clk(qsfp_3_mgt_refclk),
+    .xcvr_gtrefclk00_in(qsfp_3_mgt_refclk),
+    .xcvr_qpll0pd_in(1'b0),
+    .xcvr_qpll0reset_in(1'b0),
+    .xcvr_qpll0pcierate_in(3'd0),
+    .xcvr_qpll0lock_out(),
+    .xcvr_qpll0clk_out(),
+    .xcvr_qpll0refclk_out(),
+    .xcvr_gtrefclk01_in(qsfp_3_mgt_refclk),
+    .xcvr_qpll1pd_in(1'b0),
+    .xcvr_qpll1reset_in(1'b0),
+    .xcvr_qpll1pcierate_in(3'd0),
+    .xcvr_qpll1lock_out(),
+    .xcvr_qpll1clk_out(),
+    .xcvr_qpll1refclk_out(),
 
     /*
      * DRP

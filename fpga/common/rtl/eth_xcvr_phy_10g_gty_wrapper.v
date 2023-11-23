@@ -23,6 +23,8 @@ module eth_xcvr_phy_10g_gty_wrapper #
     // PLL parameters
     parameter QPLL0_PD = 1'b0,
     parameter QPLL1_PD = 1'b1,
+    parameter QPLL0_EXT_CTRL = 0,
+    parameter QPLL1_EXT_CTRL = 0,
 
     // GT parameters
     parameter GT_TX_PD = 1'b0,
@@ -75,10 +77,16 @@ module eth_xcvr_phy_10g_gty_wrapper #
      * PLL out
      */
     input  wire                   xcvr_gtrefclk00_in,
+    input  wire                   xcvr_qpll0pd_in,
+    input  wire                   xcvr_qpll0reset_in,
+    input  wire [2:0]             xcvr_qpll0pcierate_in,
     output wire                   xcvr_qpll0lock_out,
     output wire                   xcvr_qpll0clk_out,
     output wire                   xcvr_qpll0refclk_out,
     input  wire                   xcvr_gtrefclk01_in,
+    input  wire                   xcvr_qpll1pd_in,
+    input  wire                   xcvr_qpll1reset_in,
+    input  wire [2:0]             xcvr_qpll1pcierate_in,
     output wire                   xcvr_qpll1lock_out,
     output wire                   xcvr_qpll1clk_out,
     output wire                   xcvr_qpll1refclk_out,
@@ -1014,10 +1022,13 @@ if (HAS_COMMON && !GT_GTH) begin : xcvr_gty_com
         .qpll1outclk_out(qpll1_clk),
         .qpll1outrefclk_out(qpll1_refclk),
 
-        .qpll0pd_in(qpll0_pd_reg),
-        .qpll0reset_in(qpll0_reset_reg),
-        .qpll1pd_in(qpll1_pd_reg),
-        .qpll1reset_in(qpll1_reset_reg),
+        .qpll0pd_in(QPLL0_EXT_CTRL ? xcvr_qpll0pd_in : qpll0_pd_reg),
+        .qpll0reset_in(QPLL0_EXT_CTRL ? xcvr_qpll0reset_in : qpll0_reset_reg),
+        .qpll1pd_in(QPLL1_EXT_CTRL ? xcvr_qpll1pd_in : qpll1_pd_reg),
+        .qpll1reset_in(QPLL1_EXT_CTRL ? xcvr_qpll1reset_in : qpll1_reset_reg),
+
+        .pcierateqpll0_in(QPLL0_EXT_CTRL ? xcvr_qpll0pcierate_in : 3'd0),
+        .pcierateqpll1_in(QPLL1_EXT_CTRL ? xcvr_qpll1pcierate_in : 3'd0),
 
         // Serial data
         .gtytxp_out(xcvr_txp),
@@ -1147,10 +1158,13 @@ end else if (HAS_COMMON && GT_GTH) begin : xcvr_gth_com
         .qpll1outclk_out(qpll1_clk),
         .qpll1outrefclk_out(qpll1_refclk),
 
-        .qpll0pd_in(qpll0_pd_reg),
-        .qpll0reset_in(qpll0_reset_reg),
-        .qpll1pd_in(qpll1_pd_reg),
-        .qpll1reset_in(qpll1_reset_reg),
+        .qpll0pd_in(QPLL0_EXT_CTRL ? xcvr_qpll0pd_in : qpll0_pd_reg),
+        .qpll0reset_in(QPLL0_EXT_CTRL ? xcvr_qpll0reset_in : qpll0_reset_reg),
+        .qpll1pd_in(QPLL1_EXT_CTRL ? xcvr_qpll1pd_in : qpll1_pd_reg),
+        .qpll1reset_in(QPLL1_EXT_CTRL ? xcvr_qpll1reset_in : qpll1_reset_reg),
+
+        .pcierateqpll0_in(QPLL0_EXT_CTRL ? xcvr_qpll0pcierate_in : 3'd0),
+        .pcierateqpll1_in(QPLL1_EXT_CTRL ? xcvr_qpll1pcierate_in : 3'd0),
 
         // Serial data
         .gthtxp_out(xcvr_txp),

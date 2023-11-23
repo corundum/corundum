@@ -1084,7 +1084,20 @@ qsfp0_phy_quad_inst (
      * Common
      */
     .xcvr_gtpowergood_out(qsfp0_gtpowergood),
-    .xcvr_ref_clk(qsfp0_mgt_refclk_1),
+    .xcvr_gtrefclk00_in(qsfp0_mgt_refclk_1),
+    .xcvr_qpll0pd_in(1'b0),
+    .xcvr_qpll0reset_in(1'b0),
+    .xcvr_qpll0pcierate_in(3'd0),
+    .xcvr_qpll0lock_out(),
+    .xcvr_qpll0clk_out(),
+    .xcvr_qpll0refclk_out(),
+    .xcvr_gtrefclk01_in(qsfp0_mgt_refclk_1),
+    .xcvr_qpll1pd_in(1'b0),
+    .xcvr_qpll1reset_in(1'b0),
+    .xcvr_qpll1pcierate_in(3'd0),
+    .xcvr_qpll1lock_out(),
+    .xcvr_qpll1clk_out(),
+    .xcvr_qpll1refclk_out(),
 
     /*
      * DRP
@@ -1238,7 +1251,20 @@ qsfp1_phy_quad_inst (
      * Common
      */
     .xcvr_gtpowergood_out(qsfp1_gtpowergood),
-    .xcvr_ref_clk(qsfp1_mgt_refclk_1),
+    .xcvr_gtrefclk00_in(qsfp1_mgt_refclk_1),
+    .xcvr_qpll0pd_in(1'b0),
+    .xcvr_qpll0reset_in(1'b0),
+    .xcvr_qpll0pcierate_in(3'd0),
+    .xcvr_qpll0lock_out(),
+    .xcvr_qpll0clk_out(),
+    .xcvr_qpll0refclk_out(),
+    .xcvr_gtrefclk01_in(qsfp1_mgt_refclk_1),
+    .xcvr_qpll1pd_in(1'b0),
+    .xcvr_qpll1reset_in(1'b0),
+    .xcvr_qpll1pcierate_in(3'd0),
+    .xcvr_qpll1lock_out(),
+    .xcvr_qpll1clk_out(),
+    .xcvr_qpll1refclk_out(),
 
     /*
      * DRP

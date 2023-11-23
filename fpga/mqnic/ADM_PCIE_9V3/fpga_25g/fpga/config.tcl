@@ -60,10 +60,11 @@ dict set params TDMA_BER_ENABLE "0"
 # Transceiver configuration
 set eth_xcvr_freerun_freq {125}
 set eth_xcvr_line_rate {25.78125}
-set eth_xcvr_sec_line_rate {10.3125}
 set eth_xcvr_refclk_freq {161.1328125}
+set eth_xcvr_sec_line_rate {10.3125}
+set eth_xcvr_sec_refclk_freq $eth_xcvr_refclk_freq
 set eth_xcvr_qpll_fracn [expr {int(fmod($eth_xcvr_line_rate*1000/2 / $eth_xcvr_refclk_freq, 1)*pow(2, 24))}]
-set eth_xcvr_sec_qpll_fracn [expr {int(fmod($eth_xcvr_sec_line_rate*1000/2 / $eth_xcvr_refclk_freq, 1)*pow(2, 24))}]
+set eth_xcvr_sec_qpll_fracn [expr {int(fmod($eth_xcvr_sec_line_rate*1000/2 / $eth_xcvr_sec_refclk_freq, 1)*pow(2, 24))}]
 set eth_xcvr_rx_eq_mode {DFE}
 
 # Structural configuration
@@ -271,7 +272,7 @@ if {$eth_xcvr_sec_line_rate != 0} {
     dict set xcvr_config CONFIG.SECONDARY_QPLL_ENABLE true
     dict set xcvr_config CONFIG.SECONDARY_QPLL_FRACN_NUMERATOR $eth_xcvr_sec_qpll_fracn
     dict set xcvr_config CONFIG.SECONDARY_QPLL_LINE_RATE $eth_xcvr_sec_line_rate
-    dict set xcvr_config CONFIG.SECONDARY_QPLL_REFCLK_FREQUENCY $eth_xcvr_refclk_freq
+    dict set xcvr_config CONFIG.SECONDARY_QPLL_REFCLK_FREQUENCY $eth_xcvr_sec_refclk_freq
 } else {
     dict set xcvr_config CONFIG.SECONDARY_QPLL_ENABLE false
 }

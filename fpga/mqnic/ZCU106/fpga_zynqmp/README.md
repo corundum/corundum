@@ -46,6 +46,10 @@ Then change into sub-directory `ps/petalinux/` and build the PetaLinux project. 
 
 ### Testing
 
+Configure DIP switches:
+
+* SW6 4-1: off, off, off, on (mode 0b1110, SD boot)
+
 Copy the following, resulting files of building the PetaLinux project onto an SDcard suitable for then booting the ZCU106 in SDcard boot mode.
 
 	ps/petalinux/images/linux/:

@@ -21,4 +21,8 @@ On the host system, run `make` in `modules/mqnic` to build the driver.  Ensure t
 
 ### Testing
 
+Configure DIP switches:
+
+* SW6 4-1: on, on, on, on (mode 0b0000, JTAG boot)
+
 Run `make program` to program the board with Vivado.  Then, reboot the machine to re-enumerate the PCIe bus.  Finally, load the driver on the host system with `insmod mqnic.ko`.  Check `dmesg` for output from driver initialization, and run `mqnic-dump -d /dev/mqnic0` to dump the internal state.

@@ -18,6 +18,7 @@ module eth_xcvr_phy_10g_gty_quad_wrapper #
 
     // GT type
     parameter GT_GTH = 0,
+    parameter GT_USP = 1,
 
     // PLL parameters
     parameter QPLL0_PD = 1'b0,
@@ -288,6 +289,7 @@ if (COUNT > 0) begin : phy1
     eth_xcvr_phy_10g_gty_wrapper #(
         .HAS_COMMON(1),
         .GT_GTH(GT_GTH),
+        .GT_USP(GT_USP),
         // PLL
         .QPLL0_PD(QPLL0_PD),
         .QPLL1_PD(QPLL1_PD),
@@ -397,6 +399,7 @@ if (COUNT > 1) begin : phy2
     eth_xcvr_phy_10g_gty_wrapper #(
         .HAS_COMMON(0),
         .GT_GTH(GT_GTH),
+        .GT_USP(GT_USP),
         // GT
         .GT_TX_PD(GT_2_TX_PD),
         .GT_TX_QPLL_SEL(GT_2_TX_QPLL_SEL),
@@ -501,6 +504,7 @@ if (COUNT > 2) begin : phy3
     eth_xcvr_phy_10g_gty_wrapper #(
         .HAS_COMMON(0),
         .GT_GTH(GT_GTH),
+        .GT_USP(GT_USP),
         // GT
         .GT_TX_PD(GT_3_TX_PD),
         .GT_TX_QPLL_SEL(GT_3_TX_QPLL_SEL),
@@ -605,6 +609,7 @@ if (COUNT > 3) begin : phy4
     eth_xcvr_phy_10g_gty_wrapper #(
         .HAS_COMMON(0),
         .GT_GTH(GT_GTH),
+        .GT_USP(GT_USP),
         // GT
         .GT_TX_PD(GT_4_TX_PD),
         .GT_TX_QPLL_SEL(GT_4_TX_QPLL_SEL),

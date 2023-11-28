@@ -908,6 +908,7 @@ sfp_sync_reset_inst (
 eth_xcvr_phy_10g_gty_quad_wrapper #(
     .COUNT(2),
     .GT_GTH(1),
+    .GT_USP(0),
     .GT_1_TX_POLARITY(1'b1),
     .GT_2_TX_POLARITY(1'b1)
 )

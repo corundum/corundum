@@ -1123,6 +1123,7 @@ qsfp0_sync_reset_inst (
 );
 
 eth_xcvr_phy_10g_gty_quad_wrapper #(
+    .GT_USP(0),
     .PRBS31_ENABLE(1),
     .TX_SERDES_PIPELINE(1),
     .RX_SERDES_PIPELINE(1),
@@ -1347,6 +1348,7 @@ qsfp1_sync_reset_inst (
 );
 
 eth_xcvr_phy_10g_gty_quad_wrapper #(
+    .GT_USP(0),
     .PRBS31_ENABLE(1),
     .TX_SERDES_PIPELINE(1),
     .RX_SERDES_PIPELINE(1),
@@ -1571,6 +1573,7 @@ qsfp2_sync_reset_inst (
 );
 
 eth_xcvr_phy_10g_gty_quad_wrapper #(
+    .GT_USP(0),
     .PRBS31_ENABLE(1),
     .TX_SERDES_PIPELINE(1),
     .RX_SERDES_PIPELINE(1),
@@ -1795,6 +1798,7 @@ qsfp3_sync_reset_inst (
 );
 
 eth_xcvr_phy_10g_gty_quad_wrapper #(
+    .GT_USP(0),
     .PRBS31_ENABLE(1),
     .TX_SERDES_PIPELINE(1),
     .RX_SERDES_PIPELINE(1),

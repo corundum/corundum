@@ -19,6 +19,7 @@ module eth_xcvr_phy_10g_gty_wrapper #
 
     // GT type
     parameter GT_GTH = 0,
+    parameter GT_USP = 1,
 
     // PLL parameters
     parameter QPLL0_PD = 1'b0,
@@ -987,7 +988,7 @@ end
 
 generate
 
-if (HAS_COMMON && !GT_GTH) begin : xcvr_gty_com
+if (HAS_COMMON && !GT_GTH && GT_USP) begin : xcvr_gty_com_usp
 
     eth_xcvr_gty_full
     eth_xcvr_gty_full_inst (
@@ -1123,7 +1124,7 @@ if (HAS_COMMON && !GT_GTH) begin : xcvr_gty_com
     assign xcvr_qpll1clk_out = qpll1_clk;
     assign xcvr_qpll1refclk_out = qpll1_refclk;
 
-end else if (HAS_COMMON && GT_GTH) begin : xcvr_gth_com
+end else if (HAS_COMMON && GT_GTH && GT_USP) begin : xcvr_gth_com_usp
 
     eth_xcvr_gth_full
     eth_xcvr_gth_full_inst (
@@ -1165,6 +1166,278 @@ end else if (HAS_COMMON && GT_GTH) begin : xcvr_gth_com
 
         .pcierateqpll0_in(QPLL0_EXT_CTRL ? xcvr_qpll0pcierate_in : 3'd0),
         .pcierateqpll1_in(QPLL1_EXT_CTRL ? xcvr_qpll1pcierate_in : 3'd0),
+
+        // Serial data
+        .gthtxp_out(xcvr_txp),
+        .gthtxn_out(xcvr_txn),
+        .gthrxp_in(xcvr_rxp),
+        .gthrxn_in(xcvr_rxn),
+
+        // Transmit
+        .gtwiz_userclk_tx_reset_in(gt_tx_reset_reg),
+        .gtwiz_userclk_tx_srcclk_out(),
+        .gtwiz_userclk_tx_usrclk_out(),
+        .gtwiz_userclk_tx_usrclk2_out(gt_txusrclk2),
+        .gtwiz_userclk_tx_active_out(gt_userclk_tx_active),
+        .gtwiz_reset_tx_done_in(tx_reset_done_reg),
+        .txpdelecidlemode_in(1'b1),
+        .txpd_in(gt_tx_pd_reg ? 2'b11 : 2'b00),
+        .gttxreset_in(gt_tx_reset_reg),
+        .txpmareset_in(gt_tx_pma_reset_reg),
+        .txpcsreset_in(gt_tx_pcs_reset_reg),
+        .txresetdone_out(gt_tx_reset_done),
+        .txpmaresetdone_out(gt_tx_pma_reset_done),
+        .txprogdivreset_in(gt_tx_prgdiv_reset_reg),
+        .txprgdivresetdone_out(gt_tx_prgdiv_reset_done),
+        .txpllclksel_in(gt_tx_qpll_sel_reg ? 2'b10 : 2'b11),
+        .txsysclksel_in(gt_tx_qpll_sel_reg ? 2'b11 : 2'b10),
+        .txuserrdy_in(gt_tx_userrdy_reg),
+
+        .txpolarity_in(gt_txpolarity_sync_reg),
+        .txelecidle_in(gt_txelecidle_reg),
+        .txinhibit_in(gt_txinhibit_sync_reg),
+        .txdiffctrl_in(gt_txdiffctrl_reg),
+        .txmaincursor_in(gt_txmaincursor_reg),
+        .txprecursor_in(gt_txprecursor_reg),
+        .txpostcursor_in(gt_txpostcursor_reg),
+
+        .txprbsforceerr_in(gt_txprbsforceerr_sync_2_reg ^ gt_txprbsforceerr_sync_3_reg),
+        .txprbssel_in(gt_txprbssel_sync_reg),
+
+        .gtwiz_userdata_tx_in(gt_txdata),
+        .txheader_in(gt_txheader),
+        .txsequence_in(7'b0),
+
+        // Receive
+        .gtwiz_userclk_rx_reset_in(gt_rx_reset_reg),
+        .gtwiz_userclk_rx_srcclk_out(),
+        .gtwiz_userclk_rx_usrclk_out(),
+        .gtwiz_userclk_rx_usrclk2_out(gt_rxusrclk2),
+        .gtwiz_userclk_rx_active_out(gt_userclk_rx_active),
+        .gtwiz_reset_rx_done_in(rx_reset_done_reg),
+        .rxpd_in(gt_rx_pd_reg ? 2'b11 : 2'b00),
+        .gtrxreset_in(gt_rx_reset_reg),
+        .rxpmareset_in(gt_rx_pma_reset_reg),
+        .rxdfelpmreset_in(gt_rx_dfe_lpm_reset_reg),
+        .eyescanreset_in(gt_eyescan_reset_reg),
+        .rxpcsreset_in(gt_rx_pcs_reset_reg),
+        .rxresetdone_out(gt_rx_reset_done),
+        .rxpmaresetdone_out(gt_rx_pma_reset_done),
+        .rxprogdivreset_in(gt_rx_prgdiv_reset_reg),
+        .rxprgdivresetdone_out(gt_rx_prgdiv_reset_done),
+        .rxpllclksel_in(gt_rx_qpll_sel_reg ? 2'b10 : 2'b11),
+        .rxsysclksel_in(gt_rx_qpll_sel_reg ? 2'b11 : 2'b10),
+        .rxuserrdy_in(gt_rx_userrdy_reg),
+
+        .rxcdrlock_out(gt_rxcdrlock),
+        .rxcdrhold_in(gt_rxcdrhold_reg),
+
+        .rxlpmen_in(gt_rxlpmen_reg),
+
+        .dmonitorout_out(gt_dmonitorout),
+
+        .rxpolarity_in(gt_rxpolarity_sync_reg),
+
+        .rxprbscntreset_in(gt_rxprbscntreset_sync_2_reg ^ gt_rxprbscntreset_sync_3_reg),
+        .rxprbssel_in(gt_rxprbssel_sync_reg),
+        .rxprbserr_out(gt_rxprbserr),
+        .rxprbslocked_out(gt_rxprbslocked),
+
+        .eyescandataerror_out(),
+
+        .rxgearboxslip_in(gt_rxgearboxslip),
+        .gtwiz_userdata_rx_out(gt_rxdata),
+        .rxdatavalid_out(gt_rxdatavalid),
+        .rxheader_out(gt_rxheader),
+        .rxheadervalid_out(gt_rxheadervalid),
+        .rxstartofseq_out()
+    );
+
+    assign xcvr_qpll0lock_out = qpll0_lock;
+    assign xcvr_qpll0clk_out = qpll0_clk;
+    assign xcvr_qpll0refclk_out = qpll0_refclk;
+    assign xcvr_qpll1lock_out = qpll1_lock;
+    assign xcvr_qpll1clk_out = qpll1_clk;
+    assign xcvr_qpll1refclk_out = qpll1_refclk;
+
+end else if (HAS_COMMON && !GT_GTH && !GT_USP) begin : xcvr_gty_com_us
+
+    eth_xcvr_gty_full
+    eth_xcvr_gty_full_inst (
+        // Common
+        .gtpowergood_out(xcvr_gtpowergood_out),
+        .loopback_in(gt_loopback_reg),
+
+        // DRP
+        .drpclk_common_in(drp_clk),
+        .drpaddr_common_in(drp_addr_reg),
+        .drpdi_common_in(drp_di_reg),
+        .drpen_common_in(drp_en_reg_2),
+        .drpwe_common_in(drp_we_reg),
+        .drpdo_common_out(drp_do_2),
+        .drprdy_common_out(drp_rdy_2),
+
+        .drpclk_in(drp_clk),
+        .drpaddr_in(drp_addr_reg),
+        .drpdi_in(drp_di_reg),
+        .drpen_in(drp_en_reg_1),
+        .drpwe_in(drp_we_reg),
+        .drpdo_out(drp_do_1),
+        .drprdy_out(drp_rdy_1),
+
+        // PLL
+        .gtrefclk00_in(xcvr_gtrefclk00_in),
+        .qpll0lock_out(qpll0_lock),
+        .qpll0outclk_out(qpll0_clk),
+        .qpll0outrefclk_out(qpll0_refclk),
+        .gtrefclk01_in(xcvr_gtrefclk01_in),
+        .qpll1lock_out(qpll1_lock),
+        .qpll1outclk_out(qpll1_clk),
+        .qpll1outrefclk_out(qpll1_refclk),
+
+        .qpll0pd_in(QPLL0_EXT_CTRL ? xcvr_qpll0pd_in : qpll0_pd_reg),
+        .qpll0reset_in(QPLL0_EXT_CTRL ? xcvr_qpll0reset_in : qpll0_reset_reg),
+        .qpll1pd_in(QPLL1_EXT_CTRL ? xcvr_qpll1pd_in : qpll1_pd_reg),
+        .qpll1reset_in(QPLL1_EXT_CTRL ? xcvr_qpll1reset_in : qpll1_reset_reg),
+
+        .qpllrsvd2_in(QPLL0_EXT_CTRL ? {2'd0, xcvr_qpll0pcierate_in} : 5'd0), // [2:0] : QPLL0 rate
+        .qpllrsvd3_in(QPLL1_EXT_CTRL ? {2'd0, xcvr_qpll1pcierate_in} : 5'd0), // [2:0] : QPLL1 rate
+
+        // Serial data
+        .gtytxp_out(xcvr_txp),
+        .gtytxn_out(xcvr_txn),
+        .gtyrxp_in(xcvr_rxp),
+        .gtyrxn_in(xcvr_rxn),
+
+        // Transmit
+        .gtwiz_userclk_tx_reset_in(gt_tx_reset_reg),
+        .gtwiz_userclk_tx_srcclk_out(),
+        .gtwiz_userclk_tx_usrclk_out(),
+        .gtwiz_userclk_tx_usrclk2_out(gt_txusrclk2),
+        .gtwiz_userclk_tx_active_out(gt_userclk_tx_active),
+        .gtwiz_reset_tx_done_in(tx_reset_done_reg),
+        .txpdelecidlemode_in(1'b1),
+        .txpd_in(gt_tx_pd_reg ? 2'b11 : 2'b00),
+        .gttxreset_in(gt_tx_reset_reg),
+        .txpmareset_in(gt_tx_pma_reset_reg),
+        .txpcsreset_in(gt_tx_pcs_reset_reg),
+        .txresetdone_out(gt_tx_reset_done),
+        .txpmaresetdone_out(gt_tx_pma_reset_done),
+        .txprogdivreset_in(gt_tx_prgdiv_reset_reg),
+        .txprgdivresetdone_out(gt_tx_prgdiv_reset_done),
+        .txpllclksel_in(gt_tx_qpll_sel_reg ? 2'b10 : 2'b11),
+        .txsysclksel_in(gt_tx_qpll_sel_reg ? 2'b11 : 2'b10),
+        .txuserrdy_in(gt_tx_userrdy_reg),
+
+        .txpolarity_in(gt_txpolarity_sync_reg),
+        .txelecidle_in(gt_txelecidle_reg),
+        .txinhibit_in(gt_txinhibit_sync_reg),
+        .txdiffctrl_in(gt_txdiffctrl_reg),
+        .txmaincursor_in(gt_txmaincursor_reg),
+        .txprecursor_in(gt_txprecursor_reg),
+        .txpostcursor_in(gt_txpostcursor_reg),
+
+        .txprbsforceerr_in(gt_txprbsforceerr_sync_2_reg ^ gt_txprbsforceerr_sync_3_reg),
+        .txprbssel_in(gt_txprbssel_sync_reg),
+
+        .gtwiz_userdata_tx_in(gt_txdata),
+        .txheader_in(gt_txheader),
+        .txsequence_in(7'b0),
+
+        // Receive
+        .gtwiz_userclk_rx_reset_in(gt_rx_reset_reg),
+        .gtwiz_userclk_rx_srcclk_out(),
+        .gtwiz_userclk_rx_usrclk_out(),
+        .gtwiz_userclk_rx_usrclk2_out(gt_rxusrclk2),
+        .gtwiz_userclk_rx_active_out(gt_userclk_rx_active),
+        .gtwiz_reset_rx_done_in(rx_reset_done_reg),
+        .rxpd_in(gt_rx_pd_reg ? 2'b11 : 2'b00),
+        .gtrxreset_in(gt_rx_reset_reg),
+        .rxpmareset_in(gt_rx_pma_reset_reg),
+        .rxdfelpmreset_in(gt_rx_dfe_lpm_reset_reg),
+        .eyescanreset_in(gt_eyescan_reset_reg),
+        .rxpcsreset_in(gt_rx_pcs_reset_reg),
+        .rxresetdone_out(gt_rx_reset_done),
+        .rxpmaresetdone_out(gt_rx_pma_reset_done),
+        .rxprogdivreset_in(gt_rx_prgdiv_reset_reg),
+        .rxprgdivresetdone_out(gt_rx_prgdiv_reset_done),
+        .rxpllclksel_in(gt_rx_qpll_sel_reg ? 2'b10 : 2'b11),
+        .rxsysclksel_in(gt_rx_qpll_sel_reg ? 2'b11 : 2'b10),
+        .rxuserrdy_in(gt_rx_userrdy_reg),
+
+        .rxcdrlock_out(gt_rxcdrlock),
+        .rxcdrhold_in(gt_rxcdrhold_reg),
+
+        .rxlpmen_in(gt_rxlpmen_reg),
+
+        .dmonitorout_out(gt_dmonitorout),
+
+        .rxpolarity_in(gt_rxpolarity_sync_reg),
+
+        .rxprbscntreset_in(gt_rxprbscntreset_sync_2_reg ^ gt_rxprbscntreset_sync_3_reg),
+        .rxprbssel_in(gt_rxprbssel_sync_reg),
+        .rxprbserr_out(gt_rxprbserr),
+        .rxprbslocked_out(gt_rxprbslocked),
+
+        .eyescandataerror_out(),
+
+        .rxgearboxslip_in(gt_rxgearboxslip),
+        .gtwiz_userdata_rx_out(gt_rxdata),
+        .rxdatavalid_out(gt_rxdatavalid),
+        .rxheader_out(gt_rxheader),
+        .rxheadervalid_out(gt_rxheadervalid),
+        .rxstartofseq_out()
+    );
+
+    assign xcvr_qpll0lock_out = qpll0_lock;
+    assign xcvr_qpll0clk_out = qpll0_clk;
+    assign xcvr_qpll0refclk_out = qpll0_refclk;
+    assign xcvr_qpll1lock_out = qpll1_lock;
+    assign xcvr_qpll1clk_out = qpll1_clk;
+    assign xcvr_qpll1refclk_out = qpll1_refclk;
+
+end else if (HAS_COMMON && GT_GTH && !GT_USP) begin : xcvr_gth_com_us
+
+    eth_xcvr_gth_full
+    eth_xcvr_gth_full_inst (
+        // Common
+        .gtpowergood_out(xcvr_gtpowergood_out),
+        .loopback_in(gt_loopback_reg),
+
+        // DRP
+        .drpclk_common_in(drp_clk),
+        .drpaddr_common_in(drp_addr_reg),
+        .drpdi_common_in(drp_di_reg),
+        .drpen_common_in(drp_en_reg_2),
+        .drpwe_common_in(drp_we_reg),
+        .drpdo_common_out(drp_do_2),
+        .drprdy_common_out(drp_rdy_2),
+
+        .drpclk_in(drp_clk),
+        .drpaddr_in(drp_addr_reg),
+        .drpdi_in(drp_di_reg),
+        .drpen_in(drp_en_reg_1),
+        .drpwe_in(drp_we_reg),
+        .drpdo_out(drp_do_1),
+        .drprdy_out(drp_rdy_1),
+
+        // PLL
+        .gtrefclk00_in(xcvr_gtrefclk00_in),
+        .qpll0lock_out(qpll0_lock),
+        .qpll0outclk_out(qpll0_clk),
+        .qpll0outrefclk_out(qpll0_refclk),
+        .gtrefclk01_in(xcvr_gtrefclk01_in),
+        .qpll1lock_out(qpll1_lock),
+        .qpll1outclk_out(qpll1_clk),
+        .qpll1outrefclk_out(qpll1_refclk),
+
+        .qpll0pd_in(QPLL0_EXT_CTRL ? xcvr_qpll0pd_in : qpll0_pd_reg),
+        .qpll0reset_in(QPLL0_EXT_CTRL ? xcvr_qpll0reset_in : qpll0_reset_reg),
+        .qpll1pd_in(QPLL1_EXT_CTRL ? xcvr_qpll1pd_in : qpll1_pd_reg),
+        .qpll1reset_in(QPLL1_EXT_CTRL ? xcvr_qpll1reset_in : qpll1_reset_reg),
+
+        .qpllrsvd2_in(QPLL0_EXT_CTRL ? {2'd0, xcvr_qpll0pcierate_in} : 5'd0), // [2:0] : QPLL0 rate
+        .qpllrsvd3_in(QPLL1_EXT_CTRL ? {2'd0, xcvr_qpll1pcierate_in} : 5'd0), // [2:0] : QPLL1 rate
 
         // Serial data
         .gthtxp_out(xcvr_txp),

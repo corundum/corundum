@@ -27,7 +27,11 @@ lappend extra_pll_ports qpll0pd_in qpll1pd_in
 lappend extra_pll_ports gtrefclk00_in qpll0lock_out qpll0outclk_out qpll0outrefclk_out
 lappend extra_pll_ports gtrefclk01_in qpll1lock_out qpll1outclk_out qpll1outrefclk_out
 # PCIe
-lappend extra_pll_ports pcierateqpll0_in pcierateqpll1_in
+if {[string first uplus [get_property FAMILY [get_property PART [current_project]]]] != -1} {
+    lappend extra_pll_ports pcierateqpll0_in pcierateqpll1_in
+} else {
+    lappend extra_pll_ports qpllrsvd2_in qpllrsvd3_in
+}
 # channel reset
 lappend extra_ports gttxreset_in txuserrdy_in txpmareset_in txpcsreset_in txresetdone_out txpmaresetdone_out
 lappend extra_ports gtrxreset_in rxuserrdy_in rxpmareset_in rxdfelpmreset_in eyescanreset_in rxpcsreset_in rxresetdone_out rxpmaresetdone_out

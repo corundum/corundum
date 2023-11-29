@@ -179,7 +179,7 @@ module mqnic_core_pcie_s10 #
     parameter AXIL_CTRL_ADDR_WIDTH = 24,
     parameter AXIL_CTRL_STRB_WIDTH = (AXIL_CTRL_DATA_WIDTH/8),
     parameter AXIL_IF_CTRL_ADDR_WIDTH = AXIL_CTRL_ADDR_WIDTH-$clog2(IF_COUNT),
-    parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((PORTS_PER_IF+3)/8),
+    parameter AXIL_CSR_ADDR_WIDTH = AXIL_IF_CTRL_ADDR_WIDTH-5-$clog2((SCHED_PER_IF+4+7)/8),
     parameter AXIL_CSR_PASSTHROUGH_ENABLE = 0,
     parameter RB_NEXT_PTR = 0,
 

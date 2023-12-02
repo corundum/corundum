@@ -89,7 +89,7 @@ localparam LOG_RATE = 3;
 
 localparam PHASE_CNT_W = LOG_RATE;
 localparam PHASE_ACC_W = PHASE_CNT_W+16;
-localparam LOAD_CNT_W = 8-LOG_RATE;
+localparam LOAD_CNT_W = 8-LOG_RATE-1;
 
 localparam LOG_SAMPLE_SYNC_RATE = 4;
 localparam SAMPLE_ACC_W = LOG_SAMPLE_SYNC_RATE+2;
@@ -225,8 +225,6 @@ reg [PERIOD_NS_W+32-1:0] src_period_shadow_reg = 0;
 
 reg [9+SRC_FNS_W-1:0] src_ns_reg = 0;
 reg [9+32-1:0] src_ns_shadow_reg = 0;
-reg src_fns_shadow_valid_reg = 1'b0;
-reg src_ns_shadow_valid_reg = 1'b0;
 
 always @(posedge ptp_clk) begin
     src_load_reg <= 1'b0;
@@ -242,15 +240,12 @@ always @(posedge ptp_clk) begin
     if (td_tvalid_reg) begin
         if (td_tid_reg[3:0] == 4'd6) begin
             src_ns_shadow_reg[15:0] <= td_tdata_reg;
-            src_fns_shadow_valid_reg <= 1'b0;
         end
         if (td_tid_reg[3:0] == 4'd7) begin
             src_ns_shadow_reg[31:16] <= td_tdata_reg;
-            src_fns_shadow_valid_reg <= 1'b1;
         end
         if (td_tid_reg[3:0] == 4'd8) begin
             src_ns_shadow_reg[40:32] <= td_tdata_reg;
-            src_ns_shadow_valid_reg <= 1'b1;
         end
         if (td_tid_reg[3:0] == 4'd11) begin
             src_period_shadow_reg[15:0] <= td_tdata_reg;
@@ -264,12 +259,9 @@ always @(posedge ptp_clk) begin
     end
 
     if (src_load_reg) begin
-        if (src_ns_shadow_valid_reg && src_fns_shadow_valid_reg) begin
-            src_ns_reg <= src_ns_shadow_reg >> (32-SRC_FNS_W);
-        end
-        src_fns_shadow_valid_reg <= 1'b0;
-        src_ns_shadow_valid_reg <= 1'b0;
+        src_ns_reg <= src_ns_shadow_reg >> (32-SRC_FNS_W);
         src_period_reg <= src_period_shadow_reg;
+        src_sync_reg <= 1'b1;
         src_marker_reg <= !src_marker_reg;
     end
 
@@ -435,19 +427,17 @@ always @* begin
         // updated sampled dst_phase error
 
         // gain scheduling
-        if (!sample_acc_sync_reg[SAMPLE_ACC_W-1]) begin
-            if (sample_acc_sync_reg[SAMPLE_ACC_W-4 +: 3]) begin
-                dst_gain_sel_next = 1'b1;
-            end else begin
-                dst_gain_sel_next = 1'b0;
-            end
-        end else begin
-            if (~sample_acc_sync_reg[SAMPLE_ACC_W-4 +: 3]) begin
-                dst_gain_sel_next = 1'b1;
-            end else begin
-                dst_gain_sel_next = 1'b0;
-            end
-        end
+        casez (sample_acc_sync_reg[SAMPLE_ACC_W-4 +: 4])
+            4'b01zz: dst_gain_sel_next = 1'b1;
+            4'b001z: dst_gain_sel_next = 1'b1;
+            4'b0001: dst_gain_sel_next = 1'b1;
+            4'b0000: dst_gain_sel_next = 1'b0;
+            4'b1111: dst_gain_sel_next = 1'b0;
+            4'b1110: dst_gain_sel_next = 1'b1;
+            4'b110z: dst_gain_sel_next = 1'b1;
+            4'b10zz: dst_gain_sel_next = 1'b1;
+            default: dst_gain_sel_next = 1'b0;
+        endcase
 
         // time integral of error
         case (dst_gain_sel_reg)
@@ -530,17 +520,16 @@ always @(posedge clk) begin
         dst_sync_reg <= !dst_sync_reg;
         ts_capt_valid_reg <= 1'b1;
 
-        dst_load_cnt_reg <= dst_load_cnt_reg + 1;
+        if (dst_sync_reg) begin
+            dst_load_cnt_reg <= dst_load_cnt_reg + 1;
+        end
     end
-
-    ts_sync_valid_reg <= 1'b0;
 
     if (src_sync_sync2_reg ^ src_sync_sync3_reg) begin
         // store captured source TS
         src_ns_sync_reg <= src_ns_reg >> (SRC_FNS_W-CMP_FNS_W);
 
-        ts_sync_valid_reg <= ts_capt_valid_reg;
-        ts_capt_valid_reg <= 1'b0;
+        ts_sync_valid_reg <= 1'b1;
     end
 
     if (src_marker_sync2_reg ^ src_marker_sync3_reg) begin
@@ -548,8 +537,11 @@ always @(posedge clk) begin
     end
 
     phase_err_out_valid_reg <= 1'b0;
-    if (ts_sync_valid_reg) begin
+    if (ts_sync_valid_reg && ts_capt_valid_reg) begin
         // coarse phase locking
+
+        ts_sync_valid_reg <= 1'b0;
+        ts_capt_valid_reg <= 1'b0;
 
         // phase and frequency detector
         phase_last_src_reg <= src_ns_sync_reg[8+CMP_FNS_W];
@@ -696,6 +688,10 @@ always @* begin
     // extract data
     if (dst_td_tvalid_reg) begin
         if (TS_TOD_EN) begin
+            if (dst_td_tid_reg[3:0] == 4'd1) begin
+                // prevent stale data from being used in time sync
+                dst_tod_shadow_valid_next = 1'b0;
+            end
             if (dst_td_tid_reg == {4'd0, 4'd1}) begin
                 dst_tod_ns_shadow_next[15:0] = dst_td_tdata_reg;
                 dst_tod_shadow_valid_next = 1'b0;
@@ -749,7 +745,7 @@ always @* begin
     ts_rel_ns_next = ({ts_rel_ns_reg, ts_fns_reg} + period_ns_reg) >> FNS_W;
 
     if (TS_REL_EN) begin
-        if (dst_update_reg && dst_rel_shadow_valid_reg && (dst_load_cnt_reg == {LOAD_CNT_W{1'b1}})) begin
+        if (dst_update_reg && !dst_sync_reg && dst_rel_shadow_valid_reg && (dst_load_cnt_reg == 0)) begin
             // check timestamp MSBs
             if (dst_rel_step_shadow_reg || ts_rel_load_ts_reg) begin
                 // input stepped
@@ -797,7 +793,7 @@ always @* begin
             end
         end
 
-        if (dst_update_reg && dst_tod_shadow_valid_reg && (dst_load_cnt_reg == {LOAD_CNT_W{1'b1}})) begin
+        if (dst_update_reg && !dst_sync_reg && dst_tod_shadow_valid_reg && (dst_load_cnt_reg == 0)) begin
             // check timestamp MSBs
             if (dst_tod_step_shadow_reg || ts_tod_load_ts_reg) begin
                 // input stepped
@@ -827,7 +823,7 @@ always @* begin
         end
     end
 
-    if (ts_sync_valid_reg) begin
+    if (ts_sync_valid_reg && ts_capt_valid_reg) begin
         // compute difference
         ts_ns_diff_valid_next = freq_locked_reg;
         ts_ns_diff_next = src_ns_sync_reg - dst_ns_capt_reg;
@@ -859,19 +855,19 @@ always @* begin
         // PI control
 
         // gain scheduling
-        if (!ts_ns_diff_reg[8+CMP_FNS_W]) begin
-            if (ts_ns_diff_reg[4+CMP_FNS_W +: 4]) begin
-                gain_sel_next = 1'b1;
-            end else begin
-                gain_sel_next = 1'b0;
-            end
-        end else begin
-            if (~ts_ns_diff_reg[4+CMP_FNS_W +: 4]) begin
-                gain_sel_next = 1'b1;
-            end else begin
-                gain_sel_next = 1'b0;
-            end
-        end
+        casez (ts_ns_diff_reg[9+CMP_FNS_W-5 +: 5])
+            5'b01zzz: gain_sel_next = 1'b1;
+            5'b001zz: gain_sel_next = 1'b1;
+            5'b0001z: gain_sel_next = 1'b1;
+            5'b00001: gain_sel_next = 1'b1;
+            5'b00000: gain_sel_next = 1'b0;
+            5'b11111: gain_sel_next = 1'b0;
+            5'b11110: gain_sel_next = 1'b1;
+            5'b1110z: gain_sel_next = 1'b1;
+            5'b110zz: gain_sel_next = 1'b1;
+            5'b10zzz: gain_sel_next = 1'b1;
+            default: gain_sel_next = 1'b0;
+        endcase
 
         // time integral of error
         case (gain_sel_reg)

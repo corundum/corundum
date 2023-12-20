@@ -612,45 +612,35 @@ module mqnic_app_block #
 
 // check configuration
 initial begin
-    if (APP_ID != 32'h12340001) begin
-        $error("Error: Invalid APP_ID (expected 32'h12340001, got 32'h%x) (instance %m)", APP_ID);
+    if (APP_ID != 32'h12349001) begin
+        $error("Error: Invalid APP_ID (expected 32'h12349001, got 32'h%x) (instance %m)", APP_ID);
         $finish;
     end
 end
 
 /*
- * AXI-Lite slave interface (control from host)
+ * route AXI-L slave interface of APP to custom AXI-L master interface
+ * (route control from host through and out of app)
  */
-axil_ram #(
-    .DATA_WIDTH(AXIL_APP_CTRL_DATA_WIDTH),
-    .ADDR_WIDTH(12),
-    .STRB_WIDTH(AXIL_APP_CTRL_STRB_WIDTH),
-    .PIPELINE_OUTPUT(1)
-)
-ram_inst (
-    .clk(clk),
-    .rst(rst),
-
-    .s_axil_awaddr(s_axil_app_ctrl_awaddr),
-    .s_axil_awprot(s_axil_app_ctrl_awprot),
-    .s_axil_awvalid(s_axil_app_ctrl_awvalid),
-    .s_axil_awready(s_axil_app_ctrl_awready),
-    .s_axil_wdata(s_axil_app_ctrl_wdata),
-    .s_axil_wstrb(s_axil_app_ctrl_wstrb),
-    .s_axil_wvalid(s_axil_app_ctrl_wvalid),
-    .s_axil_wready(s_axil_app_ctrl_wready),
-    .s_axil_bresp(s_axil_app_ctrl_bresp),
-    .s_axil_bvalid(s_axil_app_ctrl_bvalid),
-    .s_axil_bready(s_axil_app_ctrl_bready),
-    .s_axil_araddr(s_axil_app_ctrl_araddr),
-    .s_axil_arprot(s_axil_app_ctrl_arprot),
-    .s_axil_arvalid(s_axil_app_ctrl_arvalid),
-    .s_axil_arready(s_axil_app_ctrl_arready),
-    .s_axil_rdata(s_axil_app_ctrl_rdata),
-    .s_axil_rresp(s_axil_app_ctrl_rresp),
-    .s_axil_rvalid(s_axil_app_ctrl_rvalid),
-    .s_axil_rready(s_axil_app_ctrl_rready)
-);
+assign m_axil_app_ctrl_awaddr = s_axil_app_ctrl_awaddr;
+assign m_axil_app_ctrl_awprot = s_axil_app_ctrl_awprot;
+assign m_axil_app_ctrl_awvalid = s_axil_app_ctrl_awvalid;
+assign s_axil_app_ctrl_awready = m_axil_app_ctrl_awready;
+assign m_axil_app_ctrl_wdata = s_axil_app_ctrl_wdata;
+assign m_axil_app_ctrl_wstrb = s_axil_app_ctrl_wstrb;
+assign m_axil_app_ctrl_wvalid = s_axil_app_ctrl_wvalid;
+assign s_axil_app_ctrl_wready = m_axil_app_ctrl_wready;
+assign s_axil_app_ctrl_bresp = m_axil_app_ctrl_bresp;
+assign s_axil_app_ctrl_bvalid = m_axil_app_ctrl_bvalid;
+assign m_axil_app_ctrl_bready = s_axil_app_ctrl_bready;
+assign m_axil_app_ctrl_araddr = s_axil_app_ctrl_araddr;
+assign m_axil_app_ctrl_arprot = s_axil_app_ctrl_arprot;
+assign m_axil_app_ctrl_arvalid = s_axil_app_ctrl_arvalid;
+assign s_axil_app_ctrl_arready = m_axil_app_ctrl_arready;
+assign s_axil_app_ctrl_rdata = m_axil_app_ctrl_rdata;
+assign s_axil_app_ctrl_rresp = m_axil_app_ctrl_rresp;
+assign s_axil_app_ctrl_rvalid = m_axil_app_ctrl_rvalid;
+assign m_axil_app_ctrl_rready = s_axil_app_ctrl_rready;
 
 /*
  * AXI-Lite master interface (control to NIC)

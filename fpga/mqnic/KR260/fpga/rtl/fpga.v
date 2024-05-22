@@ -153,6 +153,11 @@ module fpga #
     output wire [1:0]   sfp_led,
 
     /*
+     * Fan control
+     */
+    output wire fan_control,
+
+    /*
      * Ethernet: SFP+
      */
     input  wire         sfp_rx_p,
@@ -420,6 +425,8 @@ zynq_ps zynq_ps_inst (
     .pl_clk0(zynq_pl_clk),
     .pl_reset(zynq_pl_reset),
     .pl_ps_irq0(zynq_irq),
+
+    .fan_control(fan_control),
 
     .m_axil_ctrl_araddr(axil_ctrl_araddr),
     .m_axil_ctrl_arprot(axil_ctrl_arprot),

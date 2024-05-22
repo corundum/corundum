@@ -14,6 +14,9 @@ set_property -dict {LOC F7   IOSTANDARD LVCMOS18 SLEW SLOW DRIVE 8} [get_ports {
 set_false_path -to [get_ports {led[*] sfp_led[*]}]
 set_output_delay 0 [get_ports {led[*] sfp_led[*]}]
 
+# Fan control
+set_property -dict {LOC A12  IOSTANDARD LVCMOS33} [get_ports fan_control] ;# HDA20 som240_1_c24
+
 # SFP+ Interface
 set_property -dict {LOC T2  } [get_ports sfp_rx_p] ;# MGTHRXP2_224 GTHE4_CHANNEL_X1Y12 / GTHE4_COMMON_X1Y3
 set_property -dict {LOC T1  } [get_ports sfp_rx_n] ;# MGTHRXN2_224 GTHE4_CHANNEL_X1Y12 / GTHE4_COMMON_X1Y3

@@ -119,6 +119,8 @@ set_property -dict [list \
     CONFIG.PSU__SWDT0__PERIPHERAL__ENABLE {1} \
     CONFIG.PSU__SWDT1__PERIPHERAL__ENABLE {1} \
     CONFIG.PSU__TTC0__PERIPHERAL__ENABLE {1} \
+    CONFIG.PSU__TTC0__WAVEOUT__ENABLE {1} \
+    CONFIG.PSU__TTC0__WAVEOUT__IO {EMIO} \
     CONFIG.PSU__IOU_SLCR__IOU_TTC_APB_CLK__TTC0_SEL {APB} \
     CONFIG.PSU__TTC1__PERIPHERAL__ENABLE {1} \
     CONFIG.PSU__IOU_SLCR__IOU_TTC_APB_CLK__TTC1_SEL {APB} \
@@ -232,6 +234,14 @@ set axi_interconnect_ctrl [ create_bd_cell -type ip -vlnv xilinx.com:ip:axi_inte
 # reset
 set proc_sys_reset [ create_bd_cell -type ip -vlnv xilinx.com:ip:proc_sys_reset proc_sys_reset ]
 
+# fan control
+set fan_control_slice [ create_bd_cell -type ip -vlnv xilinx.com:ip:xlslice fan_control_slice ]
+set_property -dict [list \
+  CONFIG.DIN_FROM {2} \
+  CONFIG.DIN_TO {2} \
+  CONFIG.DIN_WIDTH {3} \
+] $fan_control_slice
+
 # Create connections
 
 # Clock
@@ -306,6 +316,12 @@ set pl_ps_irq0_port [get_bd_ports -of_objects [get_bd_nets -of_objects $pl_ps_ir
 set_property -dict [list \
     CONFIG.PortWidth 8 \
 ] $pl_ps_irq0_port
+
+# Fan control
+connect_bd_net [get_bd_pins $zynq_ultra_ps/emio_ttc0_wave_o] [get_bd_pins $fan_control_slice/Din]
+set fan_control_pin [get_bd_pins $fan_control_slice/Dout]
+make_bd_pins_external $fan_control_pin
+set_property name fan_control [get_bd_ports -of_objects [get_bd_nets -of_objects $fan_control_pin]]
 
 # Port clock associations
 set lst [list]

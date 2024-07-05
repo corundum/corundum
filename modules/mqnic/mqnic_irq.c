@@ -14,6 +14,7 @@ static irqreturn_t mqnic_irq_handler(int irqn, void *data)
 	return IRQ_HANDLED;
 }
 
+#ifdef CONFIG_PCI
 int mqnic_irq_init_pcie(struct mqnic_dev *mdev)
 {
 	struct pci_dev *pdev = mdev->pdev;
@@ -77,7 +78,7 @@ void mqnic_irq_deinit_pcie(struct mqnic_dev *mdev)
 
 	pci_free_irq_vectors(pdev);
 }
-
+#endif /* CONFIG_PCI */
 int mqnic_irq_init_platform(struct mqnic_dev *mdev)
 {
 	struct platform_device *pdev = mdev->pfdev;

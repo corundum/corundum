@@ -21,6 +21,7 @@
 #include <linux/ptp_clock_kernel.h>
 #include <linux/timer.h>
 #include <net/devlink.h>
+#include <linux/if_vlan.h>
 
 #include <linux/i2c.h>
 #include <linux/i2c-algo-bit.h>

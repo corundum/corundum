@@ -134,8 +134,8 @@ int mqnic_start_port(struct net_device *ndev)
 	}
 
 	// set MTU
-	mqnic_interface_set_tx_mtu(iface, ndev->mtu + ETH_HLEN);
-	mqnic_interface_set_rx_mtu(iface, ndev->mtu + ETH_HLEN);
+	mqnic_interface_set_tx_mtu(iface, ndev->mtu + ETH_HLEN + VLAN_HLEN);
+	mqnic_interface_set_rx_mtu(iface, ndev->mtu + ETH_HLEN + VLAN_HLEN);
 
 	// configure RX indirection and RSS
 	mqnic_update_indir_table(ndev);

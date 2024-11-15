@@ -50,7 +50,7 @@ mqnic-bmc: mqnic-bmc.o $(LIBMQNIC)
 mqnic-xcvr: mqnic-xcvr.o $(LIBMQNIC) drp.o xcvr_gt.o xcvr_gthe3.o xcvr_gtye3.o xcvr_gthe4.o xcvr_gtye4.o
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
-perout: perout.o timespec.o
+perout: perout.o timespec.o $(LIBMQNIC)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) $^ -o $@ $(LDLIBS)
 
 install:

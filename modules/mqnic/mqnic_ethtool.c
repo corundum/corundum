@@ -201,43 +201,41 @@ static u32 mqnic_get_rxfh_indir_size(struct net_device *ndev)
 	return priv->rx_queue_map_indir_table_size;
 }
 
-static int mqnic_get_rxfh(struct net_device *ndev, u32 *indir, u8 *key,
-		u8 *hfunc)
+static int mqnic_get_rxfh(struct net_device *ndev,
+			  struct ethtool_rxfh_param *rxfh)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	int k;
 
-	if (hfunc)
-		*hfunc = ETH_RSS_HASH_TOP;
+	rxfh->hfunc = ETH_RSS_HASH_TOP;
 
-	if (indir)
+	if (rxfh->indir)
 		for (k = 0; k < priv->rx_queue_map_indir_table_size; k++)
-			indir[k] = priv->rx_queue_map_indir_table[k];
+			rxfh->indir[k] = priv->rx_queue_map_indir_table[k];
 
 	return 0;
 }
 
-static int mqnic_set_rxfh(struct net_device *ndev, const u32 *indir,
-		const u8 *key, const u8 hfunc)
+static int mqnic_set_rxfh(struct net_device *ndev,
+			  struct ethtool_rxfh_param *rxfh,
+			  struct netlink_ext_ack *extack)
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	int k;
 
-	if (hfunc != ETH_RSS_HASH_NO_CHANGE && hfunc != ETH_RSS_HASH_TOP)
+	if (rxfh->hfunc != ETH_RSS_HASH_NO_CHANGE && rxfh->hfunc != ETH_RSS_HASH_TOP)
 		return -EOPNOTSUPP;
 
-	if (!indir)
+	if (!rxfh->indir)
 		return 0;
 
-	if (indir) {
-		for (k = 0; k < priv->rx_queue_map_indir_table_size; k++) {
-			if (indir[k] >= priv->rxq_count)
-				return -EINVAL;
-		}
-
-		for (k = 0; k < priv->rx_queue_map_indir_table_size; k++)
-			priv->rx_queue_map_indir_table[k] = indir[k];
+	for (k = 0; k < priv->rx_queue_map_indir_table_size; k++) {
+		if (rxfh->indir[k] >= priv->rxq_count)
+			return -EINVAL;
 	}
+
+	for (k = 0; k < priv->rx_queue_map_indir_table_size; k++)
+		priv->rx_queue_map_indir_table[k] = rxfh->indir[k];
 
 	return mqnic_update_indir_table(ndev);
 }

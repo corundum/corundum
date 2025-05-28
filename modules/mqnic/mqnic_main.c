@@ -845,7 +845,11 @@ fail:
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+static void mqnic_platform_remove(struct platform_device *pdev)
+#else
 static int mqnic_platform_remove(struct platform_device *pdev)
+#endif
 {
 	struct mqnic_dev *mqnic = platform_get_drvdata(pdev);
 	struct devlink *devlink = priv_to_devlink(mqnic);
@@ -856,7 +860,11 @@ static int mqnic_platform_remove(struct platform_device *pdev)
 
 	mqnic_free_id(mqnic);
 	mqnic_devlink_free(devlink);
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+	return;
+#else
 	return 0;
+#endif
 }
 
 static struct platform_driver mqnic_platform_driver = {

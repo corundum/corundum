@@ -242,6 +242,23 @@ static int mqnic_set_rxfh(struct net_device *ndev, const u32 *indir,
 	return mqnic_update_indir_table(ndev);
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+static int mqnic_get_rxfh_new(struct net_device *ndev, struct ethtool_rxfh_param *param)
+{
+    u8 hfunc = 0;
+    int ret = mqnic_get_rxfh(ndev, param->indir, param->key, &hfunc);
+    if (ret)
+        return ret;
+    param->hfunc = hfunc;
+    return 0;
+}
+
+static int mqnic_set_rxfh_new(struct net_device *ndev, struct ethtool_rxfh_param *param, struct netlink_ext_ack *extack)
+{
+    return mqnic_set_rxfh(ndev, param->indir, param->key, param->hfunc);
+}
+#endif
+
 static void mqnic_get_channels(struct net_device *ndev,
 		struct ethtool_channels *channel)
 {
@@ -305,8 +322,13 @@ static int mqnic_set_channels(struct net_device *ndev,
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 11, 0)
+static int mqnic_get_ts_info(struct net_device *ndev,
+		struct kernel_ethtool_ts_info *info)
+#else
 static int mqnic_get_ts_info(struct net_device *ndev,
 		struct ethtool_ts_info *info)
+#endif
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	struct mqnic_dev *mdev = priv->mdev;
@@ -612,8 +634,13 @@ const struct ethtool_ops mqnic_ethtool_ops = {
 	.set_pauseparam = mqnic_set_pauseparam,
 	.get_rxnfc = mqnic_get_rxnfc,
 	.get_rxfh_indir_size = mqnic_get_rxfh_indir_size,
-	.get_rxfh = mqnic_get_rxfh,
-	.set_rxfh = mqnic_set_rxfh,
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+    .get_rxfh = mqnic_get_rxfh_new,
+    .set_rxfh = mqnic_set_rxfh_new,
+#else
+    .get_rxfh = mqnic_get_rxfh,
+    .set_rxfh = mqnic_set_rxfh,
+#endif
 	.get_channels = mqnic_get_channels,
 	.set_channels = mqnic_set_channels,
 	.get_ts_info = mqnic_get_ts_info,

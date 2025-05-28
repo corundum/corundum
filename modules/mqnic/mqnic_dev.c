@@ -134,7 +134,7 @@ static long mqnic_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			info.child = 0;
 			info.size = mqnic->hw_regs_size;
 			info.offset = ((u64)info.index) << 40;
-			strlcpy(info.name, "ctrl", sizeof(info.name));
+			strscpy(info.name, "ctrl", sizeof(info.name));
 			break;
 		case 1:
 			info.type = MQNIC_REGION_TYPE_APP_CTRL;
@@ -142,7 +142,7 @@ static long mqnic_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			info.child = 0;
 			info.size = mqnic->app_hw_regs_size;
 			info.offset = ((u64)info.index) << 40;
-			strlcpy(info.name, "app", sizeof(info.name));
+			strscpy(info.name, "app", sizeof(info.name));
 			break;
 		case 2:
 			info.type = MQNIC_REGION_TYPE_RAM;
@@ -150,7 +150,7 @@ static long mqnic_ioctl(struct file *file, unsigned int cmd, unsigned long arg)
 			info.child = 0;
 			info.size = mqnic->ram_hw_regs_size;
 			info.offset = ((u64)info.index) << 40;
-			strlcpy(info.name, "ram", sizeof(info.name));
+			strscpy(info.name, "ram", sizeof(info.name));
 			break;
 		default:
 			return -EINVAL;

@@ -201,6 +201,47 @@ static u32 mqnic_get_rxfh_indir_size(struct net_device *ndev)
 	return priv->rx_queue_map_indir_table_size;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 8, 0)
+static int mqnic_get_rxfh(struct net_device *ndev,
+		struct ethtool_rxfh_param *rxfh)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	int k;
+
+	rxfh->hfunc = ETH_RSS_HASH_TOP;
+
+	if (rxfh->indir)
+		for (k = 0; k < priv->rx_queue_map_indir_table_size; k++)
+			rxfh->indir[k] = priv->rx_queue_map_indir_table[k];
+
+	return 0;
+}
+
+static int mqnic_set_rxfh(struct net_device *ndev,
+		struct ethtool_rxfh_param *rxfh,
+		struct netlink_ext_ack *extack)
+{
+	struct mqnic_priv *priv = netdev_priv(ndev);
+	const u32 *indir = rxfh->indir;
+	int k;
+
+	if (rxfh->hfunc != ETH_RSS_HASH_NO_CHANGE && rxfh->hfunc != ETH_RSS_HASH_TOP)
+		return -EOPNOTSUPP;
+
+	if (!indir)
+		return 0;
+
+	for (k = 0; k < priv->rx_queue_map_indir_table_size; k++) {
+		if (indir[k] >= priv->rxq_count)
+			return -EINVAL;
+	}
+
+	for (k = 0; k < priv->rx_queue_map_indir_table_size; k++)
+		priv->rx_queue_map_indir_table[k] = indir[k];
+
+	return mqnic_update_indir_table(ndev);
+}
+#else
 static int mqnic_get_rxfh(struct net_device *ndev, u32 *indir, u8 *key,
 		u8 *hfunc)
 {
@@ -241,6 +282,7 @@ static int mqnic_set_rxfh(struct net_device *ndev, const u32 *indir,
 
 	return mqnic_update_indir_table(ndev);
 }
+#endif
 
 static void mqnic_get_channels(struct net_device *ndev,
 		struct ethtool_channels *channel)
@@ -305,8 +347,13 @@ static int mqnic_set_channels(struct net_device *ndev,
 	return ret;
 }
 
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(6, 10, 0)
+static int mqnic_get_ts_info(struct net_device *ndev,
+		struct kernel_ethtool_ts_info *info)
+#else
 static int mqnic_get_ts_info(struct net_device *ndev,
 		struct ethtool_ts_info *info)
+#endif
 {
 	struct mqnic_priv *priv = netdev_priv(ndev);
 	struct mqnic_dev *mdev = priv->mdev;
